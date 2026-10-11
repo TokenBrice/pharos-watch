@@ -16,7 +16,6 @@ import type {
  */
 const PROTOCOL_PAR_SOURCE = "protocol-par";
 
-const SOFID_SOFI_ID = "sofid-sofi";
 const USBD_BIMA_ID = "usbd-bima";
 const USDQ_QUILL_ID = "usdq-quill";
 const ZARM_MENTO_ID = "zarm-mento";
@@ -28,7 +27,6 @@ interface ProtocolParConfig {
 }
 
 const PROTOCOL_PAR_PRICE_CONFIGS: readonly ProtocolParConfig[] = [
-  { id: SOFID_SOFI_ID, pegType: "peggedUSD" },
   { id: USBD_BIMA_ID, pegType: "peggedUSD" },
   { id: USDQ_QUILL_ID, pegType: "peggedUSD" },
   { id: ZARM_MENTO_ID, pegType: "peggedZAR" },

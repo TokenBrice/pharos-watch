@@ -3,7 +3,7 @@ import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/r
 import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
-import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyReference, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
+import { ReviewedEconomicSupplyPlanFileSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyReference, type EconomicSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
 import type { SafetyScoreV9ReviewedTransferFact } from "@shared/types/safety-score-v9-transfer-overlays";
 import reviewRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 import { deriveReviewedEconomicDeploymentPartition, buildReviewedEconomicDeploymentInventory, hasCompleteEligibleProviderSupply, loadReviewedEconomicSupplyPlans, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, reviewedEconomicDeploymentAttributionValidationError, reviewedSupplyRouteKind } from "../safety-score-v9/supply-attribution-contract";
@@ -152,6 +152,93 @@ describe("reviewed economic supply accounting", () => {
     const rows = deriveReviewedEconomicDeploymentPartition(input)!.deployments;
     expect(rows[0]!.currentSupplyUsd).toBeCloseTo(100 * 5 / 6);
     expect(rows[1]!.currentSupplyUsd).toBeCloseTo(100 / 6);
+  });
+  function vaultConversionFixture() {
+    const input = independentFixture();
+    input.plan.deployments.forEach((row, index) => {
+      row.claimUnit = `vault-shares-${index}`; row.conversionSourceId = `nav-${index}`;
+      const source = { kind: "evm-erc4626-convert-to-assets" as const, sourceId: row.conversionSourceId,
+        chainId: row.chainId, vaultAddress: row.address!, vaultRuntimeCodeSha256: sha256Hex(`0x600${index}`),
+        immutable: true as const, assetAddress: `0x${"4".repeat(40)}`, shareDecimals: row.decimals!, assetDecimals: 6 };
+      input.plan.conversionSources.push(source);
+      const erc4626Proof = { anchor: 100, anchorHash: input.observations[index]!.anchorHash, assets: index === 0 ? "1250000" : "2000000" };
+      input.conversions.push({ sourceId: source.sourceId, sourceGeneration: `${source.chainId}:100:${erc4626Proof.anchorHash}`,
+        observedAtSec: CLOCK - 60, value: index === 0 ? "1.25" : "2", erc4626Proof,
+        responseSha256: sha256Hex(stableJsonStringifyV1({ source, erc4626Proof })) });
+    });
+    return input;
+  }
+  it("retains exact ERC-4626 proof through the shared packet wire and re-admission", () => {
+    const input = vaultConversionFixture(), packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    const decoded = ReviewedEconomicDeploymentPartitionSchema.parse(JSON.parse(JSON.stringify(packet)));
+    expect(decoded.conversions).toEqual(packet.conversions);
+    expect(deriveReviewedEconomicDeploymentPartition({ ...input, conversions: decoded.conversions })).toEqual(packet);
+  });
+  it.each(["1.25", "1.2500"])("admits an exact canonical fractional ERC-4626 rate %s", value => {
+    const input = vaultConversionFixture();
+    input.conversions[0]!.value = value;
+    expect(deriveReviewedEconomicDeploymentPartition(input)).not.toBeNull();
+  });
+  it.each(["2", "2.0"])("admits an exact canonical integral ERC-4626 rate %s", value => {
+    const input = vaultConversionFixture();
+    input.conversions[1]!.value = value;
+    expect(deriveReviewedEconomicDeploymentPartition(input)).not.toBeNull();
+  });
+  it.each(["01.25", "+1.25", "-1.25", ".125", "1.", "1.25.0", "1e0"])("keeps malformed ERC-4626 decimal shape unavailable: %s", value => {
+    const input = vaultConversionFixture();
+    input.conversions[0]!.value = value;
+    const diagnostics: Array<{ failurePredicate: string | null }> = [];
+    expect(deriveReviewedEconomicDeploymentPartition({ ...input, onDiagnostic: row => diagnostics.push(row) })).toBeNull();
+    expect(diagnostics[diagnostics.length - 1]?.failurePredicate).toBe("erc4626-conversion-value-shape");
+  });
+  it("rejects a long malformed ERC-4626 decimal without admitting a partition", () => {
+    const input = vaultConversionFixture();
+    input.conversions[0]!.value = `1${"0".repeat(10000)}x`;
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+  it("allocates distinct immutable vault/Pot share claims by their own pinned common-unit rates", () => {
+    const input = vaultConversionFixture();
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(input.plan).success).toBe(true);
+    const packet = deriveReviewedEconomicDeploymentPartition(input)!;
+    expect(packet.aggregate.supplyUsd).toBe(100);
+    expect(packet.deployments[0]!.currentSupplyUsd).toBeCloseTo(100 * 125 / 165);
+    expect(packet.deployments[1]!.currentSupplyUsd).toBeCloseTo(100 * 40 / 165);
+    vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockReturnValue(input.plan);
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(input.meta as StablecoinMeta);
+    const fixed = makeV9FixedInput({ assetId: "alpha", clockSec: CLOCK });
+    Object.assign(fixed, { baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration, registryFingerprint: input.registryFingerprint,
+      aggregateCirculatingById: { alpha: { circulating: { peggedUSD: 100 }, observedAtSec: CLOCK - 60 } }, chainCirculatingById: {}, navPriceById: { alpha: { sourceId: "reference", priceUsd: 1, observedAtSec: CLOCK - 60, confidence: "high" } }, safetyScoreV9SupplyAttributionById: { alpha: packet } });
+    const baseScope = { authoritativeDeploymentKeys: [CANONICAL, REMOTE], materialDeploymentKeys: [], materialDeploymentScopeComplete: false, deploymentModel: "contract-addressable" as const };
+    expect(transferMaterialScopeFromEconomicDeploymentPartition({ assetId: "alpha", fixedInput: fixed, baseScope }).materialDeploymentScopeComplete).toBe(true);
+    packet.conversions[0]!.value = "1";
+    expect(transferMaterialScopeFromEconomicDeploymentPartition({ assetId: "alpha", fixedInput: fixed, baseScope }).materialDeploymentScopeComplete).toBe(false);
+  });
+  it.each(["missing proof", "number", "hash", "time", "generation", "digest", "rate", "stale", "future", "missing source"])("keeps %s ERC-4626 conversion unavailable to materiality", failure => {
+    const input = vaultConversionFixture(), rate = input.conversions[0]!;
+    if (failure === "missing proof") delete rate.erc4626Proof;
+    if (failure === "number") rate.erc4626Proof!.anchor--;
+    if (failure === "hash") rate.erc4626Proof!.anchorHash = `0x${"f".repeat(64)}`;
+    if (failure === "time") rate.observedAtSec--;
+    if (failure === "generation") rate.sourceGeneration = "unrelated";
+    if (failure === "digest") rate.responseSha256 = "f".repeat(64);
+    if (failure === "rate") rate.value = "1";
+    if (failure === "stale") rate.observedAtSec = CLOCK - 1801;
+    if (failure === "future") rate.observedAtSec = CLOCK + 1;
+    if (failure === "missing source") input.conversions.pop();
+    expect(deriveReviewedEconomicDeploymentPartition(input)).toBeNull();
+  });
+  it.each(["vault", "chain", "decimals", "unbound", "mutable", "provider", "reused"])("rejects %s ERC-4626 source identity in a plan", failure => {
+    const input = vaultConversionFixture(), row = input.plan.deployments[0]!;
+    const source = input.plan.conversionSources[0]!;
+    if (!("kind" in source)) throw new Error("Expected vault source");
+    if (failure === "vault") source.vaultAddress = `0x${"9".repeat(40)}`;
+    if (failure === "chain") source.chainId = "base";
+    if (failure === "decimals") source.shareDecimals++;
+    if (failure === "unbound") row.conversionSourceId = "unknown";
+    if (failure === "mutable") Object.assign(source, { immutable: false });
+    if (failure === "provider") row.read = { kind: "provider-chain", sourceChain: "Ethereum" };
+    if (failure === "reused") input.plan.deployments[1]!.conversionSourceId = source.sourceId;
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(input.plan).success).toBe(false);
   });
   it("reconciles only verified escrow-backed subsets when a destination also issues independent liabilities", () => {
     const input = fixture();

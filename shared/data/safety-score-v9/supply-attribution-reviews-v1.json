@@ -3148,7 +3148,6 @@
   ],
   "independentLiabilityAssetIds": [
     "usdz-anzen",
-    "wsrusd-reservoir",
     "brsrv-blackrock",
     "jpyt-dephaser",
     "mhyper-midas",
@@ -3158,7 +3157,8 @@
     "chfsafo-spiko",
     "ustb-superstate",
     "usdai-usd-ai",
-    "susdai-usd-ai"
+    "susdai-usd-ai",
+    "zaru-blocktower"
   ],
   "nativeSingleRouteReviews": [
     {

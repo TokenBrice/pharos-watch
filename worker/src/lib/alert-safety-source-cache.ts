@@ -1,5 +1,6 @@
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
+import { resolveV9PublicWitnessText } from "@shared/lib/safety-score-v9/public-witness-texts";
 import type { SafetyAlertSourceState } from "@shared/types";
 import { SafetyGradesResponseSchema, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import {
@@ -294,7 +295,7 @@ export function buildAlertSafetyV9SourceEnvelopeFromParts(source: {
           v9Explain: {
             reasons: card.evidence.reasons.map((reason) => ({
               code: reason.code,
-              message: truncateDetail(reason.message),
+              message: truncateDetail(card.witnessTexts === undefined ? reason.message : resolveV9PublicWitnessText(card, reason.message)),
             })),
             bindingCap:
               card.bindingCap === null
@@ -302,7 +303,7 @@ export function buildAlertSafetyV9SourceEnvelopeFromParts(source: {
                 : {
                     kind: card.bindingCap.kind,
                     limit: card.bindingCap.limit,
-                    reason: truncateDetail(card.bindingCap.reason),
+                    reason: truncateDetail(card.witnessTexts === undefined ? card.bindingCap.reason : resolveV9PublicWitnessText(card, card.bindingCap.reason)),
                   },
             weakestPillar: card.weakestPillar,
             pillars: Object.fromEntries(

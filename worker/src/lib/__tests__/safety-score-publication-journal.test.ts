@@ -4,6 +4,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 import { buildSafetyScoreCompactCard, journalSafetyScorePublication, safetyScoreCompactDigest, safetyScoreJournalCardChanged } from "../safety-score-v9/publication-journal";
+import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 
 const identity = { methodologyVersion: "10.12", policyDigest: "a".repeat(64), evaluationBuildDigest: "b".repeat(64) };
 
@@ -65,6 +66,20 @@ describe("compact Safety publication journal", () => {
       { ...identity, methodologyVersion: "10.13" }, { ...identity, policyDigest: "c".repeat(64) },
       { ...identity, evaluationBuildDigest: "d".repeat(64) },
     ]) expect(safetyScoreJournalCardChanged(digest, safetyScoreCompactDigest(compact, updated))).toBe(true);
+  });
+
+  it("hashes the resolved binding-cap fact rather than its card-local text reference", () => {
+    const cap = { kind: "test-cap", reason: "The independently measured required parent constraint retains its exact binding price.",
+      limit: 35, source: "parent" as const, binding: true };
+    const card = makeWorkerV9Card({ caps: [cap], bindingCap: cap });
+    const wire = internV9PublicWitnessTexts(card);
+    expect(wire.bindingCap!.reason).toMatch(/^~/u);
+    const semantic = buildSafetyScoreCompactCard(card);
+    expect(buildSafetyScoreCompactCard(wire)).toEqual(semantic);
+    expect(safetyScoreCompactDigest(buildSafetyScoreCompactCard(wire), identity))
+      .toBe(safetyScoreCompactDigest(semantic, identity));
+    const corrupt = { ...wire, bindingCap: { ...wire.bindingCap!, reason: "~zzzzzz" } };
+    expect(() => buildSafetyScoreCompactCard(corrupt)).toThrow(/outside the card table/);
   });
 
   it("writes first sight, skips identical cards across generations, and records same-grade score changes and releases", async () => {

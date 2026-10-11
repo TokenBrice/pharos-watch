@@ -121,6 +121,8 @@ describe("Safety Score V9 canonical publication resource budget", {
           import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment.ts";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
           import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+          import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
+          import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
           import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
           import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
           import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
@@ -227,12 +229,83 @@ describe("Safety Score V9 canonical publication resource budget", {
           extension = null;
           await yieldTurn();
           globalThis.gc?.();
-          let prior = buildSafetyScoreV9PublicationFromNormalizedInput({
+          // The async serializer's argument registers must die with this frame
+          // before the probe decodes the accepted generation.
+          let { acceptedStored, witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes } = await (async () => {
+          const prior = buildSafetyScoreV9PublicationFromNormalizedInput({
             fixedInput: input,
             publishedAtSec: input.clockSec,
           });
-          let acceptedStored = await serializeSafetyScoreV9Publication(prior.candidate);
-          prior = null;
+          // Scope the measurement iterator and decoded card graphs to a completed
+          // synchronous frame before decoding a second accepted publication.
+          const { witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes } = (() => {
+            let witnessTextSavingsBytes = 0;
+            let factVocabularySavingsBytes = 0;
+            const witnessViewBytes = {};
+            for (const card of prior.candidate.cards) {
+              const semantic = resolveV9PublicWitnessTexts(card);
+              witnessTextSavingsBytes += Buffer.byteLength(JSON.stringify(semantic)) - Buffer.byteLength(JSON.stringify(card));
+              const decoded = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
+              const originalFacts = card.scoreTrace.evidenceResponsibility.facts.map((row, index) => {
+                const fact = decoded[index];
+                return [fact[0], row[1], row[2], fact[3], fact[4], fact[5], fact[6]];
+              });
+              factVocabularySavingsBytes += Buffer.byteLength(JSON.stringify(originalFacts)) -
+                Buffer.byteLength(JSON.stringify(card.scoreTrace.evidenceResponsibility.facts));
+              for (const [view, value] of Object.entries({
+                pillarReasons: Object.values(semantic.pillars).flatMap(pillar => pillar.reasons),
+                evidenceReasons: semantic.evidence.reasons,
+                adverseAttribution: semantic.scoreTrace.adverseAttribution.items,
+                boundedAttribution: semantic.scoreTrace.boundedUncertaintyAttribution.items,
+                evidenceFacts: semantic.scoreTrace.evidenceResponsibility.facts,
+              })) {
+                witnessViewBytes[view] = (witnessViewBytes[view] ?? 0) + Buffer.byteLength(JSON.stringify(value));
+              }
+            }
+            return { witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes };
+          })();
+          let acceptedStored;
+          try {
+            acceptedStored = await serializeSafetyScoreV9Publication(prior.candidate);
+            const measuredBytes = JSON.parse(acceptedStored).uncompressedBytes;
+            process.stderr.write(JSON.stringify({ probe: "publication-byte-measurement",
+              candidateBytes: measuredBytes, expandedWitnessCandidateBytes: measuredBytes + witnessTextSavingsBytes + factVocabularySavingsBytes,
+              witnessTextSavingsBytes, factVocabularySavingsBytes }) + "\\n");
+          } catch (error) {
+            // Measure one card field at a time on failure, never retain a second
+            // cohort-sized string or bypass the production serialization bound.
+            const cardFieldBytes = {};
+            const traceFieldBytes = {};
+            const scalarFieldBytes = {};
+            function measureScalars(value) {
+              if (Array.isArray(value)) { for (const row of value) measureScalars(row); return; }
+              if (value === null || typeof value !== "object") return;
+              for (const [key, field] of Object.entries(value)) {
+                if (field === null || typeof field !== "object" || Array.isArray(field) && field.length === 0) {
+                  scalarFieldBytes[key] = (scalarFieldBytes[key] ?? 0) +
+                    Buffer.byteLength(JSON.stringify(key) + ":" + JSON.stringify(field));
+                } else measureScalars(field);
+              }
+            }
+            let cardBytes = 0;
+            for (const card of prior.candidate.cards) {
+              cardBytes += Buffer.byteLength(JSON.stringify(card));
+              for (const [key, value] of Object.entries(card)) {
+                cardFieldBytes[key] = (cardFieldBytes[key] ?? 0) + Buffer.byteLength(JSON.stringify(value));
+              }
+              for (const [key, value] of Object.entries(card.scoreTrace)) {
+                traceFieldBytes[key] = (traceFieldBytes[key] ?? 0) + Buffer.byteLength(JSON.stringify(value));
+              }
+              measureScalars(card);
+            }
+            console.error({ probe: "publication-byte-failure", cards: prior.candidate.cards.length,
+              cardBytes, cardFieldBytes, traceFieldBytes, scalarFieldBytes,
+              finalHeapUsedBytes: process.memoryUsage().heapUsed,
+              peakRssBytes: process.resourceUsage().maxRSS * 1024 });
+            throw error;
+          }
+            return { acceptedStored, witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes };
+          })();
           await new Promise((resolve) => setImmediate(resolve));
           globalThis.gc?.();
           let accepted = await parseSafetyScoreV9Publication(acceptedStored);
@@ -265,6 +338,8 @@ describe("Safety Score V9 canonical publication resource budget", {
               JSON.stringify(acceptedBaseline),
             ).byteLength,
             candidateBytes: metadata.uncompressedBytes,
+            expandedWitnessCandidateBytes: metadata.uncompressedBytes + witnessTextSavingsBytes + factVocabularySavingsBytes,
+            witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes,
             compressedBytes: metadata.compressedBytes,
             storedBytes: new TextEncoder().encode(stored).byteLength,
             replayCaptureStoredBytes: capture.storedBytes,
@@ -334,6 +409,7 @@ describe("Safety Score V9 canonical publication resource budget", {
         env: { ...process.env, SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
       },
     );
+    if (result.status !== 0) console.error({ probe: "canonical-publication-failure", stdout: result.stdout, stderr: result.stderr });
     expect(result.error).toBeUndefined();
     expect(result.status, result.stderr).toBe(0);
 

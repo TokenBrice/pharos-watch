@@ -12,7 +12,7 @@ import type { BridgeRouteRiskProfile, StablecoinMeta } from "@shared/types/core"
 import { ReviewedEconomicSupplyPlanEnvelopeSchema, ReviewedEconomicSupplyPlanSchema, ReviewedEconomicDeploymentPartitionSchema, ReviewedProviderChainPartitionSchema, type ReviewedProviderChainPartition, type ReviewedEconomicSupplyPlan, type ReviewedEconomicDeploymentPartition, type EconomicSupplyObservation, type EconomicSupplyReference } from "@shared/types/safety-score-v9-supply-attribution";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
-import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 import { authenticateCcipPendingObservation } from "./supply-attribution-ccip-proof";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
@@ -1135,6 +1135,27 @@ export function deriveReviewedEconomicDeploymentPartition(input: {
   const all = [...input.observations, ...input.inFlight];
   if (all.length === 0 || new Set(all.map(row => row.id)).size !== all.length) return rejected("observation-roster-nonempty-and-unique", { count: all.length });
   const observations = new Map(all.map(row => [row.id, row]));
+  for (const conversion of input.conversions) {
+    const source = input.plan.conversionSources.find(row => row.sourceId === conversion.sourceId)!;
+    if (!("kind" in source)) {
+      if (conversion.erc4626Proof !== undefined) return rejected("api-conversion-proof-exclusive");
+      continue;
+    }
+    const proof = conversion.erc4626Proof;
+    const holding = observations.get(`${source.chainId}:${source.vaultAddress}`);
+    if (!proof || !holding || !Number.isSafeInteger(proof.anchor) || proof.anchor < 0 ||
+      !EVM_BLOCK_HASH_RE.test(proof.anchorHash) || !/^[1-9][0-9]*$/.test(proof.assets) || proof.assets.length > 78 ||
+      holding.anchor !== String(proof.anchor) || holding.anchorHash !== proof.anchorHash ||
+      holding.observedAtSec !== conversion.observedAtSec) return rejected("erc4626-conversion-equals-holding-pin", { sourceId: source.sourceId });
+    if (conversion.sourceGeneration !== `${source.chainId}:${proof.anchor}:${proof.anchorHash}` ||
+      conversion.responseSha256 !== sha256Hex(stableJsonStringifyV1({ source, erc4626Proof: proof }))) {
+      return rejected("erc4626-conversion-source-binding", { sourceId: source.sourceId });
+    }
+    if (!/^(0|[1-9][0-9]*)$/.test(conversion.value) &&
+      !/^(0|[1-9][0-9]*)\.[0-9]+$/.test(conversion.value)) return rejected("erc4626-conversion-value-shape");
+    const rate = economicDecimal(conversion.value);
+    if (rate.n * 10n ** BigInt(source.assetDecimals) !== BigInt(proof.assets) * rate.d) return rejected("erc4626-conversion-value-equals-assets", { sourceId: source.sourceId });
+  }
   const units = new Map<string, EconomicFraction>();
   const rawBasis = input.plan.deployments.every(row => row.amountBasis === "circulating-usd");
   if (!rawBasis && input.plan.deployments.some(row => row.amountBasis === "circulating-usd")) return rejected("amount-bases-not-mixed");

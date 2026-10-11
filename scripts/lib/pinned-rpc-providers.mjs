@@ -19,6 +19,8 @@ export async function resolvePinnedProvider(chain, provider) {
   if (provider === "public") {
     // https://docs.sui.io/develop/accessing-data/graphql/query-with-graphql
     if (canonicalChain === "sui") return { endpoint: "https://graphql.mainnet.sui.io/graphql", protocol: "sui-graphql" };
+    // https://docs.usecorn.com/docs/developers/Network/Run_a_Node — Maizenet 21000000.
+    if (canonicalChain === "corn") return { endpoint: "https://maizenet-rpc.usecorn.com", protocol: "evm" };
     const { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } = await import("../../shared/lib/chain-rpc-registry.ts");
     const endpoint = PUBLIC_RPC_URLS[canonicalChain] ?? SUPPLY_RPC_DEFAULTS[canonicalChain]?.rpcUrl;
     if (endpoint && meta?.type === "evm") return { endpoint, protocol: "evm" };
@@ -27,18 +29,25 @@ export async function resolvePinnedProvider(chain, provider) {
     return null;
   }
   if (provider === "alchemy") {
-    // Reuse the chain identity's provider slug; BSC and Solana are established
-    // runtime endpoints but BSC has no identity-provider annotation yet.
+    // Account Archive documents solana-mainnet; the shared runtime annotation
+    // uses sol-mainnet and must not override this research-specific surface.
+    // https://www.alchemy.com/docs/solana/account-archive
+    if (canonicalChain === "solana") return { endpoint: "https://solana-mainnet.g.alchemy.com/v2/", protocol: "solana-jsonrpc", credential: "ALCHEMY_API_KEY" };
+    // Reuse EVM chain identity provider slugs; BSC's established runtime
+    // endpoint has no identity-provider annotation yet.
     // Additional slugs: https://www.alchemy.com/docs/reference/node-supported-chains
     // Fraxtal: https://www.alchemy.com/docs/reference/frax-api-quickstart
     const slug = meta?.providers?.alchemy ?? ({
-      bsc: "bnb-mainnet", solana: "solana-mainnet", fraxtal: "frax-mainnet",
+      bsc: "bnb-mainnet", fraxtal: "frax-mainnet",
       rootstock: "rootstock-mainnet", arc: "arc-mainnet", tempo: "tempo-mainnet",
     })[canonicalChain];
-    if (!slug || (meta?.type !== "evm" && canonicalChain !== "solana")) return null;
-    return { endpoint: `https://${slug}.g.alchemy.com/v2/`, protocol: canonicalChain === "solana" ? "solana-jsonrpc" : "evm", credential: "ALCHEMY_API_KEY" };
+    if (!slug || meta?.type !== "evm") return null;
+    return { endpoint: `https://${slug}.g.alchemy.com/v2/`, protocol: "evm", credential: "ALCHEMY_API_KEY" };
   }
   if (provider === "drpc") {
+    // https://drpc.org/docs/solana-api/blocksinfo/getBlock and header auth:
+    // https://drpc.org/docs/gettingstarted/firstrequest
+    if (canonicalChain === "solana") return { endpoint: "https://lb.drpc.live/solana", protocol: "solana-jsonrpc", credential: "DRPC_API_KEY" };
     // https://drpc.org/chainlist documents these exact direct public hosts,
     // not the paid network= aliases. Do not invent paid-route slugs or send
     // credentials to the public endpoints.
@@ -48,10 +57,10 @@ export async function resolvePinnedProvider(chain, provider) {
       arc: "arc", tempo: "tempo-mainnet",
     })[canonicalChain];
     if (directHost && meta?.type === "evm") return { endpoint: `https://${directHost}.drpc.org`, protocol: "evm" };
-    const { DRPC_NETWORK } = await import("../../worker/src/lib/drpc.ts");
-    const network = DRPC_NETWORK[canonicalChain] ?? (canonicalChain === "solana" ? "solana" : undefined);
-    if (!network || (meta?.type !== "evm" && canonicalChain !== "solana")) return null;
-    return { endpoint: `https://lb.drpc.org/ogrpc?network=${network}`, protocol: canonicalChain === "solana" ? "solana-jsonrpc" : "evm", credential: "DRPC_API_KEY" };
+    const { DRPC_NETWORK } = await import("../../shared/lib/drpc.ts");
+    const network = DRPC_NETWORK[canonicalChain];
+    if (!network || meta?.type !== "evm") return null;
+    return { endpoint: `https://lb.drpc.org/ogrpc?network=${network}`, protocol: "evm", credential: "DRPC_API_KEY" };
   }
   return null;
 }

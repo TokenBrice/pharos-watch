@@ -21,7 +21,7 @@ import {
   addReviewedStaticReserveEvidence,
 } from "../safety-score-v9/extension-reserves";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
-import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";

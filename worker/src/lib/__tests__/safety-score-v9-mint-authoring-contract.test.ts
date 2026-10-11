@@ -4,13 +4,24 @@ import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versio
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { MintAuthorityProfile } from "@shared/types/core";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 import { makePublicationDexRow, makePublicationPegRow } from "./safety-score-v9-publication-input.test-support";
+
+// Pin the authoring scenario without independent incident curation. The native
+// review may resolve mint history, but bridge incident absence needs its own proof.
+vi.mock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
+  default: {
+    schemaVersion: 1,
+    digest: "0".repeat(64),
+    incidents: [],
+    negativeReviews: [],
+  },
+}));
 
 const AS_OF_SEC = 1_785_456_000;
 // Derived, never hardcoded: the extension rejects a reviewedAt later than the
@@ -398,16 +409,11 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     }
   });
 
-  // Premise rewritten, not re-valued: the 2026-08-08 C-wave review resolved both
-  // questions this test used to hold open (the RecoveryModeTriggerModule
-  // representation and the scoped historical mint-incident review), so DUSD's
-  // profile is now `confidence: "probable"` / `disposition: "scoreable"` and the
-  // compiled control facts are `known` with no gap IDs. The invariant worth
-  // guarding moved with it: the curated five-control array must compile to the
-  // same five keys, and the recovery module must stay represented as a narrow
-  // bypass surface on the governance control rather than as a mint-capable one —
-  // which the review evidence states explicitly ("adding it as an economically
-  // mint-capable control would overstate its scope").
+  // The C-wave review resolved RecoveryModeTriggerModule representation and
+  // historical native mint incidents. Its mint controls remain known, and the
+  // recovery module remains a narrow governance bypass rather than a mint path.
+  // That review is not an independent negative review of DUSD's bridge:
+  // aggregate control coverage must retain its separate incident uncertainty.
   it("compiles DUSD's resolved control review with the recovery module as a bypass surface, not a mint path", () => {
     const assetId = "dusd-dialectic";
     const activeAssetIds = [assetId, "usdc-circle"];
@@ -462,7 +468,10 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         "safe:ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc",
       ],
     });
-    expect(controlReview.state).toBe("reviewed-controls");
+    expect(controlReview.state).toBe("partially-reviewed-controls");
+    const bridgeControls = controlReview.controls.filter((control) => control.controlKind === "bridge");
+    expect(bridgeControls).toHaveLength(1);
+    expect(bridgeControls[0]!.incidentState).toBe("unknown");
     const feeTimelockControl = mintControls.find((control) =>
       control.authority?.authorityKey === "ethereum:0x38542447c49d24e617fc06113295d7aaa3bec4b6",
     );
@@ -470,8 +479,8 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       capabilities: ["parameter-change"],
       economicLossScope: "global-claim",
     });
-    // The scoped historical review establishes incident absence positively, so no
-    // control is left at the fail-closed "unknown" incident state.
+    // The scoped historical review establishes native mint incident absence
+    // positively without certifying the independently scoped bridge.
     expect(mintControls.map((control) => control.incidentState)).toEqual(
       Array.from({ length: mintControls.length }, () => "none"),
     );
@@ -498,8 +507,14 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       control.controlKey.startsWith(`mint-meta:${assetId}:`),
     );
     expect(compiledAsset.controlStatus).toMatchObject({
-      observationState: "known",
-      gapIds: [],
+      observationState: "bounded-unknown",
+      gapIds: [`${assetId}:gap:deployment-controls`],
+    });
+    const compiledBridge = compiledAsset.controls.find((control) => control.controlKind === "bridge")!;
+    expect(compiledBridge.incidentState).toBe("unknown");
+    expect(compiledBridge.factorStatuses?.incidentState).toMatchObject({
+      observationState: "missing",
+      gapIds: [`${assetId}:gap:control:${compiledBridge.controlKey}:incidentState`],
     });
     expect(compiledMintControls.map((control) => control.status)).toEqual(
       compiledMintControls.map(() =>

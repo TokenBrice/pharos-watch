@@ -125,6 +125,39 @@ describe("issuer payout identity", () => {
     expect(build({ config: { ...config, outputAssetType: "stable-single" } })?.output)
       .toEqual({ kind: "fiat", currency: "USD" });
   });
+  it("keeps ZARU's conditional issuer payout in fiat ZAR without nominal USD valuation", () => {
+    const observation = build({
+      stablecoinId: "zaru-blocktower",
+      config: getRedemptionBackstopConfig("zaru-blocktower")!,
+      now: Date.UTC(2026, 9, 12) / 1_000,
+    })!;
+    expect(observation.output).toEqual({ kind: "fiat", currency: "ZAR" });
+    expect(observation.scoreEligible).toBe(false);
+    expect(observation).not.toHaveProperty("outputUnitValueUsd");
+  });
+
+  it.each([
+    ["mantrausd-mantra", "usdc-circle"],
+    ["usdxl-last", "usdt-tether"],
+    ["usdb-blast", "dai-makerdao"],
+  ])("preserves %s's named output on diagnostic retained capacity without inventing complete costs", (id, output) => {
+    const observation = build({
+      stablecoinId: id, config: getRedemptionBackstopConfig(id)!,
+      resolvedFeeBps: null,
+      now: Date.UTC(2026, 9, 12) / 1_000,
+    })!;
+    expect(observation.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds: [output] });
+    expect(observation.scoreEligible).toBe(false);
+    expect(observation).not.toHaveProperty("allInCostBps");
+  });
+
+  it.each(["usdv-solomon-v2", "iusd-initia", "bnusd-balanced"])(
+    "does not expose %s's opaque composite path as a configured output or execution",
+    (id) => {
+      expect(getRedemptionBackstopConfig(id)).toBeNull();
+      expect(getConfiguredRedemptionBackstopIds()).not.toContain(id);
+    },
+  );
 
   it("honors HLUSD's reviewed stablecoin basket", () => {
     expect(build({
@@ -154,6 +187,7 @@ describe("issuer payout identity", () => {
     ["srusde-strata", ["usde-ethena", "susde-ethena"]],
     ["dllr-sovryn", ["asset:zusd", "doc-money-on-chain"]],
     ["gldy-streamex", ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"]],
+    ["spusd-soulpeg", ["asset:susdc-soulpeg"]],
   ] as const)("keeps %s explicit unresolved outputs instead of parent, fiat or basket inference", (id, keys) => {
     const reviewed = getRedemptionBackstopConfig(id)!;
     expect(build({ stablecoinId: id, config: reviewed })?.output).toEqual({

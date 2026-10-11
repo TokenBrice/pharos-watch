@@ -10,7 +10,11 @@ import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { boundedUnknown, makeDeploymentControl, makeEconomicControlFacts, noBridgeReview, noMintReview, noOracleReview, requiredKnown } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
-import { ReviewEvidenceBuilder, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
+import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 const original = structuredClone(reviews.providerRowExclusionReviews);
 const registryPath = "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
@@ -39,6 +43,54 @@ function cohort(review: NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][nu
   return unresolvedDeploymentCohort({ assetId: "frax-frax", supply: {
     ...review, status: { applicability: { state: "required" }, observationState: "known" },
   } } as unknown as V9EconomicControlAssetFacts, []).share;
+}
+
+async function consumer({
+  clockSec = original[0]!.reviewedAtSec + 1,
+  ownLegacyDeployment = false,
+  foreignCatalogDeployment = false,
+  additionalProviderLabel = false,
+} = {}) {
+  const native = ACTIVE_META_BY_ID.get("frax-frax")!.contracts!.find((contract) => contract.chain === "ethereum")!;
+  const nativeKey = `ethereum:${native.address}`;
+  const source = { label: "Fixture primary evidence", url: "https://example.com/identity" };
+  const risk: BridgeRouteRiskProfile = {
+    tier: "single-chain-or-native", confidence: "verified", summary: "Fixture native issuance census.",
+    reviewer: "Fixture reviewer", reviewedAt: "2026-10-01", sources: [source],
+    routes: [{
+      id: nativeKey, destinationChain: "ethereum", contractAddress: native.address,
+      protocol: "Fixture native issuance", issuanceModel: "native-issuance", routeClass: "native",
+      riskTier: "single-chain-or-native", semantics: "native-mint", scope: "canonical",
+      reviewDisposition: "reviewed", observedAt: "2026-10-01", sources: [source],
+    }],
+  };
+  const meta: V9ExtensionRegistryMeta = {
+    id: "frax-frax", mechanismArchetype: "fiat-cash", bridgeRouteRisk: risk,
+    contracts: [native, ...(ownLegacyDeployment ? [{
+      chain: "fraxtal", address: "0xff000000000000000000000000000000000001fd", decimals: 18,
+    }] : []), ...(foreignCatalogDeployment ? [{
+      chain: "fraxtal", address: original[0]!.contractAddress, decimals: 18,
+    }] : [])],
+  };
+  const row = (current: number) => ({ current, circulatingPrevDay: current, circulatingPrevWeek: current, circulatingPrevMonth: current });
+  const fixed = makeV9FixedInput({
+    assetId: meta.id, clockSec,
+    chainSupplyByChain: { Ethereum: row(additionalProviderLabel ? 80 : 90), Fraxtal: row(10),
+      ...(additionalProviderLabel ? { fraxtal: row(10) } : {}) },
+  });
+  await build(fixed as SafetyScoreV9CompilerInput, risk);
+  // Cold imports are required to exercise the just-replaced registry admission boundary.
+  const { buildSafetyScoreV9BaselineExtension } = await import("../safety-score-v9/extension");
+  const { compileSafetyScoreV9FactSetFromFixedInput } = await import("../safety-score-v9/fact-set");
+  const transfer = SafetyScoreV9ReviewedTransferFactSchema.parse({
+    assetId: meta.id, reviewedAt: "2026-10-01", reviewer: "Fixture reviewer",
+    deployments: [{ chainId: "ethereum", contractOrTokenId: native.address, scope: "canonical",
+      posture: "permissionless", evidence: "Exact native token has no transfer restrictions.", sources: [source] }],
+  });
+  const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+    metaById: new Map([[meta.id, meta]]), reviewedTransferFacts: new Map([[meta.id, transfer]]),
+  });
+  return { fixed, extension, facts: compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]! };
 }
 
 describe("reviewed attribution-only provider-row exclusion", () => {
@@ -117,7 +169,8 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     expect(admitted.reasons).not.toContainEqual(expect.objectContaining({ code: "runtime-bridge-materiality-unavailable" }));
     expect(admittedBridge.review.status.observationState).toBe("known");
     expect(admittedBridge.review.diagnostics?.unprovenRouteJoins).toEqual([]);
-    expect(admittedBridge.controls).toEqual(baselineBridge.controls);
+    expect(admittedBridge.controls).toEqual(unreviewed ? baselineBridge.controls :
+      baselineBridge.controls.filter((control) => control.deploymentKey !== "unmatched-chain:frax-frax:fraxtal"));
     expect(unresolvedDeploymentCohort(facts, facts.controls).share).toBeCloseTo(0.02);
     expect(facts.supply.unknownRouteSupplyShare).toBeCloseTo(unreviewed ? 0.02 : 0.1209);
     expect(facts.supply.unreviewedRouteSupplyShare).toBeCloseTo(unreviewed ? 0.16 : 0);
@@ -166,6 +219,55 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     authoredExclusions = [];
     expect(unchanged).toEqual(await build(fixed));
     expect(JSON.stringify(fixed)).toBe(captured);
+  });
+
+  it("removes only the foreign synthetic control and its consumer-visible factor/deployment gaps", async () => {
+    const admitted = await consumer();
+    const foreignKey = "unmatched-chain:frax-frax:fraxtal";
+    expect(admitted.facts.controls.some((control) => control.deploymentKey === foreignKey)).toBe(false);
+    expect(admitted.facts.gaps.some((gap) => gap.path.kind === "deployment-control" && gap.path.deploymentKey === foreignKey)).toBe(false);
+    expect(admitted.facts.gaps.some((gap) => gap.causeScope?.exposureId === foreignKey)).toBe(false);
+    expect(admitted.facts.accessReview.transfer.status.observationState).toBe("known");
+    expect(admitted.facts.gaps.some((gap) => gap.gapId === "frax-frax:gap:access:transfer")).toBe(false);
+    expect(admitted.fixed.aggregateCirculatingById["frax-frax"]!.circulating).toEqual({ peggedUSD: 100 });
+    authoredExclusions = [];
+    const baseline = await consumer();
+    const foreign = baseline.facts.controls.find((control) => control.deploymentKey === foreignKey)!;
+    expect(foreign.factorStatuses).toMatchObject({
+      authority: { observationState: "missing" }, capAuthority: { observationState: "missing" },
+      claimImpairment: { observationState: "missing" }, incidentState: { observationState: "missing" },
+    });
+    expect(baseline.facts.gaps.some((gap) => gap.path.kind === "deployment-control" && gap.path.deploymentKey === foreignKey)).toBe(true);
+    expect(baseline.facts.accessReview.transfer.status.observationState).not.toBe("known");
+  });
+
+  it.each([
+    ["expired", { expiresAtSec: original[0]!.reviewedAtSec + 1 }],
+    ["future", { reviewedAtSec: original[0]!.reviewedAtSec + 2 }],
+    ["different row label", { providerChainLabel: "fraxtal" }],
+    ["different contract", { contractAddress: "0xff000000000000000000000000000000000001fd" }],
+  ])("retains foreign control and transfer gaps when the exclusion is %s", async (_name, patch) => {
+    Object.assign(authoredExclusions[0]!, patch);
+    const { facts } = await consumer();
+    expect(facts.controls.some((control) => control.deploymentKey === "unmatched-chain:frax-frax:fraxtal")).toBe(true);
+    expect(facts.accessReview.transfer.status.observationState).not.toBe("known");
+  });
+
+  it("does not exclude a second same-chain provider label or an unobserved own LFRAX deployment", async () => {
+    const aliases = await consumer({ additionalProviderLabel: true });
+    expect(aliases.facts.controls.some((control) => control.deploymentKey === "unmatched-chain:frax-frax:fraxtal")).toBe(true);
+    expect(aliases.facts.accessReview.transfer.status.observationState).not.toBe("known");
+    const legacy = await consumer({ ownLegacyDeployment: true });
+    expect(legacy.extension.assets[0]!.supplyReview!.providerRowExclusions).toHaveLength(1);
+    expect(legacy.facts.accessReview.transfer.status.observationState).not.toBe("known");
+    expect(legacy.facts.gaps.some((gap) => gap.gapId === "frax-frax:gap:access:transfer")).toBe(true);
+  });
+
+  it("excludes only the exact admitted foreign contract from the transfer catalog census", async () => {
+    const foreign = await consumer({ foreignCatalogDeployment: true });
+    expect(foreign.facts.accessReview.transfer.status.observationState).toBe("known");
+    const both = await consumer({ foreignCatalogDeployment: true, ownLegacyDeployment: true });
+    expect(both.facts.accessReview.transfer.status.observationState).not.toBe("known");
   });
 
   it("retains an asset's own same-chain legacy deployment instead of excluding its route", async () => {

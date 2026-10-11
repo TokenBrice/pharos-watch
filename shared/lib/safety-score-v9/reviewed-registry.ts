@@ -1,8 +1,8 @@
 import type { z } from "zod";
-import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import { isRecord } from "@shared/lib/type-guards";
-import { sha256Hex } from "@shared/lib/sha256";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { compareText } from "./primitives";
+import { isRecord } from "../type-guards";
+import { sha256Hex } from "../sha256";
+import { stableJsonStringifyV1 } from "../stable-json";
 
 type AttributedRow = { assetId: string; [key: string]: unknown };
 const EMPTY_REGISTRY_ROWS: readonly never[] = [];
@@ -14,11 +14,40 @@ export class ReviewedRegistryEntryError extends Error {
   }
 }
 
+/** Share unchanged JSON subtrees only after successful schema admission. */
+function reuseAdmittedRegistryValue(authored: unknown, admitted: unknown): unknown {
+  if (Object.is(authored, admitted)) return authored;
+  if (authored === null || admitted === null || typeof authored !== "object" || typeof admitted !== "object") {
+    return admitted;
+  }
+  if (Array.isArray(authored) || Array.isArray(admitted)) {
+    if (!Array.isArray(authored) || !Array.isArray(admitted)) return admitted;
+    let unchanged = authored.length === admitted.length;
+    for (let index = 0; index < admitted.length; index++) {
+      admitted[index] = reuseAdmittedRegistryValue(authored[index], admitted[index]);
+      unchanged &&= Object.is(authored[index], admitted[index]);
+    }
+    return unchanged ? authored : admitted;
+  }
+  if (Object.getPrototypeOf(authored) !== Object.prototype || Object.getPrototypeOf(admitted) !== Object.prototype) {
+    return admitted;
+  }
+  const source = authored as Record<string, unknown>;
+  const result = admitted as Record<string, unknown>;
+  const keys = Object.keys(result);
+  let unchanged = Object.keys(source).length === keys.length;
+  for (const key of keys) {
+    result[key] = reuseAdmittedRegistryValue(source[key], result[key]);
+    unchanged &&= Object.prototype.hasOwnProperty.call(source, key) && Object.is(source[key], result[key]);
+  }
+  return unchanged ? authored : admitted;
+}
+
 /**
  * Index only attribution and key collisions; evidence is admitted on the asset's first read.
- * An admitted row whose parse output is byte-identical (same keys, order, and values) to the
- * authored row reuses the authored object instead of caching a second, schema-built copy of
- * every entry for the isolate's lifetime.
+ * Reuse schema-equivalent authored JSON subtrees irrespective of object-key insertion
+ * order. Transformed/defaulted/stripped values retain the admitted graph, while their
+ * unchanged children need not occupy a second isolate-lifetime graph.
  */
 export function createReviewedAssetRegistry<T>(args: {
   rows: readonly AttributedRow[];
@@ -60,7 +89,7 @@ export function createReviewedAssetRegistry<T>(args: {
         const path = [args.path, index, ...issue.path].join(".");
         throw new ReviewedRegistryEntryError(path, parsed.error.issues.map((failure) => `${[args.path, index, ...failure.path].join(".")}: ${failure.message}`).join("; "));
       }
-      return JSON.stringify(parsed.data) === JSON.stringify(row) ? row as T : parsed.data;
+      return reuseAdmittedRegistryValue(row, parsed.data) as T;
     });
     validated.set(assetId, rows);
     return rows;

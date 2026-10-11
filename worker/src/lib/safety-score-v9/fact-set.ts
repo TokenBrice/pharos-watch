@@ -122,13 +122,13 @@ function buildAssetFacts(
   const mechanismRiskReview = buildMechanismReview(context);
   const mechanismExitFacts = buildMechanismExitFacts(context);
   const cdpStressCoverage = buildCdpStressCoverage(context);
-  const routes = buildRoutes(context);
+  const supply = buildSupply(context);
+  const routes = buildRoutes(context, supply);
   const exitRoutes = routes.exitRoutes.map((route) => compileRouteFactorStatuses(context, route));
   const controls = buildControls(context);
   const economicControlReview = buildEconomicControlReview(context);
   const accessReview = buildAccessReview(context, reserves, dependencies);
   const peg = buildPeg(context);
-  const supply = buildSupply(context);
   const operationalResilience = buildOperationalResilienceFact(context);
   const operationalGap = operationalResilience === null ? context.gaps.get(`${context.asset.assetId}:gap:operational-resilience`) : undefined;
   const operationalResilienceStatus = operationalGap ? createV9FactStatus({

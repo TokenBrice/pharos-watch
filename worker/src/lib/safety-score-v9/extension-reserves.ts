@@ -18,9 +18,9 @@ import {
   conservativeDateEndSec,
   type ExtensionAsset,
   type ReserveClassification,
-  type ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "./extension-shared";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
 const REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC =
   V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec;

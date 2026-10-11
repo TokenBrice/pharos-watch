@@ -79,6 +79,17 @@ export function admitExitExecutionCertificate(args: {
     return unavailable("execution-input-units-mismatch");
   }
   if (point.executableUsd > 0) {
+    const externalShares = review.producer.kind === "erc4626-instant" ? review.producer.externalShareToken : undefined;
+    if (externalShares) {
+      const gasFees = point.fees.filter((fee) => fee.kind === "gas");
+      const native = certificate.feeReferences.find((reference) => reference.assetKey === "asset:eth");
+      if (review.producer.chain !== "ethereum" || gasFees.length !== 1 || gasFees[0]!.assetKey !== "asset:eth" ||
+          BigInt(gasFees[0]!.rawUnits) <= 0n || !native || native.deployment !== "ethereum:native:eth" ||
+          native.decimals !== 18 || native.sourceId !== `chainlink:${externalShares.nativeUsdFeed.address.toLowerCase()}` ||
+          !fresh(native.observedAtSec, Math.min(model.priceMaxAgeSec, externalShares.nativeUsdFeed.maxAgeSec)) ||
+          !certificate.prerequisites.includes("ordinary-token-approval") ||
+          !certificate.prerequisites.includes("pinned-transaction-gas-estimate")) return unavailable("execution-custodian-gas-unproven");
+    }
     const executedValue = exitRawUsd(BigInt(point.executedRawInput), certificate.inputReference.decimals, certificate.inputReference.unitValueUsd);
     const outputValue = point.outputs.reduce((sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.unitValueUsd), 0n);
     const expectedOutputValue = point.outputs.reduce((sum, leg) => sum + exitRawUsd(BigInt(leg.rawUnits), leg.decimals, leg.expectedUnitValueUsd), 0n);

@@ -21,7 +21,6 @@ const REFERENCES: PriceValidationReferences = {
   typeByPeg: { peggedZAR: "fresh", peggedXOF: "fresh" },
 };
 const NOMINAL_ROUTES = [
-  ["sofid-sofi", "peggedUSD", 1],
   ["usbd-bima", "peggedUSD", 1],
   ["usdq-quill", "peggedUSD", 1],
   ["zarm-mento", "peggedZAR", 0.0608],
@@ -135,6 +134,34 @@ describe("nominal par precedence (DEC-02 / CR-43)", () => {
     it.each(NOMINAL_ROUTES)("does not displace par for %s", async (id, pegType, par) => {
       expectPublishedNominal(await runPrecedence(makeAsset(id, pegType, buildMarket(par))), pegType, par);
     });
+  });
+
+  it.each([
+    ["sofid-sofi", "peggedUSD", 1],
+  ] as const)("retires %s nominal publication without weakening observed-source trust", async (id, pegType, par) => {
+    expect(protocolParProvider.matches(id)).toBe(false);
+    const quote = market(par, {
+      priceSource: "coingecko+kraken", priceConfidence: "high",
+      agreeSources: ["coingecko", "kraken"], consensusSources: ["coingecko", "kraken"],
+      priceObservedAtMode: "local_fetch",
+    });
+    const published = await runPrecedence(makeAsset(id, pegType, quote));
+    expect(published.price).toBe(quote.price);
+    expect(published.priceSource).toBe("coingecko+kraken");
+    expect(published.priceObservedAt).toBe(NOW - 30);
+    expect(published.nominalPriceReference).toBeUndefined();
+    expect(isObservedPrice(published)).toBe(true);
+    expect(classifyPrimaryDepegTrust(published, NOW)).toBe("confirm_required");
+
+    const carried = await runPrecedence(makeAsset(id, pegType, {
+      price: par, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+      nominalPriceReference: { price: par, source: "protocol-par", mode: "nominal_reference" },
+    }));
+    expect(carried.price).toBeNull();
+    expect(carried.nominalPriceReference).toBeUndefined();
+    const absent = await runPrecedence(makeAsset(id, pegType));
+    expect(absent.price).toBeNull();
+    expect(absent.nominalPriceReference).toBeUndefined();
   });
 
   it("publishes no nominal reference when non-USD par has no usable FX reference, and drops a carried one", async () => {

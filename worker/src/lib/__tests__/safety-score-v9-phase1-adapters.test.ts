@@ -24,9 +24,9 @@ import { resolveV9MintControlGroupSeverity } from "@shared/lib/safety-score-v9/e
 import { addReviewedStaticReserveEvidence } from "../safety-score-v9/extension-reserves";
 import {
   conservativeDateEndSec,
-  ReviewEvidenceBuilder,
   reviewedObservationState,
 } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
   LIVE_RESERVES_CONFIG,
   eligibleReserveMeta as reserveMetaFixture,

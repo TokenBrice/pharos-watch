@@ -2,6 +2,7 @@ import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9
 import type { V9PublicationHoldReason } from "@shared/types/report-cards-v9";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { sha256Hex } from "@shared/lib/sha256";
+import { resolveV9PublicWitnessText } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
@@ -53,7 +54,9 @@ export function buildSafetyScoreCompactCard(card: Card): SafetyScoreCompactCard 
     },
     pegMultiplier: card.pegMultiplier,
     bindingCap: card.bindingCap === null ? null : {
-      kind: card.bindingCap.kind, reason: card.bindingCap.reason, limit: card.bindingCap.limit,
+      kind: card.bindingCap.kind,
+      reason: card.witnessTexts === undefined ? card.bindingCap.reason : resolveV9PublicWitnessText(card, card.bindingCap.reason),
+      limit: card.bindingCap.limit,
     },
     primaryExitRoute: primary == null ? null : {
       routeId: primary.routeId, lane: primary.lane,

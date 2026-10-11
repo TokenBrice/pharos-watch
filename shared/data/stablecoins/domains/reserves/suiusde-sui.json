@@ -4,7 +4,7 @@
     {
       "sourceKey": "ethena-whitelabel:usde",
       "name": "USDe (Ethena synthetic dollar)",
-      "pct": 90.102,
+      "pct": 90.169,
       "risk": "high",
       "coinId": "usde-ethena",
       "depType": "collateral",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "ethena-whitelabel:usdc",
       "name": "USDC cash-equivalent reserves",
-      "pct": 9.891,
+      "pct": 9.812,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -36,7 +36,7 @@
     {
       "sourceKey": "ethena-whitelabel:off-chain",
       "name": "Coinbase Prime custody (off-chain)",
-      "pct": 0.007,
+      "pct": 0.019,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -51,8 +51,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC07)",
+    "reviewedAt": "2026-10-11",
+    "reviewer": "Sol curation campaign 2026-10-11 (G15SuiUSDe)",
     "confidence": "verified",
     "sources": [
       {
@@ -68,9 +68,9 @@
         "url": "https://blog.sui.io/esui-dollar-suiusde-deepbook-margin/"
       }
     ],
-    "rationale": "Ethena Whitelabel suiUSDe API timestamp 1790812827242 (2026-10-01T00:00:27.242Z) reports totalBacking USD 12,392,233.449979. Complete disclosed rows are USDe 11,165,640.265470; on-chain USDC 440, 1,902.052319, 965,446.324661 and 257,903.444342; and Coinbase Prime USDC 901.362187. On-chain USDC sums to 1,225,691.821322. Independently dividing each group by totalBacking and rounding to three decimals gives 90.102%, 9.891% and 0.007%. The disclosed rows are USD 0.001 below totalBacking; no residual asset is invented and all existing category and custody classifications are retained.",
+    "rationale": "Ethena Whitelabel suiUSDe API timestamp 1791676827389 (2026-10-11T00:00:27.389Z), observed 2026-10-11T08:38:06Z, reports totalBacking USD 12,403,838.683257. Complete disclosed rows are USDe 11,184,366.265470; on-chain USDC 440, 3,407.414600, 955,346.326361 and 257,903.444342; and Coinbase Prime USDC 2,375.231484. On-chain USDC sums to 1,217,097.185303. Independently dividing each group by totalBacking and rounding to three decimals gives 90.169%, 9.812% and 0.019%. The disclosed rows are USD 0.001 below totalBacking; no residual asset is invented and all existing category, liquidity and custody classifications are retained.",
     "compositionBasis": "Ethena Whitelabel issuer transparency API, with backing grouped by token and the Coinbase Prime off-chain custody balance retained separately.",
-    "compositionAsOf": "2026-10-01",
+    "compositionAsOf": "2026-10-11",
     "scope": "full-composition",
     "knownUnknownExposure": "The API identifies backing token, custodian, network and amount for every disclosed row; listed balances are USD 0.001 below totalBacking. Legal segregation, insolvency treatment and rehypothecation remain undisclosed.",
     "knownUnknownExposurePct": 0

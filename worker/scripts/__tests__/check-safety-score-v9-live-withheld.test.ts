@@ -1,6 +1,6 @@
 import { makeAccessReview } from "@shared/lib/__tests__/safety-score-v9-access-lookthrough.test-support";
 import { buildSafetyScoreV9AccessClaimGraph } from "../../src/lib/safety-score-v9/extension-access-lookthrough";
-import { ReviewEvidenceBuilder } from "../../src/lib/safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { computeNativeDexLiquidityPayloadFingerprint, normalizeNativeV9Input, normalizeSafetyScoreV9CompilerInput } from "../../src/lib/safety-score-v9/native-input";
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";

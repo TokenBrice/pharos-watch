@@ -30,6 +30,30 @@ const REVIEWED_MENTO_XOFM_PSM_AT = "2026-07-27";
 const reviewedBasketRedemptionSupplyFull = documentedBoundSupplyFull(REVIEWED_BASKET_REDEMPTION_AT);
 
 const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "usdxl-last": {
+    ...psmSwapBase,
+    reviewedAt: "2026-10-11",
+    capacityModel: { kind: "unquantified" },
+    holderEligibility: "any-holder",
+    outputAssets: ["usdt-tether"],
+    costModel: documentedVariableFee(
+      "GSM buyAsset charges getBuyFee through the mutable fee strategy; no binding all-in numeric maximum is established. Gas is separate.",
+      "formula",
+    ),
+    docs: [
+      sourceRef("HypurrFi USDXL live Burn interface", "https://app.hypurrfi.com/usdxl", ["route"]),
+      sourceRef("Exact HyperEVM USDXL GSM proxy", "https://hyperevmscan.io/address/0xcb17105f6a7a75d1f1c91317a4621d9aaafe96fd#code", ["route"]),
+      sourceRef("Exact verified GsmWithHyFiPool implementation and inherited Gsm", "https://sourcify.dev/server/v2/contract/999/0xdc6ed7834f8693fc2691e1b70ea0ccec557c8f26?fields=sources,abi,compilation", ["route", "access", "settlement", "fees"]),
+      sourceRef("Pinned HyperEVM identity observation at block 48242188", "https://rpc.hyperliquid.xyz/evm", ["route"]),
+      sourceRef("HypurrFi agent reference retains contradictory not-enabled text", "https://docs.hypurrfi.com/agents/usdxl", ["route"]),
+    ],
+    notes: [
+      "Sol curation campaign 2026-10-11 (G58EUROT), reviewed 2026-10-11T08:41:59Z. HyperEVM USDXL 0xca79db4b49f608ef54a5cb813fbed3a6387bc645 is redeemed through GSM proxy 0xcb17105f6a7a75d1f1c91317a4621d9aaafe96fd into USDt0 0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb (tracked as usdt-tether). No HyperCore-to-HyperEVM conversion or whole-deployment availability is certified.",
+      "Exact implementation 0xdc6ed7834f8693fc2691e1b70ea0ccec557c8f26 exposes inherited permissionless buyAsset(minAmount, receiver): approve USDXL, transferFrom the holder, burn gross USDXL and transfer underlying in the same transaction. notFrozen/notSeized and available liquidity/current exposure constrain execution; a revert is not evidence of whole-asset exhaustion. The separate buyHyAsset output is a lending receipt and is not included in this route.",
+      "Observed 2026-10-11T08:41:02.546Z at block 48242188, hash 0xc62a075168a1e32283bf5179255452cc1d2936d058c3f6cb896859e00c77c96f, timestamp 2026-10-11T08:40:05Z: EIP-1967 implementation, USDXL_TOKEN and UNDERLYING_ASSET match the exact identities; getIsFrozen and getIsSeized return false. These snapshots are not a permanent open-state guarantee or exact-request execution certificate.",
+      "The live app advertises Burn USDXL to redeem USDT0, subject to available liquidity. The agent-reference bundle still says direct redemptions are not currently enabled; verified exact implementation, pinned identities and displayed Buy Asset transactions corroborate the current route without inventing its launch date. No supply-full bound, static sampled capacity, zero fee, fee maximum or end-to-end cross-chain settlement bound is authored.",
+    ],
+  },
   "cusd-cap": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,

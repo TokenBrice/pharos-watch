@@ -25,7 +25,7 @@ const VAULT = "0x0000000000000000000000000000000000000001";
 const TOKEN = "0x0000000000000000000000000000000000000002";
 const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
-const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }));
+const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }));
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
   default: { schemaVersion: 1, get reviews() { return [review]; } },
@@ -55,9 +55,10 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         const received = executed * (10_000n - state.feeBps) / 10_000n;
         results.push(encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [[
           { success: true, returnData: word(7n) }, { success: true, returnData: word(shares) },
-          { success: succeeds, returnData: succeeds ? word(received) : "0x" },
+          { success: succeeds, returnData: succeeds ? word(state.grossReturn ? executed : received) : "0x" },
           { success: true, returnData: word(7n + (succeeds ? received + (state.realizedMismatch ? 1n : 0n) : 0n)) },
           { success: true, returnData: word(shares - (succeeds ? executed : 0n)) },
+          { success: true, returnData: word(1_000_000_000_000_000n - (succeeds && !state.escrowOnly ? executed : 0n)) },
         ]]));
         continue;
       }
@@ -71,7 +72,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         [toFunctionSelector("maxWithdraw(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("convertToAssets(uint256)")]: amount,
         [toFunctionSelector("convertToShares(uint256)")]: amount,
-        [toFunctionSelector("previewRedeem(uint256)")]: amount * (10_000n - state.feeBps) / 10_000n,
+        [toFunctionSelector("previewRedeem(uint256)")]: state.grossPreview ? amount : amount * (10_000n - state.feeBps) / 10_000n,
         [toFunctionSelector("paused()")]: state.paused ? 1n : 0n,
       };
       if (!(selector in values)) throw new Error(`unexpected fixture selector ${selector}`);
@@ -92,7 +93,7 @@ const inputReference: ExitExecutionCertificate["inputReference"] = { assetKey: "
   unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-price", sourceGenerationId: "fixture-price", observedAtSec: CLOCK };
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
-beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0 }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
 describe("reviewed synchronous ERC4626 exact execution", () => {
@@ -126,6 +127,33 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
   it("quantifies a 50bps withdrawal fee in output units exactly once", async () => {
     state.feeBps = 50n;
     expect((await observeErc4626InstantExit(args)).points[0]).toMatchObject({ certification: "exact-complete", executionCostBps: 50, allInCostBps: 50, fees: [{ rawUnits: "500000000" }], outputs: [{ rawUnits: "99500000000" }] });
+  });
+  it("admits a source-reviewed gross preview only through the actual net receipt and retains default net-preview rejection", async () => {
+    state.feeBps = 50n; state.grossPreview = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    const grossReview = { ...review, producer: { ...review.producer, previewRedeem: "gross-before-fee" } } as ExitExecutionModelReview;
+    expect((await observeErc4626InstantExit({ ...args, review: grossReview })).points[0]).toMatchObject({
+      certification: "exact-complete", executionCostBps: 50, allInCostBps: 50,
+      fees: [{ rawUnits: "500000000" }], outputs: [{ rawUnits: "99500000000" }],
+    });
+    state.realizedMismatch = true;
+    await expect(observeErc4626InstantExit({ ...args, review: grossReview })).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it("values a reviewed gross redeem return by actual net proceeds and rejects escrow transfers without share burn", async () => {
+    state.feeBps = 50n; state.grossReturn = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    const grossReturnReview = { ...review, producer: { ...review.producer, redeemReturns: "gross-before-fee" } } as ExitExecutionModelReview;
+    expect((await observeErc4626InstantExit({ ...args, review: grossReturnReview })).points[0]).toMatchObject({
+      certification: "exact-complete", executionCostBps: 50, outputs: [{ rawUnits: "99500000000" }],
+    });
+    state.escrowOnly = true;
+    await expect(observeErc4626InstantExit({ ...args, review: grossReturnReview })).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it("rejects a changed reviewed delegatecall dependency before simulating any capacity", async () => {
+    const dependencyReview = { ...review, producer: { ...review.producer, dependencyCodeIdentities: [{
+      address: "0x0000000000000000000000000000000000000003", codeSha256: sha256Hex("0x6001"),
+    }] } } as ExitExecutionModelReview;
+    await expect(observeErc4626InstantExit({ ...args, review: dependencyReview })).rejects.toThrow("erc4626-dependency-identity-mismatch");
   });
   it("rejects substituted deployment, underlying identity and bytecode", async () => {
     await expect(observeErc4626InstantExit({ ...args, outputReference: { ...outputReference, deployment: `base:${TOKEN}` } })).rejects.toThrow("erc4626-route-identity-mismatch");

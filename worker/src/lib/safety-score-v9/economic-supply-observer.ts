@@ -60,7 +60,7 @@ export async function observeEconomicSolanaMint(input: {
   })) };
 }
 
-async function readReviewedApiAmount(source: ReviewedEconomicSupplyPlan["conversionSources"][number], signal?: AbortSignal, onBodyRead?: BodyReadObserver): Promise<EconomicSupplyReference | null> {
+async function readReviewedApiAmount(source: NonNullable<ReviewedEconomicSupplyPlan["referencePriceSource"]>, signal?: AbortSignal, onBodyRead?: BodyReadObserver): Promise<EconomicSupplyReference | null> {
   const response = await fetch(source.url, { signal });
   if (!response.ok) { await cancelResponseBodyQuietly(response); return null; }
   const text = await readResponseTextWithinLimitWithSignal(response, ECONOMIC_SUPPLY_BODY_CAPS.conversion, signal, onBodyRead);
@@ -70,6 +70,42 @@ async function readReviewedApiAmount(source: ReviewedEconomicSupplyPlan["convers
   // eslint-disable-next-line security/detect-unsafe-regex -- anchored canonical unsigned-decimal shape; groups cannot overlap.
   if ((typeof value !== "string" && typeof value !== "number") || !/^(0|[1-9][0-9]*)(\.[0-9]+)?$/.test(String(value)) || typeof observedAt !== "number" || !Number.isInteger(observedAt) || observedAt < 0 || typeof generation !== "string" || generation.length === 0) return null;
   return { sourceId: source.sourceId, sourceGeneration: generation, value: String(value), observedAtSec: observedAt, responseSha256: sha256Hex(text) };
+}
+
+/** Same canonical holding pin; no latest/numeric-block fallback or inferred NAV. */
+async function readReviewedErc4626Conversion(
+  source: Extract<ReviewedEconomicSupplyPlan["conversionSources"][number], { kind: string }>,
+  header: EvmBlockHeader | undefined, clockSec: number,
+  chainRpcs: Map<string, ChainRpcConfig>, signal?: AbortSignal,
+): Promise<EconomicSupplyReference | null> {
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+  if (!header || header.timestamp > clockSec || clockSec - header.timestamp > policy.referencePriceMaxAgeSec) return null;
+  const block = { blockHash: header.hash, requireCanonical: true };
+  const calls = [
+    { method: "eth_getCode", params: [source.vaultAddress, block] },
+    { method: "eth_call", params: [{ to: source.vaultAddress, data: toFunctionSelector("asset()") }, block] },
+    { method: "eth_call", params: [{ to: source.vaultAddress, data: DECIMALS_SELECTOR }, block] },
+    { method: "eth_call", params: [{ to: source.assetAddress, data: DECIMALS_SELECTOR }, block] },
+    { method: "eth_call", params: [{ to: source.vaultAddress,
+      data: toFunctionSelector("convertToAssets(uint256)") + (10n ** BigInt(source.shareDecimals)).toString(16).padStart(64, "0") }, block] },
+  ];
+  const results = await fetchEvmRpcBatch(source.chainId, calls, { chainRpcs, signal });
+  if (!results || results.length !== calls.length || typeof results[0] !== "string" ||
+    !/^0x[0-9a-f]+$/i.test(results[0]) || results[0].length % 2 !== 0 ||
+    sha256Hex(results[0].toLowerCase()) !== source.vaultRuntimeCodeSha256 ||
+    typeof results[1] !== "string" || results[1].toLowerCase() !== `0x${source.assetAddress.slice(2).padStart(64, "0")}` ||
+    results.slice(2).some(value => typeof value !== "string" || !/^0x[0-9a-f]{64}$/i.test(value)) ||
+    BigInt(results[2] as string) !== BigInt(source.shareDecimals) ||
+    BigInt(results[3] as string) !== BigInt(source.assetDecimals)) return null;
+  const assets = BigInt(results[4] as string);
+  if (assets <= 0n) return null;
+  const padded = assets.toString().padStart(source.assetDecimals + 1, "0");
+  const value = source.assetDecimals === 0 ? padded :
+    `${padded.slice(0, -source.assetDecimals)}.${padded.slice(-source.assetDecimals)}`.replace(/0+$/, "").replace(/\.$/, "");
+  const erc4626Proof = { anchor: header.number, anchorHash: header.hash, assets: assets.toString() };
+  return { sourceId: source.sourceId, sourceGeneration: `${source.chainId}:${header.number}:${header.hash}`,
+    value, observedAtSec: header.timestamp, erc4626Proof,
+    responseSha256: sha256Hex(stableJsonStringifyV1({ source, erc4626Proof })) };
 }
 
 const CURVE_HISTORY_PAGE_BLOCKS = 2000;
@@ -611,8 +647,11 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       observations.push(observation);
     }
     for (const source of plan.conversionSources) {
-      failedRouteId = source.sourceId; bodyOrigin = new URL(source.url).origin; bodyMethod = "conversion";
-      const conversion = await readReviewedApiAmount(source, input.signal, input.onBodyRead);
+      failedRouteId = source.sourceId; bodyMethod = "conversion";
+      bodyOrigin = "url" in source ? new URL(source.url).origin : null;
+      const conversion = "kind" in source
+        ? await readReviewedErc4626Conversion(source, headers.get(source.chainId), input.scoringClockSec, input.chainRpcs, input.signal)
+        : await readReviewedApiAmount(source, input.signal, input.onBodyRead);
       if (!conversion || Number(conversion.value) <= 0) return { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: source.sourceId };
       conversions.push(conversion);
     }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import {
   buildV9PortfolioProjection,
   buildV9SafetyTableMap,
@@ -17,6 +18,16 @@ import {
 
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 describe("V9 safety consumer projections", () => {
+  it("resolves raw-wire witness texts at the independent consumer parser boundary", () => {
+    const semantic = makeReportCardsV9Response();
+    const reason = { code: "unresolved-control-identity" as const, message: "The independently scoped incident disposition remains unknown.", path: "control:incidentState" };
+    semantic.cards[0]!.evidence.reasons = [reason];
+    semantic.cards[0]!.pillars.control.reasons = [reason];
+    const wire = { ...semantic, cards: semantic.cards.map((card) => internV9PublicWitnessTexts(card)) };
+    expect(resolveV9ConsumerResponse(wire, semantic.safetyScoreIdentity)).toEqual({
+      status: "available", identity: semantic.safetyScoreIdentity, value: semantic,
+    });
+  });
   it("preserves technical gap nulls and excludes them from grade risk buckets", () => {
     const gap = makeReportCardsV9PipelineGapCard("control", "A");
     const response = makeReportCardsV9Response({ cards: [gap] });

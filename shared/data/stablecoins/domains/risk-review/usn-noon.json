@@ -42,7 +42,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USN is natively issued on Ethereum through MinterHandlerV2. Its zkSync, Sophon, and Starknet deployments are burn-mint bridge representations: Hyperlane warp/router paths cover those tracked routes, while LayerZero Endpoint V2 peers are live between Ethereum and zkSync/Sophon only. The official TAC registry also identifies the USN representation 0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 on TAC, but tac is not registered in shared/lib/chains/index.ts and is intentionally omitted from the catalog contract and route inventory. Its TAC block 24352134 owner Safe 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, token implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2, proxy admin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe, Hyperlane mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, mailbox owner 0xb801c2712f92e2d29e1120862e0f9c93d80cbbca, and default ISM 0xad3bce653f56d4e03d0789d01d055b06cf6ac48f remain named Bridge Risk evidence gaps pending chain admission. Current tracked-route token owners, proxy slots, mailbox owners, default ISMs, Hyperlane remote mappings, and LayerZero peer reads are recorded below; Hyperlane validator sets and LayerZero DVN/message-library/executor configuration remain unresolved, so the external-validated-network tier is provisional.",
+    "summary": "USN is natively issued on Ethereum through MinterHandlerV2. Its zkSync, Sophon, and Starknet deployments are burn-mint bridge representations: Hyperlane warp/router paths cover those tracked routes, while LayerZero Endpoint V2 peers are live between Ethereum and zkSync/Sophon only. The official TAC registry also identifies USN 0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 on TAC, now included in the catalog with an unresolved route disposition; TAC is registered in the chain-identity and public RPC registries. Its TAC block 24352134 owner Safe 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, token implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2, proxy admin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe, Hyperlane mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, mailbox owner 0xb801c2712f92e2d29e1120862e0f9c93d80cbbca, and default ISM 0xad3bce653f56d4e03d0789d01d055b06cf6ac48f remain historical Bridge Risk evidence, not current liability shares. Current tracked-route token owners, proxy slots, mailbox owners, default ISMs, Hyperlane remote mappings, and LayerZero peer reads are recorded below; Hyperlane validator sets and LayerZero DVN/message-library/executor configuration remain unresolved, so the external-validated-network tier is provisional. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: Noon lists Sophon and TAC as deprecated, not as extinguished liabilities. Its specific USN architecture says burn-mint across supported chains, while Bridging Operations describes Hyperlane generally as lock-and-mint. TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 3882062016887419165253 atomic USN. Without exact historical route/escrow reconciliation, this inventory is not an exhaustive independent-liability proof; existing control observations and review dates are not refreshed.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Pharos mint-bridge boundary migration; Codex usn-noon; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting/identity only",
     "confidence": "manual-review",
@@ -84,6 +84,14 @@
       {
         "label": "TAC USN token on explorer",
         "url": "https://explorer.tac.build/address/0x51A30E647D33A044967FA3DBb04d6ED6F45455F6"
+      },
+      {
+        "label": "Noon deployment registry; deprecated Sophon and TAC identities, observed 2026-10-11T00:50:58Z by Sol curation campaign 2026-10-11 (C08USN), historical accounting scope only",
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+      },
+      {
+        "label": "Noon Bridging Operations; general Hyperlane lock-and-mint wording requires reconciliation with specific USN burn-mint architecture, observed 2026-10-11T00:50:58Z by Sol curation campaign 2026-10-11 (C08USN)",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability/bridging-operations.md"
       }
     ],
     "routes": [
@@ -260,6 +268,33 @@
         "failureDomainKeys": [
           "protocol:hyperlane-warp-route",
           "contract:starknet:0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b"
+        ]
+      },
+      {
+        "id": "tac:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6",
+        "destinationChain": "tac",
+        "contractAddress": "0x51a30e647d33a044967fa3dbb04d6ed6f45455f6",
+        "protocol": "Noon TAC deployment; exact current transport unreviewed",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Sol curation campaign 2026-10-11 (C08USN): issuer registry lists this deprecated TAC USN address. Pinned https://rpc.tac.build block 26795569, hash 0xc0823095b63e488e3c18155688a5fd0940774413f5bfc658b7c7442f54c32c06, timestamp 2026-10-11T00:51:29Z, observed 2026-10-11T00:51:51.117Z and 2026-10-11T00:52:28.173Z, establishes name USN, symbol USN, 18 decimals and totalSupply 3882062016887419165253 atomic units. Identity and nonzero supply do not certify current proxy/controller reach, escrow absence, every historical transport lane or authenticated in-flight accounting. Existing historical TAC controls in the summary are not promoted as a current control inventory.",
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry; deprecated TAC USN",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "TAC USN verified proxy metadata; current transport not certified",
+            "url": "https://explorer.tac.build/api/v2/smart-contracts/0x51A30E647D33A044967FA3DBb04d6ED6F45455F6"
+          },
+          {
+            "label": "Pinned TAC RPC identity and nonzero totalSupply, block 26795569",
+            "url": "https://rpc.tac.build"
+          }
         ]
       }
     ],
@@ -1012,7 +1047,7 @@
         },
         "capDescription": "The Starknet owner account governs the upgradeable Hyperlane representation and its router table; this is bridge representation authority, not an independent native USN issuance route. Signer quorum is 1-of-1.",
         "bypassSurfaces": [
-          "Single-signer account can upgrade/configure the representation immediately; wallet-vendor class name beyond class hash 0x3957f9f5... and version 001.002.000 was not independently labeled."
+          "Single-signer account can upgrade/configure the representation immediately. The recorded class 0x03957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a is Braavos Account v1.2.0; supported hardware/passkey/multisig features in the vendor code do not establish that this account enabled them."
         ],
         "observedAt": "2026-08-18",
         "observedBlock": 13501913,
@@ -1024,9 +1059,17 @@
           {
             "label": "Noon interoperability docs",
             "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
+          },
+          {
+            "label": "Braavos official Account Contract v1.2.0 README; exact recorded owner class hash matched, observed 2026-10-11T00:58:32Z by Sol curation campaign 2026-10-11 (C08USN)",
+            "url": "https://raw.githubusercontent.com/myBraavos/braavos-account-cairo/main/README.md"
+          },
+          {
+            "label": "Starknet Foundry account-create reference; independent Braavos v1.2.0 exact class mapping, observed 2026-10-11T00:58:32Z by Sol curation campaign 2026-10-11 (C08USN)",
+            "url": "https://foundry-rs.github.io/starknet-foundry/appendix/sncast/account/create.html"
           }
         ],
-        "evidence": "At Starknet block 13501913, token.owner() still returns 0x25beda2.... That account's get_signers/get_public_key establish a single Stark key and zero guardian. Class hash and version string were read via starknet_getClassHashAt / get_version. This closes the prior 'signer quorum unresolved' gap as 1-of-1 without claiming a named wallet product."
+        "evidence": "At Starknet block 13501913, token.owner() still returns 0x25beda2.... That account's get_signers/get_public_key establish a single Stark key and zero guardian. Class hash and version string were read via starknet_getClassHashAt / get_version. Sol curation campaign 2026-10-11 (C08USN), reviewed 2026-10-11T00:58:32Z: the exact recorded owner class hash 0x03957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a is published by Braavos as Account Contract v1.2.0 and independently listed by Starknet Foundry as type braavos / v1.2.0; its version matches the prior block 14197601 get_version pin (001.002.000). This resolves the named-product scoped question only. The earlier on-chain owner/signing observations are not renewed, no configured hardware signer, passkey, multisig, withdrawal limit or key-custody assurance is inferred from vendor capabilities, and supply attribution remains unresolved."
       },
       {
         "id": "starknet-hyperlane-mailbox-owner",
@@ -1073,21 +1116,6 @@
           }
         ],
         "evidence": "starknet_call at blocks 13501913 to 13502090: Mailbox.owner matches the authored controller. That account returns get_name=ArgentMultisig, threshold 4, seven signer public keys, class 0x6e150953.... Default ISM aggregation children, Pausable unpaused, and Ethereum-origin 6-of-9 validators were read from the live contracts. This is not a Gnosis Safe; signer values are Stark public keys, so no Safe API/threshold object is asserted."
-      }
-    ],
-    "scopedQuestions": [
-      {
-        "controlRef": "starknet-usn-owner",
-        "question": "What named Starknet account product (Argent 0.2.x / OpenZeppelin / other) is class 0x3957f9f5a1cbfe918cedc2015c85200ca51a5f7506ecb6de98a5207b759bf8a? Live calls prove 1-of-1 with no guardian, but the class is not self-named (no get_name) and public class registries were not independently matched on 2026-08-18.",
-        "subject": "execution-scope",
-        "reviewedAt": "2026-08-18",
-        "reviewer": "aug18-v927-control-wave W01",
-        "sources": [
-          {
-            "label": "Starknet USN owner account class (via token owner)",
-            "url": "https://starkscan.co/contract/0x025beda2df6bff2e5328d8dc873dd91c0c5ed3fac4ba9f295c022ea3217c3072"
-          }
-        ]
       }
     ]
   }

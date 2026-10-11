@@ -57,7 +57,7 @@ export function internEvidenceFactPathPrefixes(rows: V9PublicEvidenceFactWire[])
         else throw new Error("Fact path interning requires a literal causal reference");
       }
       else {
-        const causeRef = path[1] ?? row[2] ?? row[6][0];
+        const causeRef = path[1] ?? row[2] ?? (typeof row[6] === "number" ? row[6] : row[6][0]);
         if (typeof causeRef !== "number") throw new Error("Causal fact path has no reference");
         row[1] = [ref, `${suffix}:cause:${causeRef}`];
       }

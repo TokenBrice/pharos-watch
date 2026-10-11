@@ -39,6 +39,22 @@ export function decodeWorkerStablecoinCatalog(asset: PackedCatalog): readonly St
   const output = new Uint8Array(asset.maxUncompressedBytes);
   const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false });
   const ids = new Set<string>();
+  // JSON.parse does not share repeated source text across independently inflated
+  // records. Intern immutable strings only; never alias mutable evidence objects.
+  // This table dies after initialization, leaving only strings the catalog uses.
+  const strings = new Map<string, string>();
+  function internStrings(value: unknown): void {
+    if (value === null || typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    for (const key of Object.keys(record)) {
+      const field = record[key];
+      if (typeof field === "string") {
+        const existing = strings.get(field);
+        if (existing !== undefined) record[key] = existing;
+        else strings.set(field, field);
+      } else internStrings(field);
+    }
+  }
   return asset.coins.map((coin) => {
     if (!Array.isArray(coin) || coin.length !== 3) throw new Error("Invalid packed stablecoin record");
     const [id, bytes, payload] = coin as unknown[];
@@ -58,6 +74,7 @@ export function decodeWorkerStablecoinCatalog(asset: PackedCatalog): readonly St
     const inflated = gunzipSync(compressed, output.subarray(0, bytes));
     const record = JSON.parse(decoder.decode(inflated)) as StablecoinMeta;
     if (record.id !== id) throw new Error(`Packed stablecoin identity mismatch: ${id}`);
+    internStrings(record);
     ids.add(id);
     return record;
   });

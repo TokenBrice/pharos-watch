@@ -21,7 +21,7 @@ import {
 } from "./supply-attribution";
 import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
-import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 import {
   exactInputBoundTransferMaterialityPacket,
   type SafetyScoreV9TransferMaterialityGeneration,
@@ -179,7 +179,9 @@ function canonicalChainKey(raw: string): string {
  *
  * Reviewed 2026-10-07 against DefiLlama/peggedassets-server commit
  * 43ea0e28655f7391e57ac687f84377c0bcf8a39a, under src/adapters/peggedAssets/.
- * Each comment names the exact adapter evidence file.
+ * Each comment names the exact adapter evidence file. Global-config additions
+ * were reviewed 2026-10-11 at that same commit; SDK 5.0.236 providers.json binds
+ * `hyperliquid` to EVM chain 999 (HyperEVM), not HyperCore.
  */
 const DEFILLAMA_HYPEREVM_SUPPLY_IDENTITIES: Readonly<Record<string, {
   llamaId: string;
@@ -195,6 +197,15 @@ const DEFILLAMA_HYPEREVM_SUPPLY_IDENTITIES: Readonly<Record<string, {
   "frxusd-frax": { llamaId: "235", address: "0x80eede496655fb9047dd39d9f418d5483ed600df" },
   // reservoir-stablecoin/layerzeroConfig.ts
   "rusd-reservoir": { llamaId: "217", address: "0x866d66f64fb81461903e1e38d998e747ecf35e78" },
+  // src/peggedData/peggedData.ts: BOLD id 269, hyperliquid.bridgedFromETH
+  "bold-liquity": { llamaId: "269", address: "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a" },
+  // src/peggedData/peggedData.ts: FEUSD id 251, hyperliquid.issued
+  "feusd-felix": { llamaId: "251", address: "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70" },
+  // src/peggedData/peggedData.ts: USDXL id 322, hyperliquid.issued
+  "usdxl-last": { llamaId: "322", address: "0xca79db4b49f608ef54a5cb813fbed3a6387bc645" },
+  // src/peggedData/peggedData.ts: Monetrix USDM id 404, hyperliquid.issued.
+  // src/peggedAssets/utils/importAdapter.ts uses chainConfig when its module is absent.
+  "usdm-monetrix": { llamaId: "404", address: "0xe2d2959f89b6389deb624bf076fe7d9e5401f377" },
 };
 
 function canonicalProviderSupplyChainKey(

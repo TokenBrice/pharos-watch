@@ -476,7 +476,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdm-moneta": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    reviewedAt: "2026-10-09",
+    reviewedAt: "2026-10-11",
+    accessModel: "manual",
+    holderEligibility: "whitelisted-primary",
     settlementModel: "days",
     capacityModel: { kind: "unquantified" },
     costModel: {
@@ -506,6 +508,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "The historical 1-3 business day processing description does not establish a binding completed-payout SLA.",
       "Re-reviewed 2026-10-09: the capped/minimum USD component represents only the issuer burning fee, not independent bank charges. The omitted feeBpsMax keeps all-in cost unresolved. Do not substitute fixedFee(10), add 10 bps again, omit the cap or treat bank charges as zero.",
       "Moneta and NBX issue the same Cardano token against separate reserve books; source terms for one issuer do not prove a complete whole-token route or interchangeable issuer access.",
+      "Access reviewed 2026-10-11T08:41:18Z by Sol curation campaign 2026-10-11 (G62USDA): the rendered current FAQ explicitly limits the live mint/redemption rail to KYB-approved institutions; linked-bank-account redemption for KYC-verified individuals is coming soon. This manual Moneta rail does not establish eligibility for NBX issuance, funded same-notional capacity, a completed-payout SLA or a complete cost bound.",
     ],
   },
   "usdh-native-markets": {

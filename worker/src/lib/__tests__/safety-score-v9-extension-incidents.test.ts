@@ -1,9 +1,10 @@
+import { projectNegativeIncidentReview } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { describe, expect, it } from "vitest";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import type { V9ApplicableWrapperLocalFacts } from "@shared/types/safety-score-v9-wrapper";
 import { resolveV9WrapperParentLimit } from "@shared/lib/safety-score-v9/wrapper-risk";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { V9NegativeIncidentReviewSchema } from "@shared/types/safety-score-v9-incidents";
+import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema } from "@shared/types/safety-score-v9-incidents";
 import {
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
@@ -12,7 +13,8 @@ import {
   routeSafetyScoreV9NegativeIncidentReviews,
   addSafetyScoreV9NegativeIncidentEvidence,
 } from "../safety-score-v9/extension-incidents";
-import { ReviewEvidenceBuilder, type ControlOverlay } from "../safety-score-v9/extension-shared";
+import type { ControlOverlay } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { getSafetyScoreV9OperationalResilienceOverlay } from "../safety-score-v9/extension-operational-resilience";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
@@ -24,19 +26,23 @@ const NEGATIVE_REVIEW = V9NegativeIncidentReviewSchema.parse({
   scope: { kind: "control", controlKey: "mint-meta:fixture:controller" },
   reviewedAt: "2026-10-07T14:00:00Z",
   reviewer: "Fixture researcher",
-  windowStartSec: NEGATIVE_CLOCK_SEC - 86_400,
+  windowStartSec: Date.parse("2024-01-01T00:00:00Z") / 1_000,
   windowEndSec: NEGATIVE_CLOCK_SEC,
   conclusion: "no-known-incident",
   searchedSurfaces: [
-    { kind: "issuer-status", url: "https://example.com/status", finding: "No incident notice in researched window." },
-    { kind: "explorer-events", url: "https://example.com/events", finding: "Exact deployment event census ends at the pinned window end." },
-    { kind: "incident-tracker", url: "https://example.com/tracker", finding: "No exact-issuer control incident found in the researched window." },
+    { kind: "issuer-status", url: "https://example.com/status", finding: "Issuer status and announcements searched for this asset and chain; no known control incident." },
+    { kind: "explorer-events", url: "https://example.com/events", finding: "Exact deployment's displayed events tab shows no Pause/EmergencyStop events; paused()=false at pinned block 123 with timestamp 2026-10-07T13:00:00Z. Displayed tab is bounded, not a lifetime log census." },
+    { kind: "incident-tracker", url: "https://example.com/tracker", finding: "DefiLlama hacks, rekt.news and rail-provider security disclosures searched by issuer, asset, rail and chain; no known affected control." },
   ],
-  sources: [{ label: "Primary status", url: "https://example.com/status", observedAt: "2026-10-07T14:00:00Z", location: "Status archive", excerpt: "Operational" }],
+  sources: [
+    { label: "Primary status", url: "https://example.com/status", observedAt: "2026-10-07T14:00:00Z", location: "Status archive", excerpt: "Operational" },
+    { label: "Exact explorer and pinned emergency read", url: "https://example.com/events", observedAt: "2026-10-07T14:00:00Z", location: "Creation timestamp 2024-01-01; events tab; block 123", excerpt: "No displayed emergency event; paused=false." },
+    { label: "Incident and rail searches", url: "https://example.com/tracker", observedAt: "2026-10-07T14:00:00Z", location: "Issuer/asset/rail/chain search results", excerpt: "No known affected control found." },
+  ],
 });
 
 describe("Safety Score v9 independent negative incident routing", () => {
-  it("resolves an exact unknown mint control while preserving unrelated research gaps and scopes", () => {
+  it("establishes none from practical-bar negative research without a lifetime event census", () => {
     const target = { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const, executionScopeComplete: false, scopedQuestionFresh: true };
     const other = { ...target, controlKey: "mint-meta:fixture:other" };
     const routed = routeSafetyScoreV9NegativeIncidentReviews([target, other], "fixture", NEGATIVE_CLOCK_SEC, [NEGATIVE_REVIEW], []);
@@ -56,6 +62,85 @@ describe("Safety Score v9 independent negative incident routing", () => {
     const upgrade = { ...target, controlKind: "upgrade" as const };
     const routed = routeSafetyScoreV9NegativeIncidentReviews([target, global, upgrade], "fixture", NEGATIVE_CLOCK_SEC, [deploymentReview], []);
     expect(routed.map((row) => row.incidentState)).toEqual(["none", "unknown", "unknown"]);
+  });
+
+  it("keeps a deployment-scoped bridge incident off sibling controls and their independent negative reviews", () => {
+    const target = { ...control("bridge:target"), controlKind: "bridge" as const,
+      deploymentKey: "ethereum:0x1111111111111111111111111111111111111111",
+      scope: "deployment" as const, incidentState: "unknown" as const };
+    const sibling = { ...target, controlKey: "bridge:sibling",
+      deploymentKey: "base:0x2222222222222222222222222222222222222222" };
+    const original = getSafetyScoreV9ReviewedIncidents("usdp-parallel", NEGATIVE_CLOCK_SEC)
+      .find((row) => row.domain === "control")!;
+    if (original.domain !== "control") throw new Error("Expected control incident fixture");
+    const incident = V9ReviewedIncidentSchema.parse({
+      ...original, assetId: "fixture", status: "active", resolvedAt: null,
+      scope: { kind: "deployment", deploymentKey: target.deploymentKey, exposureShare: 0.1 },
+      posture: { ...original.posture, controlKinds: ["bridge"], incidentState: "active" },
+    });
+    const routed = routeSafetyScoreV9ControlIncidents([target, sibling], mintReview(null), [incident]);
+    expect(routed.controls.map((row) => row.incidentState)).toEqual(["active", "unknown"]);
+    const negatives = [target, sibling].map((row) => V9NegativeIncidentReviewSchema.parse({
+      ...NEGATIVE_REVIEW, reviewId: `negative:${row.controlKey}`,
+      scope: { kind: "deployment", deploymentKey: row.deploymentKey, controlKinds: ["bridge"] },
+    }));
+    expect(routeSafetyScoreV9NegativeIncidentReviews(routed.controls, "fixture", NEGATIVE_CLOCK_SEC,
+      negatives, [incident]).map((row) => row.incidentState)).toEqual(["active", "none"]);
+    const root = V9ReviewedIncidentSchema.parse({ ...incident, scope: { kind: "root-claim" } });
+    expect(routeSafetyScoreV9ControlIncidents([target, sibling], mintReview(null), [root])
+      .controls.map((row) => row.incidentState)).toEqual(["active", "active"]);
+  });
+
+  it.each(["active", "mitigated", "resolved"] as const)("routes a %s control incident only to its exact control without root seasoning", (status) => {
+    const target = { ...control("bridge-meta:fixture:target"), controlKind: "bridge" as const,
+      deploymentKey: "ethereum:0x1111111111111111111111111111111111111111",
+      scope: "deployment" as const, incidentState: "unknown" as const };
+    const sibling = { ...target, controlKey: "bridge-meta:fixture:sibling" };
+    const root = { ...control("mint-meta:fixture:root"), incidentState: "unknown" as const };
+    const wrongKind = { ...target, controlKey: "bridge-meta:fixture:upgrade", controlKind: "upgrade" as const };
+    const original = getSafetyScoreV9ReviewedIncidents("usdp-parallel", NEGATIVE_CLOCK_SEC)
+      .find((row) => row.domain === "control")!;
+    if (original.domain !== "control") throw new Error("Expected control incident fixture");
+    const incident = V9ReviewedIncidentSchema.parse({
+      ...original, assetId: "fixture", status, resolvedAt: status === "active" ? null : original.remediation.lastVerifiedAt,
+      remediation: { ...original.remediation, state: "verified" },
+      scope: { kind: "control", controlKey: target.controlKey },
+      posture: { ...original.posture, controlKinds: ["bridge"], incidentState: status === "active" ? "active" : "resolved" },
+    });
+    const baselineMint = mintReview(root.controlKey);
+    const routed = routeSafetyScoreV9ControlIncidents([target, sibling, root, wrongKind], baselineMint, [incident]);
+    expect(routed.controls.map((row) => row.incidentState)).toEqual([status === "active" ? "active" : "resolved", "unknown", "unknown", "unknown"]);
+    expect(routed.mintReview).toEqual(baselineMint);
+    const negatives = [target, sibling, root].map((row) => V9NegativeIncidentReviewSchema.parse({
+      ...NEGATIVE_REVIEW, reviewId: `negative:${row.controlKey}`,
+      scope: { kind: "control", controlKey: row.controlKey },
+    }));
+    expect(routeSafetyScoreV9NegativeIncidentReviews(routed.controls, "fixture", NEGATIVE_CLOCK_SEC, negatives, [incident])
+      .map((row) => row.incidentState)).toEqual([status === "active" ? "active" : "resolved", "none", "none", "unknown"]);
+    // Even before positive routing, negative research cannot conceal the exact incident.
+    expect(routeSafetyScoreV9NegativeIncidentReviews([target, sibling], "fixture", NEGATIVE_CLOCK_SEC, negatives, [incident])
+      .map((row) => row.incidentState)).toEqual(["unknown", "none"]);
+    if (status !== "active") {
+      expect(routeSafetyScoreV9ControlIncidents([target], mintReview(target.controlKey), [incident])
+        .mintReview.latestResolvedIncidentAtSec).toBe(Date.parse(`${original.remediation.lastVerifiedAt}T00:00:00Z`) / 1_000);
+    }
+  });
+
+  it("keeps active exact-control incidents ahead of historical incidents regardless of order", () => {
+    const target = { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const };
+    const original = getSafetyScoreV9ReviewedIncidents("usdp-parallel", NEGATIVE_CLOCK_SEC)
+      .find((row) => row.domain === "control")!;
+    if (original.domain !== "control") throw new Error("Expected control incident fixture");
+    const historical = V9ReviewedIncidentSchema.parse({ ...original, assetId: "fixture", status: "resolved",
+      resolvedAt: original.remediation.lastVerifiedAt, remediation: { ...original.remediation, state: "verified" },
+      posture: { ...original.posture, incidentState: "resolved" },
+      scope: { kind: "control", controlKey: target.controlKey } });
+    const active = V9ReviewedIncidentSchema.parse({ ...historical, status: "active", resolvedAt: null,
+      posture: { ...original.posture, incidentState: "active" } });
+    for (const incidents of [[historical, active], [active, historical]]) {
+      expect(routeSafetyScoreV9ControlIncidents([target], mintReview(target.controlKey), incidents)
+        .controls[0]!.incidentState).toBe("active");
+    }
   });
 
   it("fails closed for future, expired, old-window and same-day date-only reviews", () => {
@@ -85,9 +170,11 @@ describe("Safety Score v9 independent negative incident routing", () => {
 
   it("carries dated search-window evidence and leaves empty registries neutral", () => {
     const builder = new ReviewEvidenceBuilder("fixture", NEGATIVE_CLOCK_SEC);
-    addSafetyScoreV9NegativeIncidentEvidence(builder, [NEGATIVE_REVIEW]);
+    addSafetyScoreV9NegativeIncidentEvidence(builder, [projectNegativeIncidentReview(NEGATIVE_REVIEW)]);
     const finished = builder.finish();
-    expect(finished.researchEvidence).toMatchObject([{ observedAtSec: NEGATIVE_REVIEW.windowEndSec, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC }]);
+    expect(finished.researchEvidence).toHaveLength(NEGATIVE_REVIEW.sources.length);
+    expect(finished.researchEvidence.every((evidence) => evidence.observedAtSec === NEGATIVE_REVIEW.windowEndSec &&
+      evidence.maxAgeSec === V9_REVIEW_EVIDENCE_MAX_AGE_SEC)).toBe(true);
     expect(finished.componentEvidence).toMatchObject([{ componentKey: "control" }]);
     const rows = [control("mint-meta:fixture:controller")];
     expect(routeSafetyScoreV9NegativeIncidentReviews(rows, "fixture", NEGATIVE_CLOCK_SEC, [], [])).toBe(rows);

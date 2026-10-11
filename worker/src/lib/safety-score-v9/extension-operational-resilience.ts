@@ -5,7 +5,7 @@ import {
   SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema,
   type SafetyScoreV9OperationalResilienceOverlay,
 } from "@shared/types/safety-score-v9-operational-resilience-overlays";
-import { createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "@shared/lib/safety-score-v9/reviewed-registry";
 
 export {
   SafetyScoreV9OperationalResilienceOverlaySchema,

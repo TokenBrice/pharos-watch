@@ -107,6 +107,17 @@ const ApiAmountReadSchema = z.strictObject({
   amountPath: z.array(CanonicalTextSchema).min(1), observedAtPath: z.array(CanonicalTextSchema).min(1),
   generationPath: z.array(CanonicalTextSchema).min(1),
 });
+/** Source-reviewed non-proxy vault; its runtime hash includes immutable bindings. */
+export const Erc4626ConversionReadSchema = z.strictObject({
+  kind: z.literal("evm-erc4626-convert-to-assets"), sourceId: CanonicalTextSchema,
+  chainId: CanonicalChainIdSchema, vaultAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+  vaultRuntimeCodeSha256: Sha256Schema, immutable: z.literal(true),
+  assetAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
+  shareDecimals: z.number().int().min(0).max(36), assetDecimals: z.number().int().min(0).max(36),
+}).superRefine((source, ctx) => {
+  if (CHAIN_META[source.chainId]?.type !== "evm") ctx.addIssue({ code: "custom", message: "ERC-4626 conversion requires an exact EVM chain" });
+});
+export type Erc4626ConversionRead = z.infer<typeof Erc4626ConversionReadSchema>;
 // Reviewed enumerable pending queue: count and indexed ids prove coverage, not an
 // escrow-minus-receipts estimate. Amounts are raw canonical token units.
 const EvmPendingStateReadSchema = z.strictObject({
@@ -304,7 +315,7 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   accountingFamily: EconomicSupplyAccountingFamilySchema, commonClaimUnit: CanonicalTextSchema,
   exhaustive: z.literal(true), inFlightTreatment: EconomicSupplyInFlightTreatmentSchema,
   deployments: z.array(CensusRowSchema).min(1).max(64),
-  conversionSources: z.array(ApiAmountReadSchema).max(64),
+  conversionSources: z.array(z.union([ApiAmountReadSchema, Erc4626ConversionReadSchema])).max(64),
   referencePriceSource: ApiAmountReadSchema.nullable(),
   liabilityInFlightSource: PendingAmountReadSchema.nullable(),
   excludedRegistryDeploymentKeys: z.array(CanonicalTextSchema), exclusions: z.array(BalanceRuleSchema).max(64),
@@ -408,7 +419,16 @@ export const ReviewedEconomicSupplyPlanSchema = z.strictObject({
   if (plan.inFlightTreatment === "observed-reconciled" && plan.escrows.some(escrow => escrow.inFlightSource === null)) ctx.addIssue({ code: "custom", message: "Asynchronous escrow accounting requires an observed pending source" });
   if (plan.expiresAtSec <= plan.reviewedAtSec || plan.expiresAtSec - plan.reviewedAtSec > vocabulary.reviewMaxAgeDays * 86400) ctx.addIssue({ code: "custom", message: "Explicit expiry exceeds review budget" });
   if (plan.deployments.some(row => row.claimUnit !== plan.commonClaimUnit && row.conversionSourceId === null)) ctx.addIssue({ code: "custom", message: "Distinct claim units require sourced conversion" });
-  if (new Set(plan.conversionSources.map(row => row.sourceId)).size !== plan.conversionSources.length || plan.deployments.some(row => row.conversionSourceId !== null && !plan.conversionSources.some(source => source.sourceId === row.conversionSourceId))) ctx.addIssue({ code: "custom", message: "Conversion source must bind an exact reviewed API read" });
+  if (new Set(plan.conversionSources.map(row => row.sourceId)).size !== plan.conversionSources.length || plan.deployments.some(row => row.conversionSourceId !== null && !plan.conversionSources.some(source => source.sourceId === row.conversionSourceId))) ctx.addIssue({ code: "custom", message: "Conversion source must bind an exact reviewed read" });
+  for (const source of plan.conversionSources) {
+    if (!("kind" in source)) continue;
+    const rows = plan.deployments.filter(row => row.conversionSourceId === source.sourceId);
+    if (rows.length !== 1 || rows.some(row => row.chainId !== source.chainId || row.address !== source.vaultAddress ||
+      row.decimals !== source.shareDecimals || row.amountBasis !== "fixed-token-units" ||
+      row.claimUnit === plan.commonClaimUnit || (row.read.kind !== "evm-total-supply" && row.read.kind !== "evm-balance"))) {
+      ctx.addIssue({ code: "custom", message: "ERC-4626 conversion must bind exactly its pinned vault holding and distinct share unit" });
+    }
+  }
   if (plan.escrows.some(row => !keys.includes(row.canonicalDeploymentKey) || row.receiptDeploymentKeys.some(key => !keys.includes(key) || key === row.canonicalDeploymentKey)) || plan.exclusions.some(row => !keys.includes(row.deploymentKey))) ctx.addIssue({ code: "custom", message: "Accounting rule references an unknown holding" });
 });
 /** A local attribution census; never certifies the rest of the asset's liabilities. */
@@ -488,8 +508,16 @@ const EconomicSupplyObservationSchema = z.strictObject({
   layerZeroOftPendingProof: LayerZeroOftPendingProofSchema.optional(),
   ccipPendingProof: CcipPendingProofSchema.optional(),
 });
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
-const EconomicSupplyReferenceSchema = z.strictObject({ sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema, value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))), responseSha256: Sha256Schema });
+const EconomicSupplyReferenceSchema = z.strictObject({
+  sourceId: CanonicalTextSchema, sourceGeneration: CanonicalTextSchema, observedAtSec: UnixSecondsSchema,
+  // eslint-disable-next-line security/detect-unsafe-regex -- anchored linear unsigned-decimal shape; groups cannot overlap.
+  value: z.string().regex(/^[0-9]+(\.[0-9]+)?$/).refine(value => Number(value) > 0 && Number.isFinite(Number(value))),
+  responseSha256: Sha256Schema,
+  erc4626Proof: z.strictObject({
+    anchor: z.number().int().nonnegative(), anchorHash: z.string().regex(/^0x[0-9a-f]{64}$/),
+    assets: z.string().regex(/^[1-9][0-9]*$/).max(78),
+  }).optional(),
+});
 export const ReviewedEconomicDeploymentPartitionSchema = z.strictObject({
   model: z.literal(REVIEWED_ECONOMIC_SUPPLY_MODEL), assetId: CanonicalTextSchema,
   baseInputGenerationId: BaseInputGenerationIdSchema, sourceGeneration: CanonicalTextSchema, registryFingerprint: Sha256Schema,

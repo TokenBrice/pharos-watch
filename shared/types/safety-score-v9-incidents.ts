@@ -64,7 +64,7 @@ export const V9NegativeIncidentReviewSchema = z.object({
   }
   const kinds = new Set(review.searchedSurfaces.map((surface) => surface.kind));
   if (!(kinds.has("issuer-status") || kinds.has("issuer-announcements")) || !kinds.has("explorer-events") || !kinds.has("incident-tracker")) {
-    ctx.addIssue({ code: "custom", path: ["searchedSurfaces"], message: "Negative incident research requires issuer, exact-deployment event history, and incident-tracker searches" });
+    ctx.addIssue({ code: "custom", path: ["searchedSurfaces"], message: "Negative incident research requires issuer, exact-deployment explorer events/emergency state, and incident-tracker searches" });
   }
   if (review.scope.kind === "control" &&
       !review.scope.controlKey.startsWith(`mint-meta:${review.assetId}:`) &&
@@ -92,6 +92,7 @@ const V9IntegrationIncidentScopeSchema = z.object({
 
 export const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("root-claim") }).strict(),
+  z.object({ kind: z.literal("control"), controlKey: CanonicalKeySchema }).strict(),
   z
     .object({
       kind: z.literal("deployment"),
@@ -218,6 +219,11 @@ export const V9ReviewedIncidentSchema = z
     V9SecurityHistoryIncidentSchema,
   ])
   .superRefine((incident, ctx) => {
+    if (incident.scope.kind === "control" &&
+        !incident.scope.controlKey.startsWith(`mint-meta:${incident.assetId}:`) &&
+        !incident.scope.controlKey.startsWith(`bridge-meta:${incident.assetId}:`)) {
+      ctx.addIssue({ code: "custom", path: ["scope", "controlKey"], message: "Incident must name this asset's exact mint or bridge control key" });
+    }
     const resolvedAt = incident.resolvedAt ?? null;
     if (incident.status === "active" && resolvedAt !== null) {
       ctx.addIssue({

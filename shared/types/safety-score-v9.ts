@@ -29,6 +29,7 @@ export type V9EvidenceLevel = z.infer<typeof V9EvidenceLevelSchema>;
 export const V9GradeSchema = ReportCardGradeSchema;
 export type V9Grade = ReportCardGrade;
 
+// Public fact tuple references bind this append-only order: never reorder or remove a code.
 export const V9_REASON_CODES = [
   "bounded-mechanism-review",
   "bounded-unknown-reserve-exposure",

@@ -65,9 +65,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Ethereum and BSC native YUSD use chain-local AegisMinting and burn/mint OFT adapters; Avalanche and Katana retain their earlier LayerZero route reviews. The expanded issuer deployment census registers Arbitrum, Base, Monad, Plasma, Starknet, and Hedera, including deployed zero-supply tokens. Arbitrum/Base verified YUSDOFT source and Plasma's immutable-masked runtime match prove direct burn/mint without canonical escrow. Starknet's verified mint/burn adapter source and pinned token/role bindings likewise prove direct burn/mint. MonadScan now exposes an exact-match verified YUSDOFT compilation proving direct burn/mint, and pinned Monad owner/quorum reads identify the local 3-of-5 Safe. Hedera still cannot be read through the required pinned helper despite successful earlier keyless secondary identity reads. Whole-asset independent-liability eligibility remains withdrawn; older controls and Katana source-provenance limits are not refreshed by this scoped Monad review.",
+    "summary": "Ethereum and BSC native YUSD use chain-local AegisMinting and burn/mint OFT adapters; Avalanche and Katana retain their earlier LayerZero route reviews. The expanded issuer deployment census registers Arbitrum, Base, Monad, Plasma, Starknet, and Hedera, including deployed zero-supply tokens. Arbitrum/Base verified YUSDOFT source and Plasma's immutable-masked runtime match prove direct burn/mint without canonical escrow. Starknet's verified mint/burn adapter source and pinned token/role bindings likewise prove direct burn/mint. MonadScan exposes an exact-match verified YUSDOFT compilation proving direct burn/mint, and pinned Monad owner/quorum reads identify the local 3-of-5 Safe. The scoped 2026-10-11 Hedera follow-up successfully pins owner, token, endpoint and supply through the public Mirror helper, but pinned bytecode remains unsupported and the route remains unresolved. Whole-asset independent-liability eligibility remains withdrawn; the historical route/escrow/in-flight census is not established, and neither older controls nor Katana source-provenance limits are refreshed by the scoped Hedera research.",
     "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L58YUSD); scoped Monad review only; prior census: Sol curation campaign 2026-10-09 (W3ReadmitAegis); prior controls: Codex FIX2-12 mint/bridge boundary review and Kimi P2 control cohort dc-3",
+    "reviewer": "Sol curation campaign 2026-10-11 (C35YUSD); scoped Hedera research observed 2026-10-11T00:51:12Z only, retaining prior aggregate review date; prior Monad: Sol curation campaign 2026-10-11 (L58YUSD); prior census: Sol curation campaign 2026-10-09 (W3ReadmitAegis); prior controls: Codex FIX2-12 mint/bridge boundary review and Kimi P2 control cohort dc-3",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -444,16 +444,17 @@
         "id": "hedera:0xf07781182b47e728b040f9e35321260e359ff9f7",
         "destinationChain": "hedera",
         "contractAddress": "0xf07781182b47e728b040f9e35321260e359ff9f7",
-        "protocol": "Aegis issuer-listed YUSDOFT (required pinned helper unsupported)",
+        "protocol": "Aegis issuer-listed YUSDOFT (pinned view calls available; pinned bytecode unsupported)",
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Issuer Hedera manifest and keyless Hashio secondary reads identify a deployed YUSD token with name/symbol YUSD and 18 decimals, so it is registered rather than omitted as a zero-supply candidate. Numeric block 100919357 returned timestamp 2026-10-09T15:19:41Z and hash 0x4511296fa5c67db7ef77394585d9cea9c984cf8ab69b59707ac06fcbe187ee87; secondary calls returned zero supply, token() self, approvalRequired() false and a runtime matching verified Base YUSDOFT after compiler-reported immutable masking. These are secondary findings, not helper provenance. The mandatory helper retry at 2026-10-09T15:39:13.700Z failed before a state read because Hedera has no registered supplemental Dwellir endpoint. The required chain-specific pinned-helper evidence and reviewed route remain unavailable, blocking whole-asset re-admission even with favorable secondary evidence. This transport gap is not issuer non-disclosure or proof of absence.",
+        "reviewNote": "Sol curation campaign 2026-10-11 (C35YUSD), observed 2026-10-11T00:51:12Z: the public Mirror helper now successfully reads historical views at block 100919357, hash 0x4511296fa5c67db7ef77394585d9cea9c984cf8ab69b59707ac06fcbe187ee870847865e128327d4fa2c7999ebdd9da5, UTC timestamp 2026-10-09T15:19:42.000Z, exact consensus timestamp 1791559182.971207716. owner() returned 0x84fe172c15bb030baa0dd497d30dd436c6b750e9, token() returned this deployment, endpoint() returned issuer-listed 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9, and totalSupply() returned explicit zero at this pin. No asset-wide denominator, current materialSupplyShare, Safe authority or incident-free state follows from these views. The historical eth_getCode helper retry is unsupported-pinned-state with null result. Current Mirror runtime bytes match verified Base YUSDOFT outside compiler-reported immutables, but that unpinned metadata is not substituted for historical bytecode provenance; Hedera Sourcify source retrieval returned 404. Exact deployment source/runtime, controller execution, cap, impairment and incident closure remain unresolved. Earlier Hashio identity/runtime observations are retained as secondary leads, not helper provenance or issuer non-disclosure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-09",
+        "observedAt": "2026-10-11",
+        "observedBlock": 100919357,
         "sources": [
           {
             "label": "Issuer Hedera YUSDOFT deployment manifest",
@@ -466,6 +467,18 @@
           {
             "label": "Hedera JSON-RPC relay documentation",
             "url": "https://docs.hedera.com/evm/development/json-rpc"
+          },
+          {
+            "label": "Pinned public Mirror helper views: block 100919357, consensus timestamp 1791559182.971207716; observed 2026-10-11T00:48:53Z and 2026-10-11T00:50:51Z",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/call"
+          },
+          {
+            "label": "Current Mirror runtime metadata only, not historical bytecode evidence",
+            "url": "https://mainnet-public.mirrornode.hedera.com/api/v1/contracts/0xf07781182b47e728b040f9e35321260e359ff9f7"
+          },
+          {
+            "label": "Verified Base YUSDOFT compilation and compiler immutable-reference ranges used only for supplementary runtime comparison",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xca2671dcd031a72359f456c212f62a9bda737cd7?fields=all"
           }
         ]
       }

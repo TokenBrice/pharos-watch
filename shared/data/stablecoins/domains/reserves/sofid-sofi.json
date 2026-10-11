@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (ValA36SOFID)",
+    "reviewedAt": "2026-10-11",
+    "reviewer": "Sol curation campaign 2026-10-11 (G10SOFID)",
     "confidence": "verified",
     "sources": [
       {
@@ -31,13 +31,13 @@
         "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm"
       },
       {
-        "label": "Deloitte SoFiUSD July 31, 2026 reserve examination",
-        "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf"
+        "label": "Deloitte SoFiUSD August 31, 2026 reserve examination (signed September 30)",
+        "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-8.31.2026.pdf"
       }
     ],
-    "rationale": "Schedule II directly reports Cash and Total of $309,934,457 as of July 31, 2026. Cash is held in SoFi Bank's Federal Reserve master account ($304,530,533) and a fiduciary account at an unnamed depository institution established by BitGo Trust Company, Inc. ($5,403,924); all reported reserves are cash, without a cash-equivalent basket. The ABS-15G link covers consumer loans and is not reserve evidence.",
+    "rationale": "Schedule II reports Cash and Total of $314,771,112 as of August 31, 2026: $307,813,896 in SoFi Bank's Federal Reserve master account and $6,957,216 in a BitGo-created fiduciary account at an unnamed commercial depository. All reported reserves are USD cash; no constituent percentages or custody shares are estimated. Deloitte's September 30 examination covers management's August 31 assets-and-liabilities assertion, with Schedule III comparing reserves to 308,322,426 redeemable circulating tokens after excluding 6,448,686 issuer-held tokens. Schedule I identifies Ethereum, Solana and five Canton tokens; this historical report does not certify current deployment coverage, custody continuity or controls. September 30 is a signed-date publication stand-in, not a verified upload date. The ABS-15G link covers consumer loans and is not reserve evidence.",
     "compositionBasis": "Deloitte-examined SoFiUSD Reserve Report Schedule II",
-    "compositionAsOf": "2026-07-31",
+    "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies all reserves as USD cash and provides account-type balances. The commercial bank is unnamed, percentage custody shares are not authored, and SoFi insolvency treatment remains unverified.",
     "knownUnknownExposurePct": 0,

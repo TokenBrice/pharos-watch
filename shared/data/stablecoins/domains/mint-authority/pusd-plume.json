@@ -258,20 +258,24 @@
               "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
             },
             {
-              "label": "Historical Plume block 96703539 hash and timestamp (header only; no historical runtime correspondence claimed)",
+              "label": "Historical Plume block 96703539 hash and timestamp",
               "url": "https://explorer.plume.org/api/v2/blocks/96703539"
+            },
+            {
+              "label": "Sol curation campaign 2026-10-11 (C44ReUSD), observed 2026-10-11T00:50:13Z: block 96703539 Teller runtime exactly matches verified MultiChainLayerZeroTellerWithMultiAssetSupport deployed bytecode (SHA-256 33dd571881460a9cdb3d0d516c00a00a08f83ed450436f84f33ef26cb8d88589); complete execution census remains unresolved",
+              "url": "https://rpc.plume.org"
             }
           ],
           "pin": {
             "position": "96703539",
             "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
-            "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified MultiChainLayerZeroTellerWithMultiAssetSupport source)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
           "observedState": {
             "position": "96703539",
             "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
-            "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified TellerWithMultiAssetSupport source)",
+            "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified MultiChainLayerZeroTellerWithMultiAssetSupport source)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
           "inventory": "partial",
@@ -458,8 +462,12 @@
               "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
             },
             {
-              "label": "Historical Plume block 96703539 hash and timestamp (header only; no historical proxy/runtime correspondence claimed)",
+              "label": "Historical Plume block 96703539 hash and timestamp",
               "url": "https://explorer.plume.org/api/v2/blocks/96703539"
+            },
+            {
+              "label": "Sol curation campaign 2026-10-11 (C44ReUSD), observed 2026-10-11T00:50:57Z: block 96703539 Nest proxy EIP-1967 implementation is 0x5766a40abfb8802303235a2f5f12a71ed84d4700 and its runtime exactly matches verified NestVaultOFT deployed bytecode (SHA-256 280a2c4b27abffca623155485f94f3d060efdb8069f045bb1a1b765d51677a5d); complete execution census remains unresolved",
+              "url": "https://rpc.plume.org"
             }
           ],
           "pin": {

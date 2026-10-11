@@ -1,3 +1,4 @@
+import { projectNegativeIncidentReview } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { parseStablecoinMetaAssets } from "@shared/lib/stablecoins/schema";
 import fusdRiskReview from "@shared/data/stablecoins/domains/risk-review/fusd-finchain.json";
@@ -14,9 +15,11 @@ import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { reviewedScope, SCOPE_CLOCK, weightedQuorum } from "@shared/lib/__tests__/safety-score-v9-control-scope.test-support";
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
+import * as incidentAdapters from "../safety-score-v9/extension-incidents";
+import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema } from "@shared/types/safety-score-v9-incidents";
 import {
   adaptBridgeReview,
   mergedBridgeAuthority,
@@ -25,9 +28,9 @@ import {
 } from "../safety-score-v9/extension-bridge";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import {
-  ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
   makeV9FixedInput,
   v9TestClockSec,
@@ -188,6 +191,33 @@ function compileFixture(
     extension,
   );
   return { extension, compiled };
+}
+
+function compileFixtureWithScopedBridgeIncidentReview(
+  metadata: V9ExtensionRegistryMeta,
+  options: Parameters<typeof compileFixture>[1] = {},
+) {
+  const clockSec = options.clockSec ?? 10_000;
+  const reviewedAt = new Date(clockSec * 1_000).toISOString();
+  const reviews = (metadata.bridgeRouteRisk?.routes ?? []).map((deployment) =>
+    V9NegativeIncidentReviewSchema.parse({
+      reviewId: `fixture-negative:${deployment.id}`, assetId: metadata.id,
+      scope: { kind: "deployment", deploymentKey: deployment.id, controlKinds: ["bridge"] },
+      reviewedAt, reviewer: "Independent fixture incident researcher",
+      windowStartSec: Math.max(0, clockSec - 86_400), windowEndSec: clockSec, conclusion: "no-known-incident",
+      searchedSurfaces: [
+        { kind: "issuer-status", url: SOURCE.url, finding: "Exact rail incident notices reviewed." },
+        { kind: "explorer-events", url: SOURCE.url, finding: "Exact deployment event census reviewed." },
+        { kind: "incident-tracker", url: SOURCE.url, finding: "Exact deployment and rail searched." },
+      ],
+      sources: [{ ...SOURCE, observedAt: reviewedAt, location: "Incident archive", excerpt: "No matching incident in reviewed window." }],
+    }));
+  const reviewMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9NegativeIncidentReviews").mockReturnValue(reviews.map(projectNegativeIncidentReview));
+  try {
+    return compileFixture(metadata, options);
+  } finally {
+    reviewMock.mockRestore();
+  }
 }
 
 function scopedMintReachMeta({ complete = false, unknownReach = true } = {}) {
@@ -692,6 +722,119 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     ).toEqual({ kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } });
   });
 
+  it.each([false, true])("requires independent scoped incident evidence for reviewed bridge controls (structured: %s)", (structured) => {
+    const clockSec = Date.parse("2026-10-07T14:00:00Z") / 1_000;
+    const metadata = meta("fixture-bridge-incident", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE, { observedAt: "2026-10-01" })], {
+        reviewedAt: "2026-10-01", ...(structured ? { controls: [bridgeControl()] } : {}),
+      }),
+    });
+    const negative = V9NegativeIncidentReviewSchema.parse({
+      reviewId: "fixture-bridge-negative", assetId: metadata.id,
+      scope: { kind: "deployment", deploymentKey: BASE_ROUTE, controlKinds: ["bridge"] },
+      reviewedAt: "2026-10-07T14:00:00Z", reviewer: "Fixture reviewer",
+      windowStartSec: clockSec - 86_400, windowEndSec: clockSec, conclusion: "no-known-incident",
+      searchedSurfaces: [
+        { kind: "issuer-status", url: SOURCE.url, finding: "Exact rail has no incident notice in the window." },
+        { kind: "explorer-events", url: SOURCE.url, finding: "Exact deployment event census reviewed." },
+        { kind: "incident-tracker", url: SOURCE.url, finding: "Exact deployment and rail searched." },
+      ],
+      sources: [{ ...SOURCE, observedAt: "2026-10-07T14:00:00Z", location: "Incident archive", excerpt: "No matching incident found." }],
+    });
+    const reviewMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9NegativeIncidentReviews");
+    try {
+      for (const reviews of [[], [{ ...negative, scope: {
+        kind: "deployment" as const, deploymentKey: ETHEREUM_ROUTE, controlKinds: ["bridge" as const],
+      } }]]) {
+        reviewMock.mockReturnValue(reviews.map(projectNegativeIncidentReview));
+        const asset = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
+        const bridge = asset.controls.find((control) => control.controlKind === "bridge")!;
+        expect(bridge.incidentState).toBe("unknown");
+        expect(bridge.factorStatuses?.incidentState?.observationState).not.toBe("known");
+        expect(asset.gaps.map((gap) => gap.gapId)).toContain(`${metadata.id}:gap:control:${bridge.controlKey}:incidentState`);
+      }
+      reviewMock.mockReturnValue([projectNegativeIncidentReview(negative)]);
+      const asset = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
+      const bridge = asset.controls.find((control) => control.controlKind === "bridge")!;
+      expect(bridge.incidentState).toBe("none");
+      expect(bridge.factorStatuses?.incidentState).toBeUndefined();
+      expect(asset.gaps.map((gap) => gap.gapId)).not.toContain(`${metadata.id}:gap:control:${bridge.controlKey}:incidentState`);
+    } finally {
+      reviewMock.mockRestore();
+    }
+  });
+
+  it.each(["active", "resolved"] as const)("routes a real %s bridge incident through the compiler", (state) => {
+    const clockSec = Date.parse("2026-10-07T14:00:00Z") / 1_000;
+    const metadata = meta("fixture-real-bridge-incident", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE, { observedAt: "2026-10-01" })], {
+        reviewedAt: "2026-10-01", controls: [bridgeControl()],
+      }),
+    });
+    const incident = incidentAdapters.getSafetyScoreV9ReviewedIncidents("usdp-parallel", clockSec)
+      .find((row) => row.domain === "control")!;
+    if (incident.domain !== "control") throw new Error("Expected control incident fixture");
+    const scopedIncident = V9ReviewedIncidentSchema.parse({
+      ...incident, assetId: metadata.id, status: state === "active" ? "active" : incident.status,
+      resolvedAt: state === "active" ? null : incident.resolvedAt,
+      posture: { ...incident.posture, controlKinds: ["bridge"], incidentState: state },
+    });
+    const incidentMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9ReviewedIncidents").mockReturnValue([scopedIncident]);
+    try {
+      const bridge = compileFixture(metadata, { clockSec }).compiled.assets[0]!.controls.find((control) => control.controlKind === "bridge")!;
+      expect(bridge.incidentState).toBe(state);
+      expect(bridge.factorStatuses?.incidentState).toBeUndefined();
+    } finally {
+      incidentMock.mockRestore();
+    }
+  });
+
+  it.each(["active", "mitigated", "resolved"] as const)("compiles a %s exact-control bridge incident without inventing share-weighted loss", (status) => {
+    const clockSec = Date.parse("2026-10-07T14:00:00Z") / 1_000;
+    const metadata = meta("fixture-shareless-control-incident", {
+      bridgeRouteRisk: bridgeProfile([
+        representationRoute(BASE_ROUTE, { observedAt: "2026-10-01" }),
+        representationRoute(ETHEREUM_ROUTE, { observedAt: "2026-10-01" }),
+      ], {
+        reviewedAt: "2026-10-01",
+        controls: [bridgeControl(), bridgeControl({ id: "sibling-control", routeRefs: [ETHEREUM_ROUTE] })],
+      }),
+    });
+    const options = { clockSec, chainSupplyByChain: {} };
+    const before = compileFixture(metadata, options).compiled.assets[0]!;
+    const target = before.controls.find((control) => control.deploymentKey === BASE_ROUTE)!;
+    const sibling = before.controls.find((control) => control.deploymentKey === ETHEREUM_ROUTE)!;
+    expect(target.materialSupplyShare).toBeNull();
+    const original = incidentAdapters.getSafetyScoreV9ReviewedIncidents("usdp-parallel", clockSec)
+      .find((row) => row.domain === "control")!;
+    if (original.domain !== "control") throw new Error("Expected control incident fixture");
+    const incident = V9ReviewedIncidentSchema.parse({
+      ...original, assetId: metadata.id, status, resolvedAt: status === "active" ? null : original.remediation.lastVerifiedAt,
+      remediation: { ...original.remediation, state: "verified" },
+      scope: { kind: "control", controlKey: target.controlKey },
+      posture: { ...original.posture, controlKinds: ["bridge"], incidentState: status === "active" ? "active" : "resolved" },
+    });
+    const incidentMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9ReviewedIncidents").mockReturnValue([incident]);
+    try {
+      const { compiled } = compileFixture(metadata, options);
+      const asset = compiled.assets[0]!;
+      expect(asset.controls.find((control) => control.controlKey === target.controlKey)).toMatchObject({
+        incidentState: status === "active" ? "active" : "resolved", materialSupplyShare: null,
+      });
+      expect(asset.controls.find((control) => control.controlKey === sibling.controlKey)!.incidentState).toBe("unknown");
+      expect(asset.economicControlReview.mint.latestResolvedIncidentAtSec).toEqual(before.economicControlReview.mint.latestResolvedIncidentAtSec);
+      expect(asset.gaps.map((gap) => gap.gapId)).not.toContain(`${metadata.id}:gap:control:${target.controlKey}:incidentState`);
+      expect(asset.gaps.map((gap) => gap.gapId)).toContain(`${metadata.id}:gap:control:${sibling.controlKey}:incidentState`);
+      const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
+      expect(evaluated.control.reasons.map((reason) => reason.code)).toContain("runtime-bridge-materiality-unavailable");
+      expect(evaluated.control.structuralFailures.filter((failure) => failure.controlKeys.includes(target.controlKey))
+        .every((failure) => failure.materialSharePct === null)).toBe(true);
+      expect(evaluated.trace.deploymentAdjustments).toEqual([]);
+    } finally {
+      incidentMock.mockRestore();
+    }
+  });
+
   it("retains intrinsic bridge-mint for a reviewed representation route without structured coverage", () => {
     const metadata = meta("fixture-intrinsic-bridge-mint", {
       bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)]),
@@ -855,7 +998,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
           ],
         }),
       });
-      const { compiled } = compileFixture(metadata);
+      const { compiled } = compileFixtureWithScopedBridgeIncidentReview(metadata);
       const bridge = controlsFor(compiled, metadata.id).find((control) =>
         control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
       )!;
@@ -1288,7 +1431,7 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         }],
       })),
     });
-    const { extension, compiled } = compileFixture(metadata);
+    const { extension, compiled } = compileFixtureWithScopedBridgeIncidentReview(metadata);
     const asset = compiled.assets[0]!, control = asset.controls[0]!;
     const custodyOnly = subject === "key-custody-independence";
     expect(extension.assets[0]!.admissionQuarantine).toBeUndefined();
@@ -1332,11 +1475,11 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
         }],
       })),
     });
-    const { extension, compiled } = compileFixture(metadata, { clockSec: 2 * 86400 });
+    const { extension, compiled } = compileFixtureWithScopedBridgeIncidentReview(metadata, { clockSec: 2 * 86400 });
     const precedence = kind === "complete" || kind === "partial-adverse";
     expect(extension.assets[0]!.admissionQuarantine).toBeUndefined();
     expect(compiled.assets[0]!.controls[0]).toMatchObject({
-      scopedQuestionFresh: true, status: { observationState: precedence ? "known" : "bounded-unknown" },
+      scopedQuestionFresh: true, incidentState: "none", status: { observationState: precedence ? "known" : "bounded-unknown" },
     });
     if (kind === "identity-mismatched") {
       const controlReview = extension.assets[0]!.controlReview;

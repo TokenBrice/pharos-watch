@@ -26,7 +26,7 @@ import {
 import { MechanismArchetypeReviewSchema } from "@shared/types/stablecoin-meta-schemas";
 import { isoDateStartSec } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
-import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "./extension-reviewed-registry";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryEnvelopeDigest } from "@shared/lib/safety-score-v9/reviewed-registry";
 
 type MechanismMeta = Pick<
   StablecoinMeta,
@@ -446,14 +446,16 @@ export function expandOverlayReview(
 }
 
 const mechanismEnvelope = SafetyScoreV9MechanismReviewOverlayEnvelopeSchema.parse(mechanismReviewOverlaysAsset);
-const MECHANISM_REVIEW_OVERLAY_FILE = canonicalizeReviewedRegistryDigest(mechanismEnvelope, {}, {
-  "overlays.*.venueShares.*.failureDomains": [],
-}, [
-  "overlays.*.collateralizationMeasurement.measurementId",
-  "overlays.*.collateralizationMeasurement.rationale",
-]);
-
-export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = reviewedRegistryEnvelopeDigest("safety-score-v9.mechanism-review-overlays.v1", "overlays", MECHANISM_REVIEW_OVERLAY_FILE);
+// Canonicalization is digest-only: do not retain its duplicate registry graph.
+export const SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST = reviewedRegistryEnvelopeDigest(
+  "safety-score-v9.mechanism-review-overlays.v1", "overlays",
+  canonicalizeReviewedRegistryDigest(mechanismEnvelope, {}, {
+    "overlays.*.venueShares.*.failureDomains": [],
+  }, [
+    "overlays.*.collateralizationMeasurement.measurementId",
+    "overlays.*.collateralizationMeasurement.rationale",
+  ]),
+);
 
 const MECHANISM_REVIEW_OVERLAYS = createReviewedAssetRegistry({
   rows: mechanismEnvelope.overlays, schema: SafetyScoreV9MechanismReviewOverlaySchema, path: "mechanismReviews.overlays",

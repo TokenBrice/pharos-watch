@@ -33,7 +33,12 @@ describe("same-chain HyperCore system transport", () => {
   it("compiles consensus authority and escrow impairment without bridge-validator or mint credit", () => {
     const control = compileTransport();
     expect(control).toBeDefined();
-    expect(control.status.observationState).toBe("known");
+    expect(control.status.observationState).toBe("bounded-unknown");
+    expect(control.incidentState).toBe("unknown");
+    expect(control.factorStatuses?.incidentState).toMatchObject({
+      observationState: "missing",
+      gapIds: [`feusd-felix:gap:control:${control.controlKey}:incidentState`],
+    });
     expect(control.authority).toMatchObject({
       authorityKey: "consensus:hyperliquid", model: "chain-consensus", threshold: null,
       sameChainSystemTransport: { family: "hypercore-evm-spot", tokenIndex: 241,

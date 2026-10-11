@@ -653,15 +653,15 @@
           ]
         },
         "routeChecks": {
-          "lockboxOrEscrow": "At Plasma block 30024507, this Chainlink CCIP LockReleaseTokenPool 1.6.1 returned getToken() = syzUSD and getRebalancer() = zero; it escrows canonical syzUSD for cross-chain release and is not an independent native issuance controller.",
-          "trustedPeerOrRemote": "The pool's supported-chain configuration includes the Ethereum and Monad selectors with remote pools 0xd915adf1b64854dd312550f6831afa151e7b2590 and 0x012247950ee154dc26d4514b84b3b60336c55ea5, both mapping back to their syzUSD representations and the canonical Plasma token.",
+          "lockboxOrEscrow": "At Plasma block 34738553 (2026-10-11T00:51:17Z), getToken() returned canonical syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 and getRebalancer() returned zero. The verified LockReleaseTokenPool source nevertheless lets the owner appoint a rebalancer, which can withdraw the pool's token balance without CCIP route-rate-limit checks; zero current rebalancer is not irrevocable protection.",
+          "trustedPeerOrRemote": "The August 17 block 30024507 review identified Ethereum and Monad remote pools 0xd915adf1b64854dd312550f6831afa151e7b2590 and 0x012247950ee154dc26d4514b84b3b60336c55ea5. At block 34738553, getSupportedChains() returned seven selectors; the historical two-route detail is not an exhaustive current or historical peer/pool inventory.",
           "rateLimits": "At Plasma block 30024507, the pool's Ethereum and Monad routes had enabled inbound capacity 3,300,000 syzUSD and outbound capacity 3,000,000 syzUSD; getRateLimitAdmin() returned Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae.",
-          "pausersAdminsUpgraders": "The pool owner and rate-limit administrator are Yuzu EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae; the deployed pool reports typeAndVersion LockReleaseTokenPool 1.6.1 and no separate pool proxy was observed."
+          "pausersAdminsUpgraders": "At Plasma block 34738553, owner() and getRateLimitAdmin() returned 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae and getRouter() returned 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3. Verified source gives the owner setRouter, setRebalancer, remote-pool/chain configuration and two-step ownership transfer powers. These mutable dependencies remain outside the existing partial execution closure."
         },
-        "capDescription": "The pool can escrow and release canonical syzUSD through authenticated CCIP routes subject to configured per-route rate limits; it does not mint independent native liabilities.",
+        "capDescription": "CCIP releases use configured per-route rate limits, but these are not immutable whole-escrow bounds: the owner can change the rate-limit administrator and router, or appoint a rebalancer whose withdrawLiquidity transfers escrowed syzUSD without consuming route limits. The pool does not mint independent native liabilities; exhaustive execution and affected-liability reach remain unresolved.",
         "canRaiseCap": true,
-        "observedAt": "2026-08-17",
-        "observedBlock": 30024507,
+        "observedAt": "2026-10-11",
+        "observedBlock": 34738553,
         "sources": [
           {
             "label": "Plasma syzUSD CCIP pool",
@@ -674,9 +674,13 @@
           {
             "label": "Plasma public RPC",
             "url": "https://rpc.plasma.to"
+          },
+          {
+            "label": "Verified exact LockReleaseTokenPool 1.6.1 and inherited TokenPool source",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x31672de4726227feb22f2dfbcfa985c71bea86b2"
           }
         ],
-        "evidence": "At Plasma block 30024507 on 2026-08-17, the official CCIP registry mapped syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 to LockReleaseTokenPool 0x31672de4726227feb22f2dfbcfa985c71bea86b2. The pool returned typeAndVersion LockReleaseTokenPool 1.6.1, owner() and getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, router() = 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, and configured the Ethereum and Monad representation pools and tokens."
+        "evidence": "Sol curation campaign 2026-10-11 (C34XAUm), observed 2026-10-11T00:53:12.270Z via https://rpc.plasma.to at block 34738553, hash 0x80b115b28a99fb71aebbc3e25e262b15d57d2ee63568fb95a7f2e13624439d2f, timestamp 2026-10-11T00:51:17Z: getToken() = canonical syzUSD, owner() = getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, getRebalancer() = zero, getRouter() = 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, and getSupportedChains() returns seven selectors. The pool runtime text SHA-256 is 80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c, identical to retained block 33946301. Verified source LockReleaseTokenPool.sol lines 53-83 permits owner-set rebalancer and rebalancer withdrawal of escrow without route limits; TokenPool.sol lines 180-187 permits owner replacement of the router governing ramp authorization. These are adverse reachable permissions, not proof of a withdrawal incident or complete downstream scope. The October 1 partial execution certificate, all seven false closure flags and October 31 expiry are unchanged. August 17 rate-limit/peer details remain historical observations, not refreshed values."
       },
       {
         "id": "syzusd-ethereum-ccip-burn-mint-pool",

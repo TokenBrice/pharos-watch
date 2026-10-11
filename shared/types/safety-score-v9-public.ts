@@ -31,6 +31,8 @@ import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
 import { causeGapRefs, V9RatingStatusSchema, V9PartialEvidenceSchema, V9DependencyCauseShape, refineV9RatingStatusFields, refineV9PublicGapReferences, refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
+import { resolveV9PublicWitnessTexts, validateV9PublicWitnessTexts, validateV9ResolvedWitnessViews } from "../lib/safety-score-v9/public-witness-texts";
+import { V9PublicWitnessTextTableSchema } from "./safety-score-v9-public-witness-texts";
 
 export const SafetyScoreV9DependencyProvenanceSchema = z.object({
   source: V9EffectiveDependenciesV3Schema.shape.source,
@@ -255,6 +257,7 @@ const SafetyScoreV9CardShape = {
   id: z.string().min(1),
   localCauseGaps: canonicalTextArray(),
   foreignCauseGapRefs: causeGapRefs(),
+  witnessTexts: V9PublicWitnessTextTableSchema.optional(),
   /**
    * True when the exact V9 fact set compiled this asset's Backing reserve
    * exposures from an accepted live-reserve snapshot. Optional only so a new
@@ -386,6 +389,20 @@ type CardRefinementInput = Omit<z.infer<typeof SafetyScoreV9CurrentCardBaseSchem
 };
 
 function refineCurrentCard(card: CardRefinementInput, ctx: z.RefinementCtx): void {
+    try {
+      validateV9PublicWitnessTexts(card);
+      if (card.witnessTexts !== undefined) {
+        card = resolveV9PublicWitnessTexts(card);
+        validateV9ResolvedWitnessViews(card);
+        const semantic = SafetyScoreV9CurrentCardBaseSchema.safeParse(card);
+        if (!semantic.success) for (const issue of semantic.error.issues) {
+          ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
+        }
+      }
+    } catch (error) {
+      ctx.addIssue({ code: "custom", path: ["witnessTexts"], message: error instanceof Error ? error.message : "Invalid witness text table" });
+      return;
+    }
     refineCardBase(card, ctx);
     refineCard(card, ctx);
     if (card.ratingStatus === "pipeline-gap" && (card.scoreTrace.aggregation !== null ||

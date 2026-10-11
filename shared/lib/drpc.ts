@@ -1,7 +1,7 @@
 /**
  * Canonical dRPC network name map: chain-registry chainId → dRPC network slug.
- * Authoritative source for all dRPC URL construction; both balance-providers
- * and chainlink-feeds import from here so adding a chain only requires one edit.
+ * Authoritative source for all dRPC URL construction across runtime and
+ * pinned research consumers, so adding a chain only requires one edit.
  */
 export const DRPC_NETWORK: Partial<Record<string, string>> = {
   ethereum: "ethereum",

@@ -14,7 +14,7 @@ import { observeEconomicSolanaMint } from "./economic-supply-observer";
 import { fetchMoveFungibleAssetSupply } from "../../cron/reserve-adapters/token-supply";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { hasCompleteEligibleProviderSupply, REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
-import { ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { fetchSafetyScoreV9SolanaRpc, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";

@@ -553,9 +553,17 @@ export async function buildRedemptionBackstopEntry(
     stablecoinsCache: options.stablecoinsCache, envelope: options.exitExecutionEnvelope, reviews: options.exitExecutionReviews,
   });
   if (executionRoutes.observations.length > 0) {
+    const routeObservations = [...(finalizedEntry.capacityProfile?.exitRouteObservations ?? [])];
+    for (const observation of executionRoutes.observations) {
+      const existingIndex = routeObservations.findIndex((route) => route.routeId === observation.routeId);
+      // A source-pinned review may certify this exact primary rail. A failed
+      // simulation is not a positive revision and never erases retained terms.
+      if (existingIndex < 0) routeObservations.push(observation);
+      else if (observation.scoreEligible) routeObservations[existingIndex] = observation;
+    }
     finalizedEntry = { ...finalizedEntry, capacityProfile: {
       ...(finalizedEntry.capacityProfile ?? { scoringHorizon: "unknown", capacityProfileConfidence: "heuristic" }),
-      exitRouteObservations: [...(finalizedEntry.capacityProfile?.exitRouteObservations ?? []), ...executionRoutes.observations],
+      exitRouteObservations: routeObservations,
     } };
   }
   return finalizedEntry;

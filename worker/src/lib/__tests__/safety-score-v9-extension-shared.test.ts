@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { ReviewEvidenceBuilder, parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
 import {
-  ReviewEvidenceBuilder,
+  nativeReviewEvidenceDigest,
   accessEvidenceObservationState,
   boundedObservedAt,
   confidenceForResearch,
   conservativeDateEndSec,
   maximumObservedAt,
   notApplicableStatus,
-  parseBoundedDateSec,
   projectControlAuthority,
   requiredStatus,
   researchReviewObservationState,
@@ -37,6 +37,15 @@ describe("review evidence timestamp admission", () => {
     componentKeys: ["allocation"], sourceId: "fixture:review",
     reviewedAtSec: CLOCK_SEC - 10, observedAtSec: CLOCK_SEC - 20, payload: { scope: "contract" },
   };
+
+  it("preserves identical evidence identity with portable and Worker-native streaming hashing", () => {
+    const portable = new ReviewEvidenceBuilder("alpha", CLOCK_SEC);
+    const native = new ReviewEvidenceBuilder("alpha", CLOCK_SEC, nativeReviewEvidenceDigest);
+    const args = { ...base, sources: [{ label: "Unicode review 🔒", url: "https://example.test/review" }],
+      payload: { z: ["🔒", "é", "a".repeat(200000)], a: { reviewed: true } } };
+    expect(portable.add(args)).toEqual(native.add(args));
+    expect(portable.finish()).toEqual(native.finish());
+  });
 
   it.each([
     { reviewedAt: undefined, reviewedAtSec: undefined },

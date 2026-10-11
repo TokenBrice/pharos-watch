@@ -60,7 +60,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "All four registered ZARU deployments are independent native issuer liabilities: Solana Token-2022 and Ethereum/Base/Arc ERC20F mint/burn rails. The issuer's native-token-standard expansion model, directly observed issuer authorities and verified ERC20F role-controlled mint/burn establish direct issuance, not canonical-token escrow, LockRelease or pooled bridge receipts. Eligible for a complete exact-input transfer census, including every zero-supply leg; no static shares or authority-key custody credit are authored.",
+    "summary": "All four registered ZARU deployments are independent native issuer liabilities: Solana Token-2022 and Ethereum/Base/Arc ERC20F mint/burn rails. The issuer's native-token-standard expansion model, directly observed issuer authorities and verified ERC20F role-controlled mint/burn establish direct issuance, not canonical-token escrow, LockRelease or pooled bridge receipts. Eligible for a complete exact-input transfer census, including every zero-supply leg; no static shares or authority-key custody credit are authored. Supplemental evidence observed 2026-10-11T00:50:29Z by Sol curation campaign 2026-10-11 (C32UTY) confirms the same ERC20F implementation, 18 decimals and explicitly zero totalSupply at historical Ethereum block 26155000, Base block 52199351 and Arc block 24360273. These are separate diagnostic pins, not a current complete economic partition. The attempted exact-slot Solana archive read failed and grants no new Solana identity, stock or authority fact; the prior complete four-native review and its original date remain unchanged.",
     "reviewedAt": "2026-10-09",
     "reviewer": "Sol curation campaign 2026-10-09 (W4T02Avant)",
     "confidence": "manual-review",
@@ -92,6 +92,18 @@
       {
         "label": "Solana finalized atomic mint identities at slot 454891046",
         "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "Supplemental Ethereum implementation, decimals and explicitly zero totalSupply at block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z; observed 2026-10-11T00:50:28Z by Sol curation campaign 2026-10-11 (C32UTY)",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Supplemental Base implementation, decimals and explicitly zero totalSupply at block 52199351, hash 0xa2ffc95e250d070ded8cbeb07bf98a6ea9d4c84e9df8bb1c33efd07025ed6306, timestamp 2026-10-05T08:14:09Z; observed 2026-10-11T00:50:29Z by Sol curation campaign 2026-10-11 (C32UTY)",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Supplemental Arc implementation, decimals and explicitly zero totalSupply at block 24360273, hash 0x8406ce1f1781205f575711f4a34f14535fd6ad867cda99372d91f57f62630cd0, timestamp 2026-10-05T08:14:09Z; observed 2026-10-11T00:50:29Z by Sol curation campaign 2026-10-11 (C32UTY)",
+        "url": "https://api-arc-mainnet.n.dwellir.com"
       }
     ],
     "routes": [

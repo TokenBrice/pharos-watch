@@ -29,9 +29,9 @@ import {
   reviewedKeyCustody,
   type ControlOverlay,
   type ExtensionAsset,
-  type ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "./extension-shared";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
   safetyScoreV9RouteSupplyShare,
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
@@ -389,7 +389,8 @@ function bridgeControl(
     // the mint-authority review owns both vocabularies.
     keyCustody: "unknown",
     modulesOrGuards: "unknown",
-    incidentState: reviewed ? "none" : "unknown",
+    // Route review is not an independently scoped incident disposition.
+    incidentState: "unknown",
     failureDomains: (route.failureDomainKeys?.length ? route.failureDomainKeys : [deploymentId])
       .map((key) => ({ kind: "bridge-route" as const, key }))
       .sort((left, right) => compareText(left.key, right.key)),
@@ -401,7 +402,6 @@ function structuredBridgeControl(
   route: BridgeRouteDeployment,
   control: BridgeRouteControl,
   materialSupplyShare: number | null,
-  reviewEvidenceCurrent: boolean,
   clockSec: number,
 ): ControlOverlay {
   const deploymentId = normalizedBridgeDeploymentId(route.id);
@@ -415,8 +415,6 @@ function structuredBridgeControl(
   const { capSemantics, claimImpairment } = projection.complete
     ? reviewedControlScopeSemantics(projection.paths)
     : projection.reviewed ? partialControlScopeSemantics(legacySemantics, projection) : legacySemantics;
-  const incidentState: ControlOverlay["incidentState"] =
-    reviewEvidenceCurrent && route.reviewDisposition === "reviewed" ? "none" : "unknown";
   const keyCustody = reviewedKeyCustody(control.keyCustodyAttestation, clockSec);
   return {
     controlKey: `bridge-meta:${assetId}:${domainDigest(
@@ -445,7 +443,7 @@ function structuredBridgeControl(
     } : {}),
     ...(control.weightedQuorum && !weightedReviewIsCurrent(control.weightedQuorum, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
       ? { authority: { ...bridgeAuthority(control, deploymentId)!, weightedQuorum: { ...control.weightedQuorum, status: "unknown" as const } } } : {}),
-    incidentState,
+    incidentState: "unknown",
     failureDomains: bridgeFailureDomains(route, control),
   };
 }
@@ -1004,9 +1002,6 @@ export function adaptBridgeReview(
           route,
           control,
           safetyScoreV9RouteSupplyShare(supplyReview ?? null, routeId),
-          !reviewStale &&
-            (control.observedAt === undefined ||
-              researchReviewObservationState(control.observedAt, clockSec) === "current"),
           clockSec,
         ),
       } satisfies StructuredBridgeOverlayEntry;
@@ -1162,11 +1157,14 @@ export function adaptBridgeReview(
   // RULED D-J: a pooled uncanonicalized row below the common-mode floor is
   // accepted supply evidence, not an unresolved deployment-control identity.
   // At the floor it keeps the ordinary synthetic control and fails closed.
+  const excludedProviderRows = supplyReview
+    ? providerRowExclusionShares(meta.id, supplyReview).byDeployment : undefined;
   const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
     .filter(
       (route) =>
         route.reviewState === "unmatched" &&
-        classifyBridgeSupplyRow(route) === "control-required",
+        classifyBridgeSupplyRow(route) === "control-required" &&
+        !excludedProviderRows?.has(route.deploymentRouteKey),
     )
     .map((route) => unmatchedBridgeControl(meta.id, route));
   // A native liability can still rely on external message validation. Keep the

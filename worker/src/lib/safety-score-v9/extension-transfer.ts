@@ -10,7 +10,7 @@ import {
   safetyScoreV9TransferDeploymentKey,
   type SafetyScoreV9ReviewedTransferFact,
 } from "@shared/types/safety-score-v9-transfer-overlays";
-import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 
 export { safetyScoreV9TransferDeploymentKey };
 export type { SafetyScoreV9ReviewedTransferFact };

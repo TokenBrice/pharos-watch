@@ -1,8 +1,26 @@
 import { z } from "zod";
-import type { V9ReasonCode } from "./safety-score-v9";
-import type { V9EvidenceCause, V9ScoringDisposition } from "./safety-score-v9-causes";
+import { V9ReasonCodeSchema, type V9ReasonCode } from "./safety-score-v9";
+import { V9EvidenceCauseSchema, type V9EvidenceCause, type V9ScoringDisposition } from "./safety-score-v9-causes";
 import type { V9EvidenceResponsibility } from "./safety-score-v9-facts";
 import type { V9PublicEvidenceFactWire } from "./safety-score-v9-public-trace";
+import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
+
+/** Append-only vocabulary indexes; inline enum literals are equally valid. */
+export const V9PublicFactReasonCodeSchema = z.union([V9ReasonCodeSchema, z.number().int().min(0).max(V9ReasonCodeSchema.options.length - 1)]);
+export const V9PublicFactResponsibilitySchema = z.union([V9EvidenceResponsibilitySchema, z.number().int().min(0).max(V9EvidenceResponsibilitySchema.options.length - 1)]);
+export const V9PublicFactCauseSchema = z.union([V9EvidenceCauseSchema, z.number().int().min(0).max(V9EvidenceCauseSchema.options.length - 1)]);
+export function resolveEvidenceFactCause(value: V9EvidenceCause | number): V9EvidenceCause {
+  if (typeof value === "string") return value;
+  const cause = V9EvidenceCauseSchema.options[value];
+  if (!Number.isInteger(value) || cause === undefined) throw new Error("Evidence cause reference is outside its vocabulary");
+  return cause;
+}
+export function resolveEvidenceFactResponsibility(value: V9EvidenceResponsibility | number): V9EvidenceResponsibility {
+  if (typeof value === "string") return value;
+  const owner = V9EvidenceResponsibilitySchema.options[value];
+  if (!Number.isInteger(value) || owner === undefined) throw new Error("Evidence responsibility reference is outside its vocabulary");
+  return owner;
+}
 
 /** Public6/API7 fact columns; null sourceGapRef means an authored absent source. */
 export const V9_PUBLIC_EVIDENCE_FACT_COLUMNS = {
@@ -30,14 +48,15 @@ export function resolveEvidenceFactPath(evidence: Pick<V9EvidenceFactContext, "f
   if (value === undefined) throw new Error("Fact path prefix reference is outside its table");
   if (typeof path === "number") return value;
   if (typeof path[1] === "string") return value + path[1];
-  const ref = path[1] ?? row[2] ?? row[6][0];
+  const ref = path[1] ?? row[2] ?? (typeof row[6] === "number" ? row[6] : row[6][0]);
   if (ref === undefined) throw new Error("Causal fact path has no reference");
   return `${value}:cause:${ref}`;
 }
 export function* iterateEvidenceResponsibilityFacts(evidence: V9EvidenceFactContext): IterableIterator<V9PublicEvidenceFact> {
   for (const row of evidence.facts) {
-    if (typeof row[1] === "string") { yield row as V9PublicEvidenceFact; continue; }
-    yield [row[0], resolveEvidenceFactPath(evidence, row), row[2], row[3], row[4], row[5], row[6]];
+    const code = typeof row[0] === "string" ? row[0] : V9ReasonCodeSchema.options[row[0]];
+    if (code === undefined) throw new Error("Evidence reason reference is outside its vocabulary");
+    yield [code, resolveEvidenceFactPath(evidence, row), row[2], resolveEvidenceFactResponsibility(row[3]), Boolean(row[4]), resolveEvidenceFactCause(row[5]), typeof row[6] === "number" ? [row[6]] : row[6]];
   }
 }
 

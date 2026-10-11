@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isV9WitnessTextReference } from "../lib/safety-score-v9/public-witness-texts";
 import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-attribution";
 import {
   V9AssetPremiumKindSchema,
@@ -26,7 +27,7 @@ import {
 import { V9BoundedEvidenceResponsibilitySchema } from "./safety-score-v9-vocabulary";
 import { causeGapRefs, V9EvidenceCauseSchema, V9ScoringDispositionSchema } from "./safety-score-v9-public-causes";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
-import { countV9EvidenceObligations, V9PublicEvidencePathSchema, refineEvidenceFactPathPrefixes } from "./safety-score-v9-public-evidence-facts";
+import { countV9EvidenceObligations, V9PublicEvidencePathSchema, refineEvidenceFactPathPrefixes, V9PublicFactReasonCodeSchema, V9PublicFactResponsibilitySchema, resolveEvidenceFactResponsibility, V9PublicFactCauseSchema, resolveEvidenceFactCause } from "./safety-score-v9-public-evidence-facts";
 
 const SafetyScoreV9AggregationTraceSchema = z
   .object({
@@ -214,6 +215,7 @@ const SafetyScoreV9AdverseAttributionTraceSchema = z
   })
   .strict()
   .superRefine((attribution, ctx) => {
+    if (attribution.items.some((item) => isV9WitnessTextReference(item.path) || isV9WitnessTextReference(item.message))) return;
     const keys = attribution.items.map((item) => `${item.source}\u0000${item.path}\u0000${item.message}`);
     if (!isUniqueSorted(keys)) {
       ctx.addIssue({
@@ -243,14 +245,14 @@ const SafetyScoreV9BoundedUncertaintyAttributionItemSchema = z
         message: "V9 bounded-uncertainty attribution requires a policy-bounded reason code",
       });
     }
-    if (item.source === "parent-score" && !item.path.startsWith("parent:")) {
+    if (item.source === "parent-score" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("parent:")) {
       ctx.addIssue({
         code: "custom",
         path: ["path"],
         message: "V9 parent bounded-uncertainty attribution requires a parent-prefixed path",
       });
     }
-    if (item.source === "wrapper-local" && !item.path.startsWith("wrapper-local:")) {
+    if (item.source === "wrapper-local" && !isV9WitnessTextReference(item.path) && !item.path.startsWith("wrapper-local:")) {
       ctx.addIssue({
         code: "custom",
         path: ["path"],
@@ -266,6 +268,7 @@ const SafetyScoreV9BoundedUncertaintyAttributionTraceSchema = z
   })
   .strict()
   .superRefine((attribution, ctx) => {
+    if (attribution.items.some((item) => isV9WitnessTextReference(item.path) || isV9WitnessTextReference(item.message))) return;
     const keys = attribution.items.map((item) =>
       [
         item.source,
@@ -310,9 +313,11 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
   });
 
 const SafetyScoreV9EvidenceResponsibilityFactSchema = z.tuple([
-  V9ReasonCodeSchema, V9PublicEvidencePathSchema, z.number().int().nonnegative().nullable(),
-  V9EvidenceResponsibilitySchema, z.boolean(), V9EvidenceCauseSchema, causeGapRefs(),
-]).superRefine(([, path, sourceGapRef, responsibility, critical, cause, refs], ctx) => {
+  V9PublicFactReasonCodeSchema, V9PublicEvidencePathSchema, z.number().int().nonnegative().nullable(),
+  V9PublicFactResponsibilitySchema, z.union([z.boolean(), z.number().int().min(0).max(1)]), V9PublicFactCauseSchema, z.union([causeGapRefs(), z.number().int().nonnegative()]),
+]).superRefine(([, path, sourceGapRef, ownerRef, critical, causeRef, gapRefs], ctx) => {
+  const responsibility = resolveEvidenceFactResponsibility(ownerRef), cause = resolveEvidenceFactCause(causeRef);
+  const refs = typeof gapRefs === "number" ? [gapRefs] : gapRefs;
   if (Array.isArray(path) && path.length === 1 && sourceGapRef === null && refs.length === 0) {
     ctx.addIssue({ code: "custom", message: "Causal fact path requires a source or causal reference" });
   }
@@ -342,10 +347,10 @@ function evidenceResponsibilityTraceSchema(accounting: "witnesses" | "obligation
     ctx.addIssue({ code: "custom", path: ["summaries"], message: "V9 evidence responsibility summaries must preserve a supported canonical owner order" });
   }
   const summariesAgree = evidence.summaries.every((summary) => {
-    const facts = evidence.facts.filter((fact) => fact[3] === summary.responsibility);
+    const facts = evidence.facts.filter((fact) => resolveEvidenceFactResponsibility(fact[3]) === summary.responsibility);
     const counts = accounting === "witnesses"
       ? { factCount: facts.length, criticalFactCount: facts.filter((fact) => fact[4]).length }
-      : countV9EvidenceObligations(facts, (fact) => fact[2], (fact) => fact[6], (fact) => fact[4]);
+      : countV9EvidenceObligations(facts, (fact) => fact[2], (fact) => typeof fact[6] === "number" ? [fact[6]] : fact[6], (fact) => Boolean(fact[4]));
     return (summary.factCount ?? 0) === counts.factCount &&
       (summary.criticalFactCount ?? 0) === counts.criticalFactCount;
   });

@@ -43,6 +43,10 @@
           {
             "label": "Pinned BSC block 126630805/hash 0x8dd758e7fd8ceef45ca0c89bcbd3e70efe70afa67f6c35aaf0f8098d5e3f6f02, 2026-10-09T11:50:39Z; observed 2026-10-09T11:50:40.933Z",
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Sol curation campaign 2026-10-11 (C22USDU): token owner() still binds this controller; getMinDelay() is 172800 for new schedules only. BSC 126926549/hash 0x597ea7b69c5ce09f89979570db92a97b066a6f986ef8806f48f9aa95d63fe49f, 2026-10-11T00:49:26Z; observed 2026-10-11T00:50:15.380Z. No role, signer, pending-operation, runtime or unavoidable-delay closure.",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
         "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) recovered the exact authenticated Etherscan source/ABI: contracts/XGLDTimelockController.sol inherits OpenZeppelin TimelockController, separates proposer/canceller roles, and exposes scheduled execute/executeBatch arbitrary CALL targets. updateDelay is self-call-only; role grants/revocations are admin-controlled. At BSC block 126630805/hash 0x8dd758e7fd8ceef45ca0c89bcbd3e70efe70afa67f6c35aaf0f8098d5e3f6f02 (2026-10-09T11:50:39Z), token owner() remains this address and its 6550-byte runtime SHA256 701d3d33d486deadd2a5f7a151c2afa55b63d848dd94e05f02231710bca8d9db matches the historical byte identity. getMinDelay() returns 172800 seconds for newly scheduled operations. This is not an unavoidable delay certificate: current/pending role, signer, operation and mutable-delay paths remain unclosed, and no Safe quorum is inferred. The historical token roster remains two minters; the current minters(original)=true observation retains the unverified original path."
@@ -60,6 +64,9 @@
         "sources": [{
           "label": "Exact original minter: authenticated explorer reports source code not verified",
           "url": "https://api.etherscan.io/v2/api?chainid=56&module=contract&action=getsourcecode&address=0x6e705a2e978a30dc92df69b428a333f6b82c0c0e"
+        }, {
+          "label": "Sol curation campaign 2026-10-11 (C22USDU): XGLDToken minters(this address) is true at BSC 126926549/hash 0x597ea7b69c5ce09f89979570db92a97b066a6f986ef8806f48f9aa95d63fe49f, 2026-10-11T00:49:26Z; observed 2026-10-11T00:52:31.431Z. Authorization only; source, collateral and downstream authority remain unresolved.",
+          "url": "https://bnb-mainnet.g.alchemy.com/v2/"
         }],
         "evidence": "Creation-to-pin historical role census identifies this native path. Fresh minters(address)=true at BSC block 126630805/hash 0x8dd758e7fd8ceef45ca0c89bcbd3e70efe70afa67f6c35aaf0f8098d5e3f6f02 (2026-10-09T11:50:39Z) proves it remains active. The October 9 authenticated exact-address Etherscan source response is status=1 with empty SourceCode and ABI='Contract source code not verified', a positive verification-status observation distinct from prior Sourcify 404/BscScan 403 failures. The historical 14773-byte runtime SHA256 5d960b93ac40550ef0afee093970a264bffbe0dd6b7a44d508530f31926d6568 and zero EIP-1967 slot are not freshly observed. Executable order/collateral enforcement and downstream authority remain U; unverified source alone does not prove an issuer non-disclosure conclusion."
       },
@@ -76,6 +83,9 @@
         "sources": [{
           "label": "Exact XGLDMinting verified source",
           "url": "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+        }, {
+          "label": "Sol curation campaign 2026-10-11 (C22USDU): XGLDToken minters(this address) is true at BSC 126926549/hash 0x597ea7b69c5ce09f89979570db92a97b066a6f986ef8806f48f9aa95d63fe49f, 2026-10-11T00:49:26Z; observed 2026-10-11T00:52:31.431Z. Does not refresh historical owner, NAV-provider, runtime or role-census observations.",
+          "url": "https://bnb-mainnet.g.alchemy.com/v2/"
         }],
         "evidence": "At BNB block 125834908, minters(address)=true, xgld() binds 0xe60106a5cab7e7c64830919d36ab20caaf50ac91, exchangeRateProvider() binds 0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7, and owner() remains the custom 0x99997b18733ff4a9d8e0b9c7d9dec59625f87228. Fresh exact verified source retains signed-order and mutable per-block-limit logic. Those restrictions do not constrain the still-active original minter or the token owner's ability to authorize another arbitrary minter."
       }

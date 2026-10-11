@@ -45,10 +45,11 @@ import {
 } from "./fact-set";
 import { admitSafetyScoreV9ExtensionAsset, quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
 import { controlCanCarryKnownStatus } from "./fact-set-control";
-import { validateSafetyScoreV9ShockRegistryAsset } from "./extension-shock";
+import { providerRowExclusionShares } from "@shared/lib/safety-score-v9/control-bridge-join";
+import { hydrateSafetyScoreV9ShockCoverageAsset, validateSafetyScoreV9ShockRegistryAsset } from "./extension-shock";
 import {
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
@@ -119,13 +120,13 @@ import {
   dependencyReserveSlices,
 } from "./extension-reserves";
 import { collateralExposureMappingIssues } from "./fact-set-context";
+import { ReviewEvidenceBuilder, parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
 import {
-  ReviewEvidenceBuilder,
+  nativeReviewEvidenceDigest,
   accessEvidenceObservationState,
   projectControlAuthority,
   boundedObservedAt,
   confidenceForResearch,
-  parseBoundedDateSec,
   maximumObservedAt,
   notApplicableStatus,
   requiredStatus,
@@ -1580,21 +1581,31 @@ function transferMaterialScope(
   meta: V9ExtensionRegistryMeta,
   generation: SafetyScoreV9TransferMaterialityGeneration | null,
   review: SafetyScoreV9ReviewedTransferFact | undefined,
+  supplyReview: ExtensionAsset["supplyReview"],
 ): SafetyScoreV9TransferMaterialScope {
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
+  const admittedExcludedRows = supplyReview ? providerRowExclusionShares(assetId, supplyReview).byDeployment : undefined;
+  const exclusions = (supplyReview?.providerRowExclusions ?? []).filter((exclusion) =>
+    admittedExcludedRows?.has(exclusion.deploymentRouteKey));
+  const excludedProviderLabels = new Set(exclusions.map((exclusion) => exclusion.review.providerChainLabel));
+  // Exclude identities, never a chain: another legacy liability on this chain
+  // still needs its own supply and transfer census after the foreign row is removed.
+  const ownContracts = (meta.contracts ?? []).filter((deployment) => !exclusions.some((exclusion) =>
+    safetyScoreV9TransferDeploymentKey(deployment.chain, deployment.address) ===
+      safetyScoreV9TransferDeploymentKey(exclusion.review.chainId, exclusion.review.contractAddress)));
   const totalSupplyUsd = !REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) ||
     fixedInput.safetyScoreV9SupplyAttributionById?.[assetId] ||
     hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: meta.contracts, bridgeRouteRisk: meta.bridgeRouteRisk })
     ? Object.values(rows).reduce((sum, row) => sum + row.current, 0) : 0;
-  const authoritativeDeployments = (meta.contracts ?? []).flatMap((deployment) => {
+  const authoritativeDeployments = ownContracts.flatMap((deployment) => {
     const chainId = resolveChainId(deployment.chain);
     return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
   });
   const authoritativeDeploymentKeys = [...new Set(authoritativeDeployments.map(({ key }) => key))].sort(compareText);
-  const unresolvedDeclaredChainIds = (meta.contracts ?? [])
+  const unresolvedDeclaredChainIds = ownContracts
     .filter((deployment) => resolveChainId(deployment.chain) === null)
     .map((deployment) => deployment.chain.trim().toLowerCase());
-  const unresolvedDeclaredDeploymentKeys = (meta.contracts ?? [])
+  const unresolvedDeclaredDeploymentKeys = ownContracts
     .filter((deployment) => resolveChainId(deployment.chain) === null)
     .map((deployment) => safetyScoreV9TransferDeploymentKey(deployment.chain.trim().toLowerCase(), deployment.address));
   if (fixedInput.safetyScoreV9SupplyAttributionById?.[assetId]?.model === "reviewed-economic-deployment-partition-v1" ||
@@ -1639,6 +1650,7 @@ function transferMaterialScope(
   const supplyByChainId = new Map<string, number>();
   let unresolvedSupplyUsd = 0;
   for (const [chain, row] of Object.entries(rows)) {
+    if (excludedProviderLabels.has(chain)) continue;
     const chainId = resolveChainId(chain);
     if (chainId === null) {
       unresolvedSupplyUsd += row.current;
@@ -1653,12 +1665,15 @@ function transferMaterialScope(
       deployment.key,
     ]);
   }
+  const unattributedOwnDeploymentKeys = authoritativeDeployments
+    .filter((deployment) => exclusions.some((exclusion) => exclusion.review.chainId === deployment.chainId))
+    .map((deployment) => deployment.key);
   const materialChainIds = [...supplyByChainId.entries()]
     .filter(([, supplyUsd]) => supplyUsd / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
     .map(([chainId]) => chainId)
     .sort(compareText);
   const materialDeploymentKeys = [
-    ...new Set(materialChainIds.flatMap((chainId) => deploymentsByChainId.get(chainId) ?? [])),
+    ...new Set([...materialChainIds.flatMap((chainId) => deploymentsByChainId.get(chainId) ?? []), ...unattributedOwnDeploymentKeys]),
   ].sort(compareText);
   return {
     authoritativeDeploymentKeys,
@@ -1666,11 +1681,13 @@ function transferMaterialScope(
     unresolvedMaterialChainIds: [...new Set([
       ...unresolvedDeclaredChainIds,
       ...Object.entries(rows)
-        .filter(([chain, row]) => resolveChainId(chain) === null && row.current / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
+        .filter(([chain, row]) => !excludedProviderLabels.has(chain) &&
+          resolveChainId(chain) === null && row.current / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
         .map(([chain]) => chain.trim().toLowerCase()),
     ])].sort(compareText),
     materialDeploymentKeys,
     materialDeploymentScopeComplete:
+      unattributedOwnDeploymentKeys.length === 0 &&
       unresolvedSupplyUsd / totalSupplyUsd < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD &&
       materialChainIds.length > 0 &&
       materialChainIds.every((chainId) => (deploymentsByChainId.get(chainId)?.length ?? 0) > 0),
@@ -2465,7 +2482,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
         const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
-        const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+        const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec, nativeReviewEvidenceDigest);
         admissionPath = "reserveScopeAdmissions";
         const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
         addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput, reviewEvidence);
@@ -2624,12 +2641,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         );
         admissionPath = "controlReview";
         const incidentControlRoute = routeSafetyScoreV9ControlIncidents(
-          mint.controls,
+          [...mint.controls, ...bridge.controls],
           mint.review,
           reviewedIncidents,
         );
         const controls = routeSafetyScoreV9NegativeIncidentReviews(
-          [...incidentControlRoute.controls, ...bridge.controls],
+          incidentControlRoute.controls,
           assetId,
           clockSec,
           negativeIncidentReviews,
@@ -2651,6 +2668,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             meta,
             options.transferMaterialityGeneration ?? null,
             reviewedTransferFact,
+            supplyReview,
           ),
           clockSec,
           buildSafetyScoreV9AccessClaimGraph({ assetId, clockSec, generationId: fixedInput.baseInputGenerationId, evidence: reviewEvidence, review: options.accessClaimGraphReviews?.get(assetId) }),
@@ -2749,7 +2767,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
               }
             : null,
           ...reviewedEvidence,
-        }, clockSec, reuseScopeRoot);
+        }, clockSec, reuseScopeRoot, (asset) => hydrateSafetyScoreV9ShockCoverageAsset(asset, clockSec));
       } catch (error) {
         return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",

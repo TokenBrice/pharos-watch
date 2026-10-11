@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSafetyScoreV9AccessClaimGraph } from "../safety-score-v9/extension-access-lookthrough";
-import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";

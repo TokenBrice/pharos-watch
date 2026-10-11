@@ -33,7 +33,7 @@ import {
   V9EvidenceGapClassificationSchema, V9TypedReviewGapClassificationSchema, v9EvidenceCauseScopeKey,
   type V9EvidenceCauseScope, type V9RuntimeProducerVerdict, type V9CauseResolutionDiagnostic,
 } from "@shared/types/safety-score-v9-causes";
-import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 

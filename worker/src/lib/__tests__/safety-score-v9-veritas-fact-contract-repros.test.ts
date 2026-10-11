@@ -9,6 +9,7 @@ import type { V9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9/co
 import { evaluateV9Exit } from "@shared/lib/safety-score-v9/exit";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { ReserveSlice } from "@shared/types/reserves";
@@ -170,7 +171,7 @@ describe("VERITAS finding VER-006: zero-route completeness is compiled as missin
     expect(evaluated.trace.finalScore).not.toBeNull();
     expect(evaluated.trace.finalGrade).not.toBe("NR");
 
-    const card = pipeline.candidate.cards[0]!;
+    const card = resolveV9PublicWitnessTexts(pipeline.candidate.cards[0]!);
     expect(card.pillars.exit.score).toBe(0);
     expect(card.grade).not.toBe("NR");
     expect(card.score).not.toBeNull();

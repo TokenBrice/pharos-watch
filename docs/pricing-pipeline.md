@@ -22,12 +22,16 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObserv
 
 When an asset still has no usable current price after validation and fallback recovery, Pharos keeps `price = null`, `priceConfidence = null`, and serializes `priceSource = "missing"` so the cache payload stays structurally valid while still making the missing-price state explicit.
 
+Supplemental on-chain supply failures identify the asset, chain, contract and machine-readable subreason in `onchain-supply-contract-withheld` events. An unreadable `totalSupply` is distinct from a nonpositive read or unsupported amount encoding; a missing admitted NAV is reported separately as `supplemental-supply-withheld` / `nav-price-unavailable`, before any supply probe. Complete native aggregates still reject every unreadable leg and preserve the same-run zero-supply guards. Caller cancellation propagates rather than being reported as a completed unavailable observation. These diagnostics do not change supply admission or refresh carried observation clocks.
+
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.46`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.47`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+The 2026-10-11 `v6.47` release retires SOFID's nominal protocol-par override. Its existing exact-identity CoinGecko/Kraken market consensus now survives ordinary normalization and can show an observed discount or premium. Kraken retains `local_fetch` timing and `confirm_required` depeg trust; missing quotes and carried nominal references remain unavailable. No source, consensus weight, liquidity threshold or freshness budget is added. Supplemental Idle CDO NAV reachability and failure diagnostics restore existing supply-admission behavior rather than adding another methodology change.
 
 The 2026-10-10 `v6.46` release keeps material supply quarantine sticky when known chain rows disappear and publishes stale fallback chain current as unavailable. Strict buckets, joined canonical-block circulation/escrow accounting and timestamp-matched historical valuation preserve completeness rather than optimistic zero. Historical cohort and structural-supplement chart buckets remain nullable without complete evidence inside the existing 14-day as-of budget; 7D/30D checkpoints use paired native supply at the current observation clock. Cap cUSD and infiniFi iUSD use observed USDC/USD, Solayer uses canonical SPL accrual, and reserve NAV rejects superseded bindings. Jupiter optional liquidity, CMC collection continuity and bounded missing-only vault rescue keep their source contracts. FX carry preserves cadence/source age and explicitly reports partial publication; gap-fill ceilings and future-skew gates retain original clocks. Coverage/replay follow admitted rows. Consensus weights and current scoring formulas are unchanged. Activation is provisionally 2026-10-11 00:00 UTC, re-dated at release; fixed-clock price/supply/coverage comparison remains required.
 
@@ -71,7 +75,7 @@ The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry, and pool-chall
 
 Pyth Hermes was retired from live primary consensus on 2026-08-26 after Pyth's API-key mandate made the free tier unavailable for API access. New runs do not request the Pyth lane and stablecoin metadata no longer carries `pythFeedId`; the pricing registry retains the retired `pyth` key only so historical price provenance remains renderable.
 
-Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request. Its bid/ask midpoint can corroborate a fresh CoinGecko quote, but the ticker retains its local-fetch clock: that pair alone does not satisfy nominal-par precedence's unchanged depeg-authoritative trust gate. A second agreeing depeg-authoritative source or an admitted upstream-capable authoritative source is still required. Provider registration alone does not establish a published observed price; unavailable or non-agreeing observations retain their ordinary admission behavior.
+Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request, corroborating the contract-verified CoinGecko `sofiusd` identity. SoFiUSD no longer has a nominal-par override: admitted observed market consensus publishes through the ordinary validation path. Kraken's bid/ask midpoint retains its local-fetch clock, and CoinGecko agreement does not upgrade that quote to single-source depeg authority. Failed or absent quotes stay unavailable rather than publishing par. Provider registration alone does not establish a published observation.
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
 

@@ -59,6 +59,7 @@ import {
   V9RouteValuationBasisSchema,
   V9RouteValuationConfidenceSchema,
 } from "@shared/types/safety-score-v9-fact-input-primitives";
+import { ResearchEvidenceSchema, ComponentEvidenceBindingSchema } from "@shared/types/safety-score-v9-research-evidence";
 
 export function computeSafetyScoreV9ReserveExposureKey(slice: ReserveSlice): string {
   if (slice.sourceKey) {
@@ -82,37 +83,6 @@ const SourceClockSchema = z
   })
   .strict();
 
-const ResearchEvidenceSchema = z
-  .object({
-    evidenceKey: CanonicalTextSchema,
-    sourceId: CanonicalTextSchema,
-    observedAtSec: UnixSecondsSchema,
-    publishedAtSec: UnixSecondsSchema.nullable(),
-    publishedBy: z.enum(["issuer", "parent", "other", "unknown"]).optional(),
-    url: z.string().url().nullable(),
-    contentSha256: Sha256Schema,
-    confidence: z.enum(["verified", "probable", "manual-review", "limited", "unknown"]),
-    maxAgeSec: z.number().int().nonnegative().nullable(),
-  })
-  .strict()
-  .superRefine((evidence, ctx) => {
-    if (evidence.publishedAtSec !== null && evidence.publishedAtSec < evidence.observedAtSec) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["publishedAtSec"],
-        message: "Research evidence publication cannot predate observation",
-      });
-    }
-  });
-
-const ComponentEvidenceBindingSchema = z
-  .object({
-    componentKey: CanonicalTextSchema,
-    evidenceKeys: canonicalArrayBy(CanonicalTextSchema, (value) => value).refine((values) => values.length > 0, {
-      message: "Component evidence binding requires at least one evidence key",
-    }),
-  })
-  .strict();
 
 const ReserveApplicabilitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("required") }).strict(),
@@ -677,10 +647,15 @@ function batchAdmitExtensionControlScopes(value: unknown, reuseScopeRoot?: V9Con
 }
 
 /** Strict admission once; immutable identity permits reuse without a second fact-graph clone. */
-export function admitSafetyScoreV9ExtensionAsset(value: unknown, compiledAtSec: number, reuseScopeRoot?: V9ControlExecutionScopeRootReuse): AssetExtension {
+export function admitSafetyScoreV9ExtensionAsset(
+  value: unknown,
+  compiledAtSec: number,
+  reuseScopeRoot?: V9ControlExecutionScopeRootReuse,
+  hydrateCdpStressCoverage: (asset: unknown) => unknown = (asset) => asset,
+): AssetExtension {
   const assetId = salvage(CanonicalTextSchema, isRecord(value) ? value.assetId : undefined, null);
   if (assetId === null) throw new Error("Safety Score v9 extension asset has no canonical assetId");
-  return admitExtensionAsset(batchAdmitExtensionControlScopes(value, reuseScopeRoot), assetId, compiledAtSec, (asset) => asset);
+  return admitExtensionAsset(batchAdmitExtensionControlScopes(value, reuseScopeRoot), assetId, compiledAtSec, hydrateCdpStressCoverage);
 }
 
 /** Envelope-only view: registry identity, clocks, freshness, and a non-empty asset list stay cohort-global. */

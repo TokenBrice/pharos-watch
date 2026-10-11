@@ -277,43 +277,70 @@
         "id": "susdat-ethereum-ccip-lockbox",
         "label": "sUSDat Ethereum CCIP lock/release pool",
         "routeRefs": ["ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
-        "capabilities": ["escrow"],
+        "capabilities": ["escrow", "peer-config", "rate-limit", "admin"],
         "controllerChain": "ethereum",
         "controllerAddress": "0xf3fc7fde5081192177f38895e57a1489e4bd56f2",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26108096,
-        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }],
-        "evidence": "getToken() returned native sUSDat, typeAndVersion() returned LockReleaseTokenPool 1.6.1 and owner() returned 0x44835bbba9d40deda9b64858095ecfb2693c9449 at block 26108096. Current peer/rate-limit and owner authority closure were not enumerated."
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Ethereum block 26155000, getSupportedChains() returned exactly BNB selector 11344663589394136015 and Monad selector 8481857512324358265. getRemoteToken/getRemotePools returned sUSDat representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 and sole pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c on BNB, and the same representation address with sole pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e on Monad. This is the current peer census, not an exhaustive historical lane or pending-message census.",
+          "rateLimits": "At block 26155000 both peers had enabled outbound buckets with raw capacity 999999999999999983222784 and rate 277000000000000000000 per second, and enabled inbound buckets with raw capacity 1100000000000000008388608 and rate 304700000000000000000 per second, in 18-decimal vault-share units. Values are retained exactly, not rounded to nominal million-share limits.",
+          "pausersAdminsUpgraders": "Pool owner() returned 0x44835bbba9d40deda9b64858095ecfb2693c9449; getRateLimitAdmin() returned 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. Verified TokenPool source permits either owner or rate-limit admin to change lane bucket configurations. getRouter() returned 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d and getRmnProxy() returned 0x411de17f12d1a34ecc7f45f49844626267c75e81. Complete upstream signing, bypass and active validator closure remain unresolved."
+        },
+        "canRaiseCap": true,
+        "observedAt": "2026-10-11",
+        "observedBlock": 26155000,
+        "sources": [
+          { "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
+          { "label": "Verified exact LockRelease pool and TokenPool authority source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3fc7fde5081192177f38895e57a1489e4bd56f2" },
+          { "label": "Pinned Ethereum RPC", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com" }
+        ],
+        "evidence": "Sol curation campaign 2026-10-11 (C13USDat), observed 2026-10-11T00:52:03.715Z and peer/bucket batch on the same hash pin: Ethereum block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z. getToken() returned native sUSDat and typeAndVersion() returned LockReleaseTokenPool 1.6.1. Current peer and mutable bucket facts are known; the complete owner/validator execution census and historical pending accounting are not claimed."
       },
       {
         "id": "susdat-bsc-ccip-pool",
         "label": "sUSDat BNB CCIP representation mint/burn pool",
         "routeRefs": ["bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
-        "capabilities": ["bridge-mint", "bridge-burn"],
+        "capabilities": ["bridge-mint", "bridge-burn", "peer-config", "rate-limit", "admin"],
         "controllerChain": "bsc",
         "controllerAddress": "0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 125385528,
-        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }],
-        "evidence": "The representation returned true for pool MINTER_ROLE and BURNER_ROLE membership; pool getToken() returned this exact representation, typeAndVersion() was BurnWithFromMintTokenPool 1.6.1 and owner() was 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 at block 125385528. No sole-role-holder or full controller closure claim is made."
+        "routeChecks": {
+          "trustedPeerOrRemote": "At BNB block 126925693, the complete supported selector list was Ethereum 5009297550715157269 and Monad 8481857512324358265. Remote token/pool pairs were native sUSDat 0xd166337499e176bbc38a1fbd113ab144e5bd2df7 with sole Ethereum pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2, and Monad representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e.",
+          "rateLimits": "Both configured peers had enabled outbound capacity 999999999999999983222784 / rate 277000000000000000000 per second and enabled inbound capacity 1100000000000000008388608 / rate 304700000000000000000 per second, raw 18-decimal share units. These are mutable observed buckets, not permanent supply or loss bounds.",
+          "pausersAdminsUpgraders": "owner() = 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5; getRateLimitAdmin() = 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c; getRouter() = 0x34b03cb9086d7d758ac55af71584f81a598759fe; getRmnProxy() = 0x9e09697842194f77d315e0907f1bda77922e8f84. Current representation getRoleMembers() returned this pool as the sole MINTER_ROLE and BURNER_ROLE member. Pool upstream authority and validator closure are not inferred from that sole-role fact."
+        },
+        "observedAt": "2026-10-11",
+        "observedBlock": 126925693,
+        "sources": [
+          { "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
+          { "label": "Pinned BNB RPC", "url": "https://bnb-mainnet.g.alchemy.com/v2/" }
+        ],
+        "evidence": "Sol curation campaign 2026-10-11 (C13USDat): successful separate token, pool and peer batches at BNB block 126925693, hash 0xfc5168b34cf05860069c0aedcb5bb85b35fc806c1f9a49874464f2a4610c201c, timestamp 2026-10-11T00:43:01Z. Token census observed 2026-10-11T00:50:57.284Z; pool batch observed 2026-10-11T00:52:06.621Z. getToken() returned the exact representation and typeAndVersion() was BurnWithFromMintTokenPool 1.6.1. Local sole-mint/burn role and complete current peer/bucket inventories are known; no whole controller, incident-history or pending-message closure is claimed."
       },
       {
         "id": "susdat-monad-ccip-pool",
         "label": "sUSDat Monad CCIP representation mint/burn pool",
         "routeRefs": ["monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
-        "capabilities": ["bridge-mint", "bridge-burn"],
+        "capabilities": ["bridge-mint", "bridge-burn", "peer-config", "rate-limit", "admin"],
         "controllerChain": "monad",
         "controllerAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 110032851,
-        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }],
-        "evidence": "The representation returned true for pool MINTER_ROLE and BURNER_ROLE membership; pool getToken() returned this exact representation, typeAndVersion() was BurnWithFromMintTokenPool 1.6.1 and owner() was 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2 at block 110032851. No sole-role-holder or full controller closure claim is made."
+        "routeChecks": {
+          "trustedPeerOrRemote": "At Monad block 112328913, the complete supported selector list was BNB 11344663589394136015 and Ethereum 5009297550715157269. Remote token/pool pairs were native sUSDat 0xd166337499e176bbc38a1fbd113ab144e5bd2df7 with sole Ethereum pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2, and BNB representation 0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25 with sole pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c.",
+          "rateLimits": "Both configured peers had enabled outbound capacity 999999999999999983222784 / rate 277000000000000000000 per second and enabled inbound capacity 1100000000000000008388608 / rate 304700000000000000000 per second, raw 18-decimal share units. These are mutable observed buckets, not permanent supply or loss bounds.",
+          "pausersAdminsUpgraders": "owner() = 0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2; getRateLimitAdmin() = 0xd691b6da5b61b4106b3355295b94a4a4b66cbc8d; getRouter() = 0x33566fe5976aaa420f3d5c64996641fc3858cadb; getRmnProxy() = 0x99dfca5d88f4d9c023531f4403966b8d61562acd. Current representation getRoleMembers() returned this pool as the sole MINTER_ROLE and BURNER_ROLE member. Pool upstream authority and validator closure remain unresolved."
+        },
+        "observedAt": "2026-10-11",
+        "observedBlock": 112328913,
+        "sources": [
+          { "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
+          { "label": "Verified exact Monad representation source", "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources" },
+          { "label": "Pinned Monad RPC", "url": "https://api-monad-mainnet-full.n.dwellir.com" }
+        ],
+        "evidence": "Sol curation campaign 2026-10-11 (C13USDat): successful separate token, pool and peer batches at Monad block 112328913, hash 0x316684406b5ca79b106600a5f39c58a75141dbe8495d71eafdbe0043fd9c339b, timestamp 2026-10-11T00:45:29Z. Token census observed 2026-10-11T00:51:00.751Z. getToken() returned the exact representation and typeAndVersion() was BurnWithFromMintTokenPool 1.6.1. Current sole-mint/burn and complete peer/bucket facts do not establish full upstream signing, bypass, validator or pending-history closure."
       },
       {
         "id": "susdat-bsc-representation-admin",
@@ -325,13 +352,15 @@
         "authorityType": "timelock",
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 125386141,
+        "observedAt": "2026-10-11",
+        "observedBlock": 126925693,
         "sources": [
           { "label": "Saturn representation source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
-          { "label": "BNB representation proxy", "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+          { "label": "BNB representation proxy", "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" },
+          { "label": "Pinned BNB role and ProxyAdmin owner census", "url": "https://bnb-mainnet.g.alchemy.com/v2/" },
+          { "label": "Verified non-enumerable SaturnTimelock source", "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources" }
         ],
-        "evidence": "The EIP-1967 admin slot returned ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e, whose owner() was this timelock. Token DEFAULT_ADMIN_ROLE membership was true and getMinDelay() returned 172800 seconds at block 125386141. Full proposer/executor and additional admin census remain unknown."
+        "evidence": "Sol curation campaign 2026-10-11 (C13USDat), BNB block 126925693 (2026-10-11T00:43:01Z), token census observed 2026-10-11T00:50:57.284Z. The EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e; owner() is this timelock and getMinDelay() is 172800. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = CCIP pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c; sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548. pendingDefaultAdmin() was zero, isPaused() false and allowlistMode() 1 (blacklist). The two direct pause/list accounts each had code 0x and nonce 0; their signing custody or counterfactual status is not inferred. SaturnTimelock inherits non-enumerable AccessControl, so full current proposer/executor/canceller membership still requires authenticated complete grant/revoke history; the reverted getRoleMembers batch is not evidence of absent roles."
       },
       {
         "id": "susdat-monad-representation-admin",
@@ -343,13 +372,16 @@
         "authorityType": "timelock",
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 110033773,
+        "observedAt": "2026-10-11",
+        "observedBlock": 112328913,
         "sources": [
           { "label": "Saturn representation source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
-          { "label": "Monad representation proxy", "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+          { "label": "Monad representation proxy", "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" },
+          { "label": "Verified exact Monad representation source", "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources" },
+          { "label": "Verified non-enumerable SaturnTimelock source", "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources" },
+          { "label": "Pinned Monad role and ProxyAdmin owner census", "url": "https://api-monad-mainnet-full.n.dwellir.com" }
         ],
-        "evidence": "The EIP-1967 admin slot returned ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e, whose owner() was this timelock. Token DEFAULT_ADMIN_ROLE membership was true and getMinDelay() returned 172800 seconds at block 110033773. Full proposer/executor and additional admin census remain unknown."
+        "evidence": "Sol curation campaign 2026-10-11 (C13USDat), Monad block 112328913 (2026-10-11T00:45:29Z), token census observed 2026-10-11T00:51:00.751Z. The EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e; owner() is this timelock and getMinDelay() is 172800. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e; sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548. pendingDefaultAdmin() was zero, isPaused() false and allowlistMode() 1 (blacklist). The two direct pause/list accounts each had code 0x and nonce 0, which does not prove EOA signing custody or the absence of counterfactual contracts. Non-enumerable timelock proposer/executor/canceller history and full bypass closure remain unresolved."
       }
     ],
     "scopedQuestions": [

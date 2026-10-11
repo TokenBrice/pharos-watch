@@ -343,14 +343,21 @@ async function fetchOnChainSupplyForContract(input: {
   observedBlocks?: Map<string, EvmBlockHeader>;
 }): Promise<ContractOnChainMcapResult | null> {
   const supplyContract = input.supplyContract;
-  if (!isFixedDecimalDeployment(supplyContract)) {
-    logWorkerEventArgs("handler", "warn",
-      `[fiat-cg] ${contractChainLabel(supplyContract)} supply probe skipped for ${input.meta.symbol}: contract has no fixed-decimal amount encoding`,
-    );
+  const reject = (reason: string, error?: unknown): null => {
+    logWorkerEvent({
+      scope: "handler", level: "warn", job: "sync-stablecoins",
+      event: "onchain-supply-contract-withheld",
+      message: `[fiat-cg] ${input.meta.symbol} supply deployment unavailable`,
+      metadata: { stablecoinId: input.meta.id, chain: supplyContract.chain, contract: supplyContract.address, reason, rule: "R4" },
+      ...(error ? { error } : {}),
+    });
     return null;
+  };
+  if (!isFixedDecimalDeployment(supplyContract)) {
+    return reject("amount-encoding-unavailable");
   }
   const family = onchainSupplyProbeFamily(supplyContract);
-  if (family === null) return null;
+  if (family === null) return reject("unsupported-chain-family");
   const decimals = supplyContract.decimals;
   const supplySignal = input.signal ?? AbortSignal.timeout(10_000);
   const chainRpc = input.chainRpcs?.get(input.supplyContract.chain);
@@ -393,7 +400,9 @@ async function fetchOnChainSupplyForContract(input: {
       rpcUrl,
       fallbackRpcUrl,
     });
-    if (raw == null || (raw <= 0n && !allowZeroSupply)) return null;
+    throwIfAborted(supplySignal);
+    if (raw == null) return reject("total-supply-read-unavailable");
+    if (raw < 0n || (raw === 0n && !allowZeroSupply)) return reject("total-supply-nonpositive");
 
     if (family === "movement") {
       const ethereumRpc = input.chainRpcs?.get("ethereum");
@@ -439,12 +448,11 @@ async function fetchOnChainSupplyForContract(input: {
       return { mcap, supplySource, observedAt, observedBlock, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {
-    logWorkerEventArgs("handler", "warn",
-      `[fiat-cg] ${contractChainLabel(input.supplyContract)} supply probe failed for ${input.meta.symbol}: ${String(err).slice(0, 200)}`,
-    );
+    throwIfAborted(supplySignal);
+    return reject("supply-probe-failed", err);
   }
 
-  return null;
+  return reject("supply-valuation-invalid");
 }
 
 /**

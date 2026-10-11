@@ -1,6 +1,7 @@
 import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
 import { attributedSerialParent } from "./safety-score-v9-public-internal";
 import { resolveCauseGapId, type V9PublicCauseGapContext } from "./safety-score-v9-public-cause-gaps";
+import { resolveV9PublicWitnessTexts } from "../lib/safety-score-v9/public-witness-texts";
 
 type AttributionCard = Omit<SafetyScoreV9CurrentCard, "breakdowns">;
 
@@ -12,10 +13,29 @@ export interface SafetyScoreV9ParentAttributionIssue {
 export function findSafetyScoreV9ParentAttributionIssues(
   response: V9PublicCauseGapContext & { cards: readonly AttributionCard[] },
 ): SafetyScoreV9ParentAttributionIssue[] {
-  const cards = response.cards;
-  const cardsById = new Map(cards.map((card) => [card.id, card]));
   const issues: SafetyScoreV9ParentAttributionIssue[] = [];
-  for (const card of cards) {
+  // Keep the cohort on its compact wire: expanded witnesses are needed only
+  // for the current card and the parents compared with that card.
+  const cardsById = new Map(response.cards.map((card) => [card.id, card]));
+  for (const wire of response.cards) {
+    let card: AttributionCard;
+    try { card = resolveV9PublicWitnessTexts(wire); }
+    catch {
+      issues.push({ cardId: wire.id, message: "Parent attribution contains invalid witness text references" });
+      continue;
+    }
+    const parents = new Map<string, AttributionCard>();
+    function resolvedParent(id: string): AttributionCard | undefined {
+      const cached = parents.get(id);
+      if (cached !== undefined) return cached;
+      const parent = cardsById.get(id);
+      if (parent === undefined) return undefined;
+      try {
+        const resolved = resolveV9PublicWitnessTexts(parent);
+        parents.set(id, resolved);
+        return resolved;
+      } catch { return undefined; } // The parent's own iteration reports invalid text.
+    }
     for (const dependency of card.dependencies.serial) {
       const upstream = cardsById.get(dependency.upstreamAssetId);
       if (upstream && (dependency.ratingStatus !== upstream.ratingStatus ||
@@ -42,7 +62,7 @@ export function findSafetyScoreV9ParentAttributionIssues(
       if (parent === null) continue;
       const pathPrefix = `parent:${parent.upstreamAssetId}:`;
       const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;
-      const upstream = cardsById.get(parent.upstreamAssetId);
+      const upstream = resolvedParent(parent.upstreamAssetId);
       const matches = upstream?.scoreTrace.adverseAttribution.items.some(
         (candidate) =>
           sameCausePath(response, upstream, candidate.path, card, item.path.slice(pathPrefix.length)) &&
@@ -61,7 +81,7 @@ export function findSafetyScoreV9ParentAttributionIssues(
       if (parent === null) continue;
       const pathPrefix = `parent:${parent.upstreamAssetId}:`;
       const messagePrefix = `Required parent ${parent.upstreamAssetId}: `;
-      const upstream = cardsById.get(parent.upstreamAssetId);
+      const upstream = resolvedParent(parent.upstreamAssetId);
       const matches = upstream?.scoreTrace.boundedUncertaintyAttribution.items.some(
         (candidate) =>
           candidate.code === item.code &&

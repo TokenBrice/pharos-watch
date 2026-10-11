@@ -3,13 +3,24 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
 import { v9TestClockSec } from "../../test-helpers/v9-fixed-input";
 import { makePublicationDexRow, makePublicationPegRow } from "./safety-score-v9-publication-input.test-support";
+
+// This regression models reviewed native controls without independent bridge
+// incident research; current campaign curation must not close its intended gap.
+vi.mock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
+  default: {
+    schemaVersion: 1,
+    digest: "0".repeat(64),
+    incidents: [],
+    negativeReviews: [],
+  },
+}));
 
 // Evaluate after the newest registry review so the D14 control refresh is
 // admitted alongside the reviewed custody/mechanism evidence.
@@ -180,9 +191,18 @@ describe("Safety Score v9 DUSD Makina team-answer evidence", () => {
         "strategy-vault-holder-loss-controls-reviewed",
       ]),
     });
-    expect(wrapper.facts.lossAbsorptionEmergencyControls.signals).not.toContain(
+    // Reviewed adverse native powers remain, but route research cannot prove
+    // absence of incidents on DUSD's independently scoped bridge control.
+    expect(wrapper.facts.lossAbsorptionEmergencyControls.signals).toContain(
       "wrapper-local-controls-partial-review",
     );
+    const bridgeControls = compiledAsset.controls.filter((control) => control.controlKind === "bridge");
+    expect(bridgeControls).toHaveLength(1);
+    expect(bridgeControls[0]!.incidentState).toBe("unknown");
+    expect(bridgeControls[0]!.factorStatuses?.incidentState).toMatchObject({
+      observationState: "missing",
+      gapIds: [`${ASSET_ID}:gap:control:${bridgeControls[0]!.controlKey}:incidentState`],
+    });
     expect(wrapper.facts.lossAbsorptionEmergencyControls.evidenceRefIds.length).toBeGreaterThan(0);
     expect(wrapper.riskTransfer).toMatchObject({
       disposition: "not-applicable",

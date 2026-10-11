@@ -27,6 +27,25 @@ describe("published conservative redemption fee bounds", () => {
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config(), 10_000, 0, context)).toBeCloseTo(50.40625);
     expect(resolveV9RedemptionRouteCostBpsAtNotional(config(), 100_000, 0, context)).toBeCloseTo(50.040625);
   });
+  it("evaluates native IDRX tiers and CHF flat terms at the exact request without assuming dollar parity", () => {
+    const idrx = { ...config(), v9RouteCostTerms: { feeBpsMax: 0, publishedFeeSchedule: schedule,
+      feeComponents: [{ currency: "IDR", tiers: [
+        { upToNotional: 250_000_000, terms: { flatAmount: 5000 } },
+        { terms: { flatAmount: 35000 } },
+      ] }] } };
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(idrx, 15_000, null, context)).toBeCloseTo(0.2083333333);
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(idrx, 15_625, null, context)).toBeCloseTo(1.4);
+    const chfContext: RedemptionFiatReferenceContext = { clockSec, pegDataById: {
+      chf: { pegCurrency: "CHF", pegReference: { valueUsd: 1.2, source: "fx", contributorCount: 0, asOf: clockSec - 60 } },
+    } };
+    const vchf = { ...config(), v9RouteCostTerms: { feeBpsMax: 0, publishedFeeSchedule: schedule,
+      feeComponents: [{ currency: "CHF", terms: { flatAmount: 30 } }] } };
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(vchf, 100_000, null, chfContext)).toBeCloseTo(3.6);
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(vchf, 100_000, null, { clockSec, pegDataById: {} })).toBeNull();
+  });
+  it.each(["idrx-idrx", "idrt-rupiah-token", "vchf-vnx"])("keeps %s partial published components unavailable as an all-in bound", (assetId) => {
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(getRedemptionBackstopConfig(assetId)!, 100_000, null, context)).toBeNull();
+  });
   it("does not substitute an observed lower fee for a published conservative maximum", () => {
     const bound = { ...config(), v9RouteCostTerms: { feeBpsMax: 1000, publishedFeeSchedule: schedule } };
     expect(resolveV9RedemptionRouteCostBpsAtNotional(bound, 1_000_000, 0, context)).toBe(1000);

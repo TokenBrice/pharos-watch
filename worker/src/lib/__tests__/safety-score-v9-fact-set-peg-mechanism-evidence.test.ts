@@ -612,6 +612,24 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     }));
   });
 
+  it("admits CDP journal hydration before sealing the baseline asset", () => {
+    const clockSec = 1_791_701_190;
+    const fixed = exactFixedInput({ assetId: "lusd-liquity", clockSec });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: metaMap(alphaMeta({ id: "lusd-liquity", mechanismArchetype: "cdp" })),
+    });
+    const asset = baseline.assets[0]!;
+    expect(asset.admissionQuarantine).toBeUndefined();
+    expect(asset.cdpStressCoverage).toEqual(selectSafetyScoreV9CdpShockMeasurement("lusd-liquity", clockSec));
+    expect(Object.isFrozen(asset.cdpStressCoverage)).toBe(true);
+    const materialized = materializeSafetyScoreV9FactSetExtension(fixed, baseline);
+    expect(materialized.assets[0]).toBe(asset);
+    const forged = structuredClone(baseline);
+    forged.assets[0]!.cdpStressCoverage!.stressLiquidationCoverageRatio = 99;
+    expect(materializeSafetyScoreV9FactSetExtension(fixed, forged).assets[0]!.admissionQuarantine)
+      .toMatchObject({ code: "fact-validation-failed", path: "cdpStressCoverage" });
+  });
+
   it("derives research, route, measured-adapter, and CDP shock freshness windows", () => {
     const clockSec = Date.UTC(2026, 6, 19) / 1_000;
     const compileResearch = (reviewedAt: string) => {

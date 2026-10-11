@@ -6070,6 +6070,123 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "ussd-sonic-labs",
+      "reviewer": "Sol curation campaign 2026-10-11 (G16HbUSDT)",
+      "reviewedAt": "2026-10-11T08:47:03Z",
+      "observedAtSec": 1791708423,
+      "expiresAtSec": 1794300423,
+      "rationale": "Frax publisher terms identify USSD by the exact branded token, custodian and router addresses and describe fixed-face 1:1 frxUSD mint/redemption accounting across branded deployments. Sonic publisher terms identify the same USSD instrument and par liability. Independently retrieved exact chain-sensitive token/explorer identities cover every registered holder deployment: Sonic, Ethereum, Base, Arbitrum, Optimism and Scroll. The previously unavailable Sonic source now resolves to the verified GeniusDollar proxy. This published fixed-face accounting review establishes moderate local accounting risk only; it does not certify an independently administered NAV, current implementation execution, backing sufficiency, aggregate liability census, emergency controls or same-notional exit. Scroll remains a registered liability instrument despite the separately disclosed disconnected Hop route; no operational resumption, zero liabilities or holder-route availability is asserted.",
+      "sources": [
+        {
+          "label": "Sonic issuer USSD fixed-face instrument terms",
+          "url": "https://docs.soniclabs.com/sonic/ussd"
+        },
+        {
+          "label": "Frax USSD-specific branded instrument and cross-chain accounting terms",
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+        },
+        {
+          "label": "Frax BrandedCustodian 1:1 frxUSD accounting and configurable fee terms",
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+        },
+        {
+          "label": "Exact USSD sonic holder-token identity retrieved 2026-10-11",
+          "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+        },
+        {
+          "label": "Exact USSD ethereum holder-token identity retrieved 2026-10-11",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+        },
+        {
+          "label": "Exact USSD base holder-token identity retrieved 2026-10-11",
+          "url": "https://base.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+        },
+        {
+          "label": "Exact USSD arbitrum holder-token identity retrieved 2026-10-11",
+          "url": "https://arbitrum.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+        },
+        {
+          "label": "Exact USSD optimism holder-token identity retrieved 2026-10-11",
+          "url": "https://explorer.optimism.io/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+        },
+        {
+          "label": "Exact USSD scroll holder-token identity retrieved 2026-10-11",
+          "url": "https://scrollscan.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.frax.com/fraxnet/branded-stablecoins",
+          "description": "Publisher explicitly names USSD token 0x000000000eccff26b795f73fb0a70d48da657fef, custodian 0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03 and router 0x2f30bef74c1f7572a3ea5e101d1f587287d06c94. Each branded token is backed 1:1 by frxUSD; cross-chain source redemption and destination re-mint preserve the fixed-face unit. This is instrument accounting, not a complete deployment-liability inventory."
+        },
+        {
+          "sourceUrl": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+          "description": "Published custodian terms use branded tokens as shares and frxUSD as underlying, with a 1:1 backing ratio and mint/redeem fee adjustments. Fixed-face unit normalization does not imply zero fees, assured NAV or a binding current executable capacity."
+        },
+        {
+          "sourceUrl": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code",
+          "description": "Retrieved exact sonic USSD address identity. Token/proxy is not substituted from another chain. Displayed supply, balances and implementation references are not pinned quantitative evidence and grant no code-certified accounting or current-capacity credit."
+        },
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef",
+          "description": "Retrieved exact ethereum USSD address identity. Token/proxy is not substituted from another chain. Displayed supply, balances and implementation references are not pinned quantitative evidence and grant no code-certified accounting or current-capacity credit."
+        },
+        {
+          "sourceUrl": "https://base.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef",
+          "description": "Retrieved exact base USSD address identity. Token/proxy is not substituted from another chain. Displayed supply, balances and implementation references are not pinned quantitative evidence and grant no code-certified accounting or current-capacity credit."
+        },
+        {
+          "sourceUrl": "https://arbitrum.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef",
+          "description": "Retrieved exact arbitrum USSD address identity. Token/proxy is not substituted from another chain. Displayed supply, balances and implementation references are not pinned quantitative evidence and grant no code-certified accounting or current-capacity credit."
+        },
+        {
+          "sourceUrl": "https://explorer.optimism.io/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef",
+          "description": "Retrieved exact optimism USSD address identity. Token/proxy is not substituted from another chain. Displayed supply, balances and implementation references are not pinned quantitative evidence and grant no code-certified accounting or current-capacity credit."
+        },
+        {
+          "sourceUrl": "https://scrollscan.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef",
+          "description": "Retrieved exact scroll USSD address identity. Token/proxy is not substituted from another chain. Displayed supply, balances and implementation references are not pinned quantitative evidence and grant no code-certified accounting or current-capacity credit."
+        }
+      ],
+      "identity": {
+        "assetId": "ussd-sonic-labs",
+        "deployments": [
+          {
+            "chain": "sonic",
+            "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+            "sourceUrl": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef#code"
+          },
+          {
+            "chain": "ethereum",
+            "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+            "sourceUrl": "https://eth.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+          },
+          {
+            "chain": "base",
+            "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+            "sourceUrl": "https://base.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+          },
+          {
+            "chain": "arbitrum",
+            "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+            "sourceUrl": "https://arbitrum.blockscout.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+          },
+          {
+            "chain": "optimism",
+            "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+            "sourceUrl": "https://explorer.optimism.io/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+          },
+          {
+            "chain": "scroll",
+            "address": "0x000000000eccff26b795f73fb0a70d48da657fef",
+            "sourceUrl": "https://scrollscan.com/api/v2/addresses/0x000000000eccff26b795f73fb0a70d48da657fef"
+          }
+        ]
+      },
+      "kind": "published-accounting",
+      "mechanism": "fixed-face-accounting"
     }
   ]
 }

@@ -2,8 +2,9 @@ import overlayJson from "@shared/data/safety-score-v9/access-lookthrough-reviews
 import { V9AccessClaimGraphSchema, V9AccessClaimGraphReviewSchema, V9AccessLookthroughOverlayEnvelopeSchema, type V9AccessClaimGraph, type V9AccessClaimGraphReview } from "@shared/types/safety-score-v9-access-lookthrough";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
-import { requiredStatus, type ReviewEvidenceBuilder } from "./extension-shared";
-import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryDigestKey } from "./extension-reviewed-registry";
+import { requiredStatus } from "./extension-shared";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryDigestKey } from "@shared/lib/safety-score-v9/reviewed-registry";
 
 const envelope = V9AccessLookthroughOverlayEnvelopeSchema.parse(overlayJson);
 const overlay = canonicalizeReviewedRegistryDigest(envelope, {

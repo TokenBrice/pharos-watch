@@ -3,7 +3,7 @@ import type { OracleRiskProfile } from "@shared/types/core";
 import { OracleRiskProfileSchema } from "@shared/types/stablecoin-meta-control-schemas";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { adaptOracleReview } from "../safety-score-v9/extension-oracle";
-import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { makeV9FixedInput, V9_EVALUATION_TEST_TIMEOUT_MS } from "../../test-helpers/v9-fixed-input";

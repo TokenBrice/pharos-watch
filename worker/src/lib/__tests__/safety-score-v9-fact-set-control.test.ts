@@ -737,7 +737,18 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
     const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
     const control = asset.controls.find((row) => row.controlKind === "bridge")!;
-    expect(control.status.observationState).toBe("known");
+    // Custody-only uncertainty does not erase route semantics; the independent
+    // incident disposition still needs its own exact negative review.
+    expect(control.status.observationState).toBe("bounded-unknown");
+    expect(control.authority).toMatchObject({ model: "multisig", threshold: { required: 2, total: 6 } });
+    expect(control.incidentState).toBe("unknown");
+    expect(control.factorStatuses?.incidentState).toMatchObject({
+      observationState: "missing",
+      gapIds: [`alpha:gap:control:${control.controlKey}:incidentState`],
+    });
+    expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe(
+      "unresolved-control-identity",
+    );
     expect(control.keyCustody).toBe("unknown");
     expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
   });

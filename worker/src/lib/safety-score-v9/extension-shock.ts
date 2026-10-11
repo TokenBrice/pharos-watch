@@ -4,7 +4,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { isRecord } from "@shared/lib/type-guards";
 import { z } from "zod";
 import { CanonicalTextSchema } from "@shared/types/safety-schema-primitives";
-import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 
 const RegistryEntrySchema = z
   .object({

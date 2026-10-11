@@ -87,7 +87,8 @@ export async function observeReviewedExitExecutionRoutes(args: {
       }
       if (!inputReference || !outputReference) { failures.push({ modelId: review.modelId, reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue; }
       const isVault = review.producer.kind === "erc4626-instant";
-      const refreshInputFromOutput = isVault &&
+      const externalShares = review.producer.kind === "erc4626-instant" ? review.producer.externalShareToken : undefined;
+      const refreshInputFromOutput = isVault && !externalShares &&
         inputReference.observedAtSec <= args.clockSec &&
         args.clockSec - inputReference.observedAtSec > policy.priceMaxAgeSec &&
         outputReference.observedAtSec <= args.clockSec &&
@@ -99,6 +100,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
         ? await observeErc4626InstantExit({ review, inputReference, outputReference, refreshInputFromOutput, requests: [request], blockNumber: args.blockNumber, rpcOptions: { ...args.rpcOptions, signal: args.signal } })
         : await observeSecuritizeOffRampExit({ review, inputReference, outputReference, nativeReference: args.nativeReference, requests, holderAddress: args.holderAddress, rpcOptions: { ...args.rpcOptions, signal: args.signal } });
       if ("inputReference" in observed) inputReference = observed.inputReference;
+      const nativeReference = "nativeReference" in observed ? observed.nativeReference : args.nativeReference;
       const observedAtSec = Math.floor(Date.now() / 1000);
       const source = observed.source;
       const completeExecution = observed.points.some((point) => point.requestedNotionalUsd === request.requestedNotionalUsd && point.executableUsd > 0 && point.certification !== "diagnostic");
@@ -113,8 +115,11 @@ export async function observeReviewedExitExecutionRoutes(args: {
         inputGenerationId: exitExecutionInputGenerationId(args.assetId, request, inputReference),
         observationGenerationId: domainDigest("safety-score-v10.exit-execution-source.v1", source),
         observedAtSec, sourceMaxAgeSec: policy.sourceMaxAgeSec, priceMaxAgeSec: policy.priceMaxAgeSec, source,
-        holder: review.holder, prerequisites: isVault ? ["counterfactual-share-balance-only", "ordinary-synchronous-redeem", "network-gas-excluded-as-dex"] : ["eligible-holder", "token-balance", "approved-spender"],
-        gates, inputReference, feeReferences: args.nativeReference ? [args.nativeReference] : [], points: observed.points,
+        holder: review.holder, prerequisites: isVault
+          ? ["counterfactual-share-balance-only", "ordinary-synchronous-redeem", ...(externalShares
+              ? ["ordinary-token-approval", "pinned-transaction-gas-estimate"] : ["network-gas-excluded-as-dex"])]
+          : ["eligible-holder", "token-balance", "approved-spender"],
+        gates, inputReference, feeReferences: nativeReference ? [nativeReference] : [], points: observed.points,
         capacityBasis: "transaction-simulation",
         settlement: { endpoint: outputReference.deployment, maximumCompletionSec: settlementMaximumSec, evidenceId: "exit-execution-settlement" },
         resourceKeys: [`exit-resource:${review.identity.endpoint}`, ...(review.producer.kind === "securitize-offramp" ? [`inventory:${review.producer.chain}:${review.producer.provider.toLowerCase()}:${review.producer.outputToken.toLowerCase()}`] : [])],
@@ -124,7 +129,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
       const point = observed.points.find((entry) => entry.requestedNotionalUsd === request.requestedNotionalUsd)!;
       const scoreEligible = admission.state !== "unavailable";
       observations.push(ExitRouteObservationSchema.parse({
-        routeId: `execution:${exitExecutionReviewDigest(review)}`, routeFamily: "issuer-redemption",
+        routeId: externalShares?.primaryRedemptionRouteId ?? `execution:${exitExecutionReviewDigest(review)}`, routeFamily: "issuer-redemption",
         scope: { kind: "chain-contract", chain: review.producer.chain, contractOrPoolId: review.producer.contract, protocol: isVault ? "erc4626-instant" : "securitize-offramp" },
         requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps, settlementHorizonSec: Math.max(1, settlementMaximumSec ?? request.comparisonWindowSec),
         ...(settlementMaximumSec === null ? { settlementBoundUnproven: true } : {}), executableUsd: point.executableUsd, completionRatio: point.executableUsd / point.requestedNotionalUsd,

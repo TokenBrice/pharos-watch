@@ -107,12 +107,24 @@ function transport(endpoint, headers) {
     } catch {
       throw new EvidenceError("transport-error", "Provider request or response body failed");
     }
-    if (!response.ok) throw new EvidenceError("http-error", `Provider returned HTTP ${response.status}`, { httpStatus: response.status });
+    let payload;
     try {
-      return JSON.parse(text);
+      payload = JSON.parse(text);
     } catch {
-      throw new EvidenceError("invalid-json", "Provider returned invalid JSON");
+      if (response.ok) throw new EvidenceError("invalid-json", "Provider returned invalid JSON");
     }
+    if (!response.ok) {
+      // Providers can encode entitlement/history errors as JSON-RPC over HTTP 400.
+      // Preserve their diagnosis, but never accept a result on an unsuccessful HTTP status.
+      if (body?.id !== undefined && payload?.id === body.id && payload.jsonrpc === "2.0" && payload.error) {
+        const rpcMessage = typeof payload.error.message === "string" ? payload.error.message : null;
+        throw new EvidenceError("rpc-error", rpcMessage ?? "Provider returned a JSON-RPC error", {
+          httpStatus: response.status, rpcCode: payload.error.code, rpcMessage,
+        });
+      }
+      throw new EvidenceError("http-error", `Provider returned HTTP ${response.status}`, { httpStatus: response.status });
+    }
+    return payload;
   }
   function unwrap(payload, expectedId) {
     if (!payload || payload.id !== expectedId || payload.jsonrpc !== "2.0") {
@@ -178,7 +190,11 @@ function normalizeEvm(method, params, block) {
   const normalized = [...params];
   const index = STATE_INDEX.get(method);
   if (index !== undefined) {
-    assertCliUsage(params.length === index || params.length === index + 1, `${method} has an invalid parameter count`);
+    assertCliUsage(params.length === index || params.length === index + 1
+      || (method === "eth_call" && params.length === 3), `${method} has an invalid parameter count`);
+    if (method === "eth_call" && params.length === 3) {
+      assertCliUsage(params[2] && typeof params[2] === "object" && !Array.isArray(params[2]), "eth_call state overrides must be an object");
+    }
     if (params.length > index) {
       const supplied = pin(params[index]);
       assertCliUsage(supplied.hash ? supplied.hash === block.hash : supplied.number === BigInt(block.number), "Parameter block must match --block");
@@ -220,6 +236,7 @@ async function evmRead(transport, method, params, requested, record) {
       return normalizeEvm(item.method, item.params, block);
     });
     record.params = calls.map(({ method: callMethod, params: callParams }) => ({ method: callMethod, params: callParams }));
+    if (calls.some((call) => call.method === "eth_call" && call.params.length === 3)) record.simulation = true;
     const result = [];
     for (let index = 0; index < calls.length; index += 10) {
       result.push(...await transport.batch(calls.slice(index, index + 10)));
@@ -228,6 +245,7 @@ async function evmRead(transport, method, params, requested, record) {
     return result.map((value, index) => ({
       method: calls[index].method,
       params: calls[index].params,
+      ...(calls[index].method === "eth_call" && calls[index].params.length === 3 ? { simulation: true } : {}),
       result: value,
       state: empty(value) ? "empty" : "ok",
       reason: empty(value) ? "empty-result-not-proof-of-absence" : null,
@@ -235,6 +253,7 @@ async function evmRead(transport, method, params, requested, record) {
   }
   const call = normalizeEvm(method, params, block);
   record.params = call.params;
+  if (method === "eth_call" && call.params.length === 3) record.simulation = true;
   let result;
   if (method === "eth_getLogs") {
     const filter = call.params[0];
@@ -376,7 +395,7 @@ async function hederaRead(transport, endpoint, method, params, requested, record
   async function header() {
     const raw = await transport.request(new URL(`blocks/${number}`, base));
     if (!raw || integer(raw.number, "Hedera block number") !== requested.number
-      || !/^0x[0-9a-f]{64}(?:[0-9a-f]{32})?$/i.test(raw.hash ?? "")
+      || !/^0x(?:[0-9a-f]{64}|[0-9a-f]{96})$/i.test(raw.hash ?? "")
       || !/^[0-9]+\.[0-9]{1,9}$/.test(raw.timestamp?.to ?? "")) {
       throw new EvidenceError("missing-block-header", "Hedera mirror block number/hash/consensus timestamp is unavailable");
     }

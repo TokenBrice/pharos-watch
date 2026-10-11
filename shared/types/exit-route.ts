@@ -391,9 +391,32 @@ export const ExitExecutionModelReviewSchema = z.object({
         keyOrder: z.enum(["account-slot", "slot-account"]),
       }).strict(),
       maxFunctions: z.enum(["binding", "reviewed-non-binding-zero"]),
+      previewRedeem: z.literal("gross-before-fee").optional(),
+      redeemReturns: z.literal("gross-before-fee").optional(),
       unrestrictedGateSelectors: z.array(z.string().regex(/^0x[0-9a-fA-F]{8}$/)).max(8),
       pausedSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
       multicallCodeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      dependencyCodeIdentities: z.array(z.object({
+        address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+        codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+      }).strict()).max(16).optional(),
+      // ERC-4626-compatible custodian rails may burn a separate ERC-20.
+      // Only its holder balance is overridden; approvals are executed normally.
+      externalShareToken: z.object({
+        address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+        codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+        implementation: z.object({
+          address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+          codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+        }).strict().optional(),
+        identitySelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/),
+        primaryRedemptionRouteId: z.string().min(1),
+        nativeUsdFeed: z.object({
+          address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+          codeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+          maxAgeSec: z.number().int().positive(),
+        }).strict(),
+      }).strict().optional(),
     }).strict(),
   ]),
 }).strict();

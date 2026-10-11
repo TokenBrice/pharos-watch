@@ -93,6 +93,47 @@ describe("pinned supplemental research RPC", () => {
     expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init.body)).method)).not.toContain("eth_call");
   });
 
+  it.each(["eth_call", "batch"])("preserves a pinned %s state override and labels simulation evidence", async (method) => {
+    const params = [{ to: "0x1111111111111111111111111111111111111111" }, "1000",
+      { "0x1111111111111111111111111111111111111111": { balance: "0x25" } }];
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      if (Array.isArray(body)) {
+        expect(body[0].params).toEqual([params[0], "0x3e8", params[2]]);
+        return new Response(JSON.stringify(body.map((item) => ({ jsonrpc: "2.0", id: item.id, result: "0x25" }))));
+      }
+      if (body.method === "eth_call") expect(body.params).toEqual([params[0], "0x3e8", params[2]]);
+      return rpcResponse(body.id, body.method === "eth_call" ? "0x25" : header(body.params[0]));
+    });
+    const record = await invoke(["--block", "1000"], "ethereum", method,
+      JSON.stringify(method === "batch" ? [{ method: "eth_call", params }] : params));
+    expect(record).toMatchObject({ state: "ok", simulation: true, block: { number: "1000" } });
+    if (method === "batch") expect(record.result[0]).toMatchObject({ result: "0x25", simulation: true });
+    else expect(record.result).toBe("0x25");
+  });
+
+  it.each([
+    [{}, "latest", {}],
+    [{}, "1001", {}],
+    [{}, "1000", []],
+    [{}, "1000", null],
+  ])("rejects unpinned or malformed overrides without an execution request: %j", async (...params) => {
+    const record = await invoke(["--block", "1000"], "ethereum", "eth_call", JSON.stringify(params));
+    expect(record).toMatchObject({ state: "error", reason: "invalid-arguments", result: null });
+    expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init.body)).method)).not.toContain("eth_call");
+  });
+
+  it("withholds simulation results when a provider rejects state overrides", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return body.method === "eth_call"
+        ? new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, error: { code: -32602, message: "state override unsupported" } }))
+        : rpcResponse(body.id, header(body.params[0]));
+    });
+    const record = await invoke(["--block", "1000"], "ethereum", "eth_call", '[{},"1000",{}]');
+    expect(record).toMatchObject({ state: "error", reason: "rpc-error", result: null, simulation: true });
+  });
+
   it("captures block provenance and scopes the secret to the header, including provider echoes", async () => {
     fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
       const body = JSON.parse(String(init.body));
@@ -315,6 +356,33 @@ describe("pinned supplemental research RPC", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it("preserves dRPC's HTTP-400 entitlement diagnosis on its documented Solana route", async () => {
+    vi.stubEnv("DRPC_API_KEY", "drpc-secret");
+    fetchMock.mockImplementation(async (url: string | URL, init: RequestInit) => {
+      expect(String(url)).toBe("https://lb.drpc.live/solana");
+      expect(init.headers).toMatchObject({ "Drpc-Key": "drpc-secret" });
+      const body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id,
+        error: { code: 35, message: "chain is not available on free plan drpc-secret" } }), { status: 400 });
+    });
+    const record = await invoke(["--provider", "drpc", "--block", "1000"], "solana", "getBlock", "[1000]");
+    expect(record).toMatchObject({ state: "error", reason: "rpc-error", result: null, block: null,
+      endpoint: "https://lb.drpc.live/solana", error: { httpStatus: 400, rpcCode: 35,
+        rpcMessage: "chain is not available on free plan [REDACTED]" } });
+    expect(process.exitCode).toBe(1);
+    expect(stdout.join("")).not.toContain("drpc-secret");
+  });
+
+  it.each([
+    { jsonrpc: "2.0", id: 1, result: "0x1" },
+    { jsonrpc: "2.0", id: 99, error: { code: 35, message: "wrong response" } },
+  ])("never accepts a non-error or mismatched envelope on HTTP 400: %j", async (payload) => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify(payload), { status: 400 }));
+    const record = await invoke(["--block", "1000"]);
+    expect(record).toMatchObject({ state: "error", reason: "http-error", result: null, block: null,
+      error: { httpStatus: 400 } });
+  });
+
   it("withholds a Solana transaction from another slot", async () => {
     fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
       const body = JSON.parse(String(init.body));
@@ -365,6 +433,38 @@ describe("pinned supplemental research RPC", () => {
     }
   });
 
+  it.each(["public", "drpc"])("keeps missing Filecoin MsgMeta on %s unavailable without archive fallback", async (provider) => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id,
+        error: { code: 1, message: "failed to create Ethereum block from Filecoin tipset: failed to load msgmeta: ipld: could not find" } }));
+    });
+    const record = await invoke(["--provider", provider, "--block", "6429411"], "filecoin",
+      "eth_getBlockByNumber", '["0x621ae3",false]');
+    expect(record).toMatchObject({ state: "error", reason: "rpc-error", block: null, result: null,
+      error: { rpcCode: 1, rpcMessage: expect.stringContaining("failed to load msgmeta") } });
+    expect(process.exitCode).toBe(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("registers Corn Maizenet research reads without leaking a keyed provider credential", async () => {
+    const record = await invoke(["--provider", "public", "--block", "1711897"], "corn");
+    expect(record).toMatchObject({ state: "ok", endpoint: "https://maizenet-rpc.usecorn.com", block: { number: "1711897" } });
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(String(url)).toBe("https://maizenet-rpc.usecorn.com");
+      expect(init.headers).not.toHaveProperty("Authorization");
+      expect(init.headers).not.toHaveProperty("X-Api-Key");
+      expect(init.headers).not.toHaveProperty("Drpc-Key");
+    }
+  });
+
+  it("leaves failed Corn transport unavailable rather than zero or unsupported", async () => {
+    fetchMock.mockRejectedValue(new TypeError("DNS unavailable"));
+    const record = await invoke(["--provider", "public", "--block", "1711897"], "corn");
+    expect(record).toMatchObject({ state: "error", reason: "transport-error", result: null, block: null,
+      endpoint: "https://maizenet-rpc.usecorn.com" });
+  });
+
   it("uses Alchemy bearer authentication and never records its key", async () => {
     vi.stubEnv("ALCHEMY_API_KEY", "alchemy-secret");
     const record = await invoke(["--provider", "alchemy", "--block", "1000"], "bsc");
@@ -404,6 +504,34 @@ describe("pinned supplemental research RPC", () => {
     });
     const record = await invoke(["--provider", "public", "--block", "1000"], "hedera");
     expect(record).toMatchObject({ state: "ok", consensusTimestamp: "1700000000.123456789", result: "0x1", block: { number: "1000", hash: HASH } });
+  });
+
+  it.each([64, 96])("accepts exactly %i hexadecimal digits in a Hedera pinned hash", async length => {
+    const hash = `0x${"A".repeat(length)}`;
+    fetchMock.mockImplementation(async (url: string | URL) => new Response(JSON.stringify(
+      String(url).includes("/blocks/")
+        ? { number: 1000, hash, timestamp: { to: "1700000000.123456789" } }
+        : { result: "0x1" },
+    )));
+    const record = await invoke(["--provider", "public", "--block", "1000"], "hedera");
+    expect(record).toMatchObject({ state: "ok", result: "0x1", block: { hash: hash.toLowerCase() } });
+  });
+
+  it.each([63, 65, 95, 97, 128])("keeps a %i-digit Hedera hash unavailable", async length => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({
+      number: 1000, hash: `0x${"a".repeat(length)}`, timestamp: { to: "1700000000.123456789" },
+    })));
+    const record = await invoke(["--provider", "public", "--block", "1000"], "hedera");
+    expect(record).toMatchObject({ state: "error", reason: "missing-block-header", result: null, block: null });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps non-hexadecimal Hedera hashes unavailable", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({
+      number: 1000, hash: `0x${"a".repeat(63)}g`, timestamp: { to: "1700000000.123456789" },
+    })));
+    const record = await invoke(["--provider", "public", "--block", "1000"], "hedera");
+    expect(record).toMatchObject({ state: "error", reason: "missing-block-header", result: null, block: null });
   });
 
   it("does not turn a pruned Hedera call into an empty or positive result", async () => {
@@ -447,6 +575,11 @@ describe("pinned supplemental research RPC", () => {
     });
     const record = await invoke(["--provider", "alchemy", "--block", "1000"], "solana", "getAccountInfo", '["11111111111111111111111111111111",{"encoding":"base64"}]');
     expect(record.state).toBe(contextSlot === 1000 ? "ok" : "error");
+    expect(record.endpoint).toBe("https://solana-mainnet.g.alchemy.com/v2/");
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(String(url)).toBe(record.endpoint);
+      expect(init.headers).toMatchObject({ Authorization: "Bearer alchemy-test-key" });
+    }
     if (contextSlot !== 1000) expect(record).toMatchObject({ reason: "block-pin-mismatch", result: null });
   });
 

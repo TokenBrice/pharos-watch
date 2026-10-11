@@ -21,6 +21,29 @@ describe("resolveVaultNavSupplyPrice", () => {
     return new Map([["usdc-circle", freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec })]]);
   }
 
+  it("admits AA supply valuation through its exact Idle CDO virtualPrice route", async () => {
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${1_115_108n.toString(16).padStart(64, "0")}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec));
+    expect(result).toMatchObject({ source: "protocol-redeem", confidence: "high", metadata: { inheritedFrom: "usdc-circle" } });
+    expect(result?.price).toBeCloseTo(1.115108 * 0.9999, 8);
+    expect(fetchEvmCallHexAtBlockMock.mock.calls[0]).toEqual(expect.arrayContaining([
+      "ethereum", "0x433d5b175148da32ffe1e1a37a939e1b7e79be4d",
+      "0x9290d427000000000000000000000000c26a6fa2c37b38e549a4a1807543801db684f99c",
+    ]));
+  });
+
+  it("keeps AA unavailable when its parent is stale or the exact CDO quote is unreadable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const stale = new Map([["usdc-circle", freshParent("usdc-circle", 1, "coingecko+pyth", {
+      nowSec, observedAt: nowSec - 3 * 3600, priceSyncedAt: nowSec - 3 * 3600,
+    })]]);
+    expect(await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", stale)).toBeNull();
+    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
+    expect(await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec))).toBeNull();
+  });
+
   it("resolves a live NAV supply price from the previous payload parent and persists the rate", async () => {
     const oneShareUsdcRaw = 1_040_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);

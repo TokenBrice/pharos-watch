@@ -59,6 +59,12 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
         yieldBearing: true, navToken: true,
       },
     },
+    {
+      id: "aa-falconx-mev-capital", name: "Pareto FalconX Credit Vault", symbol: "AA_FalconXUSDC",
+      detailProvider: "coingecko",
+      contracts: [{ chain: "ethereum", address: "0xc26a6fa2c37b38e549a4a1807543801db684f99c", decimals: 18 }],
+      flags: { pegCurrency: "USD", backing: "rwa-backed", governance: "centralized-dependent", yieldBearing: true, navToken: true },
+    },
   ],
 }));
 
@@ -213,6 +219,22 @@ describe("fetchFiatCoinGeckoTokens", () => {
     expect(susdsProbeCalls).toHaveLength(0);
   });
 
+  it("reports AA's missing admitted NAV separately from an unreadable totalSupply", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), { status: 200 }));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const result = await fetchFiatCoinGeckoTokens({});
+      expect(result.find((asset) => asset.id === "aa-falconx-mev-capital")).toBeUndefined();
+      expect(probeTrackedTokenSupplyMock.mock.calls.filter(([meta]) => meta?.id === "aa-falconx-mev-capital")).toHaveLength(0);
+      expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+        event: "supplemental-supply-withheld",
+        metadata: expect.objectContaining({ stablecoinId: "aa-falconx-mev-capital", reason: "nav-price-unavailable" }),
+      }));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("admits a NAV token from the protocol-redeem supply fallback without publishing a price", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ coins: {} }), {
@@ -280,6 +302,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
     );
 
     expect(result).toEqual([]);
-    expect(resolveVaultNavSupplyPriceMock).toHaveBeenCalledTimes(1);
+    expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "susds-sky")).toHaveLength(1);
+    expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "aa-falconx-mev-capital")).toHaveLength(1);
   });
 });

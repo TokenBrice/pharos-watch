@@ -47,6 +47,7 @@ vi.mock("../../lib/peg-analytics-cache", () => ({
 vi.mock("../../lib/report-cards-snapshot", () => ({
   loadExactDexPublicationGeneration: mockLoadExactDexGeneration,
   buildNavPriceById: () => ({}),
+  buildExitOutputPriceById: () => ({}),
   resolveExactRedemptionPublicationGeneration: () => "redemption-backstops-unavailable",
 }));
 

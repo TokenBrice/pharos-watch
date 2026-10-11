@@ -33,6 +33,21 @@ function authenticatedBytes(envelope: Record<string, unknown>, payload: Buffer) 
 }
 
 describe("Safety Score V9 publication codec", () => {
+  it("validates each producer card without mutating the caller-owned cohort", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const original = structuredClone(publication);
+    const cards = publication.cards;
+    const card = cards[0];
+    await serializeSafetyScoreV9Publication(publication);
+    expect(publication).toEqual(original);
+    expect(publication.cards).toBe(cards);
+    expect(publication.cards[0]).toBe(card);
+    publication.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = -1;
+    await expect(serializeSafetyScoreV9Publication(publication)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: ["cards", 0, "scoreTrace", "evidenceResponsibility", "totalFactCount"] })]),
+    });
+  });
+
   it("rejects digest and valid identity tampering independently", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = await serializeSafetyScoreV9Publication(publication);
@@ -98,6 +113,25 @@ describe("Safety Score V9 publication codec", () => {
     });
 
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(/totalFactCount/);
+    await expect(parseSafetyScoreV9Publication(stored)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: ["cards", 0, "scoreTrace", "evidenceResponsibility", "totalFactCount"] })]),
+    });
+  });
+
+  it("keeps card witness admission and complete envelope reconciliation on incremental decode", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const invalidWitness = await authenticatedPayload(publication, (payload) => {
+      payload.cards[0]!.witnessTexts = ["unused witness"];
+      return payload;
+    });
+    await expect(parseSafetyScoreV9Publication(invalidWitness)).rejects.toMatchObject({
+      issues: [{ path: ["cards", 0, "witnessTexts"] }],
+    });
+    const invalidEnvelope = await authenticatedPayload(publication, (payload) => {
+      payload.completeness.expectedCount++;
+      return payload;
+    });
+    await expect(parseSafetyScoreV9Publication(invalidEnvelope)).rejects.toThrow(/count|completeness/i);
   });
 
   it("fails closed explicitly for authenticated schema 6 until typed-identity cutover", async () => {

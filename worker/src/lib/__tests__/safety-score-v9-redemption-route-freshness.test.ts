@@ -4,6 +4,7 @@ import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-ad
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { buildRedemptionExitRouteObservation } from "../redemption-exit-route-observations";
 import { buildRoutes } from "../safety-score-v9/fact-set-exit";
+import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { reserveBackedRedemptionRouteMaxAgeSec } from "../safety-score-v9/redemption-route-freshness";
 import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
@@ -59,7 +60,7 @@ describe("reserve-backed redemption route clock admission", () => {
   it("keeps a current consumed disclosure without mistaking its date for the redemption cron clock", () => {
     const { fixed, extension, observation } = fixture();
     const context = factBuilderContext(fixed, extension);
-    const route = buildRoutes(context).exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+    const route = buildRoutes(context, buildSupply(context)).exitRoutes.find((candidate) => candidate.lane === "redemption")!;
     expect(route.status.observationState).toBe("known");
     expect(route.status.gapIds).toEqual([]);
     expect(context.evidence.get(route.status.evidenceRefIds[0]!)?.observedAtSec).toBe(sourceTimestamp);
@@ -75,7 +76,8 @@ describe("reserve-backed redemption route clock admission", () => {
     expect(sourceTimestamp + budget).toBe(runClockSec + producerBudgetSec);
     for (const offset of [0, 1]) {
       const { fixed, extension } = fixture(runClockSec + producerBudgetSec + offset);
-      const route = buildRoutes(factBuilderContext(fixed, extension)).exitRoutes.find((candidate) => candidate.lane === "redemption")!;
+      const context = factBuilderContext(fixed, extension);
+      const route = buildRoutes(context, buildSupply(context)).exitRoutes.find((candidate) => candidate.lane === "redemption")!;
       expect(route.status.observationState).toBe(offset === 0 ? "known" : "stale");
     }
   });

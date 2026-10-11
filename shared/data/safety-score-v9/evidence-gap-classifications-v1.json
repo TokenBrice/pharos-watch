@@ -60514,32 +60514,6 @@
       ]
     },
     {
-      "id": "w4-frxusd-frax-cost-20261009",
-      "assetId": "frxusd-frax",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "cost",
-        "routeKey": "redemption:redemption:7bfd0c7b-cf0c-4b32-9258-e8492c7f06ab:redemption:frxusd-frax:stablecoin-redeem",
-        "exposureId": null,
-        "requiredDatum": "cost"
-      },
-      "reviewedAt": "2026-10-09T14:19:24Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (W4C03First)",
-      "sources": [
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
-          "observedAt": "2026-10-09T14:19:24Z",
-          "datumAsOf": null,
-          "location": "additional_sources: src/deps/FrxUSDCustodian.sol, previewRedeem and setMintRedeemFee",
-          "excerpt": "function previewRedeem(uint256 _sharesIn) public view returns (uint256 _assetsOut) {\n    uint256 fee = redeemFee;",
-          "assertion": "The exact configured custodian publicly exposes redeemFee and request-size previewRedeem. The producer must bind that endpoint to its observed capacity, round output at token decimals, measure transaction costs at the same pin, and convert to USD. No fixed zero all-in fee is asserted."
-        }
-      ],
-      "cause": "B",
-      "assertion": "required-data-public"
-    },
-    {
       "id": "w4-sfrxusd-frax-cost-20261009",
       "assetId": "sfrxusd-frax",
       "scope": {
@@ -65721,6 +65695,96 @@
         "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust"
       ],
       "rationale": "Researched non-disclosure of admissible aggregate/current-book assurance and reconciliation, not absence of an audit. The newly retrieved July Trust report cannot refresh the existing May assurance denominator by date substitution: the issuer separates legacy tokens from Trust reserves, and no current whole-book partition and complete aggregate reconciliation was disclosed in the retrieved report, issuer notice, transparency surface, regulator decision or balances API. Preserve the positive scoped Trust assurance without promoting it to all-book coverage."
+    },
+    {
+      "id": "campaign-C01WARS-tempo-control-incident-state",
+      "assetId": "wars-argentine-peso",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:wars-argentine-peso:0fc7f269cd009af28bc2",
+        "factorKey": "incidentState",
+        "routeKey": null,
+        "exposureId": "tempo:0x20c0000000000000000000009ebea3d43a08bad1",
+        "requiredDatum": "incidentState"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-11T00:52:51Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (C01WARS)",
+      "sources": [
+        {
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+          "observedAt": "2026-10-11T00:51:50Z",
+          "datumAsOf": null,
+          "location": "Available local stablecoins and WFIAT Releases & Updates",
+          "excerpt": "The wFiat Bridge was launched. Ripio launched bridge.ripio.com, a platform that enables fiat users to move Ripio's stablecoins from one blockchain to another.",
+          "assertion": "The retrieved issuer product and release disclosure identifies wARS and its bridge but supplies no exact Tempo-controller incident inventory, adverse-event disposition or remediation state. This is not an assertion that no incident occurred."
+        },
+        {
+          "url": "https://bridge.ripio.com/developers",
+          "observedAt": "2026-10-11T00:51:50Z",
+          "datumAsOf": null,
+          "location": "Overview and Contract & token addresses",
+          "excerpt": "The bridge operator observes the event and waits for source-chain finality.",
+          "assertion": "The successfully retrieved developer disclosure describes nine EVM bridge chains and operator fulfillment, not an exact Tempo deployment/controller incident census or remediation disclosure. Its omission of Tempo is not evidence of no Tempo bridge."
+        },
+        {
+          "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/docs/AUDIT_CONTEXT.MD",
+          "observedAt": "2026-10-11T00:51:50Z",
+          "datumAsOf": null,
+          "location": "Known Issues or Concerns; Out of Scope; Previous Audits",
+          "excerpt": "Out of Scope - Implementation and security of LatamStable token contracts. This is the first audit of the LimitedMinter contract.",
+          "assertion": "The retrieved issuer audit-context document discusses generic minter design concerns, not incidents or remediation for the exact wARS Tempo issuer contract or token. Generic design concerns are not substituted for a measured deployment incident."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "https://bridge.ripio.com/developers",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/README.md",
+        "https://raw.githubusercontent.com/ripio/latam-stables/main/docs/AUDIT_CONTEXT.MD"
+      ],
+      "rationale": "The successfully retrieved issuer product/release, bridge developer and issuer repository documentation does not disclose an incident census or remediation state for Tempo wARS 0x20c0000000000000000000009ebea3d43a08bad1 and its contract issuer 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d. The prior pinned paused=false observation proves only a momentary pause value, not incident-free history. This exact incidentState datum is researched nondisclosure; capAuthority, claimImpairment, authority closure, economic liability classification and materialSupplyShare remain separately unresolved. Unhydrated explorer content, failed browser access and partial status-feed rendering are not evidence for this classification."
+    },
+    {
+      "id": "g01mfone-mf-one-midas-exit-capacity-20261011",
+      "assetId": "mf-one-midas",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:bb7cfe27-10b3-44dc-ab9a-e3545970e7fb:redemption:mf-one-midas:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-11T08:37:49Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (G01MFONE)",
+      "sources": [
+        {
+          "url": "https://midas.app/mfone",
+          "observedAt": "2026-10-11T08:37:49Z",
+          "datumAsOf": null,
+          "location": "Exact mF-ONE product identity and footnote 3; primary text recovered through https://r.jina.ai/https://midas.app/mfone",
+          "excerpt": "A redemption can only be completed once the Strategy Manager has set aside the corresponding funds. Any latency in that step may extend the overall processing time and is not controlled by Midas.",
+          "assertion": "The exact product identifies conditional manager funding but publishes no binding funded standard-redemption amount available to an eligible holder at the requested notional. Loading and $0.00 interface defaults are not execution observations."
+        },
+        {
+          "url": "https://docs.midas.app/llms-full.txt",
+          "observedAt": "2026-10-11T08:37:49Z",
+          "datumAsOf": null,
+          "location": "Open Liquidity Architecture: Choosing Your Redemption Method, Internal Liquidity Sleeve and FAQ; recovered through https://r.jina.ai/https://docs.midas.app/llms-full.txt",
+          "excerpt": "Standard Redemption: This option is fee-free and follows the natural settlement timeline of the underlying assets. Redemption requests accumulate and are processed after the next price update",
+          "assertion": "The issuer describes a queued standard route, without a published funded same-notional capacity bound. Separate instant capacity is availability-dependent; typical sleeve allocations and capped MSL facilities cannot establish standard-route capacity."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://midas.app/mfone",
+        "https://docs.midas.app/llms-full.txt",
+        "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+        "https://api-prod.midas.app/api/transparency?token=mFONE"
+      ],
+      "rationale": "Successfully recovered exact-product disclosures and issuer-wide liquidity documentation do not publish funded capacity for the captured standard offchain-issuer route at its USD 3287537.279579105 canonical request. The product requires strategy-manager funding; standard redemptions follow NAV updates and natural underlying settlement. The transparency API's October 11 observation remains dominated by unmapped fund shares, not callable liquidity. Product loading defaults, portfolio NAV, instant pool/sleeve targets and a technical daily mint-token limit are not standard holder-exit capacity. This is researched nondisclosure, not zero capacity or exhaustion; existing settlement C and fee facts remain unchanged."
     }
   ]
 }

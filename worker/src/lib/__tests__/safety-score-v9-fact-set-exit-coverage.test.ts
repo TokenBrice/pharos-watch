@@ -46,6 +46,7 @@ import {
   v9Status,
 } from "../../test-helpers/v9-fixed-input";
 import { buildRoutes } from "../safety-score-v9/fact-set-exit";
+import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 
 describe("explicit route factor gaps and source chronology", () => {
@@ -691,6 +692,47 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(modelLimitOnly.gaps.map((gap) => gap.reasonCode)).not.toContain("incomplete-dex-route-coverage");
   });
 
+  it("does not infer an immaterial missing DEX remainder from pool counts or supply materiality", () => {
+    const run = (missingPool: boolean) => {
+      const draft = exactFixedInput();
+      const coverage = draft.dexLiqMap.alpha!.exitRouteObservationCoverage!;
+      // One missing exact-capability pool among thousands of diagnostic rows
+      // has no admitted liquidity share. Counts cannot certify immateriality.
+      coverage.retainedPoolCount = 10_000;
+      coverage.scoreEligibleCapabilityPoolCount = missingPool ? 2 : 1;
+      coverage.scoreEligiblePoolCount = 1;
+      coverage.unsupportedPoolCount = missingPool ? 9_999 : 9_998;
+      coverage.unsupportedReasons = {
+        "nonExecutableEvidence:discovery-pool-shaped": 9_998,
+        ...(missingPool ? { "executionCapabilityGate:measured-execution:quote-failed": 1 } : {}),
+      };
+      const fixed = rebuildFixed(draft);
+      const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed).assets[0]!;
+      const evaluated = evaluateV9Exit({
+        circulatingUsd: asset.supply.circulatingUsd,
+        gaps: asset.gaps,
+        portfolioFactStatus: asset.exitStatus,
+        routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
+      }, V9_CANDIDATE_POLICY_V1);
+      return { asset, evaluated };
+    };
+    const complete = run(false);
+    const missing = run(true);
+    const gapId = "alpha:gap:exit-portfolio-coverage";
+    expect(complete.asset.gaps.map((gap) => gap.gapId)).not.toContain(gapId);
+    expect(missing.asset.gaps.find((gap) => gap.gapId === gapId)).toMatchObject({
+      reasonCode: "incomplete-dex-route-coverage",
+      causeProof: { cause: "U" },
+    });
+    expect(missing.asset.exitStatus.observationState).toBe("bounded-unknown");
+    expect(missing.evaluated.causeGapIds).toContain(gapId);
+    // The absent pool produces neither a synthetic route nor numeric capacity.
+    expect(missing.asset.exitRoutes).toEqual(complete.asset.exitRoutes);
+    expect(missing.evaluated.routes.map((route) => route.capacityPoint))
+      .toEqual(complete.evaluated.routes.map((route) => route.capacityPoint));
+  });
+
   it("keeps the DEX portfolio denominator and cause independent of fee-only changes", () => {
     const assetId = "usdc-circle";
     const run = (costModel: RedemptionBackstopConfig["costModel"], observedPools: number) => {
@@ -1013,7 +1055,8 @@ describe("direct exit fact builder", () => {
     reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
     const review = reviewed.assets[0]!.routeReviews.find((route) => route.lane === "redemption")!;
     review.executionCosts = review.executionCosts.map((point) => ({ ...point, executionCostBps: costBps }));
-    const result = buildRoutes(factBuilderContext(fixed, reviewed));
+    const context = factBuilderContext(fixed, reviewed);
+    const result = buildRoutes(context, buildSupply(context));
     const route = result.exitRoutes.find((entry) => entry.lane === "redemption")!;
     expect(route.capacityCurve).toEqual([
       { requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: costBps <= 200 ? 100_000 : 0,
@@ -1035,7 +1078,7 @@ describe("direct exit fact builder", () => {
     const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
     reviewed.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, "alpha");
     const context = factBuilderContext(fixed, reviewed);
-    const route = buildRoutes(context).exitRoutes.find((entry) => entry.lane === "redemption")!;
+    const route = buildRoutes(context, buildSupply(context)).exitRoutes.find((entry) => entry.lane === "redemption")!;
     expect(route).toMatchObject({
       status: { observationState: "missing" },
       scoreEligible: false, request: null, capacityCurve: [],
@@ -1056,7 +1099,7 @@ describe("direct exit fact builder", () => {
     const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
     reviewed.assets[0]!.routeReviews = [];
     const context = factBuilderContext(fixed, reviewed);
-    const result = buildRoutes(context);
+    const result = buildRoutes(context, buildSupply(context));
     expect(result.exitRoutes).toEqual([]);
     expect(result.exitStatus.observationState).toBe("missing");
     expect([...context.gaps.values()]).toContainEqual(expect.objectContaining({
@@ -1068,7 +1111,8 @@ describe("direct exit fact builder", () => {
     const fixed = exactFixedInput();
     const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
     reviewed.assets[0]!.routeReviews.push(routeReview("dex:absent"));
-    expect(() => buildRoutes(factBuilderContext(fixed, reviewed)))
+    const context = factBuilderContext(fixed, reviewed);
+    expect(() => buildRoutes(context, buildSupply(context)))
       .toThrow(/Route reviews do not match captured observations/);
   });
 });

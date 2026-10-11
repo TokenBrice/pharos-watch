@@ -14,7 +14,7 @@ import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import xdaiReserveSource from "@shared/data/stablecoins/domains/reserves/xdai-gnosis.json";
 import xdaiLiveObservation from "./fixtures/xdai-live-reserve-observation.json";
 import { ReserveObservationEnvelopeSchema } from "@shared/types/safety-score-v9-reserve-scope";
-import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
 const clockSec = Date.parse("2026-10-02T12:00:00Z") / 1000;
 const asOfSec = Date.parse("2026-08-31T23:59:59Z") / 1000;

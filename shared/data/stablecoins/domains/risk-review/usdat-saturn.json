@@ -351,7 +351,7 @@
           "rateLimits": "Same buckets as Ethereum/Monad at BNB block 116709059. getRateLimitAdmin() = 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c.",
           "pausersAdminsUpgraders": "owner() = RBACTimelock 0x950350b073956bd1d22bb1c18c4d45263b5aa3a5, getMinDelay() = 10800. Current roles at BNB block 116709552: ADMIN = self; PROPOSER = 0x966a1c3dbe1ed31d976e00ab6edd4ccdea246999, 0x0fb10a4a6529615ab07dad645d8cbeac2ada200d, 0xd9757aa52907798d1af2fda7a6c0cc733e5acf7e; EXECUTOR = 0x36b484f0a13832642849a1c468344bcecef87492; CANCELLER = the three proposers plus 0x6f7e1fdfdf74b8b3fd425580fc2eb71954e29e6c and bypasser 0x07712e9618f20843ecda8e61a6ee64f6cef76ab4; BYPASSER = 0x07712e9618f20843ecda8e61a6ee64f6cef76ab4. Live typeAndVersion() is BurnWithFromMintTokenPool 1.6.1."
         },
-        "capDescription": "Per-lane CCIP token-bucket at BNB block 116709059 matches Ethereum/Monad: outbound 1,000,000 USDat @ 277/s and inbound 1,100,000 USDat @ 304.7/s toward both Ethereum and Monad. Rate-limit admin is the same SaturnTimelock address 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c (minDelay 86400s). BNB share is currently 0; this does not bind v9.27 once shares are attributed.",
+        "capDescription": "At BNB block 126925693, both configured peers (Ethereum selector 5009297550715157269 and Monad selector 8481857512324358265) had enabled outbound buckets with raw six-decimal capacity 1000000000000 and refill 277000000 per second, and enabled inbound capacity 1100000000000 and refill 304700000 per second. getRateLimitAdmin() remained 0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c. These mutable observed buckets do not establish an immutable issuance cap or any materialSupplyShare; provider omission is not zero.",
         "canRaiseCap": true,
         "observedAt": "2026-08-18",
         "observedBlock": 116709059,
@@ -367,6 +367,10 @@
           {
             "label": "Chainlink CCIP EVM token-pool documentation",
             "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
+          },
+          {
+            "label": "Pinned BNB bucket refresh reviewed by Sol curation campaign 2026-10-11 (C13USDat)",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
           },
           {
             "label": "BNB public RPC",
@@ -398,11 +402,11 @@
         "authorityType": "timelock",
         "timelockDelaySec": 172800,
         "routeChecks": {
-          "pausersAdminsUpgraders": "The Monad and BNB representation proxies share ProxyAdmin 0xcb8384df068b55228a66ea6efab4a10fcbfa42a2, whose owner is SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c with a 172800-second delay. That timelock is also each representation token's defaultAdmin and can replace representation token logic or token-level admin/role configuration; these are bridge failure domains, not native USDat mint authority.",
-          "onchainAmountBounds": "At Monad block 96624455 and BNB block 116363343, the local CCIP pool was the sole MINTER_ROLE and BURNER_ROLE holder on each representation token, and isPaused() was false. Replacing the representation token or its roles can change the route's supply-conservation assumptions."
+          "pausersAdminsUpgraders": "At BNB block 126925693 and Monad block 112328913, EIP-1967 admin remained ProxyAdmin 0xcb8384df068b55228a66ea6efab4a10fcbfa42a2; owner() remained SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c with getMinDelay() 172800. Complete current token role enumeration returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock, sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd and sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548 on both chains. Those direct pause/list accounts had code 0x and nonce 0 on each chain; this does not establish EOA signing custody or exclude counterfactual deployment. The admin can replace representation logic and roles; complete current upstream timelock role history remains unproven.",
+          "onchainAmountBounds": "At BNB block 126925693, getRoleMembers() returned pool 0x904939a965edc2efbd44fd4db223f07680510c61 as the sole MINTER_ROLE/BURNER_ROLE; at Monad block 112328913 the sole member of both roles was pool 0x8ab40e2dabcd24dcff0a06a68eb59990405270f0. pendingDefaultAdmin() was zero, isPaused() false and allowlistMode() 1 (blacklist) on both chains. Observed unpaused state is not absence of historical incidents or future seizure/pause powers."
         },
-        "observedAt": "2026-08-16",
-        "observedBlock": 96624455,
+        "observedAt": "2026-10-11",
+        "observedBlock": 112328913,
         "sources": [
           {
             "label": "Monad USDat proxy",
@@ -417,11 +421,23 @@
             "url": "https://sourcify.dev/server/v2/contract/143/0x79EdA68D227eaA4B6431B123aa89f31F4bC70e5d?fields=all"
           },
           {
+            "label": "Pinned complete BNB token role and ProxyAdmin owner census",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Pinned complete Monad token role and ProxyAdmin owner census",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Verified non-enumerable SaturnTimelock source",
+            "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources"
+          },
+          {
             "label": "Chainlink CCIP EVM token-pool documentation",
             "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/evm/token-pools"
           }
         ],
-        "evidence": "The Monad and BNB representation proxies share ProxyAdmin 0xcb8384df068b55228a66ea6efab4a10fcbfa42a2, owned by SaturnTimelock 0xf0237a1cb794ea830129966049ef99243082ff0c with a two-day delay. At Monad block 96624455 and BNB block 116363343, the corresponding local CCIP pool held the only MINTER_ROLE and BURNER_ROLE, while the shared timelock was the token defaultAdmin. The common upgrade/admin domain can replace representation logic or token roles and remains scored under Bridge Risk."
+        "evidence": "Sol curation campaign 2026-10-11 (C13USDat), token censuses observed 2026-10-11T00:50:57.284Z (BNB) and 2026-10-11T00:51:00.751Z (Monad). BNB block 126925693, hash 0xfc5168b34cf05860069c0aedcb5bb85b35fc806c1f9a49874464f2a4610c201c, timestamp 2026-10-11T00:43:01Z; Monad block 112328913, hash 0x316684406b5ca79b106600a5f39c58a75141dbe8495d71eafdbe0043fd9c339b, timestamp 2026-10-11T00:45:29Z. Current implementation slots remain BNB 0x65458213bb2398f968ca1760b806956966b9adac and Monad 0x79eda68d227eaa4b6431b123aa89f31f4bc70e5d. Separate successful pool batches bind ProxyAdmin owner and timelock delay at those same pins. Sole pool mint/burn roles, direct pause/list authority and arbitrary token upgrade/admin reach remain bridge failure domains. SaturnTimelock's verified AccessControl ABI is non-enumerable; a complete current proposer/executor/canceller census cannot be inferred from constructor members or a reverted getRoleMembers call."
       },
       {
         "id": "usdat-ccip-rmn-validation",
@@ -450,7 +466,7 @@
         ],
         "authorityType": "contract",
         "canRaiseCap": false,
-        "capDescription": "RMN 2.1.0 is a curse/bless gate, not a numeric supply cap. Global and USDat-lane curses were false at the observed blocks; five unrelated chain-selector subjects were cursed on Ethereum RMN. The ARMProxy owner (per-chain pool RBACTimelock) can replace the ARM implementation after the 10,800-second delay or via the configured bypasser.",
+        "capDescription": "RMN 2.1.0 is an emergency curse gate, not a numeric supply cap or a live blessing quorum surface: verified isBlessed() is a backward-compatibility function that always returns true, and getVersionedConfig() is hardcoded empty at version zero. The historically observed global and USDat-lane curses were false; five unrelated subjects were cursed on Ethereum RMN. The separately evidenced ARMProxy owner can replace the ARM implementation after its documented delay or through its configured bypasser. No current active-lane validator threshold is inferred from those compatibility functions.",
         "routeChecks": {
           "attestorQuorum": "The pools use CCIP RMN/ARMProxy deployments Ethereum 0x411de17f12d1a34ecc7f45f49844626267c75e81, BNB 0x9e09697842194f77d315e0907f1bda77922e8f84 and Monad 0x99dfca5d88f4d9c023531f4403966b8d61562acd. At Ethereum block 26095799, getAllAuthorizedCallers() returned 0xd9ab1714df2b5d0011b22f6d94812e7813fa5795 and newly observed 0x2ace0735c229a2cd12c86c734be48007578e1200. At Monad block 109541539, it returned 0xae458c0cc4183482d5a32c945781fe053f2592ea and the same new 0x2ace0735c229a2cd12c86c734be48007578e1200. Empty getVersionedConfig() signer arrays remain a limitation of this curse-contract surface, not proof of a current independent validator roster or adequate quorum.",
           "trustedPeerOrRemote": "Pool peer mappings for Ethereum selector 5009297550715157269, BNB 11344663589394136015, and Monad 8481857512324358265 are unchanged from the 2026-08-16 sidecar. TokenPool 1.6.1 _validateLockOrBurn / _validateReleaseOrMint both require RMN not cursed.",
@@ -486,17 +502,21 @@
     "scopedQuestions": [
       {
         "controlRef": "usdat-ccip-rmn-validation",
-        "question": "What is the current RMN node roster and f-threshold (2f+1) that must bless CCIP commits for the Ethereum-Monad and Ethereum-BNB USDat lanes? Per-chain RMN 2.1.0 getVersionedConfig() returns empty signers and fSign=0 by design; getAllAuthorizedCallers() only lists curse admins, not the blessing committee. The live membership is not published on the curse contract or in the CCIP directory pages reviewed.",
+        "question": "What complete current verifier/off-ramp signing, threshold, owner and bypass topology actually validates the Ethereum-Monad and Ethereum-BNB USDat lanes? Verified selected Ethereum RMN 2.1.0 exposes an emergency curse surface; isBlessed() always returns true for backward compatibility and getVersionedConfig() deliberately returns an empty version-zero structure, not a live signer census. Current active-lane authority closure must be independently established rather than inferred from those functions or curse-admin membership.",
         "subject": "authority-semantics",
-        "reviewedAt": "2026-08-18",
-        "reviewer": "aug18-v927-control-wave W02",
+        "reviewedAt": "2026-10-11",
+        "reviewer": "Sol curation campaign 2026-10-11 (C13USDat)",
         "sources": [
           {
-            "label": "RMN 2.1.0 getVersionedConfig is empty by design",
-            "url": "https://eth.blockscout.com/address/0x0b047953451a207743fb62541b21199b95190602?tab=contract_source_code"
+            "label": "Verified selected Ethereum RMN compatibility and curse semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b047953451a207743fb62541b21199b95190602"
           },
           {
-            "label": "Ethereum CCIP directory (RMN proxy only; no node list)",
+            "label": "Pinned Ethereum block 26155000 getARM identity, observed 2026-10-11T00:56:23.878Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum CCIP directory current infrastructure",
             "url": "https://docs.chain.link/ccip/directory/mainnet/chain/mainnet"
           }
         ]

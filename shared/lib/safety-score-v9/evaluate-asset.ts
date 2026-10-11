@@ -928,6 +928,23 @@ function controlPillar(
       return gapsForV9Ids(gapIndex, status.applicability.gapId === null
         ? status.gapIds : [status.applicability.gapId]);
     }
+    // These reasons originate in the aggregate mint review, even when its
+    // anchor names a fully reviewed deployment control. Join the originating
+    // status/factor before consulting that control's independent diagnostics.
+    if (reason.path === "mint" &&
+      (reason.code === "missing-mint-authority" || reason.code === "unresolved-mint-authority")) {
+      return gapsForStatus(asset.economicControlReview.mint.status);
+    }
+    if (reason.code === "mint-control-question") {
+      const mint = asset.economicControlReview.mint;
+      if (reason.path === "mint:reconciliation") {
+        return gapsForV9Ids(gapIndex, mint.factorStatuses?.reconciliation?.gapIds ?? []);
+      }
+      if (reason.path === "mint" && mint.status.applicability.state === "unresolved") {
+        return gapsForV9Ids(gapIndex, mint.status.applicability.gapId === null
+          ? mint.status.gapIds : [mint.status.applicability.gapId]);
+      }
+    }
     if (reason.controlKey !== null) {
       const control = asset.controls.find(
         (candidate) => candidate.controlKey === reason.controlKey,

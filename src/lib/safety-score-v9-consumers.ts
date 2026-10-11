@@ -1,5 +1,6 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
+import { resolveV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import type {
   SafetyScorePublicationIdentity,
   SafetyScoreV9Card,
@@ -68,7 +69,8 @@ export function resolveV9ConsumerResponse(
   if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
     return { status: "unavailable", reason: "identity-mismatch" };
   }
-  return { status: "available", identity: parsed.data.safetyScoreIdentity, value: parsed.data };
+  return { status: "available", identity: parsed.data.safetyScoreIdentity,
+    value: { ...parsed.data, cards: parsed.data.cards.map((card) => resolveV9PublicWitnessTexts(card)) } };
 }
 
 // Re-exported so existing imports of `V9GradeRiskBucket` / `getV9GradeRiskBucket`

@@ -22,7 +22,7 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSec } from "./supply-attribution";
-import { isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9Exit, isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitCirculatingUsd, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
@@ -31,6 +31,7 @@ import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-scor
 import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
 import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
 import type {
+  V9AssetFactsV3,
   V9EvidenceResponsibility,
   V9ExitRouteFactV2,
   V9FactGapV3,
@@ -702,7 +703,7 @@ function classifyUnsupportedDexSurface(
   return null;
 }
 
-export function buildRoutes(context: AssetBuildContext): {
+export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["supply"]): {
   exitStatus: V9FactStatusV2;
   exitRoutes: V9ExitRouteFactV2[];
 } {
@@ -1087,6 +1088,33 @@ export function buildRoutes(context: AssetBuildContext): {
     coverage.status === "populated" &&
     (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageWithinRouteBudget(coverage));
   const portfolioGapIds = [...gapIds];
+  const independentExitUnresolved = routes.some((route) => route.routeSuspension) &&
+    evaluateV9Exit({
+      assetId: context.asset.assetId,
+      clockSec: context.fixedInput.clockSec,
+      circulatingUsd: selectV9ExitCirculatingUsd(supply),
+      portfolioStatus: dexSurfaceComplete ? "reviewed-complete" : "incomplete",
+      gaps: [...context.gaps.values()],
+      routes: routes.map(projectV9ExitEvaluationRoute),
+    }, policy).reasons.includes("missing-same-notional-route");
+  if (independentExitUnresolved) {
+    // Reuse the Exit evaluator's canonical request and materiality authority:
+    // a measured but immaterial alternative cannot close its bounded census.
+    // The closed channel's D remains separate, with no execution obligations.
+    portfolioGapIds.push(missingLocalFact(context, {
+      componentKey: "exit-independent-route-census",
+      path: { kind: "local-component", componentKey: "exit-routes" },
+      causeScope: { pillar: "exit", componentKey: "exit-routes", factorKey: null,
+        routeKey: null, exposureId: null, requiredDatum: "independent-route-census" },
+      reasonCode: "missing-runtime-route-evidence",
+      ownerDomain: "exit",
+      responsibility: "unresearched",
+      policyRuleId: "v9.exit.same-notional-route",
+      observationState: "bounded-unknown",
+      evidenceRefIds,
+      message: "The suspended channel does not establish the independent whole-Exit route census; admitted alternatives do not close the limited same-notional Exit evidence.",
+    }).gapId);
+  }
   if (reviewedExecutionModels.reviews.length > 0) {
     const executionPolicy = loadV9CandidateMethodologyPolicy();
     for (const review of validateExitExecutionModelReviews(reviewedExecutionModels, executionPolicy)) {

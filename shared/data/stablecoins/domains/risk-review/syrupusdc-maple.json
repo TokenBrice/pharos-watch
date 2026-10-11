@@ -52,7 +52,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is the sole canonical syrupUSDC issuance route. Maple's September 28, 2026 CCIP 2.0 disclosure confirms Ethereum LockRelease escrow and matching destination minting, so the end-to-end remote routes are lock-mint even when destination tokens use burn/mint. The Q4 migration changes token pools, not holder token addresses. Native minting and redemption beyond Ethereum are future functionality. Historical controller observations remain dated independently and do not establish the authority of replacement pools.",
+    "summary": "Ethereum is the sole canonical syrupUSDC issuance route. Maple's September 28, 2026 CCIP 2.0 disclosure confirms Ethereum LockRelease escrow and matching destination minting, so the end-to-end remote routes are lock-mint even when destination tokens use burn/mint. The Q4 migration changes token pools, not holder token addresses. Native minting and redemption beyond Ethereum are future functionality. Historical controller observations remain dated independently and do not establish the authority of replacement pools. Independently observed on 2026-10-11 at Ethereum block 26155000 (2026-10-09T12:57:47Z), TokenAdminRegistry resolves the canonical token to LockReleaseTokenPool 1.5.1 at 0x20b79d39bd44deee4f89b1e9d0e3b945fde06491. Its complete current supported-chain array has eight selectors, and each remote token/pool mapping matches the Solana, Arbitrum, Base, Ink, Tempo, Monad, Robinhood and Arc identities in the issuer directory. This pinned current configuration is not a historical lane census, in-flight reconciliation or deployment supply-share measurement.",
     "reviewedAt": "2026-08-23",
     "reviewer": "Pharos bridge-route re-verification; 2026-08-23 Chainlink directory coverage refresh",
     "confidence": "manual-review",
@@ -121,6 +121,10 @@
       {
         "label": "Maple exact crosschain token and pool identities; accessed 2026-10-09T10:31:57Z",
         "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"
+      },
+      {
+        "label": "Canonical syrupUSDC pool binding and eight exact remote token/pool mappings; Ethereum block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, block time 2026-10-09T12:57:47Z; observed 2026-10-11T00:50:10.914Z and 2026-10-11T00:50:49.166Z by Sol curation campaign 2026-10-11 (C18SyrupUSDT)",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
     "routes": [

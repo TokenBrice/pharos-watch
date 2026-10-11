@@ -491,7 +491,6 @@ describe("buildRedemptionBackstopEntry", () => {
   });
   it.each([
     "usdx-axis",
-    "mantrausd-mantra",
   ])("withholds the %s entry when no honest exact-route capacity model exists", async (id) => {
     const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), { id } as StablecoinData, null, now);
 
@@ -501,6 +500,37 @@ describe("buildRedemptionBackstopEntry", () => {
       reasonCode: "capacity-unpublished",
     });
   });
+  it.each([
+    ["usdv-solomon-v2", "defer", "issuer-terms-missing"],
+    ["iusd-initia", "needs-research", "documentation-insufficient"],
+    ["bnusd-balanced", "defer", "route-status-unverified"],
+  ])("withholds %s's opaque composite path even with positive supply", async (id, disposition, reasonCode) => {
+    const asset = makeAsset({ id, circulating: { peggedUSD: 100_000_000 } });
+    expect(await resolveRedemptionBackstopEntry(mockD1Strict([]), asset, null, Date.UTC(2026, 9, 12) / 1_000))
+      .toBeNull();
+    expect(REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.find((row) => row.id === id))
+      .toMatchObject({ disposition, reasonCode });
+  });
+  it("publishes mantraUSD's documented institutional USDC branch without executable capacity or fees", async () => {
+    const asset = makeAsset({ id: "mantrausd-mantra", circulating: { peggedUSD: 100_000_000 } });
+    const entry = await resolveRedemptionBackstopEntry(mockD1Strict([]), asset, null, Date.UTC(2026, 9, 12) / 1_000);
+    expect(entry).toMatchObject({
+      routeFamily: "offchain-issuer", accessModel: "issuer-api",
+      holderEligibility: "whitelisted-primary", outputAssetType: "stable-single",
+      resolutionState: "missing-capacity",
+      immediateCapacityUsd: null, immediateCapacityRatio: null, capacityScore: null,
+      score: null, eventualRedeemabilityScore: null, feeBps: null,
+    });
+    expect(entry?.capacityProfile).toMatchObject({
+      immediateUsd: null, scoringUsd: null, eventualUsd: null, scoringHorizon: "unknown",
+    });
+    expect(entry?.capacityProfile?.exitRouteObservations ?? []).toEqual([]);
+    expect(getRedemptionBackstopConfig(asset.id)?.outputAssets).toEqual(["usdc-circle"]);
+    // Dispositions census only unconfigured assets; the separate unmeasured
+    // wM rail must not make this configured institutional branch look absent.
+    expect(REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.find((row) => row.id === asset.id)).toBeUndefined();
+  });
+
 
   it("publishes the reviewed legacy Spark USDC route with unquantified capacity when no execution receipt exists", async () => {
     const asset = makeAsset({ id: "susdc-spark-v1", circulating: { peggedUSD: 100_000_000 } });

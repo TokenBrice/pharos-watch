@@ -10,9 +10,9 @@ import {
   reviewedObservationState,
   notApplicableStatus,
   type ExtensionAsset,
-  type ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "./extension-shared";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
 const ORACLE_BRANCH_ADAPTERS = [
   ["feed", (branch: OracleRiskBranch) => (branch.feeds?.length ?? 0) > 0 || branch.fallbackBehavior != null],
