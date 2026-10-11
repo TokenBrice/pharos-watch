@@ -1,0 +1,138 @@
+{
+  "dateRange": {
+    "from": "2026-10-05",
+    "to": "2026-10-11"
+  },
+  "headline": "Safety Score advances from 10.04 to 10.16 and GENIUS Act coverage reaches all 396 active coins.",
+  "fieldNotes": "Most of the week went into proving facts and declining to publish what could not be proved. Research waves 3 to 5 and a 239-asset campaign closed Safety Score gaps from primary sources, and the October 10 sweep kept unavailable data unavailable across ten methodology domains. One release failed that test: 10.13 dropped valid DEX execution routes, moving PAXG from 80 to 56, and was reverted the same day.",
+  "summary": [
+    {
+      "label": "Safety Score 10.16",
+      "tag": "feature",
+      "description": "Releases 10.05 to 10.16 ship. 10.08 reads authenticated CCIP, LayerZero OFT and rollup-bridge pending messages; 10.13 was reverted; 10.16 ages track records through one shared resolver.",
+      "href": "/methodology/scoring-changelog/"
+    },
+    {
+      "label": "Evidence research waves",
+      "tag": "coverage",
+      "description": "Wave 3 worked open facts in 44 research lanes, waves 4 and 5 verified control, custody, bridge and exit evidence, and an October 9 campaign curated 239 blind-spot assets from primary sources."
+    },
+    {
+      "label": "Compliance coverage",
+      "tag": "coverage",
+      "description": "GENIUS Act rows now cover all 396 active coins, up from 225, with no unknown left. Every MiCA row was re-verified; non-compliant calls fall from 28 to 17 where no exact-token source exists.",
+      "href": "/compliance/"
+    },
+    {
+      "label": "Failure scenarios",
+      "tag": "feature",
+      "description": "Coin pages gain eight approved failure scenarios for USDS, crvUSD, USDC, GHO, USDe, USDT, USD1 and LUSD, fork-replayed where mechanics decide the outcome and re-verified monthly."
+    },
+    {
+      "label": "Pillar-based dossier",
+      "tag": "design",
+      "description": "Coin pages follow the Safety Score pillars: backing, exit and control evidence sit in always-open modules, reserves render once as a risk-tier treemap, and raw pipeline errors leave the page."
+    },
+    {
+      "label": "Unavailable is not zero",
+      "tag": "feature",
+      "description": "Ten methodology domains release sweep corrections. Unavailable supply no longer reads as $0, and a chain-dropout guard blocks DefiLlama collapses like October 9's $9.6B of phantom redemptions.",
+      "href": "/methodology/"
+    },
+    {
+      "label": "Source additions and retirements",
+      "tag": "coverage",
+      "description": "Spark V1, Forest Road and Kava CDP reserve readers arrive. The STBT reserve adapter, vaults.fyi, BIMA and CETES yield collectors and direct CEX depth telemetry retire with other unfunded diagnostics."
+    },
+    {
+      "label": "Scheduling and release gates",
+      "tag": "infra",
+      "description": "V9 publication moves to a separate heavy scheduled Worker (ADR-38), DEX collection gains :20/:50 slots (ADR-39), and local check:pr now matches the PR gate with commit-bound receipts."
+    }
+  ],
+  "stats": {
+    "totalCommits": 525
+  },
+  "commits": [
+    {
+      "hash": "860e28e4",
+      "message": "fix(api): refresh aged coin details before responding"
+    },
+    {
+      "hash": "686b94b4",
+      "message": "fix(homepage): retain market shares with partial supply coverage"
+    },
+    {
+      "hash": "c75abe6d",
+      "message": "docs(process): ADR lifecycle rules, nav completeness check, cross-doc drift"
+    },
+    {
+      "hash": "958778e0",
+      "message": "ci(deploy): fail closed unless the remote D1 ledger has adopted the squashed baseline"
+    },
+    {
+      "hash": "d241a82b",
+      "message": "ci(guards): declared cron CPU placement, thin-V9 Telegram reachability, @shared alias lint"
+    },
+    {
+      "hash": "eabb38d8",
+      "message": "chore(scoring): drop dead exit confidence copy, mark structural clamps, reject empty catalogs"
+    },
+    {
+      "hash": "ace14b0c",
+      "message": "feat(pricing)!: Pricing 6.47 - conserve or withhold historical chain buckets; label local-read clocks"
+    },
+    {
+      "hash": "aad4e438",
+      "message": "fix(status): exact stale-slot count, no durable zero on failed Telegram reads, honest pulse quality, independent safety reads"
+    },
+    {
+      "hash": "69f1b94d",
+      "message": "fix(api): count trailing supply omissions in non-USD share coverage"
+    },
+    {
+      "hash": "22c5c7d4",
+      "message": "fix(pipeline): tolerate non-systemic stablecoin publication gaps"
+    },
+    {
+      "hash": "1858600a",
+      "message": "fix(ddr): tolerate immaterial stablecoin publication gaps"
+    },
+    {
+      "hash": "b92654b9",
+      "message": "fix: reconcile production QA displays and hydration"
+    },
+    {
+      "hash": "878adc60",
+      "message": "Safety Score v10.16: record the two-capture release gate"
+    },
+    {
+      "hash": "1156a097",
+      "message": "Agent tooling: receipt explanation, registry drift guards, generated indexes"
+    },
+    {
+      "hash": "11269507",
+      "message": "CI and curation tooling: enforce the documented contracts"
+    },
+    {
+      "hash": "da777b20",
+      "message": "Safety Score v10.16: age track records through the documented resolver"
+    },
+    {
+      "hash": "7d4e610c",
+      "message": "Telegram and yield: fix defects the docs review confirmed"
+    },
+    {
+      "hash": "6c2a9e87",
+      "message": "Tests: detail price revalidation inside the fresh band carries no warning"
+    },
+    {
+      "hash": "edc1ae1b",
+      "message": "Hotfix: background detail-cache revalidation is not stale data"
+    },
+    {
+      "hash": "58383ef4",
+      "message": "Hotfix: restore historical market-cap chart cohorts"
+    }
+  ]
+}

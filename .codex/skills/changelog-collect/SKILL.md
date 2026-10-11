@@ -8,7 +8,9 @@ Read `docs/editorial-style.md`; its `release-note` register governs prose. Read 
 
 # Changelog Collection
 
-Accept optional ISO `from`/`to`, `--force` for an intentional overlap, and `--commit` only when the user authorized a commit. Otherwise derive `from` as the day after the newest entry’s `dateRange.to` and `to` as today. Refuse any range overlapping an existing entry unless forced.
+Every entry covers exactly one ISO week: `from` is a Monday, `to` is the following Sunday (`from + 6` days), both inclusive UTC calendar days. Never write a partial, multi-week, or off-weekday range, and never derive `to` as “today” on a non-Sunday; `check:editorial-content` and `src/data/changelogs/__tests__/index.test.ts` reject anything else.
+
+Accept an optional ISO `week` (any date inside the target week) and `--commit` only when the user authorized a commit. Without `week`, target the current week when today (UTC) is Sunday, otherwise the most recently completed Monday–Sunday week. If the target week already has an entry, revise that file instead of creating a second one. If one or more complete weeks lie between the newest entry and the target, report the gap and write one entry per missing week.
 
 ## Collect And Curate
 
@@ -25,7 +27,7 @@ git log --no-merges --abbrev=8 --since="<from> 00:00:00 +0000" --until="<to> 23:
 
 ## Write And Verify
 
-Create `src/data/changelogs/<to>.json` with the `ChangelogEntry` shape. Before writing, confirm range ordering/non-overlap, field-note length, summary tags/descriptions, headline length, commit hashes, manifest cap, source-backed numbers, and existing methodology routes.
+Create `src/data/changelogs/<to>.json` with the `ChangelogEntry` shape. Before writing, confirm the Monday–Sunday range, non-overlap with neighbouring entries, field-note length, summary tags/descriptions, headline length, commit hashes, manifest cap, source-backed numbers, and existing methodology routes.
 
 Regenerate rather than hand-edit the barrel and refresh the Markdown fixture:
 

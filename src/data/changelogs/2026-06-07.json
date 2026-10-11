@@ -1,0 +1,138 @@
+{
+  "dateRange": {
+    "from": "2026-06-01",
+    "to": "2026-06-07"
+  },
+  "headline": "A navigation redesign and a shared table system reshape the app as the depeg resolver starts locking forecasts.",
+  "fieldNotes": "A heads-down week. The visible change is a navigation rework: a sticky core rail, a watch-column sidebar, and a homepage that rotates through what's worth looking at. Every table then moved onto one shared system, and a compare hub launched. Underneath, the resolver learned to withhold forecasts until it's actually ready, apxUSD's wobble got handled live, and a long correctness pass taught the data pipeline to fail closed rather than guess.",
+  "summary": [
+    {
+      "label": "Navigation & homepage redesign",
+      "tag": "design",
+      "description": "The sidebar becomes a lit 'watch column', a sticky core tape rail spans the top routes, and the homepage swaps static callouts for a rotating discovery module. The depeg resolver is promoted in primary navigation."
+    },
+    {
+      "label": "Public compare hub",
+      "tag": "feature",
+      "description": "A new indexable compare hub launches for side-by-side stablecoin lookups, the DEWS radar now surfaces high-risk coin logos scaled by escalation tier, and the public dataset catalog gains JSON-LD structured data."
+    },
+    {
+      "label": "Resolver readiness & apxUSD",
+      "tag": "feature",
+      "href": "/methodology/depeg-resolver-changelog/",
+      "description": "The depeg resolver now locks predictions by forecast readiness or backstop behind a readiness contract, and /depeg gains a resolver posture board. The apxUSD incident reopened across DDR/DDRR with hardened pricing."
+    },
+    {
+      "label": "Shared table system",
+      "tag": "design",
+      "description": "Content, status, analytics, comparison, and embedded detail tables migrate onto one shared table foundation with common toolbar controls, skeletons, density breakpoints, and accessible names."
+    },
+    {
+      "label": "Reserves & yield",
+      "tag": "coverage",
+      "href": "/methodology/yield-changelog/",
+      "description": "Royco Dawn rows feed a new structured tranche-yield safety model, GBP, JPY, and AUD benchmarks move to direct central-bank sources (v8.22), and live-reserve coverage gains audit hardening and source fixes."
+    },
+    {
+      "label": "Scoring & compliance",
+      "tag": "feature",
+      "href": "/methodology/scoring-changelog/",
+      "description": "Safety Score advances to v7.291, PegScore coverage extends to more priced assets, and a broad MiCA and GENIUS data pass refreshes compliance metadata across the registry."
+    },
+    {
+      "label": "Pipeline fail-closed hardening",
+      "tag": "infra",
+      "description": "Pricing, depeg, DEWS, yield, reserves, and blacklist paths now fail closed on stale or uncorroborated data, with freshness guards, input gating, and hardened parsing. The ops proxy now requires Access JWTs."
+    },
+    {
+      "label": "Codebase consolidation",
+      "tag": "infra",
+      "description": "A broad refactor wave shares helpers across worker, Telegram, and UI layers, derives types from schemas, and prunes dead code; perf work defers heavy detail bundles, memoizes the coverage matrix, and chunks cron queries."
+    }
+  ],
+  "stats": {
+    "totalCommits": 349
+  },
+  "commits": [
+    {
+      "hash": "eac10a6e",
+      "message": "fix(mint-burn): exclude tx-context shortfall rows"
+    },
+    {
+      "hash": "672873c4",
+      "message": "test: align mint/burn mocks with batch tx-context"
+    },
+    {
+      "hash": "ed9c9f3f",
+      "message": "test(redemption): align backstop assertions with current config"
+    },
+    {
+      "hash": "8e7f9894",
+      "message": "chore(yield): migrate GBP, JPY, AUD benchmarks to direct sources"
+    },
+    {
+      "hash": "088a970d",
+      "message": "Update yield documentation details for benchmark source migration"
+    },
+    {
+      "hash": "709f177b",
+      "message": "Bump yield methodology for direct central-bank benchmark sources"
+    },
+    {
+      "hash": "86ca8c7b",
+      "message": "Improve mint/burn bridge tx-context throughput and update methodology docs"
+    },
+    {
+      "hash": "fdfb4231",
+      "message": "fix: tighten homepage digest spacing"
+    },
+    {
+      "hash": "7be75533",
+      "message": "Add depeg posture board to /depeg page"
+    },
+    {
+      "hash": "e2e83fc9",
+      "message": "perf: eliminate homepage CLS/LCP shift and trim load-path JS"
+    },
+    {
+      "hash": "5f1a7ff3",
+      "message": "fix: clarify PSI display basis"
+    },
+    {
+      "hash": "fe7c100f",
+      "message": "ci: align local pages smoke rehearsal"
+    },
+    {
+      "hash": "b9fcd8b2",
+      "message": "fix: serve decoded pages middleware html"
+    },
+    {
+      "hash": "36a94bc2",
+      "message": "ci: wait for pages release propagation"
+    },
+    {
+      "hash": "995a5346",
+      "message": "fix: keep critical css CSP-safe"
+    },
+    {
+      "hash": "64b3a266",
+      "message": "chore: finalize inline critical CSS script and dependency lock updates"
+    },
+    {
+      "hash": "0bc89c61",
+      "message": "chore: add inline homepage critical CSS maintenance script"
+    },
+    {
+      "hash": "7b006e2b",
+      "message": "feat: refine top-rail visuals and logo/rail behavior"
+    },
+    {
+      "hash": "edce0b63",
+      "message": "feat: improve timeline chart readiness signaling and styling"
+    },
+    {
+      "hash": "5b58cebf",
+      "message": "chore: update build-size reporting maintenance script"
+    }
+  ]
+}

@@ -32,7 +32,7 @@
     {
       "label": "Fail-closed publication",
       "tag": "infra",
-      "description": "Publication now holds rather than guesses: V9 input is skipped after a failed DEX stage, producer holds baseline by identity, transition caches survive rollout, and report-card failures stay isolated to one asset."
+      "description": "Unhealthy V9 attempts keep the last accepted ratings and report held status, never falling back to V8. V9 input is skipped after a failed DEX stage, and report-card failures stay isolated to one asset."
     },
     {
       "label": "Wider coverage",
@@ -47,7 +47,7 @@
     }
   ],
   "stats": {
-    "totalCommits": 181
+    "totalCommits": 188
   },
   "commits": [
     {

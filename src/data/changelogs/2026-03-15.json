@@ -1,0 +1,137 @@
+{
+  "dateRange": {
+    "from": "2026-03-09",
+    "to": "2026-03-15"
+  },
+  "headline": "Multi-source price consensus and five batches of live reserve adapters land alongside two audit remediation campaigns.",
+  "fieldNotes": "Pricing and reserves both moved toward cross-checked sources. The new N-source consensus module validates prices against Pyth, RedStone, Binance, Coinbase, Curve pools, and real-time FX, while five batches of live reserve adapters began reading reserve data directly for issuers including Tether, Circle, Aave, and Sky. Two audit remediation campaigns ran alongside, adding Zod validation at system boundaries and consolidating shared contracts.",
+  "summary": [
+    {
+      "label": "Multi-source pricing",
+      "tag": "feature",
+      "description": "N-source consensus module integrating Pyth, RedStone, Binance, Coinbase, Curve on-chain prices, and real-time FX rates"
+    },
+    {
+      "label": "Live reserve expansion",
+      "tag": "coverage",
+      "description": "Five batches of reserve adapters (USDT, OUSD, Circle, GHO, Sky, Mento, crvUSD), live collateral scoring in report cards, and drift alerting"
+    },
+    {
+      "label": "Deeper digest intelligence",
+      "tag": "feature",
+      "description": "Weekly recap format, yield anomaly signals, DEX liquidity shifts, PSI trajectories, and Telegram pending queue for reliable delivery"
+    },
+    {
+      "label": "Broader stablecoin coverage",
+      "tag": "coverage",
+      "description": "dUSD, sdUSD, CETES, Parallel USDp added to tracking; CNHT, EURA, USDA moved to cemetery"
+    },
+    {
+      "label": "Codebase hardening",
+      "tag": "security",
+      "description": "Two major audit remediation campaigns (38 tasks), Zod validation at system boundaries, timing-safe auth, and shared contract consolidation"
+    },
+    {
+      "label": "Liquidity Score v4",
+      "tag": "feature",
+      "description": "Log-scale volume, reworked durability formula, DexScreener and CG ticker fallback crawlers for broader pool coverage",
+      "href": "/methodology/liquidity-score-changelog/"
+    },
+    {
+      "label": "Start Here onboarding",
+      "tag": "design",
+      "description": "New onboarding page, compare flow signals, stablecoin coverage matrix, and Telegram global alert subscriptions"
+    },
+    {
+      "label": "Yield and flows graduate",
+      "tag": "feature",
+      "description": "Yield Intelligence and Mint/Burn Flows promoted from Experimental to Mature, with detail-page yield sections, PYS tooltips, and flash-loan roundtrip filtering",
+      "href": "/methodology/yield-changelog/"
+    }
+  ],
+  "stats": {
+    "totalCommits": 546
+  },
+  "commits": [
+    {
+      "hash": "ac3d935a",
+      "message": "fix(auth): support both JWT and service token verification for ops-api"
+    },
+    {
+      "hash": "12b24ae6",
+      "message": "fix(auth): validate service token directly for Worker custom domain"
+    },
+    {
+      "hash": "f6693d63",
+      "message": "refactor: rename weekly digest → weekly recap"
+    },
+    {
+      "hash": "d7eea41e",
+      "message": "refactor: extract enrichment passes from enrichMissingPrices"
+    },
+    {
+      "hash": "abb002b0",
+      "message": "refactor: extract snapshot diff and pending queue from dispatch-telegram-alerts"
+    },
+    {
+      "hash": "fe1e8b72",
+      "message": "refactor: decompose backfill-depegs.ts into FX, price sources, and orchestrator"
+    },
+    {
+      "hash": "d701cb62",
+      "message": "refactor: options objects for long param lists, BigInt for Tron amounts, atomic DDL"
+    },
+    {
+      "hash": "36ac0942",
+      "message": "ci: add safety scripts to CI pipeline and migration uniqueness check"
+    },
+    {
+      "hash": "cef70639",
+      "message": "feat: add Zod validation for external API responses"
+    },
+    {
+      "hash": "f8d4cc73",
+      "message": "refactor: consolidate DEX types to shared schemas, migrate safety-score-version to factory"
+    },
+    {
+      "hash": "e539ed33",
+      "message": "refactor: extract PYS formula to shared/lib/yield-scoring.ts"
+    },
+    {
+      "hash": "1bd14505",
+      "message": "test: add unit tests for supply helpers and peg utilities"
+    },
+    {
+      "hash": "7ad38061",
+      "message": "test: add unit tests for core scoring engine"
+    },
+    {
+      "hash": "4f37bdc5",
+      "message": "fix(security): require JWT verification for admin auth, remove header-presence fallback"
+    },
+    {
+      "hash": "043350c2",
+      "message": "chore: config and naming fixes"
+    },
+    {
+      "hash": "7fba3592",
+      "message": "refactor: consolidate duplicate imports and format functions"
+    },
+    {
+      "hash": "d84ae09d",
+      "message": "feat(digest): add weekly recap section to archive + fix daily API exclusion"
+    },
+    {
+      "hash": "851bb7c4",
+      "message": "chore: remove dead code and unexport unused symbols"
+    },
+    {
+      "hash": "237b0bad",
+      "message": "fix(digest): apply quality review fixes (NaN guard, header trim, prompt consistency)"
+    },
+    {
+      "hash": "e9849c62",
+      "message": "test(digest): add tests for new digest enrichment collectors"
+    }
+  ]
+}
