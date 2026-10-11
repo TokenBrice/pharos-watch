@@ -722,6 +722,38 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     ).toEqual({ kind: "bounded", bound: { amount: 1, unit: "supply-fraction" } });
   });
 
+
+  it.each(["deployment", "representation-group"] as const)(
+    "does not infer an incident disposition from multiple reviewed %s contributors",
+    (aggregation) => {
+      const representationId = "fixture-incident-aggregation";
+      const routeIds = aggregation === "deployment" ? [BASE_ROUTE, BASE_ROUTE] : [BASE_ROUTE, ARBITRUM_ROUTE];
+      const routes = [...new Set(routeIds)].map((id) => representationRoute(id, {
+        ...(aggregation === "representation-group"
+          ? { representationId, issuanceModel: "wrapped-representation" as const } : {}),
+      }));
+      const metadata = meta("fixture-incident-aggregation", {
+        bridgeRouteRisk: bridgeProfile(routes, {
+          controls: routeIds.map((id, index) => bridgeControl({
+            id: `reviewed-contributor-${index}`, routeRefs: [id],
+            controllerChain: id.split(":")[0], controllerAddress: id.split(":")[1],
+            authorityType: "multisig", threshold: 2, signerCount: 3, canRaiseCap: true,
+          })),
+        }),
+      });
+      const result = adaptBridgeFixture(metadata, aggregation === "representation-group"
+        ? representationSupplyReview(metadata.id, representationId) : null);
+      expect(result.controls).toHaveLength(1);
+      expect(result.controls[0]).toMatchObject({
+        authority: { model: "multisig", threshold: { required: 2, total: 3 } },
+        capabilities: ["bridge-mint"],
+        capSemantics: { kind: aggregation === "deployment" ? "raiseable" : "unbounded" },
+        claimImpairment: aggregation === "deployment" ? "bounded" : "unbounded",
+        economicLossScope: "deployment",
+        incidentState: "unknown",
+      });
+    },
+  );
   it.each([false, true])("requires independent scoped incident evidence for reviewed bridge controls (structured: %s)", (structured) => {
     const clockSec = Date.parse("2026-10-07T14:00:00Z") / 1_000;
     const metadata = meta("fixture-bridge-incident", {

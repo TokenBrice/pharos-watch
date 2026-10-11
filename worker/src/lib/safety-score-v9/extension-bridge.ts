@@ -269,15 +269,6 @@ function mergedBridgeModulesOrGuards(
   return values.every((value) => value === values[0]) ? values[0]! : "unknown";
 }
 
-function mergedBridgeIncidentState(
-  entries: readonly StructuredBridgeOverlayEntry[],
-): ControlOverlay["incidentState"] {
-  const values = entries.map((entry) => entry.overlay.incidentState);
-  if (values.includes("active")) return "active";
-  if (values.includes("unknown")) return "unknown";
-  if (values.includes("resolved")) return "resolved";
-  return "none";
-}
 
 function mergedBridgeFailureDomains(
   entries: readonly StructuredBridgeOverlayEntry[],
@@ -347,7 +338,8 @@ function structuredBridgeRouteControl(
       moduleImpact: entries.every((entry) => entry.overlay.moduleImpact === "verified-noninterfering" || entry.overlay.modulesOrGuards !== "present") ? "verified-noninterfering" as const : "unresolved" as const,
       scopeDiagnostics: [...new Set(entries.flatMap((entry) => entry.overlay.scopeDiagnostics ?? ["execution-scope-unreviewed"]))].sort(compareText),
     } : {}),
-    incidentState: mergedBridgeIncidentState(entries),
+    // Independent incident reviews are routed only after bridge aggregation.
+    incidentState: "unknown",
     failureDomains: mergedBridgeFailureDomains(entries),
   };
 }
@@ -571,9 +563,7 @@ function representationGroupBridgeControl(
       moduleImpact: memberControls.every((member) => member.moduleImpact === "verified-noninterfering" || member.modulesOrGuards !== "present") ? "verified-noninterfering" as const : "unresolved" as const,
       scopeDiagnostics: [...new Set(memberControls.flatMap((member) => member.scopeDiagnostics ?? ["execution-scope-unreviewed"]))].sort(compareText),
     } : {}),
-    incidentState: memberControls.some((member) => member.incidentState === "active") ? "active"
-      : !reviewed || memberControls.some((member) => member.incidentState === "unknown") ? "unknown"
-      : memberControls.some((member) => member.incidentState === "resolved") ? "resolved" : "none",
+    incidentState: "unknown",
     failureDomains: [...domains.values()].sort((left, right) =>
       compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
     ),
@@ -771,7 +761,6 @@ function buildUnprovenRouteJoins(
   assetId: string,
   supplyReview: ExtensionAsset["supplyReview"],
   bridgeControls: readonly ControlOverlay[],
-  controlSemanticsResolved: (control: ControlOverlay) => boolean,
 ): V9BridgeSupplyRouteJoinV1[] {
   const exclusions = supplyReview === null ? null : providerRowExclusionShares(assetId, supplyReview);
   const controlsByDeployment = new Map<string, ControlOverlay[]>();
@@ -783,8 +772,10 @@ function buildUnprovenRouteJoins(
     ]);
   }
   const fullCeilingShare = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
+  // Every bridge overlay still has an unknown incident disposition here.
+  // Independent incident routing runs downstream, so none is fully resolved.
   const reviewedUnresolvedDeploymentKeys = new Set(
-    bridgeControls.filter((control) => !controlSemanticsResolved(control) &&
+    bridgeControls.filter((control) =>
       control.scope === "deployment" && control.economicLossScope === "deployment")
       .map((control) => control.deploymentKey),
   );
@@ -808,13 +799,11 @@ function buildUnprovenRouteJoins(
         if (row.reviewedRouteKind === "native") return joined.length === 0;
         if (row.reviewedRouteKind !== "controlled" || single === null) return false;
         return (
-          (controlSemanticsResolved(single) ||
-            (single.scope === "deployment" &&
-              canRelaxUnresolvedRows &&
-              single.economicLossScope === "deployment" &&
-              single.materialSupplyShare !== null &&
-              single.materialSupplyShare < fullCeilingShare)) &&
+          single.scope === "deployment" &&
+          canRelaxUnresolvedRows &&
+          single.economicLossScope === "deployment" &&
           single.materialSupplyShare !== null &&
+          single.materialSupplyShare < fullCeilingShare &&
           bridgeJoinSharesReconcile(single.materialSupplyShare, row.supplyShare)
         );
       }
@@ -835,7 +824,7 @@ function buildUnprovenRouteJoins(
       reviewedRouteKind: row.reviewedRouteKind ?? null,
       supplyShare: row.supplyShare,
       joinedControlKeys: [...new Set(joined.map((control) => control.controlKey))].sort(compareText),
-      joinedControlSemanticsResolved: single === null ? null : controlSemanticsResolved(single),
+      joinedControlSemanticsResolved: single === null ? null : false,
       joinedControlSupplyShare: single === null ? null : single.materialSupplyShare,
     });
   }
@@ -1045,27 +1034,14 @@ export function adaptBridgeReview(
     (control.controllerChain != null &&
       control.controllerAddress != null &&
       refs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
-  const overlayFullyResolved = (overlay: ControlOverlay): boolean =>
-    overlay.authority !== null &&
-    overlay.authority.model !== "unknown" &&
-    overlay.failureDomains.length > 0 &&
-    overlay.capSemantics.kind !== "unknown" &&
-    overlay.claimImpairment !== "unknown" &&
-    overlay.economicLossScope !== "unknown" &&
-    overlay.incidentState !== "unknown";
   if (freshScopedQuestionRefs.size > 0) {
     for (const [routeId, entries] of structuredOverlaysByDeployment) {
       const merged = structuredRouteControlsByDeployment.get(routeId);
       if (!merged) continue;
       const anyNamed = entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl));
       const custodyOnly = anyNamed && !entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl, semanticQuestionRefs));
-      if (custodyOnly && overlayFullyResolved(merged)) {
-        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
-          scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
-        continue;
-      }
       const allUnresolvedNamed = entries.every(
-        (entry) => controlHasFreshScopedQuestion(entry.sourceControl) || overlayFullyResolved(entry.overlay),
+        (entry) => controlHasFreshScopedQuestion(entry.sourceControl),
       );
       if (anyNamed && allUnresolvedNamed) {
         structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
@@ -1349,7 +1325,7 @@ export function adaptBridgeReview(
         supplyReview,
         bridgeClaimControls,
         "applicable",
-        buildUnprovenRouteJoins(meta.id, supplyReview, controls, overlayFullyResolved),
+        buildUnprovenRouteJoins(meta.id, supplyReview, controls),
       ),
     },
     controls,

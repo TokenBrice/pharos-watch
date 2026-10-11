@@ -8,7 +8,7 @@ import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runt
 vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
   const original = await importOriginal<typeof WorkerRuntimeRegistry>();
   // Keep production metadata for transitive reviewed-doc lookups; only the sync cohort is synthetic.
-  const registry = mockWorkerRuntimeRegistry({ trackedMetaById: original.WORKER_TRACKED_META_BY_ID, stablecoins: Array.from({ length: 8 }, (_, index) => ({
+  const registry = mockWorkerRuntimeRegistry({ trackedMetaById: new Map(original.WORKER_TRACKED_META_BY_ID), stablecoins: Array.from({ length: 8 }, (_, index) => ({
     id: `coin-${index}`, name: `Coin ${index}`, symbol: `C${index}`,
     flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
     liveReservesConfig: { adapter: "m0", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "http-json", url: `https://example.com/${index}` } } },

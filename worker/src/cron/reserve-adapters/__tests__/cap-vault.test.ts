@@ -326,6 +326,83 @@ describe("adaptCapVaultState", () => {
   });
 });
 
+describe("Cap redemption output valuation", () => {
+  it("values a single source-priced holding without treating its NAV as a fixed peg", () => {
+    const result = adaptCapVaultState({
+      contractAddress: CAP_VAULT,
+      supplyUsd: 100,
+      assets: [makeCapAsset({
+        address: WTGXX, name: "WTGXX", coinId: "wtgxx-wisdomtree", depType: "collateral",
+        totalSupplied: 80, available: 40, priceUsd: 1.25,
+        priceSourceId: `chainlink-nav:${WTGXX_ORACLE}`, priceObservedAt: CAP_NOW - 60,
+      })],
+    });
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 50,
+      outputValuation: {
+        sourceId: `cap-vault:chainlink-nav:${WTGXX_ORACLE}`,
+        observedAt: CAP_NOW - 60, unitValueUsd: 1,
+        basketWeights: [{ assetId: "wtgxx-wisdomtree", weight: 1 }],
+      },
+    });
+    expectValidAdapterOutput("cap-vault", result);
+  });
+
+  it("weights every holding by its sourced dollar value and dates the basket to the oldest price", () => {
+    const result = adaptCapVaultState({
+      contractAddress: CAP_VAULT,
+      supplyUsd: 100,
+      assets: [
+        makeCapAsset({
+          coinId: "usdc-circle", depType: "collateral", totalSupplied: 50, available: 50,
+          priceUsd: 0.9, priceSourceId: "market:usdc", priceObservedAt: CAP_NOW - 120,
+        }),
+        makeCapAsset({
+          address: WTGXX, name: "WTGXX", coinId: "wtgxx-wisdomtree", depType: "collateral",
+          totalSupplied: 50, available: 50, priceUsd: 1.1,
+          priceSourceId: `chainlink-nav:${WTGXX_ORACLE}`, priceObservedAt: CAP_NOW - 60,
+        }),
+      ],
+    });
+    const valuation = result.metadata?.redemption?.outputValuation;
+    expect(valuation).toMatchObject({
+      sourceId: `cap-vault:chainlink-nav:${WTGXX_ORACLE}+market:usdc`,
+      observedAt: CAP_NOW - 120, unitValueUsd: 1,
+    });
+    expect(valuation?.basketWeights?.[0]).toMatchObject({ assetId: "usdc-circle" });
+    expect(valuation?.basketWeights?.[0]?.weight).toBeCloseTo(0.45);
+    expect(valuation?.basketWeights?.[1]).toMatchObject({ assetId: "wtgxx-wisdomtree" });
+    expect(valuation?.basketWeights?.[1]?.weight).toBeCloseTo(0.55);
+    expectValidAdapterOutput("cap-vault", result);
+  });
+
+  it.each([
+    ["identity", { coinId: undefined }],
+    ["price", { priceUsd: undefined }],
+    ["source", { priceSourceId: undefined }],
+    ["observation", { priceObservedAt: undefined }],
+  ] as const)("withholds the entire basket valuation when one active holding lacks %s", (_field, missing) => {
+    const result = adaptCapVaultState({
+      contractAddress: CAP_VAULT, supplyUsd: 100,
+      assets: [
+        makeCapAsset({
+          coinId: "usdc-circle", totalSupplied: 50, available: 50,
+          priceUsd: 1, priceSourceId: "market:usdc", priceObservedAt: CAP_NOW - 60,
+        }),
+        makeCapAsset({
+          address: "0xdac17f958d2ee523a2206206994597c13d831ec7", name: "USDT",
+          coinId: "usdt-tether", totalSupplied: 50, available: 50,
+          priceUsd: 1, priceSourceId: "market:usdt", priceObservedAt: CAP_NOW - 60,
+          ...missing,
+        }),
+      ],
+    });
+    expect(result.metadata?.totalReserveUsd).toBe(100);
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 100 });
+    expect(result.metadata?.redemption).not.toHaveProperty("outputValuation");
+  });
+});
+
 describe("fetchCapVaultReserves", () => {
   it("fails closed when the vault contract is not configured for the input chain", async () => {
     const network = installAdapterNetwork(capNetwork());
@@ -426,6 +503,41 @@ describe("fetchCapVaultReserves", () => {
       totalReserveUsd: 100,
     });
     expect(result.metadata).not.toHaveProperty("redemption.outputValuation");
+  });
+
+  it("publishes a source-bound NAV for a WTGXX-only vault at the maximum accepted oracle age", async () => {
+    const { result } = await runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ assets: [WTGXX], navAnswer: 120_000_000n, navUpdatedAt: CAP_NOW - 345_600 }),
+      nowSec: CAP_NOW,
+    });
+    expect(result.metadata?.totalReserveUsd).toBe(60);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 60,
+      outputValuation: {
+        sourceId: `cap-vault:chainlink-nav:${WTGXX_ORACLE}`,
+        observedAt: CAP_NOW - 345_600, unitValueUsd: 0.6,
+        basketWeights: [{ assetId: "wtgxx-wisdomtree", weight: 1 }],
+      },
+    });
+    expectValidAdapterOutput("cap-vault", result);
+  });
+
+  it.each(["0x313ce567", "0xfeaf968c"])("rejects the snapshot when WTGXX NAV read %s reverts", async (selector) => {
+    const network = capNetwork({ assets: [WTGXX] });
+    network.rpc[`${WTGXX_ORACLE}:${selector}`] = null;
+    await expect(runAdapter("cap-vault", "cusd-cap", {
+      network, nowSec: CAP_NOW,
+    })).rejects.toThrow("WTGXX Chainlink NAV read failed");
+  });
+
+  it("accepts the future-clock allowance boundary and rejects a NAV one second beyond it", async () => {
+    const { result } = await runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ assets: [WTGXX], navUpdatedAt: CAP_NOW + 600 }), nowSec: CAP_NOW,
+    });
+    expect(result.metadata?.redemption?.outputValuation?.observedAt).toBe(CAP_NOW + 600);
+    await expect(runAdapter("cap-vault", "cusd-cap", {
+      network: capNetwork({ assets: [WTGXX], navUpdatedAt: CAP_NOW + 601 }), nowSec: CAP_NOW,
+    })).rejects.toThrow("WTGXX Chainlink NAV timestamp is in the future (601s)");
   });
 
   it("fails the CUSD basket snapshot closed when WTGXX Chainlink NAV is stale", async () => {

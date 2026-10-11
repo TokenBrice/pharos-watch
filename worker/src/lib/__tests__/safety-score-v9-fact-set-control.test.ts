@@ -309,6 +309,27 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(empty.assets[0]!.controlReview).toMatchObject({ state: "partially-reviewed-controls", controls: [expect.objectContaining({ materialSupplyShare: 1 })] });
   });
 
+  it("rejects a bridge tier whose exact research source was not registered", () => {
+    const fixed = exactFixedInput();
+    const extension = structuredClone(buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: metaMap(bridgeMeta([reviewedLockMintRoute("base:0x3333333333333333333333333333333333333333")])),
+    }));
+    const route = extension.assets[0]!.economicControlReview!.bridge.routes[0]!;
+    route.factorStatuses = {
+      tier: { ...v9Status("known", "v9.control.tier"), evidenceRefIds: ["unregistered-tier-source"] },
+    };
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+      fixed, materializeSafetyScoreV9FactSetExtension(fixed, extension),
+    );
+    expect(compiled.quarantines).toEqual([{
+      assetId: "alpha", code: "fact-build-failed",
+      message: `Bridge factor alpha:${route.controlKey} has unknown research evidence unregistered-tier-source`,
+    }]);
+    expect(evaluateV9FactSet(compiled.factSet, V9_CANDIDATE_POLICY_V1).assets[0]!.trace).toMatchObject({
+      ratingStatus: "pipeline-gap", finalGrade: null, finalScore: null,
+    });
+  });
+
   it("applies deployment and common-mode materiality boundaries", () => {
     const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
     const below = materialityFixture(threshold - 0.001);
