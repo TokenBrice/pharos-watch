@@ -58,6 +58,29 @@ function summaryFor(
 }
 
 describe("rpc parity gate math", () => {
+  it("gates actual latest calls, not failed references or mixed legacy calls", () => {
+    const runs = parityRunWindow(24, () => ({
+      calls: {
+        dwellir: [
+          { step: "head", phase: "firstTouch", latencyMs: 1, errorClass: null },
+          { step: "latest", phase: "warm", latencyMs: 1, errorClass: null },
+          { step: "reference", phase: "warm", latencyMs: 1, errorClass: "rpc-error" },
+          { step: "header", phase: "warm", latencyMs: 1, errorClass: "invalid-response" },
+          { step: "legacy-latest", phase: "warm", latencyMs: 1, errorClass: "timeout" },
+        ], comparator: [],
+      },
+    }));
+    const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(summary.availability.dwellir.latest.successRate).toBe(1);
+    expect(summary.availability.dwellir.reference.successRate).toBe(0);
+    expect(summary.gate.failing).not.toContain("success-rate:latest");
+    for (const run of runs) run.samples.forEach((sample) => {
+      sample.calls!.dwellir = sample.calls!.dwellir.filter((call) => call.step !== "latest");
+    });
+    const legacyOnly = summaryFor(PARITY_REGISTRY_CHAIN, runs);
+    expect(legacyOnly.availability.dwellir.latest.attempts).toBe(0);
+    expect(legacyOnly.gate.failing).toContain("insufficient-latest-attempts");
+  });
   it("passes a full healthy window", () => {
     const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS + 6);
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
@@ -222,8 +245,8 @@ describe("rpc parity gate math", () => {
     expect(summary.errorClasses).toEqual({});
     expect(summary.comparatorErrorClasses).toEqual({ capability: RPC_PARITY_GATE_MIN_RUNS });
     expect(summary.failedSteps).toEqual({
-      dwellir: { head: 0, state: 0, logs: 0, latest: 0 },
-      comparator: { head: RPC_PARITY_GATE_MIN_RUNS, state: 0, logs: 0, latest: 0 },
+      dwellir: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
+      comparator: { head: RPC_PARITY_GATE_MIN_RUNS, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
     });
     expect(summary.lastComparatorFailure).toEqual({
       atSec: PARITY_NOW_SEC,
@@ -276,7 +299,7 @@ describe("rpc parity gate math", () => {
     // Availability is where the failed reads belong.
     expect(summary.dwellirSuccessRate).toBeCloseTo((RPC_PARITY_GATE_MIN_RUNS - 2) / RPC_PARITY_GATE_MIN_RUNS, 6);
     expect(summary.errorClasses).toEqual({ timeout: 2 });
-    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 1, logs: 1, latest: 0 });
+    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 1, logs: 1, latest: 0, reference: 0, header: 0, "legacy-latest": 0 });
   });
 
   it("does not count a plan refusal as a Dwellir availability failure", () => {
@@ -316,8 +339,8 @@ describe("rpc parity gate math", () => {
     ));
 
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, runs);
-    expect(summary.failedSteps.comparator).toEqual({ head: 0, state: 1, logs: 1, latest: 0 });
-    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 0, logs: 1, latest: 0 });
+    expect(summary.failedSteps.comparator).toEqual({ head: 0, state: 1, logs: 1, latest: 0, reference: 0, header: 0, "legacy-latest": 0 });
+    expect(summary.failedSteps.dwellir).toEqual({ head: 0, state: 0, logs: 1, latest: 0, reference: 0, header: 0, "legacy-latest": 0 });
     expect(summary.lastComparatorFailure).toEqual({
       atSec: PARITY_NOW_SEC,
       step: "logs",
@@ -331,8 +354,8 @@ describe("rpc parity gate math", () => {
     const summary = summaryFor(PARITY_REGISTRY_CHAIN, parityRunWindow(RPC_PARITY_GATE_MIN_RUNS));
     expect(summary.comparatorErrorClasses).toEqual({});
     expect(summary.failedSteps).toEqual({
-      dwellir: { head: 0, state: 0, logs: 0, latest: 0 },
-      comparator: { head: 0, state: 0, logs: 0, latest: 0 },
+      dwellir: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
+      comparator: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
     });
     expect(summary.lastComparatorFailure).toBeNull();
   });
@@ -469,6 +492,7 @@ describe("rpc parity gate math", () => {
     expect(summary.logsComparator).toEqual(logRef);
     expect(summary.comparatorsByStep).toEqual({
       head: [logRef, stateRef], state: [logRef, stateRef], logs: [logRef], latest: [],
+      reference: [], header: [], "legacy-latest": [],
     });
     expect(summary.stateParity.lastMismatch).toEqual({
       atSec: PARITY_NOW_SEC - 3600, block: oldSample.commonBlock, comparator: logRef,
@@ -685,6 +709,28 @@ describe("rpc parity gate math", () => {
 });
 
 describe("rpc provider trial report", () => {
+  it("reports placement readiness and per-chain rollback without enabling request RPCs", async () => {
+    const { db } = fixtures.open();
+    const env = { DWELLIR_API_KEY: "parity-test-key" };
+    const report = await loadRpcProviderTrialReport(db, env, PARITY_NOW_SEC);
+    expect(report.observation?.chains.find((chain) => chain.chainId === "mantle")?.routing.statePlacement).toBe("primary");
+    expect(report.observation?.chains.find((chain) => chain.chainId === "base")?.routing.statePlacement).toBe("after-alchemy");
+    const disabled = await loadRpcProviderTrialReport(db, { ...env, DWELLIR_ROUTING_DISABLED_CHAINS: "MANTLE, Base" }, PARITY_NOW_SEC);
+    expect(disabled.observation?.chains.find((chain) => chain.chainId === "mantle")?.routing)
+      .toEqual({ statePlacement: "supplemental", logScan: false });
+    const absent = await loadRpcProviderTrialReport(db, {}, PARITY_NOW_SEC);
+    expect(absent.observation?.chains.every((chain) => chain.routing.statePlacement === "unavailable" && !chain.routing.logScan)).toBe(true);
+  });
+
+  it("excludes changed-host evidence on read before the next parity write", async () => {
+    const { db } = fixtures.open();
+    await recordRpcParityRun(db, fullParityRun(PARITY_NOW_SEC, (chainId) => chainId === "polygon"
+      ? { dwellirHost: "api-polygon-mainnet-full.n.dwellir.com" } : {}));
+    const report = await loadRpcProviderTrialReport(db, {}, PARITY_NOW_SEC);
+    expect(report.observation?.chains.find((chain) => chain.chainId === "polygon"))
+      .toMatchObject({ runs: 0, last: null });
+    expect(report.observation?.chains.find((chain) => chain.chainId === "base")?.runs).toBe(1);
+  });
   it("expires stored evidence at report time without requiring another run", async () => {
     const { db } = fixtures.open();
     const runs = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS);
@@ -782,7 +828,7 @@ describe("rpc provider trial report", () => {
 });
 
 function sampleWith(overrides: Partial<RpcParityChainSample>): RpcParityChainSample {
-  return { ...fullParityRun(PARITY_NOW_SEC).samples[0], ...overrides };
+  return paritySample(overrides.chainId ?? PARITY_REGISTRY_CHAIN, overrides);
 }
 
 describe("rpc parity chain summary edge cases", () => {

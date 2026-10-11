@@ -93,6 +93,18 @@ describe("resolveRpcUrls", () => {
     expect(resolveRpcUrls(rpc, { order: "rotate", seed: 1 })).toEqual(["https://rpc.example.com"]);
   });
 
+  it("excludes promoted Dwellir without displacing either incumbent URL", () => {
+    const rpc = makeRpc();
+    const promoted = { ...supplementalEndpoint("https://dwellir.example"), position: "registry" as const };
+    for (const index of [0, 1]) {
+      const endpoints = [...rpc.endpoints];
+      endpoints.splice(index, 0, promoted);
+      expect(resolveRpcUrls(makeRpc({ endpoints }))).toEqual(resolveRpcUrls(rpc));
+      expect(resolveRpcUrls(makeRpc({ endpoints }), { order: "primary-first" }))
+        .toEqual(resolveRpcUrls(rpc, { order: "primary-first" }));
+    }
+  });
+
   it("ignores a trailing supplemental endpoint in every order", () => {
     const withDwellir = makeRpc({
       endpoints: [

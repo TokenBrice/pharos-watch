@@ -3,8 +3,7 @@ import {
   getChainRpc,
   getRpcAuth,
   getRpcAuthHeaders,
-  registryRpcUrls,
-  supplementalRpcEndpoints,
+  logScanRpcEndpoints,
   type ChainRpcConfig,
 } from "./chain-registry";
 import { recordDwellirCredits } from "./rpc-provider-budget";
@@ -36,11 +35,7 @@ export interface EvmRpcOptions {
   deadlineMs?: number;
   /** Invoked immediately before each RPC URL attempt with the URL about to be requested. False prevents the request. */
   beforeRequest?: (url: string) => boolean;
-  /**
-   * Registry endpoints and `extraRpcUrls` only. Log lanes (blacklist, mint/burn)
-   * must never reach a supplemental operator, so they set this on every call
-   * that passes `chainRpcs`.
-   */
+  /** Exclude supplemental endpoints AND the metered Dwellir operator at every position. */
   excludeSupplementalRpc?: boolean;
   maxRetries?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
@@ -248,15 +243,13 @@ function resolveMulticallBatchSize(callsLength: number, rawBatchSize: number | u
 interface BuildRpcUrlsOptions {
   /** True when the request can pin a historical block; near-head-only endpoints are then skipped. */
   historicalBlock?: boolean;
-  /** Registry endpoints and `extraRpcUrls` only. */
+  /** Exclude supplemental endpoints and Dwellir regardless of placement. */
   excludeSupplementalRpc?: boolean;
 }
 
 /**
- * Supplemental origins demoted after a failed attempt, keyed by the per-run
- * `chainRpcs` Map object. The run owns the lifetime: entries are only reachable
- * through the map that observed the failure, so a demotion never outlives its
- * run and registry endpoints are never demoted.
+ * Dwellir origins demoted after a failed attempt, keyed by the per-run
+ * `chainRpcs` Map object. Placement does not affect the operator's failure policy.
  */
 const demotedSupplementalRpcOriginsByRun = new WeakMap<Map<string, ChainRpcConfig>, Set<string>>();
 
@@ -307,9 +300,8 @@ function isHistoricalBlockTag(blockTag: string | number | undefined): boolean {
 }
 
 /**
- * Every url a read may try, in order: registry endpoints, then adapter-pinned
- * `extraRpcUrls`, then supplemental endpoints (Dwellir is always last, so no
- * existing operator is ever reordered).
+ * Registry endpoints, adapter pins, then supplemental endpoints. Operator-level
+ * exclusion, pruning guards and run-local demotion apply at every position.
  */
 function buildRpcUrls(
   chainId?: string,
@@ -323,14 +315,22 @@ function buildRpcUrls(
   const chainRpc = chainId && chainRpcs ? getChainRpc(chainRpcs, chainId) : undefined;
   const demoted = chainRpcs == null ? undefined : demotedSupplementalRpcOriginsByRun.get(chainRpcs);
 
-  urls.push(...registryRpcUrls(chainRpc));
-  if (extraRpcUrls) {
-    urls.push(...extraRpcUrls);
+  const eligible = (url: string): boolean => {
+    const endpoint = chainRpc?.endpoints.find((row) => row.url === url);
+    if (endpoint?.operator !== "dwellir" && !isDwellirRpcUrl(url)) return true;
+    return !options?.excludeSupplementalRpc
+      && !(historicalBlock && endpoint?.stateHistory === "recent")
+      && !demoted?.has(endpointOrigin(url) ?? url);
+  };
+  for (const endpoint of chainRpc?.endpoints ?? []) {
+    if (endpoint.position === "registry" && eligible(endpoint.url)) urls.push(endpoint.url);
+  }
+  for (const url of extraRpcUrls ?? []) {
+    if (eligible(url)) urls.push(url);
   }
   if (!options?.excludeSupplementalRpc) {
-    for (const endpoint of supplementalRpcEndpoints(chainRpc, { historicalBlock })) {
-      if (demoted?.has(endpointOrigin(endpoint.url) ?? endpoint.url)) continue;
-      urls.push(endpoint.url);
+    for (const endpoint of chainRpc?.endpoints ?? []) {
+      if (endpoint.position === "supplemental" && eligible(endpoint.url)) urls.push(endpoint.url);
     }
   }
 
@@ -532,11 +532,15 @@ async function runEvmRpcBatch<Value>(
     excludeSupplementalRpc: options?.excludeSupplementalRpc,
   });
   if (urls.length === 0 || calls.length === 0) return null;
+  const logEndpoints = calls.some((call) => call.method === "eth_getLogs")
+    ? logScanRpcEndpoints(chainId ? options?.chainRpcs?.get(chainId) : undefined)
+    : undefined;
 
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;
   const maxRetries = options?.maxRetries ?? 1;
   endpoints: for (const rpcUrl of urls) {
     if (isTronRpcUrl(rpcUrl) && calls.some(call => requiresHistoricalEvmState(call.method, call.params))) continue;
+    if (logEndpoints && isDwellirRpcUrl(rpcUrl) && !logEndpoints.some((endpoint) => endpoint.url === rpcUrl)) continue;
     const endpoint = chainId ? options?.chainRpcs?.get(chainId)?.endpoints.find(row => row.url === rpcUrl) : undefined;
     if (!fitsRpcLogSpan(calls, endpoint?.maxLogBlockSpan)) continue;
     const noBatch = endpoint?.noBatch === true;

@@ -228,7 +228,16 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_API_KEY",
     valueType: "string",
-    description: "Dwellir credential for last-position supplemental EVM and native state-read endpoints during the provider trial; sent only as the X-Api-Key header.",
+    description: "Scheduled-only Dwellir credential for reviewed primary/after-Alchemy EVM routing, supplemental fallback elsewhere, and native state reads; sent only as the X-Api-Key header.",
+    example: { section: "workerOptional", value: "" },
+    runtimes: {
+      worker: { status: "optional" },
+    },
+  },
+  {
+    key: "DWELLIR_ROUTING_DISABLED_CHAINS",
+    valueType: "string",
+    description: "Optional CSV of chain IDs that revert Dwellir to supplemental-last state fallback and exclude it from log scans. Applied after scheduled key, budget, and circuit admission.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -237,8 +246,8 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_MAX_CREDITS_PER_MONTH",
     valueType: "string",
-    description: "Optional positive integer local cap for Dwellir response credit units consumed during one UTC month (JSON-RPC items and native HTTP responses); unset or invalid values fall back to the built-in 20,000,000 credit default.",
-    example: { section: "workerOptional", value: "" },
+    description: "Optional positive integer local cap for conservative Dwellir attempt credit units per UTC month (JSON-RPC items and native requests), distinct from vendor successful-response billing; unset or invalid values use the built-in 100,000,000 credit default.",
+    example: { section: "workerOptional", value: "100000000" },
     runtimes: {
       worker: { status: "optional" },
     },

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Env, WorkerEnvIssue } from "../env";
 import {
+  parseDwellirRoutingDisabledChains,
   resolveDdrRepairTaskRunnerConfig,
   validateWorkerEnvContract,
   WORKER_ACTIVE_ENV_KEYS,
@@ -8,6 +9,28 @@ import {
   WORKER_REQUIRED_ENV_KEYS,
   WORKER_RESERVED_ENV_KEYS,
 } from "../env";
+
+describe("parseDwellirRoutingDisabledChains", () => {
+  it("trims, lowercases and deduplicates known IDs", () => {
+    expect([...parseDwellirRoutingDisabledChains(" Gnosis,BASE, gnosis, ,Mantle ")])
+      .toEqual(["gnosis", "base", "mantle"]);
+    expect([...parseDwellirRoutingDisabledChains(undefined)]).toEqual([]);
+  });
+
+  it("logs one structured warning for all unknown IDs without admitting them", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect([...parseDwellirRoutingDisabledChains("Gnosis,typo, TYPO,missing")]).toEqual(["gnosis"]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(String(warn.mock.calls[0]?.[0]))).toMatchObject({
+        event: "dwellir_routing_disabled_unknown_chains",
+        metadata: { unknownChains: ["typo", "missing"] },
+      });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
 
 describe("resolveDdrRepairTaskRunnerConfig", () => {
   it.each(["1", "true", "yes", "on", "enabled", " TRUE "])('%s enables the repair runner', (value) => {

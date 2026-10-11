@@ -5,7 +5,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import type { SupplyChainGuardProvenance } from "@shared/types/market";
-import { buildChainRpcs, registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
+import { buildChainRpcs, registryRpcEndpoints, type ChainRpcConfig } from "../../lib/chain-registry";
 import { getCache, setCacheIfNewer } from "../../lib/db-cache";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
@@ -141,7 +141,7 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
   if (!CHAIN_DROPOUT_ONCHAIN_ROSTER.some((entry) => entry.assetId === assetId && entry.chainId === chainId)) return null;
   if (!chainId || !CHAIN_META[chainId]) return null;
   const contracts = ACTIVE_META_BY_ID.get(assetId)?.contracts?.filter((contract) => contract.chain === chainId) ?? [];
-  const urls = registryRpcUrls(chainRpcs.get(chainId));
+  const urls = registryRpcEndpoints(chainRpcs.get(chainId)).filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
   const priceUsd = getPegReferencePriceUsd(assetId, candidate.pegKey);
   if (contracts.length !== 1 || urls.length === 0 || priceUsd == null) return null;
   const contract = contracts[0];

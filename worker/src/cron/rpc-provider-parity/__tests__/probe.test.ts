@@ -14,6 +14,7 @@ import {
 } from "../probe";
 import { RPC_PARITY_TARGETS, type RpcParityTarget } from "../../../lib/rpc-provider-parity/targets";
 import { buildRpcParityChainSummary } from "../../../lib/rpc-provider-parity/report";
+import { stepFailures } from "../../../lib/rpc-provider-parity/__tests__/rpc-parity-test-support";
 
 const API_KEY = "dwellir-parity-test-key";
 const START_MS = 1_789_000_000_000;
@@ -102,6 +103,113 @@ function runProbe(options: {
 }
 
 describe("rpc parity probe", () => {
+  it("redacts bare dRPC query credentials and records failed log ranges", async () => {
+    const drpcKey = "query-key-sensitive-test";
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") {
+        const contract = call.params[0] as { data?: string };
+        return rpcResult(contract.data === "0x42cbb15c" ? "0x64" : "0x7");
+      }
+      if (call.method === "eth_getLogs" && !isDwellir(call.url)) return {
+        kind: "json", body: { error: { code: -32005, message: `range exceeds policy for ${drpcKey}` } },
+      };
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({
+      targets: [target("gnosis")], chainRpcs: buildChainRpcs(undefined, drpcKey), fetchText: transport.fetchText,
+    });
+    const failure = sample.failures?.find((item) => item.method === "eth_getLogs");
+    const logCall = transport.calls.find((call) => call.method === "eth_getLogs" && !isDwellir(call.url));
+    const filter = logCall?.params[0] as { fromBlock: string; toBlock: string };
+    expect(failure).toMatchObject({
+      operator: "comparator", blockParam: `${filter.fromBlock}-${filter.toBlock}`,
+    });
+    expect(String(failure?.blockParam).length).toBeLessThanOrEqual(64);
+    expect(failure?.message).toContain("[redacted]");
+    expect(JSON.stringify(sample.failures)).not.toContain(drpcKey);
+    expect(logCall?.url).toContain("dkey=");
+  });
+
+  it.each(["HeaderNotFound(0x65)", "No state available", "header not found", "not-found"])(
+    "keeps above-head reference insufficiency separate from latest availability: %s", async (message) => {
+      const transport = createFakeTransport((call) => {
+        if (call.method === "eth_blockNumber") return rpcResult("0x64");
+        if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+        if (call.method === "eth_call") {
+          const target = call.params[0];
+          if (target && typeof target === "object" && "data" in target && target.data === "0x42cbb15c") return rpcResult("0x65");
+          if (isDwellir(call.url) && call.params[1] === "0x65") return {
+            kind: "json", body: { error: { code: -32603, message: `${message} ${API_KEY} https://rpc.example/secret` } },
+          };
+          return rpcResult("0x7");
+        }
+        return rpcResult([]);
+      });
+      const { samples: [sample] } = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+      expect(sample.tokenFreshness).toMatchObject({ verdict: "indeterminate", reason: "reference-unavailable" });
+      expect(sample.latestFreshness?.verdict).toBe("indeterminate");
+      expect(sample.errorClass).toBeNull();
+      expect(sample.failedSteps.dwellir.reference).toBe(false);
+      expect(sample.failures?.[0]).toMatchObject({
+        operator: "dwellir", step: "reference", method: "eth_call", blockParam: "0x65",
+        rpcCode: -32603, httpStatus: 200, atSec: START_MS / 1000, errorClass: "reference-unavailable",
+      });
+      expect(JSON.stringify(sample.failures)).not.toContain(API_KEY);
+      expect(JSON.stringify(sample.failures)).not.toContain("rpc.example");
+      const summary = buildRpcParityChainSummary({
+        chainId: "base", runs: [{ atSec: 0, samples: [sample] }], latest: null,
+        dwellirHost: sample.dwellirHost, fallbackComparator: sample.comparator,
+        blockTimeSec: 2, logsHistoryIsNone: false,
+      });
+      expect(summary.availability.dwellir.latest).toMatchObject({ attempts: 2, successes: 2, successRate: 1 });
+      expect(summary.availability.dwellir.header.attempts).toBe(2);
+      expect(summary.availability.dwellir.reference).toMatchObject({
+        attempts: 1, successes: 0, referenceUnavailable: 1, successRate: null,
+      });
+      expect(summary.lastFailures).toEqual(sample.failures);
+    },
+  );
+
+  it("does not excuse not-found failures at H2 or on latest and retains comparator details", async () => {
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") {
+        const target = call.params[0];
+        if (target && typeof target === "object" && "data" in target && target.data === "0x42cbb15c") return rpcResult("0x64");
+        return { kind: "json", body: { error: { code: -32000, message: `header not found ${"x".repeat(300)}` } } };
+      }
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+    expect(sample.errorClass).toBe("rpc-error");
+    expect(sample.failures?.some((failure) => failure.operator === "comparator" && failure.step === "state")).toBe(true);
+    expect(sample.failures?.every((failure) => failure.errorClass === "rpc-error" && failure.message.length <= 160)).toBe(true);
+  });
+
+  it("counts an unavailable numeric read at the served head as a provider failure", async () => {
+    const transport = createFakeTransport((call) => {
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") {
+        const target = call.params[0];
+        if (target && typeof target === "object" && "data" in target && target.data === "0x42cbb15c") return rpcResult("0x64");
+        if (isDwellir(call.url) && call.params[1] === "0x64") return {
+          kind: "json", body: { error: { code: -32603, message: "No state available" } },
+        };
+        return rpcResult("0x7");
+      }
+      return rpcResult([]);
+    });
+    const { samples: [sample] } = await runProbe({ targets: [target("base")], fetchText: transport.fetchText });
+    expect(sample.failedSteps.dwellir.reference).toBe(true);
+    expect(sample.failedSteps.dwellir.latest).toBe(false);
+    expect(sample.errorClass).toBe("rpc-error");
+    expect(sample.tokenFreshness).toMatchObject({ verdict: "indeterminate", reason: "step-failed" });
+    expect(sample.failures?.[0]).toMatchObject({ step: "reference", blockParam: "0x64", errorClass: "rpc-error" });
+  });
   it("probes serially, one request in flight, and keeps the key out of every URL", async () => {
     const credits = { count: 0 };
     const transport = createFakeTransport((call) => {
@@ -195,8 +303,8 @@ describe("rpc parity probe", () => {
     expect(ethereum.logChecked).toBe(true);
     expect(ethereum.logMatched).toBe(true);
     expect(ethereum.failedSteps).toEqual({
-      dwellir: { head: false, state: false, logs: false, latest: false },
-      comparator: { head: false, state: false, logs: false, latest: false },
+      dwellir: stepFailures(),
+      comparator: stepFailures(),
     });
     expect(ethereum.comparatorErrorClass).toBeNull();
     expect(ethereum.comparatorHttpStatus).toBeNull();
@@ -258,8 +366,8 @@ describe("rpc parity probe", () => {
     expect(sample.stateChecked).toBe(false);
     expect(sample.logChecked).toBe(false);
     expect(sample.failedSteps).toEqual({
-      dwellir: { head: false, state: false, logs: false, latest: false },
-      comparator: { head: true, state: false, logs: false, latest: false },
+      dwellir: stepFailures(),
+      comparator: stepFailures({ head: true }),
     });
     expect(sample.comparatorErrorClass).toBe("capability");
     expect(sample.comparatorHttpStatus).toBe(403);

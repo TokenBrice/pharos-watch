@@ -232,7 +232,7 @@ function normalizeEvm(method, params, block) {
   return { method, params: normalized };
 }
 
-async function evmRead(transport, method, params, requested, record) {
+async function evmRead(transport, method, params, requested, record, maxLogBlockSpan) {
   const block = await readEvmHeader(transport.rpc, requested);
   record.block = block;
   if (method === "batch") {
@@ -307,8 +307,9 @@ async function evmRead(transport, method, params, requested, record) {
       record.chunks.push({ params: chunkParams, state: chunk.length === 0 ? "empty" : "ok", count: chunk.length });
       result.push(...chunk);
     }
-    for (let start = from; start <= to; start += 500n) {
-      const end = start + 499n < to ? start + 499n : to;
+    const chunkSpan = BigInt(maxLogBlockSpan ?? 500);
+    for (let start = from; start <= to; start += chunkSpan) {
+      const end = start + chunkSpan - 1n < to ? start + chunkSpan - 1n : to;
       await readChunk(start, end);
     }
     sameHeader(record.rangeStartBlock, await readEvmHeader(transport.rpc, { number: from }));
@@ -660,7 +661,7 @@ export async function main(argv = process.argv.slice(2)) {
         : target.credential === "DRPC_API_KEY" ? { "Drpc-Key": key } : {};
     const client = transport(record.endpoint, headers);
     const result = target.protocol === "evm"
-      ? await evmRead(client, record.method, record.params, requested, record)
+      ? await evmRead(client, record.method, record.params, requested, record, target.maxLogBlockSpan)
       : target.protocol === "aptos-rest"
         ? await moveRead(client, record.endpoint, record.method, record.params, requested, record)
         : target.protocol === "hedera-rest"

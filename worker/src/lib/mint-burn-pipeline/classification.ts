@@ -125,7 +125,7 @@ async function resolveTxContextBatch(
   const timeoutMs = options?.deadlineMs != null
     ? Math.max(1, options.deadlineMs - Date.now())
     : undefined;
-  const fetched = await getAlchemyTransactionContextBatchMany(alchemyUrl, uncached, budget, signal, timeoutMs);
+  const fetched = await getAlchemyTransactionContextBatchMany(alchemyUrl, uncached, budget, signal, timeoutMs, options?.deadlineMs);
 
   for (const txHash of uncached) {
     const resolution = toTxContext(fetched.get(txHash) ?? { tx: null, receipt: null });

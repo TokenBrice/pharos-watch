@@ -1062,6 +1062,41 @@ describe("evm-rpc helpers", () => {
     );
   });
 
+  it.each(["registry", "supplemental"] as const)("applies Dwellir guards at %s position", async (position) => {
+    const url = "https://api-routing-test.n.dwellir.com";
+    const endpoint = { ...dwellirEndpoint(url, "recent"), position };
+    const publicUrl = "https://routing-public.example";
+    const chainRpcs = chainRpcsWith("base", [endpoint, registryEndpoint(publicUrl)]);
+    fetchWithRetryMock.mockResolvedValue(null);
+    await fetchEvmStorageAtBlock("base", "0xContract", "0x0", 1234, { chainRpcs, maxRetries: 0 });
+    expect(attemptedUrls()).toEqual([publicUrl]);
+    fetchWithRetryMock.mockClear();
+    await fetchEvmRpcBatch("base", [{ method: "eth_call", params: [{}, "0x123"] }], { chainRpcs, maxRetries: 0 });
+    expect(attemptedUrls()).toEqual([publicUrl]);
+    fetchWithRetryMock.mockClear();
+    await fetchEvmStorageAtBlock("base", "0xContract", "0x0", "latest", {
+      chainRpcs, maxRetries: 0, excludeSupplementalRpc: true, extraRpcUrls: [url],
+    });
+    expect(attemptedUrls()).toEqual([publicUrl]);
+    fetchWithRetryMock.mockClear();
+    await fetchEvmStorageAtBlock("base", "0xContract", "0x0", "latest", { chainRpcs, maxRetries: 0 });
+    expect(attemptedUrls()).toContain(url);
+    fetchWithRetryMock.mockClear();
+    await fetchEvmStorageAtBlock("base", "0xContract", "0x0", "latest", { chainRpcs, maxRetries: 0 });
+    expect(attemptedUrls()).toEqual([publicUrl]);
+  });
+
+  it("excludes promoted Dwellir from unreviewed log batches", async () => {
+    const chainRpcs = chainRpcsWith("base", [
+      { ...dwellirEndpoint("https://api-base-log-test.n.dwellir.com"), position: "registry" },
+      registryEndpoint("https://base-log-public.example"),
+    ]);
+    fetchWithRetryMock.mockResolvedValue(null);
+    await fetchEvmRpcBatch("base", [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2" }] }],
+      { chainRpcs, maxRetries: 0 });
+    expect(attemptedUrls()).toEqual(["https://base-log-public.example"]);
+  });
+
   it("keeps log lanes on registry endpoints when supplemental RPC is excluded", async () => {
     const chainRpcs = chainRpcsWith("base", [
       registryEndpoint("https://base-public-a.example"),
@@ -1080,8 +1115,9 @@ describe("evm-rpc helpers", () => {
   });
 
   it("skips near-head-only supplemental endpoints for a historical block", async () => {
-    const recentUrl = "https://api-polygon-mainnet-full.n.dwellir.com";
-    const archiveUrl = "https://api-polygon-archive.n.dwellir.com";
+    // Synthetic capabilities: production Polygon now supports archive state.
+    const recentUrl = "https://recent-state.dwellir-fixture.example";
+    const archiveUrl = "https://archive-state.dwellir-fixture.example";
     const endpoints = [
       registryEndpoint("https://polygon-public-a.example"),
       dwellirEndpoint(recentUrl, "recent"),

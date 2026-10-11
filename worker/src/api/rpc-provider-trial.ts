@@ -1,6 +1,6 @@
 import { loadRpcProviderTrialReport } from "../lib/rpc-provider-parity/report";
 import { jsonResponse } from "../lib/api-response";
-import type { DwellirBudgetEnv } from "../lib/rpc-provider-budget";
+import type { RpcProviderTrialEnv } from "../lib/rpc-provider-parity/report";
 
 /**
  * Route context for the Dwellir trial report. `dwellirBudgetEnv` is hydrated by
@@ -9,7 +9,7 @@ import type { DwellirBudgetEnv } from "../lib/rpc-provider-budget";
  */
 export interface RpcProviderTrialRouteContext {
   db: D1Database;
-  dwellirBudgetEnv: DwellirBudgetEnv;
+  dwellirBudgetEnv: RpcProviderTrialEnv;
 }
 
 /**

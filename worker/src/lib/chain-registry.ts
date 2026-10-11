@@ -36,13 +36,15 @@ export interface RpcEndpoint {
   readonly noBatch?: boolean;
   /** ISO date of the capability probe (Dwellir entries). */
   readonly verifiedAt?: string;
+  /** Runtime operator rollback: retain state fallback, disable promoted/log routing. */
+  readonly routingDisabled?: boolean;
 }
 
 export interface ChainRpcConfig {
   chainId: string;
   chainName: string;
   type: "evm" | "tron" | "other";
-  /** Ordered: every "registry" endpoint first (today's rpcUrl then fallbackRpcUrl), then "supplemental". */
+  /** Ordered registry endpoints (including admitted promotions), then supplemental endpoints. */
   endpoints: readonly RpcEndpoint[];
   explorerUrl: string;
 }
@@ -54,6 +56,7 @@ function rpcConfig(chainId: string, type: ChainRpcConfig["type"], endpoints: rea
 
 export interface BuildChainRpcsOptions {
   dwellirApiKey?: string | null;
+  dwellirRoutingDisabledChains?: ReadonlySet<string>;
 }
 
 /** Alchemy chain slugs for their JSON-RPC endpoints */
@@ -223,12 +226,21 @@ const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 
-/**
- * Appends one supplemental Dwellir endpoint per entry, after every registry
- * endpoint (including coin/curated pins), and creates a supplemental-only config
- * for chains that have no registry config yet.
- */
-function appendDwellirEndpoints(configs: Map<string, ChainRpcConfig>, apiKey: string): void {
+export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, "primary" | "after-alchemy">> = {
+  mantle: "primary",
+  sonic: "primary",
+  gnosis: "primary",
+  base: "after-alchemy",
+};
+
+export const DWELLIR_LOG_SCAN_CHAINS: ReadonlySet<string> = new Set(["gnosis"]);
+
+/** Single attachment authority; callers must admit the scheduled runtime first. */
+function appendDwellirEndpoints(
+  configs: Map<string, ChainRpcConfig>,
+  apiKey: string,
+  disabledChains?: ReadonlySet<string>,
+): void {
   for (const entry of DWELLIR_CHAINS) {
     const config = configs.get(entry.chainId);
     const meta = CHAIN_META[entry.chainId];
@@ -238,18 +250,30 @@ function appendDwellirEndpoints(configs: Map<string, ChainRpcConfig>, apiKey: st
 
     const url = dwellirRpcUrl(entry);
     registerRpcAuth("dwellir", url, { "X-Api-Key": apiKey });
+    const routingDisabled = disabledChains?.has(entry.chainId) === true;
+    const placement = routingDisabled ? undefined : DWELLIR_STATE_PLACEMENT[entry.chainId];
+    const endpoints = config?.endpoints.filter((row) => row.operator !== "dwellir") ?? [];
+    const insertionIndex = placement === "primary" && endpoints.some((row) => row.position === "registry")
+      ? 0
+      : placement === "after-alchemy" && endpoints[0]?.operator === "alchemy" && endpoints[0].position === "registry"
+        ? 1
+        : endpoints.length;
+    const promoted = insertionIndex < endpoints.length;
     const endpoint: RpcEndpoint = {
       url,
       operator: "dwellir",
       keyed: true,
-      position: "supplemental",
+      position: promoted ? "registry" : "supplemental",
       stateHistory: entry.stateHistory,
       logsHistory: entry.logsHistory,
       verifiedAt: entry.verifiedAt,
+      maxLogBlockSpan: entry.maxLogBlockSpan,
+      routingDisabled,
     };
 
     if (config) {
-      config.endpoints = [...config.endpoints, endpoint];
+      endpoints.splice(insertionIndex, 0, endpoint);
+      config.endpoints = endpoints;
       continue;
     }
     configs.set(entry.chainId, rpcConfig(entry.chainId, "evm", [endpoint]));
@@ -375,7 +399,7 @@ export function buildChainRpcs(
 
   const dwellirApiKey = options?.dwellirApiKey;
   if (typeof dwellirApiKey === "string" && dwellirApiKey.length > 0) {
-    appendDwellirEndpoints(map, dwellirApiKey);
+    appendDwellirEndpoints(map, dwellirApiKey, options?.dwellirRoutingDisabledChains);
   }
   return map;
 }
@@ -389,12 +413,12 @@ export function registryRpcEndpoints(config: ChainRpcConfig | undefined): readon
   return config?.endpoints.filter((endpoint) => endpoint.position === "registry") ?? [];
 }
 
-/** Today's [rpcUrl, fallbackRpcUrl] (filtered), in order. */
+/** Registry-position URLs in admitted runtime order; may include Dwellir. */
 export function registryRpcUrls(config: ChainRpcConfig | undefined): string[] {
   return registryRpcEndpoints(config).map((endpoint) => endpoint.url);
 }
 
-/** Today's rpcUrl. undefined for supplemental-only configs. */
+/** First admitted registry URL; undefined for supplemental-only configs. */
 export function primaryRpcUrl(config: ChainRpcConfig | undefined): string | undefined {
   return config?.endpoints.find((endpoint) => endpoint.position === "registry")?.url;
 }
@@ -414,11 +438,9 @@ export function supplementalRpcEndpoints(
   return supplemental.filter((endpoint) => endpoint.stateHistory === "archive");
 }
 
-/** Registry endpoints whose operator is not "dwellir" — the only endpoints log lanes may use. */
+/** Reviewed log operators only, retaining their admitted runtime placement order. */
 export function logScanRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
-  return (
-    config?.endpoints.filter(
-      (endpoint) => endpoint.position === "registry" && endpoint.operator !== "dwellir",
-    ) ?? []
-  );
+  return config?.endpoints.filter((endpoint) => endpoint.operator === "dwellir"
+    ? DWELLIR_LOG_SCAN_CHAINS.has(config.chainId) && !endpoint.routingDisabled && endpoint.logsHistory === "full"
+    : endpoint.position === "registry") ?? [];
 }

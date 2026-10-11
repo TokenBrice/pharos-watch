@@ -97,8 +97,15 @@ function circuitRecordPolicy(source: string): CachePolicy<CircuitRecord> {
   };
 }
 
+class InvalidDwellirCircuitRecordError extends Error {}
+
 async function readCircuitRecordFromDb(db: D1Database, source: string): Promise<CircuitRecord> {
   const cached = await readCacheWithPolicy(db, circuitRecordPolicy(source));
+  // A missing record intentionally permits first boot. Corrupt Dwellir state
+  // must not masquerade as that missing/closed record and admit metered reads.
+  if (source === "dwellir-evm" && cached.state === "invalid") {
+    throw new InvalidDwellirCircuitRecordError("Invalid dwellir-evm circuit record");
+  }
   return cached.state === "fresh" || cached.state === "stale"
     ? cloneCircuitRecord(cached.value)
     : cloneCircuitRecord(DEFAULT_RECORD);
@@ -226,7 +233,15 @@ export async function recordOutcome(
   source: string,
   success: boolean,
 ): Promise<CircuitOutcomeRecord> {
-  const record = await getCircuitRecord(db, source);
+  let record: CircuitRecord;
+  try {
+    record = await getCircuitRecord(db, source);
+  } catch (error) {
+    if (!(error instanceof InvalidDwellirCircuitRecordError)) throw error;
+    // Admission still rejects malformed state; only a new measured outcome
+    // repairs it. A failed repair must reopen rather than admit fresh reads.
+    record = { ...DEFAULT_RECORD, state: "half-open" };
+  }
   const before = { ...record };
   const now = Math.floor(Date.now() / 1000);
 

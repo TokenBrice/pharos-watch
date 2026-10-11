@@ -368,6 +368,31 @@ describe("circuit-breaker", () => {
     });
   });
 
+  describe("malformed Dwellir outcome repair", () => {
+    it.each(["not-json", JSON.stringify({ state: "unknown" })])("denies admission then repairs success for %s", async (value) => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:dwellir-evm", value, 100);
+      await expect(shouldAttemptFetch(db, "dwellir-evm")).rejects.toThrow("Invalid dwellir-evm circuit record");
+      await recordOutcome(db, "dwellir-evm", true);
+      expect(await getCircuitRecord(db, "dwellir-evm")).toEqual(makeRecord({ lastSuccessAt: Math.floor(Date.now() / 1000) }));
+      expect(await shouldAttemptFetch(db, "dwellir-evm")).toBe(true);
+    });
+
+    it("repairs a failure to an open circuit, without reopening admission", async () => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:dwellir-evm", "not-json", 100);
+      const outcome = await recordOutcome(db, "dwellir-evm", false);
+      expect(outcome.after).toMatchObject({ state: "open", consecutiveFailures: 1, lastFailureAt: Math.floor(Date.now() / 1000) });
+      expect(await shouldAttemptFetch(db, "dwellir-evm")).toBe(false);
+    });
+
+    it("keeps other circuits' malformed-record default unchanged", async () => {
+      const db = mockD1([{ match: "cache", rows: [{ key: "circuit:src", value: "not-json", updated_at: 100 }] }]);
+      expect(await shouldAttemptFetch(db, "src")).toBe(true);
+      expect((await recordOutcome(db, "src", false)).after).toMatchObject({ state: "closed", consecutiveFailures: 1 });
+    });
+  });
+
   // --- recordOutcome — failure ---
 
   describe("recordOutcome — failure", () => {

@@ -84,6 +84,7 @@ function buildRuntime(options: {
   db: D1Database;
   dwellirApiKey?: string;
   maxCreditsPerMonth?: string;
+  disabledChains?: string;
 }): ScheduledRuntimeContext {
   return createScheduledRuntimeContext(
     createWorkerEnv({
@@ -92,6 +93,7 @@ function buildRuntime(options: {
       DRPC_API_KEY,
       ...(options.dwellirApiKey ? { DWELLIR_API_KEY: options.dwellirApiKey } : {}),
       ...(options.maxCreditsPerMonth ? { DWELLIR_MAX_CREDITS_PER_MONTH: options.maxCreditsPerMonth } : {}),
+      DWELLIR_ROUTING_DISABLED_CHAINS: options.disabledChains,
     }),
     {} as ExecutionContext,
     {
@@ -143,7 +145,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     expect(runtime.chainRpcs.get("ethereum")?.endpoints).toEqual(registryOnly.get("ethereum")?.endpoints);
   });
 
-  it("appends Dwellir after every registry operator and adds supplemental-only chains", async () => {
+  it("admits reviewed placement and adds supplemental-only chains on missing-record boot", async () => {
     const { db } = makeContextDb();
     const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
     const registryOnly = buildChainRpcs(ALCHEMY_API_KEY, DRPC_API_KEY);
@@ -156,8 +158,13 @@ describe("scheduled runtime Dwellir enablement", () => {
       const endpoints = runtime.chainRpcs.get(chainId)?.endpoints ?? [];
       const dwellir = endpoints.filter((endpoint) => endpoint.operator === "dwellir");
       expect(dwellir.length).toBeLessThanOrEqual(1);
-      expect(endpoints.slice(0, endpoints.length - dwellir.length)).toEqual(registryConfig.endpoints);
+      expect(endpoints.filter((endpoint) => endpoint.operator !== "dwellir")).toEqual(registryConfig.endpoints);
     }
+    for (const chain of ["mantle", "sonic", "gnosis"]) {
+      expect(runtime.chainRpcs.get(chain)?.endpoints[0]).toMatchObject({ operator: "dwellir", position: "registry" });
+    }
+    expect(runtime.chainRpcs.get("base")?.endpoints.slice(0, 2).map((endpoint) => endpoint.operator))
+      .toEqual(["alchemy", "dwellir"]);
 
     const ethereumEndpoints = runtime.chainRpcs.get("ethereum")?.endpoints ?? [];
     expect(ethereumEndpoints[ethereumEndpoints.length - 1]).toMatchObject({
@@ -184,6 +191,28 @@ describe("scheduled runtime Dwellir enablement", () => {
         expect.objectContaining({ operator: "dwellir", position: "supplemental" }),
       ]);
     }
+  });
+
+  it.each(["not-json", "{}", '{"state":"closed"}'])("denies malformed circuit %s without changing the map", async (value) => {
+    const { db } = makeContextDb({ cacheRows: { [CIRCUIT_CACHE_KEY]: value } });
+    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const before = [...runtime.chainRpcs];
+    await runJob(runtime);
+    expect([...runtime.chainRpcs]).toEqual(before);
+    expect(runtime.dwellirNative).toBeUndefined();
+  });
+
+  it("parses the runtime rollback CSV without withholding supplemental fallback", async () => {
+    const { db } = makeContextDb();
+    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY, disabledChains: " MANTLE, Base,GNOSIS ,Sonic, typo,TYPO " });
+    await runJob(runtime);
+    for (const chain of ["mantle", "base", "gnosis", "sonic"]) {
+      const endpoints = runtime.chainRpcs.get(chain)!.endpoints;
+      expect(endpoints[endpoints.length - 1]).toMatchObject({
+        operator: "dwellir", position: "supplemental", routingDisabled: true,
+      });
+    }
+    expect(warnings.filter((line) => line.includes("dwellir_routing_disabled_unknown_chains"))).toHaveLength(1);
   });
 
   it("withholds Dwellir and never reads the ledger without a key", async () => {

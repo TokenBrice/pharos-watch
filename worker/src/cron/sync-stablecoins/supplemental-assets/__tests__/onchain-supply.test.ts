@@ -46,6 +46,22 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
+  it("keeps pre-resolved URLs incumbent-only while retaining the map-aware EVM path", async () => {
+    const chainRpcs = buildChainRpcs("test-alchemy", undefined, { dwellirApiKey: "test-dwellir" });
+    const sonic = chainRpcs.get("sonic")!;
+    const incumbentUrls = sonic.endpoints.filter((endpoint) => endpoint.operator !== "dwellir" && endpoint.position === "registry")
+      .map((endpoint) => endpoint.url);
+    const meta: StablecoinMeta = {
+      ...TRACKED_META_BY_ID.get("steakusdg-steakhouse")!,
+      contracts: [{ chain: "sonic", address: "0x0000000000000000000000000000000000000001", decimals: 18 }],
+    };
+    probeTrackedTokenSupplyMock.mockClear();
+    probeTrackedTokenSupplyMock.mockResolvedValue(100n * 10n ** 18n);
+    expect(await fetchOnChainMcap(meta, 1, chainRpcs)).toMatchObject({ mcap: 100 });
+    expect(probeTrackedTokenSupplyMock.mock.calls[0]?.slice(4, 7))
+      .toEqual([{ chainRpcs }, incumbentUrls[0], incumbentUrls[1]]);
+  });
+
   it("names AA's unreadable totalSupply without admitting supply or replacing it with zero", async () => {
     const meta = TRACKED_META_BY_ID.get("aa-falconx-mev-capital")!;
     probeTrackedTokenSupplyMock.mockResolvedValue(null);

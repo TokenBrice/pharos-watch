@@ -603,7 +603,7 @@ Blacklist and mint/burn have independent circuit breakers:
 
 An Alchemy outage does not block blacklist sync, and vice versa. Each circuit breaker opens after consecutive failures and probes independently.
 
-During the Dwellir trial this lane never reaches the supplemental Dwellir operator (`excludeSupplementalRpc` on every batch call, including the conservation pre-pass), because mint/burn depends on full-history `eth_getLogs` while the trial's Dwellir endpoints are plan-capped at 500 blocks per request and zkSync answers pruned ranges with a silent empty result.
+Mint/burn continues to build direct Alchemy contexts for Ethereum, Arbitrum, and Base; the reviewed Dwellir log rollout enables only Gnosis, which this lane does not scan. Conservation retains its existing Alchemy context and supplemental exclusion. The shared raw log transport is Dwellir-safe: endpoint metadata can clamp inclusive pages, range errors split serially, registered auth applies to logs/timestamps/receipts, and every physical Dwellir request is metered per member. Unexecuted batch members are retried within existing budgets, never admitted as data. Growth's gateway cap is 10,000 blocks, with stricter measured node caps in the registry; zkSync remains excluded because pruned ranges can look silently empty. Future mint/burn Dwellir admission still requires registry-backed contexts for the selected chain, not merely adding a provider URL.
 
 ---
 

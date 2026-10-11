@@ -1,6 +1,6 @@
-import { RPC_PARITY_TARGETS } from "../targets";
+import { RPC_PARITY_TARGETS, dwellirHostForChain } from "../targets";
 import { mergeRpcParityRun, type RpcParityStoreRow } from "../store";
-import { combineRpcParityLatestFreshness, RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, type RpcParityChainSample, type RpcParityRunSamples, type RpcParityStepFailures } from "../types";
+import { combineRpcParityLatestFreshness, createRpcParityStepRecord, RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, type RpcParityChainSample, type RpcParityRunSamples, type RpcParityStepFailures } from "../types";
 import { headLagThresholdBlocks } from "../report";
 
 /**
@@ -24,7 +24,7 @@ export function paritySample(
   const sample: RpcParityChainSample = {
     chainId,
     comparator: { operator: "public", host: "mainnet.base.org", source: "registry" },
-    dwellirHost: "api-base-mainnet-archive.n.dwellir.com",
+    dwellirHost: dwellirHostForChain(chainId)!,
     headOk: true,
     comparatorHeadOk: true,
     comparatorHead: 380_000_002,
@@ -92,7 +92,7 @@ export function paritySample(
 
 /** Step-failure flags for one operator; every step is healthy unless named. */
 export function stepFailures(overrides: Partial<RpcParityStepFailures> = {}): RpcParityStepFailures {
-  return { head: false, state: false, logs: false, latest: false, ...overrides };
+  return { ...createRpcParityStepRecord(false), ...overrides };
 }
 
 export function fullParityRun(

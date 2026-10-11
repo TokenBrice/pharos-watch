@@ -8,7 +8,7 @@ export async function resolvePinnedProvider(chain, provider) {
   const meta = CHAIN_META[canonicalChain];
   if (provider === "dwellir") {
     const evm = DWELLIR_CHAINS.find((entry) => entry.chainId === canonicalChain);
-    if (evm) return { endpoint: dwellirRpcUrl(evm), protocol: "evm", credential: "DWELLIR_API_KEY" };
+    if (evm) return { endpoint: dwellirRpcUrl(evm), protocol: "evm", credential: "DWELLIR_API_KEY", maxLogBlockSpan: evm.maxLogBlockSpan };
     const native = DWELLIR_NATIVE_ENDPOINTS.find((entry) => entry.network === canonicalChain);
     if (native) return { endpoint: native.baseUrl, protocol: native.protocol, credential: "DWELLIR_API_KEY" };
     // https://www.dwellir.com/networks/sui — checkpoint/execution only,

@@ -5,6 +5,8 @@ import { CIRCUIT_SOURCE } from "../constants";
 import { loadDwellirBudgetState, type DwellirBudgetEnv } from "../rpc-provider-budget";
 import { logWorkerEvent } from "../structured-log";
 import { readRpcParityStore, RPC_PARITY_RETENTION_SEC, type RpcParityLatestState, type RpcParityStoredRun } from "./store";
+import { DWELLIR_STATE_PLACEMENT, DWELLIR_LOG_SCAN_CHAINS } from "../chain-registry";
+import { parseDwellirRoutingDisabledChains } from "../env";
 import {
   RPC_PARITY_TARGETS,
   dwellirEntryForChain,
@@ -13,13 +15,14 @@ import {
 } from "./targets";
 import {
   combineRpcParityLatestFreshness,
+  createRpcParityStepRecord,
   RPC_PARITY_PROBE_STEPS,
   RPC_PARITY_LATEST_MAX_NUMERIC_CALLS,
+  RPC_PARITY_MAX_FAILURES,
   type RpcParityChainSample,
   type RpcParityChainSummary,
   type RpcParityComparatorRef,
   type RpcParityErrorClass,
-  type RpcParityFailedStepCounts,
   type RpcParityLatencySummary,
   type RpcParityProbeStep,
   type RpcParityStepFailures,
@@ -60,10 +63,6 @@ export function headLagThresholdBlocks(blockTimeSec: number): number {
 
 const PROBE_STEPS = RPC_PARITY_PROBE_STEPS;
 
-function emptyFailedStepCounts(): RpcParityFailedStepCounts {
-  return { head: 0, state: 0, logs: 0, latest: 0 };
-}
-
 /** The first failing step in probe order, which is the one whose call lost the comparison. */
 function firstFailedStep(failures: RpcParityStepFailures): RpcParityProbeStep | null {
   return PROBE_STEPS.find((step) => failures[step]) ?? null;
@@ -102,7 +101,7 @@ export function evaluateRpcParityGate(summary: RpcParityChainSummary, blockTimeS
   if (summary.runs < RPC_PARITY_GATE_MIN_RUNS) {
     failing.push("runs");
   }
-  for (const step of PROBE_STEPS) {
+  for (const step of ["head", "state", "logs", "latest"] as const) {
     const method = summary.availability.dwellir[step];
     if (method.attempts - method.capabilityRefusals < RPC_PARITY_GATE_MIN_RUNS) {
       failing.push(`insufficient-${step}-attempts`);
@@ -189,6 +188,7 @@ export function buildRpcParityChainSummary(input: {
   fallbackLogsComparator?: RpcParityComparatorRef;
   logsHistoryIsNone: boolean;
   blockTimeSec: number;
+  routing?: RpcParityChainSummary["routing"];
 }): RpcParityChainSummary {
   const { runCount, samples } = collectChainSamples(input.runs, input.chainId);
   const newest = samples[samples.length - 1]?.sample ?? null;
@@ -211,7 +211,7 @@ export function buildRpcParityChainSummary(input: {
   // rate describes the calls the key was entitled to serve.
   const capabilitySamples = samples.filter(({ sample }) => sample.errorClass !== "capability");
   const servedSamples = capabilitySamples.filter(({ sample }) => (
-    sample.headOk && !sample.failedSteps.dwellir.state && !sample.failedSteps.dwellir.logs && !sample.failedSteps.dwellir.latest
+    sample.headOk && !Object.values(sample.failedSteps.dwellir).some(Boolean)
   ));
   const dwellirSuccessRate =
     capabilitySamples.length === 0 ? null : servedSamples.length / capabilitySamples.length;
@@ -229,11 +229,11 @@ export function buildRpcParityChainSummary(input: {
   let prunedTraps = 0;
   const errorClasses: Partial<Record<RpcParityErrorClass, number>> = {};
   const comparatorErrorClasses: Partial<Record<RpcParityErrorClass, number>> = {};
-  const failedSteps = { dwellir: emptyFailedStepCounts(), comparator: emptyFailedStepCounts() };
+  const failedSteps = { dwellir: createRpcParityStepRecord(0), comparator: createRpcParityStepRecord(0) };
   let lastComparatorFailure: RpcParityChainSummary["lastComparatorFailure"] = null;
   const availability = {} as RpcParityChainSummary["availability"];
   const latency = {} as RpcParityChainSummary["latency"];
-  const comparatorsByStep: RpcParityChainSummary["comparatorsByStep"] = { head: [], state: [], logs: [], latest: [] };
+  const comparatorsByStep: RpcParityChainSummary["comparatorsByStep"] = { head: [], state: [], logs: [], latest: [], reference: [], header: [], "legacy-latest": [] };
   for (const operator of ["dwellir", "comparator"] as const) {
     const methods = {} as Record<RpcParityProbeStep, RpcParityMethodAvailability>;
     const timing: RpcParityOperatorLatency = {
@@ -256,12 +256,14 @@ export function buildRpcParityChainSummary(input: {
         return observed;
       });
       const capabilityRefusals = calls.filter((call) => call.errorClass === "capability").length;
+      const referenceUnavailable = calls.filter((call) => call.errorClass === "reference-unavailable").length;
       const successes = calls.filter((call) => call.errorClass === null).length;
       methods[step] = {
-        attempts: calls.length, successes, capabilityRefusals,
+        attempts: calls.length, successes, capabilityRefusals, referenceUnavailable,
         unknownRuns: samples.filter(({ sample }) => !sample.calls
           || !sample.calls[operator].some((call) => call.step === step)).length,
-        successRate: calls.length === capabilityRefusals ? null : successes / (calls.length - capabilityRefusals),
+        successRate: calls.length === capabilityRefusals + referenceUnavailable ? null
+          : successes / (calls.length - capabilityRefusals - referenceUnavailable),
       };
       for (const phase of ["firstTouch", "warm"] as const) {
         // Failed calls remain visible in per-call timing; the readiness latency
@@ -333,7 +335,7 @@ export function buildRpcParityChainSummary(input: {
         if (sample.failedSteps[operator][step]) failedSteps[operator][step] += 1;
       }
     }
-    const failedCall = sample.calls?.comparator.find((call) => call.errorClass !== null);
+    const failedCall = sample.calls?.comparator.find((call) => call.errorClass !== null && call.errorClass !== "reference-unavailable");
     const comparatorStep = failedCall?.step ?? firstFailedStep(sample.failedSteps.comparator);
     if (comparatorStep !== null) {
       lastComparatorFailure = {
@@ -349,6 +351,9 @@ export function buildRpcParityChainSummary(input: {
   const summary: RpcParityChainSummary = {
     chainId: input.chainId,
     dwellirHost: newest?.dwellirHost ?? input.dwellirHost,
+    routing: input.routing ?? { statePlacement: "unavailable", logScan: false },
+    lastFailures: samples.flatMap(({ sample }) => sample.failures ?? [])
+      .reverse().sort((left, right) => right.atSec - left.atSec).slice(0, RPC_PARITY_MAX_FAILURES),
     comparator: { operator: comparator.operator, host: comparator.host, source: comparator.source },
     logsComparator: newest ? newest.logsComparator === undefined ? newest.comparator : newest.logsComparator
       : input.fallbackLogsComparator ?? input.fallbackComparator,
@@ -439,14 +444,27 @@ async function loadDwellirCircuitState(
   }
 }
 
+export interface RpcProviderTrialEnv extends DwellirBudgetEnv {
+  DWELLIR_ROUTING_DISABLED_CHAINS?: string;
+}
+
 export async function loadRpcProviderTrialReport(
   db: D1Database,
-  env: DwellirBudgetEnv,
+  env: RpcProviderTrialEnv,
   nowSec: number,
 ): Promise<RpcProviderTrialReport> {
   const budget = await loadDwellirBudgetState(db, env, nowSec);
   const circuit = await loadDwellirCircuitState(db);
   const store = await readRpcParityStore(db);
+  const disabledChains = parseDwellirRoutingDisabledChains(env.DWELLIR_ROUTING_DISABLED_CHAINS);
+  // This endpoint observes admission; it does not advance a circuit into half-open.
+  const admitted = budget.usable && (circuit?.state === "closed" || circuit?.state === "half-open");
+  const routingForChain = (chainId: string): RpcParityChainSummary["routing"] => ({
+    statePlacement: !admitted ? "unavailable" : disabledChains.has(chainId) ? "supplemental"
+      : DWELLIR_STATE_PLACEMENT[chainId] ?? "supplemental",
+    logScan: admitted && !disabledChains.has(chainId) && DWELLIR_LOG_SCAN_CHAINS.has(chainId)
+      && dwellirEntryForChain(chainId)?.logsHistory === "full",
+  });
   if (store.error !== null) {
     return {
       provider: "dwellir",
@@ -469,14 +487,18 @@ export async function loadRpcProviderTrialReport(
         windowStartSec: null,
         lastRunAtSec: null,
         runsRetained: 0,
-        chains: RPC_PARITY_TARGETS.map((target) => emptyChainSummary(target.chainId, target.blockTimeSec)),
+        chains: RPC_PARITY_TARGETS.map((target) => ({
+          ...emptyChainSummary(target.chainId, target.blockTimeSec), routing: routingForChain(target.chainId),
+        })),
       },
       observationError: null,
     };
   }
 
   const cutoffSec = nowSec - RPC_PARITY_RETENTION_SEC;
-  const runs = row.runs.filter((run) => run.atSec >= cutoffSec);
+  const runs = row.runs.filter((run) => run.atSec >= cutoffSec).map((run) => ({
+    ...run, samples: run.samples.filter((sample) => sample.dwellirHost === dwellirHostForChain(sample.chainId)),
+  }));
 
   const chains = RPC_PARITY_TARGETS.map((target) => {
     const entry = dwellirEntryForChain(target.chainId);
@@ -484,12 +506,15 @@ export async function loadRpcProviderTrialReport(
     return buildRpcParityChainSummary({
       chainId: target.chainId,
       runs,
-      latest: latest && latest.atSec >= cutoffSec ? latest : null,
+      latest: latest && latest.atSec >= cutoffSec
+        && runs.some((run) => run.atSec === latest.atSec && run.samples.some((sample) => sample.chainId === target.chainId))
+        ? latest : null,
       dwellirHost: dwellirHostForChain(target.chainId) ?? `${target.chainId}.n.dwellir.com`,
       fallbackComparator: plannedRpcParityComparator(target),
       fallbackLogsComparator: plannedRpcParityComparator(target, "logs"),
       logsHistoryIsNone: entry?.logsHistory === "none",
       blockTimeSec: target.blockTimeSec,
+      routing: routingForChain(target.chainId),
     });
   });
 

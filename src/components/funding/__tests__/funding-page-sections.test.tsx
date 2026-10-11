@@ -114,6 +114,9 @@ describe("CostBreakdown", () => {
     expect(dwellirLink.getAttribute("href")).toBe("https://www.dwellir.com");
     expect(dwellirLink.getAttribute("rel")).toBe("noopener noreferrer");
     expect(screen.getByText(/Thank you, Dwellir\./)).toBeTruthy();
+    const acknowledgment = dwellirLink.closest("p")?.textContent ?? "";
+    expect(acknowledgment).toContain("multi-chain RPC access on its Growth plan");
+    expect(acknowledgment).not.toMatch(/Developer|one.year|\$40/);
   });
 });
 

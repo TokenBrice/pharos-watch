@@ -17,6 +17,7 @@ import type { LiveReserveInput } from "@shared/types/live-reserves";
 import type { AdapterContext } from "./types";
 import { runAdapterIo } from "./concurrency";
 import { fetchJsonPostWithRetry } from "./request";
+import { logScanRpcEndpoints } from "../../lib/chain-registry";
 
 type EvmInput = Extract<LiveReserveInput, { kind: "onchain-evm" }>;
 type EvmCallInput = Pick<EvmInput, "chain"> & { rpcMode?: EvmInput["rpcMode"] };
@@ -292,8 +293,16 @@ export async function fetchOnchainLogs(options: OnchainLogsOptions): Promise<Onc
       let calls = 0;
       const logs: OnchainLogEntry[] = [];
       const pendingRanges: Array<{ from: number; to: number }> = [{ from: options.fromBlock, to: options.toBlock }];
+      const spans = logScanRpcEndpoints(options.ctx?.chainRpcs?.get(options.chain))
+        .flatMap((endpoint) => endpoint.operator !== "dwellir" || endpoint.maxLogBlockSpan == null
+          ? [] : [endpoint.maxLogBlockSpan]);
+      const maxSpan = Math.min(...spans);
       while (pendingRanges.length > 0) {
         const range = pendingRanges.pop()!;
+        if (range.to - range.from + 1 > maxSpan) {
+          pendingRanges.push({ from: range.from + maxSpan, to: range.to });
+          range.to = range.from + maxSpan - 1;
+        }
         if (calls >= maxCalls) return { logs: [], complete: false, calls, failureReason: "split-call-budget-exhausted" };
         calls += 1;
 

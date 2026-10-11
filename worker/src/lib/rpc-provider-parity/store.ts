@@ -3,6 +3,7 @@ import { Buffer as NodeBuffer } from "node:buffer";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { getCache, setCache } from "../db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { safeErrorMessage } from "../safe-error-message";
 import { RPC_PARITY_TARGETS } from "./targets";
 import type {
   RpcParityChainSample,
@@ -14,6 +15,7 @@ import type {
 } from "./types";
 import {
   combineRpcParityLatestFreshness,
+  createRpcParityStepRecord,
   RPC_PARITY_PROBE_STEPS,
   RPC_PARITY_LATEST_MAX_NUMERIC_CALLS,
   RPC_PARITY_MAX_CALLS_PER_OPERATOR,
@@ -22,6 +24,8 @@ import {
   RPC_PARITY_LATEST_FRESHNESS_REASONS,
   RPC_PARITY_LATEST_PROBE_METHODS,
   type RpcParityCallObservation,
+  RPC_PARITY_MAX_FAILURES,
+  type RpcParityFailure,
   type RpcParityLatestFreshness,
   type RpcParityChainSkip,
 } from "./types";
@@ -48,7 +52,7 @@ const Buffer = NodeBuffer as {
  */
 
 export const RPC_PARITY_STORE_KEY = "rpc:provider-parity:dwellir:v1";
-const RPC_PARITY_STORE_VERSION = 5;
+const RPC_PARITY_STORE_VERSION = 6;
 export const RPC_PARITY_RETENTION_SEC = 7 * 86_400;
 export const RPC_PARITY_RETENTION_RUNS = 168;
 /** Serialized compressed row ceiling; leaves 16 KiB below the cache-row budget. */
@@ -56,13 +60,13 @@ export const RPC_PARITY_MAX_ROW_BYTES = 240 * 1024;
 /** Bound the uncompressed wire too, so highly compressible proof data stays readable. */
 export const RPC_PARITY_MAX_DECOMPRESSED_BYTES = 4 * 1024 * 1024;
 const RAW_ROW_BUDGET_ERROR = "rpc-parity-raw-row-budget";
-/** v5 reads v1–v4; old readers reject its dual freshness provenance.
+/** v6 reads v1–v5; old readers reject split availability and failure evidence.
  * A rollback reader's next write resets history; preserve the row beforehand.
  */
 
 type CallLayout = [number[], number[]];
-/** v4 layout bit: this call used the sample's separate logs comparator. */
-const CALL_LOGS_COMPARATOR = 128;
+/** v6 uses a wider layout so appended method buckets do not overlap this flag. */
+const CALL_LOGS_COMPARATOR = 256;
 
 function packLatencies(values: number[]): string | number[] {
   // Preserve exact milliseconds, including unexpectedly long/fractional timings.
@@ -116,6 +120,7 @@ const RPC_PARITY_ERROR_CLASSES: readonly RpcParityErrorClass[] = [
   "network",
   "rpc-error",
   "invalid-response",
+  "reference-unavailable",
 ];
 
 const FLAG_HEAD_OK = 1;
@@ -163,13 +168,9 @@ const DIAGNOSTICS_FIELD_COUNT = 4;
 
 /** Step-failure bits, per operator, in the sparse diagnostics section. */
 const STEP_FAILURE_BITS: Record<"dwellir" | "comparator", Record<RpcParityProbeStep, number>> = {
-  dwellir: { head: 1, state: 2, logs: 4, latest: 64 },
-  comparator: { head: 8, state: 16, logs: 32, latest: 128 },
+  dwellir: { head: 1, state: 2, logs: 4, latest: 64, reference: 256, header: 512, "legacy-latest": 1024 },
+  comparator: { head: 8, state: 16, logs: 32, latest: 128, reference: 2048, header: 4096, "legacy-latest": 8192 },
 };
-
-function emptyStepFailures(): RpcParityStepFailures {
-  return { head: false, state: false, logs: false, latest: false };
-}
 
 interface RpcParityWireRow {
   v: number;
@@ -186,6 +187,8 @@ interface RpcParityWireRow {
   runs: ([number, string] | [number, string, string])[];
   latest: Record<string, [number, number | null, number | null, number | null]>;
   skips?: ([number, number][] | null)[];
+  /** Sparse v6 diagnostics, newest five per chain across the whole window. */
+  failures?: [number, number, RpcParityFailure[]][];
 }
 
 function encodeCompactFreshness(
@@ -301,15 +304,12 @@ function encodeSample(
  * costs nothing in the retained row.
  */
 function encodeSampleDiagnostics(sample: RpcParityChainSample, chainIndex: number): string | null {
-  const stepMask =
-    (sample.failedSteps.dwellir.head ? STEP_FAILURE_BITS.dwellir.head : 0)
-    | (sample.failedSteps.dwellir.state ? STEP_FAILURE_BITS.dwellir.state : 0)
-    | (sample.failedSteps.dwellir.logs ? STEP_FAILURE_BITS.dwellir.logs : 0)
-    | (sample.failedSteps.comparator.head ? STEP_FAILURE_BITS.comparator.head : 0)
-    | (sample.failedSteps.comparator.state ? STEP_FAILURE_BITS.comparator.state : 0)
-    | (sample.failedSteps.comparator.logs ? STEP_FAILURE_BITS.comparator.logs : 0)
-    | (sample.failedSteps.dwellir.latest ? STEP_FAILURE_BITS.dwellir.latest : 0)
-    | (sample.failedSteps.comparator.latest ? STEP_FAILURE_BITS.comparator.latest : 0);
+  let stepMask = 0;
+  for (const operator of ["dwellir", "comparator"] as const) {
+    for (const step of RPC_PARITY_PROBE_STEPS) {
+      if (sample.failedSteps[operator][step]) stepMask |= STEP_FAILURE_BITS[operator][step];
+    }
+  }
   const errorCode = sample.comparatorErrorClass
     ? RPC_PARITY_ERROR_CLASSES.indexOf(sample.comparatorErrorClass) + 1
     : 0;
@@ -493,16 +493,17 @@ function decodeSample(
       if (!timings) return null;
       let timingIndex = 0;
       const operators = layout.map((entries, operatorIndex) => entries.map((code): RpcParityCallObservation => {
-        const separateComparator = version >= 4 && (code & CALL_LOGS_COMPARATOR) !== 0;
-        const step = Math.floor((version >= 4 ? code & 127 : code) / 32);
+        const comparatorBit = version >= 6 ? CALL_LOGS_COMPARATOR : 128;
+        const separateComparator = version >= 4 && (code & comparatorBit) !== 0;
+        const step = Math.floor((version >= 4 ? code & (comparatorBit - 1) : code) / 32);
         const error = code % 16;
-        if (!Number.isInteger(code) || code < 0 || code > 255 || !RPC_PARITY_PROBE_STEPS[step]
+        if (!Number.isInteger(code) || code < 0 || code > (version >= 6 ? 511 : 255) || !RPC_PARITY_PROBE_STEPS[step]
           || error > RPC_PARITY_ERROR_CLASSES.length
           || (separateComparator && (operatorIndex !== 1 || !logsComparator))) {
           throw new Error("invalid-call");
         }
         const observation: RpcParityCallObservation = {
-          step: RPC_PARITY_PROBE_STEPS[step], phase: code & 16 ? "warm" : "firstTouch",
+          step: version < 6 && step === 3 ? "legacy-latest" : RPC_PARITY_PROBE_STEPS[step], phase: code & 16 ? "warm" : "firstTouch",
           latencyMs: timings[timingIndex++], errorClass: error === 0 ? null : RPC_PARITY_ERROR_CLASSES[error - 1],
         };
         if (separateComparator && logsComparator) observation.comparator = logsComparator;
@@ -561,7 +562,7 @@ function decodeSample(
     // decoder overlays the section when this row carries one.
     comparatorErrorClass: null,
     comparatorHttpStatus: null,
-    failedSteps: { dwellir: emptyStepFailures(), comparator: emptyStepFailures() },
+    failedSteps: { dwellir: createRpcParityStepRecord(false), comparator: createRpcParityStepRecord(false) },
     ...telemetry,
   };
 }
@@ -582,12 +583,9 @@ function decodeDiagnosticFields(diagnostics: SampleDiagnostics): Pick<
 
 function stepFailuresFromMask(mask: number, operator: "dwellir" | "comparator"): RpcParityStepFailures {
   const bits = STEP_FAILURE_BITS[operator];
-  return {
-    head: (mask & bits.head) !== 0,
-    state: (mask & bits.state) !== 0,
-    logs: (mask & bits.logs) !== 0,
-    latest: (mask & bits.latest) !== 0,
-  };
+  const failures = createRpcParityStepRecord(false);
+  for (const step of RPC_PARITY_PROBE_STEPS) failures[step] = (mask & bits[step]) !== 0;
+  return failures;
 }
 
 function sameComparator(left: RpcParityComparatorRef, right: RpcParityComparatorRef): boolean {
@@ -626,6 +624,21 @@ export function encodeRpcParityStoreRow(row: RpcParityStoreRow): string {
     if (diagnostics.length === 0) return [run.atSec, samplePayload];
     return [run.atSec, samplePayload, [DIAGNOSTICS_LAYOUT, ...diagnostics].join(SAMPLE_SEPARATOR)];
   });
+  const newestFailures = new Map<string, { runIndex: number; failure: RpcParityFailure }[]>();
+  row.runs.forEach((run, runIndex) => {
+    for (const sample of run.samples) {
+      const failures = [...(newestFailures.get(sample.chainId) ?? []),
+        ...(sample.failures ?? []).map((failure) => ({ runIndex, failure }))];
+      newestFailures.set(sample.chainId, failures.slice(-RPC_PARITY_MAX_FAILURES));
+    }
+  });
+  const failures: NonNullable<RpcParityWireRow["failures"]> = [];
+  for (const [chainId, entries] of newestFailures) {
+    const chainIndex = chains.indexOf(chainId);
+    for (const { runIndex, failure } of entries) {
+      failures.push([runIndex, chainIndex, [{ ...failure, message: safeErrorMessage(failure.message).slice(0, 160) }]]);
+    }
+  }
   const latest: RpcParityWireRow["latest"] = {};
   for (const [chainId, state] of Object.entries(row.latest)) {
     latest[chainId] = [state.atSec, state.dwellirHead, state.comparatorHead, state.commonBlock];
@@ -638,6 +651,7 @@ export function encodeRpcParityStoreRow(row: RpcParityStoreRow): string {
     layouts,
     runs,
     latest,
+    failures,
     skips: row.runs.map((run) => run.skipped === undefined ? null : run.skipped.map<[number, number]>((entry) => (
       [chains.indexOf(entry.chainId), RPC_PARITY_SKIP_REASONS.indexOf(entry.reason)]
     ))),
@@ -661,7 +675,7 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
     parsed = JSON.parse(value) as unknown;
     if (parsed && typeof parsed === "object" && "encoding" in parsed) {
       const envelope = parsed as { v?: unknown; encoding?: unknown; payload?: unknown };
-      if ((envelope.v !== 2 && envelope.v !== 3 && envelope.v !== 4 && envelope.v !== RPC_PARITY_STORE_VERSION) || envelope.encoding !== "gzip" || typeof envelope.payload !== "string") return null;
+      if ((envelope.v !== 2 && envelope.v !== 3 && envelope.v !== 4 && envelope.v !== 5 && envelope.v !== RPC_PARITY_STORE_VERSION) || envelope.encoding !== "gzip" || typeof envelope.payload !== "string") return null;
       const decompressed = gunzipSync(Buffer.from(envelope.payload, "base64"), {
         maxOutputLength: RPC_PARITY_MAX_DECOMPRESSED_BYTES,
       });
@@ -674,7 +688,7 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
   const wire = parsed as Partial<RpcParityWireRow>;
-  if (wire.v !== 1 && wire.v !== 2 && wire.v !== 3 && wire.v !== 4 && wire.v !== RPC_PARITY_STORE_VERSION) return null;
+  if (wire.v !== 1 && wire.v !== 2 && wire.v !== 3 && wire.v !== 4 && wire.v !== 5 && wire.v !== RPC_PARITY_STORE_VERSION) return null;
   if (!Array.isArray(wire.chains) || !wire.chains.every((chainId) => typeof chainId === "string")) return null;
   if (!Array.isArray(wire.hosts) || !wire.hosts.every((host) => typeof host === "string")) return null;
   if (!Array.isArray(wire.comparators)) return null;
@@ -728,9 +742,43 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
       samples: decoded.map((sample) => {
         const chainIndex = chains.indexOf(sample.chainId);
         const entry = chainIndex === -1 ? undefined : diagnostics.get(chainIndex);
-        return entry === undefined ? sample : { ...sample, ...decodeDiagnosticFields(entry) };
+        const value = entry === undefined ? sample : { ...sample, ...decodeDiagnosticFields(entry) };
+        if (wire.v! < 6) {
+          for (const operator of ["dwellir", "comparator"] as const) {
+            value.failedSteps[operator]["legacy-latest"] = value.failedSteps[operator].latest;
+            value.failedSteps[operator].latest = false;
+          }
+        }
+        return value;
       }),
     });
+  }
+  if (wire.failures !== undefined) {
+    if (wire.v! < 6 || !Array.isArray(wire.failures)) return null;
+    const counts = new Map<string, number>();
+    for (const entry of wire.failures) {
+      if (!Array.isArray(entry) || entry.length !== 3) return null;
+      const [runIndex, chainIndex, failures] = entry;
+      const sample = runs[runIndex]?.samples.find((value) => value.chainId === chains[chainIndex]);
+      if (!sample || !Array.isArray(failures)) return null;
+      for (const failure of failures) {
+        if (!failure || typeof failure !== "object"
+          || (failure.operator !== "dwellir" && failure.operator !== "comparator")
+          || !RPC_PARITY_PROBE_STEPS.includes(failure.step)
+          || !RPC_PARITY_ERROR_CLASSES.includes(failure.errorClass)
+          || typeof failure.method !== "string" || failure.method.length > 64
+          || !(failure.blockParam === null || typeof failure.blockParam === "number"
+            || (typeof failure.blockParam === "string" && failure.blockParam.length <= 64))
+          || !(failure.httpStatus === null || Number.isInteger(failure.httpStatus))
+          || !(failure.rpcCode === null || Number.isInteger(failure.rpcCode))
+          || typeof failure.message !== "string" || failure.message.length > 160
+          || !Number.isSafeInteger(failure.atSec)) return null;
+        const count = (counts.get(sample.chainId) ?? 0) + 1;
+        if (count > RPC_PARITY_MAX_FAILURES) return null;
+        counts.set(sample.chainId, count);
+        (sample.failures ??= []).push({ ...failure, message: safeErrorMessage(failure.message).slice(0, 160) });
+      }
+    }
   }
 
   const latest: Record<string, RpcParityLatestState> = {};
@@ -828,8 +876,15 @@ export function mergeRpcParityRun(
     };
   }
 
+  const incomingHosts = new Map(incoming.map((sample) => [sample.chainId, sample.dwellirHost]));
+  // A host change starts only that target's evidence window, not every chain.
   const retained = (existing && !reset ? existing.runs : [])
-    .filter((existingRun) => existingRun.atSec >= windowStartSec && existingRun.atSec !== run.atSec);
+    .filter((existingRun) => existingRun.atSec >= windowStartSec && existingRun.atSec !== run.atSec)
+    .map((existingRun) => ({
+      ...existingRun,
+      samples: existingRun.samples.filter((sample) => !incomingHosts.has(sample.chainId)
+        || incomingHosts.get(sample.chainId) === sample.dwellirHost),
+    }));
   // A duplicate write for the same slot replaces the earlier sample set instead
   // of counting the chain twice in the window.
   const runs: RpcParityStoredRun[] = [...retained, {

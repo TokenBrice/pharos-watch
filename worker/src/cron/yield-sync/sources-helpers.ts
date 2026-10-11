@@ -1,9 +1,8 @@
-import { registryRpcUrls, type ChainRpcConfig } from "../../lib/chain-registry";
+import { registryRpcEndpoints, type ChainRpcConfig } from "../../lib/chain-registry";
 
 /**
- * Build a deduped list of RPC URLs from a ChainRpcConfig's registry endpoints.
- * Supplemental endpoints (Dwellir) are never part of these lists: the evm-rpc
- * transport is what appends them, after every URL returned here.
+ * Build a deduped list of incumbent registry RPC URLs. Dwellir is excluded
+ * independently of placement; supplemental-aware EVM transports own its routing.
  * @param order  'fallback-first' (default) | 'primary-first' | 'rotate'
  * @param seed   Rotation index used when order='rotate' (even → fallback-first, odd → primary-first)
  */
@@ -13,7 +12,8 @@ export function resolveRpcUrls(
 ): string[] {
   if (!rpc) return [];
   const { order = "fallback-first", seed = 0 } = options;
-  const [primaryUrl, fallbackUrl] = registryRpcUrls(rpc);
+  const [primaryUrl, fallbackUrl] = registryRpcEndpoints(rpc)
+    .filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
   const primary = primaryUrl || null;
   const fallback = fallbackUrl || null;
   let ordered: (string | null)[];
