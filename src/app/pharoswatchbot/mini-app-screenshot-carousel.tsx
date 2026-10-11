@@ -30,13 +30,13 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
   }, [paused, screenshots.length]);
 
   return (
-    <div className="telegram-mini-app-stage flex min-w-0 max-w-full flex-1 flex-col gap-3">
+    <div className="flex min-w-0 max-w-full flex-1 flex-col gap-3">
       <div
-        className="telegram-mini-app-carousel flex w-full min-w-0 max-w-full flex-1 overflow-hidden rounded-lg border border-border/65"
+        className="flex w-full min-w-0 max-w-full flex-1 overflow-hidden rounded-lg border border-border/65"
         aria-label="Mini App screenshots"
       >
         <div
-          className="telegram-mini-app-carousel-track flex h-full w-full"
+          className="flex h-full w-full transition-transform duration-300 ease-out motion-reduce:transition-none"
           style={{ transform: `translateX(-${activeIndex * 100}%)` }}
         >
           {screenshots.map((screenshot, idx) => (
@@ -53,7 +53,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
                 />
               </div>
               <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-[10px] uppercase text-white/65">
-                <span className="pharos-numeric text-sky-300">{String(idx + 1).padStart(2, "0")}</span>
+                <span className="pharos-numeric text-white/90">{String(idx + 1).padStart(2, "0")}</span>
                 <span aria-hidden="true" className="text-white/25">
                   ·
                 </span>

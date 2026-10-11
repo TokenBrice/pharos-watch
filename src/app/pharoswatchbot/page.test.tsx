@@ -62,14 +62,6 @@ vi.mock("./instrument-panel", () => ({
   ),
 }));
 
-vi.mock("./night-shift-metric", () => ({
-  NightShiftMetric: () => <p>hero metric</p>,
-}));
-
-vi.mock("./live-watcher-count", () => ({
-  LiveWatcherCount: () => <span>1,842</span>,
-}));
-
 vi.mock("@/components/copy-button", () => ({
   CopyButton: ({ text, className }: { text: string; className?: string }) => (
     <button type="button" aria-label={`Copy ${text}`} className={className} />
@@ -140,25 +132,36 @@ describe("PharosWatchBotPage", () => {
     expect(TELEGRAM_MINI_APP_PAYLOAD_PATTERN.test(startPayload ?? "")).toBe(true);
   });
 
-  it("renders the night-watch experience, the un-collapsed reference, and JSON-LD", () => {
+  it("renders the landing page, the un-collapsed reference, and JSON-LD", () => {
     const { container } = render(<PharosWatchBotPage />);
 
-    // Act I — the hero.
-    expect(screen.getByRole("heading", { name: "Stablecoin alerts, before you have to check.", level: 1 })).toBeTruthy();
+    // Header: shared shell h1, lead, and the two primary CTAs.
+    expect(screen.getByRole("heading", { name: "PharosWatchBot", level: 1 })).toBeTruthy();
     expect(
-      screen.getByText(`Free Telegram alerts for ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`),
+      screen.getByText((content) =>
+        content.includes(`free for all ${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`),
+      ),
     ).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: /open the bot/i }).length).toBeGreaterThan(0);
-    // The hero stays copy-led: the mini-app screenshot lives only in the carousel (mocked here).
+    const openLinks = screen.getAllByRole("link", { name: /open in telegram/i });
+    expect(openLinks.length).toBe(2);
+    expect(container.querySelector("#bot")?.contains(openLinks[0])).toBe(true);
+    expect(screen.getAllByRole("link", { name: /open the mini app/i }).length).toBeGreaterThan(0);
+    // The mini-app screenshot lives only in the carousel (mocked here).
     expect(container.querySelector('img[src="/featured/telegram-mini-app/home.jpg"]')).toBeNull();
 
-    // Act II — every family lands as a signal with plain-language framing.
+    // Every family has a selectable preview with plain-language framing.
     expect(screen.getByRole("heading", { name: "What lands in your chat" })).toBeTruthy();
     for (const family of TELEGRAM_ALERT_FAMILIES) {
       expect(screen.getAllByText(family.label).length).toBeGreaterThan(0);
     }
     expect(container.textContent).toContain("Depeg Early Warning System");
     expect(screen.getAllByText(/Reason: Active depeg peak 7546 bps/i).length).toBeGreaterThan(0);
+    // All six previews stay in the DOM; the selected family is the visible one.
+    expect(container.querySelector("#alert-preview-dews")?.hasAttribute("hidden")).toBe(false);
+    expect(container.querySelector("#alert-preview-depeg")?.hasAttribute("hidden")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /Depeg Events/ }));
+    expect(container.querySelector("#alert-preview-depeg")?.hasAttribute("hidden")).toBe(false);
+    expect(container.querySelector("#alert-preview-dews")?.hasAttribute("hidden")).toBe(true);
 
     // The two-minute setup keeps its anchor and its recommended command.
     expect(screen.getByRole("heading", { name: "Start in two minutes" })).toBeTruthy();
@@ -172,16 +175,19 @@ describe("PharosWatchBotPage", () => {
       expect(command.className).toContain("[overflow-wrap:anywhere]");
     }
 
-    // Acts IV–V.
+    // Tuning controls and the Mini App.
+    expect(screen.getByRole("heading", { name: "Tuned to you, quiet by default" })).toBeTruthy();
+    expect(screen.getByText("Daily recap", { selector: "#controls p" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "The same alert state, without slash commands" })).toBeTruthy();
-    for (const feature of ["Global alerts", "Per-coin tuning", "Delivery health", "Coin search", "Bot sync", "Deep links", "Launch alerts"]) {
+    for (const feature of ["Global alerts", "Per-coin tuning", "Delivery health", "Coin search", "Bot sync", "Deep links"]) {
       expect(screen.getByText(feature)).toBeTruthy();
     }
     expect(screen.getByLabelText("Mini App screenshots")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "One recap each morning" })).toBeTruthy();
+    expect(container.querySelector("#channel")).toBeTruthy();
+    expect(container.querySelector("#community")).toBeTruthy();
 
-    // Act VI — the reference is fully visible, not folded behind details.
-    expect(screen.getByRole("heading", { name: "Commands, limits, and answers" })).toBeTruthy();
+    // The reference is fully visible, not folded behind details.
+    expect(screen.getByRole("heading", { name: "Every command" })).toBeTruthy();
     const commandReference = screen.getByLabelText("PharosWatchBot command reference");
     expect(commandReference.closest("details")).toBeNull();
     expect(screen.getByLabelText("Filter bot commands")).toBeTruthy();
@@ -196,7 +202,6 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getAllByText("/recap [on|off]").length).toBeGreaterThan(0);
     expect(screen.getAllByText("/recap time <hour>").length).toBeGreaterThan(0);
     expect(screen.getByText(/\/market is a deprecated compatibility alias/i)).toBeTruthy();
-    expect(screen.getByText("Other starter setups")).toBeTruthy();
     expect(screen.getAllByText("/subscribe@PharosWatchBot dews usd-top25").length).toBeGreaterThan(0);
 
     // The filter narrows the reference without a server round-trip.
@@ -213,12 +218,12 @@ describe("PharosWatchBotPage", () => {
     expect(screen.getByText(/use \/forget in a private chat for immediate subscriber-data deletion/i)).toBeTruthy();
     expect(screen.getByText(/separate from the market-wide Daily Digest channel/i)).toBeTruthy();
 
-    // Narrative order: signals → setup → instrument panel.
+    // Narrative order: adoption hero → signals → setup.
     const signals = container.querySelector("#signals") as HTMLElement;
     const setup = container.querySelector("#getting-started") as HTMLElement;
     const evidence = screen.getByLabelText("Live Telegram adoption metrics");
+    expect(Boolean(evidence.compareDocumentPosition(signals) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
     expect(Boolean(signals.compareDocumentPosition(setup) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
-    expect(Boolean(setup.compareDocumentPosition(evidence) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
 
     expect(container.textContent).not.toMatch(/no dropped alerts|arrive in order/i);
 

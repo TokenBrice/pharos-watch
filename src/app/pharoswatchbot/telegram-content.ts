@@ -60,7 +60,6 @@ export const MINI_APP_FEATURES = [
   { title: "Coin search", detail: "Find and add stablecoins fast." },
   { title: "Bot sync", detail: "Commands and app share one alert state." },
   { title: "Deep links", detail: "Jump straight to settings, presets, or a coin." },
-  { title: "Launch alerts", detail: "Catch tracked pre-launch assets going live." },
 ] as const satisfies readonly { title: string; detail: string }[];
 
 export const MINI_APP_SCREENSHOTS = [
@@ -93,23 +92,6 @@ export const MINI_APP_SCREENSHOTS = [
     height: 1280,
   },
 ] as const satisfies readonly { title: string; src: string; alt: string; width: number; height: number }[];
-
-export const RECOMMENDED_SETUPS = [
-  {
-    title: "Research desk setup",
-    command: "/subscribe safety mcap-ge-1b",
-    description: "All safety-grade changes with reason lines, on coins above $1B mcap.",
-  },
-  {
-    title: "Group setup",
-    command: "/subscribe@PharosWatchBot dews usd-top25",
-    description: "Address commands to the bot so a shared Telegram group runs one watch desk without colliding with other bots.",
-  },
-] as const satisfies readonly {
-  title: string;
-  command: string;
-  description: string;
-}[];
 
 // Page-specific presentation for each alert-family example; keys, labels, and
 // the message bodies themselves derive from the shared manifests so the

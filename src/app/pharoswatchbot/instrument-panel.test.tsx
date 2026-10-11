@@ -10,8 +10,6 @@ import { useTelegramPulse } from "@/hooks/api-hooks";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramPulse } from "@shared/types/status";
 import { TelegramPulseSchema } from "@shared/types/status/telegram";
-import { LiveWatcherCount } from "./live-watcher-count";
-import { NightShiftMetric } from "./night-shift-metric";
 
 vi.mock("@/hooks/api-hooks", () => ({
   useTelegramPulse: vi.fn(),
@@ -197,11 +195,11 @@ describe("InstrumentPanel", () => {
 
   it("withdraws every live placement on retained-data refresh failure and recovers", () => {
     mockPulse(pulse);
-    const { rerender } = render(<><NightShiftMetric /><LiveWatcherCount /><InstrumentPanel /></>);
-    expect(screen.getAllByText("1,842").length).toBeGreaterThan(2);
+    const { rerender } = render(<InstrumentPanel />);
+    expect(screen.getAllByText("1,842").length).toBeGreaterThan(0);
 
     mockPulse(pulse, { isError: true });
-    rerender(<><NightShiftMetric /><LiveWatcherCount /><InstrumentPanel /></>);
+    rerender(<InstrumentPanel />);
     expect(screen.getByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeTruthy();
     expect(screen.queryByText("Complete telemetry")).toBeNull();
     expect(screen.queryByText("Partial telemetry")).toBeNull();
@@ -211,10 +209,10 @@ describe("InstrumentPanel", () => {
     expect(screen.queryByRole("figure", { name: /lifecycle chart/i })).toBeNull();
 
     mockPulse({ ...pulse, activeWatchers: 2_000, watcherHistory: [] });
-    rerender(<><NightShiftMetric /><LiveWatcherCount /><InstrumentPanel /></>);
+    rerender(<InstrumentPanel />);
     expect(screen.queryByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeNull();
     expect(screen.getByText("Complete telemetry")).toBeTruthy();
-    expect(screen.getAllByText("2,000")).toHaveLength(3);
+    expect(screen.getAllByText("2,000")).toHaveLength(1);
   });
 
   it("clears retained count-up values after a real QueryClient refetch error", async () => {
@@ -227,10 +225,10 @@ describe("InstrumentPanel", () => {
     mockUseTelegramPulse.mockImplementation(() => useQuery({ queryKey, queryFn: async () => pulse }) as ReturnType<typeof useTelegramPulse>);
     const view = render(
       <QueryClientProvider client={client}>
-        <NightShiftMetric /><LiveWatcherCount /><InstrumentPanel />
+        <InstrumentPanel />
       </QueryClientProvider>,
     );
-    expect(screen.getAllByText("1,842").length).toBeGreaterThan(2);
+    expect(screen.getAllByText("1,842").length).toBeGreaterThan(0);
     await act(async () => {
       await client.fetchQuery({ queryKey, staleTime: 0, queryFn: async () => { throw new Error("Refresh failed"); } }).catch(() => {});
     });
@@ -242,7 +240,7 @@ describe("InstrumentPanel", () => {
     await act(async () => {
       await client.fetchQuery({ queryKey, staleTime: 0, queryFn: async () => ({ ...pulse, activeWatchers: 2_000, watcherHistory: [] }) });
     });
-    await waitFor(() => expect(screen.getAllByText("2,000")).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByText("2,000")).toHaveLength(1));
     expect(screen.getByText("Complete telemetry")).toBeTruthy();
     view.unmount();
     client.clear();

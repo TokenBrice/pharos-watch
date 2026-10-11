@@ -81,20 +81,20 @@ export function CommandManual() {
                 {group.commands.map((cmd) => (
                   <div
                     key={cmd.command}
-                    className="grid min-w-0 gap-2 py-3 sm:grid-cols-[minmax(12rem,0.9fr)_minmax(0,1.4fr)] sm:gap-5"
+                    className="grid min-w-0 gap-1.5 py-2.5 sm:grid-cols-[minmax(12rem,0.9fr)_minmax(0,1.4fr)] sm:gap-5"
                   >
                     <dt className="min-w-0">
-                      <div className="flex min-w-0 items-center gap-1 rounded-lg bg-muted px-1 py-0.5">
-                        <code className="min-w-0 flex-1 whitespace-pre-wrap px-1 font-mono text-xs text-foreground [overflow-wrap:anywhere]">
+                      <div className="flex min-w-0 items-center gap-1">
+                        <code className="min-w-0 flex-1 whitespace-pre-wrap font-mono text-xs font-semibold text-foreground [overflow-wrap:anywhere]">
                           {cmd.command}
                         </code>
                         <CopyButton
                           text={cmd.command}
-                          className="size-11 shrink-0 text-muted-foreground hover:bg-background/70 hover:text-foreground"
+                          className="size-11 shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground sm:size-8"
                         />
                       </div>
                     </dt>
-                    <dd className="min-w-0 text-xs leading-relaxed text-muted-foreground">
+                    <dd className="min-w-0 self-center text-xs leading-relaxed text-muted-foreground">
                       {cmd.description}
                       {cmd.example ? (
                         <span className="mt-1.5 block">
