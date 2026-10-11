@@ -290,9 +290,9 @@ After the digest is stored in D1, it is posted to configured Twitter/X and Teleg
 
 ### Web archive and sitemap policy
 
-`/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Individual digest detail pages stay indexable and sitemap-listed because they are durable archive/citation pages with unique editorial text and point-in-time snapshots. Crawl and URL Inspection quota should be managed through post-deploy GSC prioritization, not by dropping older daily digests from `src/app/sitemap.ts`.
+`/digest/` remains the primary indexable archive hub and links to every generated daily or weekly detail page present in `data/digests.json`. Every detail page stays live as a durable archive/citation page. Indexing is split (owner ruling, 2026-10-11): weekly recaps are always indexable and sitemap-listed; a daily edition is indexable and sitemap-listed only while it is within 30 days (`DAILY_DIGEST_INDEX_WINDOW_SEC`) of the newest checked-in edition, after which it emits `noindex, follow` and leaves `src/app/sitemap.ts` and the public route inventory. `isDigestIndexable` in `src/lib/digest-registry.ts` is the single authority; the reference clock is the newest edition's `generatedAt` rather than the wall clock so a given snapshot builds deterministically. The release SEO gate's archive-continuity check accepts a digest URL that leaves the sitemap while its HTML is still exported.
 
-The interactive archive may narrow the visible wire table with URL-addressable `view` (`all`, `daily`, or `weekly`), `month`, and `q` (title/body search) parameters. These controls do not alter the server-rendered crawlable link index or the sitemap's complete digest membership.
+The interactive archive may narrow the visible wire table with URL-addressable `view` (`all`, `daily`, or `weekly`), `month`, and `q` (title/body search) parameters. These controls do not alter the server-rendered crawlable link index or the sitemap's digest membership.
 
 ### Twitter
 

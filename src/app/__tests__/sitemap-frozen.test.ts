@@ -10,6 +10,7 @@ import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PUBLIC_ROUTE_PATHS } from "@/lib/public-route-inventory";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import { DAILY_DIGEST_INDEX_WINDOW_SEC } from "@/lib/digest-registry";
 import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
 import digests from "../../../data/digests.json";
 import aiSummaries from "../../../data/ai-summaries.json";
@@ -169,12 +170,18 @@ describe("sitemap", () => {
     expect(Number.isNaN((entry?.lastModified as Date).getTime())).toBe(false);
   });
 
-  it("lists every digest detail page as durable archive content", () => {
-
+  it("lists weekly recaps and recent daily digests, leaving older dailies out", () => {
+    const newestGeneratedAt = Math.max(...digests.map((digest) => digest.generatedAt));
     for (const digest of digests) {
       const entry = entriesByUrl.get(`${SITE_ORIGIN}/digest/${digest.date}/`);
+      const indexable = digest.digestType === "weekly"
+        || newestGeneratedAt - digest.generatedAt <= DAILY_DIGEST_INDEX_WINDOW_SEC;
 
-      expect(entry).toBeDefined();
+      if (!indexable) {
+        expect(entry, digest.date).toBeUndefined();
+        continue;
+      }
+      expect(entry, digest.date).toBeDefined();
       expect(entry?.lastModified).toEqual(new Date(digest.generatedAt * 1000));
       expect(entry?.changeFrequency).toBe("never");
     }

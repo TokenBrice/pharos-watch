@@ -12,7 +12,7 @@ import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import {
   METHODOLOGY_CHANGELOG_SITEMAP_PATHS as SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
 } from "@shared/lib/methodology-versions/registry";
-import { DIGEST_ENTRIES } from "@/lib/digest-registry";
+import { DIGEST_ENTRIES, INDEXABLE_DIGEST_ENTRIES } from "@/lib/digest-registry";
 import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import costsData from "@shared/data/funding/costs.json";
@@ -242,7 +242,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  const digestPages: MetadataRoute.Sitemap = DIGEST_ENTRIES.map((d) => ({
+  const digestPages: MetadataRoute.Sitemap = INDEXABLE_DIGEST_ENTRIES.map((d) => ({
     url: `${SITE_URL}/digest/${d.date}/`,
     lastModified: new Date(d.generatedAt * 1000),
     changeFrequency: "never" as const,

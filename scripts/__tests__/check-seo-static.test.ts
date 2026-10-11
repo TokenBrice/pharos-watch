@@ -240,6 +240,14 @@ describe("check-seo-static", () => {
     ).toEqual([]);
   });
 
+  it("accepts an archive page that left the sitemap but still exports HTML (noindexed)", () => {
+    const previous = "<urlset><url><loc>https://pharos.watch/digest/2026-07-17/</loc></url></urlset>";
+    const current = "<urlset><url><loc>https://pharos.watch/digest/</loc></url></urlset>";
+
+    expect(findPublishedArchiveContinuityErrors(previous, current, [], new Set(["/digest/2026-07-17/"]))).toEqual([]);
+    expect(findPublishedArchiveContinuityErrors(previous, current, [], new Set())).toHaveLength(1);
+  });
+
   type SeoFixtureCase = {
     name: string;
     rootLinks?: string[];

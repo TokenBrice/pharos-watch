@@ -440,6 +440,7 @@ export function findPublishedArchiveContinuityErrors(
   previousSitemapXml,
   currentSitemapXml,
   redirectRules = [],
+  currentHtmlRoutes = new Set(),
 ) {
   const previousUrls = new Set(parseSitemapLocs(previousSitemapXml).map(normalizeSitemapUrl).filter(Boolean));
   const currentUrls = new Set(parseSitemapLocs(currentSitemapXml).map(normalizeSitemapUrl).filter(Boolean));
@@ -448,6 +449,10 @@ export function findPublishedArchiveContinuityErrors(
   for (const previousUrl of previousUrls) {
     const pathname = new URL(previousUrl).pathname;
     if (!DURABLE_ARCHIVE_ROUTE_PATTERN.test(pathname) || currentUrls.has(previousUrl)) continue;
+    // A deliberately noindexed archive page (e.g. a daily digest past its
+    // index window) leaves the sitemap but still resolves; only a vanished
+    // page needs a 301.
+    if (currentHtmlRoutes.has(pathname)) continue;
 
     const sourceKey = redirectSourceKey(pathname);
     const hasCanonicalRedirect = redirectRules.some((rule) => {
@@ -1267,7 +1272,7 @@ function fail(errors, warning = []) {
 }
 
 async function main() {
-  const { errors, warnings } = await collectSeoStaticCheckResultParallel();
+  const { errors, warnings, pageRecords } = await collectSeoStaticCheckResultParallel();
 
   const previousSitemapUrl = process.env.SEO_PREVIOUS_SITEMAP_URL?.trim();
   if (previousSitemapUrl) {
@@ -1286,6 +1291,7 @@ async function main() {
           previousSitemapXml,
           currentSitemapXml,
           collectRedirectRules(DEFAULT_OUT_DIR),
+          new Set(pageRecords.map((record) => record.route)),
         ),
       );
     } catch (error) {
