@@ -775,7 +775,7 @@
         "id": "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44",
         "label": "syrupUSDC collateral market 0x729badf2",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are pinned. Fully verified exact MorphoChainlinkOracleV2 consumes syrupUSDC convertToAssets(100000000), with all external-feed slots and quote vault zero. This is internal pool NAV, not a configured Chainlink or Pyth feed. Maple's official pricing docs distinguish convertToAssets for general pricing from convertToExitAssets including unrealized losses for redemption. Published MaplePool source is only partially verified; manager implementation/authority and upstream rate closure remain unpinned. No feed independence, redundancy, recovery or current allocation credit is claimed.",
+        "summary": "At Ethereum block 26154200, the exact syrupUSDC Morpho market uses immutable oracle 0x80032f4cb6e3573b9ed61e888af658e48fb790cc, syrupUSDC convertToAssets(100000000), and zero external-feed/quote-vault slots. This is internal pool NAV, not a Chainlink or Pyth feed. Independently source-matched MaplePool and current manager implementation establish balance-plus-strategy accounting; all four strategy addresses and direct manager/admin role addresses are pinned. Their downstream accounting, upgrade controllers and signing topology remain incompletely reviewed. No feed independence, redundancy, bounded freshness, recovery or current allocation credit is claimed.",
         "collateralAssets": [
           "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
         ],
@@ -785,16 +785,16 @@
         "feeds": [
           {
             "provider": "syrupUSDC ERC-4626 conversion rate; no external Chainlink feed in this exact oracle",
-            "path": "MorphoChainlinkOracleV2 0x80032f4cb6e3573b9ed61e888af658e48fb790cc BASE_VAULT=0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b, BASE_VAULT_CONVERSION_SAMPLE=100000000; price() consumes convertToAssets(sample); all BASE_FEED/QUOTE_FEED slots and QUOTE_VAULT are zero",
+            "path": "Immutable Morpho oracle 0x80032f4cb6e3573b9ed61e888af658e48fb790cc calls syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b convertToAssets(100000000); all BASE_FEED/QUOTE_FEED slots and QUOTE_VAULT are zero. Pool manager is 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f, implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8; manager.totalAssets sums pool USDC balance and every strategyList entry's assetsUnderManagement",
             "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
             "chain": "ethereum",
-            "observedAt": "2026-10-09",
-            "observedBlock": 26110193
+            "observedAt": "2026-10-11",
+            "observedBlock": 26154200
           }
         ],
-        "fallbackBehavior": "Fully verified immutable MorphoChainlinkOracleV2 calls syrupUSDC convertToAssets(100000000) directly. Zero feed slots and quote vault are identity factors, not alternative providers; no oracle administrator setter, timestamp check or fallback exists, and an upstream conversion revert propagates. Maple's official docs state convertToExitAssets, not this configured convertToAssets call, includes unrealized losses for actual redemption. Published partial MaplePool source uses manager.totalAssets and totalSupply; exact upstream manager implementation/authority, rate update semantics and any freshness bound remain unpinned.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Exact immutable Morpho oracle directly calls syrupUSDC convertToAssets(100000000); zero feed/quote-vault slots are identity factors, not redundant providers. There is no external-feed heartbeat, oracle administrator setter, timestamp check or fallback at this oracle. Independently executable-matched pool and manager source compute convertToAssets from manager.totalAssets/totalSupply; manager sums pool USDC balance plus all four strategy assetsUnderManagement calls without its own timestamp-age check. Any nested revert propagates rather than selecting an alternative. Strategy-level update/staleness and complete upgrade/signing controls remain unreviewed; no numeric heartbeat or staleness bound is established. This pricing path does not subtract unrealizedLosses as convertToExitAssets does. Manager setImplementation/migrate require its factory; upgrade permits the scheduled poolDelegate or globals.securityAdmin. At the pin, poolDelegate=0xc1e18ffd8825ffb286d177ddebeba345ec70b49f, factory=0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339 and globals=0x804a6f5f667170f545bf14e5ddb48c70b788390c. Globals getters return governor=0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b, securityAdmin=0x6b1a78c1943b03086f7ee53360f9b0672bd60818 and operationalAdmin=0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8; these are observed role addresses, not independently verified quorum or ownership claims.",
+        "observedAt": "2026-10-11",
+        "observedBlock": 26154200,
         "collateralParameters": [
           {
             "asset": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
@@ -831,7 +831,7 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80032f4cb6e3573b9ed61e888af658e48fb790cc"
           },
           {
-            "label": "Exact oracle runtime bytes equal the fully verified Blockscout deployment at Ethereum block 26110193, hash 0x7c1445e54e779269c3961399108a9635f407f54957917c55a4e806310376197b, timestamp 2026-10-03T07:03:47.000Z; observed 2026-10-09T11:43:17.954Z by Sol curation campaign 2026-10-09 (W2L19Figure)",
+            "label": "Exact oracle runtime bytes equal the fully verified Blockscout deployment at Ethereum block 26110193, oracle runtime hash 0x7c1445e54e779269c3961399108a9635f407f54957917c55a4e806310376197b (not a block hash), timestamp 2026-10-03T07:03:47.000Z; observed 2026-10-09T11:43:17.954Z by Sol curation campaign 2026-10-09 (W2L19Figure)",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           },
           {
@@ -845,6 +845,26 @@
           {
             "label": "Primary Maple PoolManager accounting and administrative boundary; no block-pinned implementation or membership assertion",
             "url": "https://docs.maple.finance/technical-resources/pools/pool-manager.md"
+          },
+          {
+            "label": "Sol curation campaign 2026-10-11 (P2BbqUSDC), observed 2026-10-11T11:55:03.504Z and 11:56:27.957Z: Ethereum block 26154200, block hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, timestamp 2026-10-09T10:17:35.000Z; exact market tuple, zero feed slots, conversion sample, pool/manager runtime, implementation, factory, globals, direct role getters and complete four-entry strategyList census",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Independent MaplePool executable-source correspondence: creation/runtime match, not exact metadata match; declared immutable and CBOR transformations reproduce the pinned runtime; reviewed 2026-10-11T11:59:22Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b?fields=matchId,creationMatch,runtimeMatch,verifiedAt,creationBytecode,runtimeBytecode,compilation"
+          },
+          {
+            "label": "Independent MaplePoolManager implementation executable-source correspondence: creation/runtime match with CBOR-only transformation, not exact metadata match; pinned runtime equals the recorded onchain runtime; reviewed 2026-10-11T11:59:22Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8?fields=matchId,creationMatch,runtimeMatch,verifiedAt,creationBytecode,runtimeBytecode,compilation"
+          },
+          {
+            "label": "Matched MaplePool source: convertToAssets, totalAssets manager call and unrealized-loss-aware exit distinction",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b?fields=sources"
+          },
+          {
+            "label": "Matched MaplePoolManager source: totalAssets strategy census, no manager-level age check, factory-only setters and scheduled-delegate/security-admin upgrade path",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8?fields=sources"
           }
         ]
       }
@@ -857,10 +877,10 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
-          "confidence": "probable",
-          "rationale": "The referenced VaultV2 share accounting computes NAV from underlying assets and adapter realAssets, without a separate external price input on the deposit/mint/redeem accounting path. This exemption does not cover borrower collateral liquidation or nested-vault valuation. Exact-deployment verification caveats remain.",
+          "reviewedAt": "2026-10-11",
+          "reviewer": "Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+          "confidence": "verified",
+          "rationale": "The exact Ethereum root share-accounting executable is independently authenticated against Sourcify's recompiled VaultV2 runtime (matchId 30034094): all executable bytes match after substituting only compiler-declared immutable fields and excluding CBOR metadata. All 12 immutable occurrences independently equal pinned exact-root getters: asset is USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals 18 and virtualShares 1000000000000. The independent matched main source equals the root explorer source. totalAssets/accrueInterestView sums underlying USDC balance and adapter realAssets, bounds accrued interest by maxRate and adjusts fee shares; deposit/mint/withdraw/redeem previews use that asset/share accounting without a separate root price feed. This local exemption does NOT cover borrower collateral liquidation, adapter-internal pricing or nested-vault valuation, and does not promote the aggregate multi-branch oracle profile or feed quality. Exact metadata equality or a fully verified root explorer badge is not claimed.",
           "sources": [
             {
               "label": "Adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -877,6 +897,18 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Independent VaultV2 recompiled runtime, matchId 30034094: exact root executable correspondence after ONLY declared immutable fields and CBOR metadata; all 12 immutable occurrences checked against pinned root getters; reviewed 2026-10-11T12:07:20Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=matchId,compilation,runtimeBytecode"
+            },
+            {
+              "label": "Independent matched VaultV2 source: exact root main-source equality, totalAssets/accrueInterestView, previews, deposit/mint/withdraw/redeem, asset/decimal/virtual-share constructor semantics; local accounting scope only",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources"
+            },
+            {
+              "label": "Exact Ethereum block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, timestamp 2026-10-09T10:17:35.000Z: root runtime observed 2026-10-11T11:55:03.504Z; root asset/decimals/virtualShares and USDC decimals getters observed 2026-10-11T12:06:28.158Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
             }
           ]
         }
@@ -1177,14 +1209,18 @@
         "branchId": "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-10",
-          "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
-          "confidence": "probable",
-          "rationale": "Exact configured Morpho oracle prices borrower collateral using syrupUSDC convertToAssets(100000000), with zero external-feed and quote-vault slots. Maple documents this as pool NAV, distinct from unrealized-loss-aware convertToExitAssets redemption valuation. ERC-4626 accounting does not exempt the lending market. Upstream manager implementation/authority and freshness remain unpinned; no independence or confidence promotion is inferred.",
+          "reviewedAt": "2026-10-11",
+          "reviewer": "Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+          "confidence": "verified",
+          "rationale": "Exact Morpho market tuple, deployed oracle runtime, immutable syrupUSDC BASE_VAULT/sample and zero feed/quote-vault slots are independently pinned at Ethereum block 26154200 (2026-10-09T10:17:35.000Z). Fully verified oracle source directly prices borrower collateral through syrupUSDC convertToAssets(100000000), so branches-required/internal-price applicability is established for this exact lending path. This does not verify downstream Maple strategy freshness or whole-feed operator/control topology, establish an independent market price, promote profile confidence or exempt root share accounting.",
           "sources": [
             {
               "label": "Fully verified exact Morpho configuration has internal ERC-4626 pricing and zero external feeds; reviewed 2026-10-10T23:46:22Z",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80032f4cb6e3573b9ed61e888af658e48fb790cc"
+            },
+            {
+              "label": "Exact syrupUSDC market tuple, oracle runtime and configured inputs at Ethereum block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, timestamp 2026-10-09T10:17:35.000Z; observed 2026-10-11T11:55:03.504Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
             },
             {
               "label": "Official Maple syrupUSDC identity and internal pricing/redemption distinction; reviewed 2026-10-10T23:46:22Z",

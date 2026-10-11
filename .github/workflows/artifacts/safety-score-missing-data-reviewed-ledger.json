@@ -245409,6 +245409,419 @@
       ],
       "nextReviewTrigger": "A vault allocator/curator funds or retargets the ordinary liquidity adapter market and a new pinned canonical-request simulation produces an admissible receipt; otherwise recheck 2026-10-18.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:usd3-reserve-protocol",
+      "taskIds": [
+        "V9G-aa7439b781cb57a3"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:58:20Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P1USD3)",
+      "evidence": [
+        "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+        "https://docs.compound.xyz/collateral-and-borrowing/",
+        "https://docs.reserve.org/core-components/yield-dtfs/overview",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x63e749153baf1838f63ca22c275370bd2b1ceb15",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xca11bde05977b3631167028862be2a173976ca11"
+      ],
+      "rationale": "At Ethereum block 26169031, hash 0xe57f6b38574bed09f11ff65f3103ca9218f338659e58dfedb6001b73a18b2d78, timestamp 2026-10-11T11:52:59Z, the actual USD3 BackingManager held 354090707756 raw wrapper principal representing 426843325063 raw USDC. Verified same-pin Multicall3 runtime was installed only as a holder-code override; actual balances, token storage and permissions were unchanged. One persistent eth_call successfully ran wrapper withdraw(MaxUint256), then Comet withdraw(USDC,MaxUint256), producing exactly 426843325059 raw native USDC with zero Comet remainder and 2 raw wrapper principal (2 raw underlying) residual. Wrapper floor-to-10 reduced the transfer by 3 raw units, within one 10-unit quantum. CometCore principalValueSupply rounds down; accrued supply index 1205463220902996 and scale 1000000000000000 reproduce received principal 354090707753 and the additional 1-raw-unit reduction, within one principal conversion quantum (ceiling 2 raw USDC). Comet actual native USDC liquidity was 45630772488810 raw. Coordinator accepts these source-attributable conversion floors as rounding rather than a liquidity-horizon limitation. Immediate covers the observed synchronous path subject to rounding and current liquidity, not residue recovery, future liquidity, fiat settlement, stress realization or USD3 redemption throughput. September composition date and all 25% weights stay unchanged. The schema-supported date-only review plus exact source/rationale pin is the accepted evidence clock; admission waits until that UTC review day ends. No same-day replay or production closure is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/usd3-reserve-protocol.json",
+        "agents/curation-campaign/fragments/P1USD3.json",
+        "agents/curation-campaign/results/P1USD3.md",
+        "agents/curation-campaign/research/P1USD3-sequential-pin.json",
+        "agents/curation-campaign/research/P1USD3-rounding-pin.json",
+        "agents/curation-campaign/research/P1USD3-decoded-finding.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "usd3-reserve-protocol:gap:reserve:reserve:337b1d4c58ef181ab8ca9810:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "After merged curation, run a capture/replay with clock at or after 2026-10-12T00:00:00Z and verify the exact liquidity gap is absent; re-review on Compound implementation/pause/market-liquidity changes or by 2026-10-18.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:bbqusdc-steakhouse-v2",
+      "taskIds": [
+        "V9G-4423371968f77939"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:07:20Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+      "evidence": [
+        "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=matchId,compilation,runtimeBytecode",
+        "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
+        "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      ],
+      "rationale": "Exact Ethereum root at block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, timestamp 2026-10-09T10:17:35.000Z is independently authenticated against Sourcify recompiled VaultV2 runtime matchId 30034094. Full executable equality follows after replacing only compiler-declared immutable fields and excluding only CBOR metadata. All 12 root immutable occurrences equal independently pinned getters: asset USDC, decimals 18 and virtualShares 1000000000000. Matched independent main source equals root explorer source. Its totalAssets/accrueInterestView, fee accrual and deposit/mint/withdraw/redeem previews use underlying balances plus adapter realAssets without a separate root price input. This fully covers the classification's exact root accounting/applicability scope. Promote only local root not-applicable review; borrower/nested pricing remains applicable, aggregate profile confidence stays limited and feed B is retained. No root explorer full-verification badge or exact metadata match is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/bbqusdc-steakhouse-v2.json",
+        "agents/curation-campaign/P2BbqUSDC-pinned-topology.json",
+        "agents/curation-campaign/P2BbqUSDC-pinned-root-immutables.json",
+        "agents/curation-campaign/P2BbqUSDC-root-source-correspondence.json",
+        "agents/curation-campaign/results/P2BbqUSDC.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "bbqusdc-steakhouse-v2:gap:economic-control:oracle",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Exact-root executable or asset/accounting change, otherwise 2026-11-10.",
+      "factsClosed": 1
+    },
+    {
+      "claimGroupId": "ORACLE_BRANCH:bbqusdc-steakhouse-v2",
+      "taskIds": [
+        "V9G-4165e18ea19dc3f1"
+      ],
+      "workType": "ORACLE_BRANCH",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:59:22Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+      "evidence": [
+        "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x80032f4cb6e3573b9ed61e888af658e48fb790cc",
+        "https://sourcify.dev/server/v2/contract/1/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b?fields=matchId,creationMatch,runtimeMatch,verifiedAt,creationBytecode,runtimeBytecode,compilation",
+        "https://sourcify.dev/server/v2/contract/1/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8?fields=matchId,creationMatch,runtimeMatch,verifiedAt,creationBytecode,runtimeBytecode,compilation",
+        "https://sourcify.dev/server/v2/contract/1/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b?fields=sources",
+        "https://sourcify.dev/server/v2/contract/1/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8?fields=sources",
+        "https://docs.maple.finance/integrate/ethereum-mainnet/asset-integration.md"
+      ],
+      "rationale": "Exact Morpho market/oracle identity, immutable conversion sample and all zero external-feed/quote-vault slots are independently pinned at Ethereum block 26154200 (2026-10-09T10:17:35.000Z). Fully verified oracle runtime matches pinned bytes. Independent Sourcify pool and manager executable matches reproduce pinned runtime with only declared immutable/CBOR transformations; exact metadata matching is not claimed. Curated pool manager, current implementation, direct role addresses, four-entry strategy census and balance-plus-strategy NAV/no manager-level timestamp check. Exact syrupUSDC branches-required/internal-price applicability is verified without promoting aggregate profile/feed confidence. No external feed heartbeat applies to the zero slots; nested strategies' accounting/freshness/control and complete factory/globals/admin signing authority remain unreviewed. The exact feed-kind gap also covers all ten declared borrower branches, not just syrupUSDC. Therefore campaign-lane23-bbqusdc-oracle-feed B remains unchanged; no partial census, heartbeat guess, generic Chainlink credit or B removal is authored.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/bbqusdc-steakhouse-v2.json",
+        "agents/curation-campaign/P2BbqUSDC-pinned-topology.json",
+        "agents/curation-campaign/P2BbqUSDC-pinned-maple-authorities.json",
+        "agents/curation-campaign/results/P2BbqUSDC.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "bbqusdc-steakhouse-v2:gap:economic-control:oracle:feed",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Complete source/runtime/authority/freshness review of the four configured Maple strategies and every declared borrower feed, otherwise 2026-11-10.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:sparkusdc-spark",
+      "taskIds": [
+        "V9G-2353754cf6c44d65"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:57:01Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P3SparkMint)",
+      "evidence": [
+        "https://base.blockscout.com/api/v2/smart-contracts/0xf93b7122450a50af3e5a76e1d546e95ac1d0f579",
+        "https://base.blockscout.com/api/v2/smart-contracts/0xfda082e00ef89185d9db7e5dcd8c5505070f5a3b",
+        "https://api-base-mainnet-archive.n.dwellir.com",
+        "https://base.blockscout.com/api/v2/addresses/0xf93b7122450a50af3e5a76e1d546e95ac1d0f579/internal-transactions",
+        "https://base.blockscout.com/api/v2/transactions/0x7b8e692e523eca62aaad95e04e279ad7d8c31b38c0694af18f1a0635f54323ae/internal-transactions",
+        "https://base.blockscout.com/api/v2/transactions/0x7b8e692e523eca62aaad95e04e279ad7d8c31b38c0694af18f1a0635f54323ae/raw-trace",
+        "https://base.blockscout.com/api/v2/transactions/0x7b8e692e523eca62aaad95e04e279ad7d8c31b38c0694af18f1a0635f54323ae/state-changes"
+      ],
+      "rationale": "Retrieved verified Executor/AccessControl/OptimismReceiver sources and actual nested historical call traces. Successful six-member Dwellir batch at Base 52199652 (hash 0x3c5f78998d03f1b4e177a3ecc5588b4277f0501ace0f12b76ce86942c7c676d9; timestamp 2026-10-05T08:24:11Z; observed 2026-10-11T11:55:01.643Z) confirms delay 0, action count 20, self-admin and receiver submitter samples, receiver SubProxy l1Authority and Executor target. Those samples are not exhaustive current membership. The address internal-call feed starts September 2025 although a July 2026 transaction-specific trace is retrievable, preventing a demonstrated creation-to-pin census. Raw trace exposes calls/calldata, not SSTORE differences; state-changes exposes coin/token balances, not authority storage. Missing all historical nested delegated writes to role membership/admin, queue and execution clocks, full upstream wards and every live governance/transport alternative. Preserve settled immutable asset-backed wrapper issuance, original sidecar clocks and exact existing B classification; no complete certificate, universal delay or incident absence is inferred.",
+      "changeRefs": [
+        "agents/curation-campaign/results/P3SparkMint.md",
+        "agents/curation-campaign/evidence/P3SparkMint-base-authority-pin.json",
+        "agents/curation-campaign/evidence/P3SparkMint-base-history-surfaces.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:economic-control:mint",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Complete independently reviewed creation-to-pinned-block delegated call/storage-write census, same-pin full authority key reconciliation and every upstream governance/transport alternative; otherwise review by 2026-11-11.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:sparkusdtbc-spark",
+      "taskIds": [
+        "V9G-74076c6a879e8d91"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:05:36Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P3SparkMint)",
+      "evidence": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x6605aa120fe8b656482903e7757babf56947e45e",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58",
+        "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      ],
+      "rationale": "Retrieved exact SubProxy, StarGuard and ESM verified sources. Seven successful Dwellir reads at Ethereum 26124951 (hash 0x3b0f07327cd6208b2c4d27f291cdbe7b658a787e185f1286eeac4075555a893a; timestamp 2026-10-05T08:23:59Z; observed 2026-10-11T12:05:29.634Z) confirm SubProxy ward samples PauseProxy/StarGuard/ESM active and deployer inactive, StarGuard PauseProxy ward active, maxDelay 604800 and zero spellData. Point getters cannot enumerate unlogged delegated writes to arbitrary wards keys. StarGuard binds selected codehash/deadline/isExecutable and after execution checks only its own ward remains; it does not freeze other ward keys. maxDelay is a maximum deadline, not a minimum delay. ESM's denyProxy is restrictive, not generic SubProxy exec. The already-retained DSPause delayed governance route and one historical delegated spell do not certify every live root or universal clock. Missing independently complete creation-to-pin nested delegated call/runtime/storage evidence, recovered exhaustive ward key set and all-root governance/execution-clock closure. Preserve original sidecar dates, immutable asset-funded VaultV2 issuance and exact existing B; no incident absence, complete certificate or new B/C is authored.",
+      "changeRefs": [
+        "agents/curation-campaign/results/P3SparkMint.md",
+        "agents/curation-campaign/evidence/P3SparkMint-subproxy-authority-pin.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:economic-control:mint",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Complete independently reviewed SubProxy creation-to-pinned-block nested delegated call/runtime/storage-write census and exhaustive same-pin ward/root/execution-clock reconciliation; otherwise review by 2026-11-11.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:xmd-metal-dollar",
+      "taskIds": [
+        "V9G-35504f3ee76d3bde"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:10:44Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P4XMD)",
+      "evidence": [
+        "https://metaldollar.com/reserves",
+        "https://metaldollar.com/developers",
+        "https://metallicus.com/metal-dollar",
+        "https://cdn.metallicus.com/Metal_Dollar_Whitepaper_v1.1.pdf",
+        "https://cdn.metallicus.com/Metal_L2_Proposal.pdf",
+        "https://cdn.metallicus.com/Q2_2025_Metallicus_Report.pdf",
+        "https://help.xprnetwork.org/hc/en-us/articles/4409934823447-How-do-I-deposit-crypto-from-an-external-wallet-into-my-WebAuth-com-Wallet-using-the-Bridge",
+        "https://docs.paxos.com/guides/stablecoin/pyusd",
+        "https://www.paxos.com/pyusd-transparency"
+      ],
+      "rationale": "Issuer sources distinguish XPYUSD in xmd.treasury from upstream PYUSD issued by Paxos for PayPal. They do not establish the exact xtokens wrapper's escrow backing or a new complete historical treasury composition. Prior W2/W4 local issuer xtokens evidence is explicitly unpinned and is not refreshed here. The current live XPYUSD row has no sourceKey, while classification-only sidecar matching requires a live key and the strict XPR descriptor accepts only symbol/name/risk. The historical 2026-08-20 sidecar contains only XUSDC and MPD. A new positive XPYUSD percentage would lack historical evidence; an invented zero/key row would not join current output safely. Defer until an exact pinned local token identity and stable live-category metadata join are available, or a complete independently dated admissible composition supports the existing full-composition join. Preserve the exact existing B without date-bumping or substituting Paxos as local wrapper obligor. Canonical bridge backing is a separate prerequisite for any upstream dependency claim, not an invented condition of issuer-only classification.",
+      "changeRefs": [
+        "agents/curation-campaign/results/P4XMD.md",
+        "agents/curation-campaign/ts-fragments/P4XMD.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "xmd-metal-dollar:gap:reserve:reserve:2bab8d4bdab7f903f0a643d6:obligorConcentration",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Exact block-pinned XPYUSD/xtokens issuer evidence and stable keyed XPR live-category classification support become available, or an independently dated complete admissible treasury composition is published; otherwise review 2026-11-10.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:susdai-usd-ai",
+      "taskIds": [
+        "V9G-c21e80fa823f604c"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:59:15Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P5SUSDai)",
+      "evidence": [
+        "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
+        "https://api.usd.ai/swagger/swagger-ui-init.js",
+        "https://api.usd.ai/usdai/loans/42161/15643b8e-babe-4734-b0ef-005136a8e881/schedule",
+        "https://api.usd.ai/usdai/loans/42161/d66748c9-9fed-4609-9746-42cf5e2b4e30/schedule",
+        "https://api.usd.ai/usdai/loans/42161/e02d3500-623d-431c-aede-d3dd1ae217b7/schedule",
+        "https://api.usd.ai/usdai/loans/42161/c2860a8c-55d3-4072-8dff-5c985a8a2d82/schedule",
+        "https://api.usd.ai/usdai/dashboard/loan-snapshot",
+        "https://api.usd.ai/usdai/dashboard/topline",
+        "https://docs.usd.ai/borrower/onchain-offchain-interplay.md",
+        "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xEd498401a356988FcFE583345b4bABd81d369fac",
+        "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+      ],
+      "rationale": "Retrieved all 26 identity-bearing DEAL schedule responses. Twenty share-bearing active loans have exact schedule.totalPrincipal-to-index.totalRemainingAmount joins, totaling USD 177410046.848327226447153860 gross; their observed latest deadline is 2029-10-02T00:00:00Z, diagnostically 1087 remaining days rounded upward from the roster observation at 2026-10-11T11:53:28Z. This is not a contractual or whole-slice bound. Six positive-amount unweighted rows are status 0 Uninitialized with zero schedule principal and epoch-relative due dates; three hold USD 133460513.10 offchain escrow. Current deployed USD 310742951.22247785 approximately reconciles protocol-owned active principal USD 177282438.122477773023895469 plus that escrow, so absence of share weights/initialized schedules does not prove absence of economic exposure. Whole-book remaining maturity requires actual escrow release/start/final-deadline or binding exclusion evidence, explicit treatment of all six pending positions, and a synchronized positive gross denominator including lender-allocation distinctions. Schedule asOf clocks range from 2026-10-10T13:11:52Z to 2026-10-11T11:11:37Z and aggregate source clocks differ. Existing B classification and September 21 sidecar review remain unchanged. Pinned router implementation corroboration does not certify per-loan current state or scope completeness.",
+      "changeRefs": [
+        "agents/curation-campaign/results/P5SUSDai.md",
+        "agents/curation-campaign/evidence/P5SUSDai-reserve-roster-20261011.json",
+        "agents/curation-campaign/evidence/P5SUSDai-loan-schedules-20261011.json",
+        "agents/curation-campaign/evidence/P5SUSDai-aggregate-loan-exposure-20261011.json",
+        "agents/curation-campaign/evidence/P5SUSDai-router-implementation-dwellir.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "susdai-usd-ai:gap:reserve:reserve:cfe7dfa45fd59dabbb50415c:maturity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "By 2026-10-18, or earlier when issuer/API/onchain evidence supplies actual escrow release/start/final maturity dates or binding whole-slice exclusions, plus a same-snapshot reconciled gross roster denominator for every positive economic position.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "ORACLE_PROFILE:hyusd-hylo",
+      "taskIds": [
+        "V9G-9377e01b1d419692",
+        "V9G-28120a6ed0d6aab8"
+      ],
+      "workType": "ORACLE_PROFILE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T12:10:31Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P6HyUSD)",
+      "evidence": [
+        "https://solana-mainnet.g.alchemy.com/v2/",
+        "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-idl/idls/hylo_exchange.json",
+        "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/pyth/feeds.rs",
+        "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/pyth/oracle.rs",
+        "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/lst/stake_pool.rs",
+        "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/lst/sol_price.rs",
+        "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/par_tolerance.rs",
+        "https://learn.sanctum.so/docs/for-developers/deployed-programs.md",
+        "https://hylo-audits.s3.us-east-2.amazonaws.com/Accretion-HyloV2-July2026.pdf",
+        "https://verify.osec.io/status/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
+      ],
+      "rationale": "Exact Alchemy Account Archive reads succeeded at finalized slot 455400000, hash 2Dx6qLz4qicFE1TTQANYLEF66E9zfmj8my885xPzQd8a, timestamp 2026-10-10T21:15:23Z. Official IDL decodes configured SOL/BTC/HYPE price accounts with 10-second interval and 1% confidence ratio; USDC pair serializes 60 seconds, 0.1% confidence and $0.001 par tolerance. Four SDK Pyth price candidates, two registered LST header/stake-pool paths, Hylo admin/ProgramData upgrade authority, and registry-listed SPL/SanctumSplMulti calculator ProgramData authorities are pinned. Account support is no longer missing. However the V2 audit explicitly says exchange build unverified and acknowledges an LST swap omitting stake withdrawal fees; Otter reports HYEXCH not verified with no matched hash/source. Public SDK/IDL is not deployed enforcement proof. UsdcPair stores no oracle address and its IDL does not assert a fixed USDC feed. Actual enforced USDC/canonical feed binding, LST calculator invocation/update validation, complete applicable path census and freshness/confidence/admin behavior remain unestablished without source correspondence. Preserve both existing Bs, limited confidence, unresolved applicability and opaque tier; no new B or inferred protective tier.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/hyusd-hylo.json",
+        "agents/curation-campaign/results/P6HyUSD.md",
+        "agents/curation-campaign/results/P6HyUSD-state-current.json",
+        "agents/curation-campaign/results/P6HyUSD-registry.json",
+        "agents/curation-campaign/results/P6HyUSD-programdata.json",
+        "agents/curation-campaign/results/P6HyUSD-spl-calculator-programdata.json",
+        "agents/curation-campaign/results/P6HyUSD-multi-calculator-programdata.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "hyusd-hylo:gap:economic-control:oracle",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "hyusd-hylo:gap:economic-control:oracle::tier",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Issuer publishes reproducible exact HYEXCH deployed-source verification and complete path/account constraints, including USDC feed and LST calculation/update handling; bind these to pinned ProgramData/registered accounts and re-review all paths. Otherwise recheck 2026-11-10.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:mre7yield-midas",
+      "taskIds": [
+        "V9G-eb27497970c7ccb9"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "evidence": [
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+        "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media"
+      ],
+      "rationale": "Public conditional ten-Business-Day terms are already representable in businessDayTerms and are curated with the Frankfurt calendar plus the exact relevant-bank/clearing-system conditions. The reviewed incorporated base and exact-product Final Terms do not disclose a maximum time to issuer notice or an unconditional settlement bound through market-disruption, underlying-illiquidity and qualified-subordination payment gates. The remaining settlement datum is issuer non-disclosure, not a Pharos schema gap. Promote the researched classification and structured terms only; no unconditional settlement fact or production sentinel closure is claimed.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/P7MidasFusdSettlement.json",
+        "agents/curation-campaign/ts-fragments/P7MidasFusdSettlement.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "mre7yield-midas:gap:exit-route:redemption:redemption:3ff8c831-e444-4d7f-9c8f-95fe2148457e:redemption:mre7yield-midas:offchain-issuer:settlement",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Issuer publishes a binding unconditional end-to-end redemption maximum, with applicable cutoff/calendar and gate treatment; otherwise recheck 2026-11-11.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:mmev-midas",
+      "taskIds": [
+        "V9G-3aa840069ff6f7b7"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "evidence": [
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+        "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf"
+      ],
+      "rationale": "Public conditional ten-Business-Day terms are already representable in businessDayTerms and are curated with the Frankfurt calendar plus the exact relevant-bank/clearing-system conditions. The reviewed incorporated base and exact-product Final Terms do not disclose a maximum time to issuer notice or an unconditional settlement bound through market-disruption, underlying-illiquidity and qualified-subordination payment gates. The remaining settlement datum is issuer non-disclosure, not a Pharos schema gap. This review does not reopen the discontinued mMEV channel or change its suspension, capacity or cost findings. Promote the researched classification and structured terms only; no unconditional settlement fact or production sentinel closure is claimed.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/P7MidasFusdSettlement.json",
+        "agents/curation-campaign/ts-fragments/P7MidasFusdSettlement.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "mmev-midas:gap:exit-route:redemption:redemption:3ff8c831-e444-4d7f-9c8f-95fe2148457e:redemption:mmev-midas:offchain-issuer:settlement",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Issuer publishes a binding unconditional end-to-end redemption maximum, with applicable cutoff/calendar and gate treatment; otherwise recheck 2026-11-11.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:mhyper-midas",
+      "taskIds": [
+        "V9G-c886e13a46f72ece"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "evidence": [
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media"
+      ],
+      "rationale": "The normal one-Business-Day realisation plus five-Business-Day payment stages, Berlin 23:59 CET/CEST cutoff and Frankfurt/relevant-bank definition are curated. The issuer terms condition processing on a 15% aggregate per-settlement-day gate and allow market-disruption valuation/payment postponements and subordinated payment restrictions; they publish no unconditional exact same-notional completion bound through those gates. Conditional terms are not credited by settlement admission; the remaining datum is researched issuer non-disclosure, not uncurated Business Days. Promote the researched classification and structured terms only; no unconditional settlement fact or production sentinel closure is claimed.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/P7MidasFusdSettlement.json",
+        "agents/curation-campaign/ts-fragments/P7MidasFusdSettlement.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "mhyper-midas:gap:exit-route:redemption:redemption:3ff8c831-e444-4d7f-9c8f-95fe2148457e:redemption:mhyper-midas:offchain-issuer:settlement",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Issuer publishes a binding unconditional end-to-end redemption maximum, with applicable cutoff/calendar and gate treatment; otherwise recheck 2026-11-11.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "EXIT_RUNTIME_ROUTE:fusd-finchain",
+      "taskIds": [
+        "V9G-d3c81e2ecebbcb8a"
+      ],
+      "workType": "EXIT_RUNTIME_ROUTE",
+      "resolutionMode": "agent-curation",
+      "decision": "promote",
+      "deferState": null,
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "evidence": [
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md"
+      ],
+      "rationale": "The public three-Hong-Kong-Business-Day universal FUSD-to-USDT target and 08:00 cutoff/next-business-day rollover are curated without substituting 259200 calendar seconds. Review of the exact redemption and cutoff pages found an operational typically/up-to statement, not an unconditional binding payment guarantee. KYC/KYB and funded order are access prerequisites. The remaining settlement maximum is researched issuer non-disclosure, not a calendar representation gap. Promote the researched classification and structured terms only; no unconditional settlement fact or production sentinel closure is claimed.",
+      "changeRefs": [
+        "agents/curation-campaign/fragments/P7MidasFusdSettlement.json",
+        "agents/curation-campaign/ts-fragments/P7MidasFusdSettlement.md"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "fusd-finchain:gap:exit-route:redemption:redemption:3ff8c831-e444-4d7f-9c8f-95fe2148457e:redemption:fusd-finchain:offchain-issuer:settlement",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Issuer publishes a binding unconditional end-to-end redemption maximum, with applicable cutoff/calendar and gate treatment; otherwise recheck 2026-11-11.",
+      "factsClosed": 0
     }
   ]
 }

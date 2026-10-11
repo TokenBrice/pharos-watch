@@ -30,14 +30,14 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Hylo's current V2 documentation names Sanctum SOL-LST accounting plus Pyth SOL/USD, BTC/USD, HYPE/USD and the USDC/USD par gate. Its public SDK publishes exact feed IDs and addresses, freshness and confidence validators, and USDC par-tolerance logic; it also includes ZEC, ONYC, PST and ETH feed candidates beyond the documentation's pool roster. These public materials need a complete identity-bound deployed branch inventory and source/runtime correspondence before a known aggregate tier can be curated. The official address directory still labels the exchange V1 and xBTC TBD. No SDK candidate is asserted to be a live funded branch.",
+    "summary": "Exact Alchemy archive reads at finalized Solana slot 455400000 (hash 2Dx6qLz4qicFE1TTQANYLEF66E9zfmj8my885xPzQd8a; 2026-10-10T21:15:23Z), observed 2026-10-11, corroborate the official SDK v2.0.5 account layouts: state 9cd2sAfbBvKs4SX9YKo4dcjwP3TgTVQ8dT5koshGcDND selects Pyth SOL/USD 7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE; cbBTC pair 8mgw2TsNxTMndWPyswLELw3V2tPrPvtqS7Ex9RyiGhML selects BTC/USD APgzQGGdv2qCgBkX6aHVkrGePtBVDDg68GiqaM7rmtf5; HYPE pair 42GzNWvZ1H1hwXaBZ8mbeVZaSEgh6zMm8BABdS3v1BEB selects HYPE/USD 9dAoWJ5ua81c43ntstN4xyg3Uo9Zt93x7BjCxSc27V6V. All three serialize a 10-second interval and 0.01 confidence-ratio tolerance. USDC pair CMNPACEDebyvNJDgBxRc5fbScF8kmx52ZPBY4Cu4wuwS serializes 60 seconds, 0.001 confidence tolerance and 0.001 par tolerance; SDK candidate USDC/USD account 6HAuqASbHEh4w4REJEUUUCginTLfj1kwCh215ZLtMkrT is independently pinned, but UsdcPair stores no oracle address and the IDL does not establish its enforced deployed binding. All four pinned PriceUpdateV2 accounts are receiver-owned, Full-verified, carry the matching SDK feed IDs and self-named write authorities. Registry 9Mb2Mt76AN7eNY3BBA4LgfTicARXhcEEokTBfsN47noK lists jitoSOL header 8Ri52tZXZehgAHKbx1MQiXhWXXkVsvAL9op6C5HytDKF / SPL pool Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb and hyloSOL header GMC2Q4ukPjiMjnhmxpZHDThQ4znC8oBAdveL62Tcu9rK / SanctumSplMulti pool hy1oDeVCVRDGkxS26qLVDvRhDpZGfWJ6w9AMvwMegwL; both cache epoch-1054 SOL exchange rates. These account/configuration facts do not verify deployed enforcement: Otter's HYEXCH verification status is false with no source/hash match. SDK freshness, confidence, epoch and par validators remain candidate implementation evidence, not a known deployed aggregate tier.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "unresolved",
-      "reviewedAt": "2026-10-09",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane37Reservoir)",
-      "rationale": "Observed 2026-10-09T10:33:04Z: the current official SDK commit 30373ffe5f22b54eeae1edc5d11b9fc642b357e3 publishes SOL, BTC, HYPE and USDC feed identities plus additional ZEC, ONYC, PST and ETH candidates. oracle.rs implements full Pyth verification, publish-time, posted-slot and confidence checks, with configurable interval validation from 1 to 60 seconds; par_tolerance.rs specifies the USDC face-value gate. This is public-but-uncurated branch evidence. A complete deployment-bound account census and source/runtime match remain necessary; neither current parameters nor active branch membership are inferred from SDK constants. Keep applicability unresolved and the tier opaque pending that curation.",
+      "reviewedAt": "2026-10-11",
+      "reviewer": "Sol curation campaign 2026-10-11 (P6HyUSD)",
+      "rationale": "Reviewed 2026-10-11T12:10:31Z. Exact archive state at slot 455400000 now establishes documented SOL/BTC/HYPE configured accounts and serialized oracle settings, the two registered LST headers/pool states, and current authority identities; lack of pinned account-read support is no longer the blocker. HYEXCH ProgramData BA5b6FzvZ77m7MZbsMEVSCFW1x86f7jM98wjcecVwzYN still names upgrade authority GzyhwK4y7EKPEevAMc2TEpgi1Y3znwj14FUzkHmCMiNP (last upgrade slot 447625876), while Hylo state names admin 12DAP8y5XemtK1pJFNMVVnQugt3PUAbZZr9SmyVvy4Ce. The registry's static entries include Sanctum's SPL calculator sp1V4h2gWorkGhVcazBc22Hfo2f5sd7jcjT4EDPrWFF / state 7orJ4kDhn1Ewp54j29tBzUWDFGhyimhYi7sxybZcphHd and SanctumSplMulti calculator ssmbu3KZxgonUtjEMCKspZzxvUQCxAFnyh1rcHUeEDo / state Ehcuy2BzuY9BscqcH2K43tDKqoi6xQHxChtVjzrMfvU8. Exact program/ProgramData reads bind both calculators' upgrade authority to 47SND7bGKvNXrqfP1bjsLCbwTgZhFBzAgmZ42QSkRScz; their actual Hylo invocation, calculator-state enforcement and controller quorum remain unproven. The official IDL assigns oracle/configuration updates to an admin signer but is not executable-source verification. The V2 audit explicitly labels the exchange build unverified and acknowledges an LST swap path omitting stake withdrawal fees; it cannot certify all paths use Sanctum fee-adjusted pricing. Missing exact deployed source correspondence leaves actual account validation, USDC feed binding, LST calculation/update enforcement, freshness/confidence fail-closed behavior and complete applicable-path inventory unresolved. The SDK's four additional exogenous candidates are not promoted to live branches, and no calculator CPI, privileged-control quorum or aggregate protective tier is inferred from names or account layouts.",
       "sources": [
         {
           "label": "Hylo on-chain address directory read 2026-09-04",
@@ -66,11 +66,35 @@
         {
           "label": "Hylo SDK pinned USDC par-tolerance gate",
           "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/par_tolerance.rs"
+        },
+        {
+          "label": "Exact Alchemy account archive pin: slot 455400000, 2026-10-10T21:15:23Z; observed 2026-10-11",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Hylo official SDK v2.0.5 IDL layouts and oracle update signer roles (pinned)",
+          "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-idl/idls/hylo_exchange.json"
+        },
+        {
+          "label": "Hylo SDK SPL stake-pool SOL exchange-rate calculation (not deployed verification)",
+          "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/lst/stake_pool.rs"
+        },
+        {
+          "label": "Hylo SDK LST epoch-bound cache validation (not deployed verification)",
+          "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/lst/sol_price.rs"
+        },
+        {
+          "label": "Otter deployed HYEXCH source verification status: not verified, observed 2026-10-11",
+          "url": "https://verify.osec.io/status/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
+        },
+        {
+          "label": "Sanctum calculator deployment names; exact registry/program authority bindings independently pinned at slot 455400000",
+          "url": "https://learn.sanctum.so/docs/for-developers/deployed-programs.md"
         }
       ]
     },
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane37Reservoir)",
+    "reviewedAt": "2026-10-11",
+    "reviewer": "Sol curation campaign 2026-10-11 (P6HyUSD)",
     "confidence": "limited",
     "sources": [
       {
@@ -108,6 +132,30 @@
       {
         "label": "Hylo SDK pinned USDC par-tolerance gate",
         "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/par_tolerance.rs"
+      },
+      {
+        "label": "Exact Alchemy account archive pin: slot 455400000, 2026-10-10T21:15:23Z; observed 2026-10-11",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Hylo official SDK v2.0.5 IDL layouts and oracle update signer roles (pinned)",
+        "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-idl/idls/hylo_exchange.json"
+      },
+      {
+        "label": "Hylo SDK SPL stake-pool SOL exchange-rate calculation (not deployed verification)",
+        "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/lst/stake_pool.rs"
+      },
+      {
+        "label": "Hylo SDK LST epoch-bound cache validation (not deployed verification)",
+        "url": "https://github.com/hylo-so/sdk/blob/30373ffe5f22b54eeae1edc5d11b9fc642b357e3/hylo-core/src/lst/sol_price.rs"
+      },
+      {
+        "label": "Otter deployed HYEXCH source verification status: not verified, observed 2026-10-11",
+        "url": "https://verify.osec.io/status/HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn"
+      },
+      {
+        "label": "Sanctum calculator deployment names; exact registry/program authority bindings independently pinned at slot 455400000",
+        "url": "https://learn.sanctum.so/docs/for-developers/deployed-programs.md"
       }
     ]
   }

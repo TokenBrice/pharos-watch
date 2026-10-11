@@ -35106,40 +35106,6 @@
       "rationale": "No maturityDaysMax, fixed expiry or governing perpetual/open-ended clause for the USCC fund-share claim is publicly supplied by the issuer fund page, latest linked factsheet, investor terms or public contract documentation. Offering materials are provided to qualified offerees, not linked publicly. Do not substitute underlying dated futures maturities or write zero."
     },
     {
-      "id": "uw-fusd-finchain-57834d6e51705a17",
-      "assetId": "fusd-finchain",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:fusd-finchain:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-04T23:45:20Z",
-      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R27)",
-      "sources": [
-        {
-          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
-          "observedAt": "2026-10-04T23:45:20Z",
-          "datumAsOf": null,
-          "location": "Universal Redemption, completion timing hint",
-          "excerpt": "Redemption is typically completed within 1 business day, but may take up to 3 business days (UTC+8). Redemption may incur fees.",
-          "assertion": "The public universal FUSD-to-USDT completion bound is three business days. Current scalar settlementDelaySec cannot encode Hong Kong business-day/cutoff/holiday semantics; 259200 calendar seconds would misstate the published bound."
-        },
-        {
-          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md",
-          "observedAt": "2026-10-04T23:45:20Z",
-          "datumAsOf": null,
-          "location": "Cut-Off Time, final paragraph",
-          "excerpt": "The daily deadline is 8:00 AM Hong Kong time (UTC+8).",
-          "assertion": "After-cutoff requests roll to the next business day. A business-calendar model is needed before this term can become an exact elapsed-second settlement SLA."
-        }
-      ]
-    },
-    {
       "id": "uw-nbasis-nest-c75e3440f4e6897d",
       "assetId": "nbasis-nest",
       "scope": {
@@ -36023,58 +35989,6 @@
         "https://eservices.mas.gov.sg/fid/institution?term=GoldZip%20Digital%20Pte.%20Ltd."
       ],
       "rationale": "An applicable issuer-level prudential licence, regulated activity and XGZ mint/product-scope join remain undisclosed. The prior MAS outage was overcome: live GoldZip query returns no exact result (only suggested Goldman entities); the longer-name query is broad and is not treated as an exact absence proof. Full litepaper and issuer legal/product disclosures claim only PSPM/MinLaw, whose current official scope expressly excludes other supervision. No prudential scalar or blanket absence of all regimes is inferred."
-    },
-    {
-      "id": "uw-mre7yield-midas-4931b72bf9a84dfa",
-      "assetId": "mre7yield-midas",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mre7yield-midas:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-05T00:10:25Z",
-      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R23)",
-      "sources": [
-        {
-          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
-          "observedAt": "2026-10-05T00:09:48Z",
-          "datumAsOf": "2025-07-17",
-          "location": "2025 governing base prospectus, General Terms 5.3, PDF page 27; expressly incorporated by currently linked mRE7YIELD and mMEV Final Terms",
-          "excerpt": "Tokenholder’s wallet or account within ten Business Days after notice of the exercise of the Issuer \nCall Option by the Issuer or notice of receipt of the Tokenholder Order Request Form by the Issuer.",
-          "assertion": "Public ten-Business-Day payment bound for Greenlisted holders after issuer notice. Current route schema requires integer calendar seconds and cannot retain Business Days/notice prerequisites; owner conversion is required. MEV suspension remains unchanged."
-        }
-      ]
-    },
-    {
-      "id": "uw-mmev-midas-b6aa9dd3d9088393",
-      "assetId": "mmev-midas",
-      "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "settlement",
-        "pillar": "exit",
-        "requiredDatum": "settlement",
-        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mmev-midas:offchain-issuer"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-05T00:10:25Z",
-      "reviewer": "Unknown-resolver wave 3 2026-10-05 (W3R23)",
-      "sources": [
-        {
-          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
-          "observedAt": "2026-10-05T00:09:48Z",
-          "datumAsOf": "2025-07-17",
-          "location": "2025 governing base prospectus, General Terms 5.3, PDF page 27; expressly incorporated by currently linked mRE7YIELD and mMEV Final Terms",
-          "excerpt": "Tokenholder’s wallet or account within ten Business Days after notice of the exercise of the Issuer \nCall Option by the Issuer or notice of receipt of the Tokenholder Order Request Form by the Issuer.",
-          "assertion": "Public ten-Business-Day payment bound for Greenlisted holders after issuer notice. Current route schema requires integer calendar seconds and cannot retain Business Days/notice prerequisites; owner conversion is required. MEV suspension remains unchanged."
-        }
-      ]
     },
     {
       "id": "uw-cumiu-chinaamc-ba0249b25d78b719",
@@ -50856,40 +50770,6 @@
       "rationale": "The successfully retrieved literal mMEV and separate mROX endpoints and current disclosure methodology contain no current complete economically valued standalone mMEV reserve allocation or reconciled token-specific share of the joint strategy. Staleness is recorded separately, and no newer sibling book is substituted for the exact product. Composition and financial-assurance evidence remain unknown."
     },
     {
-      "id": "campaign-Lane08Midas-64c36a6c97f2fa07",
-      "assetId": "mhyper-midas",
-      "scope": {
-        "pillar": "exit",
-        "componentKey": "exit-route",
-        "factorKey": "settlement",
-        "routeKey": "redemption:redemption:ebdf5ef5-e7ab-4b14-87dd-f0807db29fa0:redemption:mhyper-midas:offchain-issuer",
-        "exposureId": null,
-        "requiredDatum": "settlement"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-09T10:36:52Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane08Midas)",
-      "sources": [
-        {
-          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
-          "observedAt": "2026-10-09T10:36:52Z",
-          "datumAsOf": "2026-07-17",
-          "location": "Part A sections 3 and 4, pages 6-7",
-          "excerpt": "Realisation Period 1 Business Day; Redemption Gates 15% of the aggregate number of outstanding mTokens per settlement day",
-          "assertion": "Exact-product normal settlement rules, cutoff 23:59 CET/CEST, USDC output and gates are public; runtime exact same-notional completion remains pending."
-        },
-        {
-          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media",
-          "observedAt": "2026-10-09T10:36:52Z",
-          "datumAsOf": "2026-07-17",
-          "location": "Condition 8.3(c), page 62",
-          "excerpt": "the redemption shall be settled no later than five (5) Business Days following expiry of the period specified in the applicable Final Terms",
-          "assertion": "Business-day semantics and market-disruption/valuation conditions must be retained. Six business days must not become a fabricated calendar-second unconditional SLA."
-        }
-      ]
-    },
-    {
       "id": "campaign-Lane08Midas-3a4fa6495f9f6488",
       "assetId": "mtbill-midas",
       "scope": {
@@ -52759,40 +52639,6 @@
         "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf"
       ],
       "rationale": "Searched the issuer FAIS disclosure, binding holder terms and newly located October 1 Moore report. The issuer identifies FAIS Category I intermediary/CASP authority and a compliance officer, while Moore expressly provides no assurance and performs no internal-control effectiveness testing. These materials disclose neither product-specific prudential supervision nor a qualifying recurring attestation-only mint-supervision process covering all native issuance. Supervision therefore remains researched non-disclosure, not an affirmative none, prudential or attestation-only finding; existing unbounded authority facts are preserved."
-    },
-    {
-      "id": "campaign-lane23-bbqusdc-oracle-profile",
-      "assetId": "bbqusdc-steakhouse-v2",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:oracle"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-09T10:42:52Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane23Steakhouse)",
-      "sources": [
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757",
-          "observedAt": "2026-10-09T10:35:28Z",
-          "datumAsOf": null,
-          "location": "Exact ethereum VaultV2 source and verification metadata",
-          "excerpt": "name: VaultV2; is_verified: true; is_fully_verified: false; is_partially_verified: true.",
-          "assertion": "Exact deployment source is public. Root share-accounting applicability still needs the required independent source/runtime verification; partial verification does not establish a verified exemption."
-        },
-        {
-          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-          "observedAt": "2026-10-09T10:35:28Z",
-          "datumAsOf": null,
-          "location": "TOTAL ASSETS and SHARE PRICE",
-          "excerpt": "Adapters are responsible for reporting to the vault how much their investments are worth at any time, so that the vault can accrue interest or realize losses.",
-          "assertion": "The public implementation describes adapter-derived share NAV; a complete exact-root applicability review is public-source curation, not a missing issuer portfolio disclosure."
-        }
-      ]
     },
     {
       "id": "campaign-lane23-bbqusdc-oracle-feed",
@@ -60885,32 +60731,6 @@
       ]
     },
     {
-      "id": "w4c05-v9g-1b3eefc16b0dce04-20261009",
-      "assetId": "usd3-reserve-protocol",
-      "scope": {
-        "pillar": "backing",
-        "componentKey": "reserve-exposure",
-        "factorKey": "liquidity",
-        "routeKey": null,
-        "exposureId": "reserve:337b1d4c58ef181ab8ca9810",
-        "requiredDatum": "liquidityHorizon"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-09T14:50:40Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
-      "sources": [
-        {
-          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x27f2f159fe990ba83d57f39fd69661764bebf37a",
-          "observedAt": "2026-10-09T14:50:40Z",
-          "datumAsOf": "2026-10-09",
-          "location": "CusdcV3Wrapper withdrawTo: underlyingComet transfer",
-          "excerpt": "IERC20(address(underlyingComet)).safeTransfer(dst, (amount / 10) * 10);",
-          "assertion": "Verified wrapper code and pinned runtime/state establish the wrapper identity and Comet receipt-token output, not native USDC. The public holder-specific sequential wrapper-to-Comet-to-USDC realization and conservative dust handling remain uncurated; separate pinned calls do not persist the wrapper output. No amount realization fraction or horizon is invented."
-        }
-      ]
-    },
-    {
       "id": "w4c05-v9g-524c4f2ad8e103a6-20261009",
       "assetId": "rlusd-ripple",
       "scope": {
@@ -65785,6 +65605,162 @@
         "https://api-prod.midas.app/api/transparency?token=mFONE"
       ],
       "rationale": "Successfully recovered exact-product disclosures and issuer-wide liquidity documentation do not publish funded capacity for the captured standard offchain-issuer route at its USD 3287537.279579105 canonical request. The product requires strategy-manager funding; standard redemptions follow NAV updates and natural underlying settlement. The transparency API's October 11 observation remains dominated by unmapped fund shares, not callable liquidity. Product loading defaults, portfolio NAV, instant pool/sleeve targets and a technical daily mint-token limit are not standard holder-exit capacity. This is researched nondisclosure, not zero capacity or exhaustion; existing settlement C and fee facts remain unchanged."
+    },
+    {
+      "id": "campaign-P7MidasFusdSettlement-mre7yield-midas-settlement-c",
+      "assetId": "mre7yield-midas",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mre7yield-midas:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "sources": [
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": "2025-07-17",
+          "location": "General Terms 1, 5.3, 6.2, 7.3 and 8; PDF pp. 23, 27-28; definitions p.39",
+          "excerpt": "If the Tokenholder is Greenlisted, the Issuer shall transfer the relevant Redemption Amount to the Tokenholder’s wallet or account within ten Business Days after notice of the exercise of the Issuer Call Option by the Issuer or notice of receipt of the Tokenholder Order Request Form by the Issuer. Beforehand, the Tokens are transferred to the Issuer.",
+          "assertion": "The ten-Business-Day term starts only after issuer notice. Business Day depends on relevant Clearing Systems, relevant commercial banks and/or Frankfurt banks; condition 6 postpones valuation, condition 7.3 postpones fixing/payment for underlying illiquidity by the necessary number of days, and condition 8 restricts subordinated payments. No unconditional request-to-completion bound is disclosed."
+        },
+        {
+          "url": "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": "2025-07-17",
+          "location": "Part A contractual terms, pp.1-2",
+          "excerpt": "Product-Specific additional prerequisites for Redemption: none",
+          "assertion": "The exact-product Final Terms incorporate the July 17, 2025 Base Prospectus and do not replace its conditional notice-dependent ten-Business-Day payment rule with an unconditional completion maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+        "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FYUqswmPoBMklqxjG6bwA%2FMidas_Final_Terms_mRE7YIELD_Update_2025.pdf?alt=media"
+      ],
+      "rationale": "Public conditional ten-Business-Day terms are already representable in businessDayTerms and are curated with the Frankfurt calendar plus the exact relevant-bank/clearing-system conditions. The reviewed incorporated base and exact-product Final Terms do not disclose a maximum time to issuer notice or an unconditional settlement bound through market-disruption, underlying-illiquidity and qualified-subordination payment gates. The remaining settlement datum is issuer non-disclosure, not a Pharos schema gap."
+    },
+    {
+      "id": "campaign-P7MidasFusdSettlement-mmev-midas-settlement-c",
+      "assetId": "mmev-midas",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:mmev-midas:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "sources": [
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": "2025-07-17",
+          "location": "General Terms 1, 5.3, 6.2, 7.3 and 8; PDF pp. 23, 27-28; definitions p.39",
+          "excerpt": "If the Tokenholder is Greenlisted, the Issuer shall transfer the relevant Redemption Amount to the Tokenholder’s wallet or account within ten Business Days after notice of the exercise of the Issuer Call Option by the Issuer or notice of receipt of the Tokenholder Order Request Form by the Issuer. Beforehand, the Tokens are transferred to the Issuer.",
+          "assertion": "The ten-Business-Day term starts only after issuer notice. Business Day depends on relevant Clearing Systems, relevant commercial banks and/or Frankfurt banks; condition 6 postpones valuation, condition 7.3 postpones fixing/payment for underlying illiquidity by the necessary number of days, and condition 8 restricts subordinated payments. No unconditional request-to-completion bound is disclosed."
+        },
+        {
+          "url": "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": "2025-07-17",
+          "location": "Part A contractual terms, pp.1-2",
+          "excerpt": "Product-Specific additional prerequisites for Redemption: none",
+          "assertion": "The exact-product Final Terms incorporate the July 17, 2025 Base Prospectus and do not replace its conditional notice-dependent ten-Business-Day payment rule with an unconditional completion maximum."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media",
+        "https://content.gitbook.com/content/MndxFHqGeA4nzBBeKDTV/blobs/uu3D8USyAPPyq1a6Qy7k/Midas_Final_Terms_mMEV_Update_2025.pdf"
+      ],
+      "rationale": "Public conditional ten-Business-Day terms are already representable in businessDayTerms and are curated with the Frankfurt calendar plus the exact relevant-bank/clearing-system conditions. The reviewed incorporated base and exact-product Final Terms do not disclose a maximum time to issuer notice or an unconditional settlement bound through market-disruption, underlying-illiquidity and qualified-subordination payment gates. The remaining settlement datum is issuer non-disclosure, not a Pharos schema gap. This review does not reopen the discontinued mMEV channel or change its suspension, capacity or cost findings."
+    },
+    {
+      "id": "campaign-P7MidasFusdSettlement-mhyper-midas-settlement-c",
+      "assetId": "mhyper-midas",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "settlement",
+        "routeKey": "redemption:redemption:ebdf5ef5-e7ab-4b14-87dd-f0807db29fa0:redemption:mhyper-midas:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "settlement"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "sources": [
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": "2026-07-17",
+          "location": "Part A General Product Terms and section 3, pp.3,6",
+          "excerpt": "Order Cut-Off Time: 23:59 CET/CEST; Realisation Period: 1 Business Day; Redemption Gates: 15% of the aggregate number of outstanding mTokens per settlement day",
+          "assertion": "These are the exact USDC-output standard route’s normal timing and gates, not a guarantee that any requested notional clears in the normal six-Business-Day window."
+        },
+        {
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": "2026-07-17",
+          "location": "Definitions p.43; conditions 8.1, 8.3(c), 12.2-12.5 and 14, pp.61-62,65-69",
+          "excerpt": "the redemption shall be settled no later than five (5) Business Days following expiry of the period specified in the applicable Final Terms (the “Realisation Period”).",
+          "assertion": "Business Day excludes Saturday/Sunday and requires relevant commercial banks and/or Frankfurt banks open. Redemption gates and market-disruption postponements/fallback valuations can delay the start or payment; condition 12.4 pays five Business Days after postponed/fallback valuation and condition 14 restricts subordinated payments. No unconditional initial-request-to-completion maximum is disclosed."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media",
+        "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media"
+      ],
+      "rationale": "The normal one-Business-Day realisation plus five-Business-Day payment stages, Berlin 23:59 CET/CEST cutoff and Frankfurt/relevant-bank definition are curated. The issuer terms condition processing on a 15% aggregate per-settlement-day gate and allow market-disruption valuation/payment postponements and subordinated payment restrictions; they publish no unconditional exact same-notional completion bound through those gates. Conditional terms are not credited by settlement admission; the remaining datum is researched issuer non-disclosure, not uncurated Business Days."
+    },
+    {
+      "id": "campaign-P7MidasFusdSettlement-fusd-finchain-settlement-c",
+      "assetId": "fusd-finchain",
+      "scope": {
+        "componentKey": "exit-route",
+        "exposureId": null,
+        "factorKey": "settlement",
+        "pillar": "exit",
+        "requiredDatum": "settlement",
+        "routeKey": "redemption:redemption:0db6a449-6523-4957-9f32-394212aff251:redemption:fusd-finchain:offchain-issuer"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-11T11:54:25Z",
+      "reviewer": "Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)",
+      "sources": [
+        {
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": null,
+          "location": "Universal Redemption, process and completion timing hint",
+          "excerpt": "Redemption is typically completed within 1 business day, but may take up to 3 business days (UTC+8). Redemption may incur fees.",
+          "assertion": "The universal FUSD-to-USDT rail publishes a typically/up-to operational timing statement after KYC/KYB, account settings and FUSD-paid order, not an unconditional binding completion guarantee."
+        },
+        {
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md",
+          "observedAt": "2026-10-11T11:54:25Z",
+          "datumAsOf": null,
+          "location": "Daily processing and rollover paragraphs",
+          "excerpt": "Any requests submitted after the deadline will be carried over to the next business day. The daily deadline is 8:00 AM Hong Kong time (UTC+8).",
+          "assertion": "Hong Kong business-day processing and 08:00 rollover are explicit and can be curated with the reviewed Hong Kong banking calendar. The cutoff page does not turn the operational redemption estimate into a binding end-to-end SLA."
+        }
+      ],
+      "searchedSurfaces": [
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
+        "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md"
+      ],
+      "rationale": "The public three-Hong-Kong-Business-Day universal FUSD-to-USDT target and 08:00 cutoff/next-business-day rollover are curated without substituting 259200 calendar seconds. Review of the exact redemption and cutoff pages found an operational typically/up-to statement, not an unconditional binding payment guarantee. KYC/KYB and funded order are access prerequisites. The remaining settlement maximum is researched issuer non-disclosure, not a calendar representation gap."
     }
   ]
 }
