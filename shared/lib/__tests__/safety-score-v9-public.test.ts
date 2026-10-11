@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countV9EvidenceObligations, iterateEvidenceResponsibilityFacts } from "../../types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "../../types/safety-score-v9-public-cause-gaps";
+import { resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   projectV9RoleDependencyPillarLimits,
   type V9ResolvedDependencyInputs,
@@ -411,7 +412,8 @@ describe("Safety Score v9 public projection", () => {
     const evidence = card.scoreTrace.evidenceResponsibility;
     expect(evidence.totalFactCount).toBe(2);
     expect(evidence.facts).toHaveLength(2);
-    expect(evidence.facts[1]![6]).toHaveLength(1);
+    expect(typeof evidence.facts[1]![6]).toBe("number");
+    expect([...iterateEvidenceResponsibilityFacts(evidence)][1]![6]).toHaveLength(1);
     expect(evidence.summaries.find(summary => summary.responsibility === "unresearched"))
       .toMatchObject({ factCount: 1, ...(critical ? { criticalFactCount: 1 } : {}), reasonCodes: ["missing-reserve-composition", "partial-reserve-review"] });
     expect(evidence.summaries.find(summary => summary.responsibility === "unresearched")?.criticalFactCount ?? 0).toBe(Number(critical));
@@ -712,7 +714,7 @@ describe("Safety Score v9 public projection", () => {
         })),
         controlFacts: controls,
       };
-      return SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control.components;
+      return resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card)).breakdowns!.control.components;
     };
     const small = project(2);
     const large = project(40);
@@ -1295,7 +1297,7 @@ describe("Safety Score v9 public projection", () => {
       const response = SafetyScoreV9CurrentResponseSchema.parse(publish([
         fixture("independent", { score: 91.8, grade: "A+" }), input,
       ]));
-      const card = response.cards.find((entry) => entry.id === assetId)!;
+      const card = resolveV9PublicWitnessTexts(response.cards.find((entry) => entry.id === assetId)!);
       const mint = card.breakdowns!.control.components[0]!;
       expect(mint).toMatchObject({
         posture: "unbounded-adverse", score: 25, cause, scoringDisposition: "bounded-uncertainty",
@@ -1365,7 +1367,7 @@ describe("Safety Score v9 public projection", () => {
     input.scoreInput.pillars.backing.reasons = [seamReason, { ...seamReason }];
     input.evidenceReasons = [seamReason, { ...seamReason }];
     input.access = { ...input.access, reasons: [seamReason, { ...seamReason }] };
-    const card = projectSafetyScoreV9Card(input).card;
+    const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(input).card);
     const rendered = { code: reason.code, path: reason.path, message: reason.message };
     expect(card.pillars.backing.reasons).toEqual([rendered]);
     expect(card.evidence.reasons).toEqual([rendered]);
@@ -1392,7 +1394,7 @@ describe("Safety Score v9 public projection", () => {
         })],
       }));
       reasons[1] = { ...seamSecond, path: "backing:mechanism:reserves" };
-      const card = projectSafetyScoreV9Card(input).card;
+      const card = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(input).card);
       const published = target === "pillar" ? card.pillars.backing.reasons
         : target === "evidence" ? card.evidence.reasons : card.accessPosture.reasons;
       expect(published.map(({ code, path, message }) => ({ code, path, message }))).toEqual([
@@ -1552,7 +1554,7 @@ describe("v10.05 published mint process evidence", () => {
     input.control = { ...input.control!, controlFacts: [fact], issuanceFacts,
       components: [{ ...input.control!.components[0]!, controlKeys: [fact.controlKey] }],
       processDiagnostics: isV9OperationallyGovernedIssuanceQualified(fact, V9_CANDIDATE_POLICY_V1.policy.semantic, issuanceFacts).diagnostics };
-    const control = SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card).breakdowns!.control;
+    const control = resolveV9PublicWitnessTexts(SafetyScoreV9CurrentCardSchema.parse(projectSafetyScoreV9Card(input).card)).breakdowns!.control;
     const details = control.components[0]!.controlDetails![0]!;
     expect(details.controlRef).toBe(ref);
     expect(details.diagnostics).toEqual(["runtime-unmatched:keeper-redo"]);
@@ -1571,7 +1573,7 @@ describe("v10.05 published mint process evidence", () => {
     expect(exact).not.toHaveProperty("issuanceFactsRef");
     const stale = input.control.processDiagnostics!.find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!;
     input.control.processDiagnostics = [{ ...stale, issuanceFactsRef: "different-book" }];
-    const unmatched = projectSafetyScoreV9Card(input).card.breakdowns!.control.issuanceSummary!.diagnostics
+    const unmatched = resolveV9PublicWitnessTexts(projectSafetyScoreV9Card(input).card).breakdowns!.control.issuanceSummary!.diagnostics
       .find((diagnostic) => diagnostic.field === "maxAnnualInterestGrowthPpm")!.exemplars[0]!;
     expect(unmatched.evidenceRefCount).toBe(0);
     expect(unmatched.evidenceRefIds).toEqual([]);

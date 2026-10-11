@@ -74,22 +74,51 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "offchain-issuer",
   }),
   {
-    id: "mantrausd-mantra",
+    id: "bnusd-balanced",
     disposition: "defer",
-    reasonCode: "capacity-unpublished",
-    blocker: "The documentary mantraUSD-to-wM path has no fresh enabled-route proof or honest exact-output executable capacity model.",
-    rationale: "Verified MANTRA token and SwapFacility code bind the documentary path from mantraUSD 0xd2b95283011e47257917770d28bb3ee44c849f6f to wM 0x437cc33344a0b27a429f795ff6b469c72698b291 through SwapFacility 0xb6807116b3b1b321a390594e31ecd6e0076f6278. The extension-to-extension path checks permissioning, transfers and unwraps the input, measures received M, then wraps that amount to the recipient atomically without a separate protocol deduction. Approved, non-permissioned extensions, unpaused contracts, holder freeze and allowance checks remain applicable; source verification is not a current enabled-path observation. wM rounding and network gas leave all-in same-notional cost unbounded. Native-M balances and sampled approved-swapper telemetry cannot establish wM output capacity. The whitepaper's conditional T+2 fiat/collateral redemption for onboarded institutions is a separate rail, not a direct-M, USDC or fiat guarantee for this holder conversion.",
-    evidenceNeeded: "Fresh pinned configuration and guard evidence for the exact enabled mantraUSD-to-wM path, plus same-notional wM output capacity, rounding, gas-priced execution and all applicable access checks. No backing balance, native-M telemetry or static full-supply fallback may substitute.",
+    reasonCode: "route-status-unverified",
+    blocker: "The documented ICON legacy-bnUSD to Sonic successor migration has no reviewed end-to-end execution, capacity, complete cost bound or maximum completion time for the tracked legacy token.",
+    rationale: "G56USDV's October 11 source review identifies canonical ICON bnUSD(old) cx88fd7df7ddff82f7cc735c871dc519838cb235bb and distinct Sonic successor 0xe801ca34e19abcbfea12025378d19c4fbe250131. The displayed 1:1 migration rate does not prove zero fees, USDC payout or tracked-old-token executable capacity. The opaque cross-chain path does not establish an atomic stablecoin redemption or an identified withdrawal queue. The December 1 v1 retirement is a future deadline, not a current suspension.",
+    evidenceNeeded: "Source-corresponding current migration execution and guard proof, exact successor identity and valuation, capacity, all-in fees and completed-settlement terms; re-review by November 24, 2026 or earlier on a migration-status notice.",
     evidenceUrls: [
-      "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8",
-      "https://blockscout.mantrascan.io/api/v2/smart-contracts/0xb6807116b3b1b321a390594e31ecd6e0076f6278",
-      "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x21a657d7dae3f33548252d350ebbe48c82c23c3c",
-      "https://docs.m0.org/resources/addresses/m0-platform",
-      "https://docs.m0.org/build/accessing-liquidity",
-      "https://assets.mantrausd.com/whitepaper.pdf",
+      "https://docs.balanced.network/",
+      "https://docs.balanced.network/migrate-assets",
+      "https://raw.githubusercontent.com/icon-project/sodax-sdks/main/packages/sdk/docs/MIGRATION.md",
     ],
-    reviewer: "Sol curation campaign 2026-10-09 (Lane22Stoneyield)",
-    reviewedDate: "2026-10-09",
+    reviewer: "Sol curation campaign 2026-10-11 (G56USDV)",
+    reviewedDate: "2026-10-11",
+    allowedRouteFamilyIfProven: "stablecoin-redeem",
+  },
+  {
+    id: "iusd-initia",
+    disposition: "needs-research",
+    reasonCode: "documentation-insufficient",
+    blocker: "The documented iUSD-to-AUSD, LayerZero-to-Ethereum and USDC-swap composite withdrawal has no reviewed callable end-to-end execution model, current holder eligibility or exact-route capacity and completed-settlement proof.",
+    rationale: "G09USDQ's October 11 FAQ review establishes a documentary holder path and final USDC output, not an atomic stablecoin redemption, identified withdrawal queue or direct Agora issuer claim. Native AUSD0 vault balances and 1:1 AUSD backing cannot establish the downstream bridge and swap. The opaque composite path remains unconfigured without inventing deterministic execution, numeric cost or a completion SLA.",
+    evidenceNeeded: "Exact tracked-iUSD entrypoint and composed bridge/swap identities, current access and guard proof, same-notional executable USDC capacity, all-in deductions and maximum request-to-USDC completion time.",
+    evidenceUrls: [
+      "https://contents.initia.xyz/app/iusd-faq.json",
+      "https://docs.initia.xyz/home/tools/bridge.md",
+      "https://scan.initia.xyz",
+    ],
+    reviewer: "Sol curation campaign 2026-10-11 (G09USDQ)",
+    reviewedDate: "2026-10-11",
+    allowedRouteFamilyIfProven: null,
+  },
+  {
+    id: "usdv-solomon-v2",
+    disposition: "defer",
+    reasonCode: "issuer-terms-missing",
+    blocker: "Approved replacement-USDv counterparties have a documented burn-and-payout design, but no complete approved output registry, source-corresponding current execution, capacity, all-in fee or completion bound.",
+    rationale: "G02KGST's October 11 review identifies the replacement six-decimal Token-2022 mint and published Chancery permission, rate and fee design. Repository source alone does not prove deployed deterministic execution or the selected payout and current permission state. Reserve mints and selected-account backing do not identify approved holder payouts. An offchain-issuer classification would falsely infer USD fiat; an opaque stablecoin-redeem entry violates the existing family contract.",
+    evidenceNeeded: "Current Chancery redemption instruction and approved payout registry, counterparty access and guards, live limits and payout liquidity, numeric all-in fees and completed-settlement terms for the replacement mint.",
+    evidenceUrls: [
+      "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/",
+      "https://raw.githubusercontent.com/SolomonLabs/chancery/main/spec/04_Settlement_Pathways_and_Permissions.md",
+      "https://raw.githubusercontent.com/SolomonLabs/chancery/main/config/networks/mainnet.ts",
+    ],
+    reviewer: "Sol curation campaign 2026-10-11 (G02KGST)",
+    reviewedDate: "2026-10-11",
     allowedRouteFamilyIfProven: "stablecoin-redeem",
   },
   {
@@ -107,24 +136,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     reviewedDate: "2026-10-07",
     allowedRouteFamilyIfProven: "offchain-issuer",
   },
-  reviewedOn("2026-10-07", {
-    id: "bnusd-balanced",
-    disposition: "defer",
-    reasonCode: "route-status-unverified",
-    blocker:
-      "Balanced's current v1 documentation says the original app is no longer supported and must be withdrawn from or migrated before December 1, 2026. The migration guide distinguishes bnUSD(old), used by v1 loans and pools, from the new bnUSD; it does not establish a current stablecoin redemption for the tracked old token.",
-    rationale:
-      "The current guide describes bnUSD(old)-to-new-bnUSD migration 1:1 on ICON, Stellar and Sui, not old-token USDC/USDT redemption. Sonic/SODAX reserve context belongs to a different contract and supply census. Neither migration value nor that inventory can be credited as tracked-old-token exit capacity before the December 1 retirement.",
-    evidenceNeeded:
-      "The active Stability Fund or SODAX route identifier reachable from the tracked ICON contract, plus its pause state, stablecoin balances, redemption limits, fee, and access terms — or a tracked-asset identity update to the current bnUSD deployment.",
-    evidenceUrls: [
-      "https://docs.balanced.network/",
-      "https://docs.balanced.network/migrate-assets",
-      "https://balanced.network/stablecoin/",
-      "https://www.sodax.com/partners/balanced",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
   reviewed({
     id: "btcusd-btcfi",
     disposition: "hard-reject",
@@ -210,19 +221,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "https://isc.money/dashboard",
       "https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics",
     ],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewedOn("2026-10-07", {
-    id: "iusd-initia",
-    disposition: "needs-research",
-    reasonCode: "documentation-insufficient",
-    blocker:
-      "Initia's current generic SkipGo, LayerZero, CCTP and IBC bridge docs identify no tracked-iUSD burn/unlock entrypoint, output or fee. Existing Move vault AUSD0/supply reads measure backing, not a complete holder exit.",
-    rationale:
-      "A proposed iUSD burn, local AUSD0 unlock and downstream Agora redemption combines generic functionality without proving the exact tracked-token path or ledger-bound executable capacity.",
-    evidenceNeeded:
-      "Official iUSD product docs, contract address, holder exit mechanics, underlying asset, fees, and current status.",
-    evidenceUrls: ["https://docs.initia.xyz/home/tools/bridge", "https://scan.initia.xyz"],
     allowedRouteFamilyIfProven: null,
   }),
   reviewedOn("2026-10-07", {
@@ -316,19 +314,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
   reviewedOn("2026-10-07", {
-    id: "spusd-soulpeg",
-    disposition: "defer",
-    reasonCode: "documentation-insufficient",
-    blocker:
-      "Official docs describe SPUSD-to-sUSDC reverse wrapping, while the current product page says one-way/no unwrap. Published wrapper addresses disagree, and neither source closes the tracked-token deployment or a secondary-holder USDC withdrawal.",
-    rationale:
-      "Contradictory wrapper terms must be reconciled before modeling a route. Even reverse conversion into sUSDC does not prove unlocked Venus-backed USDC payout or funded executable capacity.",
-    evidenceNeeded:
-      "Reconciled official terms, exact live wrapper/source and tracked-token identity, secondary-holder lock/access conditions, USDC withdrawal fees and same-run capacity.",
-    evidenceUrls: ["https://docs.soulpeg.io/", "https://soulpeg.io/spusd"],
-    allowedRouteFamilyIfProven: "queue-redeem",
-  }),
-  reviewedOn("2026-10-07", {
     id: "stusd-stoneyield",
     disposition: "needs-research",
     reasonCode: "capacity-unpublished",
@@ -396,17 +381,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://help.app.kava.io/article/15-what-is-kava-mint"],
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
-  reviewedOn("2026-10-07", {
-    id: "usdxl-last",
-    disposition: "defer",
-    reasonCode: "borrower-repay-only",
-    blocker:
-      "Current HypurrFi documentation explicitly says direct redemption from supplementary USDT0 is not enabled. The recovered Last site and a roadmap facility do not establish an active ordinary-holder USDXL gateway.",
-    rationale: "Borrower debt settlement and protocol-owned market liquidity are not general redemption.",
-    evidenceNeeded: "Official ordinary-holder redemption mechanics with capacity, output, fees, and route status.",
-    evidenceUrls: ["https://www.last.net/", "https://hypurrfi.com/", "https://hypurrfi.com/blog-posts/usdxl-position-backed-cdp"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
   reviewed({
     id: "usg-tangent",
     disposition: "hard-reject",
@@ -457,23 +431,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "https://docs.zoth.io/zoth/tech-center/contract-deployments",
     ],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewedOn("2026-10-07", {
-    id: "usdv-solomon-v2",
-    disposition: "defer",
-    reasonCode: "issuer-terms-missing",
-    blocker:
-      "Solomon's replacement USDv docs confirm approved counterparties can burn USDv for an approved payout asset, subject to onboarding, liquidity, operational controls, program terms, and processing windows. They do not enumerate the complete direct-redemption payout set or publish quantitative capacity, fees, or a settlement bound.",
-    rationale:
-      "The replacement Chancery Solana mint is distinct from legacy USDv. The dated backing API covers selected authority accounts, not an approved payout registry or guaranteed institution burn/settlement throughput; USDC/USDG reserve assets and open-market swaps do not identify complete issuer redemption outputs.",
-    evidenceNeeded:
-      "Current Chancery redemption instruction and approved payout registry, counterparty access, live limits and payout liquidity, numeric fees, and processing/settlement terms for the replacement mint.",
-    evidenceUrls: [
-      "https://docs.solomonlabs.org/usdv/acquiring-and-redeeming/",
-      "https://docs.solomonlabs.org/usdv/peg-stability-and-reserves",
-      "https://github.com/SolomonLabs/chancery/blob/main/config/networks/mainnet.ts",
-    ],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewedOn("2026-10-07", {
     id: "zkusd-goal3",

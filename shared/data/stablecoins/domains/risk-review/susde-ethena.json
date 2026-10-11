@@ -111,7 +111,7 @@
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-01",
         "observedBlock": 26095796,
-        "reviewNote": "Pinned ethereum block 26095796: symbol() = sUSDe; decimals() = 18; asset() = USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3; owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Canonical staking shares; the separate Ethereum OFT adapter token() returns this vault address.",
+        "reviewNote": "Pinned ethereum block 26095796: symbol() = sUSDe; decimals() = 18; asset() = USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3; owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Canonical staking shares; the separate Ethereum OFT adapter token() returns this vault address. Supplementary escrow review by Sol curation campaign 2026-10-11 (C19SUSDe), observed 2026-10-11T00:54:51Z: Ethereum block 26160000, hash 0x2d90aeb4d9d143f85dde7c5f8f230072c6f3dcab7879cbdbf5ef9b9458470820, timestamp 2026-10-10T05:40:35Z, confirms adapter 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2 token() = this vault, owner() = 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94 and endpoint() = 0x1a44076050125825900e736c501f859c50fe728c. Vault balanceOf(adapter) = 300651242718604000000000000 raw 18-decimal shares; vault totalSupply() = 969312041424878458344856558 raw shares. Verified inherited OFTAdapter._debit locks these shares by safeTransferFrom and _credit unlocks them; independent-liability total-supply summation would double-count escrow-backed receipts. RateLimiter.amountInFlight decays with time and is not an authenticated undelivered-message balance. These point observations establish neither exhaustive escrow/receipt coverage nor any materialSupplyShare; prior route and whole-profile observation clocks remain unchanged.",
         "sources": [
           {
             "label": "Ethena key addresses",
@@ -128,6 +128,14 @@
           {
             "label": "LayerZero OFT reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          },
+          {
+            "label": "Ethereum verified StakedUSDeOFTAdapter and inherited lock/unlock and rate-limiter source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
+          },
+          {
+            "label": "Pinned Ethereum adapter and vault reads at block 26160000, observed 2026-10-11T00:54:51Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       },

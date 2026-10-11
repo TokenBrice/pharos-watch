@@ -544,6 +544,63 @@ describe("v10.01 cause compilation reserve proof boundaries", () => {
     expect(asset.reserveCompositionEvidenceClass).toBeUndefined();
     expect(asset.reserveCompositionProvenance).toBeUndefined();
     expect(asset.gaps.some((gap) => gap.causeScope?.componentKey === "asset-compilation")).toBe(false);
+    const staleGaps = asset.gaps.filter(gap => gap.observationState === "stale" &&
+      gap.causeScope?.componentKey === "reserve-exposure");
+    expect(staleGaps).toHaveLength(5);
+    for (const gap of staleGaps) {
+      expect(gap).toMatchObject({
+        responsibility: "producer-failed",
+        causeProof: { cause: "A", producerState: "stale-producer", rejectionCode: "reserve-fetch-stale" },
+      });
+      for (const evidenceId of gap.causeProof.evidenceRefIds) {
+        expect(asset.evidence.find(row => row.evidenceId === evidenceId)).toMatchObject({
+          disposition: "rejected", causeBinding: { assetId: "alpha", scope: gap.causeScope },
+        });
+      }
+    }
+  });
+
+  it("does not turn an uncurated subfield into a producer failure when the holding is stale", () => {
+    const original = makeV9FixedInput({ reserves: [{
+      sourceKey: "fixture:cash", name: "Cash", pct: 100, risk: "very-low", assetClass: "cash",
+      liquidityHorizon: "immediate", issuerOrObligor: "custodian:alpha",
+    }] });
+    const fixed = normalizeFixedInput({ ...original, baseInputGenerationId: undefined,
+      liveReserveProvenanceMap: { alpha: { source: "fixture-reserve-api", fetchedAt: 1 } } });
+    const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
+    extension.sources.liveReserves.maxAgeSec = 1;
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    expect(asset.gaps.find(gap => gap.causeScope?.factorKey === "maturity")).toMatchObject({
+      observationState: "missing", responsibility: "unresearched", causeProof: { cause: "U" },
+    });
+    expect(asset.gaps.find(gap => gap.causeScope?.factorKey === "assetClass")?.causeProof.cause).toBe("A");
+  });
+
+  it("does not infer a stale producer from a null fetch budget", () => {
+    const original = makeV9FixedInput({ reserves: [{
+      sourceKey: "fixture:bill", name: "Treasury bills", pct: 100, risk: "very-low", assetClass: "treasury-bill",
+      liquidityHorizon: "immediate", issuerOrObligor: "custodian:alpha",
+    }] });
+    const fixed = normalizeFixedInput({ ...original, baseInputGenerationId: undefined,
+      liveReserveProvenanceMap: { alpha: { source: "fixture-reserve-api", fetchedAt: 1 } } });
+    const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
+    extension.sources.liveReserves.maxAgeSec = null;
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    expect(asset.evidence.find(row => row.evidenceId.startsWith("alpha:reserve:"))!.freshness)
+      .toMatchObject({ state: "not-assessed", maxAgeSec: null });
+    expect(asset.gaps.find(gap => gap.causeScope?.factorKey === "maturity")!.causeProof.cause).toBe("U");
+    expect(asset.gaps.some(gap => gap.causeProof.cause === "A")).toBe(false);
+  });
+
+  it("does not invent a reserve failure from provenance without captured holdings", () => {
+    const original = makeV9FixedInput({ omitLiveReserve: true });
+    const fixed = normalizeFixedInput({ ...original, baseInputGenerationId: undefined,
+      liveReserveProvenanceMap: { alpha: { source: "fixture-reserve-api", fetchedAt: 1 } } });
+    const extension = makeV9Extension({ registryFingerprint: fixed.registryFingerprint });
+    extension.sources.liveReserves.maxAgeSec = 1;
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    expect(asset.reserveExposures).toEqual([]);
+    expect(asset.gaps.find(gap => gap.causeScope?.componentKey === "reserve-composition")!.causeProof.cause).toBe("U");
   });
 });
 
@@ -564,6 +621,32 @@ describe("v10.01 scoped authored reserve causes", () => {
 });
 
 describe("direct backing reserve builder", () => {
+  it("uses the fresh fetch clock for its budget without redating the retained portfolio observation", () => {
+    const original = makeV9FixedInput();
+    const sourceAsOf = original.clockSec - 600;
+    const fixed = normalizeFixedInput({ ...original, baseInputGenerationId: undefined,
+      liveReserveProvenanceMap: { alpha: {
+        source: "fixture-reserve-api", fetchedAt: original.clockSec - 1,
+        reserveObservation: {
+          kind: "portfolio-observation", scopeId: "fixture:portfolio", liabilityBookKey: "fixture:alpha",
+          deploymentRefs: [], reviewer: "fixture", confidence: "verified",
+          sources: [{ url: "https://example.com/portfolio", accessedAtSec: original.clockSec - 1, sha256: "a".repeat(64) }],
+          reviewedAtSec: original.clockSec - 1, expiresAtSec: original.clockSec + 1,
+          sourceGeneration: "fixture:unchanged-portfolio", sourceSha256: "a".repeat(64),
+          completeness: "complete", obligations: [], observedAtSec: sourceAsOf,
+          wholeAssetDenominator: { amount: "100", asOfSec: sourceAsOf, unitBasis: "USD", sourceSha256: "a".repeat(64) },
+        },
+      } },
+    });
+    const context = factBuilderContext(fixed);
+    const result = buildReserves(context);
+    expect(result.reserveExposures[0]!.status.observationState).toBe("known");
+    expect(context.evidence.get(result.reserveExposures[0]!.status.evidenceRefIds[0]!)).toMatchObject({
+      observedAtSec: original.clockSec - 1, freshness: { state: "current" },
+    });
+    expect(fixed.liveReserveProvenanceMap.alpha!.reserveObservation!.observedAtSec).toBe(sourceAsOf);
+  });
+
   it.each([100, 70])("preserves a %s percent holding and leaves unidentified notional explicit", (pct) => {
     const fixed = makeV9FixedInput();
     const cash = { ...fixed.liveReserveMap.alpha![0]!, pct };

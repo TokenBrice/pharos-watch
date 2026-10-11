@@ -125,18 +125,18 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-31",
-      "publishedAt": "2026-08-31",
+      "periodEnd": "2026-08-31",
+      "publishedAt": "2026-09-30",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (ValA36SOFID)",
+      "reviewer": "Sol curation campaign 2026-10-11 (G10SOFID)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte SoFiUSD July 31, 2026 reserve examination (signed August 31, 2026; publication date unverified)",
-          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-7.31.2026.pdf"
+          "label": "Deloitte SoFiUSD August 31, 2026 reserve examination (signed September 30, 2026; observed 2026-10-11T08:39:03Z; publication date unverified)",
+          "url": "https://d32ijn7u0aqfv4.cloudfront.net/wp/wp-content/uploads/raw/SoFiUSD-Stablecoin-Attestation-Report-8.31.2026.pdf"
         },
         {
           "label": "SoFiUSD issuer monthly attestation report archive",

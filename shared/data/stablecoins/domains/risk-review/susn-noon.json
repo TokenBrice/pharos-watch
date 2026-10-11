@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Noon documents Ethereum sUSN as the canonical ERC-4626 wrapper and lock chain: sUSN inventory is locked on Ethereum, destination Hyperlane representations mint on accepted messages, and return transfers burn the representation before Ethereum unlocks the original. The zkSync, Sophon, and Starknet deployments are bridge representations, while Ethereum bridge configuration, pause/correction, upgrade, mailbox/ISM, and destination owner controls are scored here separately from native deposit-gated issuance.",
+    "summary": "Noon documents Ethereum sUSN as the canonical ERC-4626 wrapper and lock chain: sUSN inventory is locked on Ethereum, destination Hyperlane representations mint on accepted messages, and return transfers burn the representation before Ethereum unlocks the original. The zkSync, Sophon, and Starknet deployments are bridge representations, while Ethereum bridge configuration, pause/correction, upgrade, mailbox/ISM, and destination owner controls are scored here separately from native deposit-gated issuance. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: deprecated TAC sUSN 0x5ced7f73b76a555ccb372cc0f0137bec5665f81e is now included with an unresolved route disposition alongside the eight previously catalogued routes. Deprecated Sophon and TAC are not extinguished liabilities: TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 536396304678010128210 atomic sUSN. The documented Ethereum lock address is 0xe24a3dc889621612422a64e6388927901608b91d; independently authenticated historical message/pending accounting and the complete historical receipt/escrow perimeter remain prerequisites to an exhaustive economic partition. A lock-mint representation must not be enrolled as an independent liability or assigned a static supply share. This accounting-scope note does not renew existing control, route or transfer observations.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "manual-review",
@@ -49,6 +49,14 @@
       {
         "label": "Noon current deployment registry; additional sUSN routes and deprecated Sophon, observed 2026-10-09T10:35:23Z by Sol curation campaign 2026-10-09 (Lane46Midas)",
         "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+      },
+      {
+        "label": "Noon deployment registry; deprecated TAC sUSN identity and historical accounting perimeter, observed 2026-10-11T00:50:58Z by Sol curation campaign 2026-10-11 (C08USN)",
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+      },
+      {
+        "label": "Noon specific sUSN lock-mint, burn-unlock and cross-satellite burn-mint architecture, observed 2026-10-11T00:50:58Z by Sol curation campaign 2026-10-11 (C08USN), accounting scope only",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/cross-chain-interoperability.md"
       }
     ],
     "routes": [
@@ -343,6 +351,33 @@
           {
             "label": "Pinned Berachain RPC block 27265554",
             "url": "https://api-berachain-mainnet.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "tac:0x5ced7f73b76a555ccb372cc0f0137bec5665f81e",
+        "destinationChain": "tac",
+        "contractAddress": "0x5ced7f73b76a555ccb372cc0f0137bec5665f81e",
+        "protocol": "Noon TAC deployment; exact current transport unreviewed",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Sol curation campaign 2026-10-11 (C08USN): issuer registry lists this deprecated TAC sUSN address. Pinned https://rpc.tac.build block 26795569, hash 0xc0823095b63e488e3c18155688a5fd0940774413f5bfc658b7c7442f54c32c06, timestamp 2026-10-11T00:51:29Z, observed 2026-10-11T00:51:51.117Z and 2026-10-11T00:52:28.173Z, establishes name Staked USN, symbol sUSN, 18 decimals and totalSupply 536396304678010128210 atomic units. Identity and nonzero supply do not certify current proxy/controller reach, exact canonical escrow linkage, every historical transport lane or authenticated in-flight accounting. No transfer posture or material supply share is inferred from this deployment observation.",
+        "sources": [
+          {
+            "label": "Noon issuer deployment registry; deprecated TAC sUSN",
+            "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+          },
+          {
+            "label": "TAC sUSN verified proxy metadata; current transport not certified",
+            "url": "https://explorer.tac.build/api/v2/smart-contracts/0x5Ced7F73B76A555CCB372cc0F0137bEc5665F81E"
+          },
+          {
+            "label": "Pinned TAC RPC identity and nonzero totalSupply, block 26795569",
+            "url": "https://rpc.tac.build"
           }
         ]
       }

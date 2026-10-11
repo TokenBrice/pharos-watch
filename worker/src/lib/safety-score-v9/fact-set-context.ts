@@ -1,5 +1,6 @@
 import { resolveChainId } from "@shared/types/chain-identity";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import {
   createV9EvidenceReference,
   createV9ClassificationEvidence,
@@ -32,7 +33,7 @@ import {
   V9EvidenceGapClassificationSchema, V9TypedReviewGapClassificationSchema, v9EvidenceCauseScopeKey,
   type V9EvidenceCauseScope, type V9RuntimeProducerVerdict, type V9CauseResolutionDiagnostic,
 } from "@shared/types/safety-score-v9-causes";
-import { createReviewedAssetRegistry } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 import { allocationReviewClockSec as reviewAdmissionClockSec } from "@shared/types/safety-score-v9-allocation";
 
@@ -175,7 +176,33 @@ export function addEvidence(context: AssetBuildContext, evidence: V9EvidenceRefe
   return evidence.evidenceId;
 }
 
-function capturedReserveFailure(context: AssetBuildContext, scope: V9EvidenceCauseScope) {
+function capturedReserveFailure(context: AssetBuildContext, scope: V9EvidenceCauseScope, gap: V9FactGapV3) {
+  // A retained, classified live holding can lose currency through producer age.
+  // Bind that failure to this exact gap; report/research expiry is not a fetch failure.
+  const provenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
+  const source = context.extension.sources.liveReserves;
+  const retainedEvidence = gap.evidenceRefIds.includes(`${context.asset.assetId}:reserve:${scope.exposureId}`)
+    ? context.evidence.get(`${context.asset.assetId}:reserve:${scope.exposureId}`) : undefined;
+  if (scope.pillar === "backing" && scope.componentKey === "reserve-exposure" &&
+      gap.observationState === "stale" && scope.routeKey === null && scope.exposureId !== null &&
+      (context.fixedInput.liveReserveMap[context.asset.assetId]?.length ?? 0) > 0 &&
+      provenance && Number.isFinite(provenance.fetchedAt) && provenance.fetchedAt >= 0 &&
+      provenance.fetchedAt <= context.fixedInput.clockSec &&
+      source.maxAgeSec !== null &&
+      context.fixedInput.clockSec - provenance.fetchedAt > source.maxAgeSec &&
+      retainedEvidence?.freshness.state === "stale" &&
+      retainedEvidence.sourceGenerationId === source.generationId &&
+      retainedEvidence.observedAtSec === provenance.fetchedAt &&
+      retainedEvidence.freshness.maxAgeSec === source.maxAgeSec) {
+    return createRuntimeGapVerdict({
+      assetId: context.asset.assetId, scope, sourceId: provenance.source,
+      sourceGenerationId: context.extension.sources.liveReserves.generationId,
+      observedAtSec: context.fixedInput.clockSec, asOfSec: context.fixedInput.clockSec,
+      producerState: "stale-producer", rejectionCode: "reserve-fetch-stale",
+      reason: `The retained live reserve fetch at ${provenance.fetchedAt} exceeds its ${source.maxAgeSec}s producer budget.`,
+      contentSha256: retainedEvidence.contentSha256,
+    });
+  }
   if (scope.pillar !== "backing" || scope.componentKey !== "reserve-composition" ||
       scope.factorKey !== null || scope.routeKey !== null || scope.exposureId !== null ||
       scope.requiredDatum !== "reserve-composition") return undefined;
@@ -198,15 +225,59 @@ function capturedReserveFailure(context: AssetBuildContext, scope: V9EvidenceCau
         ? latest.sidecarMaterializationSha256 : latest.contentSha256,
     });
   }
-  const provenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
-  const failure = provenance?.reserveObservationFailure;
-  return failure && provenance.fetchedAt <= context.fixedInput.clockSec ? createRuntimeGapVerdict({
-    assetId: context.asset.assetId, scope, sourceId: provenance.source,
+  const compositionProvenance = context.fixedInput.liveReserveProvenanceMap[context.asset.assetId];
+  const failure = compositionProvenance?.reserveObservationFailure;
+  return failure && compositionProvenance.fetchedAt <= context.fixedInput.clockSec ? createRuntimeGapVerdict({
+    assetId: context.asset.assetId, scope, sourceId: compositionProvenance.source,
     sourceGenerationId: `rejected-reserve-observation:${failure.sourceSha256}`,
-    observedAtSec: provenance.fetchedAt, asOfSec: context.fixedInput.clockSec,
+    observedAtSec: compositionProvenance.fetchedAt, asOfSec: context.fixedInput.clockSec,
     producerState: "producer-failed", rejectionCode: failure.reason, reason: failure.reason,
     contentSha256: failure.sourceSha256,
   }) : undefined;
+}
+
+function capturedPegSupplyFailure(context: AssetBuildContext, scope: V9EvidenceCauseScope, gap: V9FactGapV3) {
+  if (scope.pillar !== "backing" || scope.factorKey !== null || scope.routeKey !== null ||
+      scope.exposureId !== null || scope.requiredDatum !== scope.componentKey ||
+      (scope.componentKey !== "peg" && scope.componentKey !== "chain-supply")) return undefined;
+  const peg = context.fixedInput.pegDataById[context.asset.assetId];
+  // An admitted row that exceeds its own evidence budget is a runtime reader
+  // rejection, not an unresearched question. Keep the original clock and budget.
+  for (const id of gap.evidenceRefIds) {
+    const expectedId = scope.componentKey === "peg" ? `${context.asset.assetId}:peg`
+      : id === `${context.asset.assetId}:chain-supply` ? id : `${context.asset.assetId}:aggregate-supply`;
+    if (id !== expectedId || gap.observationState !== "stale") continue;
+    const evidence = context.evidence.get(id);
+    if (evidence?.freshness.state !== "stale" ||
+        evidence.observedAtSec > context.fixedInput.clockSec) continue;
+    return createRuntimeGapVerdict({
+      assetId: context.asset.assetId, scope, sourceId: evidence.sourceId,
+      sourceGenerationId: evidence.sourceGenerationId,
+      observedAtSec: context.fixedInput.clockSec, asOfSec: context.fixedInput.clockSec,
+      producerState: "stale-producer", rejectionCode: `${scope.componentKey}-observation-stale`,
+      reason: `The retained observation at ${evidence.observedAtSec} exceeds its ${evidence.freshness.maxAgeSec}s producer budget.`,
+      contentSha256: evidence.contentSha256,
+    });
+  }
+  if (scope.componentKey !== "peg") return undefined;
+  // Mere absence of a row is not a captured failed attempt. An explicit
+  // unavailable result or a nominal-only source is a producer/reader verdict.
+  if (!peg) return undefined;
+  const nominal = !isObservedPrice(peg) &&
+    (peg.priceSource === "protocol-par" || peg.priceObservedAtMode === "nominal_reference");
+  if (!nominal && peg.currentPriceUnavailable !== true) return undefined;
+  const source = context.extension.sources.peg;
+  if (source.observedAtSec > context.fixedInput.clockSec) return undefined;
+  return createRuntimeGapVerdict({
+    assetId: context.asset.assetId, scope, sourceId: "report-cards-peg-observation-admission",
+    sourceGenerationId: source.generationId,
+    observedAtSec: source.observedAtSec, asOfSec: context.fixedInput.clockSec,
+    producerState: nominal ? "unsupported-reader" : "producer-failed",
+    rejectionCode: nominal ? "peg-nominal-reference-only" : "peg-current-price-unavailable",
+    reason: nominal ? "The producer supplied only a nominal reference, not an observed market price."
+      : "The captured peg producer explicitly reported no usable current price observation.",
+    contentSha256: domainDigest("safety-score-v9.peg-observation-rejection.v1", peg),
+  });
 }
 
 export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
@@ -218,7 +289,7 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
   const exactScopeKey = v9EvidenceCauseScopeKey(context.asset.assetId, scope);
   const captured = context.fixedInput.pipelineGapByAssetId?.[context.asset.assetId]?.find(
     ({ verdict }) => v9EvidenceCauseScopeKey(verdict.assetId, verdict.scope) === exactScopeKey,
-  ) ?? capturedReserveFailure(context, scope);
+  ) ?? capturedReserveFailure(context, scope, gap) ?? capturedPegSupplyFailure(context, scope, gap);
   if (captured) addEvidence(context, captured.evidence);
   const classification = scoped[0];
   let typedReview: unknown;
@@ -560,8 +631,12 @@ export function compileRouteFactorStatuses(
   context: AssetBuildContext,
   route: V9ExitRouteFactV2,
 ): V9AssetFactsV3["exitRoutes"][number] {
+  // A reviewed withdrawn channel has one adverse state witness. Its masked
+  // execution fields are not missing obligations for an operational route.
+  // Keep the placeholders diagnostic; never infer payout terms or capacity.
   const capacityEvidenceTier = route.capacityEvidenceTier ?? "unknown";
   const factorStatuses = { ...route.factorStatuses };
+  if (route.routeSuspension) return { ...route, factorStatuses, capacityEvidenceTier };
   let knownFactorStatus: V9FactStatusV2 | undefined;
   const config = route.lane === "redemption" ? getRedemptionBackstopConfig(context.asset.assetId) : null;
   const reviewed = config?.v9RouteReviewTerms;

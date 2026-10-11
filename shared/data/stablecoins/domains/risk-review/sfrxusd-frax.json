@@ -18,7 +18,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "The 2026-09-21 review covered native sfrxUSD on Ethereum and Fraxtal, 25 other EVM OFTs, and Solana, Aptos and Movement OFT representations. That historical review identified FraxZero mint-on-receipt/burn-on-send semantics and unresolved DVN configuration, enforced options, rate limits and lockbox redemption caps. On 2026-10-09, W3ReadmitFrax added three independently verified 18-decimal deployments and route reviews: Blast, Tempo and Robinhood (including deployed zero-supply Robinhood), bringing the registered inventory to 33. The new pins prove direct OFT token-self/no-approval mechanics and per-chain owner/implementation/admin identities. Tempo and Robinhood point to the Fraxtal sfrxUSD mintable-adapter hub; Blast's probed Ethereum/Fraxtal/Base/Metis/Arbitrum/Optimism peers are zero, so no active Fraxtal route is asserted for Blast. Current issuer documentation calls the Ethereum and Fraxtal sfrxUSD counterparts no-balance mintable adapters, not standard balance-holding adapters; historical canonical control observations below were not re-pinned or date-bumped. Issuer-listed Somnia remains unregistered and unpinnable through the required helper. Whole-asset independent-liability re-admission is withheld; local burn/mint proof is not an exhaustive no-escrow/census-completeness claim.",
+    "summary": "The 2026-09-21 review covered native sfrxUSD on Ethereum and Fraxtal, 25 other EVM OFTs, and Solana, Aptos and Movement OFT representations. That historical review identified FraxZero mint-on-receipt/burn-on-send semantics and unresolved DVN configuration, enforced options, rate limits and lockbox redemption caps. On 2026-10-09, W3ReadmitFrax added three independently verified 18-decimal deployments and route reviews: Blast, Tempo and Robinhood (including deployed zero-supply Robinhood), bringing the registered inventory to 33. The new pins prove direct OFT token-self/no-approval mechanics and per-chain owner/implementation/admin identities. Tempo and Robinhood point to the Fraxtal sfrxUSD mintable-adapter hub; Blast's probed Ethereum/Fraxtal/Base/Metis/Arbitrum/Optimism peers are zero, so no active Fraxtal route is asserted for Blast. Current issuer documentation calls the Ethereum and Fraxtal sfrxUSD counterparts no-balance mintable adapters, not standard balance-holding adapters; historical canonical control observations below were not re-pinned or date-bumped. Supplemental review by Sol curation campaign 2026-10-11 (C40SfrxUSD), observed 2026-10-11T00:51:50Z: the issuer's October 6 configuration discloses a required Frax-operated DVN (2-of-3), contradicting the overview's statement that no DVN is Frax-operated. Its current mesh omits eight registered chains (Mode, Aurora, Berachain, Polygon zkEVM, Scroll, Aptos, Movement and Blast); omission does not prove zero supply, retirement or a complete historical liability census. Issuer-listed Somnia remains unregistered but is now pinnable: block 428575187 (2026-10-03T07:05:37Z) returned 18 decimals, zero totalSupply and owner 0x9527e19f55d1afce9f1e9edcea79552bf41983f9 for 0x00000000fd8c4b8a413a06821456801295921a71. Ethereum block 26165300 and Fraxtal block 42431958 (both 2026-10-10T23:23:47Z) returned zero native sfrxUSD balances at the current Ethereum and Fraxtal mintable adapters and legacy Ethereum lockbox. These exact-account observations are not whole-history no-escrow proof, current deployment supply shares, route controls or authenticated in-flight accounting. Whole-asset independent-liability re-admission remains withheld; the issuer still disclaims native liability for OFTs, and local burn/mint proof is not an exhaustive no-escrow/census-completeness claim.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl6)",
     "confidence": "verified",
@@ -74,6 +74,22 @@
       {
         "label": "Fraxtal sfrxUSD lockbox",
         "url": "https://fraxscan.com/address/0x88aa7854d3b2daa5e37e7ce73a1f39669623a361"
+      },
+      {
+        "label": "Frax pathway configuration, issuer on-chain read date 2026-10-06; supplemental review 2026-10-11T00:51:50Z",
+        "url": "https://docs.frax.com/protocol/crosschain/configuration"
+      },
+      {
+        "label": "Ethereum exact-account balance reads, block 26165300; observed 2026-10-11T00:51:07Z",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Fraxtal exact-account balance reads, block 42431958; observed 2026-10-11T00:51:17Z",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Somnia issuer-listed deployment reads, block 428575187; observed 2026-10-11T00:51:37Z",
+        "url": "https://api.infra.mainnet.somnia.network"
       }
     ],
     "routes": [

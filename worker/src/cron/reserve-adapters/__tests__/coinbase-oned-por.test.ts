@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import onedReserves from "@shared/data/stablecoins/domains/reserves/oned-gennius.json";
+import { defaultV9DependencyEconomicRole } from "@shared/types/dependency-types";
+import { ReserveSliceSchema } from "@shared/types/reserves";
+import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
 import capture from "./fixtures/coinbase-oned-por.json";
 import { COINBASE_ONED_POR_URL, fetchCoinbaseOnedPorReserves, parseCoinbaseOnedPor } from "../coinbase-oned-por";
 
@@ -27,6 +31,17 @@ describe("Coinbase ONED source-native GraphQL reserves", () => {
     });
     expect(result.slices).toEqual([expect.objectContaining({ coinId: "usdc-circle", depType: "wrapper", pct: 100 })]);
     expect(result.metadata).not.toHaveProperty("redemption");
+  });
+  it("preserves identical USDC serial claims on the live and curated fallback paths", () => {
+    const meta = { id: onedReserves.id, reserves: onedReserves.reserves.map((slice) => ReserveSliceSchema.parse(slice)) };
+    const live = deriveEffectiveDependencySet(meta, { liveReserveSlices: parseCoinbaseOnedPor(payload, now).slices });
+    const fallback = deriveEffectiveDependencySet(meta);
+    expect(live.baseSource).toBe("live-reserve");
+    expect(fallback.baseSource).toBe("curated-reserve");
+    expect(live.rejectionReasons).toEqual([]);
+    expect(live.dependencies).toEqual(fallback.dependencies);
+    expect(live.dependencies).toEqual([{ id: "usdc-circle", type: "wrapper", weight: 1 }]);
+    expect(live.dependencies.map((dependency) => defaultV9DependencyEconomicRole(dependency.type!))).toEqual(["serial-claim"]);
   });
   it("rejects schema drift and partial GraphQL data, with stable machine reasons", () => {
     expect(() => parseCoinbaseOnedPor({ data: {} }, now)).toThrow("coinbase-oned-por:schema-drift");

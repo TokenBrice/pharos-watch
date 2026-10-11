@@ -398,23 +398,25 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
     settlementModel: "days",
+    holderEligibility: "verified-customer",
     costModel: fixedFee(0, "Issuer docs describe EURI redemption as fee-free at par"),
     v9RouteReviewTerms: {
       businessDayTerms: {
         businessDays: 5, calendarId: "luxembourg-banking-target",
-        cutoff: { time: null, timezone: "Europe/Luxembourg" },
-        assurance: "binding-guarantee", conditional: true,
-        conditions: ["Completed Tokenholder KYC to Banking Circle's satisfaction", "Receipt of EURI in the Banking Circle Burn Wallet; KYC failure permits suspension"],
-        startEvent: "Receipt of Redemption Request subject to completed KYC and burn-wallet delivery (condition 7.1)",
+        cutoff: { time: null, timezone: "Europe/Luxembourg", basis: "receipt-day" },
+        assurance: "binding-guarantee", conditional: false,
+        conditions: [],
+        accessPrerequisites: ["Completed Tokenholder KYC to Banking Circle's satisfaction", "Receipt of EURI in the Banking Circle Burn Wallet; unresolved KYC is ineligible and may suspend redemption"],
+        startEvent: "Received Redemption Request with completed KYC and burn-wallet delivery; condition 13.1 deems notice received on that day",
       },
-      reviewedAt: "2026-10-05",
-      docs: [sourceRef("EURI governing terms, conditions 1.2 and 7.1", "https://www.eurite.com/wp-content/uploads/2024/07/EUR-TCs-Final-clean.pdf", ["settlement"])],
+      reviewedAt: "2026-10-10",
+      docs: [sourceRef("EURI governing terms, conditions 1.2, 7.1 and 13.1; reviewed by Sol curation campaign 2026-10-11 (K4ExitTermsModel)", "https://www.eurite.com/wp-content/uploads/2024/07/EUR-TCs-Final-clean.pdf", ["settlement", "access"])],
     },
     docs: [
       sourceRefRouteCapacityFees("EURI white paper", "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html"),
     ],
     notes: [
-      "Banking Circle documents redemption at par within five business days after the request and required checks",
+      "Five Luxembourg Business Days after receipt applies only to a completed-KYC holder whose EURI reached the burn wallet. Condition 13.1 specifies receipt-day notice, not an undisclosed intraday cutoff. Calendar admission takes the maximum end-of-day completion over the full reviewed 365-day horizon, including weekends, holidays and DST; no bound is claimed for initial requests with unresolved prerequisites.",
     ],
   },
   ...expandIds(["usdq-quantoz", "eurq-quantoz"], quantozBase),
@@ -474,7 +476,9 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   "usdm-moneta": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    reviewedAt: "2026-10-09",
+    reviewedAt: "2026-10-11",
+    accessModel: "manual",
+    holderEligibility: "whitelisted-primary",
     settlementModel: "days",
     capacityModel: { kind: "unquantified" },
     costModel: {
@@ -504,6 +508,7 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
       "The historical 1-3 business day processing description does not establish a binding completed-payout SLA.",
       "Re-reviewed 2026-10-09: the capped/minimum USD component represents only the issuer burning fee, not independent bank charges. The omitted feeBpsMax keeps all-in cost unresolved. Do not substitute fixedFee(10), add 10 bps again, omit the cap or treat bank charges as zero.",
       "Moneta and NBX issue the same Cardano token against separate reserve books; source terms for one issuer do not prove a complete whole-token route or interchangeable issuer access.",
+      "Access reviewed 2026-10-11T08:41:18Z by Sol curation campaign 2026-10-11 (G62USDA): the rendered current FAQ explicitly limits the live mint/redemption rail to KYB-approved institutions; linked-bank-account redemption for KYC-verified individuals is coming soon. This manual Moneta rail does not establish eligibility for NBX issuance, funded same-notional capacity, a completed-payout SLA or a complete cost bound.",
     ],
   },
   "usdh-native-markets": {

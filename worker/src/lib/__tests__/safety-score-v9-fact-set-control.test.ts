@@ -309,6 +309,27 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(empty.assets[0]!.controlReview).toMatchObject({ state: "partially-reviewed-controls", controls: [expect.objectContaining({ materialSupplyShare: 1 })] });
   });
 
+  it("rejects a bridge tier whose exact research source was not registered", () => {
+    const fixed = exactFixedInput();
+    const extension = structuredClone(buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: metaMap(bridgeMeta([reviewedLockMintRoute("base:0x3333333333333333333333333333333333333333")])),
+    }));
+    const route = extension.assets[0]!.economicControlReview!.bridge.routes[0]!;
+    route.factorStatuses = {
+      tier: { ...v9Status("known", "v9.control.tier"), evidenceRefIds: ["unregistered-tier-source"] },
+    };
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+      fixed, materializeSafetyScoreV9FactSetExtension(fixed, extension),
+    );
+    expect(compiled.quarantines).toEqual([{
+      assetId: "alpha", code: "fact-build-failed",
+      message: `Bridge factor alpha:${route.controlKey} has unknown research evidence unregistered-tier-source`,
+    }]);
+    expect(evaluateV9FactSet(compiled.factSet, V9_CANDIDATE_POLICY_V1).assets[0]!.trace).toMatchObject({
+      ratingStatus: "pipeline-gap", finalGrade: null, finalScore: null,
+    });
+  });
+
   it("applies deployment and common-mode materiality boundaries", () => {
     const threshold = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct / 100;
     const below = materialityFixture(threshold - 0.001);
@@ -665,6 +686,24 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     },
   );
 
+  it.each([["1970-01-01T00:00:00Z", "hardware-wallet"], ["2026-10-10T23:47:08Z", "unknown"]] as const)(
+    "retains an explicit custody gap when the independent hardware review %s cannot enter",
+    (reviewedAt, expected) => {
+      const fixed = exactFixedInput();
+      const metadata = cappedMinterMeta();
+      metadata.mintAuthority!.controls![0]!.keyCustodyAttestation = {
+        kind: "hardware-wallet", reviewedAt, reviewer: "Fixture reviewer", confidence: "issuer-described",
+        rationale: "Exact issuer account keys are documented as hardware-wallet stored, without independent-human or HSM policy certification.",
+        sources: [{ label: "Exact account storage disclosure", url: "https://example.com/custody" }],
+      };
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+      const control = asset.controls.find(row => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
+      expect(control.keyCustody).toBe(expected);
+      expect(control.factorStatuses?.keyCustody?.observationState).toBe(expected === "unknown" ? "missing" : undefined);
+    },
+  );
+
   it.each([undefined, "authority-semantics", "execution-scope", "key-custody-independence"] as const)(
     "admits authored %s question subjects without letting custody-only uncertainty gate native economics",
     (subject) => {
@@ -719,7 +758,18 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
     const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
     const control = asset.controls.find((row) => row.controlKind === "bridge")!;
-    expect(control.status.observationState).toBe("known");
+    // Custody-only uncertainty does not erase route semantics; the independent
+    // incident disposition still needs its own exact negative review.
+    expect(control.status.observationState).toBe("bounded-unknown");
+    expect(control.authority).toMatchObject({ model: "multisig", threshold: { required: 2, total: 6 } });
+    expect(control.incidentState).toBe("unknown");
+    expect(control.factorStatuses?.incidentState).toMatchObject({
+      observationState: "missing",
+      gapIds: [`alpha:gap:control:${control.controlKey}:incidentState`],
+    });
+    expect(asset.gaps.find((gap) => gap.gapId === control.status.gapIds[0])?.reasonCode).toBe(
+      "unresolved-control-identity",
+    );
     expect(control.keyCustody).toBe("unknown");
     expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
   });

@@ -3,23 +3,21 @@
  *
  * The extension builder was one 2,500-line module; the reserve, bridge, and
  * oracle adapters now live in sibling files. This holds what all of them need:
- * the registry-meta projection, the extension-asset aliases, the reviewed-
- * research evidence builder, and the small clock/status helpers. Reviewed
- * evidence uses Worker-native incremental SHA-256 over the shared canonical
- * JSON byte stream.
+ * the registry-meta projection, the extension-asset aliases, and the
+ * small clock/status helpers. Runtime-neutral reviewed evidence construction
+ * lives in shared/lib; Worker consumers inject native incremental SHA-256.
  */
 import { createHash } from "node:crypto";
-import { stableJsonStringifyChunksV1 } from "@shared/lib/stable-json";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import type { V9PublishedEvidenceAttribution } from "@shared/lib/safety-score-v9/evidence";
-import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import type { V9SameChainSystemTransport, V9WeightedQuorum } from "@shared/types/safety-score-v9-control-scope";
-import type { MintAuthorityControl, StablecoinLink, StablecoinMeta } from "@shared/types/core";
+import type { MintAuthorityControl, StablecoinMeta } from "@shared/types/core";
 import type { V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./fact-set-schema";
+import { parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
+import type { ResearchEvidence } from "@shared/types/safety-score-v9-research-evidence";
 
 export type V9ExtensionRegistryMeta = Pick<
   StablecoinMeta,
@@ -50,8 +48,6 @@ export type V9ExtensionRegistryMeta = Pick<
 > &
   Partial<Pick<StablecoinMeta, "flags" | "custodyModel">>;
 export type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
-export type ResearchEvidence = ExtensionAsset["researchEvidence"][number];
-export type ComponentEvidence = ExtensionAsset["componentEvidence"][number];
 export type ControlOverlay = NonNullable<
   Extract<NonNullable<ExtensionAsset["controlReview"]>, { state: "partially-reviewed-controls" }>
 >["controls"][number];
@@ -106,25 +102,14 @@ export const DEPLOYMENT_MATERIAL_SHARE_THRESHOLD =
 // a bounded/diagnostic condition; at or above it the pool stays fail-closed.
 export const COMMON_MODE_MATERIAL_SHARE_THRESHOLD = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.commonModeShareThreshold;
 
-export function parseBoundedDateSec(
-  value: string,
-  clockSec: number,
-  label: string,
-  errorKind: "review-date" | "date" = "review-date",
-): number {
-  const timestampMs = Date.parse(value.includes("T") ? value : `${value}T00:00:00.000Z`);
-  const review = errorKind === "review-date";
-  if (!Number.isFinite(timestampMs)) {
-    throw new Error(`Safety Score v9 ${label} has an invalid ${review ? "review date" : "date"}`);
-  }
-  const timestampSec = Math.floor(timestampMs / 1_000);
-  if (timestampSec > clockSec) {
-    throw new Error(`Safety Score v9 ${label}${review ? " review" : ""} is later than the scoring clock`);
-  }
-  return timestampSec;
-}
 
 export const isoDateStartSec = parseBoundedDateSec;
+
+export function nativeReviewEvidenceDigest(chunks: Iterable<string>): string {
+  const hash = createHash("sha256");
+  for (const chunk of chunks) hash.update(chunk);
+  return hash.digest("hex");
+}
 
 export function confidenceForResearch(
   value: "verified" | "probable" | "manual-review" | "limited" | "unknown" | undefined,
@@ -132,105 +117,6 @@ export function confidenceForResearch(
   return value ?? "manual-review";
 }
 
-export class ReviewEvidenceBuilder {
-  readonly evidence = new Map<string, ResearchEvidence>();
-  readonly bindings = new Map<string, Set<string>>();
-
-  constructor(
-    private readonly assetId: string,
-    private readonly clockSec: number,
-  ) {}
-
-  add(args: {
-    componentKeys: readonly string[];
-    sourceId: string;
-    reviewedAt?: string;
-    reviewedAtSec?: number;
-    observedAtSec?: number;
-    observedAt?: string;
-    publishedAt?: string;
-    publishedBy?: V9PublishedEvidenceAttribution;
-    confidence?: ResearchEvidence["confidence"];
-    sources?: readonly StablecoinLink[];
-    payload: unknown;
-    maxAgeSec?: number | null;
-  }): string[] {
-    if ((args.reviewedAt == null) === (args.reviewedAtSec == null)) {
-      throw new Error("Review evidence requires exactly one reviewed date or timestamp");
-    }
-    const reviewSec = args.reviewedAtSec ?? parseBoundedDateSec(args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:reviewed`);
-    const observedAtSec = args.observedAtSec ?? (args.reviewedAtSec != null
-      ? args.reviewedAtSec
-      : parseBoundedDateSec(args.observedAt ?? args.reviewedAt!, this.clockSec, `${this.assetId}:${args.sourceId}:observed`));
-    if (args.reviewedAtSec != null || args.observedAtSec != null) {
-      for (const timestamp of [reviewSec, observedAtSec]) {
-        if (!Number.isSafeInteger(timestamp) || timestamp < 0 || timestamp > this.clockSec) {
-          throw new Error("Review evidence timestamp is invalid or later than the scoring clock");
-        }
-      }
-      if (observedAtSec > reviewSec) throw new Error("Evidence observation cannot postdate review");
-    }
-    const publishedAtSec = args.publishedAt
-      ? parseBoundedDateSec(args.publishedAt, this.clockSec, `${this.assetId}:${args.sourceId}:published`)
-      : null;
-    const sources = args.sources?.length
-      ? [...args.sources].sort(
-          (left, right) => compareText(left.url, right.url) || compareText(left.label, right.label),
-        )
-      : [null];
-    const evidenceKeys = sources.map((source, index) => {
-      const hash = createHash("sha256");
-      for (const chunk of stableJsonStringifyChunksV1({
-        domain: "safety-score-v9.reviewed-metadata-evidence.v2",
-        payload: {
-          assetId: this.assetId,
-          sourceId: args.sourceId,
-          reviewedAt: args.reviewedAtSec ?? args.reviewedAt,
-          observedAt: args.observedAtSec ?? args.observedAt ?? args.reviewedAtSec ?? args.reviewedAt,
-          publishedAt: args.publishedAt ?? null,
-          publishedBy: args.publishedBy ?? "unknown",
-          confidence: args.confidence ?? "manual-review",
-          source,
-          payload: args.payload,
-        },
-      })) hash.update(chunk);
-      const contentSha256 = hash.digest("hex");
-      const evidenceKey = `${args.sourceId}:${index}:${contentSha256.slice(0, 16)}`;
-      this.evidence.set(evidenceKey, {
-        evidenceKey,
-        sourceId: args.sourceId,
-        observedAtSec,
-        publishedAtSec,
-        ...(args.publishedBy === undefined ? {} : { publishedBy: args.publishedBy }),
-        url: source?.url ?? null,
-        contentSha256,
-        confidence: args.confidence ?? "manual-review",
-        maxAgeSec: args.maxAgeSec ?? null,
-      });
-      return evidenceKey;
-    });
-    for (const componentKey of args.componentKeys) {
-      const binding = this.bindings.get(componentKey) ?? new Set<string>();
-      for (const evidenceKey of evidenceKeys) binding.add(evidenceKey);
-      this.bindings.set(componentKey, binding);
-    }
-    return evidenceKeys;
-  }
-
-  finish(): { researchEvidence: ResearchEvidence[]; componentEvidence: ComponentEvidence[] } {
-    return {
-      researchEvidence: [...this.evidence.values()].sort((left, right) =>
-        compareText(left.evidenceKey, right.evidenceKey),
-      ),
-      componentEvidence: [...this.bindings.entries()]
-        .sort(([left], [right]) => compareText(left, right))
-        .map(([componentKey, evidenceKeys]) => ({
-          componentKey,
-          evidenceKeys: [...evidenceKeys].sort(compareText),
-        })),
-    };
-  }
-}
 
 export function requiredStatus(
   policyRuleId: string,
@@ -293,6 +179,19 @@ export function conservativeDateEndSec(value: string | undefined, clockSec: numb
   if (!Number.isFinite(timestampMs)) return null;
   const timestampSec = Math.floor(timestampMs / 1_000);
   return timestampSec <= clockSec ? timestampSec : null;
+}
+
+/** Hardware storage has its own review clock; it never inherits an older control pin. */
+export function reviewedKeyCustody(
+  attestation: MintAuthorityControl["keyCustodyAttestation"],
+  clockSec: number,
+): ControlOverlay["keyCustody"] {
+  if (!attestation) return "unknown";
+  if (attestation.kind !== "hardware-wallet") return attestation.kind;
+  const reviewSec = conservativeDateEndSec(attestation.reviewedAt, clockSec);
+  if (reviewSec === null || clockSec - reviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC) return "unknown";
+  if (attestation.reviewedAt?.length === 10 && reviewSec + 86_400 > clockSec) return "unknown";
+  return "hardware-wallet";
 }
 
 export function accessEvidenceObservationState(reviewedAt: string, clockSec: number): "current" | "stale" {

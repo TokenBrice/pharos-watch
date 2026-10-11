@@ -8,6 +8,7 @@ import { SafetyScoreV9CommonModeGroupsSchema } from "@shared/types/safety-score-
 import { projectSafetyScoreV9CommonModeGroups } from "@shared/lib/safety-score-v9/public";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { structuralSignalNeedsHardCap } from "@shared/lib/safety-score-v9/formula";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
 function replay() {
   const fixedInput = createReportCardsFixedInput(capture.draft as unknown as ReportCardsFixedInputDraft);
@@ -50,7 +51,7 @@ describe("V9 common-mode publication", () => {
       });
       expect((group.pricedEffects ?? []).map((effect) => effect.assetId)).toEqual(expectedPricedAssetIds);
       for (const effect of group.pricedEffects ?? []) {
-        const card = report.cards.find((asset) => asset.id === effect.assetId)!;
+        const card = resolveV9PublicWitnessTexts(report.cards.find((asset) => asset.id === effect.assetId)!);
         expect(effect.capIndices.length > 0 || effect.deploymentAdjustmentIndices.length > 0).toBe(true);
         for (const index of effect.capIndices) {
           expect(card.caps[index]).toMatchObject({ source: "structural" });
@@ -67,9 +68,23 @@ describe("V9 common-mode publication", () => {
     }
   });
 
+  it("preserves exact priced-effect references for interned and resolved cap reasons", () => {
+    const { pipeline, report } = replay();
+    expect(report.cards.some((card) => card.caps.some((cap) => cap.reason.startsWith("~")))).toBe(true);
+    const results = pipeline.evaluatedSet.assets.map((asset) => ({ ...asset, policy: V9_CANDIDATE_POLICY_V1 }));
+    const expected = projectSafetyScoreV9CommonModeGroups(
+      pipeline.evaluatedSet.dependencyPlan.commonModeGroups, results,
+      report.cards.map((card) => resolveV9PublicWitnessTexts(card)),
+    );
+    expect(projectSafetyScoreV9CommonModeGroups(
+      pipeline.evaluatedSet.dependencyPlan.commonModeGroups, results, report.cards,
+    )).toEqual(expected);
+    expect(report.commonModeGroups).toEqual(expected);
+  });
+
   it("marks and warns about price references lost after cap copy changes without holding publication", () => {
     const { pipeline, report } = replay();
-    const cards = structuredClone(report.cards);
+    const cards = report.cards.map((card) => structuredClone(resolveV9PublicWitnessTexts(card)));
     for (const card of cards) {
       for (const cap of card.caps) if (cap.source === "structural") cap.reason = "Updated presentation wording.";
       if (card.bindingCap?.source === "structural") card.bindingCap.reason = "Updated presentation wording.";

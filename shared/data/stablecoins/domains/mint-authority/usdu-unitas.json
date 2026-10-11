@@ -202,6 +202,14 @@
           {
             "label": "Pinned native minter/token/runtime observation, BSC 126630645/hash 0x4026791653e6dc8fa9dcabc7d1a5ab3c987f8d84e21d8253d8857fe9d344954c, 2026-10-09T11:49:27Z; observed 2026-10-09T11:49:29.058Z",
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Sol curation campaign 2026-10-11 (C22USDU): USDu.minter() still binds this contract. BSC 126926549/hash 0x597ea7b69c5ce09f89979570db92a97b066a6f986ef8806f48f9aa95d63fe49f, 2026-10-11T00:49:26Z; observed 2026-10-11T00:52:31.431Z. Authorization only; does not refresh the historical role census or close the partial execution certificate.",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Sol curation campaign 2026-10-11 (C22USDU): UnitasMintingV2.owner() is 0x0a6db8e8f0b79ba5b9f5ac7f5728843b830bb1c8 at BSC 126926549/hash 0x597ea7b69c5ce09f89979570db92a97b066a6f986ef8806f48f9aa95d63fe49f, 2026-10-11T00:49:26Z; observed 2026-10-11T00:50:15.380Z. Owner identity only; Safe signing and execution closure are not re-observed.",
+            "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ]
       },

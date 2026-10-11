@@ -198,6 +198,11 @@ describe("redemption backstop config consistency", () => {
     expect(violations).toEqual([]);
   });
 
+  it.each(["usdv-solomon-v2", "iusd-initia", "bnusd-balanced"])(
+    "does not coerce %s's opaque composite into another configured execution family",
+    (id) => expect(getRedemptionBackstopConfig(id)).toBeNull(),
+  );
+
   it("every route family has at least one configured coin", () => {
     const families: RedemptionRouteFamily[] = [
       "stablecoin-redeem",

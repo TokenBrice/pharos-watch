@@ -158,6 +158,12 @@ receives a new identity.
 - Every overlay entry carries `reviewedAt` (ISO date of the evidence pin), descriptive
   source labels, and notes stating what was measured, at what timestamp/block, and why each
   grade was assigned.
+- A changed component may carry its own `review` with `reviewedAt`, `reviewer`,
+  `rationale` and primary `sources`. Its sources must also occur in the overlay
+  source list (and its applicability source, if any, in its own review). That
+  component uses its own elapsed-day/expiry gate and evidence reference; never
+  replace the global date to renew untouched metrics, measurements or siblings.
+  A component-only review does not extend an expired whole overlay's admission.
 - Date-only overlay claims become score-bearing only after the reviewed UTC day has elapsed.
   During that day the admission gap is method-owned; clocks before the review date receive
   neither the future overlay nor its disposition.

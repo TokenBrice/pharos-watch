@@ -14,7 +14,7 @@ import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fa
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 
-const now = Date.UTC(2026, 9, 10, 12) / 1_000;
+const now = Date.UTC(2026, 9, 12, 12) / 1_000;
 const supplyUsd = 100_000_000;
 const db = {} as D1Database;
 const eventualClaims = [
@@ -24,6 +24,7 @@ const eventualClaims = [
   ["eurw-newrails", "institutional-eligible"],
   ["usdsm-stable-mint", "institutional-eligible"],
   ["usdu-universal", "allowlisted"],
+  ["zaru-blocktower", "allowlisted"],
 ] as const;
 
 function fixedInput(row: RedemptionBackstopEntry): ReportCardsFixedInput {
@@ -85,6 +86,77 @@ function assertConsumerGaps(row: RedemptionBackstopEntry) {
 }
 
 describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
+  it("withdraws only the reviewed ordinary YieldFi yUSD channel even with retained positive telemetry", () => {
+    const id = "yusd-yieldfi";
+    const config = getRedemptionBackstopConfig(id)!;
+    const profile = {
+      scoringUsd: 10_000_000, scoringHorizon: "immediate" as const,
+      capacityProfileConfidence: "documented-bound" as const, modeledExitSizeUsd: 5_000_000,
+    };
+    const observation = buildRedemptionExitRouteObservation({
+      stablecoinId: id, config, capacityProfile: profile,
+      scoringCapacityUsd: 10_000_000, supplyUsd, routeStatus: "suspended",
+      resolutionState: "resolved", sourceMode: "static", capacityConfidence: "documented-bound",
+      resolvedFeeBps: 0, now,
+    })!;
+    expect(observation.scoreEligible).toBe(false);
+    const row = makeSupplyFullRedemption({
+      stablecoinId: id, updatedAt: now, routeFamily: config.routeFamily,
+      accessModel: config.accessModel, settlementModel: config.settlementModel,
+      executionModel: config.executionModel, routeStatus: "suspended",
+      capacityProfile: { ...profile, exitRouteObservations: [observation] },
+      docs: { ...config.docs![0], reviewedAt: config.reviewedAt },
+    });
+    const reviews = buildSafetyScoreV9RouteReviews(fixedInput(row), id);
+    expect(reviews).toHaveLength(1);
+    expect(reviews[0]).toMatchObject({
+      routeId: "redemption:yusd-yieldfi:stablecoin-redeem",
+      coverageClass: "diagnostic", physicalResourceKeys: [],
+      routeSuspension: { routeId: "redemption:yusd-yieldfi:stablecoin-redeem", reviewedAt: "2026-10-11" },
+    });
+    const draft = makeV9FixedInput({ assetId: id, clockSec: now });
+    draft.redemptionBackstopMap = { [id]: row };
+    draft.redemptionStale = false;
+    draft.redemptionGenerationId = "redemption:wave-g";
+    draft.inputFreshness.redemptionBackstops = { updatedAt: now, ageSeconds: 0, stale: false };
+    const fixed = rebuildFixed(draft);
+    const extension = structuredClone(makeV9Extension({ assetId: id, clockSec: now, registryFingerprint: fixed.registryFingerprint }));
+    extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, id);
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const evaluated = evaluateV9Exit({
+      circulatingUsd: asset.supply.circulatingUsd,
+      routes: asset.exitRoutes.filter((route) => route.lane === "redemption").map(projectV9ExitEvaluationRoute),
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(evaluated.primaryRouteKey).toBeNull();
+    expect(evaluated.diversificationRouteKey).toBeNull();
+    const withIndependentDex = evaluateV9Exit({
+      circulatingUsd: asset.supply.circulatingUsd,
+      routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(withIndependentDex.primaryRouteKey).toMatch(/^dex:/);
+  });
+
+  it("keeps unavailable wave-G capacity absent despite documented holder access and outputs", async () => {
+    for (const id of ["mantrausd-mantra", "spusd-soulpeg", "usdxl-last", "usdm-moneta"]) {
+      const { capacity, row } = await resolve(id);
+      expect(capacity).toMatchObject({
+        resolutionState: "missing-capacity",
+        immediateCapacityUsd: null, scoringCapacityUsd: null, eventualCapacityUsd: null,
+      });
+      expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput(row), id)).toEqual([]);
+    }
+  });
+
+  it.each(["usdv-solomon-v2", "iusd-initia", "bnusd-balanced"])(
+    "does not create retained routes for the unconfigured %s composite path",
+    (id) => {
+      expect(getRedemptionBackstopConfig(id)).toBeNull();
+      const fixed = { ...fixedInput(makeSupplyFullRedemption()), redemptionBackstopMap: {} };
+      expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixed, id)).toEqual([]);
+      expect(buildSafetyScoreV9RouteReviews(fixed, id)).toEqual([]);
+    },
+  );
+
   it.each(eventualClaims)("documents %s without immediate/scoring promotion or broader holder access", async (id, holderAccess) => {
     const { capacity, row } = await resolve(id);
     expect(capacity).toMatchObject({
@@ -117,7 +189,7 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
     expect(buildSafetyScoreV9RetainedRedemptionRoutes(fixedInput(row), id)).toEqual([]);
   });
 
-  it.each(["xgz-goldzip", "zaru-blocktower", "stbt-matrixdock", "gldy-streamex"])(
+  it.each(["xgz-goldzip", "stbt-matrixdock", "gldy-streamex"])(
     "does not convert %s supply/backing/token quantities into executable or eventual USD", async (id) => {
       for (const supply of [null, supplyUsd]) {
         const { capacity, row } = await resolve(id, supply);

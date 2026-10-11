@@ -13,6 +13,28 @@
     "reviewedAt": "2026-10-04",
     "reviewer": "Unknown-wave W2R20 October pinned Ethereum OFT review",
     "confidence": "verified",
+    "nativeExternalTransferReviews": [
+      {
+        "id": "sbc-layerzero-oft",
+        "routeRefs": [
+          "ethereum:0xf9fb20b8e097904f0ab7d12e9dbee88f2dcd0f16"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-10T23:38:10Z",
+        "reviewer": "Sol curation campaign 2026-10-11 (K7NativeBridgeTier)",
+        "rationale": "Brale's March 20, 2025 announcement names SBC, native OFT mint/burn, LayerZero DVN message validation and Ethereum support. The existing pinned Ethereum adapter/token linkage identifies the native SBC deployment. This review establishes the separate external-validation transfer tier, not wrapped issuance or an exhaustive chain census. Effective peers, configured DVN quorum, rate-limit amounts, upgrades, administrator reach and signing topology are not established by this announcement and remain unresolved; native issuer mint controls are not duplicated.",
+        "sources": [
+          {
+            "label": "Brale SBC LayerZero integration, native issuance and DVN validation (2025-03-20)",
+            "url": "https://brale.xyz/blog/sbc-integrates-layerzero-for-cross-chain-transfers"
+          },
+          {
+            "label": "Exact Ethereum SBC OFT adapter proxy verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb9d852a3f9b3a82e243faab0272604102a111e1a"
+          }
+        ]
+      }
+    ],
     "sources": [
       {
         "label": "Brale SBC LayerZero OFT integration",

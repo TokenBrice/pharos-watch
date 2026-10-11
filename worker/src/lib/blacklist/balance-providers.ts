@@ -16,7 +16,7 @@ import {
   tronBase58ToHex,
   tronHexAddressToBase58,
 } from "../tron-address";
-import { DRPC_NETWORK } from "../drpc";
+import { DRPC_NETWORK } from "@shared/lib/drpc";
 
 async function fetchEvmBalanceAtTag(
   evmChainId: number,

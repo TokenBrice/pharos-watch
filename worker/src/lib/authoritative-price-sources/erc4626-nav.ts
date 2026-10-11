@@ -4,6 +4,7 @@ import { logWorkerEventArgs } from "../structured-log";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../circuit-breaker";
 import { readVaultRateCache, writeVaultRateCache } from "./rate-cache";
 import { CIRCUIT_SOURCE } from "../constants";
+import { idleCdoTrancheProvider } from "./idle-cdo-tranche";
 import {
   buildCachedRateLiveOverride,
   buildParentDerivedLiveOverride,
@@ -175,7 +176,7 @@ export const previewRedeemProvider = createVaultNavProvider({
  * before this run's enrichment prices exist, so the parent row comes from the
  * previous published payload. This reuses the exact protocol-redeem route —
  * parent-trust gate (incl. its 30-minute synced-at ceiling), live
- * convertToAssets read, and the bounded cached-rate degradation lane — so no
+ * registered ERC-4626 convertToAssets or Idle CDO virtualPrice read, and the bounded cached-rate degradation lane — so no
  * freshness policy is bypassed. The result values supply only; the live
  * override stage re-prices the published row in the same run.
  */
@@ -187,14 +188,17 @@ export async function resolveVaultNavSupplyPrice(
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<CurrentPriceOverride | null> {
   const config = ERC4626_NAV_VAULTS_BY_ID.get(stablecoinId);
-  if (!config) return null;
-  const parentAsset = previousAssetsById.get(config.parentId);
+  const provider = config ? erc4626NavProvider
+    : idleCdoTrancheProvider.matches(stablecoinId) ? idleCdoTrancheProvider : null;
+  const parentId = config?.parentId ?? provider?.liveParentByAssetId?.[stablecoinId];
+  if (!provider || !parentId) return null;
+  const parentAsset = previousAssetsById.get(parentId);
   if (!parentAsset) return null;
   const liveAllowed = !db || await shouldAttemptFetch(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM);
 
   const nowSec = Math.floor(Date.now() / 1000);
   const context: LivePriceContext = {
-    assetsById: new Map([[config.parentId, { ...parentAsset }]]),
+    assetsById: new Map([[parentId, { ...parentAsset }]]),
     chainRpcs,
     vaultRateCache: db ? await readVaultRateCache(db, nowSec) : undefined,
     vaultRateWrites: new Map(),
@@ -202,7 +206,7 @@ export async function resolveVaultNavSupplyPrice(
   };
   const stub: PeggedAsset = { id: stablecoinId, name: stablecoinId, symbol: stablecoinId };
   try {
-    const override = await erc4626NavProvider.fetchLivePrice!(stub, context, signal);
+    const override = await provider.fetchLivePrice!(stub, context, signal);
     if (db) {
       if (liveAllowed && override) {
         await recordOutcomeSafe(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM, "source" in override && override.source !== CACHED_VAULT_RATE_SOURCE);

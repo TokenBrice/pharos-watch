@@ -40,6 +40,10 @@
       {
         "label": "Bridge reserve management; generic treasury partner and liquidity conditions, reviewed 2026-10-09T10:38:56Z by Sol curation campaign 2026-10-09 (Lane19Sygnum)",
         "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
+      },
+      {
+        "label": "Bridge pathUSD public categories observed 2026-10-10T23:35:13Z by Sol curation campaign 2026-10-11 (L55UTY); payload as of 2026-10-10T23:20:35Z: cash $17,816,876.50 plus treasury $53,541,201.47 exceeds total reserves $71,358,064.05 by $13.92; instrument-level mapping remains undisclosed",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
       }
     ],
     "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. The October 9, 2026 public API payload at 10:20:33Z reports cash of $19,161,280.75 and treasury of $52,096,485.21, totaling $71,257,765.96, versus reported total reserves of $71,257,752.29: a $13.67 discrepancy. Generic reserve-management documentation lists traditional and tokenized treasury partners but does not identify the instruments within pathUSD's treasury category or their shares. No composition weights are normalized over either conflicting denominator, no treasury-class or tracked-token allocation is assumed, and no liquidity bound is joined to unidentified reserve exposures. The existing composition and composition date remain unchanged; the current researched classification is supplied separately in the campaign fragment.",

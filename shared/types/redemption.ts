@@ -72,16 +72,24 @@ export type RedemptionSettlementModel = z.infer<typeof RedemptionSettlementModel
 export const RedemptionBusinessDayTermsSchema = z.strictObject({
   businessDays: z.number().int().nonnegative(),
   calendarId: BusinessCalendarIdSchema,
-  cutoff: z.strictObject({ time: BusinessClockTimeSchema.nullable(), timezone: BusinessTimezoneSchema }),
+  cutoff: z.strictObject({
+    time: BusinessClockTimeSchema.nullable(),
+    timezone: BusinessTimezoneSchema,
+    // An explicit receipt-day contract has no intraday processing cutoff.
+    basis: z.literal("receipt-day").optional(),
+  }),
   assurance: z.enum(["binding-guarantee", "target"]),
   conditional: z.boolean(),
   conditions: z.array(z.string().trim().min(1)),
+  // Completed before startEvent; these constrain access, not payment after acceptance.
+  accessPrerequisites: z.array(z.string().trim().min(1)).min(1).optional(),
   startEvent: z.string().trim().min(1),
   // Preserve sequential realization/payment stages; their sum is the stated normal term, not an ungated SLA.
   stages: z.array(z.strictObject({ name: z.string().min(1), businessDays: z.number().int().nonnegative() })).min(1).optional(),
 }).superRefine((terms, ctx) => {
   if (terms.conditional && terms.conditions.length === 0) ctx.addIssue({ code: "custom", path: ["conditions"], message: "Conditional terms must name the gates" });
   if (!terms.conditional && terms.conditions.length > 0) ctx.addIssue({ code: "custom", path: ["conditional"], message: "Unresolved conditions cannot carry unconditional credit" });
+  if (terms.cutoff.basis === "receipt-day" && terms.cutoff.time !== null) ctx.addIssue({ code: "custom", path: ["cutoff"], message: "Receipt-day terms cannot also assert an intraday cutoff" });
   if (terms.stages && terms.stages.reduce((sum, stage) => sum + stage.businessDays, 0) !== terms.businessDays) ctx.addIssue({ code: "custom", path: ["stages"], message: "Sequential stages must reconcile to the normal business-day term" });
 });
 export type RedemptionBusinessDayTerms = z.infer<typeof RedemptionBusinessDayTermsSchema>;

@@ -461,7 +461,9 @@ function reserveSourceEvidence(
         sourceId: provenance?.source ?? "report-cards-live-reserves",
         sourceGenerationId: source.generationId,
         disposition: "observed",
-        observedAtSec: provenance?.reserveObservation?.observedAtSec ?? provenance?.fetchedAt ?? source.observedAtSec,
+        // This budget is the producer-fetch cadence, not the issuer's report
+        // cadence. Scoped observations retain their original independent clock.
+        observedAtSec: provenance?.fetchedAt ?? source.observedAtSec,
         contentSha256: domainDigest("safety-score-v9.reserve-exposure.v1", slices),
         maxAgeSec: source.maxAgeSec,
       },
@@ -671,7 +673,7 @@ export function buildReserves(context: AssetBuildContext): {
           ownerDomain: "backing",
           policyRuleId: "v9.backing.reserve-freshness",
           observationState: "stale",
-          responsibility: "producer-failed",
+          responsibility: reviewedStatic ? "published-evidence-expired" : "producer-failed",
           path: collateralExposureV9Path(exposureKey),
           message: auditedFallback
             ? "The independently audited reserve composition is older than the v9 freshness bound."
@@ -774,9 +776,13 @@ export function buildReserves(context: AssetBuildContext): {
       factorStatuses[factorKey] = missing || status.observationState === "stale"
         ? missingLocalFact(context, {
             componentKey: `reserve:${exposureKey}:${factorKey}`, reasonCode: "material-reserve-slice-unstructured",
-            ownerDomain: "backing", responsibility: "unresearched", policyRuleId: "v9.backing.reserve-classification",
+            ownerDomain: "backing",
+            responsibility: !missing && status.observationState === "stale"
+              ? reviewedStatic ? "published-evidence-expired" : "producer-failed"
+              : "unresearched",
+            policyRuleId: "v9.backing.reserve-classification",
             path: collateralExposureV9Path(exposureKey),
-            observationState: status.observationState === "stale" ? "stale" : "missing",
+            observationState: !missing && status.observationState === "stale" ? "stale" : "missing",
             evidenceRefIds: evidenceIds, message: `The ${requiredDatum} factor for ${raw.name.trim()} is not current and known.`,
             causeScope: { pillar: "backing", componentKey: "reserve-exposure", factorKey, routeKey: null,
               exposureId: exposureKey, requiredDatum },

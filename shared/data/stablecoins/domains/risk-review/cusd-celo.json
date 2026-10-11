@@ -573,7 +573,7 @@
         "semantics": "unknown",
         "scope": "unknown",
         "reviewDisposition": "unresolved",
-        "reviewNote": "W1R87 re-read exact token at Kaia block 228867105, hash 0x2c522358b9f3f1bfde9343f256aa1bed2e6e9fca5f71104fd15af7968251fd0f, on 2026-10-03. Verified KIP7 source exposes _minter() rather than minter(): selector 0x578ec33f returned 0x979cd0826c2bf62703ef62221a4fea1f23da3777, whose nonempty runtime is an upgradeable bridge proxy. _owner() selector 0xb2bdfa7b returned governance contract 0xe665028e06cab79928d8e607e0de99ffd7eb76a7. The owner can replace the minter; minter can mint through transferFrom with no token-level economic cap. The bridge proxy implementation() returned 0xca0105f978739bc313ff0236595823ea611a2163. Official Orbit API documentation independently maps exact oCUSD to this minter. Governance and implementation source/reach remain unverified, and no route-specific Celo-vault incident/remediation conclusion is established. Only exact contract authority is identified; route remains unresolved and no zero-supply, bounded-cap or incident-free assertion is made.",
+        "reviewNote": "W1R87 re-read exact token at Kaia block 228867105, hash 0x2c522358b9f3f1bfde9343f256aa1bed2e6e9fca5f71104fd15af7968251fd0f, on 2026-10-03. Verified KIP7 source exposes _minter() rather than minter(): selector 0x578ec33f returned 0x979cd0826c2bf62703ef62221a4fea1f23da3777, whose nonempty runtime is an upgradeable bridge proxy. _owner() selector 0xb2bdfa7b returned governance contract 0xe665028e06cab79928d8e607e0de99ffd7eb76a7. The owner can replace the minter; minter can mint through transferFrom with no token-level economic cap. The bridge proxy implementation() returned 0xca0105f978739bc313ff0236595823ea611a2163. Official Orbit API documentation independently maps exact oCUSD to this minter. Governance and implementation source/reach remain unverified, and no route-specific Celo-vault incident/remediation conclusion is established. Only exact contract authority is identified; route remains unresolved and no zero-supply, bounded-cap or incident-free assertion is made. Sol curation campaign 2026-10-11 (C14USDm) successfully re-read these same three identities through https://klaytn.drpc.org at the unchanged historical block/hash (block timestamp 2026-10-03T23:04:53Z), observed 2026-10-11T01:02:20Z. The original observation date is retained: this is archive-reader recovery, not a fresh current-state or full execution certificate. Official Klaytn minter documentation recovered the upstream Orbit bridge-contract source family, but deployed implementation/governance source-runtime correspondence, activation, validator reach, economic caps and exact-route incident/remediation remain unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-10-03",
         "observedBlock": 228867105,
@@ -603,6 +603,14 @@
           {
             "label": "Official Orbit API exact cUSD vault and Klaytn minter mapping",
             "url": "https://documenter.getpostman.com/view/5070734/2s83zdxSAn"
+          },
+          {
+            "label": "C14USDm successful three-identity archive re-read at Kaia block 228867105; observed 2026-10-11T01:02:20Z",
+            "url": "https://klaytn.drpc.org"
+          },
+          {
+            "label": "Official Orbit Klaytn minter implementation-family documentation; deployed correspondence unresolved",
+            "url": "https://bridge-docs.orbitchain.io/contract/minter/klaytn-2.md"
           }
         ]
       }

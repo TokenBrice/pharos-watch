@@ -10,9 +10,9 @@ import {
   reviewedObservationState,
   notApplicableStatus,
   type ExtensionAsset,
-  type ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "./extension-shared";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
 const ORACLE_BRANCH_ADAPTERS = [
   ["feed", (branch: OracleRiskBranch) => (branch.feeds?.length ?? 0) > 0 || branch.fallbackBehavior != null],
@@ -243,21 +243,40 @@ export function adaptOracleReview(
     : { tier: profile.tier };
   const branches = branchesRequired
       ? ORACLE_BRANCH_ADAPTERS.map(([branchKind, predicate]) => {
-          const complete = !missingPathBranch && applicableBranches.every(predicate);
-          const state = complete ? reviewedObservationState(confidence) : "missing";
+          // An explicit review owns this kind's confidence and census. It cannot
+          // promote another kind (in particular, unresolved nested feed facts).
+          const review = profile.branchKindReviews?.find((candidate) => candidate.kind === branchKind);
+          const kindBranches = review ? profile.branches ?? [] : applicableBranches;
+          const complete = !missingPathBranch && kindBranches.length > 0 && kindBranches.every(predicate) &&
+            (!review || kindBranches.every((branch) => review.branchIds.includes(branch.id)));
+          const kindEvidenceKeys = review ? evidence.add({
+            componentKeys: [`economic-control:oracle:${branchKind}`],
+            sourceId: "stablecoin-meta.oracle-risk-kind",
+            reviewedAt: review.reviewedAt,
+            publishedBy: "unknown",
+            confidence: confidenceForResearch(review.confidence),
+            sources: review.sources,
+            payload: { review, branches: kindBranches },
+            maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+          }) : evidenceKeys;
+          const state = !complete
+            ? "missing"
+            : review && researchReviewObservationState(review.reviewedAt, clockSec) === "stale"
+              ? "stale"
+              : reviewedObservationState(review ? confidenceForResearch(review.confidence) : confidence);
           return {
             branch: branchKind,
             status: requiredStatus(
               "v9.control.oracle-review",
               state,
               `oracle:${meta.id}:${branchKind}`,
-              state === "known" || state === "bounded-unknown" ? evidenceKeys : [],
+              state === "known" || state === "bounded-unknown" || state === "stale" ? kindEvidenceKeys : [],
             ),
             controlKey: null,
             mechanismKey: complete
               ? `oracle-mechanism:${meta.id}:${branchKind}:${domainDigest("safety-score-v9.oracle-branch.v1", {
                   branchKind,
-                  branches: applicableBranches,
+                  branches: kindBranches,
                 }).slice(0, 16)}`
               : null,
             inheritedFromAssetId: null,

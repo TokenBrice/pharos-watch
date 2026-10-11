@@ -77,6 +77,32 @@
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Codex mint/bridge boundary migration (2026-08-16)",
     "confidence": "verified",
+    "nativeExternalTransferReviews": [
+      {
+        "id": "parallel-layerzero-oft",
+        "routeRefs": [
+          "ethereum:0x9b3a8f7cec208e247d97dee13313690977e24459"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-10T23:38:10Z",
+        "reviewer": "Sol curation campaign 2026-10-11 (K7NativeBridgeTier)",
+        "rationale": "The issuer explicitly documents USDp's LayerZero OFT native burn/mint transfer rail and DVN validation. October parameters name required LayerZero Labs and Nethermind plus one of Horizen or Canary, DAO-mutable daily/global limits and isolation off. This review binds the existing exact Ethereum native USDp deployment, not a new representation, and establishes only external-validation tier. It does not certify peers, effective controller/signing reach, immutable amount bounds, other deployments or whole-asset materiality; native issuance stays in Mint Authority.",
+        "sources": [
+          {
+            "label": "Parallel USDp OFT module and message-verification lifecycle",
+            "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/bridging-module"
+          },
+          {
+            "label": "Parallel October 2026 USDp bridge DVNs and mutable limits",
+            "url": "https://docs.parallel.best/products/parallel-v3/fees"
+          },
+          {
+            "label": "Parallel disclosed bridge failure and cross-chain supply reach",
+            "url": "https://docs.parallel.best/security/risks"
+          }
+        ]
+      }
+    ],
     "sources": [
       {
         "label": "Parallel docs",

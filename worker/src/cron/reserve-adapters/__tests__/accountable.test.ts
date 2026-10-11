@@ -93,7 +93,7 @@ afterEach(() => {
 });
 
 describe("adaptAccountableDashboard", () => {
-  it("replays Yuzu's October signed book without certifying unresolved LP/PT identities", async () => {
+  it("replays Yuzu's October signed book with conservative LP/PT classification but no certified identities", async () => {
     const { result } = await runAdapter("accountable", "yzusd-yuzu", {
       network: { json: { "https://cache.accountable.capital/dashboard/yuzu": octoberCapture.yuzu } },
       nowSec: Date.parse("2026-10-07T20:47:43Z") / 1000,
@@ -101,11 +101,15 @@ describe("adaptAccountableDashboard", () => {
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-10-07T13:44:59Z") / 1000);
     expect(result.metadata?.signedBucketTotalResidual).toBeCloseTo(2_349_563.1561, 3);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "signed-negative-bucket", effect: "degraded" }));
-    expect(result.metadata?.unknownBucketNames).toEqual(expect.arrayContaining(["[Agora]_AUSD_LP", "[Re]_PT_reUSD"]));
-    const unknown = result.slices.find((entry) => entry.name === "Unknown / unmapped Accountable buckets");
-    expect(unknown).toMatchObject({ risk: "high" });
-    expect(unknown?.coinId).toBeUndefined();
-    expect(unknown?.depType).toBeUndefined();
+    for (const [sourceKey, name] of [
+      ["accountable:yuzu:deployment:agora-ausd-lp", "Agora AUSD LP"],
+      ["accountable:yuzu:deployment:re-pt-reusd", "Re reUSD principal-token position"],
+    ]) {
+      const slice = result.slices.find((entry) => entry.sourceKey === sourceKey);
+      expect(slice).toMatchObject({ name, risk: "high", sourceKey });
+      expect(slice?.coinId).toBeUndefined();
+      expect(slice?.depType).toBeUndefined();
+    }
   });
 
   it("replays Axis's anonymous venue book as unknown locations, not collateral assets", async () => {

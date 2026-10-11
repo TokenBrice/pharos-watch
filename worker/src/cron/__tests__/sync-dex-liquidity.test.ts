@@ -364,6 +364,29 @@ describe("dex liquidity scoring stage cycle", () => {
     vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
   });
 
+  it("evaluates late source-stage exact captures at the consumer clock without restamping registry volume", async () => {
+    const sourceClock = Date.parse("2026-10-11T12:10:00Z") / 1000;
+    const consumerClock = sourceClock + 360;
+    phaseFixtures.current.stagedPools.registryEvaluatedAtSec = sourceClock + 180;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(sourceClock * 1000);
+    try {
+      await stageDexLiquidityScoring(db, "graph-key");
+      expect(scoringStage.syncStartSec).toBe(sourceClock);
+      clock.mockReturnValue(consumerClock * 1000);
+      await consumeDexLiquidityScoringStage(db);
+      const calls = vi.mocked(computeStablecoinScores).mock.calls;
+      const call = calls[calls.length - 1]!;
+      expect(call[4]).toBe(consumerClock);
+      expect(call[9]).toBe(sourceClock + 180);
+      // A pinned block captured four minutes into the stage is not future
+      // relative to consumption; the old stage-start clock rejected it.
+      expect(sourceClock + 240).toBeLessThanOrEqual(Number(call[4]));
+      expect(scoringStage.syncStartSec).toBe(sourceClock);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it.each(["registry", "stage", "after-stage"] as const)(
     "leaves a fetched tail retryable after %s failure and acknowledges its replay",
     async (failure) => {

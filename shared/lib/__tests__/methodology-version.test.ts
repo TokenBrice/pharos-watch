@@ -158,6 +158,18 @@ describe("Safety Score methodology head entry", () => {
     expect(head!.version).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
   });
 
+  it("activates v10.17 at the next UTC midnight without relabeling prior scores", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.17");
+    expect(release).toMatchObject({
+      version: "10.17",
+      date: "2026-10-11",
+      effectiveAt: 1_791_763_200,
+      reconstructed: false,
+    });
+    expect(getMethodologyVersionAt("safety-score", 1_791_763_199)).toBe("10.16");
+    expect(getMethodologyVersionAt("safety-score", 1_791_763_200)).toBe("10.17");
+  });
+
   it("orders every changelog entry strictly newest-first", () => {
     for (let index = 1; index < SAFETY_SCORE_METHODOLOGY_CHANGELOG.length; index += 1) {
       const newer = SAFETY_SCORE_METHODOLOGY_CHANGELOG[index - 1]!;
@@ -177,6 +189,24 @@ describe("methodology registry", () => {
         methodology.currentLabel.slice(1),
       );
     }
+  });
+
+  it.each([
+    ["pricing-pipeline", "6.46", "6.48"],
+  ] as const)("activates the October 11 %s cutover without relabeling prior publications", (key, previousVersion, version) => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === key)!;
+    expect(methodology.entries.find((candidate) => candidate.version === version)).toMatchObject({
+      date: "2026-10-11",
+      effectiveAt: 1_791_763_200,
+      reconstructed: false,
+    });
+    expect(getMethodologyVersionAt(key, 1_791_763_199)).toBe(previousVersion);
+    expect(getMethodologyVersionAt(key, 1_791_763_200)).toBe(version);
+  });
+
+  it("retains standalone Liquidity and Redemption versions at the campaign boundary", () => {
+    expect(getMethodologyVersionAt("liquidity-score", 1_791_763_200)).toBe("6.94");
+    expect(getMethodologyVersionAt("redemption-backstop", 1_791_763_200)).toBe("4.49");
   });
 
   it.each([
@@ -207,7 +237,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.47");
+    expect(methodology.currentLabel).toBe("v6.48");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -216,7 +246,14 @@ describe("methodology registry", () => {
     });
     expect(release.effectiveAt).toBeGreaterThan(previous.effectiveAt);
     expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.46");
-    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.47");
+    // Both independently authored releases activate at this midnight; the newer
+    // combined branch identity wins without rewriting main's historical entry.
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.48");
+    const sofidRelease = methodology.entries.find((candidate) => candidate.version === "6.48")!;
+    expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
+    expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
+    expect(release.title).toBe("Conserved historical missing-chain attribution");
+    expect(methodology.entries.slice(0, 2).map((candidate) => candidate.version)).toEqual(["6.48", "6.47"]);
   });
 
   it("provides an LLM-facing description for every changelog", () => {

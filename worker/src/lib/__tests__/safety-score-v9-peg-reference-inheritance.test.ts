@@ -131,6 +131,64 @@ describe("Safety Score V9 peg-reference inheritance", () => {
     expect(parent.activeDepegBps).toBeNull();
   });
 
+  it.each([
+    { priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" as const,
+      producerState: "unsupported-reader", rejectionCode: "peg-nominal-reference-only" },
+    { priceSource: "missing", currentPriceUnavailable: true,
+      producerState: "producer-failed", rejectionCode: "peg-current-price-unavailable" },
+  ])("binds a captured unusable current peg to A without admitting parity: $rejectionCode", (testCase) => {
+    const { producerState, rejectionCode, ...provenance } = testCase;
+    const template = twoAssetInput();
+    const fixed = reseal(template, {
+      pegDataById: {
+        ...template.pegDataById,
+        [PARENT_ID]: { ...template.pegDataById[PARENT_ID]!, ...provenance,
+          currentDeviationBps: null, eventCount: 2, worstDeviationBps: -189 },
+      },
+    });
+    const parent = compileSafetyScoreV9FactSetFromFixedInput(
+      fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() }),
+    ).assets.find((asset) => asset.assetId === PARENT_ID)!;
+    const gap = parent.gaps.find((entry) => entry.gapId === `${PARENT_ID}:gap:peg`)!;
+    expect(gap.causeProof).toMatchObject({ cause: "A", producerState, rejectionCode });
+    expect(parent.evidence.find((entry) => entry.evidenceId === gap.causeProof.evidenceRefIds[0]))
+      .toMatchObject({ disposition: "rejected", causeBinding: { assetId: PARENT_ID,
+        scope: { componentKey: "peg", requiredDatum: "peg" }, producerState, rejectionCode } });
+    expect(parent.peg.currentDeviationBps).toBeNull();
+    expect(parent.peg.pegScore).toBeNull();
+    expect(fixed.pegDataById[PARENT_ID]!.worstDeviationBps).toBe(-189);
+  });
+
+  it("binds stale observed peg evidence to its own producer budget", () => {
+    const template = twoAssetInput();
+    const fixed = reseal(template, {
+      pegDataById: { ...template.pegDataById, [PARENT_ID]: {
+        ...template.pegDataById[PARENT_ID]!, priceSource: "coingecko",
+        priceObservedAtMode: "upstream", priceObservedAt: CLOCK_SEC - 86400,
+      } },
+    });
+    const parent = compileSafetyScoreV9FactSetFromFixedInput(
+      fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() }),
+    ).assets.find((asset) => asset.assetId === PARENT_ID)!;
+    expect(parent.gaps.find((entry) => entry.gapId === `${PARENT_ID}:gap:peg`)!.causeProof)
+      .toMatchObject({ cause: "A", producerState: "stale-producer", rejectionCode: "peg-observation-stale" });
+    expect(parent.peg.status.observationState).toBe("stale");
+    expect(parent.evidence.find((entry) => entry.evidenceId === `${PARENT_ID}:peg`)!.observedAtSec)
+      .toBe(CLOCK_SEC - 86400);
+  });
+
+  it("does not invent a failed attempt for a wholly absent peg row", () => {
+    const template = twoAssetInput();
+    const pegDataById = { ...template.pegDataById };
+    delete pegDataById[PARENT_ID];
+    const fixed = reseal(template, { pegDataById });
+    const parent = compileSafetyScoreV9FactSetFromFixedInput(
+      fixed, buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() }),
+    ).assets.find((asset) => asset.assetId === PARENT_ID)!;
+    expect(parent.gaps.find((entry) => entry.gapId === `${PARENT_ID}:gap:peg`)!.causeProof)
+      .toMatchObject({ cause: "U", reason: "not-yet-researched" });
+  });
+
   it("passes apyUSD's tracked parent active-depeg peak into the child peg fact", () => {
     const fixed = parentDepegPeg(twoAssetInput(), 2_500);
     const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metadata() });

@@ -58,6 +58,11 @@
       "chain": "starknet",
       "address": "0x01e6545cab7ba4ac866768ba5e1bd540893762286ed3fea7f9c02bfa147e135b",
       "decimals": 18
+    },
+    {
+      "chain": "tac",
+      "address": "0x51a30e647d33a044967fa3dbb04d6ed6f45455f6",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

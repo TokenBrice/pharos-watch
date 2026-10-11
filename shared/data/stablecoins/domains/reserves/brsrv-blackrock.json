@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "U.S. Treasury bills",
-      "pct": 81.947,
+      "pct": 63.98676053200351,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -13,18 +13,18 @@
     },
     {
       "name": "Overnight Treasury-secured tri-party repurchase agreements",
-      "pct": 18.053,
+      "pct": 36.01323946799649,
       "risk": "low",
       "assetClass": "repo",
-      "issuerOrObligor": "BofA Securities, Credit Agricole CIB and J.P. Morgan Securities",
+      "issuerOrObligor": "J.P. Morgan Securities, Credit Agricole CIB, BofA Securities and Mizuho Securities USA",
       "riskFactors": ["counterparty", "custody", "legal"],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 1
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine04 primary-source review",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L02ONyc)",
     "confidence": "verified",
     "sources": [
       {
@@ -44,13 +44,13 @@
         "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
       },
       {
-        "label": "BlackRock complete holdings CSV as of October 1, 2026",
+        "label": "BlackRock complete holdings CSV as of October 8, 2026; observed 2026-10-10T23:32:24Z",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund"
       }
     ],
-    "rationale": "The October 1, 2026 holdings CSV publishes 13 Treasury bills with market value USD 40,853,218.07 and three overnight Treasury repos totaling USD 9,000,000, for USD 49,853,218.07 total listed holdings. Percentages use market value rather than the CSV's par percentages: 81.947% bills and 18.053% repo after rounding. Repo counterparties are BofA Securities (USD 5m), Credit Agricole CIB (USD 2m) and J.P. Morgan Securities (USD 2m). Bills mature October 6 through December 24, 2026; the 93-day maximum is the prospectus mandate, not WAM. The fund page separately reports WAM/WAL 28 days and daily/weekly liquid assets 100% as of October 1. These issuer observations do not reconcile the October 1 portfolio to October 3 on-chain shares or provide financial assurance.",
-    "compositionBasis": "October 1, 2026 itemized holdings, normalized by published security market values",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Observed 2026-10-10T23:32:24Z: the October 8, 2026 holdings CSV publishes eleven Treasury bills with market value USD 31,981,618.61 and four overnight Treasury repos totaling USD 18,000,000, for USD 49,981,618.61 total listed securities. Both slice weights use these published market values without favourable rounding or substituting par percentages. Repo counterparties are J.P. Morgan Securities (USD 7m), Credit Agricole CIB (USD 5m), BofA Securities (USD 5m) and Mizuho Securities USA (USD 1m), with October 9 maturities. Bills mature October 13 through December 24, 2026; the 93-day maximum remains the prospectus mandate, not WAM. The listed-securities denominator is not represented as current whole-token liabilities or total fund net assets; no collateralization ratio, financial assurance, account-level custody or executable redemption capacity is inferred.",
+    "compositionBasis": "October 8, 2026 itemized securities holdings, normalized by the exactly summed published security market values; not a reserve-to-liability reconciliation",
+    "compositionAsOf": "2026-10-08",
     "scope": "full-composition",
     "knownUnknownExposure": "Current whole-token liability reconciliation and account-level custody, collateral and recovery agreements remain unavailable. Portfolio and token stock have different observation dates; their difference is not a measured shortfall. Named auditors do not establish a signed financial report.",
     "knownUnknownExposurePct": 0,
@@ -58,14 +58,14 @@
       {
         "reserveIndex": 0,
         "reserveName": "U.S. Treasury bills",
-        "pct": 81.947,
+        "pct": 63.98676053200351,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Itemized U.S. Treasury securities are exogenous assets, not tracked stablecoins."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Overnight Treasury-secured tri-party repurchase agreements",
-        "pct": 18.053,
+        "pct": 36.01323946799649,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Itemized off-chain secured repo claims are exogenous assets, not tracked stablecoins."
       }

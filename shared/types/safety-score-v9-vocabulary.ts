@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// Public fact tuple references bind this append-only order; never reorder or remove an owner.
 const V9_EVIDENCE_RESPONSIBILITIES = [
   "measured-adverse", "issuer-undisclosed", "integration-missing",
   "producer-failed", "method-unsupported", "published-evidence-expired",

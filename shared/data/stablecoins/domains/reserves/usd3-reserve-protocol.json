@@ -56,7 +56,7 @@
         "liquidity",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown",
+      "liquidityHorizon": "immediate",
       "sourceKey": "reserve-protocol-dtf:0x27f2f159fe990ba83d57f39fd69661764bebf37a"
     },
     {
@@ -80,8 +80,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Codex USD3 exact-contract identity review; W1R68 sUSDS native withdrawal review; W2R44 full-held Aave and MetaMorpho withdrawal simulation; Sol curation campaign 2026-10-09 (W4C05Origin) Compound wrapper identity and output review",
+    "reviewedAt": "2026-10-11",
+    "reviewer": "Codex USD3 exact-contract identity review; W1R68 sUSDS native withdrawal review; W2R44 full-held Aave and MetaMorpho withdrawal simulation; Sol curation campaign 2026-10-09 (W4C05Origin) Compound wrapper identity and output review; Sol curation campaign 2026-10-11 (P1USD3) pinned sequential native-USDC realization",
     "confidence": "verified",
     "sources": [
       {
@@ -135,9 +135,25 @@
       {
         "label": "Ethereum block 26155384 (2026-10-09T14:14:35Z): exact wrapper runtime match, BackingManager balance and underlyingComet identity; no full native-USDC realization claim",
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Compound Comet implementation verified source: transferBase, withdrawInternal, withdrawBase and CometCore floor-rounding conversions",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63e749153baf1838f63ca22c275370bd2b1ceb15"
+      },
+      {
+        "label": "Compound III withdrawal documentation: MaxUint256 withdraws the source account's full base balance",
+        "url": "https://docs.compound.xyz/collateral-and-borrowing/"
+      },
+      {
+        "label": "Verified Multicall3 sequential CALL implementation; pinned runtime used only as a code override on the actual holder, without balance, storage or permission overrides",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xca11bde05977b3631167028862be2a173976ca11"
+      },
+      {
+        "label": "Ethereum block 26169031 (2026-10-11T11:52:59Z): actual BackingManager holding, current Comet liquidity, verified runtimes and persistent wrapper-to-Comet-to-native-USDC eth_call simulation",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
-    "rationale": "The previously reviewed four-contract composition and rounded 25% weights are retained. Exact identity reads at Ethereum block 26088539 (2026-09-30T06:35:47Z) confirm that USD3's BasketHandler quote includes 0xbeef01735c132ada46aa9aa4c54623caa92a64cb and its AssetRegistry maps that token to collateral plugin 0xb1327ead6ab9a1e363c4fc61648bd3131a587e39. The exact Steakhouse USDC V1 vault differs from the tracked V2 share token and remains unlinked. W1R68's sourced sUSDS synchronous native USDS conversion remains unchanged. On 2026-10-03 W2R44 pinned Ethereum block 26115203, hash 0x1b8e8fe59dc6658999fa93a3f1e1a854885dfb8d7eaacf9a8b1c4a10a1d9bee6, timestamp 2026-10-03T23:48:35Z. USD3 main().backingManager() is 0x4b0b3d40b0623f3a9eac09d2e01f592710ee59f0. Sender-bound eth_call redeem(uint256,address,address) for this holder's full balance succeeded on both verified exact contracts: StaticATokenV3LM 0x0adc69041a2b086f8772acce2a754f410f211bed and MetaMorpho 0xbeef01735c132ada46aa9aa4c54623caa92a64cb. Each verified redemption burns the entire submitted position and transfers native USDC synchronously; MetaMorpho's exact market-liquidity checks and StaticAToken's pause/available-liquidity checks were exercised, not assumed. Immediate describes full backing-manager claim realization at this observed state, not a future liquidity guarantee, stressed USD sale, fiat settlement or USD3 holder-redemption throughput. Compound's wrapper-to-Comet-to-USDC path remains unknown. No portfolio weights or composition date are refreshed.",
+    "rationale": "The previously reviewed four-contract composition and rounded 25% weights are retained. Exact identity reads at Ethereum block 26088539 (2026-09-30T06:35:47Z) confirm that USD3's BasketHandler quote includes 0xbeef01735c132ada46aa9aa4c54623caa92a64cb and its AssetRegistry maps that token to collateral plugin 0xb1327ead6ab9a1e363c4fc61648bd3131a587e39. The exact Steakhouse USDC V1 vault differs from the tracked V2 share token and remains unlinked. W1R68's sourced sUSDS synchronous native USDS conversion remains unchanged. On 2026-10-03 W2R44 pinned Ethereum block 26115203, hash 0x1b8e8fe59dc6658999fa93a3f1e1a854885dfb8d7eaacf9a8b1c4a10a1d9bee6, timestamp 2026-10-03T23:48:35Z. USD3 main().backingManager() is 0x4b0b3d40b0623f3a9eac09d2e01f592710ee59f0. Sender-bound eth_call redeem(uint256,address,address) for this holder's full balance succeeded on both verified exact contracts: StaticATokenV3LM 0x0adc69041a2b086f8772acce2a754f410f211bed and MetaMorpho 0xbeef01735c132ada46aa9aa4c54623caa92a64cb. Each verified redemption burns the entire submitted position and transfers native USDC synchronously; MetaMorpho's exact market-liquidity checks and StaticAToken's pause/available-liquidity checks were exercised, not assumed. Immediate describes backing-manager claim realization at the respective observed state, not a future liquidity guarantee, stressed USD sale, fiat settlement or USD3 holder-redemption throughput. P1USD3 rechecked the actual holder and exact wrapper/Comet identities at Ethereum block 26169031, hash 0xe57f6b38574bed09f11ff65f3103ca9218f338659e58dfedb6001b73a18b2d78, timestamp 2026-10-11T11:52:59Z; sequential simulation observed 2026-10-11T11:54:57.079Z. A code-only override placed the verified, same-pin Multicall3 runtime at the actual BackingManager; no token balances, storage, permissions, wrapper code or Comet code were overridden. In one persistent eth_call, wrapper withdraw(MaxUint256) and Comet withdraw(USDC,MaxUint256) both succeeded against the actual full holding of 354090707756 raw wrapper principal, with initial underlying claim 426843325063 raw USDC. The wrapper floors the receipt transfer to a multiple of 10: 426843325060 raw Comet units, a 3-raw-unit reduction below its one 10-raw-unit rounding quantum. CometCore principalValueSupply explicitly rounds down; at accrued supply index 1205463220902996 with scale 1000000000000000, received principal 354090707753 projects to 426843325059 raw USDC. This additional 1-raw-unit reduction is within one principal conversion quantum, whose ceiling is 2 raw USDC. Native USDC increased from 0 to exactly 426843325059, the Comet balance ended at 0, and 2 raw wrapper principal (2 raw underlying units) remained; neither residual nor output is rounded up. Comet held 45630772488810 raw native USDC before the simulation, and the successful ordinary withdrawal exercised its pause, permission and transfer/liquidity checks. Immediate is the observed synchronous realization path's horizon, subject to these conservative conversion floors and available liquidity, not a promise that the rounding residue is realizable or that future liquidity remains available. The new Compound evidence is as of this pin only; the older sibling facts retain their stated pins. No portfolio weights or composition date are refreshed.",
     "compositionBasis": "Previously reviewed 2026-09-21 Reserve DTF basket weights retained; exact basket, registry, holder, vault asset and curator identity rechecked by block-pinned Ethereum RPC at block 26088539",
     "compositionAsOf": "2026-09-21",
     "scope": "full-composition",

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry, mockWorkerRuntimeRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockLiveReserveAdapterRegistry, shouldAttemptFetchMock, recordOutcomeSafeMock } from "./live-reserves.test-support";
+import type * as WorkerRuntimeRegistry from "@shared/lib/stablecoins/worker-runtime-registry";
 
 const testRegistry = vi.hoisted(() => ({ stablecoins: ["shared-a", "shared-b", "control"].map((id) => ({
   id, name: id, symbol: id, flags: { backing: "rwa-backed", pegCurrency: "USD", governance: "centralized", yieldBearing: false, rwa: true, navToken: false },
@@ -9,7 +10,15 @@ const testRegistry = vi.hoisted(() => ({ stablecoins: ["shared-a", "shared-b", "
 })) }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry(testRegistry));
-vi.mock("@shared/lib/stablecoins/worker-runtime-registry", () => mockWorkerRuntimeRegistry(testRegistry));
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async (importOriginal) => {
+  const original = await importOriginal<typeof WorkerRuntimeRegistry>();
+  // Reviewed redemption docs need the full metadata universe, not the three-coin sync cohort.
+  const trackedMetaById = new Map([
+    ...original.WORKER_TRACKED_META_BY_ID,
+    ...mockWorkerRuntimeRegistry(testRegistry).WORKER_TRACKED_META_BY_ID,
+  ]);
+  return mockWorkerRuntimeRegistry({ ...testRegistry, trackedMetaById });
+});
 
 import { syncLiveReserves } from "../sync-live-reserves";
 import { resolveReserveResult } from "../../lib/live-reserves/store-views";

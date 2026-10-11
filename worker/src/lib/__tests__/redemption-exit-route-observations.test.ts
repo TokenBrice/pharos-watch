@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopEntrySchema, type RedemptionBackstopEntry, type RedemptionCapacityProfile } from "@shared/types/redemption";
 import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC, ExitRouteObservationSchema } from "@shared/types/exit-route";
+import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
 import {
   buildRedemptionExitRouteObservation,
   buildPhysicalToUsdExitObservation,
@@ -71,6 +72,35 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
   });
 }
 
+describe("fresh exact single-output valuation", () => {
+  it.each(["fresh", "stale", "future", "wrong-identity"] as const)(
+    "admits only an exact current single-output price (%s)", (state) => {
+      const now = Date.UTC(2026, 6, 13) / 1_000;
+      const outputValuation = LiveReserveRedemptionOutputValuationSchema.parse({
+        sourceId: "protocol-redeem",
+        observedAt: state === "stale" ? now - 1_801 : state === "future" ? now + 1 : now - 60,
+        unitValueUsd: 0.99, expectedUnitValueUsd: 1,
+        basketWeights: [{ assetId: state === "wrong-identity" ? "usdt-tether" : "m-m0", weight: 1 }],
+      });
+      const observation = build({
+        stablecoinId: "usdsc-startale", now, outputValuation,
+        config: { ...config, routeFamily: "stablecoin-redeem", outputAssetType: "stable-single", outputAssets: ["m-m0"] },
+        sourceMode: "dynamic", capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+        evidenceObservedAt: now,
+      })!;
+      expect(observation.output).toMatchObject({ kind: "tracked-stablecoin", trackedAssetIds: ["m-m0"] });
+      if (state === "fresh") {
+        expect(observation).toMatchObject({ outputUnitValueUsd: 0.99, outputExpectedUnitValueUsd: 1,
+          outputUnitValueSourceId: "protocol-redeem", outputUnitValueObservedAt: now - 60 });
+        expect(observation.allInCostBps).toBeCloseTo(125);
+        expect(() => ExitRouteObservationSchema.parse(observation)).not.toThrow();
+      } else {
+        expect(observation).not.toHaveProperty("outputUnitValueUsd");
+      }
+    },
+  );
+});
+
 describe("issuer payout identity", () => {
   it.each(getConfiguredRedemptionBackstopIds())("admits the real catalog producer output for %s", (stablecoinId) => {
     const routeConfig = getRedemptionBackstopConfig(stablecoinId)!;
@@ -95,6 +125,39 @@ describe("issuer payout identity", () => {
     expect(build({ config: { ...config, outputAssetType: "stable-single" } })?.output)
       .toEqual({ kind: "fiat", currency: "USD" });
   });
+  it("keeps ZARU's conditional issuer payout in fiat ZAR without nominal USD valuation", () => {
+    const observation = build({
+      stablecoinId: "zaru-blocktower",
+      config: getRedemptionBackstopConfig("zaru-blocktower")!,
+      now: Date.UTC(2026, 9, 12) / 1_000,
+    })!;
+    expect(observation.output).toEqual({ kind: "fiat", currency: "ZAR" });
+    expect(observation.scoreEligible).toBe(false);
+    expect(observation).not.toHaveProperty("outputUnitValueUsd");
+  });
+
+  it.each([
+    ["mantrausd-mantra", "usdc-circle"],
+    ["usdxl-last", "usdt-tether"],
+    ["usdb-blast", "dai-makerdao"],
+  ])("preserves %s's named output on diagnostic retained capacity without inventing complete costs", (id, output) => {
+    const observation = build({
+      stablecoinId: id, config: getRedemptionBackstopConfig(id)!,
+      resolvedFeeBps: null,
+      now: Date.UTC(2026, 9, 12) / 1_000,
+    })!;
+    expect(observation.output).toEqual({ kind: "tracked-stablecoin", trackedAssetIds: [output] });
+    expect(observation.scoreEligible).toBe(false);
+    expect(observation).not.toHaveProperty("allInCostBps");
+  });
+
+  it.each(["usdv-solomon-v2", "iusd-initia", "bnusd-balanced"])(
+    "does not expose %s's opaque composite path as a configured output or execution",
+    (id) => {
+      expect(getRedemptionBackstopConfig(id)).toBeNull();
+      expect(getConfiguredRedemptionBackstopIds()).not.toContain(id);
+    },
+  );
 
   it("honors HLUSD's reviewed stablecoin basket", () => {
     expect(build({
@@ -124,6 +187,7 @@ describe("issuer payout identity", () => {
     ["srusde-strata", ["usde-ethena", "susde-ethena"]],
     ["dllr-sovryn", ["asset:zusd", "doc-money-on-chain"]],
     ["gldy-streamex", ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"]],
+    ["spusd-soulpeg", ["asset:susdc-soulpeg"]],
   ] as const)("keeps %s explicit unresolved outputs instead of parent, fiat or basket inference", (id, keys) => {
     const reviewed = getRedemptionBackstopConfig(id)!;
     expect(build({ stablecoinId: id, config: reviewed })?.output).toEqual({
@@ -601,7 +665,7 @@ describe("derived supply-model route observations", () => {
 
   it("preserves reviewed capacity while distinguishing unquantified published fees", () => {
     const variable = deriveSupplyModelExitRouteObservation(
-      { ...supplyFullEntry, feeModelKind: "documented-variable", feeBps: null },
+      { ...supplyFullEntry, stablecoinId: "xsgd-straitsx", feeModelKind: "documented-variable", feeBps: null },
       now,
     );
     expect(variable).toMatchObject({
@@ -652,9 +716,30 @@ describe("derived supply-model route observations", () => {
       completionRatio: 1,
       scoreEligible: true,
     });
-    // usdc-circle's config has no feeBpsMax: documented-variable keeps its
-    // reviewed capacity under the bounded-unknown marker, while only a primary
-    // source numeric ceiling can make the route producer-level score eligible.
+    // eurc-circle's ceiling lives only in the v9 route-cost overlay; it bounds
+    // the eventual supply-model route exactly like the hot-buffer path.
+    const overlay = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, stablecoinId: "eurc-circle", settlementModel: "same-day",
+        feeModelKind: "documented-variable", feeBps: null },
+      now,
+    );
+    expect(overlay).toMatchObject({ routeId: "redemption:eurc-circle:offchain-issuer", executableUsd: 5_000_000 });
+    expect(overlay).not.toHaveProperty("feeEvidence");
+  });
+
+  it("evaluates a ceiling's minimum fee at every curve rung, not only the modeled request", () => {
+    // usdt-tether: 10 bps ceiling with a USD 1,000 minimum. A 40k modeled exit
+    // costs 250 bps (over the 200 bps budget); the 100k rung costs 100 bps.
+    const observation = deriveSupplyModelExitRouteObservation(
+      { ...supplyFullEntry, stablecoinId: "usdt-tether", feeModelKind: "documented-variable", feeBps: null,
+        capacityProfile: { ...supplyFullEntry.capacityProfile!, modeledExitSizeUsd: 40_000 } },
+      now,
+    )!;
+    const at = (request: number) => observation.capacityCurve!.find((point) => point.requestedNotionalUsd === request)!;
+
+    expect(observation).toMatchObject({ requestedNotionalUsd: 40_000, executableUsd: 0, scoreEligible: false });
+    expect(at(100_000)).toMatchObject({ executableUsd: 100_000, completionRatio: 1 });
+    expect(at(1_000_000)).toMatchObject({ executableUsd: 1_000_000, completionRatio: 1 });
   });
 
   it("resolves derived outputs from the reviewed static config's outputAssets", () => {

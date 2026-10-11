@@ -4,7 +4,7 @@
     {
       "sourceKey": "ondo-ousg:position:592c34b5-6d5d-43f9-a4b8-787ab0b88bce",
       "name": "State Street Galaxy Onchain Liquidity Sweep Fund",
-      "pct": 47.3256,
+      "pct": 47.4659,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "State Street Galaxy Onchain Liquidity Sweep Fund",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "ondo-ousg:position:07110012-2936-43db-a82c-b486e74e3822",
       "name": "BlackRock USD Institutional Digital Liquidity Fund",
-      "pct": 31.8496,
+      "pct": 31.9458,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
@@ -40,7 +40,7 @@
     {
       "sourceKey": "ondo-ousg:position:012efdd9-0b06-48e7-96d6-4a7f2a588850",
       "name": "Franklin OnChain U.S. Government Money Fund",
-      "pct": 12.9204,
+      "pct": 12.1758,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Franklin OnChain U.S. Government Money Fund",
@@ -59,7 +59,7 @@
     {
       "sourceKey": "ondo-ousg:position:6e7b5396-27eb-488c-9f9f-9c7b833b0d82",
       "name": "Fidelity Treasury Digital Fund",
-      "pct": 6.8888,
+      "pct": 7.387,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Fidelity Treasury Digital Fund",
@@ -76,7 +76,7 @@
     {
       "sourceKey": "ondo-ousg:position:545bffa5-2de4-4080-a879-1ad11ebfb040",
       "name": "Coinbase - Cash Equivalents",
-      "pct": 0.9447,
+      "pct": 0.9759,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle (USDC), held at Coinbase",
@@ -93,7 +93,7 @@
     {
       "sourceKey": "ondo-ousg:position:71e93ded-53e3-4125-a317-2ce6cc55df36",
       "name": "Other Assets \u2074",
-      "pct": 0.0395,
+      "pct": 0.0237,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Unspecified funds-in-transit counterparties and net receivables",
@@ -108,7 +108,7 @@
     {
       "sourceKey": "ondo-ousg:position:04bcda43-af66-497e-8064-efe82ca3cb71",
       "name": "Silicon Valley Bank - Bank Deposits",
-      "pct": 0.0313,
+      "pct": 0.0259,
       "risk": "medium",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Silicon Valley Bank",
@@ -122,12 +122,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC02)",
+    "reviewedAt": "2026-10-11",
+    "reviewer": "Sol curation campaign 2026-10-11 (G06MHYPER)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ondo OUSG portfolio overview",
+        "label": "Ondo OUSG complete seven-position portfolio as of 2026-10-09T20:00:00.000Z; raw issuer page accessed 2026-10-11T08:51:05Z",
         "url": "https://ondo.finance/ousg"
       },
       {
@@ -135,38 +135,38 @@
         "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
       }
     ],
-    "rationale": "The issuer portfolio as of 2026-09-30T20:00:00.000Z contains seven USD positions totaling $319695047.16: State Street Galaxy Onchain Liquidity Sweep Fund $151297555.22 (47.3256%); BlackRock USD Institutional Digital Liquidity Fund $101821706.15 (31.8496%); Franklin OnChain U.S. Government Money Fund $41305902.43 (12.9204%); Fidelity Treasury Digital Fund $22023264.78 (6.8888%); Coinbase - Cash Equivalents $3020274.72 (0.9447%); Other Assets $126343.87 (0.0395%); Silicon Valley Bank - Bank Deposits $99999.99 (0.0313%). Under D01, independent integer-cent division by the disclosed denominator and rounding to four decimal places reproduces these percentages; the source serializes its total as 319695047.1600001, a floating-point representation of the same cent total. Rounding totals 99.9999%; no residual category or favorable reclassification is added. Dependencies, custody uncertainty and nonzero unresolved Other Assets exposure remain unchanged. This issuer-reported portfolio is not an independent audit and excludes non-tokenized book-entry OUSG interests.",
-    "compositionBasis": "Issuer-published complete seven-position OUSG portfolio, source time 2026-09-30T20:00:00.000Z; USD amounts divided by disclosed USD total $319695047.16 and independently rounded to four decimal places under D01",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "The issuer portfolio as of 2026-10-09T20:00:00.000Z contains seven USD positions totaling $319024551.09: State Street Galaxy Onchain Liquidity Sweep Fund $151427776.46 (47.4659%); BlackRock USD Institutional Digital Liquidity Fund $101914898.36 (31.9458%); Franklin OnChain U.S. Government Money Fund $38843784.05 (12.1758%); Fidelity Treasury Digital Fund $23566488.15 (7.3870%); Coinbase - Cash Equivalents $3113303.00 (0.9759%); Other Assets $75640.95 (0.0237%); Silicon Valley Bank - Bank Deposits $82660.12 (0.0259%). The raw issuer page was accessed at 2026-10-11T08:51:05Z; its unique embedded portfolio preserves all seven reviewed source IDs and the source scope excluding non-tokenized book-entry OUSG interests. Exact cent amounts reconcile to the disclosed denominator. Under D01, independent integer-cent division and rounding to four decimal places gives 100.0000%, without a residual adjustment or renormalization. This updates measured composition only; existing liquidity and maturity C classifications, dependency identities, custody review and unknown Other Assets counterparties remain unchanged. Issuer portfolio data provides no independent financial assurance or account-specific realization bound.",
+    "compositionBasis": "Issuer-published complete seven-position OUSG portfolio, source time 2026-10-09T20:00:00.000Z; exact USD cent amounts divided by disclosed USD total $319024551.09 and independently rounded to four decimal places under D01",
+    "compositionAsOf": "2026-10-09",
     "scope": "full-composition",
     "knownUnknownExposure": "Other Assets consists of funds in transit and outstanding receivables less payables; its underlying asset and counterparty allocation remains unresolved.",
-    "knownUnknownExposurePct": 0.0395,
+    "knownUnknownExposurePct": 0.0237,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "State Street Galaxy Onchain Liquidity Sweep Fund",
-        "pct": 47.3256,
+        "pct": 47.4659,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Named fund share with no matching canonical tracked asset; do not invent an indirect token dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Fidelity Treasury Digital Fund",
-        "pct": 6.8888,
+        "pct": 7.387,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Named fund share with no matching canonical tracked asset; do not invent an indirect token dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Other Assets \u2074",
-        "pct": 0.0395,
+        "pct": 0.0237,
         "disposition": "insufficient-evidence",
         "rationale": "Issuer identifies net receivables and funds in transit but does not identify their counterparties or asset breakdown."
       },
       {
         "reserveIndex": 6,
         "reserveName": "Silicon Valley Bank - Bank Deposits",
-        "pct": 0.0313,
+        "pct": 0.0259,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Direct bank deposit, not a tracked stablecoin."
       }

@@ -13,7 +13,7 @@ import {
   missingLocalFact,
   type AssetBuildContext,
 } from "./fact-set-context";
-import { parseBoundedDateSec } from "./extension-shared";
+import { parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
 
 function operationalResilienceConfidence(
   overlay: SafetyScoreV9OperationalResilienceOverlay,

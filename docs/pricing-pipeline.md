@@ -22,12 +22,16 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObserv
 
 When an asset still has no usable current price after validation and fallback recovery, Pharos keeps `price = null`, `priceConfidence = null`, and serializes `priceSource = "missing"` so the cache payload stays structurally valid while still making the missing-price state explicit.
 
+Supplemental on-chain supply failures identify the asset, chain, contract and machine-readable subreason in `onchain-supply-contract-withheld` events. An unreadable `totalSupply` is distinct from a nonpositive read or unsupported amount encoding; a missing admitted NAV is reported separately as `supplemental-supply-withheld` / `nav-price-unavailable`, before any supply probe. Complete native aggregates still reject every unreadable leg and preserve the same-run zero-supply guards. Caller cancellation propagates rather than being reported as a completed unavailable observation. These diagnostics do not change supply admission or refresh carried observation clocks.
+
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.47`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.48`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+The 2026-10-11 `v6.48` release retires SOFID's nominal protocol-par override. Its existing exact-identity CoinGecko/Kraken market consensus now survives ordinary normalization and can show an observed discount or premium. Kraken retains `local_fetch` timing and `confirm_required` depeg trust; missing quotes and carried nominal references remain unavailable. No source, consensus weight, liquidity threshold or freshness budget is added. Supplemental Idle CDO NAV reachability and failure diagnostics restore existing supply-admission behavior rather than adding another methodology change.
 
 The historical-bucket conservation change checks each CoinGecko missing-chain gap-fill window independently. A missing chain receives the historical `CG − DL` remainder only when every existing canonical chain has an observed value and their sum conserves that DefiLlama bucket within `max($0.01, DL bucket × 1e-6)`. Otherwise the missing chain's historical field is `null` and optional `supplyGapFill.withheldHistoricalBuckets` names `"day"`, `"week"`, and/or `"month"`. Existing chain observations are never scaled; admitted aggregate buckets retain the single CoinGecko series, while a bucket DefiLlama did not observe stays unavailable under the existing admission rule. Current-bucket conservation, ratio bounds and hysteresis are unchanged. See [DEC-01 supply admission](./supply-snapshot.md#coingecko-aggregate-gap-fill-limits-dec-01).
 
@@ -81,7 +85,7 @@ The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry, and pool-chall
 
 Pyth Hermes was retired from live primary consensus on 2026-08-26 after Pyth's API-key mandate made the free tier unavailable for API access. New runs do not request the Pyth lane and stablecoin metadata no longer carries `pythFeedId`; the pricing registry retains the retired `pyth` key only so historical price provenance remains renderable.
 
-Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request. Its bid/ask midpoint can corroborate a fresh CoinGecko quote, but the ticker retains its local-fetch clock: that pair alone does not satisfy nominal-par precedence's unchanged depeg-authoritative trust gate. A second agreeing depeg-authoritative source or an admitted upstream-capable authoritative source is still required. Provider registration alone does not establish a published observed price; unavailable or non-agreeing observations retain their ordinary admission behavior.
+Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request, corroborating the contract-verified CoinGecko `sofiusd` identity. SoFiUSD no longer has a nominal-par override: admitted observed market consensus publishes through the ordinary validation path. Kraken's bid/ask midpoint retains its local-fetch clock, and CoinGecko agreement does not upgrade that quote to single-source depeg authority. Failed or absent quotes stay unavailable rather than publishing par. Provider registration alone does not establish a published observation.
 
 > **Historical note (v2.0→v2.1):** The DL coins API (`coins.llama.fi/prices/current/coingecko:{id}`) was removed from primary consensus because it returned CoinGecko-sourced data, creating illusory two-source agreement. It is still used in fallback enrichment via contract-address queries.
 
@@ -163,11 +167,7 @@ also satisfies the temporal-jump guard when the previous trusted price was near 
 liquidity from erasing a corroborated severe depeg while preserving the normal challenge behavior for weak,
 uncorroborated soft-source prices.
 
-The DEX bridge and the pool challenge now deliberately read from different storage views:
-
-- `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
-- `dex_price_challenger_snapshots` + `dex_price_challengers`: current individual challenger pools, selected from the full retained DEX pool set with protocol-first diversity and bounded TVL coverage for large-pool challenge / depeg confirmation
-- `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source
+The [challenger storage views](./process/pricing-pipeline-appendix.md#challenger-storage-views) distinguish promotion, challenge and display inputs.
 
 Dead or explicitly blocked DEX ids, including Bunni and its chain-scoped variants, are filtered upstream and cannot contribute challenger pools, promoted DEX bridge sources, or pool-challenge replacement marks.
 

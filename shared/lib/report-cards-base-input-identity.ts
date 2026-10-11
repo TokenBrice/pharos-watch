@@ -27,6 +27,7 @@ export interface ReportCardsBaseInputSourceV1 {
   };
   pegDataById: Readonly<Record<string, unknown>>;
   navPriceById?: Readonly<Record<string, unknown>>;
+  exitOutputPriceById?: Readonly<Record<string, unknown>>;
   activeDepegPeakBpsById: Readonly<Record<string, unknown>>;
   dexLiqMap: Readonly<Record<string, unknown>>;
   redemptionBackstopMap: Readonly<Record<string, unknown>>;
@@ -58,6 +59,7 @@ export function projectReportCardsBaseInputIdentityV1(
   const scoreBearingFactsSha256 = domainDigest("report-cards.base-input.score-bearing-facts.v1", {
     pegDataById: source.pegDataById,
     navPriceById: source.navPriceById ?? {},
+    ...(source.exitOutputPriceById ? { exitOutputPriceById: source.exitOutputPriceById } : {}),
     activeDepegPeakBpsById: source.activeDepegPeakBpsById,
     dexLiqMap: source.dexLiqMap,
     redemptionBackstopMap: source.redemptionBackstopMap,

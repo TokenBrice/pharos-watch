@@ -103,6 +103,27 @@ describe("mergeRedemptionRouteStatus", () => {
     expect(result.capsApplied).toEqual(["market-implied-depeg-evidence-uncertain"]);
   });
 
+  it.each([null, 100_000_000])("withholds the reviewed ordinary yUSD suspension with supply %s and no reserve read", async (supplyUsd) => {
+    const db = mockD1Strict([]);
+    const config = getRedemptionBackstopConfig("yusd-yieldfi")!;
+    const entry = await buildRedemptionBackstopEntry(
+      db, "yusd-yieldfi", config, supplyUsd, null, Date.UTC(2026, 9, 12) / 1_000,
+      { reserveSnapshotMetadata: null, routeAvailability: severeMarketEvidence({ routeStatus: "unknown" }) },
+    );
+    expect(entry).toMatchObject({
+      routeStatus: "suspended", routeStatusSource: "operator-notice",
+      routeStatusReviewedAt: "2026-10-11", resolutionState: "impaired",
+      score: null, capacityScore: null, immediateCapacityUsd: null,
+      capsApplied: ["reviewed-route-suspension"],
+    });
+    if (supplyUsd == null) {
+      expect(entry.capacityProfile).toBeUndefined();
+    } else {
+      expect(entry.capacityProfile).toMatchObject({ immediateUsd: null, eventualUsd: null, scoringUsd: null });
+    }
+    expect(db.getHistory()).toEqual([]);
+  });
+
   it.each([
     { supplyUsd: null, marketStatus: "unknown" as const },
     { supplyUsd: 1_000_000, marketStatus: "degraded" as const },

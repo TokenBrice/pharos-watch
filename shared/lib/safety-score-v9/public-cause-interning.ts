@@ -4,6 +4,13 @@ import type { V9PublicEvidenceFactWire } from "../../types/safety-score-v9-publi
 import { publicCauseScoringDisposition } from "../../types/safety-score-v9-public-evidence-facts";
 import type { V9EvidenceCause, V9ScoringDisposition } from "../../types/safety-score-v9-causes";
 import { internEvidenceFactPathPrefixes } from "./public-evidence-path-interning";
+import { internV9PublicWitnessTexts } from "./public-witness-texts";
+import { V9ReasonCodeSchema } from "../../types/safety-score-v9";
+import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
+import { V9EvidenceCauseSchema } from "../../types/safety-score-v9-causes";
+const CAUSE_REFS: Record<string, number> = Object.fromEntries(V9EvidenceCauseSchema.options.map((cause, ref) => [cause, ref]));
+const REASON_REFS: Record<string, number> = Object.fromEntries(V9ReasonCodeSchema.options.map((code, ref) => [code, ref]));
+const RESPONSIBILITY_REFS: Record<string, number> = Object.fromEntries(V9EvidenceResponsibilitySchema.options.map((owner, ref) => [owner, ref]));
 interface UninternedEvidenceFact {
   reasonCode: V9PublicEvidenceFact[0]; exactFactPath: string; sourceGapId: string | null;
   responsibility: V9PublicEvidenceFact[3]; critical: boolean; cause: V9EvidenceCause;
@@ -13,7 +20,7 @@ const EMPTY_REFS: number[] = [];
 
 /** Private projection input, before the sole public wire is interned. */
 export type V9UninternedPublic<T> = T extends readonly (infer U)[] ? V9UninternedPublic<U>[]
-  : T extends object ? { [K in keyof T as K extends "localCauseGaps" | "foreignCauseGapRefs" ? never : K extends "causeGapRefs" ? "causeGapIds" : K extends "sourceGapRef" ? "sourceGapId" : K]:
+  : T extends object ? { [K in keyof T as K extends "localCauseGaps" | "foreignCauseGapRefs" | "witnessTexts" ? never : K extends "causeGapRefs" ? "causeGapIds" : K extends "sourceGapRef" ? "sourceGapId" : K]:
     K extends "causeGapRefs" ? string[] : K extends "sourceGapRef" ? string | null :
     K extends "facts" ? T[K] extends V9PublicEvidenceFactWire[] ? UninternedEvidenceFact[] : V9UninternedPublic<T[K]> : V9UninternedPublic<T[K]> }
     : T;
@@ -96,7 +103,7 @@ export function internV9PublicCauseGaps(card: V9UninternedPublicCard): V9Interne
             const ref = Number(suffix.id), prefix = suffix.prefix;
             encodedPath = ref === (sourceGapRef ?? gapRefs[0]) ? [prefix] : [prefix, ref];
           }
-          return [fact.reasonCode, encodedPath, sourceGapRef, fact.responsibility, fact.critical, fact.cause, gapRefs];
+          return [REASON_REFS[raw.reasonCode]!, encodedPath, sourceGapRef, RESPONSIBILITY_REFS[raw.responsibility]!, raw.critical ? 1 : 0, CAUSE_REFS[raw.cause]!, gapRefs.length === 1 ? gapRefs[0]! : gapRefs];
         });
         continue;
       }
@@ -135,7 +142,7 @@ export function internV9PublicCauseGaps(card: V9UninternedPublicCard): V9Interne
   result.scoreTrace.boundedUncertaintyAttribution.items.sort((a, b) =>
     compare(a.source, b.source) || compare(a.code, b.code) || compare(a.path, b.path) ||
     compare(a.message, b.message) || compare(a.responsibility, b.responsibility));
-  return result;
+  return internV9PublicWitnessTexts(result);
 }
 function compare(a: string, b: string): number { return a < b ? -1 : a > b ? 1 : 0; }
 function compareRefs(a: number, b: number): number { return a - b; }

@@ -1,6 +1,8 @@
 import { BPS_PER_UNIT } from "../math";
 import { resolveRedemptionFiatUsdRate, type RedemptionFiatReferenceContext } from "../redemption-fiat-reference";
 import { trackedRedemptionDocSources } from "../redemption-backstop-docs";
+import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../safety-score-v9/evidence";
+import { allocationReviewClockSec as reviewAdmissionClockSec } from "../../types/safety-score-v9-allocation";
 import type {
   RedemptionDocSource,
   RedemptionDocSourceSupport,
@@ -102,7 +104,10 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
       : {}),
     ...(config.v9RouteCostTerms ? { v9RouteCostTerms: { ...config.v9RouteCostTerms,
       ...(config.v9RouteCostTerms.feeComponents
-        ? { feeComponents: cloneFeeComponents(config.v9RouteCostTerms.feeComponents) } : {}) } } : {}),
+        ? { feeComponents: cloneFeeComponents(config.v9RouteCostTerms.feeComponents) } : {}),
+      ...(config.v9RouteCostTerms.publishedFeeSchedule
+        ? { publishedFeeSchedule: { ...config.v9RouteCostTerms.publishedFeeSchedule,
+          docs: config.v9RouteCostTerms.publishedFeeSchedule.docs.map(cloneRedemptionDocSource) } } : {}) } } : {}),
     ...(config.v9RouteReviewTerms
       ? {
           v9RouteReviewTerms: {
@@ -113,6 +118,9 @@ export function cloneRedemptionBackstopConfig(config: RedemptionBackstopConfig):
                     ...config.v9RouteReviewTerms.businessDayTerms,
                     cutoff: { ...config.v9RouteReviewTerms.businessDayTerms.cutoff },
                     conditions: [...config.v9RouteReviewTerms.businessDayTerms.conditions],
+                    ...(config.v9RouteReviewTerms.businessDayTerms.accessPrerequisites
+                      ? { accessPrerequisites: [...config.v9RouteReviewTerms.businessDayTerms.accessPrerequisites] }
+                      : {}),
                     ...(config.v9RouteReviewTerms.businessDayTerms.stages
                       ? { stages: config.v9RouteReviewTerms.businessDayTerms.stages.map((stage) => ({ ...stage })) }
                       : {}),
@@ -255,10 +263,19 @@ export function resolveV9RedemptionRouteCostBpsAtNotional(
   resolvedFeeBps: number | null = null,
   fiatReferences?: RedemptionFiatReferenceContext,
 ): number | null {
+  const schedule = config.v9RouteCostTerms?.publishedFeeSchedule;
+  if (schedule) {
+    const clockSec = fiatReferences?.clockSec ?? Math.floor(Date.now() / 1_000);
+    const reviewSec = Date.parse(schedule.reviewedAt) / 1_000;
+    if (!Number.isFinite(clockSec) || !Number.isFinite(reviewSec) ||
+        reviewAdmissionClockSec(schedule.reviewedAt) > clockSec ||
+        clockSec - reviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC ||
+        !schedule.docs.some((doc) => doc.supports?.includes("fees"))) return null;
+  }
   return resolveRedemptionCostBpsAtNotional(
     { ...config.costModel, ...config.v9RouteCostTerms },
     requestedNotionalUsd,
-    resolvedFeeBps,
+    schedule ? null : resolvedFeeBps,
     fiatReferences,
   );
 }

@@ -903,30 +903,51 @@
         ]
       },
       {
-        "label": "Alchemix Fantom alUSD debt-token proxy upgrade (controller unresolved)",
+        "label": "Alchemix Fantom alUSD debt-token ProxyAdmin owner Safe",
         "role": "proxy-admin",
-        "authorityType": "contract",
+        "authorityType": "safe",
         "directMintAbility": "upgrade-only",
         "deploymentRefs": [
           "fantom:0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e"
         ],
+        "threshold": 3,
+        "signerCount": 7,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "capDescription": "The current Fantom debt-token implementation is mutable in the reviewed proxy family, but the current token proxy administrator was not resolved. No historical bridge EOA is promoted to native Mint Authority.",
-        "evidence": "At Fantom block 122918901, alUSD token 0xb67fa6defce4042070eb1ae1511dcd6dcc6a532e resolved to implementation 0x211c74db951c161c5a379363716ebdca5125ef59. The current token proxy upgrade controller was not independently resolved; the code-less Multichain-era EOA remains only an unresolved Bridge Risk fact.",
+        "safe": {
+          "owners": [
+            "0xf920f2688719012b587afbdec27ec5029c18e875",
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xa33a27b81a7156f0bb8c2a33b8c5f99a5c9e0573",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xacd8b7e9ac7a0900cb57007000302b3234e33a36",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e"
+          ],
+          "threshold": 3,
+          "observedBlock": 123505324,
+          "observedAt": "2026-10-11",
+          "source": "onchain"
+        },
+        "capDescription": "The debt-token EIP-1967 administrator is the same ProxyAdmin 0xf55db61d1e65718ac0d5a163b18cca3645791265 already identified for the Fantom AlchemistV2 proxy, owned by the same 3-of-7 Safe. The existing upgrade-only capability is retained; this identity read does not independently close callable upgrade selectors, cap reach, Safe extensions or complete execution scope.",
+        "evidence": "Sol curation campaign 2026-10-11 (C51AlUSD), observed 2026-10-11T00:50:39.374Z and 2026-10-11T00:51:01.359Z. At Fantom block 123505324, hash 0x000570b8000012b4eb72c9754ab7df0aa778d577a4cc0e3e5772aabaaefc8992, timestamp 2026-10-01T07:17:21Z, debt-token EIP-1967 admin and implementation slots returned 0xf55db61d1e65718ac0d5a163b18cca3645791265 and 0x211c74db951c161c5a379363716ebdca5125ef59. ProxyAdmin.owner() returned Safe 0x6b291cf19370a14bbb4491b01091e1e29335e605; getThreshold() returned 3 and getOwners() returned the seven signers already recorded for this Safe. This closes the exact previously unresolved token-proxy controller identity, not the historical minter census, Safe extensions, incident history, runtime/source execution certificate or aggregate mint review.",
         "sources": [
           {
-            "label": "Archived Fantom alUSD token page (22 March 2025; identity only, current state verified by RPC)",
-            "url": "https://web.archive.org/web/20250322082139/https://ftmscan.com/token/0xB67FA6deFCe4042070Eb1ae1511Dcd6dcc6a532E"
+            "label": "Pinned Fantom token EIP-1967 and ProxyAdmin/Safe reads, block 123505324",
+            "url": "https://fantom.drpc.org"
           },
           {
-            "label": "Fantom verified token implementation",
-            "url": "https://sourcify.dev/server/v2/contract/250/0x211c74db951c161c5a379363716ebdca5125ef59?fields=abi,metadata"
+            "label": "Issuer Fantom debt-token deployment inventory",
+            "url": "https://raw.githubusercontent.com/alchemix-finance/deployments/master/fantom/CrossChainCanonicalAlchemicTokenV2_alUSD.json"
           }
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 122918901,
+        "chain": "fantom",
+        "address": "0x6b291cf19370a14bbb4491b01091e1e29335e605",
+        "observedAt": "2026-10-11",
+        "observedBlock": 123505324,
         "failureDomainKeys": [
+          "safe:fantom:0x6b291cf19370a14bbb4491b01091e1e29335e605",
+          "proxy-admin:fantom:0xf55db61d1e65718ac0d5a163b18cca3645791265",
           "implementation:fantom:0x211c74db951c161c5a379363716ebdca5125ef59"
         ]
       },
@@ -1191,7 +1212,7 @@
       "reviewedAt": "2026-10-09",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Reconcile every current, stopped and reactivatable token-authorized minter using a complete historical whitelist-setter transaction/internal-call census and pinned membership, not only the three official V3 and known V2 addresses. Resolve the remaining Fantom native token-proxy administrator.",
+        "Reconcile every current, stopped and reactivatable token-authorized minter using a complete historical whitelist-setter transaction/internal-call census and pinned membership, not only the three official V3 and known V2 addresses.",
         "Complete MYT collateral-authority closure, including all strategy owners, extra operators/sentinels, permissioned forwarding selectors, pending/reactivatable paths and the Arbitrum Allocator runtime/source binding. The pinned documented roles and Safe topology alone are not a complete execution-scope certificate."
       ],
       "sources": [

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeFunctionResult, parseAbi } from "viem/utils";
 import { captureQuoterV2Pools } from "../quoter-v2-pool-capture";
-import { enrichQuoterV2ExecutionTargets } from "../enrich-quoter-v2-targets";
+import { enrichQuoterV2ExecutionTargets, selectQuoterV2EnrichmentCandidates } from "../enrich-quoter-v2-targets";
 import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 import { encodeQuoterV2ExactInputSingle, encodeV3FactoryGetPool } from "../../measured-execution/quoter-v2";
 import type { LiquidityMetrics, PoolEntry } from "../types";
@@ -106,6 +106,19 @@ describe("address-bound discovered QuoterV2 capture", () => {
 });
 
 describe("retained discovered rows enter actual target production", () => {
+  it("does not let a large first deployment starve another chain or fabricate execution on failure", async () => {
+    rpc.fetchEvmBlockNumber.mockResolvedValue(null);
+    const ethereum = Array.from({ length: 129 }, (_, index) =>
+      row("uniswap-v3", "ethereum", "cg-concentrated", `ethereum:0x${(index + 1).toString(16).padStart(40, "0")}`));
+    const bsc = row("pancakeswap", "bsc", "cg-concentrated");
+    const result = await enrich([...ethereum, bsc]);
+    expect(result).toMatchObject({ exactPoolCount: 0, exactCapableAssets: [] });
+    expect(result.telemetry.find((entry) => entry.chain === "bsc")).toMatchObject({ attempted: 1, enriched: 0 });
+    expect(result.telemetry.find((entry) => entry.chain === "ethereum")).toMatchObject({
+      attempted: 127, enriched: 0, dropReasons: { "enrichment-cap": 2, "source-failure": 127 },
+    });
+    expect([...ethereum, bsc].every((pool) => pool.extra?.measuredExecutionTarget === undefined)).toBe(true);
+  });
   it("clips capture to the original event deadline after a readiness wait", async () => {
     const nowMs = Date.now();
     const deadline = createSlotDeadline(nowMs);
@@ -142,6 +155,7 @@ describe("retained discovered rows enter actual target production", () => {
     ["uniswap-v3-quoter-v2", "uniswap-v3", "xlayer"],
     ["hyperswap-v3-quoter-v2", "hyperswap-v3", "hyperevm"],
     ["kodiak-v3-quoter-v2", "kodiak-v3", "berachain"],
+    ["pancakeswap-v3-quoter-v2", "pancakeswap", "monad"],
   ])("collects %s without admitting new forks to scoring", async (profile, project, chain) => {
     answers(profile, chain, 100);
     const pool = row(project, chain, "cg-concentrated");
@@ -162,5 +176,29 @@ describe("retained discovered rows enter actual target production", () => {
     expect(await enrich([pool])).toEqual({ exactPoolCount: 0, exactCapableAssets: [], telemetry: [] });
     expect(pool.extra?.measuredExecutionTarget).toBeUndefined();
     expect(rpc.fetchEvmBlockNumber).not.toHaveBeenCalled();
+  });
+});
+
+describe("bounded quote identity rotation", () => {
+  const addresses = Array.from({ length: 256 }, (_, index) =>
+    `0x${(index + 1).toString(16).padStart(40, "0")}` as `0x${string}`);
+
+  it("eventually probes identities beyond the first 128 without widening the run cap", () => {
+    const candidates = new Map([["uniswap-v3-quoter-v2:ethereum", addresses]]);
+    const first = [...selectQuoterV2EnrichmentCandidates(candidates, 0).values()].flat();
+    const second = [...selectQuoterV2EnrichmentCandidates(candidates, 3600).values()].flat();
+    expect(first).toHaveLength(128);
+    expect(second).toHaveLength(128);
+    expect(new Set([...first, ...second]).size).toBe(256);
+  });
+
+  it("is stable under source insertion-order drift and rotates the first serialized deployment", () => {
+    const candidates = new Map([["uniswap-v3-quoter-v2:ethereum", addresses], ["pancakeswap-v3-quoter-v2:bsc", addresses]]);
+    const reversed = new Map([...candidates].reverse().map(([key, values]) => [key, [...values].reverse()]));
+    expect(selectQuoterV2EnrichmentCandidates(candidates, 0)).toEqual(selectQuoterV2EnrichmentCandidates(reversed, 0));
+    const first = selectQuoterV2EnrichmentCandidates(candidates, 0);
+    const second = selectQuoterV2EnrichmentCandidates(candidates, 3600);
+    expect([...first.values()].map((values) => values.length)).toEqual([64, 64]);
+    expect([...first.keys()][0]).not.toBe([...second.keys()][0]);
   });
 });

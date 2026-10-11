@@ -373,14 +373,17 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ],
     },
     costModel: documentedVariableFee(
-      "M0 docs describe $M as fully backed and redeemable 1:1, but direct mint and redemption access is restricted to permissioned minters and no public fee schedule is disclosed",
+      "MXON's public service terms require separate written counterparty agreements, and M0's primary-market liquidity guide requires issuer onboarding; neither retrieved disclosure publishes a binding direct M institutional redemption fee or all-in cost maximum. SwapFacility no-trading-fee extension conversions and onchain minter-debt burns are different routes",
     ),
     docs: [
       sourceRefRouteCapacityAccess("M0 FAQ", "https://www.m0.org/faq"),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+      sourceRef("MXON website terms: separate counterparty service agreements (observed 2026-10-10T23:34:49Z; L31M)", "https://www.mxon.co/terms-of-use", ["fees", "access"]),
+      sourceRef("M0 primary-market issuer onboarding and distinct SwapFacility conversions (observed 2026-10-10T23:34:49Z; L31M)", "https://docs.m0.org/build/accessing-liquidity", ["fees", "access"]),
     ],
     notes: [
       "Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption",
+      "Cost-only disclosure review observed 2026-10-10T23:34:49Z by Sol curation campaign 2026-10-11 (L31M): MXON Website Terms of Use section 2 places services under separate written agreements. The terms print Last updated: March 2026, without an exact day; no precise evidence date or fee value is inferred. This review does not refresh capacity, settlement, access configuration or the older composed-wrap checkpoint",
     ],
   },
   "fusd-finchain": {
@@ -392,13 +395,14 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
         businessDays: 3, calendarId: "hong-kong-banking",
         cutoff: { time: "08:00", timezone: "Asia/Hong_Kong" },
         assurance: "target", conditional: true,
-        conditions: ["Completed KYC/KYB and account settings", "Universal redemption timing is a typically/up-to operational statement, not a binding guarantee"],
-        startEvent: "FUSD-paid universal redemption order; requests after 08:00 Hong Kong roll to the next business day",
+        conditions: ["Universal FUSD-to-USDT redemption is described as typically completed within one business day but may take up to three business days (UTC+8); this is an operational timing statement, not a binding unconditional payment guarantee"],
+        accessPrerequisites: ["Completed KYC/KYB and all account settings, including upgrading the wallet to FinPass ID if needed", "Redemption order created and FUSD payment completed"],
+        startEvent: "FUSD-paid universal redemption order included in Hong Kong business-day processing; requests after 08:00 Hong Kong time roll to the next business day",
       },
-      reviewedAt: "2026-10-05",
+      reviewedAt: "2026-10-11",
       docs: [
-        sourceRef("FinChain universal redemption", "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md", ["settlement"]),
-        sourceRef("FinChain Hong Kong cutoff", "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md", ["settlement"]),
+        sourceRef("FinChain universal FUSD-to-USDT redemption: KYC/KYB, funded order and operational one-to-three-business-day timing; reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md", ["settlement", "access"]),
+        sourceRef("FinChain Hong Kong business-day processing, 08:00 cutoff and next-business-day rollover; reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md", ["settlement"]),
       ],
     },
     costModel: fixedFee(

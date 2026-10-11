@@ -56,50 +56,54 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
+          "reviewedAt": "2026-10-11",
+          "observedAt": "2026-10-11",
           "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
-          "confidence": "partial",
+          "reviewer": "Sol curation campaign 2026-10-11 (C36GHO)",
+          "confidence": "verified",
           "sources": [
             {
-              "label": "Verified deployed source",
+              "label": "Byte-matched Executor source: arbitrary CALL and delegatecall, owner mutation and no local timelock",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5300a1a15135ea4dc7ad5a167152c01efc9b192a"
             },
             {
-              "label": "Verified deployed source",
+              "label": "GHO source: facilitator authorization, bucket management and default-admin permissions",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
             },
             {
-              "label": "Verified deployed source",
+              "label": "Byte-matched Governance implementation and ordinary-route timing refreshed at Ethereum 26165719",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x58bcb647c4beff253b4b6996c62f737b783f2cdd"
             },
             {
-              "label": "Verified deployed source",
+              "label": "Byte-matched PayloadsController implementation and ordinary-route executor delay refreshed at Ethereum 26165719",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7222182cb9c5320587b5148bf03eee107ad64578"
+            },
+            {
+              "label": "Pinned Ethereum runtime, owner and all three GHO roles at block 26165719, 2026-10-11T00:47:47Z",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26165719",
+            "hash": "0x00587986baad89aea13d080173eab122777387afed59d3e01a581ffe9c38ab54",
             "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
-            "signerIdentity": "PayloadsController 0xdabad81af85554e9ae636395611c58f7ec1aaec5 is executor owner; ordinary Governance V3 route uses past-block proofs; cross-chain infrastructure, upgrades and emergency bypass closure not certified"
+            "signerIdentity": "onlyOwner:ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5; local adverse upper envelope only, upstream governance timing and bypasses remain uncertified"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26165719",
+            "hash": "0x00587986baad89aea13d080173eab122777387afed59d3e01a581ffe9c38ab54",
             "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
-            "signerIdentity": "PayloadsController 0xdabad81af85554e9ae636395611c58f7ec1aaec5 is executor owner; ordinary Governance V3 route uses past-block proofs; cross-chain infrastructure, upgrades and emergency bypass closure not certified"
+            "signerIdentity": "onlyOwner:ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5; local adverse upper envelope only, upstream governance timing and bypasses remain uncertified"
           },
-          "inventory": "partial",
+          "inventory": "complete",
           "closure": {
-            "entrypoints": false,
-            "mutableTargets": false,
-            "delegateAndFallback": false,
-            "permissions": false,
-            "upgrades": false,
-            "bypasses": false,
-            "liabilityInventory": false
+            "entrypoints": true,
+            "mutableTargets": true,
+            "delegateAndFallback": true,
+            "permissions": true,
+            "upgrades": true,
+            "bypasses": true,
+            "liabilityInventory": true
           },
           "paths": [
             {
@@ -135,10 +139,74 @@
               "permissionChangeRefs": [],
               "upgradeRefs": [],
               "bypassRefs": []
+            },
+            {
+              "id": "maximal-execution",
+              "targetDeployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+              "entrypointKind": "evm-selector",
+              "entrypoints": [
+                "0x025d36a9",
+                "0xf2fde38b",
+                "0x715018a6"
+              ],
+              "callMode": "call",
+              "capabilities": [
+                "mint",
+                "burn",
+                "upgrade",
+                "freeze",
+                "seize",
+                "oracle-update",
+                "bridge-mint",
+                "custody-transfer",
+                "parameter-change"
+              ],
+              "capSemantics": {
+                "kind": "unbounded",
+                "bound": null
+              },
+              "claimImpairment": "unbounded",
+              "economicLossScope": "global-claim",
+              "unavoidableDelaySec": 0,
+              "activation": "active",
+              "affectedLiabilityIds": [
+                "gho-aave"
+              ],
+              "affectedDeployments": [],
+              "reach": "root",
+              "controlRefs": [],
+              "reactivationRefs": [],
+              "permissionChangeRefs": [],
+              "upgradeRefs": [],
+              "bypassRefs": [],
+              "downstreamCallDomain": {
+                "kind": "conservative-maximal",
+                "controllerDeployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+                "executorDeployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+                "sourceDeployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+                "targets": "any-address",
+                "calldata": "arbitrary-bytes",
+                "capabilities": "all-reachable",
+                "arbitraryCallVerified": true,
+                "sourceRuntimeCorrespondence": "verified",
+                "executorPin": {
+                  "position": "26165719",
+                  "hash": "0x00587986baad89aea13d080173eab122777387afed59d3e01a581ffe9c38ab54",
+                  "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
+                  "signerIdentity": "onlyOwner:ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5; local adverse upper envelope only, upstream governance timing and bypasses remain uncertified"
+                },
+                "sourceRuntimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
+                "observedSourceRuntimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
+                "minimumDelaySec": 0,
+                "source": {
+                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
+                  "location": "src/contracts/payloads/Executor.sol:executeTransaction and inherited Ownable.sol:transferOwnership/renounceOwnership; arbitrary nonzero target and raw bytes CALL or delegatecall; no local delay, proxy, initializer, module or fallback-handler dispatch. Complete adverse envelope includes mutable ownership and arbitrary delegated storage effects, not upstream governance certification."
+                }
+              }
             }
           ]
         },
-        "evidence": "At Ethereum block 26095800, hasRole() returned true for this executor under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight facilitator contracts. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths."
+        "evidence": "At Ethereum block 26095800, hasRole() returned true for this executor under DEFAULT_ADMIN_ROLE, FACILITATOR_MANAGER_ROLE, and BUCKET_MANAGER_ROLE. getFacilitatorsList() returned eight facilitator contracts. O0 ordinary-route timing correction at Ethereum block 26118754 (hash 0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10, 2026-10-04T11:41:11Z): reviewed Level-1 payload-visible lower bound 345603 seconds = 1 + 259201 + 86401, excluding pre-payload proposal cooldown. Governance.getVotingConfig(1) 0x1c84e321 / COOLDOWN_PERIOD() 0x6e99d52f at 0x9aee0b04504cef83a65ac3f0e838d0593bcb2bc7 and PayloadsController.getExecutorSettingsByAccessControl(1) 0xf80281fb at 0xdabad81af85554e9ae636395611c58f7ec1aaec5, with byte-matched implementations and strict source inequalities, are recorded in executionCertificates proof gho-ordinary-route; 04-gho-paths.md section 4 / 07-gho-factcheck.md section 5 historically corroborate at 26118181. This is not complete upstream/bypass certification and does not alter independent zero-delay Council paths. C36GHO independently observed Ethereum block 26165719 (hash 0x00587986baad89aea13d080173eab122777387afed59d3e01a581ffe9c38ab54, 2026-10-11T00:47:47Z) through PublicNode: byte-for-byte Executor source/runtime correspondence, owner PayloadsController, and all three token roles true. The same pin re-read both governance/payload implementation slots, byte-matched both implementation runtimes and confirmed ordinary-route voting cooldown 86400, duration 259200, execution cooldown 0 and payload delay 86400. The complete local executor certificate adds the v10.08 conservative-maximal adverse envelope: arbitrary nonzero target/raw-byte CALL and delegatecall encompass owner mutation, delegated storage effects and every liability capability. Its zero-second minimum is the executor-local conservative lower bound, not a finding that the upstream DAO can execute instantly, and grants no governance-process certification. The historical ordinary-route path and its existing graph references remain separately intact; nine sibling execution inventories remain partial."
       },
       {
         "chain": "ethereum",

@@ -2,6 +2,8 @@ import { z } from "zod";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DASHBOARD_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
+import { DependencyTypeSchema } from "@shared/types/dependency-types";
+import onedReserves from "@shared/data/stablecoins/domains/reserves/oned-gennius.json";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { fetchJsonWithRetry, requireJsonInput, verifiedFreshnessMetadata } from "./helpers";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
@@ -12,6 +14,12 @@ const OPERATION = "ProofOfReservesPageQuery";
 const HASH = "f26fac8fa11e1fcab64476e3dc605758082acc19b13353841bd78fb57a0ba34a";
 const ONED_CONTRACT = "0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd";
 const USDC_CONTRACT = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+// Coinbase's CCS terms give holders transferable reserve ownership and all
+// reserve value/risk: a serial claim despite custodian-managed conversion.
+// The reviewed sidecar owns the live/fallback role; absent linkage fails closed.
+const USDC_DEPENDENCY_TYPE = DependencyTypeSchema.parse(
+  onedReserves.reserves.find((slice) => slice.coinId === "usdc-circle")?.depType,
+);
 const queryUrl = new URL("https://www.coinbase.com/graphql/query");
 queryUrl.searchParams.set("operationName", OPERATION);
 queryUrl.searchParams.set("extensions", JSON.stringify({ persistedQuery: { version: 1, sha256Hash: HASH } }));
@@ -84,7 +92,7 @@ export function parseCoinbaseOnedPor(payload: unknown, nowSec: number): AdapterR
   const supplyTokens = Number(stock) / 1_000_000;
   if (!Number.isFinite(totalReserveUsdc) || !Number.isFinite(supplyTokens)) fail("schema-drift", "amount exceeds numeric observation range");
   return {
-    slices: [{ sourceKey: `${KEY}:base:${USDC_CONTRACT}`, name: "USDC in Coinbase published ONED reserve wallets", pct: 100, risk: "low", coinId: "usdc-circle", depType: "wrapper" }],
+    slices: [{ sourceKey: `${KEY}:base:${USDC_CONTRACT}`, name: "USDC in Coinbase published ONED reserve wallets", pct: 100, risk: "low", coinId: "usdc-circle", depType: USDC_DEPENDENCY_TYPE }],
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),
       supplyTokens,

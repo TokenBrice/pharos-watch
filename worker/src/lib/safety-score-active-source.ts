@@ -1,5 +1,6 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { loadPublishedReportCardsV9Snapshot } from "./report-cards-v9-cache";
 import { loadActiveSafetyScoreIndex } from "./safety-score-index";
 
@@ -38,7 +39,9 @@ export async function loadActiveSafetyScoreSource(
   signal?: AbortSignal,
 ): Promise<ActiveSafetyScoreSource> {
   return loadPublishedReportCardsV9Snapshot(db, signal).then(
-    (snapshot): ActiveSafetyScoreSource =>
+    (snapshot): ActiveSafetyScoreSource => {
+      snapshot = { ...snapshot, cards: snapshot.cards.map((card) => resolveV9PublicWitnessTexts(card)) };
+      return (
       snapshot.publicationHealth.status === "held"
         ? {
             kind: "held",
@@ -50,7 +53,8 @@ export async function loadActiveSafetyScoreSource(
         : {
             kind: "v9",
             snapshot,
-          },
+          });
+    },
     (error): ActiveSafetyScoreSource => ({
       kind: "error",
       reason: error instanceof Error && error.message.includes("publication-schema-cutover-pending")

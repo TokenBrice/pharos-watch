@@ -111,6 +111,7 @@ export const DEX_EXECUTION_CAPABILITY_REGISTRY: readonly DexExecutionCapabilityR
     platform: "evm",
     lifecycle: "active",
     eligibleChains: ["ethereum", "base", "bsc"],
+    shadowChains: ["monad"],
     eligibleDeploymentKeys: ACTIVE_QUOTER_V2_DEPLOYMENT_KEYS,
     proofKind: "evm-state-and-call-proof",
   }),

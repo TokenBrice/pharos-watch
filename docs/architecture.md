@@ -64,6 +64,8 @@ Stablecoin catalog identity, routing, contracts, classifications, and other scal
 
 Shared runtime host/origin defaults live in `shared/lib/runtime-origins.json` and `shared/lib/runtime-origins.ts`. Frontend API-base inference, `/_site-data/*` Pages Functions, ops-host Pages Functions, worker self/probe URLs, and local static-export tooling should consume that shared source instead of embedding production origins ad hoc.
 
+`shared/lib/drpc.ts` owns canonical dRPC network slugs for Worker balance/feed consumers and pinned research tooling; research-only provider routes do not widen runtime capability or priority.
+
 `shared/lib/stable-json.ts` rejects undefined array entries, including sparse holes, before emitting its V1 canonical string or chunk stream; valid-input bytes are unchanged.
 
 `shared/lib/format.ts` owns tracking-span labels: days remain days until a full 30.44-day rollup month; the seconds wrapper floors to whole days first. Peg history, tracker spans and safety-grade streaks share this policy.

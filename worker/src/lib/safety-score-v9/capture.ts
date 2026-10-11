@@ -17,6 +17,7 @@ import {
 } from "../report-cards-snapshot-inputs";
 import {
   buildNavPriceById,
+  buildExitOutputPriceById,
   loadExactDexPublicationGeneration,
   resolveExactRedemptionPublicationGeneration,
 } from "../report-cards-snapshot";
@@ -286,6 +287,7 @@ export async function buildNativeSafetyScoreV9Capture(
     },
     pegDataById,
     navPriceById: buildNavPriceById(peggedAssets, clockSec),
+    exitOutputPriceById: buildExitOutputPriceById(peggedAssets, clockSec),
     activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),
     redemptionBackstopMap,
     liveReserveMap: Object.fromEntries(liveReserveMap),

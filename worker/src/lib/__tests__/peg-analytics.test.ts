@@ -19,6 +19,14 @@ const { STABLECOINS_MOCK } = vi.hoisted(() => ({
       flags: { pegCurrency: "USD", governance: "centralized", navToken: false },
     },
     {
+      id: "sofid-sofi",
+      symbol: "SOFID",
+      name: "SoFiUSD",
+      launchDate: "2025-12-18",
+      commodityOunces: undefined,
+      flags: { pegCurrency: "USD", governance: "centralized", navToken: false },
+    },
+    {
       id: "usdc-circle",
       symbol: "NAV",
       name: "NAV Stable",
@@ -371,6 +379,27 @@ describe("derivePegAnalyticsSnapshot", () => {
     expect(observed?.currentDeviationBps).not.toBeNull();
   });
 
+  it("consumes SOFID's admitted market discount without turning nominal or failed reads into peg stability", async () => {
+    const now = 1_700_000_000;
+    const observed = makeStablecoin({
+      id: "sofid-sofi", symbol: "SOFID", name: "SoFiUSD", pegType: "peggedUSD",
+      price: 0.999, circulating: { peggedUSD: 8_000_000 },
+      priceSource: "coingecko+kraken", priceConfidence: "high",
+      priceObservedAt: now - 30, priceObservedAtMode: "local_fetch",
+    });
+    const snapshot = await derivePegAnalyticsSnapshot(db, { peggedAssets: [observed], methodologyAsOf: now });
+    expect(snapshot.pegDataById.get("sofid-sofi")?.currentPriceUnavailable).toBeUndefined();
+    expect(snapshot.pegDataById.get("sofid-sofi")?.currentDeviationBps).toBe(-10);
+    for (const failed of [
+      { ...observed, price: null, priceSource: "missing", priceConfidence: null },
+      { ...observed, price: 1, priceSource: "protocol-par", priceObservedAt: null, priceObservedAtMode: "nominal_reference" as const },
+    ]) {
+      const unavailable = await derivePegAnalyticsSnapshot(db, { peggedAssets: [failed], methodologyAsOf: now });
+      expect(unavailable.pegDataById.get("sofid-sofi")?.currentPriceUnavailable).toBe(true);
+      expect(unavailable.pegDataById.get("sofid-sofi")?.currentDeviationBps).toBeNull();
+    }
+  });
+
   it("marks coins with no usable price observation so a null deviation is not read as at peg", async () => {
     const snapshot = await derivePegAnalyticsSnapshot(db, {
       peggedAssets: [
@@ -443,7 +472,7 @@ describe("derivePegAnalyticsSnapshot", () => {
         methodologyAsOf: 1_783_000_000,
       });
 
-      expect(vi.mocked(coinTrackingStart)).toHaveBeenLastCalledWith(
+      expect(vi.mocked(coinTrackingStart)).toHaveBeenCalledWith(
         expect.any(Array),
         expect.any(Number),
         1_782_604_800,

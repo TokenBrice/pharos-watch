@@ -5,6 +5,7 @@ import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-revi
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import {
   V9EvidenceGapQueueV2Schema,
   type V9EvidenceGapQueueEntryV2,
@@ -316,7 +317,8 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   }
 
   const factById = new Map(facts.assets.map((asset) => [asset.assetId, asset]));
-  const cardById = new Map(candidate.cards.map((card) => [card.id, card]));
+  // Wire cards intern witness text; tasks must carry the readable scope.
+  const cardById = new Map(candidate.cards.map((card) => [card.id, resolveV9PublicWitnessTexts(card)]));
   const sourceById = new Map(input.catalogEntries.map((entry) => [entry.id, entry]));
   const entriesById = new Map<string, V9EvidenceGapQueueEntryV2[]>();
   for (const entry of queue.entries) {

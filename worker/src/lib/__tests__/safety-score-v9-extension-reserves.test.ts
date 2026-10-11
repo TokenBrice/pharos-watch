@@ -21,7 +21,7 @@ import {
   addReviewedStaticReserveEvidence,
 } from "../safety-score-v9/extension-reserves";
 import { buildSafetyScoreV9MechanismReview } from "../safety-score-v9/extension-mechanism";
-import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
@@ -174,6 +174,21 @@ describe("v10.01 named reserve reports", () => {
       evidenceClass: "static-validated",
     });
     for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Issuer financial figures";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
+  });
+
+  it.each([
+    ["PricewaterhouseCoopers; monthly examination", "PwC signed reserve report"],
+    ["PwC monthly examination", "PricewaterhouseCoopers LLP signed reserve report"],
+  ])("recognizes the published PwC identity without changing named-report gates: %s", (provider, label) => {
+    const meta = structuredClone(usdt);
+    meta.proofOfReserves!.provider = provider;
+    for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = label;
+    const clockSec = asOfSec + 94 * 86400;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toMatchObject({
+      evidenceClass: "static-validated",
+    });
+    for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Unnamed auditor reserve report";
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
   });
 

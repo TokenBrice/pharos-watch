@@ -21,6 +21,7 @@ import {
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 import { fixturePegFact } from "./safety-score-v9-facts.fixture-support";
+import { makeDeploymentControl } from "./safety-score-v9-fixtures.test-support";
 
 const AS_OF_SEC = 1_800_000_000;
 const BASE_EVIDENCE_ID = "evidence:base";
@@ -503,6 +504,110 @@ describe("Safety Score v9 operational-resilience full-pipeline integration", () 
     ]);
 
     expect(persistentMarketDepthContribution(evaluatedAsset(factSet))).toBeUndefined();
+  });
+
+  it.each([
+    ["active", 0.0004501001445390269],
+    ["active", 0.5],
+    ["resolved", 0.0004501001445390269],
+  ] as const)("retains %s deployment incident scope at supply share %s without blocking root resilience", (incidentState, materialSupplyShare) => {
+    const factSet = mutateFactSet(compiledFactSet([
+      measuredRoute({ routeId: "deep-route", physicalResourceKey: "pool:deep", executableUsdAtStress: 10_000_000 }),
+    ]), (asset) => {
+      const control = makeDeploymentControl("bridge:local", "bridge", {
+        status: knownStatus(),
+        sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+        scope: "deployment",
+        economicLossScope: "deployment",
+        materialSupplyShare,
+        incidentState,
+      });
+      asset.controlStatus = knownStatus();
+      asset.controls = [control];
+      asset.economicControlReview.bridge = {
+        status: knownStatus(),
+        routes: [{ controlKey: control.controlKey, tier: "issuer-native-burn-mint" }],
+      };
+    });
+    const evaluated = evaluatedAsset(factSet);
+    expect(evaluated.operationalResilience).toMatchObject({ eligible: true, blockerCodes: [], pillarCredits: { exit: 2 } });
+    expect(persistentMarketDepthContribution(evaluated)).toBeDefined();
+    const incidents = evaluated.scoreInput.pillars.control.structuralSignals.filter((signal) => signal.kind === "active-control-incident");
+    if (incidentState === "active") {
+      expect(incidents).toEqual([expect.objectContaining({
+        severity: "critical", economicLossScope: "deployment", materialSharePct: materialSupplyShare * 100,
+      })]);
+    } else {
+      expect(incidents).toEqual([]);
+    }
+  });
+
+  it("keeps unknown deployment materiality unavailable without turning its active incident into a root failure", () => {
+    const factSet = mutateFactSet(compiledFactSet([
+      measuredRoute({ routeId: "deep-route", physicalResourceKey: "pool:deep", executableUsdAtStress: 10_000_000 }),
+    ]), (asset) => {
+      const gap = createV9FactGapV3({
+        gapId: "gap:bridge-materiality", reasonCode: "runtime-bridge-materiality-unavailable",
+        ownerDomain: "control", policyRuleId: "v9.control.bridge-materiality",
+        observationState: "missing", responsibility: "unresearched",
+        path: { kind: "deployment-control", controlKey: "bridge:unknown-share", deploymentKey: "deployment:bridge:unknown-share" },
+        message: "The exact deployment's supply share has not been established.",
+      });
+      asset.gaps = [...asset.gaps, gap];
+      const control = makeDeploymentControl("bridge:unknown-share", "bridge", {
+        status: knownStatus(), scope: "deployment", economicLossScope: "deployment",
+        sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+        materialSupplyShare: null, incidentState: "active",
+        factorStatuses: { materialSupplyShare: createV9FactStatus({
+          applicability: requiredV9Applicability("v9.control.bridge-materiality"),
+          observationState: "missing", gapIds: [gap.gapId],
+        }) },
+      });
+      asset.controlStatus = knownStatus();
+      asset.controls = [control];
+      asset.economicControlReview.bridge = {
+        status: knownStatus(),
+        routes: [{ controlKey: control.controlKey, tier: "issuer-native-burn-mint" }],
+      };
+    });
+    const evaluated = evaluatedAsset(factSet);
+    expect(evaluated.operationalResilience).toMatchObject({
+      eligible: false, blockerCodes: ["issuerOpacity"], pillarCredits: { backing: 0, exit: 0, control: 0 },
+    });
+    const incident = evaluated.scoreInput.pillars.control.structuralSignals.find((signal) => signal.kind === "active-control-incident");
+    expect(incident).toMatchObject({ kind: "active-control-incident", economicLossScope: "deployment" });
+    expect(incident).not.toHaveProperty("materialSharePct");
+    expect(factSet.assets[0]!.controls[0]!.materialSupplyShare).toBeNull();
+    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
+      code: "runtime-bridge-materiality-unavailable",
+    }));
+  });
+
+  it.each(["active", "resolved"] as const)("preserves the %s root-claim incident eligibility rule", (incidentState) => {
+    const factSet = mutateFactSet(compiledFactSet([
+      measuredRoute({ routeId: "deep-route", physicalResourceKey: "pool:deep", executableUsdAtStress: 10_000_000 }),
+    ]), (asset) => {
+      const control = makeDeploymentControl("bridge:root", "bridge", {
+        status: knownStatus(), scope: "global", economicLossScope: "global-claim",
+        sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId,
+        materialSupplyShare: null, incidentState,
+      });
+      asset.controlStatus = knownStatus();
+      asset.controls = [control];
+      asset.economicControlReview.bridge = {
+        status: knownStatus(),
+        routes: [{ controlKey: control.controlKey, tier: "issuer-native-burn-mint" }],
+      };
+    });
+    const evaluated = evaluatedAsset(factSet);
+    if (incidentState === "active") {
+      expect(evaluated.operationalResilience).toMatchObject({
+        eligible: false, blockerCodes: ["criticalControlFailure", "globalReserveImpairment"],
+        pillarCredits: { backing: 0, exit: 0, control: 0 },
+      });
+    } else {
+      expect(evaluated.operationalResilience).toMatchObject({ eligible: true, blockerCodes: [], pillarCredits: { exit: 2 } });
+    }
   });
 
   it("blocks resilience credit for ordinary and peg issuer opacity", () => {

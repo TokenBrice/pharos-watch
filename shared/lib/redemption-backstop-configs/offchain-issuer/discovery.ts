@@ -6,6 +6,39 @@ import { documentedVariableFee, fixedFee, issuerBase, sourceRef, undisclosedRevi
  * but neither that confidence nor current supply proves immediate executable capacity.
  * Each route withholds scoring for its explicitly missing executable terms. */
 export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBackstopConfig> = {
+  "mantrausd-mantra": {
+    ...issuerBase,
+    capacityModel: { kind: "unquantified" },
+    reviewedAt: "2026-10-11",
+    holderEligibility: "whitelisted-primary",
+    settlementModel: "days",
+    executionModel: "opaque",
+    outputAssetType: "stable-single",
+    outputAssets: ["usdc-circle"],
+    costModel: undisclosedReviewedFee("M0 protocol, bridge, gas and settlement costs may apply; no complete numeric mantraUSD institutional redemption fee schedule is published."),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "The mantraUSD whitepaper documents burning for USDC through the MANTRA/M0 institutional redemption flow, while Risk Disclosure 2.3 limits direct redemption to authorized Minters and onboarded institutional participants. T+2 is conditional on liquidity and operations and may be delayed or suspended under section 2.2. No exact executable same-notional USDC capacity, unconditional completed-payout maximum or complete all-in fee bound is established. Most holders must use secondary markets; the documented institutional path is not permissionless holder execution.",
+      reviewedAt: "2026-10-11",
+      docs: [
+        sourceRef("mantraUSD whitepaper v1.0, operational structure and Risk Disclosure 2.2-2.3", "https://assets.mantrausd.com/whitepaper.pdf", ["route", "access", "settlement"]),
+        sourceRef("mantraUSD minting/burning documentation, redemption access and fees", "https://docs.mantrausd.com/how-it-works/minting-burning", ["route", "access", "fees", "settlement"]),
+      ],
+    },
+    docs: [
+      sourceRef("mantraUSD whitepaper v1.0, USDC institutional redemption branch", "https://assets.mantrausd.com/whitepaper.pdf", ["route", "access", "settlement"]),
+      sourceRef("mantraUSD minting/burning documentation, exact MANTRA token and costs", "https://docs.mantrausd.com/how-it-works/minting-burning", ["route", "access", "fees", "settlement"]),
+    ],
+    notes: [
+      "Reviewed by Sol curation campaign 2026-10-11 (G17MantraUSD), observed 2026-10-11T08:41:32Z. Whitepaper v1.0 carries a 2025 copyright but no precise publication date; the observation does not re-date its evidence.",
+      "Eligibility: Authorized Minters and institutional participants satisfying onboarding, KYC/AML and compliance requirements. Direct redemptions are unavailable to most ordinary holders, who rely on secondary markets.",
+      "Identity: mantraUSD on MANTRA Chain at 0xd2b95283011e47257917770d28bb3ee44c849f6f. Whitepaper operational structure section 3 names USDC output; no Ethereum USDC token deployment or exact cross-chain execution payload is inferred.",
+      "Minimum: No institutional redemption minimum established. T+2 is a standard conditional timeline, not a two-calendar-day or business-day payout guarantee.",
+      "Capacity and settlement categories are diagnostic only. No full-supply entitlement, immediate backing-sized liquidity, zero total fee or funded emergency recovery is asserted.",
+      "The distinct same-chain mantraUSD-to-wM SwapFacility route remains unconfigured pending exact enabled-path, wM-output capacity, request-sized cost and valuation evidence; native-M backing telemetry cannot be attributed to wM or USDC execution.",
+    ],
+  },
   "xgz-goldzip": {
     ...issuerBase,
     capacityModel: { kind: "unquantified" },
@@ -154,27 +187,37 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
   },
   "zaru-blocktower": {
     ...issuerBase,
-    capacityModel: { kind: "unquantified" },
-    reviewedAt: "2026-10-07",
+    capacityModel: { kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" },
+    reviewedAt: "2026-10-11",
     holderEligibility: "whitelisted-primary",
     settlementModel: "days",
     executionModel: "opaque",
     outputAssetType: "stable-single",
-    costModel: undisclosedReviewedFee("Partner/issuer fees not numerically disclosed"),
+    costModel: undisclosedReviewedFee("ZARU Terms section 12 permits advance-disclosed issuer charges and holder-paid bank fees; Platform section 17 also makes network fees holder-paid. No complete numeric deduction ceiling is published."),
     v9RouteReviewTerms: {
       scoringDisposition: "bounded-terms-gap",
       missingScoringFields: ["capacity", "settlement", "cost"],
-      rationale: "The whitepaper refers holders to separate Platform/ZARU Terms that are not publicly established here. Referral and historical 101.78% reserve coverage do not prove a full-supply legal USD claim or executable capacity. Five-business-day fiat wording is not an unconditional completed-settlement SLA; partner/issuer fees are not numerically disclosed. Capacity, settlement and all-in cost remain unquantified.",
-      reviewedAt: "2026-10-07",
-      docs: [sourceRef("ZARU whitepaper updated July 21, 2026", "https://framerusercontent.com/assets/pbLBuQ5dcf9LCfFb3DHZ9qgc.pdf", ["route", "access", "settlement"])],
+      rationale: "The retrieved September 16 holder terms establish a transferable conditional 1 ZAR per issuer-minted ZARU redemption claim for an eligible BlockTower account holder; Platform section 17 describes delivery to the issuer-provided burn wallet and payment to the holder's recorded bank account. This supplies an eventual legal ceiling only, not funded current same-notional capacity or a USD payout. Direct institutional access, ongoing account/compliance gates and banking processes remain binding. Platform section 11 expressly provides no guaranteed redemption processing period, so the whitepaper's commercially reasonable five-business-day wording is not a completed-payment SLA. Advance-disclosed issuer fees, bank deductions and network costs have no complete published numeric maximum. All three scoring factors remain withheld.",
+      reviewedAt: "2026-10-11",
+      docs: [
+        sourceRef("ZARU binding holder terms, updated September 16, 2026", "https://blocktower.tech/legal/zaru-terms-of-use", ["route", "capacity", "access", "fees", "settlement"]),
+        sourceRef("BlockTower binding Platform User Agreement, updated September 16, 2026", "https://blocktower.tech/legal/platform-user-agreement", ["route", "capacity", "access", "fees", "settlement"]),
+        sourceRef("BlockTower October 2026 issuance platform and current native-network scope", "https://blocktower.tech/issuance", ["route", "access"]),
+      ],
     },
     docs: [
       sourceRef("ZARU whitepaper updated July 21, 2026", "https://framerusercontent.com/assets/pbLBuQ5dcf9LCfFb3DHZ9qgc.pdf", ["route", "access", "settlement"]),
+      sourceRef("ZARU binding holder terms, updated September 16, 2026", "https://blocktower.tech/legal/zaru-terms-of-use", ["route", "capacity", "access", "fees", "settlement"]),
+      sourceRef("BlockTower binding Platform User Agreement, updated September 16, 2026", "https://blocktower.tech/legal/platform-user-agreement", ["route", "capacity", "access", "fees", "settlement"]),
+      sourceRef("BlockTower October 2026 issuance platform and current native-network scope", "https://blocktower.tech/issuance", ["route", "access"]),
     ],
     notes: [
-      "Eligibility: Verified institutions directly; retail through network partners, with issuer contingency claim",
-      "Minimum: Partner-defined thresholds, numerical minimum not published",
-      "No full-supply USD quantity is modeled: missing separate Platform/ZARU Terms cannot be replaced by whitepaper referral or reserve coverage. Current executable capacity, unconditional payout timing and numeric all-in fees remain unavailable.",
+      "Reviewed by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z. Retrieved binding holder and Platform terms replace the prior source-unestablished rationale; their evidence date is September 16, not the October retrieval date.",
+      "Eligibility: Verified approved institutional BlockTower account in good standing, supported jurisdiction, ongoing KYC/AML and lawful funds; payment goes only to the holder's recorded bank account. Retail normally uses network partners; the whitepaper contingency right does not guarantee retail account acceptance.",
+      "Minimum: Partner-defined thresholds remain unquantified. No numerical issuer redemption minimum is inferred from a portal demonstration.",
+      "Output is fiat South African rand at the stated conditional 1 ZAR per token rate, not USD, USDC or another tracked stablecoin. No outputAssets token identifier or nominal USD parity is invented; current ZAR FX and route-output admission remain required.",
+      "The October issuance page explicitly says portal mint/redeem is live on Solana, while Circle Arc portal support is forthcoming. General supported-chain holder rights do not prove current Ethereum, Base or Arc portal execution. Demonstration balances, wallet fragments and example transactions are not measured capacity or payout observations.",
+      "Supply-full is an eventual eligible-holder legal ceiling only. Funded immediate capacity, guaranteed completed bank credit and complete all-in costs remain unavailable; the historical Moore reserve coverage ratio supplies none of these factors.",
     ],
   },
   "frnt-wyoming": {

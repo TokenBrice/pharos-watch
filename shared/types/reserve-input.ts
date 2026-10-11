@@ -24,6 +24,12 @@ export type ReserveFreshnessView = z.output<typeof ReserveFreshnessViewSchema>;
 export const ConsumedReserveInputSchema = z.object({
   generationId: z.string().min(1), contentSha256: z.string().regex(/^[a-f0-9]{64}$/), stablecoinId: z.string().min(1),
   attemptId: z.string().nullable(), configFingerprint: z.string().regex(/^[a-f0-9]{64}$/), freshness: ReserveFreshnessViewSchema,
+  /** Independently admitted on-chain redemption scope; never verifies composition. */
+  redemptionCapacityEvidence: z.object({
+    sourceTimestamp: z.number().int().positive(),
+    blockNumber: z.number().int().positive(),
+    outputAssetKeys: z.array(z.string().trim().min(1)).min(1),
+  }).strict().optional(),
 }).strict();
 export type ConsumedReserveInput = z.output<typeof ConsumedReserveInputSchema>;
 export const RedemptionReserveRunMetadataSchema = z.object({

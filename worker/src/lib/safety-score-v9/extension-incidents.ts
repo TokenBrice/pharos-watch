@@ -1,4 +1,7 @@
-import incidentReviewsAsset from "@shared/data/safety-score-v9/incident-reviews-v1.json";
+import incidentRuntimeAsset from "@shared/data/safety-score-v9/incident-runtime-v1.generated.json";
+import { z } from "zod";
+import { Sha256Schema } from "@shared/types/safety-schema-primitives";
+import type { ResearchEvidence } from "@shared/types/safety-score-v9-research-evidence";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
@@ -24,23 +27,26 @@ import {
 } from "@shared/types/safety-score-v9-wrapper";
 import { componentResearchEvidence, type AssetBuildContext } from "./fact-set-context";
 import {
-  ReviewEvidenceBuilder,
   type ControlOverlay,
 } from "./extension-shared";
-import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, reviewedRegistryDigestKey, reviewedRegistryEnvelopeDigest } from "./extension-reviewed-registry";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 
-const incidentEnvelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(incidentReviewsAsset);
-const INCIDENT_REVIEW_REGISTRY = canonicalizeReviewedRegistryDigest(incidentEnvelope, {
-  incidents: reviewedRegistryDigestKey("incidentId"),
-  "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
-  "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
-  "incidents.*.posture.controlKinds": (value) => typeof value === "string" ? value : "",
-  negativeReviews: reviewedRegistryDigestKey("reviewId"),
-  "negativeReviews.*.sources": reviewedRegistryDigestKey("url"),
-  "negativeReviews.*.scope.controlKinds": (value) => typeof value === "string" ? value : "",
-});
-
-export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", INCIDENT_REVIEW_REGISTRY);
+const NegativeIncidentRuntimeSchema = z.object({
+  reviewId: V9NegativeIncidentReviewSchema.shape.reviewId,
+  assetId: V9NegativeIncidentReviewSchema.shape.assetId,
+  scope: V9NegativeIncidentReviewSchema.shape.scope,
+  reviewedAt: V9NegativeIncidentReviewSchema.shape.reviewedAt,
+  windowStartSec: V9NegativeIncidentReviewSchema.shape.windowStartSec,
+  windowEndSec: V9NegativeIncidentReviewSchema.shape.windowEndSec,
+  // [contentSha256, url] in the build-time builder's sorted-source index order.
+  sources: z.array(z.tuple([Sha256Schema, z.string().url().nullable()])).min(1),
+}).strict();
+type NegativeIncidentRuntime = z.infer<typeof NegativeIncidentRuntimeSchema>;
+type NegativeIncidentScope = Pick<V9NegativeIncidentReview, "assetId" | "scope" | "reviewedAt" | "windowEndSec">;
+const { digest, ...runtimeEnvelope } = incidentRuntimeAsset;
+const incidentEnvelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(runtimeEnvelope);
+export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = Sha256Schema.parse(digest);
 
 const INCIDENTS_BY_ASSET_ID = createReviewedAssetRegistry({
   rows: incidentEnvelope.incidents,
@@ -52,13 +58,13 @@ const INCIDENTS_BY_ASSET_ID = createReviewedAssetRegistry({
 
 const NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID = createReviewedAssetRegistry({
   rows: incidentEnvelope.negativeReviews ?? [],
-  schema: V9NegativeIncidentReviewSchema,
+  schema: NegativeIncidentRuntimeSchema,
   path: "incidentReviews.negativeReviews",
   keyOf: (row) => typeof row.reviewId === "string" ? row.reviewId : undefined,
   keyPath: "reviewId",
 });
 
-function negativeIncidentReviewIsCurrent(review: V9NegativeIncidentReview, clockSec: number): boolean {
+function negativeIncidentReviewIsCurrent(review: NegativeIncidentScope, clockSec: number): boolean {
   const reviewedSec = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
   return Number.isFinite(clockSec) && clockSec >= reviewedSec && clockSec >= review.windowEndSec &&
     clockSec - reviewedSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC &&
@@ -68,7 +74,7 @@ function negativeIncidentReviewIsCurrent(review: V9NegativeIncidentReview, clock
 export function getSafetyScoreV9NegativeIncidentReviews(
   assetId: string,
   clockSec: number,
-): readonly V9NegativeIncidentReview[] {
+): readonly NegativeIncidentRuntime[] {
   if (!Number.isFinite(clockSec) || clockSec < 0) {
     throw new Error("Safety Score v9 negative incident-review clock must be finite and non-negative");
   }
@@ -76,22 +82,40 @@ export function getSafetyScoreV9NegativeIncidentReviews(
     negativeIncidentReviewIsCurrent(review, clockSec));
 }
 
+/** Rebuilds the build-time evidence rows; each key embeds its sorted-source index. */
+export function negativeIncidentReviewEvidence(review: NegativeIncidentRuntime): ResearchEvidence[] {
+  const sourceId = `safety-score-v9.negative-incident-review.${review.reviewId}`;
+  return review.sources.map(([contentSha256, url], index) => ({
+    evidenceKey: `${sourceId}:${index}:${contentSha256.slice(0, 16)}`,
+    sourceId,
+    observedAtSec: review.windowEndSec,
+    publishedAtSec: null,
+    url,
+    contentSha256,
+    confidence: "manual-review",
+    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+  }));
+}
+
 export function addSafetyScoreV9NegativeIncidentEvidence(
   evidence: ReviewEvidenceBuilder,
-  reviews: readonly V9NegativeIncidentReview[],
+  reviews: readonly NegativeIncidentRuntime[],
 ): void {
   for (const review of reviews) {
-    evidence.add({
-      componentKeys: ["control"],
-      sourceId: `safety-score-v9.negative-incident-review.${review.reviewId}`,
-      reviewedAtSec: v9NegativeIncidentReviewTimeSec(review.reviewedAt),
-      observedAtSec: review.windowEndSec,
-      confidence: "manual-review",
-      sources: review.sources,
-      payload: review,
-      maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
-    });
+    const bindings = evidence.bindings.get("control") ?? new Set<string>();
+    for (const row of negativeIncidentReviewEvidence(review)) {
+      evidence.evidence.set(row.evidenceKey, row);
+      bindings.add(row.evidenceKey);
+    }
+    evidence.bindings.set("control", bindings);
   }
+}
+
+function controlIncidentMatchesScope(incident: V9ControlIncident, control: ControlOverlay): boolean {
+  return incident.posture.controlKinds.includes(control.controlKind) &&
+    (incident.scope.kind === "root-claim" ||
+      (incident.scope.kind === "deployment" && incident.scope.deploymentKey === control.deploymentKey) ||
+      (incident.scope.kind === "control" && incident.scope.controlKey === control.controlKey));
 }
 
 /** Independent negative research never erases real history or grants knowledge to another scope. */
@@ -99,16 +123,15 @@ export function routeSafetyScoreV9NegativeIncidentReviews(
   controls: ControlOverlay[],
   assetId: string,
   clockSec: number,
-  reviews: readonly V9NegativeIncidentReview[],
+  reviews: readonly NegativeIncidentScope[],
   incidents: readonly V9ReviewedIncident[],
 ): ControlOverlay[] {
   if (reviews.length === 0) return controls;
   return controls.map((control) => {
     if (control.incidentState !== "unknown") return control;
-    // Existing incident routing is conservative at control-kind granularity.
-    // Retain that precedence, including on a bridge row not passed to the mint router.
+    // Actual history takes precedence only on the incident's explicit scope.
     if (incidents.some((incident) => incident.assetId === assetId && incident.domain === "control" &&
-        incident.posture.controlKinds.includes(control.controlKind))) return control;
+        controlIncidentMatchesScope(incident, control))) return control;
     const reviewed = reviews.some((review) => review.assetId === assetId &&
       negativeIncidentReviewIsCurrent(review, clockSec) &&
       (review.scope.kind === "control"
@@ -200,9 +223,7 @@ export function routeSafetyScoreV9ControlIncidents(
     return { controls: [...controls], mintReview: { ...mintReview } };
   }
   const routedControls = controls.map((control) => {
-    const matching = controlIncidents.filter((incident) =>
-      incident.posture.controlKinds.includes(control.controlKind),
-    );
+    const matching = controlIncidents.filter((incident) => controlIncidentMatchesScope(incident, control));
     if (
       control.incidentState === "active" ||
       matching.some((incident) => incident.posture.incidentState === "active")
@@ -218,6 +239,8 @@ export function routeSafetyScoreV9ControlIncidents(
     return { ...control };
   });
   const historicalAtSec = controlIncidents.reduce<number | null>((latest, incident) => {
+    // Exact control history cannot season an unrelated root mint claim.
+    if (incident.scope.kind === "control" && incident.scope.controlKey !== mintReview.controlKey) return latest;
     const atSec = controlIncidentHistoryAtSec(incident);
     return atSec === null || (latest !== null && latest >= atSec) ? latest : atSec;
   }, mintReview.latestResolvedIncidentAtSec ?? null);

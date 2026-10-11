@@ -29,6 +29,14 @@ CoinGecko reassigned `solomon-usdv` to the separate Chancery mint in September 2
 
 The replacement `usdv-solomon-v2` alone owns `geckoId: solomon-usdv` and uses the existing CoinGecko supplemental current-price/market-cap path. The recycled provider history is current-only: CoinGecko market-history, direct price backfill, depeg-history audit, hourly price history, caller-provided history seeds and their DefiLlama proxy history are withheld. New detail charts use local supply/cache history, and forward local collection continues. No historical rows are deleted and no guessed migration date divides the mixed provider series.
 
+### Challenger storage views
+
+The DEX bridge and the pool challenge now deliberately read from different storage views:
+
+- `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
+- `dex_price_challenger_snapshots` + `dex_price_challengers`: current individual challenger pools, selected from the full retained DEX pool set with protocol-first diversity and bounded TVL coverage for large-pool challenge / depeg confirmation
+- `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source
+
 ## Provider-Specific Normalization
 
 Primary provider implementations are normalized before their prices can enter the active 15-minute `sync-stablecoins` consensus. The exact-address rule applies only to hourly corroboration.
@@ -117,7 +125,6 @@ After market/oracle consensus, the provider registry under `worker/src/lib/autho
 | `usdn-noble`             | inherits fresh tracked `m-m0` pricing as an M0-backed rebasing Noble unit       |
 | `usdnr-nerona`           | inherits tracked `wm-m0` pricing as an M0 extension unit                        |
 | `weusd-picwe`            | missing-price fallback to tracked `usdc-circle` with PicWe's 1% redemption-fee haircut |
-| `sofid-sofi`             | nominal USD par reference (`protocol-par`) fallback behind the admitted CoinGecko consensus |
 | `usbd-bima`              | nominal USD par reference (`protocol-par`) for observable DefiLlama supply      |
 | `usdq-quill`             | nominal USD par reference (`protocol-par`) for observable DefiLlama supply      |
 | `zarm-mento`             | nominal ZAR par reference (`protocol-par`) using fresh/static ZAR/USD FX        |
@@ -255,9 +262,10 @@ redemption floor; unavailable market history fails closed by preserving existing
 For the other inheritance paths, this prevents thin secondary-market child-token prints, or missing child-market
 coverage, from dragging PegScore away from the executable value of the tracked parent rail.
 
-Scoped nominal par references (v6.38, DEC-02 / CR-43) cover source-reviewed redemption routes without a trusted current market quote. `chfau-allunity`, `cadd-cad-digital`, and `jpym-mento` have no nominal route; without an admissible observed quote they publish missing, never par. `sofid-sofi` can publish an observed market price only when it passes the trusted-market precedence gate below; a fresh CoinGecko mark alone does not displace nominal par. XOFm retains nominal par rather than presenting the reviewed Broker spread as a market depeg. Par is a reviewed constant, not a runtime redemption read: `protocol-par.ts` returns `confidence: null`, `observedAt: null` and `observedAtMode: "nominal_reference"`. The registry source is not replay-safe or depeg-authoritative and has no freshness budget. Fee and capacity risk remains in the redemption-backstop methodology. Non-USD routes require a `fresh` or `static` FX reference; its per-peg clock is published as `fxObservedAt`, with `fxReferenceType`, never as the token observation time. USD par carries neither FX field. `PROTOCOL_PAR_PRICE_CONFIGS` in `worker/src/lib/authoritative-price-sources/protocol-par.ts` owns the route roster:
+Pricing `v6.48` (2026-10-11, activating at 2026-10-12 00:00 UTC) retires only SOFID's nominal protocol-par override. It follows `v6.47`'s historical-chain conservation release without changing that release's rules or history. Existing exact-identity observed consensus, original source clocks and depeg confirmation requirements govern SOFID; absent quotes and carried nominal references remain unavailable.
 
-- `sofid-sofi` at USD parity
+Scoped nominal par references (v6.38, DEC-02 / CR-43) cover source-reviewed redemption routes without a trusted current market quote. `chfau-allunity`, `cadd-cad-digital`, and `jpym-mento` have no nominal route; without an admissible observed quote they publish missing, never par. SoFiUSD now also has no nominal override: its contract-verified CoinGecko/Kraken market consensus publishes under the ordinary source admission rules, without upgrading depeg authority. XOFm and ZARm remain nominal-only pending independently reviewed executable Broker integration. Par is a reviewed constant, not a runtime redemption read: `protocol-par.ts` returns `confidence: null`, `observedAt: null` and `observedAtMode: "nominal_reference"`. The registry source is not replay-safe or depeg-authoritative and does not establish observed peg stability.
+
 - `usbd-bima` at USD parity
 - `usdq-quill` at USD parity
 - `zarm-mento` at ZAR parity converted through the live ZAR/USD reference

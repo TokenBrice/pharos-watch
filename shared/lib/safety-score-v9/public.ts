@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { internV9PublicCauseGaps, finalizeV9PublicCauseGaps, type V9InternedPublicCardDraft, type V9UninternedPublic, type V9UninternedPublicCard } from "./public-cause-interning";
+import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentResponseSchema,
@@ -1142,13 +1143,15 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): { 
  * score inputs or recompute a cap, pillar minimum, or evidence state.
  */
 export function projectTopDriver(card: SafetyScoreV9CurrentCard): SafetyScoreV9TopDriver | null {
+  if (card.witnessTexts !== undefined) card = resolveV9PublicWitnessTexts(card);
   const evidenceFreshness = card.evidence.freshness;
   if (card.score === null || card.grade === "NR") {
+    const message = card.nrReasons[0]?.message ?? "Required evidence is withheld.";
     return {
       kind: "withheld",
       label: null,
       value: null,
-      reason: card.nrReasons[0]?.message ?? "Required evidence is withheld.",
+      reason: card.witnessTexts === undefined ? message : resolveV9PublicWitnessText(card, message),
       evidenceFreshness,
     };
   }
@@ -1212,6 +1215,7 @@ export function projectSafetyScoreV9CommonModeGroups(
 ): SafetyScoreV9CommonModeGroups {
   const resultById = new Map(results.map((result) => [result.trace.assetId, result]));
   const cardById = new Map(cards.map((card) => [card.id, card]));
+  const resolvedCapsById = new Map<string, SafetyScoreV9CurrentCard["caps"]>();
   return groups.flatMap((group) => {
     const id = `${group.failureDomain.kind}:${group.failureDomain.key}`;
     const memberAssetIds = uniqueSorted(group.members.map((member) => member.assetId));
@@ -1220,9 +1224,14 @@ export function projectSafetyScoreV9CommonModeGroups(
     const pricedEffects = memberAssetIds.flatMap((assetId) => {
       const trace = resultById.get(assetId)?.trace;
       const card = cardById.get(assetId);
+      let resolvedCaps = resolvedCapsById.get(assetId);
+      if (resolvedCaps === undefined && card !== undefined) {
+        resolvedCaps = resolveV9PublicWitnessTexts({ caps: card.caps, witnessTexts: card.witnessTexts }).caps;
+        resolvedCapsById.set(assetId, resolvedCaps);
+      }
       if (!trace || !card) throw new Error(`Common-mode member ${assetId} has no evaluated public card`);
       const signals = trace.structuralSignals.filter((signal) => signal.failureDomainKeys.includes(id));
-      const capIndices = card.caps.flatMap((cap, index) =>
+      const capIndices = resolvedCaps!.flatMap((cap, index) =>
         cap.source === "structural" && (signals.some((signal) => signal.reason === cap.reason) ||
           (cap.kind === "signal:common-mode-oracle" && cap.reason.endsWith(`share ${id}.`))) ? [index] : []);
       const deploymentAdjustmentIndices = card.scoreTrace.deploymentRisk.adjustments.flatMap(

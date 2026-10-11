@@ -103,4 +103,31 @@ describe("V9 consumed reserve scoring-clock admission", () => {
     })]);
     expect(input.pipelineGapByAssetId?.[other.id]).toBeUndefined();
   });
+  it("retains separately sealed Reservoir redemption evidence without upgrading undated composition", async () => {
+    fixture(RUN + 1, RUN - 60);
+    const loaded = await mocks.inputs();
+    const assetId = "rusd-reservoir";
+    const sourceTimestamp = RUN - 60;
+    const reserveInput = {
+      ...loaded.redemptionBackstopMap["iusd-infinifi"].reserveInput,
+      stablecoinId: assetId,
+      configFingerprint: computeLiveReserveConfigFingerprint(ACTIVE_META_BY_ID.get(assetId)!.liveReservesConfig!),
+      freshness: assessReserveFetchFreshness({
+        fetchedAt: RUN - 59, attemptId: "success", metadata: { freshnessMode: "unverified" },
+      }, RUN, 172800),
+      redemptionCapacityEvidence: { sourceTimestamp, blockNumber: 26164363, outputAssetKeys: ["usdc-circle"] },
+    };
+    loaded.redemptionBackstopMap = { [assetId]: {
+      ...loaded.redemptionBackstopMap["iusd-infinifi"], stablecoinId: assetId, reserveInput,
+      sourceMode: "dynamic", freshnessKind: "same-run-onchain", capacityKind: "live-direct",
+      sourceTimestamp, liveHolderEligibility: "any-holder",
+    } };
+    loaded.redemptionSnapshotProvenance.runMetadata.consumedReserveInputs = { [assetId]: reserveInput };
+    mocks.inputs.mockResolvedValue(loaded);
+    const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
+    expect(input.redemptionStale).toBe(false);
+    expect(input.redemptionBackstopMap[assetId]?.reserveInput?.freshness.freshnessMode).toBe("unverified");
+    expect(input.pipelineGapByAssetId?.[assetId]).toBeUndefined();
+    expect(input.liveReserveMap[assetId]).toBeUndefined();
+  });
 });

@@ -81,9 +81,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "sUSDD has no bridge route: Ethereum and BNB Chain each host an immutable native SavingsUsdd ERC-4626 wrapper over that chain's native USDD. Deposits mint sUSDD shares and withdrawals burn them; inherited USDD Join and GovActionsProxy issuance controls remain in Mint Authority and are not bridge controls.",
-    "reviewedAt": "2026-08-16",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle); Codex mint-bridge boundary migration",
+    "summary": "The official sUSDD roster and both exact verified SavingsUsdd sources identify independent native Ethereum and BNB Chain wrappers, not canonical-sUSDD lock/mint receipts. Each immutable wrapper mints only against local USDD deposits and burns shares on local withdrawal; neither source has a bridge-message or privileged share-mint path. Their separate immutable Pots determine chain-local share-to-USDD conversion, so equal raw share units are not established as equal economic claims. No raw-share materiality enrollment, static supply share, historical external-escrow absence, or parent-USDD bridge exemption is claimed.",
+    "reviewedAt": "2026-10-11",
+    "reviewer": "Sol curation campaign 2026-10-11 (C41JPYT)",
     "confidence": "verified",
     "protocols": [
       {
@@ -99,6 +99,26 @@
       {
         "label": "USDD docs",
         "url": "https://docs.usdd.io"
+      },
+      {
+        "label": "Official Ethereum and BNB Chain sUSDD deployment roster",
+        "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses.md"
+      },
+      {
+        "label": "Ethereum exact direct SavingsUsdd source and verification",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xc5d6a7b61d18afa11435a889557b068bb9f29930?fields=compilation,sources,proxyResolution"
+      },
+      {
+        "label": "BNB Chain exact direct SavingsUsdd source and verification",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d?fields=compilation,sources,proxyResolution"
+      },
+      {
+        "label": "Ethereum pinned asset, decimals and native conversion reads",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "BNB Chain pinned asset, decimals and native conversion reads",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/"
       }
     ],
     "routes": [
@@ -113,9 +133,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical native deployment: sUSDD on Ethereum is an immutable SavingsUsdd ERC-4626 wrapper with no proxy or owner; it mints sUSDD only against Ethereum USDD deposits and burns shares on withdrawal.",
+        "reviewNote": "Exact direct non-proxy SavingsUsdd source has immutable USDD/Join/Pot addresses and no owner, privileged share mint, cross-chain message or canonical-sUSDD lock/mint path. At Ethereum block 26083816 (hash 0x8352bd06484bb8acf41570c6895aac678d7322c543bfd0a122abf7fd4e00b88f, 2026-09-29T14:47:11Z), asset() is local USDD 0x4f8e5de400de08b164e7421b3ee387f461becd1a and decimals() is 18. pot() is 0xe789578252cc026ffb3413a1104ba223fdeca500; convertToAssets(10^18) returns 1067335739311306659 raw USDD units. Observed 2026-10-11, this historical conversion is an identity/accounting witness, not a current price, material supply share or cross-chain common-claim proof.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-09-29",
+        "observedBlock": 26083816,
         "sources": [
           {
             "label": "sUSDD Ethereum wrapper",
@@ -138,9 +159,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical native deployment: BNB Chain sUSDD is an immutable SavingsUsdd ERC-4626 wrapper with no proxy or owner; its immutable asset() is natively issued BNB Chain USDD 0x45E51bc23D592EB2DBA86da3985299f7895d66Ba. It mints sUSDD only against local USDD deposits and burns shares on withdrawal; no bridge mints this deployment.",
+        "reviewNote": "Exact direct non-proxy SavingsUsdd source has immutable USDD/Join/Pot addresses and no owner, privileged share mint, cross-chain message or canonical-sUSDD lock/mint path. At BNB Chain block 125139388 (hash 0xc10af77e5abbaec57fdeae395acc81b6eb6a2d3e071e02ebe522b04d53eaa10d, 2026-10-01T17:20:09Z), asset() is local USDD 0x45e51bc23d592eb2dba86da3985299f7895d66ba and decimals() is 18. pot() is 0xf0c506e48383c1925c025ec9f4a9e1dd94ff8b18; convertToAssets(10^18) returns 1060069009040227054 raw USDD units. Observed 2026-10-11 through Alchemy after Dwellir historical state was unavailable. The separate-time historical conversion is not a current price, material supply share or coherent cross-chain common-claim proof.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-10-01",
+        "observedBlock": 125139388,
         "sources": [
           {
             "label": "USDD docs: deployment addresses (native BNB Chain stack)",

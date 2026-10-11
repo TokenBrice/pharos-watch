@@ -12,6 +12,40 @@ import { normalizeProtocol } from "./pool-helpers";
 import type { LiquidityMetrics, PoolEntry, SymbolLookups } from "./types";
 import { incrementReason, type TargetEnrichmentTelemetry } from "./route-telemetry";
 
+/** Bounded, hourly-rotating identity probes; selection is never execution evidence. */
+export function selectQuoterV2EnrichmentCandidates(
+  candidates: ReadonlyMap<string, readonly `0x${string}`[]>,
+  capturedAt: number,
+): Map<string, `0x${string}`[]> {
+  const groups = [...candidates.entries()]
+    .filter(([, addresses]) => addresses.length > 0)
+    .sort(([left], [right]) => left.localeCompare(right));
+  const selected = new Map<string, `0x${string}`[]>();
+  if (groups.length === 0) return selected;
+  const cycle = Math.floor(capturedAt / 3600);
+  const groupOffset = cycle % groups.length;
+  const stride = Math.max(1, Math.floor(QUOTER_V2_CAPTURE_MAX_POOLS / groups.length));
+  const ordered = groups.map(([key, addresses]) => ({
+    key, addresses: [...addresses].sort(), offset: (cycle * stride) % addresses.length, used: 0,
+  }));
+  let remaining = QUOTER_V2_CAPTURE_MAX_POOLS;
+  while (remaining > 0) {
+    let added = false;
+    for (let index = 0; index < ordered.length && remaining > 0; index++) {
+      const group = ordered[(index + groupOffset) % ordered.length];
+      if (group.used === group.addresses.length) continue;
+      const addresses = selected.get(group.key) ?? [];
+      addresses.push(group.addresses[(group.offset + group.used) % group.addresses.length]);
+      selected.set(group.key, addresses);
+      group.used++;
+      remaining--;
+      added = true;
+    }
+    if (!added) break;
+  }
+  return selected;
+}
+
 /** Address-bound recovery only; fingerprints continue through the unique-source candidate resolver. */
 export async function enrichQuoterV2ExecutionTargets(input: {
   metrics: Map<string, LiquidityMetrics>;
@@ -56,16 +90,18 @@ export async function enrichQuoterV2ExecutionTargets(input: {
   const attempted = new Set<PoolEntry>();
   const assets = new Set<string>();
   let exactPoolCount = 0;
-  let remaining = QUOTER_V2_CAPTURE_MAX_POOLS;
+  const selectedByGroup = selectQuoterV2EnrichmentCandidates(
+    new Map([...groups].map(([key, group]) => [key, [...group.pools.keys()]])),
+    input.capturedAt,
+  );
   const nowMs = Date.now();
   const deadline = nowMs + (input.deadline?.childCeilingMs(QUOTER_V2_CAPTURE_MAX_WALL_MS, nowMs) ?? QUOTER_V2_CAPTURE_MAX_WALL_MS);
   const rpcBudget = createDexMeasuredExecutionRpcBudget({ maxRequests: QUOTER_V2_CAPTURE_MAX_REQUESTS, deadlineMs: deadline });
-  for (const group of groups.values()) {
+  for (const [key, selected] of selectedByGroup) {
     throwIfAborted(input.signal);
+    const group = groups.get(key)!;
     const groupTelemetry = telemetry.find((entry) => entry.adapterProfileId === group.adapterProfileId && entry.chain === group.chain)!;
-    if (remaining === 0 || rpcBudget.remainingRequests === 0 || rpcBudget.stopReason || Date.now() >= deadline) break;
-    const selected = [...group.pools.keys()].slice(0, Math.min(remaining, QUOTER_V2_CAPTURE_MAX_POOLS));
-    remaining -= selected.length;
+    if (rpcBudget.remainingRequests === 0 || rpcBudget.stopReason || Date.now() >= deadline) break;
     for (const address of selected) for (const reference of group.pools.get(address)!) {
       attempted.add(reference.pool);
       groupTelemetry.attempted++;
@@ -120,11 +156,14 @@ export async function enrichQuoterV2ExecutionTargets(input: {
       if (attached) exactPoolCount++;
     }
   }
-  for (const group of groups.values()) {
+  for (const [key, group] of groups) {
     const entry = telemetry.find((row) => row.adapterProfileId === group.adapterProfileId && row.chain === group.chain)!;
-    const deferred = [...group.pools.values()].flat().filter((reference) => !attempted.has(reference.pool)).length;
-    if (deferred > 0) incrementReason(entry.dropReasons,
-      remaining === 0 ? "enrichment-cap" : Date.now() >= deadline ? "deadline-exhausted" : "request-budget-exhausted", deferred);
+    const admitted = new Set(selectedByGroup.get(key) ?? []);
+    for (const [address, references] of group.pools) {
+      const deferred = references.filter((reference) => !attempted.has(reference.pool)).length;
+      if (deferred > 0) incrementReason(entry.dropReasons,
+        !admitted.has(address) ? "enrichment-cap" : Date.now() >= deadline ? "deadline-exhausted" : "request-budget-exhausted", deferred);
+    }
   }
   return { exactPoolCount, exactCapableAssets: [...assets].sort(), telemetry };
 }

@@ -284,7 +284,6 @@ describe("Safety Score v9 methodology policy", () => {
     reordered.semantic.accessPostureVocabulary.governance.reverse();
     reordered.semantic.backing.reserve.maturityNotApplicableClasses.reverse();
     reordered.semantic.backing.archetypes.cdp.serialComponentKeys.reverse();
-    reordered.semantic.formula.assetPremiums[0]!.requiredOperationalComponents.reverse();
     reordered.semantic.formula.danger.withholdCentralizedMintSeverities.reverse();
     reordered.semantic.control.governedIssuance.admissibleVotingPower.reverse();
     reordered.semantic.control.governedIssuance.minorityVeto.admissibleVotingPower.reverse();

@@ -13,12 +13,13 @@ import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import { observeEconomicSolanaMint } from "./economic-supply-observer";
 import { fetchMoveFungibleAssetSupply } from "../../cron/reserve-adapters/token-supply";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
-import { ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { hasCompleteEligibleProviderSupply, REVIEWED_PROVIDER_CHAIN_PARTITIONS, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
+import { ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { fetchSafetyScoreV9SolanaRpc, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
 import type { EvmRpcOptions } from "../evm-rpc";
+import type { SafetyScoreV9CompilerInput } from "./native-input";
 
 export const TRANSFER_MATERIALITY_CAPTURE_BUDGET = Object.freeze({
   maxAssets: 96,
@@ -362,6 +363,9 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
   registryFingerprint: string;
   scoringClockSec: number;
   chainRpcs: Map<string, ChainRpcConfig>;
+  /** The exact prepared supply input; complete provider partitions need no duplicate census. */
+  providerSupplyInput?: Pick<SafetyScoreV9CompilerInput,
+    "clockSec" | "baseInputGenerationId" | "registryFingerprint" | "aggregateCirculatingById" | "chainCirculatingById">;
   signal?: AbortSignal;
   /** Absolute preparation/slot deadline; network work reserves time for the atomic capture write. */
   deadlineMs?: number;
@@ -376,14 +380,26 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
   if (assets.length > budget.maxAssets) throw new Error("Transfer materiality capture exceeds the bounded cohort");
   const startIndex = assets.length === 0 ? 0 :
     Math.floor(input.scoringClockSec / SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC) % assets.length;
+  const providerSupplyInput = input.providerSupplyInput;
+  const providerInputBound = providerSupplyInput !== undefined &&
+    providerSupplyInput.clockSec === input.scoringClockSec &&
+    providerSupplyInput.baseInputGenerationId === input.baseInputGenerationId &&
+    providerSupplyInput.registryFingerprint === input.registryFingerprint;
   const observationsByAssetId: Record<string, SafetyScoreV9TransferMaterialityObservation[]> = {};
   const targetsByChainId = new Map<string, DeploymentTarget[]>();
   const admittedByChainId = new Map<string, number>();
+  const rpcAvailableByChainId = new Map<string, boolean>();
   let admittedDeployments = 0;
   for (let cursor = 0; cursor < assets.length; cursor++) {
     const assetId = assets[(startIndex + cursor) % assets.length]!;
     throwIfAborted(input.signal);
     const meta = ACTIVE_META_BY_ID.get(assetId);
+    if (providerInputBound && hasCompleteEligibleProviderSupply(providerSupplyInput!, assetId, meta)) {
+      // The compiler consumes these same complete rows first. No numeric
+      // observation is invented here, and no shared probe capacity is spent.
+      observationsByAssetId[assetId] = [];
+      continue;
+    }
     const rows: SafetyScoreV9TransferMaterialityObservation[] = [];
     // Chain-local censuses must not trigger an 88-contract whole-asset probe
     // or be mistaken for complete transfer-materiality coverage.
@@ -420,9 +436,34 @@ export async function observeSafetyScoreV9TransferMaterialityGeneration(input: {
       continue;
     }
     const assetChainCounts = new Map<string, number>();
+    let observableInventory = deployments.length > 0;
     for (const deployment of deployments) {
       const chainId = resolveChainId(deployment.chain);
-      if (chainId !== null) assetChainCounts.set(chainId, (assetChainCounts.get(chainId) ?? 0) + 1);
+      const supportedChain = chainId !== null &&
+        (CHAIN_META[chainId]?.type === "evm" || chainId === "solana" || chainId === "aptos" || chainId === "movement");
+      if (!supportedChain || deployment.kind === "native-denom" || !isFixedDecimalDeployment(deployment)) {
+        observableInventory = false;
+        continue;
+      }
+      assetChainCounts.set(chainId, (assetChainCounts.get(chainId) ?? 0) + 1);
+      if (CHAIN_META[chainId]?.type === "evm") {
+        let available = rpcAvailableByChainId.get(chainId);
+        if (available === undefined) {
+          available = transferMaterialityObserverResolvesRpc(chainId, input.chainRpcs);
+          rpcAvailableByChainId.set(chainId, available);
+        }
+        if (!available) observableInventory = false;
+      }
+    }
+    // A statically unreadable leg prevents whole-inventory admission. Do not
+    // spend shared deployment/request capacity on siblings that cannot make
+    // this packet usable; retain every rejected identity with null quantities.
+    if (!observableInventory) {
+      observationsByAssetId[assetId] = deployments.map(deployment => {
+        const chainId = resolveChainId(deployment.chain) ?? deployment.chain;
+        return rejected(`${chainId}:${normalizeReviewedDeploymentAddress(chainId, deployment.address)}`);
+      });
+      continue;
     }
     // A crowded shared chain must not enlarge the direct-call fallback until
     // even its first asset can never finish. Rotate whole assets under both caps.

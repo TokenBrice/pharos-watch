@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "MXNB is a FiatToken-fork proxy. On Ethereum and Arbitrum, masterMinter() = owner() = EOA 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739. Proxy admin is also EOA 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca. All three are issuer-controlled EOAs with no multisig.",
+    "summary": "MXNB uses an upgradeable FiatToken fork. Existing Ethereum/Arbitrum reviews identify owner/masterMinter and proxy-admin EOAs. Arc block 25087646 independently confirms those same role addresses on Arc. Verified Arc source permits arbitrary minter allowances, implementation replacement and a hardcoded ownership-reset bypass; these are unbounded native issuance paths, not bridge mint controls.",
     "controls": [
       {
         "label": "MXNB masterMinter / owner (Ethereum, Arbitrum — EOA)",
@@ -49,6 +49,63 @@
           }
         ],
         "evidence": "At Ethereum block 25295171, custom proxy admin slot (0x10d6a5...) = 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca; eth_getCode = 0x (EOA confirmed). Same address in Arbitrum block 472412264 proxy admin slot."
+      },
+      {
+        "label": "MXNB Arc owner / masterMinter and hardcoded owner-reset authority",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "arc",
+        "address": "0xcf3783abaf4a11da1382f0c49748fa87a1b6b739",
+        "deploymentRefs": [
+          "arc:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "configureMinter accepts an arbitrary uint256 allowance without an on-chain collateral/deposit check; superSetOwner can replace owner independently of the current owner.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "bypassSurfaces": [
+          "FiatTokenV1.superSetOwner(address) checks the hardcoded 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739 rather than onlyOwner and permits resetting ownership."
+        ],
+        "observedAt": "2026-10-10",
+        "observedBlock": 25087646,
+        "sources": [
+          {
+            "label": "Arc pinned block 25087646, hash 0x9bcd9785a04baabecd740f36e44360bb6ce32014ea38f1964d5003f9a27b11f8, 2026-10-09T14:49:47Z; observed 2026-10-10T23:29:29.083Z",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Arc verified FiatTokenV2_2 and FiatTokenV1 source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x72beddf7032eec58f199857b79a8e37020c14e42"
+          }
+        ],
+        "evidence": "Sol curation campaign 2026-10-11 (L35MXNB): at Arc block 25087646, owner() and masterMinter() return this address; its eth_getCode result is 0x at the same pin, establishing no deployed runtime code at that block, not beneficial key custody. The verified implementation identified by the pinned implementation() read exposes configureMinter(address,uint256), onlyMasterMinter, with arbitrary allowance and no posted-backing gate. The same implementation hardcodes this address in superSetOwner(address), which directly calls setOwner without onlyOwner or a one-time initialization guard; ownership replacement can select a new masterMinter. This is unbounded native issuance authority, not a bridge mint path. No incident-free, multisig, financial reconciliation or process-certificate claim is made."
+      },
+      {
+        "label": "MXNB Arc proxy admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "arc",
+        "address": "0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca",
+        "deploymentRefs": [
+          "arc:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+        ],
+        "canRaiseCap": true,
+        "capDescription": "The proxy admin can replace native mint-critical implementation via upgradeTo or upgradeToAndCall, with no source-enforced mint bound.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-10",
+        "observedBlock": 25087646,
+        "sources": [
+          {
+            "label": "Arc pinned admin and account-code reads, block 25087646, 2026-10-09T14:49:47Z; observed 2026-10-10T23:29:29.083Z",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Arc verified FiatTokenProxy and AdminUpgradeabilityProxy source",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          }
+        ],
+        "evidence": "Sol curation campaign 2026-10-11 (L35MXNB): admin() returns this address at Arc block 25087646; its pinned eth_getCode returns 0x, establishing no deployed runtime code at that block but not beneficial key custody. Arc verified AdminUpgradeabilityProxy exposes upgradeTo(address) and upgradeToAndCall(address,bytes) gated only by the admin address. An arbitrary replacement implementation can change native mint logic and bypass allowance constraints; no on-chain economic cap, timelock or independent approval is enforced in this path. The existing Ethereum/Arbitrum authorities are not used as evidence for Arc."
       }
     ],
     "reconciliation": "periodic",

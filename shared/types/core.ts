@@ -337,7 +337,7 @@ export const MINT_AUTHORITY_UPGRADE_MODEL_VALUES = [
 export type MintAuthorityUpgradeability = import("./stablecoin-meta-control-schemas").MintAuthorityUpgradeability;
 export type MintAuthorityRouteChecks = import("./stablecoin-meta-control-schemas").MintAuthorityRouteChecks;
 
-export const MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES = ["mpc", "hsm"] as const;
+export const MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES = ["mpc", "hsm", "hardware-wallet"] as const;
 export type MintAuthorityKeyCustodyAttestation = import("./stablecoin-meta-control-schemas").MintAuthorityKeyCustodyAttestation;
 export type MintAuthorityControl = import("./stablecoin-meta-control-schemas").MintAuthorityControl;
 export type MintAuthorityReview = import("./stablecoin-meta-control-schemas").MintAuthorityReview;
@@ -491,6 +491,9 @@ export type OracleRiskRole = (typeof ORACLE_RISK_ROLE_VALUES)[number];
 export const ORACLE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "limited", "unknown"] as const;
 export type OracleRiskConfidence = (typeof ORACLE_RISK_CONFIDENCE_VALUES)[number];
 export const ORACLE_RISK_BRANCH_MODEL_VALUES = ["single-path", "multi-branch"] as const;
+export const ORACLE_RISK_BRANCH_KIND_VALUES = [
+  "feed", "collateral-parameter", "liquidation", "backstop", "shutdown-bad-debt",
+] as const;
 export const ORACLE_RISK_BRANCH_APPLICABILITY_VALUES = [
   "branches-required",
   "top-level-only",

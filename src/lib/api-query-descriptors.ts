@@ -1,4 +1,5 @@
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS, type YieldHistoryMode } from "@shared/lib/data-surface-descriptors";
@@ -365,7 +366,12 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ReportCardsV9CurrentResponse>(
-      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9CurrentResponseSchema,
+      async () => {
+        const { ReportCardsV9CurrentResponseSchema } = await import("@shared/types/report-cards-v9");
+        return ReportCardsV9CurrentResponseSchema.transform((response) => ({
+          ...response, cards: response.cards.map((card) => resolveV9PublicWitnessTexts(card)),
+        }));
+      },
     ),
   ),
   // Free no-key grade projection of the same V9 publication; `/api/` reads it

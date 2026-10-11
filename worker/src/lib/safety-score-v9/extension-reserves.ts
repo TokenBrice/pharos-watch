@@ -18,9 +18,9 @@ import {
   conservativeDateEndSec,
   type ExtensionAsset,
   type ReserveClassification,
-  type ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "./extension-shared";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
 const REVIEWED_RESERVE_CLASSIFICATION_MAX_AGE_SEC =
   V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.reviewedReserveClassificationMaxAgeSec;
@@ -380,17 +380,23 @@ function hasNamedReportFirm(meta: V9ExtensionRegistryMeta): boolean {
   const proof = meta.proofOfReserves;
   const report = proof?.latestReport;
   const provider = proof?.provider?.trim();
-  if (!provider || !report || !["attestation", "independent-audit"].includes(proof!.type) ||
+  if (!provider || !report || !["attestation", "independent-audit", "agreed-upon-procedures"].includes(proof!.type) ||
     !["big4", "regional", "niche"].includes(proof!.attestorTier ?? "")) return false;
   const normalizeName = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "");
   // A provider may name the actual firm after an issuer-led assurance description.
   const describedFirmNames = Array.from(provider.matchAll(
     /(?:attestations?|audits?|assurance|examinations?)\s*\(([^)]+)\)/giu), match => match[1]!);
   const firmNames = describedFirmNames.length > 0 ? describedFirmNames : [provider];
-  const firmPatterns = firmNames.map(name => {
-    const token = normalizeName(name.trim().split(/\s/, 1)[0]!);
-    // eslint-disable-next-line security/detect-non-literal-regexp -- token comes from reviewed registry metadata and is escaped before interpolation.
-    return new RegExp(`(?:^|[^\\p{L}\\p{N}])${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^\\p{L}\\p{N}])`, "iu");
+  const firmPatterns = firmNames.flatMap(name => {
+    const token = normalizeName(name.trim().split(/\s/, 1)[0]!).replace(/[;,]+$/u, "");
+    // PwC's published brand and legal network name identify the same firm.
+    // Do not infer aliases for other providers from a tier or acronym.
+    const tokens = /^(?:pricewaterhousecoopers|pwc)$/iu.test(token)
+      ? ["PricewaterhouseCoopers", "PwC"] : [token];
+    return tokens.map(firmToken => {
+      // eslint-disable-next-line security/detect-non-literal-regexp -- token comes from reviewed registry metadata and is escaped before interpolation.
+      return new RegExp(`(?:^|[^\\p{L}\\p{N}])${firmToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:$|[^\\p{L}\\p{N}])`, "iu");
+    });
   });
   return report.sources.some(source => {
     // A proof URL can itself be the signed report PDF, rather than an issuer index.
@@ -443,7 +449,8 @@ function independentlyAttestedComposition(
     compositionAtSec === null ||
     reviewAtSec < compositionAtSec ||
     !validateReserveCompositionTotal(rows, "full") ||
-    (proof?.type !== "independent-audit" && proof?.type !== "attestation") ||
+    (proof?.type !== "independent-audit" && proof?.type !== "attestation" &&
+      !(proof?.type === "agreed-upon-procedures" && report?.assuranceMethod === "agreed-upon-procedures")) ||
     !attestorIndependent ||
     !proof.provider?.trim() ||
     report === undefined ||
@@ -486,7 +493,9 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
   if (admission?.freshness !== "fresh") return null;
   return {
     rows: admission.normalizedRows,
-    evidenceClass: hasDirectIndependentReserveAssurance(meta, clockSec, fixedInput) ? "independent" : "issuer-attested",
+    evidenceClass: admission.proof.type === "agreed-upon-procedures"
+      ? "static-validated"
+      : hasDirectIndependentReserveAssurance(meta, clockSec, fixedInput) ? "independent" : "issuer-attested",
     provenance: "curated",
   };
 }
@@ -502,9 +511,9 @@ export function buildSafetyScoreV9ReviewedStaticReserveRows(
  * same report-period freshness window without promotion to audit-grade strength.
  *
  * Never returns `independent`: direct assurance describes the reserves and must
- * not lift an unsupervised issuer back to full strength through this path. The
- * caller decides *whether* this rung is reachable, so an asset whose live
- * producer is deliberately excluded from falling back is not rescued here.
+ * not lift an unsupervised issuer back to full strength through this path.
+ * Independently reviewed registry evidence is admitted by its own source,
+ * scope and age gates, not the captured live-producer fallback census.
  */
 export function buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(
   meta: V9ExtensionRegistryMeta,

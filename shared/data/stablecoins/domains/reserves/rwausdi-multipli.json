@@ -67,8 +67,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (FixInv7)",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L01YLDS)",
     "confidence": "verified",
     "sources": [
       {
@@ -76,12 +76,16 @@
         "url": "https://verification.afiprotocol.xyz/multipli/rwaUSDi"
       },
       {
-        "label": "AFI rwaUSDi signed reserve-breakdown feed, timestamp 2026-10-01T10:01:38.545Z, retrieved 2026-10-01",
+        "label": "AFI rwaUSDi reserve-breakdown feed, timestamp 2026-10-10T23:27:59.413Z, observed 2026-10-10T23:30:33Z",
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/graph/reserve-breakdown"
       },
       {
-        "label": "AFI rwaUSDi proof-of-reserves snapshot (data timestamp 2026-10-01T06:30:00Z, TEE attestation 2026-10-01T06:30:58Z, proof bbed05ca9c97d24c)",
+        "label": "AFI rwaUSDi proof-of-reserves snapshot (data timestamp 2026-10-10T18:30:00Z, TEE attestation 2026-10-10T18:30:57.740Z, proof 6def82e5cb21c621), observed 2026-10-10T23:30:33Z",
         "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
+      },
+      {
+        "label": "AFI data pipeline: private inputs and computation-only verification limits, observed 2026-10-10T23:34:05Z",
+        "url": "https://docs.afiprotocol.xyz/proof-of-reserve-network/the-data-pipeline.md"
       },
       {
         "label": "Multipli rwaUSD and rwaUSDi transparency dashboard",
@@ -100,9 +104,9 @@
         "url": "https://github.com/Chainrisk-Cloud/ASSET-BASE-VERIFICATION-FOR-TOKENIZED-ISSUANCE-ELIGIBILITY/blob/main/ASSET%20BASE%20VERIFICATION%20FOR%20TOKENIZED%20ISSUANCE%20ELIGIBILITY.pdf"
       }
     ],
-    "rationale": "Re-verified the category composition on 2026-10-01 from the signed AFI reserve-breakdown feed, whose metadata timestamp is 2026-10-01T10:01:38.545Z. It directly publishes Li Mines $600,000,000 (40%), Commodities (Gold) $450,000,000 (30%), Real Estate $375,000,000 (25%), and Cu Mines $75,000,000 (5%). All four rows and disposition fingerprints remain unchanged after this fresh observation. Their $1,500,000,000 total equals aggregate reserves in proof bbed05ca9c97d24c, with data timestamp 2026-10-01T06:30:00Z and TEE attestation generated 2026-10-01T06:30:58Z; the proof reports liabilities of $479,782,100. The separate category feed publishes no proof ID, so this review does not assert cryptographic binding of its categories to that proof. The previous instrument-level uncertainty and conservative high risk tiers remain: individual obligors, legal position forms, gold holding form, custodians, seniority, maturities, and valuation marks are not disclosed. The older documentation references retain the prior institutional-credit context rather than supplying a newly verified instrument split.",
-    "compositionBasis": "AFI signed rwaUSDi reserve-breakdown feed dated 2026-10-01T10:01:38.545Z: Li Mines $600,000,000 / 40%, Commodities Gold $450,000,000 / 30%, Real Estate $375,000,000 / 25%, Cu Mines $75,000,000 / 5%; same-day proof bbed05ca9c97d24c reports the matching $1,500,000,000 aggregate",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Re-read the exact rwaUSDi category feed and proof endpoint at 2026-10-10T23:30:33Z. The category feed metadata timestamp is 2026-10-10T23:27:59.413Z and its signature field accompanies Li Mines $600,000,000 (40%), Commodities (Gold) $450,000,000 (30%), Real Estate $375,000,000 (25%), and Cu Mines $75,000,000 (5%). The four published shares total 100% and all slice and disposition fingerprints remain unchanged. Their $1,500,000,000 total matches the aggregate in proof 6def82e5cb21c621, with data timestamp 2026-10-10T18:30:00Z and TEE attestation generated 2026-10-10T18:30:57.740Z; its reported liabilities are $479,782,100. This review verifies the published category values, not the cryptographic signatures or truth of private inputs. The separate category feed publishes no proof ID, so no cryptographic category-to-proof binding is claimed. AFI's primary pipeline documentation expressly states that computation correctness cannot establish input truth and that individual custodian and asset records are private. Category disclosure supplies composition only: conservative high risk tiers remain, and this observation does not establish financial assurance, instrument-level credit quality, custody safeguards, seniority, maturities, legal enforcement, or recovery. The older Multipli documentation references retain prior context; current retrieval failed and does not refresh those claims.",
+    "compositionBasis": "AFI rwaUSDi reserve-breakdown feed dated 2026-10-10T23:27:59.413Z: Li Mines $600,000,000 / 40%, Commodities Gold $450,000,000 / 30%, Real Estate $375,000,000 / 25%, Cu Mines $75,000,000 / 5%; same-day proof 6def82e5cb21c621 publishes the matching $1,500,000,000 aggregate",
+    "compositionAsOf": "2026-10-10",
     "scope": "full-composition",
     "knownUnknownExposure": "Category weights are fully disclosed and sum to the verified aggregate, so no share of the composition is unknown. Instrument-level facts sit outside the disclosure: individual obligors and counterparties, the legal form of each position (credit, equity, royalty, or offtake), the gold holding form, custodian identities and shares, seniority, maturities, and valuation marks are committed as private salted fields and are not published.",
     "knownUnknownExposurePct": 0,

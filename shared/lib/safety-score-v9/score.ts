@@ -464,7 +464,6 @@ function resolveV9AssetPremium(
   if (
     ordinaryTrace.finalScore === null ||
     ordinaryTrace.preCapScore === null ||
-    ordinaryTrace.finalScore < premium.minimumBaseScore ||
     ordinaryTrace.finalScore >= premium.maximumPublishedScore ||
     input.marketRank !== premium.requiredMarketRank ||
     input.trackRecordMonths < premium.minimumTrackRecordMonths ||
@@ -492,22 +491,13 @@ function resolveV9AssetPremium(
   ) {
     return null;
   }
+  // Longevity is rewarded despite evidence gaps (issuer opacity), never over an
+  // operational danger blocker; an unobserved resilience result withholds it.
   const resilience = input.operationalResilience;
   if (
     resilience === null ||
     resilience === undefined ||
-    !resilience.eligible ||
-    resilience.blockerCodes.length > 0
-  ) {
-    return null;
-  }
-  const contributed = new Set(
-    resilience.contributions.map((contribution) => contribution.component),
-  );
-  if (
-    premium.requiredOperationalComponents.some(
-      (component) => !contributed.has(component),
-    )
+    resilience.blockerCodes.some((code) => code !== "issuerOpacity")
   ) {
     return null;
   }

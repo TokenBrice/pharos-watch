@@ -2,13 +2,13 @@
   "id": "usdxl-last",
   "name": "Last USD",
   "symbol": "USDXL",
-  "oneLiner": "USDXL is Last's synthetic dollar minted as CDP-style debt against blue-chip collateral on HypurrFi (Aave-V3 fork on HyperEVM), with no public redemption rail.",
+  "oneLiner": "USDXL is Last's CDP-style synthetic dollar on HypurrFi, with a liquidity-limited on-chain redemption path into USDT0.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
   "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM, with protocol-owned liquidity and stablecoin reserves including USDT0 supporting secondary liquidity. Eligible borrow collateral includes HYPE and HYPE LSTs, bridged BTC, and ETH.",
-  "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Liquidations and protocol-owned liquidity defend the peg, but public docs do not describe an enabled direct 1:1 holder redemption against issuer reserves.",
+  "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Holders can also burn HyperEVM USDXL through the GSM to receive USDT0 at the configured rate, subject to available liquidity, fees and swap-freeze or seizure controls; no full-supply redemption guarantee is established.",
   "mechanismArchetype": "cdp",
   "implementationLaunchDate": "2025-03-22",
   "mechanismArchetypeReview": {
@@ -42,6 +42,25 @@
     {
       "label": "HypurrFi (mint venue)",
       "url": "https://hypurrfi.com/"
+    },
+    {
+      "label": "USDXL GSM redemption app",
+      "url": "https://app.hypurrfi.com/usdxl"
+    },
+    {
+      "label": "HyperEVM USDXL GSM proxy",
+      "url": "https://hyperevmscan.io/address/0xcb17105f6a7a75d1f1c91317a4621d9aaafe96fd#code"
+    },
+    {
+      "label": "Verified GSMWithHyFiPool implementation",
+      "url": "https://sourcify.dev/server/v2/contract/999/0xdc6ed7834f8693fc2691e1b70ea0ccec557c8f26?fields=sources,abi,compilation"
+    }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Liquidity-limited USDT0 redemption",
+      "message": "HypurrFi's live USDXL app advertises burning USDXL for USDT0 through the GSM, while its agent reference still says direct redemption is not enabled. The exact HyperEVM GSM source and a 2026-10-11 pinned identity read support the on-chain route, without establishing current same-notional capacity or an all-in fee bound."
     }
   ],
   "contracts": [

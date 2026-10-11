@@ -769,6 +769,31 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(evidence.freshness.state).toBe("current");
     expect(alpha.supply.status.observationState).toBe("known");
   });
+  it.each(["chain", "aggregate"] as const)("attributes stale %s supply to A without refreshing or zero-filling it", (name) => {
+    const ageSec = name === "chain" ? 501 : 7 * 86400 + 1;
+    const clockSec = AS_OF_SEC + ageSec;
+    const observedAtSec = AS_OF_SEC;
+    const chainSupplyByChain = name === "chain" ? {
+      Ethereum: { current: 4_000_000, circulatingPrevDay: 4_000_000,
+        circulatingPrevWeek: 4_000_000, circulatingPrevMonth: 4_000_000 },
+    } : undefined;
+    const fixed = exactFixedInput({
+      clockSec, chainSupplyByChain: chainSupplyByChain ?? {}, aggregateCirculating: { peggedUSD: 4_000_000 },
+      supplyObservedAtSec: observedAtSec,
+    });
+    const alpha = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension({ clockSec })).assets[0]!;
+    const gap = alpha.gaps.find((entry) => entry.gapId === "alpha:gap:chain-supply")!;
+    expect(gap.causeProof).toMatchObject({
+      cause: "A", producerState: "stale-producer", rejectionCode: "chain-supply-observation-stale",
+    });
+    const evidence = alpha.evidence.find((entry) => entry.evidenceId ===
+      (name === "chain" ? "alpha:chain-supply" : "alpha:aggregate-supply"))!;
+    expect(evidence.observedAtSec).toBe(observedAtSec);
+    expect(evidence.freshness.state).toBe("stale");
+    expect(alpha.supply.circulatingUsd).toBe(4_000_000);
+    expect(evaluateV9ExitAssetFacts(alpha, V9_CANDIDATE_POLICY_V1).stressRequest).toBeNull();
+    expect(fixed.aggregateCirculatingById.alpha!.circulating.peggedUSD).toBe(4_000_000);
+  });
 
   it("sizes Exit from a current aggregate without clearing the bridge-materiality gap", () => {
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(

@@ -19,12 +19,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA18U)",
+    "reviewedAt": "2026-10-11",
+    "reviewer": "Sol curation campaign 2026-10-11 (G13JAAA)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Moore CPA Independent Assurance Report on the TUSD Consolidated Reserves Report, September 30, 2026",
+        "label": "Moore CPA signed ISAE 3000 reasonable-assurance report as of October 11, 2026 at 16:30:30 HKT; observed 2026-10-11T08:36:29Z",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       },
       {
@@ -32,13 +32,13 @@
         "url": "https://tusd.io/transparency"
       },
       {
-        "label": "Moore TUSD consolidated reserves report (issued and issuer-held supply; September 30, 2026 report, accessed October 1)",
+        "label": "Moore TUSD consolidated reserves report (issued and issuer-held supply; October 11, 2026 report, observed 2026-10-11T08:36:29Z)",
         "url": "https://widget.verinumus.io/api/v1/tusd/report"
       }
     ],
-    "rationale": "The signed Moore CPA ISAE 3000 (Revised) reasonable-assurance report as of September 30, 2026 at 04:30:30 PM HKT reports $501,850,000 in First Digital Trust Limited, $78,900.88 US Dollars Cash and $0 US Treasury Bills. Total reserves at cost are $501,928,900.88 against 494,515,082.75 TUSD issued; footnote 2 records 412,585,497.92 issuer-held tokens outside public circulation. The assurance report excludes fund fair market value and internal-control effectiveness. Management Notes, expressly outside the assurance scope, state that all or substantially all Hong Kong collateral was invested in instruments which cannot be readily convertible to cash, describe FDT redemption litigation and an October 2025 DIFC freezing order up to $456 million, and claim separate alternative liquidity for public-token redemption. The single curated row preserves the live chainlink-por adapter identity and conservative opaque-fund classification; the newly dated report does not resolve fund look-through, fair value or cash-bank identities.",
-    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of September 30, 2026",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "Observed 2026-10-11T08:36:29Z: the signed Moore CPA ISAE 3000 (Revised) reasonable-assurance report as of October 11, 2026 at 04:30:30 PM HKT reports $501,850,000 in First Digital Trust Limited, $78,900.88 US Dollars Cash and $0 US Treasury Bills. Total reserves at cost are $501,928,900.88 against 494,515,082.75 TUSD issued; footnote 2 records 412,585,497.92 issuer-held tokens outside public circulation. These amounts are unchanged from the September 30 report. The assurance report excludes fund fair market value and internal-control effectiveness. Management Notes, expressly outside the assurance scope, state that all or substantially all Hong Kong collateral was invested in instruments which cannot be readily convertible to cash, describe FDT redemption litigation and an October 2025 DIFC freezing order up to $456 million, and claim separate alternative liquidity for public-token redemption. The single curated row preserves the live chainlink-por adapter identity and conservative opaque-fund classification; the new report does not resolve fund look-through, maximum maturity, full-position realization time, fair value or cash-bank identities. The canonical report publication date uses the report's signed date as a conservative stand-in, not an inferred upload date.",
+    "compositionBasis": "Moore CPA examination of the TUSD Consolidated Reserves Report as of October 11, 2026 at 16:30:30 HKT",
+    "compositionAsOf": "2026-10-11",
     "scope": "full-composition",
     "knownUnknownExposure": "The live snapshot exposes only aggregate totalTrust. The reviewed Moore report identifies a concentrated First Digital Trust fund position at cost, with undisclosed underlying instruments and fair value, plus cash at unnamed Bahamian institutions. Supply definitions are separate: the report records 494,515,082.75 TUSD issued and 412,585,497.92 issuer-held/non-public TUSD, leaving 81,929,584.83 public float by subtraction. Pharos's market-data circulating USD value has not been reconciled to that public-float definition and must not be treated as issuer public float. This note does not change runtime supply, subtract issuer holdings automatically, or establish a stablecoin dependency.",
     "knownUnknownExposurePct": 100,

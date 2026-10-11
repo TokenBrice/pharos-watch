@@ -304,7 +304,7 @@ describe("authoritative-price-sources", () => {
     });
   });
 
-  it("returns protocol-par live overrides only for active direct-redeem fiat assets", async () => {
+  it("keeps nominal overrides only for assets without repaired observed sources", async () => {
     const overrides = await fetchLiveOverrides(
       [
         asset("sofid-sofi", { circulating: { peggedUSD: 100_000_000 } }),
@@ -323,13 +323,11 @@ describe("authoritative-price-sources", () => {
       },
     );
 
-    // Par is a nominal reference: no runtime observation clock, no observed-price
-    // confidence, never the redemption source key. Non-USD par carries its FX
-    // reference's own type and per-peg clock as separate provenance.
+    // SOFID's repaired market route must not fall back to nominal publication.
     const nominal = { source: "protocol-par", confidence: null, observedAt: null, observedAtMode: "nominal_reference" };
     const fx = (fxObservedAt: number) => ({ nominalFx: { fxReferenceType: "fresh", fxObservedAt } });
     expect(overrides.get("usbd-bima")).toEqual({ price: 1, ...nominal });
-    expect(overrides.get("sofid-sofi")).toEqual({ price: 1, ...nominal });
+    expect(overrides.has("sofid-sofi")).toBe(false);
     expect(overrides.get("usdq-quill")).toEqual({ price: 1, ...nominal });
     expect(overrides.get("zarm-mento")).toEqual({ price: 0.0608, ...nominal, ...fx(1_778_000_003) });
     expect(overrides.get("xofm-mento")).toEqual({ price: 0.00172, ...nominal, ...fx(1_778_000_004) });

@@ -258,9 +258,28 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     fallback.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fallback);
     const fallbackMeta: V9ExtensionRegistryMeta = { ...meta, proofOfReserves: undefined, liveReservesConfig: { adapter: "curated-validated", version: 1, semantics: "collateral-mix", inputs: { primary: { kind: "onchain-solana" } } }, mintAuthority: { ...meta.mintAuthority!, supervision: "attestation-only" as const } } as V9ExtensionRegistryMeta;
     expect(buildSafetyScoreV9BaselineExtension(fallback, { metaById: metaMap(fallbackMeta) }).assets[0]!.reviewedStaticReserveRows).toMatchObject({ evidenceClass: "static-validated", provenance: "curated-fallback" });
+    // Supplemental/live-unscored producers do not enter the legacy census.
+    // That omission cannot suppress independently reviewed current composition.
+    expect(noLive.liveToFallbackCoins).toEqual([]);
+    const withoutCensus = buildSafetyScoreV9BaselineExtension(noLive, { metaById: metaMap(fallbackMeta) });
+    expect(withoutCensus.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "static-validated", provenance: "curated-fallback",
+    });
+    const compiledWithoutCensus = compileSafetyScoreV9FactSetFromFixedInput(noLive, withoutCensus).assets[0]!;
+    expect(compiledWithoutCensus.reserveExposures).toHaveLength(2);
+    expect(compiledWithoutCensus.gaps.some(gap => gap.reasonCode === "missing-reserve-composition")).toBe(false);
     const standalone = buildSafetyScoreV9BaselineExtension(fallback, { metaById: metaMap({ ...fallbackMeta, liveReservesConfig: undefined }) });
     expect(standalone.assets[0]!.reviewedStaticReserveRows).toMatchObject({ evidenceClass: "static-validated", provenance: "curated" });
-    expect(buildSafetyScoreV9BaselineExtension(exactFixedInput({ omitLiveReserve: true }), { metaById: metaMap({ ...fallbackMeta, variantOf: "beta" } as V9ExtensionRegistryMeta) }).assets[0]!.reviewedStaticReserveRows).toBeNull();
+    const configuredVariant = buildSafetyScoreV9BaselineExtension(noLive, {
+      metaById: metaMap({ ...fallbackMeta, variantOf: "beta" } as V9ExtensionRegistryMeta),
+    });
+    expect(configuredVariant.assets[0]!.reviewedStaticReserveRows).toMatchObject({
+      evidenceClass: "static-validated", provenance: "curated-fallback",
+    });
+    expect(compileSafetyScoreV9FactSetFromFixedInput(noLive, configuredVariant).assets[0]!.reserveExposures).toHaveLength(2);
+    expect(buildSafetyScoreV9BaselineExtension(noLive, {
+      metaById: metaMap({ ...fallbackMeta, liveReservesConfig: undefined, variantOf: "beta" } as V9ExtensionRegistryMeta),
+    }).assets[0]!.reviewedStaticReserveRows).toBeNull();
   });
 
   it("binds evidenced structural freeze dispositions to adverse proof without changing their score state", () => {
@@ -591,6 +610,24 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     expect(asset.evidence).not.toContainEqual(expect.objectContaining({
       sourceId: "safety-score-v9.single-deployment-attribution.v1",
     }));
+  });
+
+  it("admits CDP journal hydration before sealing the baseline asset", () => {
+    const clockSec = 1_791_701_190;
+    const fixed = exactFixedInput({ assetId: "lusd-liquity", clockSec });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: metaMap(alphaMeta({ id: "lusd-liquity", mechanismArchetype: "cdp" })),
+    });
+    const asset = baseline.assets[0]!;
+    expect(asset.admissionQuarantine).toBeUndefined();
+    expect(asset.cdpStressCoverage).toEqual(selectSafetyScoreV9CdpShockMeasurement("lusd-liquity", clockSec));
+    expect(Object.isFrozen(asset.cdpStressCoverage)).toBe(true);
+    const materialized = materializeSafetyScoreV9FactSetExtension(fixed, baseline);
+    expect(materialized.assets[0]).toBe(asset);
+    const forged = structuredClone(baseline);
+    forged.assets[0]!.cdpStressCoverage!.stressLiquidationCoverageRatio = 99;
+    expect(materializeSafetyScoreV9FactSetExtension(fixed, forged).assets[0]!.admissionQuarantine)
+      .toMatchObject({ code: "fact-validation-failed", path: "cdpStressCoverage" });
   });
 
   it("derives research, route, measured-adapter, and CDP shock freshness windows", () => {

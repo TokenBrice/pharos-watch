@@ -24,6 +24,18 @@ describe("Worker full stablecoin catalog", () => {
     expect(decodedAsset.map(digest)).toEqual(sourceAsset.map(digest));
   });
 
+  it("keeps repeated evidence strings lossless without aliasing mutable records", () => {
+    const text = "Repeated evidence ".repeat(100);
+    const first = fixture({ id: "one", evidence: { text } }, "one");
+    const second = fixture({ id: "two", evidence: { text } }, "two");
+    const decoded = decodeWorkerStablecoinCatalog({
+      version: 1, maxUncompressedBytes: Math.max(first.maxUncompressedBytes, second.maxUncompressedBytes),
+      coins: [...first.coins, ...second.coins],
+    });
+    expect(decoded).toEqual([{ id: "one", evidence: { text } }, { id: "two", evidence: { text } }]);
+    expect(decoded[0]).not.toBe(decoded[1]);
+  });
+
   it("preserves every registry array, map and set including suspended-feed normalization", async () => {
     vi.doMock("#pharos-full-catalog", () => ({ default: decodedAsset }));
     vi.resetModules();

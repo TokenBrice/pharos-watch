@@ -82,6 +82,11 @@
       "chain": "berachain",
       "address": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
       "decimals": 18
+    },
+    {
+      "chain": "tac",
+      "address": "0x5ced7f73b76a555ccb372cc0f0137bec5665f81e",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

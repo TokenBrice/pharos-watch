@@ -8,7 +8,7 @@
     "inputs": { "primary": { "kind": "http-html", "url": "https://www.supercoin.co.za/assurance-reports" } },
     "params": {
       "reviewedReport": {
-        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf",
         "balanceDate": "2026-08-31"
       },
       "slices": [{
@@ -65,7 +65,7 @@
     },
     {
       "label": "Reserve report",
-      "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+      "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
     },
     {
       "label": "Monthly Moore assurance report archive",
@@ -79,7 +79,7 @@
   "geckoId": "zar-supercoin",
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
-    "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf",
+    "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf",
     "provider": "Moore Blockchain and Digital Assets JHB (Pty) Ltd; ISRS 4400 (Revised) procedures expressly provide no assurance opinion",
     "attestorTier": "regional",
     "cadence": "monthly",
@@ -91,12 +91,12 @@
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewer": "Sol curation campaign 2026-10-11 (L57FUSD); current archive PDF retrieved 2026-10-10T23:32:30Z",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Retrieved independent reserve report",
-          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+          "label": "Moore Blockchain and Digital Assets JHB (Pty) Ltd August 31 AUP report",
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
         }
       ]
     }

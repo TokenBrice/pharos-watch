@@ -380,14 +380,20 @@ export function SafetyScoresOverview() {
       </p>
       <p>
         Reviewed incidents are routed into the control, wrapper-local, operational, or peg component that owns the
-        risk, with root-claim, deployment, integration-only, or holder-exit scope. Active, mitigated, and resolved
-        evidence therefore changes an existing component without creating a fourth pillar or charging an event beyond
-        the affected liability.
+        risk, with root-claim, exact-control, deployment, integration-only, or holder-exit scope. Confirmed
+        exact-control incidents retain active, mitigated or resolved posture without inventing historical
+        exposure shares or propagating to sibling controls or unrelated root mint history.
         Since methodology v10.10, independent researched-negative incident reviews can resolve only a matching
-        unknown control incident state. They require dated issuer/status evidence, exact-deployment event history
-        and an independent incident-tracker search, with source excerpts, an honest researched window and reviewer
-        identity. Both review and window end must remain current; date-only reviews wait until their UTC day ends.
-        Exact deployment/control-kind reviews never resolve global controls. Actual incidents retain precedence,
+        unknown control incident state. The v10.17 practical bar searches issuer notices, independent incident
+        trackers and rail disclosures, and exact-deployment explorer events plus pinned emergency state where
+        exposed. The event surface may use displayed pages, the same explorer&apos;s JSON API, or bounded
+        pinned exact-contract logs with creation evidence and verified-ABI filters. It establishes no known
+        incident, not lifetime proof of absence.
+        Sources, bounded findings, reviewer identity and a first-activity-to-review window remain required;
+        both review and window end must be current, and date-only reviews wait until their UTC day ends.
+        Known exact-control integrity incidents, active pauses and unresolved adverse primary findings bar
+        a negative review. A resolved precautionary pause without integrity failure, or a primary-confirmed
+        unaffected channel, may be cited without becoming an incident. Actual scoped incidents take precedence;
         an empty registry or audit alone proves no absence, and unrelated authority or custody gaps stay open.
       </p>
       <p>
@@ -458,6 +464,30 @@ export function SafetyScoresOverview() {
         can still move scores, grades or availability. Two fixed-clock production captures from October 10
         retained all 396 scores, grades and rating statuses. Only nonbinding age ceilings changed for sDAI
         Gnosis and syzUSD; these replay results do not establish post-release production health.
+      </p>
+      <p>
+        Methodology v10.17 expands independently scoped evidence admission, not pillar weights or grade gates.
+        Complete published fee schedules can establish conservative request-specific cost bounds, while
+        contractual business-day completion guarantees require the full reviewed calendar horizon.
+        Exact execution receipts and fresh output valuation still determine executable capacity;
+        previews, static balances and sampled fees do not. A suspended channel retains measured adverse
+        treatment and no capacity, without erasing genuine whole-Exit uncertainty or its independent alternatives.
+        Pipeline A attribution requires a captured scoped rejection and its original source clock.
+      </p>
+      <p>
+        Independently dated oracle-kind and mechanism-component reviews resolve only their own questions,
+        not unreviewed feeds or expired sibling measurements. Source-backed hardware-wallet storage is not
+        independent quorum, MPC or HSM credit. Native external transfer tiers do not certify rail administrators
+        or bridge materiality. A named agreed-upon-procedures report can support historical composition at
+        static-validated strength, not financial assurance or current-book coverage. Wrapper-local accounting,
+        emergency and withdrawal reviews likewise do not establish executable capacity or settlement guarantees.
+      </p>
+      <p>
+        Operational-resilience eligibility requires established global-claim loss scope for its critical
+        control-failure blocker. Exact-control or deployment incidents keep their local adverse signals and
+        independently admitted materiality; critical severity alone cannot veto whole-asset credit.
+        Unknown shares remain unavailable, and independent opacity, impairment and depeg blockers still apply.
+        Fixed-clock mover review and fresh producer observations remain release requirements.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}

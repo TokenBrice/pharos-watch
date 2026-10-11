@@ -91,7 +91,6 @@ export function buildCurationExpiryQueue(
         meta,
         clockSec,
         liveReserveRows: [],
-        liveFallbackAllowed: fixedInput.liveToFallbackCoins.includes(assetId),
       });
     // Currently-inadmissible compositions already surface in the worklist's
     // RESV/DEP streams; this queue is preventive and lists only admitted

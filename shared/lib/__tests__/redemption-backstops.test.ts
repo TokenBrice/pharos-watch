@@ -2,8 +2,110 @@ import { describe, expect, it } from "vitest";
 import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
 import { getRedemptionBackstopConfig, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstops";
 import { resolveDefaultHolderEligibility } from "../redemption-backstop-configs/shared";
+import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "../../data/coverage-dispositions/redemption-coverage-dispositions";
 
 describe("getRedemptionBackstopConfig", () => {
+  it.each([
+    ["usdv-solomon-v2", "defer", "issuer-terms-missing", "https://raw.githubusercontent.com/SolomonLabs/chancery/main/spec/04_Settlement_Pathways_and_Permissions.md"],
+    ["iusd-initia", "needs-research", "documentation-insufficient", "https://contents.initia.xyz/app/iusd-faq.json"],
+    ["bnusd-balanced", "defer", "route-status-unverified", "https://raw.githubusercontent.com/icon-project/sodax-sdks/main/packages/sdk/docs/MIGRATION.md"],
+  ])("keeps %s's opaque composite path unconfigured with its sourced unresolved disposition", (id, disposition, reasonCode, evidenceUrl) => {
+    expect(getRedemptionBackstopConfig(id)).toBeNull();
+    const review = REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.filter((row) => row.id === id);
+    expect(review).toHaveLength(1);
+    expect(review[0]).toMatchObject({ disposition, reasonCode, reviewedDate: "2026-10-11" });
+    expect(review[0]!.evidenceUrls).toContain(evidenceUrl);
+    expect(review[0]!.evidenceNeeded).toMatch(/capacity|liquidity/);
+    expect(review[0]!.evidenceNeeded).toMatch(/fees|deductions/);
+    expect(review[0]!.evidenceNeeded).toMatch(/settlement|completion/);
+  });
+
+  it.each([
+    ["mantrausd-mantra", "issuer-api", "whitelisted-primary"],
+    ["usdm-moneta", "manual", "whitelisted-primary"],
+  ] as const)("keeps %s documentary access separate from executable capacity and complete costs", (id, access, eligibility) => {
+    const config = getRedemptionBackstopConfig(id)!;
+    expect(config.accessModel).toBe(access);
+    expect(config.holderEligibility).toBe(eligibility);
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+    expect(config.v9RouteReviewTerms?.scoringDisposition).toBe("bounded-terms-gap");
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(expect.arrayContaining(["capacity", "cost", "settlement"]));
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(config.v9RouteReviewTerms?.businessDayTerms).toBeUndefined();
+    for (const notional of [1_000, 1_000_000, 25_000_000]) {
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBeNull();
+    }
+  });
+
+  it.each([
+    ["spusd-soulpeg", "asset:susdc-soulpeg"],
+  ])("does not relabel %s's untracked receipt or successor as a priced stablecoin", (id, output) => {
+    const config = getRedemptionBackstopConfig(id)!;
+    expect(config.outputAssets).toBeUndefined();
+    expect(config.unresolvedOutputAssetKeys).toEqual([output]);
+    expect(config.unresolvedOutputDisposition).toBe("reviewed-external");
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+  });
+
+  it("keeps SoulPeg atomic receipt conversion and zero protocol fee distinct from a USDC payout", () => {
+    const config = getRedemptionBackstopConfig("spusd-soulpeg")!;
+    expect(config.holderEligibility).toBe("any-holder");
+    expect(config.settlementModel).toBe("atomic");
+    expect(config.v9RouteReviewTerms).toMatchObject({ settlementDelaySec: 0, missingScoringFields: ["capacity"] });
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBe(0);
+    expect(config.costModel).not.toHaveProperty("gasOrBridgeCostUsd");
+  });
+
+  it("keeps USDXL GSM capacity and mutable fee strategy unquantified", () => {
+    const config = getRedemptionBackstopConfig("usdxl-last")!;
+    expect(config.outputAssets).toEqual(["usdt-tether"]);
+    expect(config.accessModel).toBe("permissionless-onchain");
+    expect(config.holderEligibility).toBe("any-holder");
+    expect(config.settlementModel).toBe("atomic");
+    expect(config.executionModel).toBe("deterministic-onchain");
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+    expect(config.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula" });
+    expect(config.costModel).not.toHaveProperty("feeBpsMax");
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+  });
+
+  it("records ZARU legal entitlement as eventual-only with all executable terms withheld", () => {
+    const config = getRedemptionBackstopConfig("zaru-blocktower")!;
+    expect(config.capacityModel).toEqual({ kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption" });
+    expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
+    expect(config.holderEligibility).toBe("whitelisted-primary");
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+    expect(config.outputAssets).toBeUndefined();
+  });
+
+  it("records only YieldFi's ordinary yUSD rail as suspended without renewing historical terms", () => {
+    const config = getRedemptionBackstopConfig("yusd-yieldfi")!;
+    expect(config.reviewedAt).toBe("2026-10-02");
+    expect(config.routeStatus).toBe("suspended");
+    expect(config.routeSuspension).toMatchObject({
+      routeId: "redemption:yusd-yieldfi:stablecoin-redeem",
+      suspendedAt: "2026-10-11", reviewedAt: "2026-10-11",
+    });
+    expect(config.routeSuspension?.sources[0]?.quote).toContain("Mint and Redeem operations for yUSD and vyUSD are paused");
+  });
+
+  it("preserves Moneta's issuer-only fee component and independent term-review clock", () => {
+    const config = getRedemptionBackstopConfig("usdm-moneta")!;
+    expect(config.reviewedAt).toBe("2026-10-11");
+    expect(config.v9RouteReviewTerms?.reviewedAt).toBe("2026-10-09");
+    expect(config.costModel.feeComponents).toEqual([{ currency: "USD", terms: { feeBps: 10, minAmount: 50, maxAmount: 5_000 } }]);
+    expect(config.costModel).not.toHaveProperty("feeBpsMax");
+  });
+
+  it("retains USDB's original terms clock without treating current withdrawal instructions as an SLA", () => {
+    const config = getRedemptionBackstopConfig("usdb-blast")!;
+    expect(config.reviewedAt).toBe("2026-05-13");
+    expect(config.outputAssets).toEqual(["dai-makerdao"]);
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(config.docs?.some((doc) => doc.url === "https://docs.blast.io/withdrawals/usdb-from-contracts")).toBe(true);
+    expect(config.notes?.some((note) => note.includes("recipient must itself call USDYieldManager.claimWithdrawal"))).toBe(true);
+  });
+
   it("shares the Sky LitePSM capacity model across USDS and DAI", () => {
     const usds = getRedemptionBackstopConfig("usds-sky");
     const dai = getRedemptionBackstopConfig("dai-makerdao");
@@ -29,16 +131,29 @@ describe("getRedemptionBackstopConfig", () => {
     expect(config?.costModel).not.toHaveProperty("feeBpsMax");
   });
 
-  it.each(["usdm-monetrix", "susdat-saturn"])(
-    "does not promote %s queue diagnostics into immediate capacity, completion or all-in costs",
-    (id) => {
+  it.each([
+    { id: "usdm-monetrix", missingScoringFields: ["capacity", "settlement"], protocolFeeBps: 0 },
+    { id: "susdat-saturn", missingScoringFields: ["capacity", "settlement", "cost"], protocolFeeBps: null },
+  ])(
+    "keeps $id queue capacity and completion unproven while preserving reviewed protocol fees",
+    ({ id, missingScoringFields, protocolFeeBps }) => {
       const config = getRedemptionBackstopConfig(id)!;
       expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
       expect(config.capacityModel).not.toHaveProperty("fallbackRatio");
       expect(config.capacityModel).not.toHaveProperty("ratio");
-      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(missingScoringFields);
       expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
-      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+      for (const notional of [1_000, 1_000_000, 25_000_000]) {
+        expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBe(protocolFeeBps);
+      }
+      expect(config.costModel).not.toHaveProperty("feeBpsMax");
+      expect(config.v9RouteCostTerms?.publishedFeeSchedule).toBeUndefined();
+      if (id === "usdm-monetrix") {
+        expect(config.costModel).toMatchObject({
+          kind: "fee-bps", feeBps: 0, confidence: "fixed",
+          feeDescription: expect.stringContaining("network gas separate"),
+        });
+      }
     },
   );
 

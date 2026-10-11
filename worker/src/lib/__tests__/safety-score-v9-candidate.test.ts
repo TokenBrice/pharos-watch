@@ -2,6 +2,7 @@ import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards
 import { computeDexLiquidityPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
 import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import {
   evaluateV9FactSet,
   evaluateValidatedV9FactSet,
@@ -591,7 +592,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     const input = reserveParentCascadeFixture();
     const baseline = buildSafetyScoreV9Candidate(input);
     expect(baseline.quarantines).toEqual([]);
-    const ordinaryAlpha = baseline.candidate.cards.find((card) => card.id === "alpha")!;
+    const ordinaryAlpha = resolveV9PublicWitnessTexts(baseline.candidate.cards.find((card) => card.id === "alpha")!);
     expect(ordinaryAlpha.pillars.exit.score).toBe(0);
     expect(ordinaryAlpha.scoreTrace.adverseAttribution.items).toContainEqual(expect.objectContaining({
       source: "reason", path: "exit:no-viable-exit-path", responsibility: "measured-adverse",
@@ -608,7 +609,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     try {
       const result = buildSafetyScoreV9Candidate(input);
       expect(result.quarantines.map((quarantine) => quarantine.assetId)).toEqual(["beta"]);
-      const card = result.candidate.cards.find((row) => row.id === assetId)!;
+      const card = resolveV9PublicWitnessTexts(result.candidate.cards.find((row) => row.id === assetId)!);
       expect(card.partialEvidence?.causes).toEqual(["A"]);
       expect(SafetyScoreV9ResponseSchema.parse(result.candidate)).toEqual(result.candidate);
       if (assetId === "alpha") {
@@ -855,7 +856,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       extension,
       publishedAtSec: PUBLISHED_AT_SEC,
     });
-    const card = result.candidate.cards[0]!;
+    const card = resolveV9PublicWitnessTexts(result.candidate.cards[0]!);
 
     expect(card.grade).not.toBe("NR");
     expect(card.score).not.toBeNull();

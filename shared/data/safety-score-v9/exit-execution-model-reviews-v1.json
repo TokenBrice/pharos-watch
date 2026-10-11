@@ -1784,6 +1784,8 @@
           "keyOrder": "account-slot"
         },
         "maxFunctions": "binding",
+        "previewRedeem": "gross-before-fee",
+        "redeemReturns": "gross-before-fee",
         "unrestrictedGateSelectors": [],
         "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
       }
@@ -2488,6 +2490,256 @@
         "maxFunctions": "binding",
         "unrestrictedGateSelectors": [],
         "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "frxusd-frax",
+        "deployment": "ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "endpoint": "ethereum:0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:b6a9e0c5b0dda3784aab28c6d6ce90b90e1493ead65a5854e2a87058ddd853ea"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-11T01:00:57Z",
+      "expiresAt": "2026-11-10T01:00:57Z",
+      "evidenceIds": [
+        "verified-source:FrxUSDCustodianUsdc:0.2.8",
+        "verified-source:FrxUSD3:erc20-balances-account-slot-0",
+        "pinned-identity:ethereum:26165734:0x1a3e2e35b715d64c8956efc13893b3ea0f9f8b8fabc67c5295a901c6a14ab712"
+      ],
+      "sourceUrls": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000048d2c8baf31742f6765383278bada4d5",
+        "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "ethereum",
+        "chainId": 1,
+        "contract": "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+        "outputToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "inputDecimals": 18,
+        "outputDecimals": 6,
+        "codeSha256": "b6a9e0c5b0dda3784aab28c6d6ce90b90e1493ead65a5854e2a87058ddd853ea",
+        "balanceStorage": {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd",
+        "externalShareToken": {
+          "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+          "codeSha256": "ed16761ddf9f0ac92ab0dd2c0b4826908f2687715e05d8b089ab2ed276e219ce",
+          "implementation": {
+            "address": "0x0000000048d2c8baf31742f6765383278bada4d5",
+            "codeSha256": "cc37e9672b9a362c16f250168b464dd931600a5e6c1a95f3c9600bbae4801164"
+          },
+          "identitySelector": "0x3b1c4f4a",
+          "primaryRedemptionRouteId": "redemption:frxusd-frax:stablecoin-redeem",
+          "nativeUsdFeed": {
+            "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+            "codeSha256": "fca12a4856c7216c7f563b6ae78f306f6d9ac9013cda7a31c4785e020c933859",
+            "maxAgeSec": 3600
+          }
+        }
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "usd3-3jane",
+        "deployment": "ethereum:0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+        "endpoint": "ethereum:0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:26240ce4ecc5bc7462ddd4f9869e04ee6a983ec725079d8ef127a7044305d5d0"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-11T01:01:20.000Z",
+      "expiresAt": "2026-11-10T01:01:20.000Z",
+      "evidenceIds": [
+        "verified-source:b80bae70efe3395821b6993ada8361716b7929d53ffa09ed8ce9621e4b9a52c5",
+        "pinned-identity:ethereum:26164397:0x5fa8788cdf21b08e1d184c9d4897788c8388d01226025f4d8b9cb28cf4d061ef",
+        "balance-layout:account-slot:0xd2841a5d2692465040bd5e06a6f3b37483952c866e0f304dc0e03f76a1f8a0b4"
+      ],
+      "sourceUrls": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893",
+        "https://docs.3jane.xyz/",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd377919fa87120584b21279a491f82d5265a139c"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "ethereum",
+        "chainId": 1,
+        "contract": "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+        "outputToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "inputDecimals": 6,
+        "outputDecimals": 6,
+        "codeSha256": "d63f07779ef9196c6fe9e2abcb2bc327576e635f6f094225a8da6f3487712ac3",
+        "implementation": {
+          "address": "0xd1f1c3f485063712873285bf4ef25ab068f13893",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "26240ce4ecc5bc7462ddd4f9869e04ee6a983ec725079d8ef127a7044305d5d0"
+        },
+        "balanceStorage": {
+          "slot": "0xd2841a5d2692465040bd5e06a6f3b37483952c866e0f304dc0e03f76a1f8a0b4",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd",
+        "dependencyCodeIdentities": [
+          {
+            "address": "0xd377919fa87120584b21279a491f82d5265a139c",
+            "codeSha256": "a455f2c31d84aa2f92b614960b80c404f476ed1561a0894ba7cd51c5d41ed4b3"
+          }
+        ]
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "wsrusd-reservoir",
+        "deployment": "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+        "endpoint": "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+        "outputAssetKeys": [
+          "rusd-reservoir"
+        ],
+        "implementationIdentity": "sha256:f3a20fd9d28a7e3d927ac98a24ae767f971cdf1f4a476e1ec3c7f0e4c8ba20f5"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-11T01:01:20.000Z",
+      "expiresAt": "2026-11-10T01:01:20.000Z",
+      "evidenceIds": [
+        "verified-source:05c009cb6d3babf3d932f4eb658ac88b793d426d8a03d3c2fb796c2fca583d1c",
+        "pinned-identity:ethereum:26164397:0x5fa8788cdf21b08e1d184c9d4897788c8388d01226025f4d8b9cb28cf4d061ef",
+        "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000001"
+      ],
+      "sourceUrls": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+        "https://docs.reservoir.xyz"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "ethereum",
+        "chainId": 1,
+        "contract": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+        "outputToken": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34",
+        "inputDecimals": 18,
+        "outputDecimals": 18,
+        "codeSha256": "f3a20fd9d28a7e3d927ac98a24ae767f971cdf1f4a476e1ec3c7f0e4c8ba20f5",
+        "balanceStorage": {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "syusd-aegis",
+        "deployment": "ethereum:0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "endpoint": "ethereum:0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "outputAssetKeys": [
+          "yusd-aegis"
+        ],
+        "implementationIdentity": "sha256:eb8c8393f417b29c7e4c58c7007ba2900a49c236cc886e66cb6d5e4947637b03"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-11T01:01:20.000Z",
+      "expiresAt": "2026-11-10T01:01:20.000Z",
+      "evidenceIds": [
+        "verified-source:cad812d7efed5238754a1bb0b2164ef5598300df79b099e96cd71b68e363feca",
+        "pinned-identity:ethereum:26164397:0x5fa8788cdf21b08e1d184c9d4897788c8388d01226025f4d8b9cb28cf4d061ef",
+        "balance-layout:account-slot:0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00"
+      ],
+      "sourceUrls": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c63bb1667b6e9215aee562af2957739b2676fe",
+        "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "ethereum",
+        "chainId": 1,
+        "contract": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "outputToken": "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+        "inputDecimals": 18,
+        "outputDecimals": 18,
+        "codeSha256": "47da0c2fb654a27f4be5299de38a2cf04dbfac8e0df9e9f43a5c3e40a866cc03",
+        "implementation": {
+          "address": "0xb0c63bb1667b6e9215aee562af2957739b2676fe",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "eb8c8393f417b29c7e4c58c7007ba2900a49c236cc886e66cb6d5e4947637b03"
+        },
+        "balanceStorage": {
+          "slot": "0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd",
+        "previewRedeem": "gross-before-fee"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "yousd-yield-optimizer",
+        "deployment": "ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "endpoint": "ethereum:0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:932df9d5d00d1231c3621d8f265b23694811fd89d1f2a2b7496d5c423366d2e1"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-11T01:01:20.000Z",
+      "expiresAt": "2026-11-10T01:01:20.000Z",
+      "evidenceIds": [
+        "verified-source:7eae07df298291ff00a19cfdb8f22d256a5150b04b9d201c760e63bf285f9d8e",
+        "pinned-identity:ethereum:26164397:0x5fa8788cdf21b08e1d184c9d4897788c8388d01226025f4d8b9cb28cf4d061ef",
+        "balance-layout:account-slot:0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00"
+      ],
+      "sourceUrls": [
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc",
+        "https://docs.yo.xyz"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "ethereum",
+        "chainId": 1,
+        "contract": "0x0000000f2eb9f69274678c76222b35eec7588a65",
+        "outputToken": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "inputDecimals": 6,
+        "outputDecimals": 6,
+        "codeSha256": "9c7d3885c3cfe0f8e0bec36a292f1222f417bce757059039b80075ab82ac172d",
+        "implementation": {
+          "address": "0xc84a6e01bff58996540f1abc22355a9dfe0d78dc",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "932df9d5d00d1231c3621d8f265b23694811fd89d1f2a2b7496d5c423366d2e1"
+        },
+        "balanceStorage": {
+          "slot": "0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd",
+        "redeemReturns": "gross-before-fee",
+        "pausedSelector": "0x5c975abb"
       }
     }
   ]

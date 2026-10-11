@@ -45,13 +45,15 @@ import {
 } from "./fact-set";
 import { admitSafetyScoreV9ExtensionAsset, quarantinedSafetyScoreV9ExtensionAsset } from "./fact-set-schema";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "./extension-reviewed-registry";
+import { createReviewedAssetRegistry, ReviewedRegistryEntryError } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
 import { controlCanCarryKnownStatus } from "./fact-set-control";
-import { validateSafetyScoreV9ShockRegistryAsset } from "./extension-shock";
+import { providerRowExclusionShares } from "@shared/lib/safety-score-v9/control-bridge-join";
+import { hydrateSafetyScoreV9ShockCoverageAsset, validateSafetyScoreV9ShockRegistryAsset } from "./extension-shock";
 import {
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
+  getSafetyScoreV9MechanismComponentEvidence,
   getSafetyScoreV9MechanismOverlayEvidence,
   getSafetyScoreV9MechanismReviewGapDisposition,
   getSafetyScoreV9MechanismReviewedUnavailableComponents,
@@ -118,18 +120,19 @@ import {
   dependencyReserveSlices,
 } from "./extension-reserves";
 import { collateralExposureMappingIssues } from "./fact-set-context";
+import { ReviewEvidenceBuilder, parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
 import {
-  ReviewEvidenceBuilder,
+  nativeReviewEvidenceDigest,
   accessEvidenceObservationState,
   projectControlAuthority,
   boundedObservedAt,
   confidenceForResearch,
-  parseBoundedDateSec,
   maximumObservedAt,
   notApplicableStatus,
   requiredStatus,
   researchReviewObservationState,
   reviewedObservationState,
+  reviewedKeyCustody,
   type ControlOverlay,
   type ExtensionAsset,
   type V9ExtensionRegistryMeta,
@@ -157,17 +160,14 @@ export function resolveReviewedReserveRows(input: {
   meta: V9ExtensionRegistryMeta;
   clockSec: number;
   liveReserveRows: readonly ReserveSlice[];
-  liveFallbackAllowed: boolean;
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
 }): ReviewedReserveRows {
   if (input.liveReserveRows.length > 0) return null;
   return (
     buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec, input.fixedInput) ??
     (input.meta.liveReservesConfig != null
-      ? input.liveFallbackAllowed
-        ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput) ??
-          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput)
-        : null
+      ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput) ??
+        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput)
       : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec, input.fixedInput))
   );
 }
@@ -1110,6 +1110,7 @@ function adaptMintControl(
       : reviewComplete && !scopedMintReachUnresolved
         ? "none"
         : "unknown";
+  const keyCustody = reviewedKeyCustody(control.keyCustodyAttestation, clockSec);
   const controlKey = `mint-meta:${assetId}:${domainDigest("safety-score-v9.mint-control-key.v1", {
     chain: control.chain ?? null,
     address: control.address?.toLowerCase() ?? null,
@@ -1135,7 +1136,9 @@ function adaptMintControl(
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     ...(scopedQuestionIsCustodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
-    keyCustody: scopedQuestionIsCustodyOnly ? "unknown" : control.keyCustodyAttestation?.kind ?? "unknown",
+    keyCustody: scopedQuestionIsCustodyOnly ? "unknown" : keyCustody,
+    ...(control.keyCustodyAttestation?.kind === "hardware-wallet" && keyCustody === "unknown"
+      ? { keyCustodyReviewUnavailable: true } : {}),
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
     ...(projection.scope ? {
       executionScope: projection.scope,
@@ -1578,21 +1581,31 @@ function transferMaterialScope(
   meta: V9ExtensionRegistryMeta,
   generation: SafetyScoreV9TransferMaterialityGeneration | null,
   review: SafetyScoreV9ReviewedTransferFact | undefined,
+  supplyReview: ExtensionAsset["supplyReview"],
 ): SafetyScoreV9TransferMaterialScope {
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
+  const admittedExcludedRows = supplyReview ? providerRowExclusionShares(assetId, supplyReview).byDeployment : undefined;
+  const exclusions = (supplyReview?.providerRowExclusions ?? []).filter((exclusion) =>
+    admittedExcludedRows?.has(exclusion.deploymentRouteKey));
+  const excludedProviderLabels = new Set(exclusions.map((exclusion) => exclusion.review.providerChainLabel));
+  // Exclude identities, never a chain: another legacy liability on this chain
+  // still needs its own supply and transfer census after the foreign row is removed.
+  const ownContracts = (meta.contracts ?? []).filter((deployment) => !exclusions.some((exclusion) =>
+    safetyScoreV9TransferDeploymentKey(deployment.chain, deployment.address) ===
+      safetyScoreV9TransferDeploymentKey(exclusion.review.chainId, exclusion.review.contractAddress)));
   const totalSupplyUsd = !REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) ||
     fixedInput.safetyScoreV9SupplyAttributionById?.[assetId] ||
     hasCompleteEligibleProviderSupply(fixedInput, assetId, { contracts: meta.contracts, bridgeRouteRisk: meta.bridgeRouteRisk })
     ? Object.values(rows).reduce((sum, row) => sum + row.current, 0) : 0;
-  const authoritativeDeployments = (meta.contracts ?? []).flatMap((deployment) => {
+  const authoritativeDeployments = ownContracts.flatMap((deployment) => {
     const chainId = resolveChainId(deployment.chain);
     return chainId === null ? [] : [{ chainId, key: safetyScoreV9TransferDeploymentKey(chainId, deployment.address) }];
   });
   const authoritativeDeploymentKeys = [...new Set(authoritativeDeployments.map(({ key }) => key))].sort(compareText);
-  const unresolvedDeclaredChainIds = (meta.contracts ?? [])
+  const unresolvedDeclaredChainIds = ownContracts
     .filter((deployment) => resolveChainId(deployment.chain) === null)
     .map((deployment) => deployment.chain.trim().toLowerCase());
-  const unresolvedDeclaredDeploymentKeys = (meta.contracts ?? [])
+  const unresolvedDeclaredDeploymentKeys = ownContracts
     .filter((deployment) => resolveChainId(deployment.chain) === null)
     .map((deployment) => safetyScoreV9TransferDeploymentKey(deployment.chain.trim().toLowerCase(), deployment.address));
   if (fixedInput.safetyScoreV9SupplyAttributionById?.[assetId]?.model === "reviewed-economic-deployment-partition-v1" ||
@@ -1637,6 +1650,7 @@ function transferMaterialScope(
   const supplyByChainId = new Map<string, number>();
   let unresolvedSupplyUsd = 0;
   for (const [chain, row] of Object.entries(rows)) {
+    if (excludedProviderLabels.has(chain)) continue;
     const chainId = resolveChainId(chain);
     if (chainId === null) {
       unresolvedSupplyUsd += row.current;
@@ -1651,12 +1665,15 @@ function transferMaterialScope(
       deployment.key,
     ]);
   }
+  const unattributedOwnDeploymentKeys = authoritativeDeployments
+    .filter((deployment) => exclusions.some((exclusion) => exclusion.review.chainId === deployment.chainId))
+    .map((deployment) => deployment.key);
   const materialChainIds = [...supplyByChainId.entries()]
     .filter(([, supplyUsd]) => supplyUsd / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
     .map(([chainId]) => chainId)
     .sort(compareText);
   const materialDeploymentKeys = [
-    ...new Set(materialChainIds.flatMap((chainId) => deploymentsByChainId.get(chainId) ?? [])),
+    ...new Set([...materialChainIds.flatMap((chainId) => deploymentsByChainId.get(chainId) ?? []), ...unattributedOwnDeploymentKeys]),
   ].sort(compareText);
   return {
     authoritativeDeploymentKeys,
@@ -1664,11 +1681,13 @@ function transferMaterialScope(
     unresolvedMaterialChainIds: [...new Set([
       ...unresolvedDeclaredChainIds,
       ...Object.entries(rows)
-        .filter(([chain, row]) => resolveChainId(chain) === null && row.current / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
+        .filter(([chain, row]) => !excludedProviderLabels.has(chain) &&
+          resolveChainId(chain) === null && row.current / totalSupplyUsd >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD)
         .map(([chain]) => chain.trim().toLowerCase()),
     ])].sort(compareText),
     materialDeploymentKeys,
     materialDeploymentScopeComplete:
+      unattributedOwnDeploymentKeys.length === 0 &&
       unresolvedSupplyUsd / totalSupplyUsd < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD &&
       materialChainIds.length > 0 &&
       materialChainIds.every((chainId) => (deploymentsByChainId.get(chainId)?.length ?? 0) > 0),
@@ -2330,6 +2349,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     [
       ...Object.values(fixedInput.pegDataById).map((peg) => peg.priceObservedAt),
       ...Object.values(fixedInput.navPriceById ?? {}).map((navPrice) => navPrice.observedAtSec),
+      ...Object.values(fixedInput.exitOutputPriceById ?? {}).map((price) => price.observedAtSec),
     ],
     fixedInput.updatedAt,
     clockSec,
@@ -2347,6 +2367,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   const pegGenerationDigest = domainDigest("safety-score-v9.peg.v1", {
     pegDataById: fixedInput.pegDataById,
     navPriceById: fixedInput.navPriceById ?? {},
+    ...(fixedInput.exitOutputPriceById ? { exitOutputPriceById: fixedInput.exitOutputPriceById } : {}),
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
   });
   const researchOverlaysGenerationDigest = domainDigest("safety-score-v9.research-overlays.v3", {
@@ -2391,7 +2412,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.researchOverlayMaxAgeSec,
     },
   } satisfies SafetyScoreV9FactSetExtensionV2["sources"];
-  const liveToFallbackAssetIds = new Set(fixedInput.liveToFallbackCoins);
 
   return {
     schemaVersion: 3,
@@ -2449,23 +2469,20 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         admissionPath = "registry.mintBridgeOwnership";
         assertMintBridgeOwnership(meta);
         const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
-        // The audited fallback rung applies only where a live producer was
-        // observed returning nothing this capture. It sits inside that gate, not
-        // ahead of it, so an asset excluded from falling back is not rescued; and
-        // it is deliberately absent from the standalone branch, where no live
-        // producer exists and nothing has gone stale.
+        // The captured live-to-fallback census is operational telemetry, not
+        // authority over independently dated, reviewed registry evidence.
+        // Live rows still win; curated rows retain every source/scope/age gate.
         admissionPath = "reviewedStaticReserveRows";
         const reviewedStaticReserveRows = resolveReviewedReserveRows({
           meta,
           clockSec,
           fixedInput,
           liveReserveRows: liveReserves,
-          liveFallbackAllowed: liveToFallbackAssetIds.has(assetId),
         });
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
         const reserveBoundFacts = buildSafetyScoreV9ReserveBoundFacts(assetId, reserveRows, { clockSec, liveProvenance: fixedInput.liveReserveProvenanceMap[assetId], liveMaxAgeSec: sources.liveReserves.maxAgeSec });
-        const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec);
+        const reviewEvidence = new ReviewEvidenceBuilder(assetId, clockSec, nativeReviewEvidenceDigest);
         admissionPath = "reserveScopeAdmissions";
         const reserveScopeAdmissions = buildSafetyScoreV10ScopedReserveAdmissions(meta, fixedInput);
         addScopedReserveEvidence(meta, reserveScopeAdmissions, fixedInput, reviewEvidence);
@@ -2502,6 +2519,18 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             payload: mechanismOverlayEvidence.payload,
             maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
           });
+          for (const component of getSafetyScoreV9MechanismComponentEvidence(assetId, archetype, clockSec)) {
+            reviewEvidence.add({
+              componentKeys: [`mechanism-risk-review:${component.componentKey}`],
+              sourceId: `safety-score-v9.mechanism-review-overlay:${component.componentKey}`,
+              reviewedAt: component.reviewedAt,
+              publishedBy: "unknown",
+              confidence: "manual-review",
+              sources: component.sources,
+              payload: component.payload,
+              maxAgeSec: component.maxAgeSec,
+            });
+          }
         } else if (
           mechanismRiskReview &&
           (archetype === "ucits-trs-fund" || archetype === "shared-reserve" || archetype === "protocol-position") &&
@@ -2612,12 +2641,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         );
         admissionPath = "controlReview";
         const incidentControlRoute = routeSafetyScoreV9ControlIncidents(
-          mint.controls,
+          [...mint.controls, ...bridge.controls],
           mint.review,
           reviewedIncidents,
         );
         const controls = routeSafetyScoreV9NegativeIncidentReviews(
-          [...incidentControlRoute.controls, ...bridge.controls],
+          incidentControlRoute.controls,
           assetId,
           clockSec,
           negativeIncidentReviews,
@@ -2639,6 +2668,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             meta,
             options.transferMaterialityGeneration ?? null,
             reviewedTransferFact,
+            supplyReview,
           ),
           clockSec,
           buildSafetyScoreV9AccessClaimGraph({ assetId, clockSec, generationId: fixedInput.baseInputGenerationId, evidence: reviewEvidence, review: options.accessClaimGraphReviews?.get(assetId) }),
@@ -2737,7 +2767,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
               }
             : null,
           ...reviewedEvidence,
-        }, clockSec, reuseScopeRoot);
+        }, clockSec, reuseScopeRoot, (asset) => hydrateSafetyScoreV9ShockCoverageAsset(asset, clockSec));
       } catch (error) {
         return quarantinedSafetyScoreV9ExtensionAsset(admitted, assetId, {
           code: "fact-build-failed",

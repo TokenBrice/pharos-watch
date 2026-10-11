@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "The five reviewed MXNB deployments are issuer-native FiatTokenV2_2 liabilities, with verified direct local-supply mint/burn implementations. The issuer also lists a live Arc deployment (pinned Arc block 25087646: MXNB, 6 decimals, 2195860.833859 tokens), now registered in contracts[] with an explicit unresolved Arc route disposition. Independent-liability eligibility is deferred until the Arc native-liability route review is complete; no eligibility or static supply shares are authored.",
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4T05Infinifi)",
+    "summary": "All six listed MXNB deployments are issuer-native FiatTokenV2_2 liabilities. Arc route review now confirms the exact proxy's implementation and direct local mint/burn construction at pinned block 25087646, with separate native issuance authorities recorded in Mint Authority. No bridge escrow or representation is present in the reviewed native mint path. No static supply shares or independent-liability eligibility are authored.",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L35MXNB)",
     "confidence": "verified",
     "sources": [
       {
@@ -42,6 +42,14 @@
       {
         "label": "Arc block 25087646, hash 0x9bcd9785a04baabecd740f36e44360bb6ce32014ea38f1964d5003f9a27b11f8, 2026-10-09T14:49:47Z; observed 2026-10-09T14:49:48Z: live omitted MXNB deployment, 6 decimals, 2195860.833859 tokens",
         "url": "https://api-arc-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Arc verified FiatTokenProxy source, implementation and upgrade authority; observed 2026-10-10T23:28Z",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+      },
+      {
+        "label": "Arc verified FiatTokenV2_2 and FiatTokenV1 source, direct local mint/burn and hardcoded ownership-reset authority",
+        "url": "https://explorer.arc.io/api/v2/smart-contracts/0x72beddf7032eec58f199857b79a8e37020c14e42"
       }
     ],
     "routes": [
@@ -204,15 +212,35 @@
         "id": "arc:0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
         "destinationChain": "arc",
         "contractAddress": "0xf197ffc28c23e0309b5559e7a166f2c6164c80aa",
-        "protocol": "Unreviewed MXNB deployment route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "The existing review documents the live Arc deployment's identity, decimals and supply, but explicitly defers its native-liability route review. Those identity observations do not establish issuance model, transfer semantics or controller evidence; independent-liability eligibility remains deferred.",
-        "mappingVersion": "bridge-route-facts-v1"
+        "protocol": "Juno/Bitso issuer-native MXNB",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The issuer transparency roster exactly identifies this Arc proxy as MXNB. At Arc block 25087646 (hash 0x9bcd9785a04baabecd740f36e44360bb6ce32014ea38f1964d5003f9a27b11f8; 2026-10-09T14:49:47Z; observed 2026-10-10T23:29:29.083Z), implementation() returns 0x72beddf7032eec58f199857b79a8e37020c14e42, owner()/masterMinter() return 0xcf3783abaf4a11da1382f0c49748fa87a1b6b739, and admin() returns 0x4d64a2ccfed1a162c8b1d7a3d8fffeccab3305ca. Arc verified FiatTokenV1 mint/burn directly increment/decrement local totalSupply_, without an escrow, remote peer or bridge message in this native issuance path. Native authorities, arbitrary allowance expansion and the superSetOwner bypass are recorded in Mint Authority, not bridge controls. This route finding does not establish current economic book partition, whole-supply reconciliation, incident absence, or supply materiality.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-10",
+        "observedBlock": 25087646,
+        "sources": [
+          {
+            "label": "Issuer-supported Arc MXNB proxy identity",
+            "url": "https://mxnb.mx/en-US/transparency"
+          },
+          {
+            "label": "Arc verified FiatTokenProxy, admin/implementation and upgrade functions",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0xf197ffc28c23e0309b5559e7a166f2c6164c80aa"
+          },
+          {
+            "label": "Arc verified FiatTokenV2_2 / FiatTokenV1 direct mint/burn",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x72beddf7032eec58f199857b79a8e37020c14e42"
+          },
+          {
+            "label": "Arc pinned role reads, block 25087646, 2026-10-09T14:49:47Z; observed 2026-10-10T23:29:29.083Z",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
+          }
+        ]
       }
     ]
   }

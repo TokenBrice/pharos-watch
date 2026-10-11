@@ -175,6 +175,90 @@
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
+    "branchKindReviews": [
+      {
+        "kind": "collateral-parameter",
+        "branchIds": [
+          "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+          "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+          "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+          "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
+          "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
+          "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+        ],
+        "reviewedAt": "2026-10-10T23:36:19Z",
+        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "confidence": "verified",
+        "rationale": "All seven registered markets, including 3Jane USD3, have independently pinned idToMarketParams LLTV at Ethereum block 26154200 (2026-10-09T10:17:35Z). Exact creation/runtime-matched Morpho source sets immutable parameters at createMarket. These are liquidation thresholds, not share mint limits, portfolio weights or nested-feed assurances.",
+        "sources": [
+          {
+            "label": "Exact creation/runtime-matched Morpho Blue source: createMarket, liquidate and zero-collateral write-off",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all"
+          },
+          {
+            "label": "Complete seven-market parameter census at Ethereum block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, 2026-10-09T10:17:35Z; original observation 2026-10-09T11:44:36Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum block 26154200 evidence timestamp",
+            "url": "https://etherscan.io/block/26154200"
+          }
+        ]
+      },
+      {
+        "kind": "liquidation",
+        "branchIds": [
+          "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+          "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+          "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+          "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
+          "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
+          "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+        ],
+        "reviewedAt": "2026-10-10T23:36:19Z",
+        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "confidence": "verified",
+        "rationale": "All seven markets pinned at block 26154200 use Morpho Blue 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb. Its exact creation/runtime-matched liquidate source tests oracle-valued health against LLTV, seizes collateral and requires loan-token repayment. This verifies mechanics, not feed correctness, successful liquidation latency, liquidator availability or funded insurance.",
+        "sources": [
+          {
+            "label": "Exact creation/runtime-matched Morpho Blue liquidate implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all"
+          },
+          {
+            "label": "All seven market identities via exact adapter.morpho and idToMarketParams census, Ethereum block 26154200, 2026-10-09T10:17:35Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "kind": "shutdown-bad-debt",
+        "branchIds": [
+          "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+          "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+          "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+          "0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b",
+          "0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea",
+          "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+          "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+        ],
+        "reviewedAt": "2026-10-10T23:36:19Z",
+        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "confidence": "verified",
+        "rationale": "The exact creation/runtime-matched Morpho Blue liquidate implementation writes off remaining borrower debt at zero collateral and subtracts badDebtAssets from supplier assets for every one of the seven immutable markets pinned at block 26154200. This is loss recognition, not guaranteed recovery or funded backstop. Nested pricing and root profile confidence stay limited.",
+        "sources": [
+          {
+            "label": "Exact creation/runtime-matched Morpho Blue zero-collateral bad-debt write-off",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all"
+          },
+          {
+            "label": "Complete seven-market parameter census, Ethereum block 26154200, 2026-10-09T10:17:35Z; original observation 2026-10-09T11:44:36Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          }
+        ]
+      }
+    ],
     "branches": [
       {
         "id": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
@@ -206,9 +290,9 @@
             "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
           }
         ],
-        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence verifies mechanics, not nested feed correctness or executable liquidation availability.",
         "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded backstop or root-vault assurance is inferred.",
         "sources": [
           {
             "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -276,9 +360,9 @@
             "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
           }
         ],
-        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence verifies mechanics, not nested feed correctness or executable liquidation availability.",
         "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded backstop or root-vault assurance is inferred.",
         "sources": [
           {
             "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -331,9 +415,9 @@
             "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
           }
         ],
-        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence verifies mechanics, not nested feed correctness or executable liquidation availability.",
         "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded backstop or root-vault assurance is inferred.",
         "sources": [
           {
             "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -386,9 +470,9 @@
             "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
           }
         ],
-        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence verifies mechanics, not nested feed correctness or executable liquidation availability.",
         "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded backstop or root-vault assurance is inferred.",
         "sources": [
           {
             "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -440,9 +524,9 @@
             "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
           }
         ],
-        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence verifies mechanics, not nested feed correctness or executable liquidation availability.",
         "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded backstop or root-vault assurance is inferred.",
         "sources": [
           {
             "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -502,9 +586,9 @@
             "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
           }
         ],
-        "liquidationMechanism": "Referenced Morpho Blue liquidate checks oracle-valued borrower health against LLTV, transfers seized collateral to the liquidator and requires loan-token repayment. Exact deployment bytecode equivalence is not newly certified.",
+        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence verifies mechanics, not nested feed correctness or executable liquidation availability.",
         "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho Blue writes off remaining debt when borrower collateral reaches zero, subtracting badDebtAssets from totalSupplyAssets; VaultV2 NAV recognizes adapter losses. No guaranteed recovery is inferred.",
+        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded backstop or root-vault assurance is inferred.",
         "sources": [
           {
             "label": "Adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -554,9 +638,9 @@
             "note": "Pinned Morpho idToMarketParams LLTV; loan token is USDC. Registered membership does not establish current allocation weight or debt share."
           }
         ],
-        "liquidationMechanism": "The configured market consumes IOracle.price for borrower health and Morpho liquidation. Exact deployed Morpho liquidation executable correspondence is not newly certified.",
+        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independent kind evidence also covers this seventh 3Jane USD3 market, without certifying the nested USD3 pricing proxy.",
         "backstop": "No exact-market funded backstop is established by this technical census.",
-        "shutdownOrBadDebtBehavior": "Referenced Morpho framework writes off debt after collateral exhaustion; current deployed executable and recovery closure remain incomplete.",
+        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets for this seventh immutable market. Guaranteed recovery and funded backstop remain unestablished.",
         "sources": [
           {
             "label": "Complete adapter and Morpho market-parameter census at block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, 2026-10-09T10:17:35Z; observed 2026-10-09T11:44:36Z",

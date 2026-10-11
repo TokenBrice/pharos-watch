@@ -1390,15 +1390,23 @@
         "protocol": "USDC proxy (X Layer team-administered)",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "other",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "FiatToken-style USDC proxy administered by the single unlabeled EOA 0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb (owner() = masterMinter() = pauser(); ZeppelinOS proxy slots populated; reads at block 65731195, 2026-07-20). The July 20 review found implementation bytecode (23,464 bytes) differing from Circle's canonical FiatTokenV2_2 (21,483 bytes) and no X Layer entry in Circle's CCTP directory. That review predates Circle's current native X Layer entry. As checked September 27, 2026, Circle identifies 0xb6ceceab302e2e4948951ee7843fc24e92933061 as its separate native deployment; this older 0x74b7f16337b8972027f6196a17a631ac6de26d22 representation remains distinct. The July review identified this as a custom X Layer team-administered deployment, not a Circle issuance and not the Agglayer canonical-bridge token (the L1StandardBridge is neutered per L2BEAT). DefiLlama classified it bridgedFromETH; the ecosystem (OKX explorer, Dolomite) treated it as the canonical USDC on X Layer. Backing is not independently verifiable, hence the opaque tier despite the identified controller. Native status of the separate deployment does not establish CCTP support or alter this route's bridge-control risks.",
+        "reviewNote": "Historical pinned controller observation: owner() = masterMinter() = pauser() = 0xa07ae4bdfa7ba8bc0e8a8525bcc768300a8970bb at X Layer block 65731195 (2026-07-20), with ZeppelinOS proxy slots populated. That review found implementation bytecode (23,464 bytes) differing from Circle's canonical FiatTokenV2_2 (21,483 bytes); those authority observations are not renewed here. Documentary route review by Sol curation campaign 2026-10-11 (L12USDM), observed 2026-10-10T23:37:24Z: X Layer's official USDC guide identifies this exact 0x74b7f16337b8972027f6196a17a631ac6de26d22 contract as USDC supported by its official bridge and OKX Exchange following Circle's Bridged USDC Standard. Circle describes that standard as third-party bridged USDC backed by native USDC locked in a smart contract on another chain, not Circle-issued native USDC. This establishes external lock-and-mint route semantics, not an independently reconciled escrow balance, current bridge-admin custody or a supply share. Circle's current contract directory separately identifies native X Layer USDC at 0xb6ceceab302e2e4948951ee7843fc24e92933061; no native upgrade or CCTP support is inferred for this older representation. Historical observedAt, observedBlock and controller fields remain unchanged.",
         "mappingVersion": "bridge-route-facts-v1",
         "observedAt": "2026-07-20",
         "observedBlock": 65731195,
         "sources": [
+          {
+            "label": "X Layer official USDC guide: exact legacy contract and Bridged USDC Standard (reviewed 2026-10-10)",
+            "url": "https://web3.okx.com/onchainos/dev-docs/xlayer/developer/bridge/usdc-on-x-layer"
+          },
+          {
+            "label": "Circle Bridged USDC Standard: third-party locked native USDC backing (reviewed 2026-10-10)",
+            "url": "https://www.circle.com/bridged-usdc"
+          },
           {
             "label": "Circle USDC mainnet contract addresses (native deployment checked 2026-09-27)",
             "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"

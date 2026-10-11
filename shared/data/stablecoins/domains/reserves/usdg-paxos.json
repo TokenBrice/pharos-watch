@@ -74,8 +74,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "OpenAI Codex official report review",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L16PAXG)",
     "confidence": "verified",
     "sources": [
       {
@@ -99,7 +99,7 @@
         "url": "https://www.blackrock.com/cash/literature/kiid/ucits_kiid-blackrock-ics-us-treasury-fund-banking-circle-dis-usd-gb-ie0004wwog99-en.pdf"
       }
     ],
-    "rationale": "KPMG's unmodified reasonable-assurance report signed September 25, 2026 gives $1,713,363,362 of BNY Dreyfus Government Cash Management shares, $2,645,071 of BNY Mellon U.S. Treasury Fund shares, $3,115,100 of BlackRock ICS U.S. Treasury Fund shares, $1,544,391,014 of Treasury bills, and $86,947,920 of cash against $3,350,462,467 of total redemption assets at August 31, 2026, 17:00 EDT. The six native-chain redeemable liabilities in image-only Exhibit A sum to 3,340,650,602 and agree with Exhibit C; no timing adjustments or nonredeemable tokens are reported. The latest listed Treasury maturity is October 1, 2026, 31 days after the composition date. Percentages are rounded to two decimals from the reported amounts.",
+    "rationale": "KPMG's unmodified reasonable-assurance report signed September 25, 2026 gives $1,713,363,362 of BNY Dreyfus Government Cash Management shares, $2,645,071 of BNY Mellon U.S. Treasury Fund shares, $3,115,100 of BlackRock ICS U.S. Treasury Fund shares, $1,544,391,014 of Treasury bills, and $86,947,920 of cash against $3,350,462,467 of total redemption assets at August 31, 2026, 17:00 EDT. The six native-chain redeemable liabilities in image-only Exhibit A sum to 3,340,650,602 and agree with Exhibit C; no timing adjustments or nonredeemable tokens are reported. The latest listed Treasury maturity is October 1, 2026, 31 days after the composition date. Percentages are rounded to two decimals from the reported amounts. The BlackRock Banking Circle Dis USD KIID, accurate as at September 25, 2026 and retrieved October 10, limits underlying investments to 397 days until full principal repayment, distinct from the 60-day weighted-average maturity and 120-day weighted-average life. These are underlying portfolio constraints, not a finite repayment maturity for the open-ended fund shares held by USDG. No money-market-fund slice receives a numeric maturityDaysMax from those constraints; the existing exact aggregate open-ended maturity-applicability review remains authoritative. Re-reading the August report and issuer index does not advance the August 31 composition date.",
     "compositionBasis": "KPMG reasonable assurance of the USDG Redemption Assets Report as of August 31, 2026",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",

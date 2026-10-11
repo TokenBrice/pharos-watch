@@ -26,11 +26,12 @@ import {
   requiredStatus,
   researchReviewObservationState,
   reviewedObservationState,
+  reviewedKeyCustody,
   type ControlOverlay,
   type ExtensionAsset,
-  type ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "./extension-shared";
+import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
   safetyScoreV9RouteSupplyShare,
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
@@ -268,15 +269,6 @@ function mergedBridgeModulesOrGuards(
   return values.every((value) => value === values[0]) ? values[0]! : "unknown";
 }
 
-function mergedBridgeIncidentState(
-  entries: readonly StructuredBridgeOverlayEntry[],
-): ControlOverlay["incidentState"] {
-  const values = entries.map((entry) => entry.overlay.incidentState);
-  if (values.includes("active")) return "active";
-  if (values.includes("unknown")) return "unknown";
-  if (values.includes("resolved")) return "resolved";
-  return "none";
-}
 
 function mergedBridgeFailureDomains(
   entries: readonly StructuredBridgeOverlayEntry[],
@@ -334,6 +326,8 @@ function structuredBridgeRouteControl(
     delaySec: Math.min(...delays),
     materialSupplyShare,
     keyCustody: mergedBridgeKeyCustody(entries),
+    ...(entries.some(entry => entry.overlay.keyCustodyReviewUnavailable === true)
+      ? { keyCustodyReviewUnavailable: true } : {}),
     modulesOrGuards: mergedBridgeModulesOrGuards(entries),
     ...(entries.some((entry) => entry.overlay.executionScope) ? {
       executionScopeContributors: entries.map((entry) => ({
@@ -344,7 +338,8 @@ function structuredBridgeRouteControl(
       moduleImpact: entries.every((entry) => entry.overlay.moduleImpact === "verified-noninterfering" || entry.overlay.modulesOrGuards !== "present") ? "verified-noninterfering" as const : "unresolved" as const,
       scopeDiagnostics: [...new Set(entries.flatMap((entry) => entry.overlay.scopeDiagnostics ?? ["execution-scope-unreviewed"]))].sort(compareText),
     } : {}),
-    incidentState: mergedBridgeIncidentState(entries),
+    // Independent incident reviews are routed only after bridge aggregation.
+    incidentState: "unknown",
     failureDomains: mergedBridgeFailureDomains(entries),
   };
 }
@@ -386,7 +381,8 @@ function bridgeControl(
     // the mint-authority review owns both vocabularies.
     keyCustody: "unknown",
     modulesOrGuards: "unknown",
-    incidentState: reviewed ? "none" : "unknown",
+    // Route review is not an independently scoped incident disposition.
+    incidentState: "unknown",
     failureDomains: (route.failureDomainKeys?.length ? route.failureDomainKeys : [deploymentId])
       .map((key) => ({ kind: "bridge-route" as const, key }))
       .sort((left, right) => compareText(left.key, right.key)),
@@ -398,7 +394,6 @@ function structuredBridgeControl(
   route: BridgeRouteDeployment,
   control: BridgeRouteControl,
   materialSupplyShare: number | null,
-  reviewEvidenceCurrent: boolean,
   clockSec: number,
 ): ControlOverlay {
   const deploymentId = normalizedBridgeDeploymentId(route.id);
@@ -412,8 +407,7 @@ function structuredBridgeControl(
   const { capSemantics, claimImpairment } = projection.complete
     ? reviewedControlScopeSemantics(projection.paths)
     : projection.reviewed ? partialControlScopeSemantics(legacySemantics, projection) : legacySemantics;
-  const incidentState: ControlOverlay["incidentState"] =
-    reviewEvidenceCurrent && route.reviewDisposition === "reviewed" ? "none" : "unknown";
+  const keyCustody = reviewedKeyCustody(control.keyCustodyAttestation, clockSec);
   return {
     controlKey: `bridge-meta:${assetId}:${domainDigest(
       "safety-score-v9.structured-bridge-control-key.v1",
@@ -429,7 +423,9 @@ function structuredBridgeControl(
     authority: bridgeAuthority(control, deploymentId),
     delaySec: projection.complete ? (projection.paths.length > 0 ? Math.min(...projection.paths.map((path) => path.unavoidableDelaySec ?? 0)) : null) : control.timelockDelaySec ?? null,
     materialSupplyShare,
-    keyCustody: control.keyCustodyAttestation?.kind ?? "unknown",
+    keyCustody,
+    ...(control.keyCustodyAttestation?.kind === "hardware-wallet" && keyCustody === "unknown"
+      ? { keyCustodyReviewUnavailable: true } : {}),
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
     ...(control.executionScope ? {
       executionScope: control.executionScope,
@@ -439,7 +435,7 @@ function structuredBridgeControl(
     } : {}),
     ...(control.weightedQuorum && !weightedReviewIsCurrent(control.weightedQuorum, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC)
       ? { authority: { ...bridgeAuthority(control, deploymentId)!, weightedQuorum: { ...control.weightedQuorum, status: "unknown" as const } } } : {}),
-    incidentState,
+    incidentState: "unknown",
     failureDomains: bridgeFailureDomains(route, control),
   };
 }
@@ -567,9 +563,7 @@ function representationGroupBridgeControl(
       moduleImpact: memberControls.every((member) => member.moduleImpact === "verified-noninterfering" || member.modulesOrGuards !== "present") ? "verified-noninterfering" as const : "unresolved" as const,
       scopeDiagnostics: [...new Set(memberControls.flatMap((member) => member.scopeDiagnostics ?? ["execution-scope-unreviewed"]))].sort(compareText),
     } : {}),
-    incidentState: memberControls.some((member) => member.incidentState === "active") ? "active"
-      : !reviewed || memberControls.some((member) => member.incidentState === "unknown") ? "unknown"
-      : memberControls.some((member) => member.incidentState === "resolved") ? "resolved" : "none",
+    incidentState: "unknown",
     failureDomains: [...domains.values()].sort((left, right) =>
       compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
     ),
@@ -767,7 +761,6 @@ function buildUnprovenRouteJoins(
   assetId: string,
   supplyReview: ExtensionAsset["supplyReview"],
   bridgeControls: readonly ControlOverlay[],
-  controlSemanticsResolved: (control: ControlOverlay) => boolean,
 ): V9BridgeSupplyRouteJoinV1[] {
   const exclusions = supplyReview === null ? null : providerRowExclusionShares(assetId, supplyReview);
   const controlsByDeployment = new Map<string, ControlOverlay[]>();
@@ -779,8 +772,10 @@ function buildUnprovenRouteJoins(
     ]);
   }
   const fullCeilingShare = V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.unresolvedDeploymentFullCeilingSharePct / 100;
+  // Every bridge overlay still has an unknown incident disposition here.
+  // Independent incident routing runs downstream, so none is fully resolved.
   const reviewedUnresolvedDeploymentKeys = new Set(
-    bridgeControls.filter((control) => !controlSemanticsResolved(control) &&
+    bridgeControls.filter((control) =>
       control.scope === "deployment" && control.economicLossScope === "deployment")
       .map((control) => control.deploymentKey),
   );
@@ -804,13 +799,11 @@ function buildUnprovenRouteJoins(
         if (row.reviewedRouteKind === "native") return joined.length === 0;
         if (row.reviewedRouteKind !== "controlled" || single === null) return false;
         return (
-          (controlSemanticsResolved(single) ||
-            (single.scope === "deployment" &&
-              canRelaxUnresolvedRows &&
-              single.economicLossScope === "deployment" &&
-              single.materialSupplyShare !== null &&
-              single.materialSupplyShare < fullCeilingShare)) &&
+          single.scope === "deployment" &&
+          canRelaxUnresolvedRows &&
+          single.economicLossScope === "deployment" &&
           single.materialSupplyShare !== null &&
+          single.materialSupplyShare < fullCeilingShare &&
           bridgeJoinSharesReconcile(single.materialSupplyShare, row.supplyShare)
         );
       }
@@ -831,7 +824,7 @@ function buildUnprovenRouteJoins(
       reviewedRouteKind: row.reviewedRouteKind ?? null,
       supplyShare: row.supplyShare,
       joinedControlKeys: [...new Set(joined.map((control) => control.controlKey))].sort(compareText),
-      joinedControlSemanticsResolved: single === null ? null : controlSemanticsResolved(single),
+      joinedControlSemanticsResolved: single === null ? null : false,
       joinedControlSupplyShare: single === null ? null : single.materialSupplyShare,
     });
   }
@@ -998,9 +991,6 @@ export function adaptBridgeReview(
           route,
           control,
           safetyScoreV9RouteSupplyShare(supplyReview ?? null, routeId),
-          !reviewStale &&
-            (control.observedAt === undefined ||
-              researchReviewObservationState(control.observedAt, clockSec) === "current"),
           clockSec,
         ),
       } satisfies StructuredBridgeOverlayEntry;
@@ -1044,27 +1034,14 @@ export function adaptBridgeReview(
     (control.controllerChain != null &&
       control.controllerAddress != null &&
       refs.has(`${control.controllerChain}:${control.controllerAddress.toLowerCase()}`));
-  const overlayFullyResolved = (overlay: ControlOverlay): boolean =>
-    overlay.authority !== null &&
-    overlay.authority.model !== "unknown" &&
-    overlay.failureDomains.length > 0 &&
-    overlay.capSemantics.kind !== "unknown" &&
-    overlay.claimImpairment !== "unknown" &&
-    overlay.economicLossScope !== "unknown" &&
-    overlay.incidentState !== "unknown";
   if (freshScopedQuestionRefs.size > 0) {
     for (const [routeId, entries] of structuredOverlaysByDeployment) {
       const merged = structuredRouteControlsByDeployment.get(routeId);
       if (!merged) continue;
       const anyNamed = entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl));
       const custodyOnly = anyNamed && !entries.some((entry) => controlHasFreshScopedQuestion(entry.sourceControl, semanticQuestionRefs));
-      if (custodyOnly && overlayFullyResolved(merged)) {
-        structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
-          scopedQuestionSubject: "key-custody-independence", keyCustody: "unknown" });
-        continue;
-      }
       const allUnresolvedNamed = entries.every(
-        (entry) => controlHasFreshScopedQuestion(entry.sourceControl) || overlayFullyResolved(entry.overlay),
+        (entry) => controlHasFreshScopedQuestion(entry.sourceControl),
       );
       if (anyNamed && allUnresolvedNamed) {
         structuredRouteControlsByDeployment.set(routeId, { ...merged, scopedQuestionFresh: true,
@@ -1156,28 +1133,89 @@ export function adaptBridgeReview(
   // RULED D-J: a pooled uncanonicalized row below the common-mode floor is
   // accepted supply evidence, not an unresolved deployment-control identity.
   // At the floor it keeps the ordinary synthetic control and fails closed.
+  const excludedProviderRows = supplyReview
+    ? providerRowExclusionShares(meta.id, supplyReview).byDeployment : undefined;
   const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
     .filter(
       (route) =>
         route.reviewState === "unmatched" &&
-        classifyBridgeSupplyRow(route) === "control-required",
+        classifyBridgeSupplyRow(route) === "control-required" &&
+        !excludedProviderRows?.has(route.deploymentRouteKey),
     )
     .map((route) => unmatchedBridgeControl(meta.id, route));
+  // A native liability can still rely on external message validation. Keep the
+  // rail's tier separate from native issuance: no mint capability, supply share
+  // or favorable controller/cap closure is inferred from an OFT label.
+  const nativeTransferEntries = (profile.nativeExternalTransferReviews ?? []).flatMap((transfer) => {
+    if (reviewStale || Date.parse(transfer.reviewedAt) / 1_000 > clockSec ||
+        researchReviewObservationState(transfer.reviewedAt, clockSec) !== "current") return [];
+    const transferEvidenceKeys = evidence.add({
+      componentKeys: ["economic-control:bridge"],
+      sourceId: "stablecoin-meta.native-external-transfer",
+      reviewedAt: transfer.reviewedAt,
+      publishedBy: "unknown",
+      confidence: "verified",
+      sources: transfer.sources,
+      payload: transfer,
+      maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+    });
+    return transfer.routeRefs.flatMap((ref) => {
+      const routeId = normalizedBridgeDeploymentId(ref);
+      const route = routesById.get(routeId);
+      if (!route || route.reviewDisposition !== "reviewed" ||
+          route.routeClass !== "native" || route.issuanceModel !== "native-issuance" ||
+          route.observedAt == null || Date.parse(route.observedAt) / 1_000 > clockSec ||
+          researchReviewObservationState(route.observedAt, clockSec) !== "current") return [];
+      const existingControl = structuredRouteControlsByDeployment.get(routeId);
+      const controlKey = existingControl?.controlKey ?? `bridge-meta:${meta.id}:${domainDigest(
+        "safety-score-v9.native-external-transfer-control-key.v1",
+        { transferId: transfer.id, routeId },
+      ).slice(0, 20)}`;
+      const control: ControlOverlay = existingControl ?? {
+        controlKey,
+        deploymentKey: routeId,
+        controlKind: "bridge",
+        scope: "global",
+        capabilities: ["parameter-change"],
+        capSemantics: { kind: "not-applicable", bound: null },
+        claimImpairment: "unknown",
+        economicLossScope: "unknown",
+        authority: { authorityKey: `native-transfer:${meta.id}:${transfer.id}`, model: "unknown", threshold: null },
+        delaySec: null,
+        materialSupplyShare: null,
+        keyCustody: "unknown",
+        modulesOrGuards: "unknown",
+        incidentState: "unknown",
+        failureDomains: bridgeFailureDomains(route),
+      };
+      return [{
+        control,
+        review: {
+          controlKey,
+          tier: transfer.tier,
+          factorStatuses: {
+            tier: requiredStatus("v9.control.tier", "known", `native-transfer:${meta.id}:${transfer.id}`, transferEvidenceKeys),
+          },
+        },
+      }];
+    });
+  });
   const controls = [
     ...structuredOverlays.filter((control) => !groupedRouteIds.has(control.deploymentKey)),
     ...profileControls,
     ...representationGroups.map((group) => group.control),
     ...unmatchedControls,
+    ...nativeTransferEntries.filter((entry) => !structuredRouteIds.has(entry.control.deploymentKey)).map((entry) => entry.control),
   ].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const profileControlsByDeployment = new Map<string, ControlOverlay>();
   for (const control of profileControls) {
     profileControlsByDeployment.set(control.deploymentKey, control);
   }
-  // `routes` is intentionally one row per reviewed bridge representation.
-  // Native-issuance routes can still retain structured bridge controls above
-  // (for canonical-side adapters/lockboxes), but they do not create a second
-  // bridge materiality reason for the native liability itself.
+  // Representations retain their existing tier/materiality join. Explicitly
+  // reviewed native external rails add only their independently sourced tier;
+  // ordinary native issuance never implies an external rail.
   const routes = [
+    ...nativeTransferEntries.map((entry) => entry.review),
     ...reviewedRoutes
       .filter(
         (route) =>
@@ -1195,17 +1233,17 @@ export function adaptBridgeReview(
       tier: group.tier,
     })),
   ].sort((left, right) => compareText(left.controlKey, right.controlKey));
-  // A structured control whose only reviewed routes are native issuance governs the
-  // canonical liability (adapters, lockboxes, portal administration on the canonical
-  // chain). It is a real control fact and stays in the umbrella inventory, but it does
-  // not make the asset bridge-exposed — the reviewed answer is still "no bridge".
+  // Canonical-side controls remain in the umbrella inventory. Native issuance
+  // alone does not establish bridge exposure; a separately reviewed external
+  // transfer rail does, even when its controller closure remains unresolved.
   const nativeRouteIds = new Set(
     profileRoutes
       .filter((route) => !isBridgeRepresentationRoute(route, profile, meta.id))
       .map((route) => normalizedBridgeDeploymentId(route.id)),
   );
+  const nativeTransferControlKeys = new Set(nativeTransferEntries.map((entry) => entry.control.controlKey));
   const bridgeClaimControls = controls.filter(
-    (control) => !nativeRouteIds.has(control.deploymentKey),
+    (control) => nativeTransferControlKeys.has(control.controlKey) || !nativeRouteIds.has(control.deploymentKey),
   );
   // A reviewed representation route is bridge exposure whether or not a control
   // compiled for it. `routes` drops a representation route whose control did not
@@ -1232,6 +1270,7 @@ export function adaptBridgeReview(
   // make the asset bridge-exposed or require a synthetic bridge route row.
   if (
     !reviewStale &&
+    (profile.nativeExternalTransferReviews?.length ?? 0) === 0 &&
     ((bridgeClaimControls.length === 0 &&
       !hasReviewedRepresentationRoute &&
       ((!hasUnmatchedRow && profile.nativeInventoryReview === undefined) || reviewedNativeDustInventory)) ||
@@ -1286,7 +1325,7 @@ export function adaptBridgeReview(
         supplyReview,
         bridgeClaimControls,
         "applicable",
-        buildUnprovenRouteJoins(meta.id, supplyReview, controls, overlayFullyResolved),
+        buildUnprovenRouteJoins(meta.id, supplyReview, controls),
       ),
     },
     controls,

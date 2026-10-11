@@ -69,9 +69,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow, not additional canonical issuance. Maple's September 28, 2026 migration disclosure confirms unchanged holder token addresses and replacement CCIP pools rolling out through Q4. Historical controller pins do not establish replacement-pool authority. Remote EVM owner bypass quorums, remaining lane controls, Solana execution and runtime materiality retain their separately dated findings and bounded gaps.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow, not additional canonical issuance. Maple's September 28, 2026 migration disclosure confirms unchanged holder token addresses and replacement CCIP pools rolling out through Q4. At Ethereum block 26155000, the directory-listed escrow owner is verified RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449, with a 10800-second ordinary delay and an active ManyChainMultiSig bypasser that avoids that delay. This partial Ethereum owner census does not establish a complete execution certificate or replacement-pool authority. Remote EVM findings, remaining lane controls, Solana execution and runtime materiality retain their separately dated findings and bounded gaps.",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L34SyrupUSDT)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -85,6 +85,22 @@
       {
         "label": "Chainlink exact syrupUSDG deployments and pools",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+      },
+      {
+        "label": "Verified current Ethereum escrow RBACTimelock owner and immediate bypass semantics",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x44835bbba9d40deda9b64858095ecfb2693c9449"
+      },
+      {
+        "label": "Verified current Ethereum escrow bypasser ManyChainMultiSig execution",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x117ec8ad107976e1dbcc21717ff78407bc36aadc"
+      },
+      {
+        "label": "Pinned Ethereum escrow owner, ordinary delay and complete ADMIN/BYPASSER member census at block 26155000 (2026-10-09T12:57:47Z); observed 2026-10-10T23:38:10Z",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum escrow owner and bypass MCM owner/full nested config/pendingOwner at block 26162000, hash 0x063085f1059ae473860f4e88dbb5ba903e3440b3f0b92c4082716ab6fbae2987, timestamp 2026-10-10T12:21:35Z; observed 2026-10-11T01:02:48Z by Sol curation campaign 2026-10-11 (C32UTY)",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       },
       {
         "label": "Maple syrupUSDG legal claim and risk disclosures",
@@ -322,6 +338,49 @@
         "evidence": "At block 26107703, getToken() bound this escrow to the canonical syrupUSDG pool; typeAndVersion() returned LockReleaseTokenPool 1.6.1 and owner() was 0x44835bbba9d40deda9b64858095ecfb2693c9449. Canonical escrow cannot be summed as additional monetary supply. Full limits, pause, router, owner execution and upgrade census remains unresolved."
       },
       {
+        "id": "ethereum-ccip-escrow-owner",
+        "routeRefs": [
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+          "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018",
+          "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f"
+        ],
+        "capabilities": ["admin"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x44835bbba9d40deda9b64858095ecfb2693c9449",
+        "label": "syrupUSDG Ethereum CCIP escrow owner",
+        "authorityType": "timelock",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": ["controller:ethereum:0x44835bbba9d40deda9b64858095ecfb2693c9449", "bridge:chainlink-ccip"],
+        "observedAt": "2026-10-10",
+        "observedBlock": 26155000,
+        "sources": [
+          {
+            "label": "Exact syrupUSDG home escrow binding",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Verified RBACTimelock owner and immediate bypass semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x44835bbba9d40deda9b64858095ecfb2693c9449"
+          },
+          {
+            "label": "Verified sole bypasser ManyChainMultiSig",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x117ec8ad107976e1dbcc21717ff78407bc36aadc"
+          },
+          {
+            "label": "Pinned owner, delay and ADMIN/BYPASSER census at block 26155000 (2026-10-09T12:57:47Z); observed 2026-10-10T23:38:10Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum escrow owner and bypass MCM owner/full nested config/pendingOwner at block 26162000, hash 0x063085f1059ae473860f4e88dbb5ba903e3440b3f0b92c4082716ab6fbae2987, timestamp 2026-10-10T12:21:35Z; observed 2026-10-11T01:02:48Z by Sol curation campaign 2026-10-11 (C32UTY)",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          }
+        ],
+        "evidence": "Sol curation campaign 2026-10-11 (L34SyrupUSDT) observed the exact directory-listed Ethereum LockRelease escrow owner at block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z. owner() resolves to this verified RBACTimelock. getMinDelay() is 10800 seconds, but live ADMIN count is one (self) and BYPASSER count is one (0x117ec8ad107976e1dbcc21717ff78407bc36aadc). Verified bypasserExecuteBatch executes arbitrary target calls without delay or blocked-selector checks; the verified ManyChainMultiSig bypasser enforces signed roots and nonce ordering, not a minimum execution delay. Zero is the owner path's delay floor, not a uniform signer quorum, independent-human proof or guaranteed reaction time. Supplemental successful reads observed 2026-10-11T01:02:48Z by Sol curation campaign 2026-10-11 (C32UTY) at block 26162000, hash 0x063085f1059ae473860f4e88dbb5ba903e3440b3f0b92c4082716ab6fbae2987, timestamp 2026-10-10T12:21:35Z, confirm the same escrow owner and 10800-second ordinary delay. The bypass MCM owner() is this timelock and pendingOwner() is zero. getConfig() (selector 0xc3f909d4) returns 69 indexed signer leaves with a nested 32-group quorum/parent tree, root quorum 3; this is not a conventional 3-of-69 multisig. Verified owner-only setConfig can replace that signer tree, so configuration authority loops through the timelock rather than an independently established owner. Proposer/executor/canceller roles, live bypass authorization at the later pin, executable correspondence, router/RMN/limits, replacement pools and complete downstream liability reach remain unresolved."
+      },
+      {
         "id": "arbitrum-ccip-burn-mint-pool",
         "routeRefs": [
           "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
@@ -473,9 +532,10 @@
         "sources": [
           {"label": "Exact directory pool binding", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"},
           {"label": "Verified RBACTimelock owner and bypass semantics", "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0xf09afe78d3c7d359b334d7cb88995751f7ec5e13"},
+          {"label": "Bypasser ManyChainMultiSig verified source retrieved 2026-10-11 by Sol curation campaign 2026-10-11 (C32UTY); runtime correspondence and current config ownership not established", "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x0cff501cdb93e72221231ca5b6b1a3321a338b14"},
           {"label": "Pinned owner, enumerable roles, ordinary delay and bypasser getConfig", "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"}
         ],
-        "evidence": "Fresh owner pin at Robinhood block 78901755 (hash 0x8115d0bfce44cdfec69c89004ca2bc142eec5ae6dc258101ca67e1c80eb224ee) identifies verified RBACTimelock. Live enumerable census: ADMIN self; PROPOSER 0x76a443768a5e3b8d1aed0105fc250877841deb40; EXECUTOR 0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9; CANCELLER proposer, 0x70003d849a20e33997fea69bbc8a366d6ab0e131 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; BYPASSER solely 0x0cff501cdb93e72221231ca5b6b1a3321a338b14. Ordinary getMinDelay()=10800; ADMIN/BYPASSER bypass delay and blocked functions. Bypasser getConfig is ManyChainMultiSig-compatible with 69 signers, nested 32-group threshold tree and root quorum 3. Bypasser verified source was unavailable on this explorer; no ordinary multisig, independent-human or execution-complete certificate is asserted."
+        "evidence": "Fresh owner pin at Robinhood block 78901755 (hash 0x8115d0bfce44cdfec69c89004ca2bc142eec5ae6dc258101ca67e1c80eb224ee) identifies verified RBACTimelock. Live enumerable census: ADMIN self; PROPOSER 0x76a443768a5e3b8d1aed0105fc250877841deb40; EXECUTOR 0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9; CANCELLER proposer, 0x70003d849a20e33997fea69bbc8a366d6ab0e131 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; BYPASSER solely 0x0cff501cdb93e72221231ca5b6b1a3321a338b14. Ordinary getMinDelay()=10800; ADMIN/BYPASSER bypass delay and blocked functions. Bypasser getConfig is ManyChainMultiSig-compatible with 69 signers, nested 32-group threshold tree and root quorum 3. Supplemental 2026-10-11 retrieval by Sol curation campaign 2026-10-11 (C32UTY) found this bypasser's verified ManyChainMultiSig source on the same explorer, with nested root-signature validation, nonce-ordered raw target CALL execution and owner-only setConfig. This source retrieval does not establish executable correspondence or current configuration-owner reach. No ordinary multisig, independent-human or execution-complete certificate is asserted."
       },
       {
         "id": "solana-syrupusdg-mint-authority",
@@ -543,18 +603,22 @@
     "scopedQuestions": [
       {
         "controlRef": "ethereum-ccip-escrow",
-        "question": "Which remaining Ethereum owner execution routes, non-bypass MCM configurations, router/RMN-validator and live rate-limit/pause/upgrade controls cover all CCIP lanes? Remote EVM owners are now verified RBACTimelock contracts with live role census and active immediate bypass; ordinary delays do not resolve remaining controls.",
+        "question": "At Ethereum block 26162000 the escrow owner and ordinary delay are confirmed, and the immediate-bypass MCM's owner is the same RBACTimelock with zero pendingOwner and a full 69-leaf, 32-group nested config. Which non-bypass roles and configuration-replacement authorization paths, current bypass membership, runtime/source correspondence, router/RMN-validator and live rate-limit/pause/upgrade controls cover every historical and replacement CCIP lane? The owner/config cycle and arbitrary-call code do not prove an independently executable global-claim impairment path or a complete execution certificate.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "reviewedAt": "2026-10-11",
+        "reviewer": "Sol curation campaign 2026-10-11 (C32UTY)",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Ethereum RPC observation at block 26107703",
-            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            "label": "Pinned Ethereum escrow owner and ADMIN/BYPASSER census at block 26155000 (2026-10-09T12:57:47Z); observed 2026-10-10T23:38:10Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Ethereum escrow owner and bypass MCM owner/full nested config/pendingOwner at block 26162000, hash 0x063085f1059ae473860f4e88dbb5ba903e3440b3f0b92c4082716ab6fbae2987, timestamp 2026-10-10T12:21:35Z; observed 2026-10-11T01:02:48Z by Sol curation campaign 2026-10-11 (C32UTY)",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       },

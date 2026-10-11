@@ -17,7 +17,7 @@ import { SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST } from "../safety-score-v9/exte
 import { SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST } from "../safety-score-v9/extension-mechanism";
 import { SAFETY_SCORE_V9_OPERATIONAL_RESILIENCE_OVERLAYS_DIGEST } from "../safety-score-v9/extension-operational-resilience";
 import { computeSafetyScoreV9ReviewedTransferFactsDigest } from "../safety-score-v9/extension-transfer";
-import { canonicalizeReviewedRegistryDigest, reviewedRegistryDigestKey } from "../safety-score-v9/extension-reviewed-registry";
+import { canonicalizeReviewedRegistryDigest, reviewedRegistryDigestKey } from "@shared/lib/safety-score-v9/reviewed-registry";
 
 describe("reviewed registry provenance identity", () => {
   it("keeps all five full-file digest identities from eager schema admission", () => {

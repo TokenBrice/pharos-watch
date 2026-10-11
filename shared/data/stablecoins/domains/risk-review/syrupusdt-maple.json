@@ -71,6 +71,10 @@
       {
         "label": "Maple crosschain token and pool addresses",
         "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain"
+      },
+      {
+        "label": "Canonical syrupUSDT pool binding to 0xde76a096c5eadddf97af3fe15ee49d32aeda9822, LockReleaseTokenPool 1.5.1, and all four current remote token/pool mappings; Ethereum block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, block time 2026-10-09T12:57:47Z; observed 2026-10-11T00:50:10.914Z and 2026-10-11T00:50:49.166Z by Sol curation campaign 2026-10-11 (C18SyrupUSDT)",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
     "routes": [

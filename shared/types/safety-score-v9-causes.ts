@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CanonicalKeySchema, CanonicalTextSchema, ScoreSchema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
 
+// Public fact tuple references bind this append-only A/B/C/U/D order.
 export const V9EvidenceCauseSchema = z.enum(["A", "B", "C", "U", "D"]);
 export type V9EvidenceCause = z.infer<typeof V9EvidenceCauseSchema>;
 const V9EvidenceProducerStateSchema = z.enum([

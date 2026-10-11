@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FRONTEND_API_QUERY_DESCRIPTORS, type FrontendApiQueryDescriptorRegistry } from "../api-query-descriptors";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
+import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { type FrontendAnyApiQueryDescriptor } from "../api-query-contract";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import {
@@ -349,6 +350,27 @@ describe("frontend API query descriptors", () => {
 
     expect(schema.safeParse(reportV5).success).toBe(true);
     expect(schema.safeParse({ ...reportV5, schemaVersion: 4 }).success).toBe(false);
+  });
+
+  it("resolves card-local witness text before any frontend reader receives the card", async () => {
+    const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);
+    if (schema === undefined) throw new Error("Expected a V9 report-card response schema");
+    const semantic = makeReportCardsV9Response();
+    const card = semantic.cards[0]!;
+    const reason = {
+      code: "unresolved-control-identity" as const,
+      message: "The independently scoped control incident review is unavailable.",
+      path: "control:ethereum:reviewed:incidentState",
+    };
+    card.evidence.reasons = [reason];
+    card.pillars.control.reasons = [reason];
+    const wire = { ...semantic, cards: [internV9PublicWitnessTexts(card)] };
+    expect(wire.cards[0]!.witnessTexts?.length).toBeGreaterThan(0);
+    const parsed = schema.safeParse(wire);
+    expect(parsed.success).toBe(true);
+    if (parsed.success) expect(parsed.data).toEqual(semantic);
+    wire.cards[0]!.evidence.reasons[0]!.message = "~zzzzzz";
+    expect(schema.safeParse(wire).success).toBe(false);
   });
 
   it("validates only global PSI display fields and preserves the full payload", () => {

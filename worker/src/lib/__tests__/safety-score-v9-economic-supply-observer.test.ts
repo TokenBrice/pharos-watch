@@ -182,6 +182,52 @@ describe("reviewed economic supply observation", () => {
     expect(result.attribution.conversions[0]).toMatchObject({ sourceId: "conversion", value: "1.25" });
   });
 
+  function erc4626Fixture() {
+    const f = fixture(), row = f.plan.deployments[0]!;
+    row.claimUnit = "local-vault-shares"; row.conversionSourceId = "vault-nav";
+    const assetAddress = `0x${"4".repeat(40)}`;
+    f.plan.conversionSources = [{ kind: "evm-erc4626-convert-to-assets", sourceId: "vault-nav",
+      chainId: row.chainId, vaultAddress: row.address!, vaultRuntimeCodeSha256: sha256Hex("0x6000"),
+      immutable: true, assetAddress, shareDecimals: 6, assetDecimals: 18 }];
+    const state = ["0x6000", `0x${assetAddress.slice(2).padStart(64, "0")}`, word(6n), word(18n), word(1067335739311306659n)];
+    vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(state);
+    return { ...f, state };
+  }
+
+  it("values immutable vault shares at their exact holding pin without rounding away the conversion", async () => {
+    const f = erc4626Fixture();
+    expect(ReviewedEconomicSupplyPlanSchema.safeParse(f.plan).success).toBe(true);
+    const result = await f.run();
+    expect(result.status).toBe("accepted");
+    if (result.status !== "accepted") throw new Error("Expected exact pinned vault conversion");
+    expect(result.attribution.conversions).toEqual([expect.objectContaining({
+      value: "1.067335739311306659", observedAtSec: CLOCK - 60,
+      sourceGeneration: `ethereum:100:${HASH}`, erc4626Proof: { anchor: 100, anchorHash: HASH, assets: "1067335739311306659" },
+    })]);
+    expect(result.attribution.deployments[0]!.currentSupplyUsd).toBe(100);
+    const calls = vi.mocked(evmRpc.fetchEvmRpcBatch).mock.calls[0][1];
+    expect(calls).toHaveLength(5);
+    expect(calls.every(call => JSON.stringify(call.params[call.params.length - 1]) === JSON.stringify({ blockHash: HASH, requireCanonical: true }))).toBe(true);
+    expect(calls[4].params[0]).toEqual({ to: f.plan.deployments[0]!.address,
+      data: toFunctionSelector("convertToAssets(uint256)") + (10n ** 6n).toString(16).padStart(64, "0") });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each(["missing", "runtime", "asset", "share decimals", "asset decimals", "zero", "malformed", "revert", "stale"])("rejects %s vault conversion without allocation fallback", async failure => {
+    const f = erc4626Fixture();
+    if (failure === "runtime") f.state[0] = "0x6001";
+    if (failure === "asset") f.state[1] = word(1n);
+    if (failure === "share decimals") f.state[2] = word(18n);
+    if (failure === "asset decimals") f.state[3] = word(6n);
+    if (failure === "zero") f.state[4] = word(0n);
+    if (failure === "malformed") f.state[4] = "0x1";
+    if (failure === "missing") vi.mocked(evmRpc.fetchEvmRpcBatch).mockResolvedValue(null);
+    if (failure === "revert") vi.mocked(evmRpc.fetchEvmRpcBatch).mockRejectedValue(new Error("RPC reverted"));
+    if (failure === "stale") vi.mocked(evmRpc.fetchEvmBlockHeader).mockResolvedValue({ number: 100, hash: HASH, timestamp: CLOCK - 1801 });
+    expect(await f.run()).toMatchObject({ status: "rejected" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it.each(["01", "1e3", "-1", ".5", "1.", "0", "9".repeat(400)])("rejects invalid reviewed API amount %s", async amount => {
     const f = fixture(); f.plan.referencePriceSource = apiSource("reference");
     vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify(apiBody(amount))));

@@ -4,7 +4,7 @@
     {
       "sourceKey": "flying-tulip-ftusd:collateral:usdc",
       "name": "USDC strategy wrappers (Ethereum, Sonic, and BNB Smart Chain)",
-      "pct": 66.36903180891656,
+      "pct": 68.28131010458026,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "flying-tulip-ftusd:collateral:usdt",
       "name": "USDT strategy wrappers (Ethereum and BNB Smart Chain)",
-      "pct": 33.39421400428466,
+      "pct": 31.083827687174136,
       "risk": "medium",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -38,7 +38,7 @@
     {
       "sourceKey": "flying-tulip-ftusd:collateral:ussd",
       "name": "USSD strategy wrapper (Sonic)",
-      "pct": 0.23410757307492752,
+      "pct": 0.21013580282425678,
       "risk": "medium",
       "coinId": "ussd-sonic-labs",
       "depType": "collateral",
@@ -56,7 +56,7 @@
     {
       "sourceKey": "flying-tulip-ftusd:collateral:usde",
       "name": "USDe strategy wrapper (Ethereum)",
-      "pct": 0.002646613723862462,
+      "pct": 0.002381863594163036,
       "risk": "medium",
       "coinId": "usde-ethena",
       "depType": "collateral",
@@ -68,7 +68,7 @@
     {
       "sourceKey": "flying-tulip-ftusd:collateral:crvusd",
       "name": "crvUSD strategy wrapper (Ethereum)",
-      "pct": 0,
+      "pct": 0.4223445418271999,
       "risk": "medium",
       "coinId": "crvusd-curve",
       "depType": "collateral",
@@ -88,27 +88,15 @@
       "issuerOrObligor": "Flying Tulip strategy and Paxos USDG",
       "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
       "liquidityHorizon": "unknown"
-    },
-    {
-      "sourceKey": "flying-tulip-ftusd:collateral:fdusd",
-      "name": "FDUSD strategy wrapper (BNB Smart Chain)",
-      "pct": 0,
-      "risk": "medium",
-      "coinId": "fdusd-first-digital",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Flying Tulip strategy and First Digital FDUSD",
-      "riskFactors": ["counterparty", "smart-contract", "liquidity", "custody"],
-      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map campaign 2026-09-30 (FtusdB4)",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L30XMD)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Flying Tulip ftUSD dashboard API",
+        "label": "Flying Tulip ftUSD dashboard API, lastUpdated 2026-10-10T23:31:24Z; accessed 2026-10-10T23:32:14Z",
         "url": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false"
       },
       {
@@ -116,9 +104,9 @@
         "url": "https://docs.flyingtulip.com/product-suite/ft-usd/#how-ftusd-works"
       }
     ],
-    "rationale": "The official dashboard API captured at 2026-09-30T07:28:33Z reports $3,107,626.6069017975 of cross-chain USDC, $1,563,632.090567056 of cross-chain USDT, $10,961.72270614788 of Sonic USSD and $123.923568 of Ethereum USDe. These measured collateral rows reconcile to $4,682,344.343743001 across active Ethereum, Sonic and BNB Smart Chain. Ethereum crvUSD and USDG are explicit zero rows; the previously reviewed zero-capital BNB Smart Chain FDUSD slot is absent and contributes no exposure. New Ethereum rows were matched by exact underlying contract address to the tracked USDe, crvUSD and USDG identities. Zero-percent keyed rows retain reviewed identities for later positive balances without fabricating current exposure.",
+    "rationale": "The official dashboard API snapshot lastUpdated 2026-10-10T23:31:24Z, accessed 2026-10-10T23:32:14Z, reports $3,551,106.7985090325 of cross-chain USDC, $1,616,576.9469646285 of cross-chain USDT, $10,928.534863734498 of Sonic USSD, $123.87360449585377 of Ethereum USDe and $21,964.87694068347 of Ethereum crvUSD. The complete nine collateral rows across Ethereum, Sonic and BNB Smart Chain sum to $5,200,701.030882575; percentages use those unrounded token TVLs, not display-rounded sharePct or ftUSD supply. The previously zero crvUSD position is now positive and retains its reviewed exact underlying identity. USDG is an explicitly observed zero row. FDUSD is absent from this snapshot and is removed rather than represented as an observed zero. These categories describe collateral wrapper claims, not debt-netted strategy assets, independent financial assurance, or guaranteed withdrawal liquidity.",
     "compositionBasis": "Cross-chain collateral wrapper TVL in the official ftUSD dashboard API, aggregated by collateral token across active chains",
-    "compositionAsOf": "2026-09-30",
+    "compositionAsOf": "2026-10-10",
     "scope": "full-composition",
     "knownUnknownExposure": "All positive collateral rows in the captured issuer dashboard have reviewed underlying identities. Future unreviewed positive rows remain unlinked with a named informational warning and measured unknown exposure; zero rows contribute no exposure.",
     "knownUnknownExposurePct": 0

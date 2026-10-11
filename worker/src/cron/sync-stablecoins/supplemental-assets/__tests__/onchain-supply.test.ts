@@ -45,6 +45,29 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
+describe("supply deployment failure reasons", () => {
+  it("names AA's unreadable totalSupply without admitting supply or replacing it with zero", async () => {
+    const meta = TRACKED_META_BY_ID.get("aa-falconx-mev-capital")!;
+    probeTrackedTokenSupplyMock.mockResolvedValue(null);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(await fetchOnChainMcap(meta, 1.04)).toBeNull();
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+      event: "onchain-supply-contract-withheld",
+      metadata: expect.objectContaining({
+        stablecoinId: meta.id, chain: "ethereum", contract: meta.contracts![0].address,
+        reason: "total-supply-read-unavailable",
+      }),
+    }));
+  });
+
+  it("preserves caller cancellation instead of classifying it as an unavailable supply read", async () => {
+    const signal = AbortSignal.abort();
+    probeTrackedTokenSupplyMock.mockResolvedValue(null);
+    await expect(fetchOnChainMcap(TRACKED_META_BY_ID.get("aa-falconx-mev-capital")!, 1.04, undefined, signal))
+      .rejects.toThrow();
+  });
+});
+
 describe("joined EVM supply observations", () => {
   it("pins inventory movement between excluded holders to one canonical hash and observation clock", async () => {
     const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
@@ -751,6 +774,19 @@ describe("discovery native supply aggregates", () => {
       await expect(fetchCuratedAggregateOnChainMcap(
         makeMeta({ id, name: id, symbol: id, contracts }), 1.25,
       )).resolves.toBeNull();
+      if (id === "pyusdx-moonpay") {
+        // The first failed leg must be named, never silently published as a partial aggregate.
+        const failedChain = contracts[missingIndex].chain;
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        await expect(fetchCuratedAggregateOnChainMcap(
+          makeMeta({ id, name: id, symbol: id, contracts }), 1.25,
+        )).resolves.toBeNull();
+        expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+          event: "onchain-supply-contract-withheld",
+          metadata: expect.objectContaining({ stablecoinId: id, chain: failedChain, reason: "total-supply-read-unavailable" }),
+        }));
+        warn.mockRestore();
+      }
     }
   });
 

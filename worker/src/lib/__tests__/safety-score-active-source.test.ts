@@ -2,6 +2,7 @@ import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
+import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 
 /**
  * The unavailable case stays a real end-to-end read against an empty schema;
@@ -67,6 +68,18 @@ describe("active Safety Score source", () => {
     await expect(
       loadActiveSafetyScoreSource({} as D1Database),
     ).resolves.toEqual({ kind: "v9", snapshot });
+  });
+
+  it.each(["current", "held"] as const)("resolves %s witness text before digest consumers receive it", async (status) => {
+    const semantic = status === "current" ? makeReportCardsV9Response() : heldSnapshot();
+    const reason = { code: "unresolved-control-identity" as const, message: "The independently scoped incident disposition remains unknown.", path: "control:incidentState" };
+    semantic.cards[0]!.evidence.reasons = [reason];
+    semantic.cards[0]!.pillars.control.reasons = [reason];
+    const wire = { ...semantic, cards: semantic.cards.map((card) => internV9PublicWitnessTexts(card)) };
+    mocks.snapshotOverride = async () => wire;
+    const result = await loadActiveSafetyScoreSource({} as D1Database);
+    expect(result.kind).toBe(status === "current" ? "v9" : "held");
+    expect(result.snapshot).toEqual(semantic);
   });
 
   it("reports a held publication as its own state and keeps the snapshot", async () => {

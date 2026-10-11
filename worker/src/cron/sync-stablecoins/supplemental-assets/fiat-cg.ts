@@ -164,6 +164,16 @@ export async function fetchFiatCoinGeckoTokens(
           chainCirculating = { Ethereum: { chainId: nativeShares.chain, current: mcap } };
         }
 
+        if (priceForSupply == null && !mcap) {
+          logWorkerEvent({
+            scope: "handler", level: "warn", job: "sync-stablecoins",
+            event: "supplemental-supply-withheld",
+            message: `[fiat-cg] ${meta.symbol} has no admitted supply valuation`,
+            metadata: { stablecoinId: meta.id, reason: navLikeAsset ? "nav-price-unavailable" : "supply-price-unavailable", rule: "R4" },
+          });
+          return null;
+        }
+
         if (!mcap) {
           logWorkerEventArgs("handler", "info", `[fiat-cg] No mcap for ${meta.symbol}, skipping`);
           return null;

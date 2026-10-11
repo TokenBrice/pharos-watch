@@ -5,7 +5,8 @@ import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { makeV9RoleExtension, makeV9TwoAssetFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
-import type { SafetyScoreV9WrapperLocalReview } from "@shared/types/safety-score-v9-wrapper-local-review";
+import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
+import wrapperLocalReviews from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";
 
 function intakeFixture(assetId: string) {
   const review = getSafetyScoreV9WrapperLocalReviews(assetId)[0]!;
@@ -16,9 +17,12 @@ function intakeFixture(assetId: string) {
   const wrapper = extension.assets.find((asset) => asset.assetId === "alpha")!;
   wrapper.variantKind = "strategy-vault";
   wrapper.dependencies!.source = "variant";
-  const retained: SafetyScoreV9WrapperLocalReview = {
-    ...review, assetId: "alpha", identity: { ...structuredClone(review.identity), assetId: "alpha" },
-  };
+  const retained = structuredClone(review);
+  if (retained.kind !== "accounting" && retained.kind !== "holder-entitlement") {
+    throw new Error("Expected a pinned accounting or holder-entitlement review");
+  }
+  retained.assetId = "alpha";
+  retained.identity.assetId = "alpha";
   wrapper.allocationScopeIdentityReview = structuredClone(retained.identity);
   wrapper.wrapperLocalReviews = [retained];
   const asset = structuredClone(compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets
@@ -39,6 +43,14 @@ function intakeFixture(assetId: string) {
 }
 
 describe("wrapper-local reviewed registry intake contract", () => {
+  it("parses every curated local review under its exact identity schema", () => {
+    const invalid = wrapperLocalReviews.localReviews.flatMap((review, index) => {
+      const parsed = SafetyScoreV9WrapperLocalReviewSchema.safeParse(review);
+      return parsed.success ? [] : [{ index, assetId: review.assetId, kind: review.kind, issues: parsed.error.issues }];
+    });
+    expect(invalid).toEqual([]);
+  });
+
   it("admits current exact accounting independently of borrower oracle and aggregate mint gaps", () => {
     const fixture = intakeFixture("senpathusd-sentora");
     const controlsBefore = structuredClone(fixture.asset.economicControlReview);

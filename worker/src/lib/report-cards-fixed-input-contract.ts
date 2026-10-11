@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { PegSummaryCoinSchema } from "@shared/types/peg";
+import { ExitOutputPriceObservationSchema } from "@shared/types/exit-output-price";
 import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
@@ -139,6 +140,7 @@ export function createFixedInputPayloadFields<
     v9PublicationInputHealth: options.publicationHealthSchema,
     pegDataById: z.record(z.string(), PegSummaryCoinSchema),
     navPriceById: z.record(z.string(), NavPriceObservationSchema).optional(),
+    exitOutputPriceById: z.record(z.string(), ExitOutputPriceObservationSchema).optional(),
     activeDepegPeakBpsById: z.record(z.string(), z.number().finite().nonnegative()),
     redemptionBackstopMap: RedemptionBackstopMapSchema,
     ...options.afterRedemptionBackstopMap,
@@ -407,6 +409,7 @@ export function assertCommonFixedInputConsistency(
 interface CommonNormalizationInput {
   pegDataById: Record<string, unknown>;
   navPriceById?: Record<string, unknown>;
+  exitOutputPriceById?: Record<string, unknown>;
   activeDepegPeakBpsById: Record<string, unknown>;
   bluechipMap?: Record<string, unknown>;
   resolvedBlacklistStatuses?: Record<string, unknown>;
@@ -434,6 +437,7 @@ export function normalizeCommonFixedInputRecords<T extends CommonNormalizationIn
   return {
     pegDataById: sortedInputRecord(input.pegDataById),
     ...(input.navPriceById ? { navPriceById: sortedInputRecord(input.navPriceById) } : {}),
+    ...(input.exitOutputPriceById ? { exitOutputPriceById: sortedInputRecord(input.exitOutputPriceById) } : {}),
     activeDepegPeakBpsById: sortedInputRecord(input.activeDepegPeakBpsById),
     ...(input.bluechipMap ? { bluechipMap: sortedInputRecord(input.bluechipMap) } : {}),
     ...(input.resolvedBlacklistStatuses

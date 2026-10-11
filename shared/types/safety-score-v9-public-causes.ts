@@ -73,7 +73,8 @@ export function refineV9PublicGapReferences(card: V9PublicCauseGapTable, ctx: Pi
         for (const row of value) {
           if (!Array.isArray(row)) continue;
           if (row[FACT.sourceGapRef] !== null) mark(row[FACT.sourceGapRef]);
-          for (const ref of row[FACT.causeGapRefs]) mark(ref);
+          if (typeof row[FACT.causeGapRefs] === "number") mark(row[FACT.causeGapRefs]);
+          else for (const ref of row[FACT.causeGapRefs]) mark(ref);
           let path: string;
           try { path = resolveEvidenceFactPath(node as Pick<V9EvidenceFactContext, "factPathPrefixes">, row as V9PublicEvidenceFactWire); }
           catch { ctx.addIssue({ code: "custom", message: "Fact paths must resolve through their declared prefix table" }); continue; }

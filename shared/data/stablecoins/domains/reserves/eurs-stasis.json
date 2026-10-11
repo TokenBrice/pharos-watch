@@ -12,20 +12,31 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv29)",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L65EURS)",
+    "confidence": "unknown",
     "sources": [
       {
-        "label": "STASIS EURS transparency page (daily statement accessed 2026-09-21)",
+        "label": "STASIS EURS transparency page (accessed 2026-10-10; allocation has no as-of date)",
         "url": "https://stasis.net/transparency"
+      },
+      {
+        "label": "STASIS live reserve allocation API (accessed 2026-10-10; amounts have no timestamps)",
+        "url": "https://api-site.stasis.net/api/bankCirculation/getAll"
+      },
+      {
+        "label": "STASIS daily statement index (newest listed statement dated 2025-12-12)",
+        "url": "https://api-site.stasis.net/api/dailyStatement?offset=0&limit=5"
+      },
+      {
+        "label": "NexPay statement for STSS (Malta) Limited, period 2025-12-11; issued 2025-12-12",
+        "url": "https://api-site.stasis.net/api/dailyStatement/download?id=2301"
       }
     ],
-    "rationale": "STASIS's live transparency page states that its daily statement is updated on the current working day for the previous date. The statement accessed 2026-09-21 reports 6,942,132 EURS in circulation, 7,147,300.66 euros in reserve assets, and a 100.00% allocation to a Lithuanian Central Bank account via NexPay UAB. The page identifies the reserve as 100% euro liquid balances in central-bank accounts.",
-    "compositionBasis": "STASIS daily reserve statement and settlement-layer allocation",
-    "compositionAsOf": "2026-09-18",
+    "rationale": "Observed 2026-10-10T23:34:41Z: the issuer's transparency page and bankCirculation/getAll API report 7,147,300.66 euros, entirely allocated to Lietuvos bankas via NexPay, but neither supplies an allocation as-of timestamp. The published daily-statement index's newest entry is dated 2025-12-12; its NexPay PDF covers 2025-12-11 and reports a 7,382,350.66 euro closing balance, not the live allocation amount. The site's generic promise to update each working day does not date these figures. The previously inferred 2026-09-18 composition date is therefore removed; current dated whole-book composition is unverified. This changes no reserve percentages and grants no financial assurance.",
+    "compositionBasis": "Undated issuer settlement-layer allocation; latest retrieved dated account statement is historical and does not reconcile to that allocation",
     "scope": "full-composition",
-    "knownUnknownExposure": "No material reserve asset class is unclassified; the public page identifies the reserve as 100% euro cash at Lietuvos bankas via NexPay but does not publish account numbers or detailed legal segregation terms.",
+    "knownUnknownExposure": "The issuer identifies the reported allocation as 100% euro cash at Lietuvos bankas via NexPay. Its current economic composition date and whole-book reconciliation remain unestablished; no recent date is inferred from retrieval time or the stated daily cadence.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

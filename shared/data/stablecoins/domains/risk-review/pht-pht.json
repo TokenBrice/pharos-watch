@@ -532,14 +532,14 @@
         "protocol": "APACX issuer-deployed LayerZero OFT",
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
-        "riskTier": "opaque-or-unknown",
+        "riskTier": "external-validated-network",
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Pinned Polygon block 95227349 (2026-10-09T11:44:03Z; hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4) resolves peers(30101) to Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2. Endpoint getConfig type 2 resolves four required DVNs, no optional DVNs and 120 send/15 receive confirmations; both receive-library timeout records are zero. The endpoint delegate is 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2, distinct from the retained token owner. This closes configuration discovery, not delegate/DVN signer independence, immutable authentication, whole-supply conservation or route-tier admission. The UUPS implementation remains 0x98210a4b34eafd668838108c99ad13a2b4340618; riskTier remains opaque-or-unknown.",
+        "reviewNote": "Sol curation campaign 2026-10-11 (C02PHT), reviewed 2026-10-11T00:52:19Z: exact Polygon block 95313433/hash 0xbd41d9adeeb92cf060481215a1a95d5efd69f657c7b65153a63dba40d7fc7e63 (2026-10-10T23:36:39Z), re-observed through Alchemy at 2026-10-11T00:51:14.777Z, binds UUPS implementation 0x98210a4b34eafd668838108c99ad13a2b4340618, endpoint 0x1a44076050125825900e736c501f859c50fe728c and peers(30101) to Ethereum adapter 0x567a173bb4baf009d13222759330c1a84b667bd2. Verified PhtOFTUpgradeable inherits OFT burn/mint execution; OAppReceiver admits only the endpoint and configured peer. Same-pin effective libraries and type-2 ULN configuration, observed 2026-10-11T00:51:47.016Z and 2026-10-11T00:52:02.671Z, establish four required DVNs, no optional DVNs and 120 send/15 receive confirmations. Verified ReceiveUln302 commits endpoint verification only after configured DVN submissions. This establishes only the external-validated-network route construction, not independent operators, immutable authentication, a whole-supply conservation certificate, bounded loss, complete controller execution or Tron-path admission. Historical October 9 bilateral configuration and zero timeout evidence retain their own dates.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-09",
-        "observedBlock": 95227349,
+        "observedAt": "2026-10-11",
+        "observedBlock": 95313433,
         "sourceChain": "ethereum",
         "canonicalChain": "ethereum",
         "failureDomainKeys": [
@@ -565,6 +565,14 @@
           {
             "label": "Pinned Polygon security census: block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4, 2026-10-09T11:44:03Z; observed 2026-10-09T11:44:04.690Z",
             "url": "https://api-polygon-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "Polygon ReceiveUln302 verified source: configured DVN submissions gate endpoint verification",
+            "url": "https://sourcify.dev/server/v2/contract/137/0x1322871e4ab09bc7f5717189434f97bbd9546e95?fields=sources"
+          },
+          {
+            "label": "Sol curation campaign 2026-10-11 (C02PHT), reviewed 2026-10-11T00:52:19Z: Polygon block 95313433/hash 0xbd41d9adeeb92cf060481215a1a95d5efd69f657c7b65153a63dba40d7fc7e63 (2026-10-10T23:36:39Z); implementation/endpoint/peer observed 00:51:14.777Z, effective libraries 00:51:47.016Z and required-DVN configuration 00:52:02.671Z",
+            "url": "https://polygon-mainnet.g.alchemy.com/v2/"
           }
         ]
       },
@@ -678,7 +686,7 @@
         "routeChecks": {
           "trustedPeerOrRemote": "At Polygon block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4 (2026-10-09T11:44:03Z), peers(30101) binds the Ethereum adapter. Effective send library is 0x6c26c61a97006888ea9e4fa36584c7df57cd9da3; default receive library is 0x1322871e4ab09bc7f5717189434f97bbd9546e95. Both getConfig type-2 responses require DVNs 0x13feb7234ff60a97af04477d6421415766753ba3, 0x23de2fe932d9043291f870324b74f820e11dc81a, 0x25e0e650a78e6304a3983fc4b7ffc6544b1beea6 and 0x31f748a368a893bdb5abb67ec95f232507601a73; optional count/threshold are zero. Send confirmations are 120, receive confirmations 15. Both app/default receive timeout records have zero library and expiry. Verified UlnBase.getUlnConfig resolves defaults; this is effective configuration, not an independence or full execution certificate.",
           "pausersAdminsUpgraders": "At Polygon block 95227349, implementation remained 0x98210a4b34eafd668838108c99ad13a2b4340618 and owner remained 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5. Verified implementation exposes owner-authorized UUPS upgradeToAndCall. Endpoint delegates(proxy) separately binds 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2, which EndpointV2 authorizes to change message libraries/configuration; its signing policy is not established.",
-          "unsupportedReason": "Effective Ethereum/Polygon library, DVN, confirmation, peer and delegate configuration is now pinned. Remaining proof includes delegate and DVN executable signing/control reach, endpoint/library administration, owner-controlled replacement, whole-supply conservation and Tron authenticated execution. No favorable tier or operator-independence credit is inferred."
+          "unsupportedReason": "Effective Ethereum/Polygon library, DVN, confirmation, peer and delegate configuration is now pinned. Remaining proof includes delegate and DVN executable signing/control reach, endpoint/library administration, owner-controlled replacement, whole-supply conservation and Tron authenticated execution. The separately reviewed Polygon external-validated-network construction does not establish operator independence or complete control admission."
         },
         "observedAt": "2026-10-01",
         "observedBlock": 94756020,
@@ -700,7 +708,7 @@
             "url": "https://api-polygon-mainnet-full.n.dwellir.com"
           }
         ],
-        "evidence": "October 9 partial security census at Polygon block 95227349 re-observed the owner, UUPS implementation, endpoint, Ethereum peer, effective libraries, four-required-DVN ULN settings, zero timeout records and the distinct endpoint delegate. Historical zero admin/beacon and token() observations remain dated October 1. No full execution or supply-conservation certificate, operator independence or favorable risk tier is asserted."
+        "evidence": "October 9 partial security census at Polygon block 95227349 re-observed the owner, UUPS implementation, endpoint, Ethereum peer, effective libraries, four-required-DVN ULN settings, zero timeout records and the distinct endpoint delegate. Historical zero admin/beacon and token() observations remain dated October 1. No full execution or supply-conservation certificate or operator independence is asserted; the separate C02PHT Polygon route-tier review establishes external validation construction only and does not renew this control observation."
       },
       {
         "id": "pht-tron-oft-owner",
@@ -758,24 +766,32 @@
         "capabilities": ["admin", "peer-config"],
         "controllerChain": "ethereum",
         "controllerAddress": "0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "delegate:ethereum:0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
         ],
-        "observedAt": "2026-10-09",
+        "observedAt": "2026-10-10",
         "observedBlock": 26154636,
         "sources": [
           {
-            "label": "Pinned Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88, 2026-10-09T11:44:59Z; observed 2026-10-09T11:45:04.204Z",
+            "label": "Sol curation campaign 2026-10-11 (L11AxCNH): Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88, 2026-10-09T11:44:59Z; delegates(adapter) re-observed 2026-10-10T23:36:22.537Z",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           },
           {
             "label": "Verified Ethereum EndpointV2 source and delegate authorization",
             "url": "https://sourcify.dev/server/v2/contract/1/0x1a44076050125825900e736c501f859c50fe728c?fields=sources,abi"
+          },
+          {
+            "label": "Ethereum delegate account: explorer identifies a non-contract externally signing account; reviewed 2026-10-10T23:37:07Z",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
+          },
+          {
+            "label": "Delegate-signed Ethereum type-0 transaction, block 22737158 (2025-06-19T07:53:35Z), nonce 300",
+            "url": "https://eth.blockscout.com/tx/0x06a8ba61ed13cc0b528be13dc08f82d685ee08d3a9f5ea1c8cdf817d7dcef64d"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) observed delegates(adapter) equal to this distinct controller. EndpointV2 _assertAuthorized permits the OApp or delegate to set message libraries/configuration and manage authenticated message channels. This does not confer token setPeer, UUPS or native CDP issuance authority. Controller signing/execution policy is unreviewed; no multisig, EOA or independent-operator conclusion is inferred."
+        "evidence": "Sol curation campaign 2026-10-11 (L11AxCNH), reviewed 2026-10-10T23:37:07Z: at Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88 (2026-10-09T11:44:59Z), delegates(adapter) returned 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2. Blockscout independently identifies this account as non-contract and records its successful externally signed type-0 transaction 0x06a8ba61ed13cc0b528be13dc08f82d685ee08d3a9f5ea1c8cdf817d7dcef64d with nonce 300, establishing EOA authority rather than a contract quorum. The supplemental empty eth_getCode result alone was not treated as proof. EndpointV2 _assertAuthorized permits this delegate to change message libraries/configuration and manage authenticated channels, not token setPeer, UUPS or native CDP issuance. Human key custody, organizational independence, and complete bridge execution remain unestablished."
       },
       {
         "id": "pht-polygon-endpoint-delegate",
@@ -786,24 +802,32 @@
         "capabilities": ["admin", "peer-config"],
         "controllerChain": "polygon",
         "controllerAddress": "0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "delegate:polygon:0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
         ],
-        "observedAt": "2026-10-09",
-        "observedBlock": 95227349,
+        "observedAt": "2026-10-10",
+        "observedBlock": 95313433,
         "sources": [
           {
-            "label": "Pinned Polygon block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4, 2026-10-09T11:44:03Z; observed 2026-10-09T11:44:04.690Z",
+            "label": "Sol curation campaign 2026-10-11 (L11AxCNH): Polygon block 95313433/hash 0xbd41d9adeeb92cf060481215a1a95d5efd69f657c7b65153a63dba40d7fc7e63, 2026-10-10T23:36:39Z; delegates(proxy) observed 2026-10-10T23:36:46.302Z",
             "url": "https://api-polygon-mainnet-full.n.dwellir.com"
           },
           {
             "label": "Verified Polygon EndpointV2 source and delegate authorization",
             "url": "https://sourcify.dev/server/v2/contract/137/0x1a44076050125825900e736c501f859c50fe728c?fields=sources,abi"
+          },
+          {
+            "label": "Polygon delegate account: explorer identifies a non-contract externally signing account; reviewed 2026-10-10T23:37:07Z",
+            "url": "https://polygon.blockscout.com/api/v2/addresses/0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
+          },
+          {
+            "label": "Delegate-signed Polygon transferOwnership transaction, block 72836268 (2025-06-16T10:55:45Z), nonce 8",
+            "url": "https://polygon.blockscout.com/tx/0xe95c27aa7fd8b83d01d6a3db4fedc4198d0198c144b462384b697ba2e64f443e"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) observed delegates(proxy) equal to this distinct controller. EndpointV2 _assertAuthorized permits the OApp or delegate to set message libraries/configuration and manage authenticated message channels. This is distinct from the token owner's setPeer/UUPS authority. Controller signing/execution policy and cross-chain operator identity are unreviewed; address equality alone proves no independence or common human custody."
+        "evidence": "Sol curation campaign 2026-10-11 (L11AxCNH), reviewed 2026-10-10T23:37:07Z: at Polygon block 95313433/hash 0xbd41d9adeeb92cf060481215a1a95d5efd69f657c7b65153a63dba40d7fc7e63 (2026-10-10T23:36:39Z), delegates(proxy) returned 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2. Blockscout independently identifies this account as non-contract and records its successful externally signed type-2 transferOwnership transaction 0xe95c27aa7fd8b83d01d6a3db4fedc4198d0198c144b462384b697ba2e64f443e with nonce 8, establishing EOA authority rather than a contract quorum. The supplemental empty eth_getCode result alone was not treated as proof. EndpointV2 _assertAuthorized permits this delegate to change message libraries/configuration and manage authenticated channels. This authority is separate from the token owner's setPeer/UUPS powers. Human key custody, cross-chain organizational independence and complete bridge execution remain unestablished; no favorable route tier is claimed."
       }
     ]
   }

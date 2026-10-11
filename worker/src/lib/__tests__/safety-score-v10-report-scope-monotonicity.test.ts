@@ -14,7 +14,7 @@ import xdaiMetaSource from "@shared/data/stablecoins/coins/xdai-gnosis.json";
 import xdaiReserveSource from "@shared/data/stablecoins/domains/reserves/xdai-gnosis.json";
 import xdaiLiveObservation from "./fixtures/xdai-live-reserve-observation.json";
 import { ReserveObservationEnvelopeSchema } from "@shared/types/safety-score-v9-reserve-scope";
-import { ReviewEvidenceBuilder } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 
 const clockSec = Date.parse("2026-10-02T12:00:00Z") / 1000;
 const asOfSec = Date.parse("2026-08-31T23:59:59Z") / 1000;
@@ -91,7 +91,7 @@ describe("diagnostic report scope monotonicity", () => {
     unscoped.mintAuthority = prudential; scoped.mintAuthority = prudential;
     expect(buildSafetyScoreV9ReviewedStaticReserveRows(scoped, clockSec)).toEqual(buildSafetyScoreV9ReviewedStaticReserveRows(unscoped, clockSec));
     for (const value of [unscoped, scoped]) { delete value.liveReservesConfig; delete value.mintAuthority; }
-    const args = { clockSec, liveReserveRows: [], liveFallbackAllowed: true, fixedInput: input() };
+    const args = { clockSec, liveReserveRows: [], fixedInput: input() };
     expect(resolveReviewedReserveRows({ ...args, meta: scoped })).toEqual(resolveReviewedReserveRows({ ...args, meta: unscoped }));
     expect(resolveReviewedReserveRows({ ...args, meta: scoped })?.rows).toEqual(scoped.reserves);
   });
@@ -104,7 +104,7 @@ describe("diagnostic report scope monotonicity", () => {
     expect([known.score, residual.score, residual.observationState]).toEqual([policy.componentQuality.strong, policy.boundedUnknownQuality, "bounded-unknown"]);
     expect(known.normalizedWeight / residual.normalizedWeight).toBeCloseTo(1 / 3);
     expect(after.result.score!).toBeLessThan(backing(report).result.score!);
-    expect(resolveReviewedReserveRows({ meta: meta(withBookJoin()), clockSec, liveReserveRows: [], liveFallbackAllowed: true, fixedInput: input(partition) })).toBeNull();
+    expect(resolveReviewedReserveRows({ meta: meta(withBookJoin()), clockSec, liveReserveRows: [], fixedInput: input(partition) })).toBeNull();
   });
   it("lowers overbroad legacy credit only for an explicit verified still-owed exclusion, not a zero or extinguished liability", () => {
     const value = scopedReport();
@@ -113,7 +113,7 @@ describe("diagnostic report scope monotonicity", () => {
       source: { url: "https://example.com/report", accessedAtSec: clockSec - 60, sha256: "a".repeat(64) }, economicallyOwed: true };
     value.coverage!.liabilityExclusions = [exclusion]; value.coverage!.denominator.excluded = [exclusion.id];
     expect(backing(value).result.score!).toBeLessThan(backing(report).result.score!);
-    expect(resolveReviewedReserveRows({ meta: meta(value), clockSec, liveReserveRows: [], liveFallbackAllowed: true, fixedInput: input() })).toBeNull();
+    expect(resolveReviewedReserveRows({ meta: meta(value), clockSec, liveReserveRows: [], fixedInput: input() })).toBeNull();
     exclusion.amount = "0";
     expect(backing(value)).toEqual(backing(report));
     exclusion.amount = "50"; exclusion.economicallyOwed = false;

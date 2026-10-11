@@ -234,6 +234,7 @@ export async function prepareSafetyScoreV9Input(
         registryFingerprint: input.registryFingerprint,
         scoringClockSec: input.clockSec,
         chainRpcs,
+        providerSupplyInput: input,
         signal,
         deadlineMs: preparationDeadlineMs,
       });

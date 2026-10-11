@@ -142,6 +142,94 @@ describe("Safety Score v9 fact evaluation", () => {
     });
     expect(evaluated.trace.finalGrade).not.toBe("NR");
   });
+  it("keeps an USDSM-shaped limited mint review NR after independent control questions close", () => {
+    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
+    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    asset.dependencies.edges = [];
+    asset.reserveExposures = [];
+    const reserveGap = createV9FactGapV3({
+      gapId: "alpha:reserve-composition", reasonCode: "missing-reserve-composition", ownerDomain: "backing",
+      policyRuleId: "backing.reserve.review", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "reserve-composition" },
+      message: "The issuer does not disclose its reserve composition.", responsibility: "unresearched",
+    });
+    certifyGap(asset, reserveGap, "C");
+    asset.gaps.push(reserveGap);
+    asset.reserveStatus = createV9FactStatus({
+      applicability: requiredV9Applicability(reserveGap.policyRuleId), observationState: "bounded-unknown",
+      gapIds: [reserveGap.gapId], evidenceRefIds: reserveGap.evidenceRefIds,
+    });
+    asset.reserveResiduals = [{ residualId: "unidentified", weight: 1, status: asset.reserveStatus }];
+    const review = asset.mechanismRiskReview.review!;
+    if (review.archetype !== "fiat-cash") throw new Error("Expected fiat fixture");
+    for (const key of ["claimAndSegregation", "custodyContinuity", "assuranceAndReconciliation"] as const) {
+      const gap = createV9FactGapV3({
+        gapId: `alpha:mechanism:${key}`, reasonCode: "bounded-mechanism-review", ownerDomain: "backing",
+        policyRuleId: "backing.mechanism.review", observationState: "bounded-unknown",
+        path: { kind: "local-component", componentKey: `mechanism:${key}` },
+        message: "The reviewed issuer surface does not disclose this backing datum.", responsibility: "unresearched",
+      });
+      certifyGap(asset, gap, "C");
+      asset.gaps.push(gap);
+      review[key] = { ...review[key], quality: null, status: createV9FactStatus({
+        applicability: requiredV9Applicability(gap.policyRuleId), observationState: "bounded-unknown",
+        gapIds: [gap.gapId], evidenceRefIds: gap.evidenceRefIds,
+      }) };
+    }
+    const mintGap = createV9FactGapV3({
+      gapId: "alpha:economic-control:mint", reasonCode: "missing-mint-authority", ownerDomain: "control",
+      policyRuleId: "control.mint.review", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "economic-control:mint" },
+      message: "The aggregate mint review remains unresearched.", responsibility: "unresearched",
+    });
+    asset.gaps.push(mintGap);
+    asset.economicControlReview.mint.status = createV9FactStatus({
+      applicability: requiredV9Applicability(mintGap.policyRuleId), observationState: "bounded-unknown",
+      gapIds: [mintGap.gapId], evidenceRefIds: ["evidence:base"],
+    });
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(asset.controls.find((control) => control.controlKey === asset.economicControlReview.mint.controlKey)?.status.gapIds).toEqual([]);
+    expect(evaluated.scoreInput.pillars.control).toMatchObject({
+      evidenceLevel: "limited", limitedEvidenceCauses: ["U"], limitingCauseGapIds: [mintGap.gapId],
+    });
+    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
+      code: "unresolved-mint-authority", cause: "U", causeGapIds: [mintGap.gapId],
+    }));
+    expect(evaluated.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
+    expect(evaluated.scoreInput.pillars.exit.evidenceLevel).toBe("adequate");
+    expect(evaluated.trace.finalGrade).toBe("NR");
+    expect(evaluated.trace.finalScore).toBeNull();
+    expect(evaluated.trace.nrReasons).toContainEqual(expect.objectContaining({
+      code: "insufficient-evidence", contributingPillars: ["backing", "control"],
+      causeGapIds: expect.arrayContaining([reserveGap.gapId, mintGap.gapId]),
+    }));
+  });
+  it.each(["C", "U"] as const)("joins issuer reconciliation questions only to their exact aggregate factor (%s)", (cause) => {
+    const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
+    const asset = core.assets.find((row) => row.assetId === "alpha")!;
+    const minter = asset.controls.find((control) => control.controlKey === asset.economicControlReview.mint.controlKey)!;
+    minter.authority = { authorityKey: "issuer:backend", model: "issuer-backend", threshold: null };
+    asset.economicControlReview.mint.reconciliation = "unknown";
+    const gap = createV9FactGapV3({
+      gapId: "alpha:mint:reconciliation", reasonCode: "missing-mint-authority", ownerDomain: "control",
+      policyRuleId: "control.reconciliation", observationState: "bounded-unknown",
+      path: { kind: "local-component", componentKey: "economic-control:mint" },
+      message: "Issuer whole-supply reconciliation is unavailable.", responsibility: "unresearched",
+    });
+    if (cause === "C") certifyGap(asset, gap, cause);
+    asset.gaps.push(gap);
+    asset.economicControlReview.mint.factorStatuses = { ...asset.economicControlReview.mint.factorStatuses,
+      reconciliation: createV9FactStatus({
+        applicability: requiredV9Applicability(gap.policyRuleId), observationState: "bounded-unknown",
+        gapIds: [gap.gapId], evidenceRefIds: cause === "C" ? gap.evidenceRefIds : ["evidence:base"],
+      }),
+    };
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(evaluated.scoreInput.pillars.control.reasons).toContainEqual(expect.objectContaining({
+      code: "mint-control-question", cause, causeGapIds: [gap.gapId],
+    }));
+    expect(evaluated.scoreInput.pillars.control.limitingCauseGapIds).toContain(gap.gapId);
+  });
   it("keeps real bounded exit witnesses when a reviewed physical profile explains the missing runtime route", () => {
     const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
     const asset = core.assets.find((row) => row.assetId === "alpha")!;

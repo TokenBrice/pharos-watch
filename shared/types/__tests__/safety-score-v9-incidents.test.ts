@@ -60,7 +60,7 @@ const NEGATIVE_REVIEW = {
   conclusion: "no-known-incident",
   searchedSurfaces: [
     { kind: "issuer-announcements", url: "https://example.com/news", finding: "No control incident disclosed in the specified search window." },
-    { kind: "explorer-events", url: "https://example.com/events", finding: "Exact deployment event census completed through the pinned window end." },
+    { kind: "explorer-events", url: "https://example.com/events", finding: "Exact deployment's displayed events tab shows no emergency events; paused()=false at pinned block 123. This bounded view is not a lifetime event census." },
     { kind: "incident-tracker", url: "https://example.com/tracker", finding: "Exact issuer/deployment searched in incident tracker." },
   ],
   sources: [{ label: "Primary announcement archive", url: "https://example.com/news", observedAt: "2026-10-07T13:30:00Z", location: "Dated announcements archive", excerpt: "Operational status" }],
@@ -118,6 +118,28 @@ describe("Safety Score v9 researched-negative incident schema", () => {
 });
 
 describe("Safety Score v9 reviewed incident schema", () => {
+  it("admits exact mint and bridge control incidents without a fabricated exposure share", () => {
+    for (const prefix of ["mint-meta", "bridge-meta"]) {
+      const scope = { kind: "control", controlKey: `${prefix}:fixture-asset:controller` };
+      expect(V9ReviewedIncidentSchema.safeParse({ ...BASE_INCIDENT, scope }).success).toBe(true);
+      expect(V9ReviewedIncidentSchema.safeParse({
+        ...BASE_INCIDENT, scope: { ...scope, exposureShare: 0.1 },
+      }).success).toBe(false);
+    }
+    for (const controlKey of [
+      "mint-meta:another-asset:controller",
+      "bridge-meta:another-asset:controller",
+      "bridge-supply:fixture-asset:controller",
+      "mint:fixture-asset:controller",
+    ]) {
+      const result = V9ReviewedIncidentSchema.safeParse({
+        ...BASE_INCIDENT, scope: { kind: "control", controlKey },
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues).toContainEqual(expect.objectContaining({ path: ["scope", "controlKey"] }));
+    }
+  });
+
 
   it("admits only scoped, verified, non-realized informational vulnerability history", () => {
     const registry = V9ReviewedIncidentRegistrySchema.parse(incidentReviewsAsset);

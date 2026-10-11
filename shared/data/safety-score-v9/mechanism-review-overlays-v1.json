@@ -8381,9 +8381,21 @@
         {
           "label": "Parallel DIA fundamental oracle documentation",
           "url": "https://docs.parallel.best/developers-hub/parallel-v3/onchain-tools/oracles/dia/fundamental"
+        },
+        {
+          "label": "Parallel current bridge contagion and disabled isolation disclosure",
+          "url": "https://docs.parallel.best/security/risks"
+        },
+        {
+          "label": "Parallel Ethereum BridgeableTokenP verified source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x78bb4882b77d74ad9b04ab71fe8e61f72595823c"
+        },
+        {
+          "label": "Ethereum RPC; block 26160000, 2026-10-10T05:40:35Z; retained successful getIsIsolateMode/getPrincipalToken packet",
+          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
         }
       ],
-      "notes": "Re-reviewed and re-measured 2026-08-08. The Parallelizer is a conversion basket, not a debt CDP: users mint/burn at oracle value against whitelisted assets and may redeem at any time for a proportional basket share; there are no borrower debt positions or liquidations. The live transparency page, presented as independently proven by DeBank and Octav, was updated 2026-08-08T17:44:31Z and reported USD 2,057,125.188683 of protocol reserves against USD 1,976,079.091888 of USDp supply, collateralizationRatio 1.041014. This supersedes the 2026-07-27 dashboard measurement while preserving the earlier fixed-block contract and cross-chain supply anchors. Whitelists, exposure targets, adaptive fees, and proportional redemption remain documented and verified enough for adequate collateralization parameters and structural redemption. The insurance fund remains discretionary, DAO/multisig administered, and small in liquid stable assets relative to backing, so backstop is limited. Below-100% redemption penalties and pause/guardian controls support limited shutdown and bad-debt handling. Separate chain contracts are documented, but no verifiable shared-token cross-chain deficit settlement or loss-isolation guarantee is published, so branch isolation remains unavailable.",
+      "notes": "Re-reviewed and re-measured 2026-08-08. The Parallelizer is a conversion basket, not a debt CDP: users mint/burn at oracle value against whitelisted assets and may redeem at any time for a proportional basket share; there are no borrower debt positions or liquidations. The live transparency page, presented as independently proven by DeBank and Octav, was updated 2026-08-08T17:44:31Z and reported USD 2,057,125.188683 of protocol reserves against USD 1,976,079.091888 of USDp supply, collateralizationRatio 1.041014. This supersedes the 2026-07-27 dashboard measurement while preserving the earlier fixed-block contract and cross-chain supply anchors. Whitelists, exposure targets, adaptive fees, and proportional redemption remain documented and verified enough for adequate collateralization parameters and structural redemption. The insurance fund remains discretionary, DAO/multisig administered, and small in liquid stable assets relative to backing, so backstop is limited. Below-100% redemption penalties and pause/guardian controls support limited shutdown and bad-debt handling. Separate chain contracts are documented, but no verifiable shared-token cross-chain deficit settlement or loss-isolation guarantee is published, so branch isolation remains unavailable. Component-scoped K15 review supersedes only branchIsolation: disabled isolation is a verified adverse finding; all August measurements retain their original provenance.",
       "metrics": {
         "collateralizationRatio": 1.041014,
         "liquidationCapacityRatio": null
@@ -8415,9 +8427,26 @@
           "quality": "limited"
         },
         "branchIsolation": {
-          "applicability": "unavailable",
-          "rationale": "Parallel documents separate per-chain backing contracts and a fungible cross-chain USDp, but publishes no verifiable loss-isolation, cross-chain rebalancing, or residual-deficit settlement guarantee between branches.",
-          "sourceUrl": "https://docs.parallel.best/security/proof-of-solvency"
+          "quality": "weak",
+          "review": {
+            "reviewedAt": "2026-10-10",
+            "reviewer": "Sol curation campaign 2026-10-11 (K15SmallCapabilities)",
+            "rationale": "Primary disclosure says isolation is off on every chain and bridge compromise can affect supply everywhere. Successful Ethereum block 26160000 (hash 0x2d90aeb4d9d143f85dde7c5f8f230072c6f3dcab7879cbdbf5ef9b9458470820, timestamp 2026-10-10T05:40:35Z; observed 2026-10-10T23:32:29.163Z) reads getIsIsolateMode() = false on 0x78bb4882b77d74ad9b04ab71fe8e61f72595823c and getPrincipalToken() = exact USDp 0x9b3a8f7cec208e247d97dee13313690977e24459. This is adverse disabled isolation, not a measured loss or all-chain runtime census; legacy August ratios remain untouched.",
+            "sources": [
+              {
+                "label": "Parallel current bridge contagion and disabled isolation disclosure",
+                "url": "https://docs.parallel.best/security/risks"
+              },
+              {
+                "label": "Parallel Ethereum BridgeableTokenP verified source",
+                "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x78bb4882b77d74ad9b04ab71fe8e61f72595823c"
+              },
+              {
+                "label": "Ethereum RPC; block 26160000, 2026-10-10T05:40:35Z; retained successful getIsIsolateMode/getPrincipalToken packet",
+                "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+              }
+            ]
+          }
         },
         "shutdownAndBadDebt": {
           "quality": "limited"
@@ -20104,7 +20133,7 @@
           "url": "https://content.govdelivery.com/accounts/WYGOV/bulletins/3ee734a"
         }
       ],
-      "notes": "Current rules effective 2026-09-23 and retrieved on 2026-10-02 establish holder-benefit FBO trust accounts, segregation from administration and liquidity accounts, and special-obligation redemption limited to trust assets. These regulatory rules support adequate claimAndSegregation, without state full-faith-and-credit or deposit insurance. Commission names Fiduciary Trust International and Franklin Advisers. Timestamped itemized dashboard assets and exact deployment liabilities are externally anchored by statute and pinned on-chain issuance; this supports only limited custodyContinuity because complete subcustodian, reuse and replacement protections are not established. Dashboard snapshot 6abf9cebdec63063af894ba9 at 2026-10-02T12:00:44.629Z reports gross assets $1,006,340.74 less $38,288.89 due administration = $968,051.85 net against $968,051.85 liabilities and zero liquidity-fund buffer. These metrics are expressly supplemental non-assured, not a signed financial report. Current signed report endpoint returned HTTP 403, Missing verification token. No independent examination quality, 102% current backing or Secure Mint activation credit is granted.",
+      "notes": "Current rules effective 2026-09-23 and retrieved on 2026-10-02 establish holder-benefit FBO trust accounts, segregation from administration and liquidity accounts, and special-obligation redemption limited to trust assets. These regulatory rules support adequate claimAndSegregation, without state full-faith-and-credit or deposit insurance. Commission names Fiduciary Trust International and Franklin Advisers. Timestamped itemized dashboard assets and exact deployment liabilities are externally anchored by statute and pinned on-chain issuance; this supports only limited custodyContinuity because complete subcustodian, reuse and replacement protections are not established. Dashboard snapshot 6abf9cebdec63063af894ba9 at 2026-10-02T12:00:44.629Z reports gross assets $1,006,340.74 less $38,288.89 due administration = $968,051.85 net against $968,051.85 liabilities and zero liquidity-fund buffer. These metrics are expressly supplemental non-assured, not a signed financial report. Current signed report endpoint returned HTTP 403, Missing verification token. No independent examination quality, 102% current backing or Secure Mint activation credit is granted. L13FRNT source-access correction observed 2026-10-10T23:30:07Z: the dashboard advertises issued reports through October 10, but its verification-protected report endpoint returned HTTP 403. Failed access cannot establish issuer non-disclosure, so the assurance unavailable disposition is withdrawn and the unestablished compiler fallback remains U. Other component grades and their October 2 review clock are unchanged; no financial assurance, reconciliation, custody upgrade or positive source-access claim is introduced.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -20112,11 +20141,6 @@
         },
         "custodyContinuity": {
           "quality": "limited"
-        },
-        "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "LedgerLens explicitly excludes all metrics outside issued AT-C 205 reports from assurance. The October 2 report download requires a verification token and returned 403; no signed current report, opinion or independently reconciled scope was retrieved.",
-          "sourceUrl": "https://dashboard.ledgerlens.io/c/wystc"
         }
       }
     },

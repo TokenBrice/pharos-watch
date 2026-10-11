@@ -9,7 +9,7 @@
     "governance": "centralized"
   },
   "collateral": "Rand bank deposits at Standard Bank and unit-trust money-market funds at Sanlam; the retrieved Moore report measures the August 31, 2026 Solana book, not current whole-token allocations.",
-  "pegMechanism": "One ZAR per token through BlockTower's verified institutional mint/redemption service; retail access through network partners. Fiat settlement may take up to five business days, and partner fees and minimums vary.",
+  "pegMechanism": "One ZAR per token through BlockTower's verified institutional mint/redemption service, subject to account and legal eligibility; retail access through network partners. The Platform User Agreement does not guarantee a redemption processing period. Issuer charges must be disclosed in advance; published terms give no complete numeric ceiling for issuer, bank and network fees.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -58,6 +58,18 @@
     {
       "label": "Holder terms and issuance",
       "url": "https://zaru.network/blog/zar-universal-white-paper"
+    },
+    {
+      "label": "Binding ZARU holder terms, updated September 16, 2026; reviewed by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z",
+      "url": "https://blocktower.tech/legal/zaru-terms-of-use"
+    },
+    {
+      "label": "Binding Platform User Agreement, updated September 16, 2026; sections 11 and 17 define processing-period and fee limitations; reviewed by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z",
+      "url": "https://blocktower.tech/legal/platform-user-agreement"
+    },
+    {
+      "label": "Current issuance portal: approved institutions, Solana live and Arc portal forthcoming; displayed balances are demo data; reviewed by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z",
+      "url": "https://blocktower.tech/issuance"
     },
     {
       "label": "Reserve report",

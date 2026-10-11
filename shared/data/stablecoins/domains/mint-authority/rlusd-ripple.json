@@ -185,6 +185,19 @@
         "label": "RLUSD XRPL issuer account (Ripple weighted signer list)",
         "role": "direct-minter",
         "authorityType": "multisig",
+        "keyCustodyAttestation": {
+          "kind": "hardware-wallet",
+          "reviewedAt": "2026-10-10T23:47:08Z",
+          "reviewer": "Sol curation campaign 2026-10-11 (K15SmallCapabilities)",
+          "confidence": "issuer-described",
+          "rationale": "June 4, 2026 RLUSD whitepaper p7 states SCTC XRPL account private/signing keys are stored on hardware wallets or Ripple Custody plus hardware wallets; p9 binds issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De. This disjunction establishes hardware-wallet involvement only, not signer/device allocation, independent humans, MPC quorum or an audited HSM signing policy.",
+          "sources": [
+            {
+              "label": "RLUSD whitepaper June 4, 2026, pp7/9: exact SCTC XRPL account key storage",
+              "url": "https://ripple.com/reports/rlusd-whitepaper.pdf"
+            }
+          ]
+        },
         "executionScope": {
           "controllerDeployment": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
           "reviewedAt": "2026-10-09",

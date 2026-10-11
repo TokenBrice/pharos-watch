@@ -13,7 +13,7 @@ export type BusinessCalendarBound =
   | { state: "known"; maximumElapsedSec: number; completionDate: string; worstSubmissionDate: string; calendarId: string; calendarReviewedAt: string; sourceUrls: readonly string[] }
   | { state: "unknown"; reason: "conditional-terms" | "target-not-guarantee" | "cutoff-unreviewed" | "calendar-mismatch" | "calendar-review-future" | "calendar-review-stale" | "coverage-exceeded" | "invalid-terms" | "timezone-transition-unresolved" };
 type CalendarWalkContext = {
-  from: number; to: number; cutoff: string;
+  from: number; to: number; cutoff: string; receiptDay: boolean;
   parts: (sec: number) => { date: string; time: string };
   instant: (day: number, time: string) => number | null;
   businessDay: (day: number) => boolean;
@@ -31,7 +31,8 @@ function calendarWalker(
   if (!parsed.success || !Number.isFinite(clockSec)) return { error: "invalid-terms" as const };
   if (terms.conditional) return { error: "conditional-terms" as const };
   if (terms.assurance !== "binding-guarantee") return { error: "target-not-guarantee" as const };
-  if (terms.cutoff.time === null) return { error: "cutoff-unreviewed" as const };
+  const receiptDay = terms.cutoff.basis === "receipt-day";
+  if (terms.cutoff.time === null && !receiptDay) return { error: "cutoff-unreviewed" as const };
   if (calendar.id !== terms.calendarId || calendar.timezone !== terms.cutoff.timezone) return { error: "calendar-mismatch" as const };
   const reviewedSec = Date.parse(`${calendar.reviewedAt}T00:00:00Z`) / 1_000;
   if (reviewedSec > clockSec) return { error: "calendar-review-future" as const };
@@ -78,7 +79,7 @@ function calendarWalker(
     }
     return day <= to ? day : null;
   };
-  return { from, to, parts, instant, businessDay, complete, cutoff: terms.cutoff.time };
+  return { from, to, parts, instant, businessDay, complete, cutoff: terms.cutoff.time ?? "00:00", receiptDay };
 }
 
 /** Latest end-of-day completion for one submission; T is the first accepted processing day. */
@@ -92,7 +93,7 @@ export function walkBusinessDaySettlement(
   const date = walker.parts(submittedAtSec).date, day = dayIndex(date);
   const cutoff = walker.instant(day, walker.cutoff);
   if (cutoff === null) return { state: "unknown", reason: "timezone-transition-unresolved" };
-  const completion = walker.complete(day, submittedAtSec >= cutoff);
+  const completion = walker.complete(day, !walker.receiptDay && submittedAtSec >= cutoff);
   if (completion === null) return { state: "unknown", reason: "coverage-exceeded" };
   const end = walker.instant(completion + 1, "00:00");
   if (end === null) return { state: "unknown", reason: "timezone-transition-unresolved" };
@@ -125,7 +126,7 @@ export function maximumBusinessDaySettlement(
     for (const afterCutoff of [false, true]) {
       const submitted = afterCutoff ? cutoff : midnight;
       // A closed day has one completion branch and its midnight dominates its cutoff.
-      if (afterCutoff && !walker.businessDay(day)) continue;
+      if (afterCutoff && (walker.receiptDay || !walker.businessDay(day))) continue;
       const completion = walker.complete(day, afterCutoff);
       if (completion === null) return { state: "unknown", reason: "coverage-exceeded" };
       const completed = walker.instant(completion + 1, "00:00");

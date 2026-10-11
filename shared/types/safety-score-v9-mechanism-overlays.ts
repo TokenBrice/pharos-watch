@@ -9,14 +9,22 @@ import { StrictIsoDateSchema, uniqueKeyedCollectionSchema, reviewedAssetCollecti
 
 const SafetyScoreV9MechanismArchetypeSchema = z.enum(MECHANISM_ARCHETYPE_VALUES);
 
+const SafetyScoreV9MechanismComponentReviewSchema = z.object({
+  reviewedAt: StrictIsoDateSchema,
+  reviewer: z.string().trim().min(1),
+  rationale: z.string().trim().min(1),
+  sources: z.array(z.object({ label: z.string().min(1), url: z.string().url() }).strict()).min(1),
+}).strict();
+
 const SafetyScoreV9MechanismOverlayComponentSchema = z.union([
-  z.object({ quality: V9MechanismQualitySchema }).strict(),
-  z.object({ applicability: z.literal("measured"), quality: V9MechanismQualitySchema }).strict(),
+  z.object({ quality: V9MechanismQualitySchema, review: SafetyScoreV9MechanismComponentReviewSchema.optional() }).strict(),
+  z.object({ applicability: z.literal("measured"), quality: V9MechanismQualitySchema, review: SafetyScoreV9MechanismComponentReviewSchema.optional() }).strict(),
   z
     .object({
       applicability: z.literal("not-applicable"),
       rationale: z.string().trim().min(1),
       sourceUrl: z.string().url(),
+      review: SafetyScoreV9MechanismComponentReviewSchema.optional(),
     })
     .strict(),
   z
@@ -24,6 +32,7 @@ const SafetyScoreV9MechanismOverlayComponentSchema = z.union([
       applicability: z.literal("unavailable"),
       rationale: z.string().trim().min(1),
       sourceUrl: z.string().url(),
+      review: SafetyScoreV9MechanismComponentReviewSchema.optional(),
     })
     .strict(),
 ]);
@@ -135,6 +144,19 @@ export const SafetyScoreV9MechanismReviewOverlaySchema = z
       });
     }
     for (const [componentKey, component] of Object.entries(overlay.components)) {
+      if (component.review !== undefined) {
+        const componentUrls = new Set(component.review.sources.map(source => source.url));
+        for (const [index, source] of component.review.sources.entries()) {
+          if (!sourceUrls.has(source.url)) ctx.addIssue({
+            code: "custom", path: ["components", componentKey, "review", "sources", index, "url"],
+            message: "Component review source must match an overlay source",
+          });
+        }
+        if ("sourceUrl" in component && !componentUrls.has(component.sourceUrl)) ctx.addIssue({
+          code: "custom", path: ["components", componentKey, "sourceUrl"],
+          message: "Component sourceUrl must match its own review source",
+        });
+      }
       if (
         "applicability" in component &&
         component.applicability !== "measured" &&

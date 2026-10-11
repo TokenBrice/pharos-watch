@@ -1,6 +1,8 @@
 import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
+  SafetyScoreV9CurrentCardSchema,
+  type SafetyScoreV9CurrentCard,
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
 } from "@shared/types/safety-score-v9-public";
@@ -122,17 +124,32 @@ function decodeCanonicalBase64(value: string, label: string): Uint8Array {
 function parsePublicationPayload(
   raw: string,
   label: string,
-  options?: { skipCanonicalityCheck?: boolean },
 ): SafetyScoreV9CurrentResponse {
   const parsed = parseJson(raw);
   if (!parsed.ok) throw new Error(`Malformed ${label} JSON: ${parsed.message}`);
-  // Re-stringifying the full payload doubles peak string heap on a ~8MB
-  // publication; callers that have already authenticated the exact stored
-  // bytes (payloadSha256 on the compressed path) skip it.
-  if (!options?.skipCanonicalityCheck && stableJsonStringifyV1(parsed.value) !== raw) {
+  if (stableJsonStringifyV1(parsed.value) !== raw) {
     throw new Error(`${label} JSON is not canonical`);
   }
-  const value = parsed.value;
+  return admitPublicationPayload(parsed.value);
+}
+
+// Validation must not retain a second cohort when the schema made no changes.
+// Compare the schema output, not assumptions about transforms/defaults, so future
+// normalizations are still serialized and stripped fields never leak.
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") return false;
+  // Mutable callers retain the old snapshot semantics across async compression.
+  if (!Object.isFrozen(left)) return false;
+  if (Array.isArray(left) !== Array.isArray(right)) return false;
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const keys = Object.keys(leftRecord);
+  if (keys.length !== Object.keys(rightRecord).length) return false;
+  return keys.every((key) => Object.prototype.hasOwnProperty.call(rightRecord, key) && sameJsonValue(leftRecord[key], rightRecord[key]));
+}
+
+function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): SafetyScoreV9CurrentResponse {
   if (value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === 6) {
     throw new SafetyScoreV9SchemaCutoverPendingError();
   }
@@ -142,7 +159,29 @@ function parsePublicationPayload(
       ? value.schemaVersion : "missing";
     throw new Error(`Unsupported Safety Score publication schema ${version}; active reader requires schema 7 and never infers route identity from legacy keys`);
   }
-  return SafetyScoreV9CurrentResponseSchema.parse(value);
+  if (!("cards" in value) || !Array.isArray(value.cards)) return SafetyScoreV9CurrentResponseSchema.parse(value);
+  // JSON.parse transferred these rows to this decoder. Admit and replace each
+  // owned row before moving on, rather than retaining two complete card graphs.
+  // The envelope still runs every response refinement, including parent and
+  // gap reconciliation; only already-admitted object identities bypass reparsing.
+  const admittedCards = new WeakSet<object>();
+  for (let index = 0; index < value.cards.length; index++) {
+    try {
+      const original = value.cards[index];
+      const parsed = SafetyScoreV9CurrentCardSchema.parse(original);
+      value.cards[index] = reuseUnchangedCards && sameJsonValue(original, parsed) ? original : parsed;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new z.ZodError(error.issues.map((issue) => ({ ...issue, path: ["cards", index, ...issue.path] })));
+      }
+      throw error;
+    }
+    admittedCards.add(value.cards[index]);
+  }
+  return SafetyScoreV9CurrentResponseSchema.safeExtend({
+    cards: z.array(z.custom<SafetyScoreV9CurrentCard>((card) =>
+      card !== null && typeof card === "object" && admittedCards.has(card))),
+  }).parse(value);
 }
 
 
@@ -161,7 +200,7 @@ export async function serializeSafetyScoreV9Publication(
   signal?: AbortSignal,
 ): Promise<string> {
   throwIfAborted(signal);
-  const publication = SafetyScoreV9CurrentResponseSchema.parse(value);
+  const publication = admitPublicationPayload({ ...value, cards: [...value.cards] }, true);
   const compressed = await gzipCanonicalJson(stableJsonStringifyChunksV1(publication), {
     label: "Safety Score v9 publication",
     maximumCompressedBytes:
@@ -276,13 +315,12 @@ export async function parseSafetyScoreV9Publication(
   if ((await sha256Hex(uncompressed)) !== storage.payloadSha256) {
     throw new Error("Safety Score v9 publication checksum mismatch");
   }
-  const publication = parsePublicationPayload(
-    canonical,
-    "Safety Score v9 publication",
-    // payloadSha256 above already pinned the exact producer-written canonical
-    // bytes, so the canonicality re-stringify adds no integrity here.
-    { skipCanonicalityCheck: true },
-  );
+  // The digest authenticated the exact producer-written canonical bytes. Drop
+  // their decoded string before card admission; the owned parsed graph is enough.
+  const payload = parseJson(canonical);
+  canonical = "";
+  if (!payload.ok) throw new Error(`Malformed Safety Score v9 publication JSON: ${payload.message}`);
+  const publication = admitPublicationPayload(payload.value);
   if (
     stableJsonStringifyV1(publicationIdentity(publication)) !==
     stableJsonStringifyV1(storage.identity)

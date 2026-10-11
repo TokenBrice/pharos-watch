@@ -5,7 +5,7 @@ import { throwIfAborted } from "./abort";
 import { parseChainlinkLatestRoundData } from "./chainlink-round-data";
 import { fetchEtherscanProxyHex, fetchEvmCallHexAtBlock, fetchJsonRpcHexAtUrl } from "./evm-rpc";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "./evm-selectors";
-import { DRPC_NETWORK } from "./drpc";
+import { DRPC_NETWORK } from "@shared/lib/drpc";
 import { mapWithConcurrency } from "./concurrency";
 
 const DRPC_PUBLIC_RPC_URL: Partial<Record<string, string>> = {

@@ -26,16 +26,31 @@ function midasBusinessDayReview(businessDays: 6 | 10): RedemptionV9RouteReviewTe
       cutoff: { time: businessDays === 6 ? "23:59" : null, timezone: "Europe/Berlin" },
       assurance: "binding-guarantee", conditional: true,
       conditions: businessDays === 6
-        ? ["15% per-settlement-day redemption gate", "Market-disruption valuation/payment deferrals and qualified subordination; instant holdback is not standard-route capacity"]
-        : ["Greenlisting and issuer notice of order receipt after token delivery", "Market-disruption/underlying-illiquidity postponements (base conditions 6 and 7)"],
-      startEvent: businessDays === 6 ? "Accepted standard redemption after applicable gates" : "Issuer notice of receipt of the Tokenholder Order Request Form",
+        ? [
+            "Business Day means any day other than Saturday or Sunday on which relevant commercial banks and/or commercial banks in Frankfurt are open for general business; unidentified relevant banks remain conditional, not assumed to share the Frankfurt calendar",
+            "15% of aggregate outstanding mTokens per settlement day redemption gate; condition 8.3 subjects processing to applicable gates",
+            "Market-disruption valuation postponement and fallback determination under condition 12; condition 12.4 pays five Business Days after the postponed or fallback-determined Valuation Date, without overriding redemption gates",
+            "Qualified subordination under condition 14 restricts payment; instant Deferred Price Method holdback is not standard-route completion or capacity",
+          ]
+        : [
+            "Business Day means a day on which (i) relevant Clearing Systems are open, (ii) relevant commercial banks are open, and/or (iii) banks in Frankfurt are open; unidentified relevant systems/banks remain conditional, not assumed to share the Frankfurt calendar",
+            "The ten-Business-Day period begins only after issuer notice of exercise of the Issuer Call Option or issuer notice of receipt of the Tokenholder Order Request Form; no request-to-notice maximum is specified",
+            "Condition 6 postpones valuation during Market Disruption Events; condition 7.3 postpones fixing and/or payment for underlying illiquidity by the number of days necessary for prevailing market conditions",
+            "Qualified subordination under condition 8 restricts payment",
+          ],
+      accessPrerequisites: businessDays === 6
+        ? ["Greenlisted eligible holder; completed irrevocable redemption order and transfer of mTokens to the issuer wallet or specified redemption-request smart contract; compatible USDC payout wallet"]
+        : ["Greenlisted holder; Tokens transferred to the Issuer before disbursement; compatible payout wallet or bank details as required by the chosen settlement currency"],
+      startEvent: businessDays === 6
+        ? "Redemption Request Effective Date under condition 8.1: completed redemption form and token transfer, or the date specified in the Issuer's Regular Call Notice; normal stages remain subject to gates"
+        : "Issuer notice of exercise of the Issuer Call Option or issuer notice of receipt of the Tokenholder Order Request Form under condition 5.3",
       ...(businessDays === 6 ? { stages: [{ name: "realisation", businessDays: 1 }, { name: "payment-after-realisation", businessDays: 5 }] } : {}),
     },
-    reviewedAt: "2026-10-05",
+    reviewedAt: "2026-10-11",
     docs: businessDays === 6 ? [
-      sourceRef("Signed July 17, 2026 mHYPER final terms: 23:59 CET/CEST cutoff, one-day realisation and 15% gate", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media", ["settlement"]),
-      sourceRef("Midas 2026 base, conditions 8.3(c) and 12", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media", ["settlement"]),
-    ] : [sourceRef("Midas governing 2025 base, Business Day and redemption/deferral clauses", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media", ["settlement"])],
+      sourceRef("Signed July 17, 2026 mHYPER final terms: USDC output, 23:59 CET/CEST cutoff, one-day realisation and 15% gate; reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FMgKVyFHWPLrKpyKjdQqL%2F20260714_mHYPER_FT_signed_final.pdf?alt=media", ["settlement", "access"]),
+      sourceRef("Midas July 17, 2026 base: Business Day definition and conditions 8.1, 8.3(c), 12 and 14; reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media", ["settlement", "access"]),
+    ] : [sourceRef("Midas governing July 17, 2025 base: Business Day definition, notice-dependent payment (5.3), market disruption (6), illiquidity deferral (7.3) and qualified subordination (8); reviewed by Sol curation campaign 2026-10-11 (P7MidasFusdSettlement)", "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FhkJf4UxNukH071S6e4GA%2FMidas_Prospectus_Update_2025%20(1).pdf?alt=media", ["settlement", "access"])],
   };
 }
 function assertKnownTableKeys(
@@ -143,12 +158,12 @@ const MIDAS_LYT_TERMS_GAPS: Partial<Record<string, MidasLytTermsGap>> = {
   "mhyper-midas": {
     missingScoringFields: ["capacity", "settlement"],
     rationale:
-      "The captured fee and vault observations remain unchanged; daily limits alone are not funded capacity. Signed July 17, 2026 mHYPER terms specify one Business Day realisation plus five Business Days payment, a 23:59 CET/CEST cutoff and 15% per-settlement-day gate. Market-disruption valuation/payment deferrals and qualified subordination remain, so the six-business-day normal window is not an unconditional same-notional completion guarantee.",
+      "The captured fee and vault observations remain unchanged; daily limits alone are not funded capacity. The signed July 17, 2026 mHYPER Final Terms and incorporated 2026 base specify one Business Day realisation plus five Business Days payment from the Redemption Request Effective Date under condition 8.1, with 23:59 CET/CEST cutoff, relevant commercial-bank/Frankfurt Business Day definition and 15% of aggregate outstanding mTokens per settlement day gate. These exact terms are curated in businessDayTerms. Conditions 12.2-12.5 allow postponed/fallback valuation and payment five Business Days after that valuation, without overriding gates; condition 14 restricts subordinated payment. No unconditional same-notional request-to-completion maximum is disclosed.",
   },
   "mmev-midas": {
     missingScoringFields: ["capacity", "settlement", "cost"],
     rationale:
-      "The product was discontinued, and the reviewed materials checked on 2026-09-04 do not establish which residual mMEV route remains executable or its post-retirement capacity, settlement SLA, and all-in cost.",
+      "The existing discontinued-product and post-retirement capacity/cost findings remain unchanged. The July 17, 2025 mMEV Final Terms incorporate the 2025 base: its condition 5.3 requires payment within ten Business Days only after issuer notice for a Greenlisted holder, with token delivery, the exact relevant-clearing-system/commercial-bank/Frankfurt definition, market-disruption and underlying-illiquidity deferrals, and qualified subordination retained in the reviewed businessDayTerms. No unconditional request-to-completion maximum is disclosed; these terms do not prove a residual executable route or reopen the discontinued channel.",
   },
   "mapollo-midas": {
     missingScoringFields: ["capacity", "settlement"],
@@ -180,15 +195,47 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
       ...midasLytBase.docs!,
     ];
     const termsGap = MIDAS_LYT_TERMS_GAPS[id];
-    const calendarReview = id === "mhyper-midas" || id === "mmev-midas"
-      ? midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10)
-      : null;
+    const calendarReview = id === "mapollo-midas"
+      ? {
+          businessDayTerms: {
+            businessDays: 6,
+            calendarId: "frankfurt-banking-target" as const,
+            cutoff: { time: "23:59", timezone: "Europe/Berlin" },
+            assurance: "binding-guarantee" as const,
+            conditional: true,
+            conditions: [
+              "15% per-settlement-day redemption gate",
+              "Market-disruption valuation/payment deferrals and qualified subordination; instant deferred-price holdback is not standard-route capacity",
+            ],
+            startEvent: "Accepted standard redemption after applicable gates",
+            stages: [
+              { name: "realisation", businessDays: 1 },
+              { name: "payment-after-realisation", businessDays: 5 },
+            ],
+          },
+          reviewedAt: "2026-10-10",
+          docs: [
+            sourceRef(
+              "mAPOLLO signed July 17, 2026 final terms: USDC output, 23:59 CET/CEST cutoff, one-day realisation and 15% gate",
+              "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+              ["route", "fees", "settlement"],
+            ),
+            sourceRef(
+              "Midas July 17, 2026 base prospectus: condition 8.3(c) five-business-day payment; condition 12 market-disruption deferrals",
+              "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media",
+              ["settlement"],
+            ),
+          ],
+        }
+      : id === "mhyper-midas" || id === "mmev-midas"
+        ? midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10)
+        : null;
     return {
       ...midasLytBase,
-      ...(id === "mhyper-midas" ? {
+      ...(id === "mhyper-midas" || id === "mapollo-midas" ? {
         outputAssetType: "stable-single" as const,
         outputAssets: ["usdc-circle"],
-        reviewedAt: "2026-10-09",
+        reviewedAt: id === "mapollo-midas" ? "2026-10-10" : "2026-10-09",
       } : {}),
       costModel: feeDisclosure
         ? feeDisclosure.feeBpsMax === 0

@@ -47,6 +47,14 @@
       {
         "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
         "url": "https://geco.amf-france.org/back-office/document/download/429960"
+      },
+      {
+        "label": "Diagnostic re-check by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z: CHF NAV dated 2026-10-09 is 1.000119 CHF, totalShares 10072779.37971 and totalAssets 10073978.04 CHF; issuer figures only, not independently reconciled whole-fund liabilities",
+        "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
+      },
+      {
+        "label": "Diagnostic re-check by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z: SAFO signed-value inventory valued 2026-10-09 contains positive and negative swaps and CACEIS cash; no complete current collateral, netting, reuse, custody-continuity or independently reconciled all-class liability disclosure",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
       }
     ],
     "rationale": "The 100% slice is the immediate proportional fund-share claim, not a measured 100% derivative allocation. The current API publishes 134 physical, cash and signed swap rows valued at 2 October 2026. Negative swap market values are not normalized to positive portfolio weights. June SAFO filing independently anchors the portfolio model; current complete NAV and collateral reconciliation remains unavailable.",

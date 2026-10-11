@@ -103,10 +103,10 @@ function operationalResilienceBlockers(
       (signal.economicLossScope === "reserve-claim" || signal.economicLossScope === "global-claim") &&
       ((signal.kind === "unsafe-backing" && signal.severity !== "low") || signal.severity === "critical"),
   );
+  // Deployment/control-local incidents retain their scoped adverse charge;
+  // their severity cannot establish a whole-asset critical control failure.
   const criticalControlFailure = pillars.control.structuralSignals.some(
-    (signal) =>
-      signal.severity === "critical" &&
-      (signal.kind === "active-control-incident" || signal.economicLossScope === "global-claim"),
+    (signal) => signal.severity === "critical" && signal.economicLossScope === "global-claim",
   );
   const criticalDependency =
     resolved.cycleBlocked ||

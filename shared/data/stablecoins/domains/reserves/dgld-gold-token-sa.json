@@ -18,16 +18,16 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurB25mHYPER)",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L71DOLA)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Gold Token SA live DGLD network reconciliation, observed 2026-10-01",
+        "label": "Gold Token SA live DGLD network reconciliation, observed 2026-10-10T23:29:57Z; reconciliation checkpoints 2026-10-10",
         "url": "https://production-gold-mapper-backend.onrender.com/v1/networks"
       },
       {
-        "label": "Gold Token SA live allocated PAMP bar registry, observed 2026-10-01",
+        "label": "Gold Token SA live allocated PAMP bar registry, observed 2026-10-10T23:29:57Z",
         "url": "https://production-gold-mapper-backend.onrender.com/v1/bars"
       },
       {
@@ -36,14 +36,18 @@
       },
       {
         "label": "DGLD current General Terms & Conditions",
-        "url": "https://dgld.ch/legal/general-terms-conditions-dgld-2"
+        "url": "https://dgld.ch/docs/terms"
+      },
+      {
+        "label": "MKS PAMP GTSA allocated-gold inventory, dated 2026-09-30; observed 2026-10-10T23:35:12Z",
+        "url": "https://files.dgld.ch/reports/2026-09-30-GTSA-Inventory-List.pdf"
       }
     ],
-    "rationale": "Observed 2026-10-01: Gold Token SA's live registry reports Base, Ethereum and Solana in matched reconciliation state, with dated reconCheckedAt observations on October 1. Each network reports identical token supply and backedWeight and a zero gap. The live bar registry identifies the corresponding serial-numbered PAMP bars; redeemed bars are explicitly distinguished from live bars. This checkpoint supports the unchanged 100% allocation to physical PAMP gold and is issuer-maintained reconciliation, not independent assurance.",
-    "compositionBasis": "Gold Token SA live bar registry reconciliation of all issued DGLD across Base, Ethereum and Solana to serial-numbered allocated PAMP bars",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Observed 2026-10-10T23:29:57Z: Gold Token SA's network registry identifies the exact catalog Ethereum, Base and Solana deployments and reports matched reconciliation at 2026-10-10T12:00:02.057Z, 2026-10-10T12:00:13.715Z and 2026-10-10T12:00:35.746Z respectively. Token supply equals backedWeight at each checkpoint: 1603.687, 401.159 and 407.109 fine troy ounces, with zero reported gaps. The six live PAMP bars in the bar registry reconcile to those same amounts. MKS PAMP's September 30 inventory lists those six serial-numbered bars and 2411.955 total fine troy ounces, corroborating the unchanged gold-only allocation at that earlier inventory date. The October 10 composition uses the issuer registry's own checkpoint, not a re-dated September report. MKS PAMP is the custodian and issuer parent; its inventory and the issuer registry establish no independent financial assurance or independently verified physical-vault inspection.",
+    "compositionBasis": "Gold Token SA October 10 live registry matches all three catalog deployments to six allocated PAMP gold bars; separately dated MKS PAMP September 30 inventory corroborates bar identity without refreshing report dates",
+    "compositionAsOf": "2026-10-10",
     "scope": "full-composition",
-    "knownUnknownExposure": "Each active network reports token supply matched to allocated PAMP bar weight with a zero gap at its October 1 reconciliation checkpoint. Independent physical-vault verification and independently audited reserve-to-liability assurance are not established by this issuer-maintained registry.",
+    "knownUnknownExposure": "All three active network entries report token supply matched to allocated PAMP bar weight with zero gaps at their October 10 reconciliation checkpoints. Independent physical-vault verification and independently audited reserve-to-liability assurance remain unestablished; the affiliated custodian's September 30 inventory is not independent assurance.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

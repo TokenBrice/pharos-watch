@@ -12,6 +12,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { CENSUS_FIXTURE_META_BY_ID } from "./safety-score-v9-transfer-census.test-support";
+import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 // Vitest hoists mock factories before static imports; load their fixture helpers inside the factories.
 
@@ -464,6 +465,91 @@ describe("transfer census admission and execution budgets", () => {
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
+
+  it.each(["complete", "clock-mismatch", "base-mismatch", "registry-mismatch", "stale", "missing-zero", "subtotal"])(
+    "skips duplicate census only for complete exact provider supply (%s)",
+    async scenario => {
+      const assetId = "usdai-usd-ai";
+      const meta = ACTIVE_META_BY_ID.get(assetId)!;
+      const chainRows = Object.fromEntries(meta.contracts!.map(deployment => {
+        const current = deployment.chain === "solana" ? 0 : 100;
+        return [deployment.chain, { current, circulatingPrevDay: current,
+          circulatingPrevWeek: current, circulatingPrevMonth: current }];
+      }));
+      if (scenario === "missing-zero") delete chainRows.solana;
+      if (scenario === "subtotal") delete chainRows.ethereum;
+      const providerSupplyInput = {
+        clockSec: scenario === "clock-mismatch" ? CLOCK - 1 : CLOCK,
+        baseInputGenerationId: scenario === "base-mismatch" ? `report-cards-input:v1:${"c".repeat(64)}` : BASE_ID,
+        registryFingerprint: scenario === "registry-mismatch" ? "c".repeat(64) : FINGERPRINT,
+        aggregateCirculatingById: {
+          [assetId]: { circulating: { peggedUSD: 400 }, observedAtSec: scenario === "stale" ? CLOCK - 1801 : CLOCK - 10 },
+        },
+        chainCirculatingById: { [assetId]: chainRows },
+      };
+      const resolve = vi.fn(async () => 100);
+      const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+        ...input([assetId]), providerSupplyInput,
+      }, { ...censusDependencies(), resolveClosestBlockAtOrBeforeTimestamp: resolve });
+      if (scenario === "complete") {
+        expect(resolve).not.toHaveBeenCalled();
+        expect(generation.observationsByAssetId[assetId]).toEqual([]);
+        const fixedInput: ReportCardsFixedInput = {
+          ...makeV9FixedInput({ assetId, clockSec: CLOCK }),
+          ...providerSupplyInput, activeAssetIds: [assetId], safetyScoreV9SupplyAttributionById: {},
+        };
+        const review = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk, {
+          meta, transferMaterialityGeneration: generation,
+        });
+        expect(review?.selectedBridgeRoutes).toHaveLength(5);
+        expect(review?.selectedBridgeRoutes.find(row => row.deploymentRouteKey.startsWith("solana:")))
+          .toMatchObject({ supplyUsd: 0, supplyShare: 0 });
+        expect(review?.unknownRouteSupplyShare).toBe(0);
+      } else {
+        expect(resolve).toHaveBeenCalled();
+        expect(generation.observationsByAssetId[assetId]).toHaveLength(5);
+      }
+    },
+  );
+
+  it.each(["tron", "stellar", "unrecognized-chain"])(
+    "preserves an unsupported %s inventory without starving four complete peers",
+    async unsupportedChain => {
+      const ids = assets.slice(0, 5);
+      const firstIndex = Math.floor(CLOCK / SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC) % ids.length;
+      const unsupportedAsset = ids[firstIndex]!;
+      const original = ACTIVE_META_BY_ID.get.bind(ACTIVE_META_BY_ID);
+      vi.spyOn(ACTIVE_META_BY_ID, "get").mockImplementation(id => {
+        const meta = original(id);
+        const assetIndex = ids.indexOf(id);
+        if (!meta || assetIndex < 0) return meta;
+        return { ...meta, contracts: Array.from({ length: 64 }, (_, index) => ({
+          chain: id === unsupportedAsset && index === 0 ? unsupportedChain : chains[assetIndex]!,
+          address: `0x${(assetIndex * 100 + index + 1).toString(16).padStart(40, "0")}`,
+          decimals: 18,
+        })) };
+      });
+      const observedChains: string[] = [];
+      const dependencies = censusDependencies();
+      const generation = await observeSafetyScoreV9TransferMaterialityGeneration(input(ids), {
+        ...dependencies,
+        fetchEvmMulticall3Aggregate3AtBlock: async (chain, calls) => {
+          observedChains.push(chain!);
+          return dependencies.fetchEvmMulticall3Aggregate3AtBlock(chain, calls);
+        },
+      });
+      expect(observedChains).not.toContain(chains[firstIndex]);
+      expect(generation.observationsByAssetId[unsupportedAsset]).toHaveLength(64);
+      expect(generation.observationsByAssetId[unsupportedAsset].every(row =>
+        row.status === "rejected" && row.rawTokenUnits === null && row.decimals === null)).toBe(true);
+      for (const assetId of ids.filter(id => id !== unsupportedAsset)) {
+        expect(exactInputBoundTransferMaterialityPacket({
+          assetId, meta: ACTIVE_META_BY_ID.get(assetId)!, generation,
+          registryFingerprint: FINGERPRINT, baseInputGenerationId: BASE_ID, clockSec: CLOCK,
+        })?.observations).toHaveLength(64);
+      }
+    },
+  );
 
   it("rotates whole-asset admission fairly, preserving every deferred leg as unknown", async () => {
     inventory(64, true);

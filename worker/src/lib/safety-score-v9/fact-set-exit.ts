@@ -22,14 +22,16 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/types/chain-identity";
 import { hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import { safetyScoreV9ChainSupplyObservedAtSec, safetyScoreV9ChainSupplyMaxAgeSec } from "./supply-attribution";
-import { isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
+import { evaluateV9Exit, isV9CreditableNonAtomicRedemption, projectV9ExitEvaluationRoute, selectV9ExitCirculatingUsd, selectV9ExitStressRequest } from "@shared/lib/safety-score-v9/exit";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
 import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
+import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
 import type {
+  V9AssetFactsV3,
   V9EvidenceResponsibility,
   V9ExitRouteFactV2,
   V9FactGapV3,
@@ -99,7 +101,13 @@ function routeEvidence(
         : context.extension.routeFreshness.dexMaxAgeSec
       : observation.evidenceKind === "documented-terms"
         ? context.extension.routeFreshness.documentedTermsMaxAgeSec
-        : context.extension.routeFreshness.redemptionMaxAgeSec);
+        : retained
+          ? context.extension.routeFreshness.redemptionMaxAgeSec
+          : reserveBackedRedemptionRouteMaxAgeSec(
+              observation,
+              context.fixedInput.redemptionBackstopMap[context.asset.assetId],
+              context.extension.routeFreshness.redemptionMaxAgeSec,
+            ));
   return addEvidence(
     context,
     createV9EvidenceReference(
@@ -208,6 +216,9 @@ function routeGap(
 function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionRouteSuspension): V9ExitRouteFactV2 {
   const generationId = context.fixedInput.redemptionGenerationId;
   const routeKey = canonicalV9RouteKey("redemption", generationId, suspension.routeId);
+  const adverseFactId = `${context.asset.assetId}:route-suspension:${suspension.routeId}`;
+  const causeScope = { pillar: "exit" as const, componentKey: "exit-route", factorKey: "suspended",
+    routeKey, exposureId: null, requiredDatum: "suspended" };
   const evidenceId = addEvidence(context, createV9EvidenceReference({
     evidenceId: `${context.asset.assetId}:route-suspension:${suspension.routeId}`,
     sourceId: "reviewed-redemption-channel-suspension",
@@ -216,10 +227,19 @@ function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionR
     observedAtSec: Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000,
     contentSha256: domainDigest("safety-score-v10.route-suspension.v1", suspension),
     url: suspension.sources[0]!.url,
+    causeBinding: { assetId: context.asset.assetId, scope: causeScope,
+      producerState: null, rejectionCode: null, adverseFactId },
   }, context.fixedInput.clockSec));
-  const gapId = routeGap(context, routeKey, "suspended", "bounded-unknown",
-    "missing-same-notional-route", "integration-missing",
-    `${suspension.channel}: ${suspension.reason} This establishes no total-exit measurement.`, [evidenceId]);
+  const gapId = addGap(context, createV9FactGapV3({
+    gapId: `${context.asset.assetId}:gap:route:${routeKey}:suspended`,
+    reasonCode: "unsupported-same-notional-route",
+    ownerDomain: "exit", policyRuleId: "v9.exit.same-notional-route",
+    observationState: "bounded-unknown", responsibility: "measured-adverse",
+    causeProof: { cause: "D", adverseFactId, evidenceRefIds: [evidenceId] },
+    causeScope, path: optionalExitV9Path(routeKey),
+    message: `${suspension.channel}: ${suspension.reason} This channel has no eligible capacity; independent exits and recovery remain unmeasured.`,
+    evidenceRefIds: [evidenceId],
+  }));
   const status = createV9FactStatus({
     applicability: requiredV9Applicability("v9.exit.same-notional-route"),
     observationState: "bounded-unknown", evidenceRefIds: [evidenceId], gapIds: [gapId],
@@ -532,6 +552,8 @@ function buildRoute(
   // V9 reviews may conservatively worsen those semantics (for example, an
   // atomic producer route can become an unbounded queue), so re-apply the
   // score-bearing contract after the review has been materialized.
+  const settlementBoundUnproven = args.review.settlementBoundUnproven ??
+    (args.observation.settlementBoundUnproven === true);
   const scoreEligible = isDexExitRouteScoreEligible({
     producerScoreEligible: args.observation.scoreEligible && executionAdmission?.state !== "unavailable",
     routeState,
@@ -553,7 +575,7 @@ function buildRoute(
       ["access", args.review.holderAccess !== "unknown"],
       ["holderEligibility", args.review.holderAccess !== "unknown"],
       ["executionConfidence", args.review.executionCertainty !== "unknown" && args.review.modelConfidence !== "unknown"],
-      ["settlement", args.review.settlementSlaSec !== null && args.observation.settlementBoundUnproven !== true],
+      ["settlement", args.review.settlementSlaSec !== null && !settlementBoundUnproven],
     ] as const) {
       if (!known) continue;
       const componentKey = `exit-route:${routeKey}:${factorKey}`;
@@ -578,8 +600,9 @@ function buildRoute(
     capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
-    ...((args.review.feeEvidence ?? args.observation.feeEvidence)
-      ? { feeEvidence: args.review.feeEvidence ?? args.observation.feeEvidence } : {}),
+    ...(args.review.feeEvidence === null ? {} :
+      (args.review.feeEvidence ?? args.observation.feeEvidence)
+        ? { feeEvidence: args.review.feeEvidence ?? args.observation.feeEvidence } : {}),
     ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
     ...(args.observation.executionModelId ? { executionModelId: args.observation.executionModelId } : {}),
     ...(certificate ? { executionCertificate: certificate } : {}),
@@ -601,7 +624,7 @@ function buildRoute(
       ...rejectedFactorStatuses,
     },
     scoreEligible,
-    settlementBoundUnproven: args.observation.settlementBoundUnproven === true,
+    settlementBoundUnproven,
     request: {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
       maxCostBps: args.observation.maxCostBps,
@@ -680,7 +703,7 @@ function classifyUnsupportedDexSurface(
   return null;
 }
 
-export function buildRoutes(context: AssetBuildContext): {
+export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["supply"]): {
   exitStatus: V9FactStatusV2;
   exitRoutes: V9ExitRouteFactV2[];
 } {
@@ -1065,6 +1088,33 @@ export function buildRoutes(context: AssetBuildContext): {
     coverage.status === "populated" &&
     (coverage.retainedPoolCount === 0 || isDexExitRouteCoverageWithinRouteBudget(coverage));
   const portfolioGapIds = [...gapIds];
+  const independentExitUnresolved = routes.some((route) => route.routeSuspension) &&
+    evaluateV9Exit({
+      assetId: context.asset.assetId,
+      clockSec: context.fixedInput.clockSec,
+      circulatingUsd: selectV9ExitCirculatingUsd(supply),
+      portfolioStatus: dexSurfaceComplete ? "reviewed-complete" : "incomplete",
+      gaps: [...context.gaps.values()],
+      routes: routes.map(projectV9ExitEvaluationRoute),
+    }, policy).reasons.includes("missing-same-notional-route");
+  if (independentExitUnresolved) {
+    // Reuse the Exit evaluator's canonical request and materiality authority:
+    // a measured but immaterial alternative cannot close its bounded census.
+    // The closed channel's D remains separate, with no execution obligations.
+    portfolioGapIds.push(missingLocalFact(context, {
+      componentKey: "exit-independent-route-census",
+      path: { kind: "local-component", componentKey: "exit-routes" },
+      causeScope: { pillar: "exit", componentKey: "exit-routes", factorKey: null,
+        routeKey: null, exposureId: null, requiredDatum: "independent-route-census" },
+      reasonCode: "missing-runtime-route-evidence",
+      ownerDomain: "exit",
+      responsibility: "unresearched",
+      policyRuleId: "v9.exit.same-notional-route",
+      observationState: "bounded-unknown",
+      evidenceRefIds,
+      message: "The suspended channel does not establish the independent whole-Exit route census; admitted alternatives do not close the limited same-notional Exit evidence.",
+    }).gapId);
+  }
   if (reviewedExecutionModels.reviews.length > 0) {
     const executionPolicy = loadV9CandidateMethodologyPolicy();
     for (const review of validateExitExecutionModelReviews(reviewedExecutionModels, executionPolicy)) {

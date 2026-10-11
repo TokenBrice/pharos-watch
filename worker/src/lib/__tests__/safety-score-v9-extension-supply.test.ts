@@ -8,9 +8,9 @@ import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deploym
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
 import {
-  ReviewEvidenceBuilder,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension-shared";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
   buildSafetyScoreV9SupplyReview,
   diagnoseSafetyScoreV9NullSupplyReviewOutcome,
@@ -768,6 +768,10 @@ describe("provider-origin HyperEVM supply identity", () => {
     ["m-m0", "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b"],
     ["frxusd-frax", "0x80eede496655fb9047dd39d9f418d5483ed600df"],
     ["rusd-reservoir", "0x866d66f64fb81461903e1e38d998e747ecf35e78"],
+    ["bold-liquity", "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a"],
+    ["feusd-felix", "0x02c6a2fa58cc01a18b8d9e00ea48d65e4df26c70"],
+    ["usdxl-last", "0xca79db4b49f608ef54a5cb813fbed3a6387bc645"],
+    ["usdm-monetrix", "0xe2d2959f89b6389deb624bf076fe7d9e5401f377"],
   ] as const;
 
   function input(assetId: string, label = "Hyperliquid L1"): ReportCardsFixedInput {
@@ -794,14 +798,20 @@ describe("provider-origin HyperEVM supply identity", () => {
     expect(fixed.chainCirculatingById[assetId]!["Hyperliquid L1"]!.current).toBe(20);
   });
 
+  it.each(identities)("also joins the raw SDK hyperliquid chain label for %s", (assetId, address) => {
+    const fixed = input(assetId, "hyperliquid");
+    const review = buildSafetyScoreV9SupplyReview(fixed, assetId, profile(routes(address)));
+    expect(safetyScoreV9RouteSupplyShare(review, `hyperevm:${address}`)).toBe(0.2);
+    expect(fixed.chainCirculatingById[assetId]!.hyperliquid!.current).toBe(20);
+  });
+
   it("keeps USDC's genuine HyperCore provider row on HyperCore", () => {
     const review = buildSafetyScoreV9SupplyReview(input("usdc-circle"), "usdc-circle", profile(routes("0xevm")));
     expect(safetyScoreV9RouteSupplyShare(review, "hyperliquid:core-token")).toBe(0.2);
     expect(safetyScoreV9RouteSupplyShare(review, "hyperevm:0xevm")).toBeNull();
   });
 
-  it("does not invent a split between competing EVM routes", () => {
-    const [assetId, address] = identities[0];
+  it.each(identities)("does not invent a split between competing EVM routes for %s", (assetId, address) => {
     const competing = [...routes(address), { ...ETH_ROUTE, id: "hyperevm:second", routeClass: "canonical" as const, issuanceModel: "bridge-representation" as const }];
     const review = buildSafetyScoreV9SupplyReview(input(assetId), assetId, profile(competing));
     expect(safetyScoreV9RouteSupplyShare(review, `hyperevm:${address}`)).toBeNull();
@@ -811,8 +821,7 @@ describe("provider-origin HyperEVM supply identity", () => {
     });
   });
 
-  it("requires the reviewed provider and exact catalog deployment identity", () => {
-    const [assetId, address] = identities[0];
+  it.each(identities)("requires the exact catalog deployment identity for %s", (assetId, address) => {
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
     const review = buildSafetyScoreV9SupplyReview(input(assetId), assetId, profile(routes(address)), {
       meta: { ...meta, contracts: meta.contracts?.filter(contract => contract.chain !== "hyperevm") },
