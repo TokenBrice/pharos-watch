@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { DEPENDENCY_RELATIONSHIP_LABELS, DEPENDENCY_ROLE_LABELS } from "@shared/lib/classification";
 import { formatCurrency } from "@shared/lib/format";
@@ -5,7 +8,10 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import type { DetailDependencyContext } from "./dependency-context-model";
+import { ShowAllToggle } from "./disclosure-toggles";
 import { DETAIL_MODULE_TITLE_CLASS } from "./section-title-class";
+
+const PREVIEW_COUNT = 5;
 
 function shareLabel(share: number | null): string {
   if (share === null) return "Share unknown";
@@ -15,6 +21,47 @@ function shareLabel(share: number | null): string {
 
 function AssetLink({ id, label }: { id: string; label: string }) {
   return <Link href={buildStablecoinUrl(id)} className="pharos-focus-ring font-medium hover:underline">{label}</Link>;
+}
+
+/**
+ * Rows grouped under one tag line per group (first-seen order) instead of the
+ * same tag repeated on every row; the first five rows show, "Show all N" the rest.
+ */
+function GroupedRows<T>({ items, groupLabel, rowKey, renderRow, noun }: {
+  items: readonly T[];
+  groupLabel: (item: T) => string;
+  rowKey: (item: T) => string;
+  renderRow: (item: T) => ReactNode;
+  noun: string;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? items : items.slice(0, PREVIEW_COUNT);
+  const groups = new Map<string, T[]>();
+  for (const item of visible) {
+    const label = groupLabel(item);
+    groups.set(label, [...(groups.get(label) ?? []), item]);
+  }
+  const totals = new Map<string, number>();
+  for (const item of items) totals.set(groupLabel(item), (totals.get(groupLabel(item)) ?? 0) + 1);
+  return (
+    <>
+      <div className="space-y-3">
+        {[...groups].map(([label, rows]) => (
+          <div key={label} className="space-y-1.5">
+            <p className="text-xs text-muted-foreground">
+              {label} <span className="font-mono tabular-nums">{totals.get(label)}</span>
+            </p>
+            <ul className="space-y-1.5 text-sm">
+              {rows.map((row) => <li key={rowKey(row)} className="flex flex-wrap items-baseline gap-x-2">{renderRow(row)}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {items.length > PREVIEW_COUNT ? (
+        <ShowAllToggle open={showAll} onToggle={() => setShowAll((prev) => !prev)} total={items.length} noun={noun} />
+      ) : null}
+    </>
+  );
 }
 
 export function DependencyContextDetails({ card, context, marketCapAsOf }: {
@@ -58,24 +105,30 @@ export function DependencyContextDetails({ card, context, marketCapAsOf }: {
       </section> : null}
       {hasUpstreams ? <section aria-label="What I depend on" className="space-y-2">
         <h3 className={DETAIL_MODULE_TITLE_CLASS}>What I depend on</h3>
-          <ul className="space-y-2 text-sm">
-            {upstreams.map((entry) => <li key={`${entry.coin.id}:${entry.edgeType}`} className="flex flex-wrap items-baseline gap-x-2">
-              <AssetLink id={entry.coin.id} label={entry.coin.symbol} />
-              <span className="text-xs text-muted-foreground">{DEPENDENCY_RELATIONSHIP_LABELS[entry.relationshipType]} ({entry.edgeType})</span>
-              <span className="font-mono text-xs tabular-nums">{entry.edgeType === "serial" ? "Full claim (100%)" : shareLabel(entry.weight)}</span>
-            </li>)}
-          </ul>
+        <GroupedRows
+          items={upstreams}
+          groupLabel={(entry) => `${DEPENDENCY_RELATIONSHIP_LABELS[entry.relationshipType]} (${entry.edgeType})`}
+          rowKey={(entry) => `${entry.coin.id}:${entry.edgeType}`}
+          renderRow={(entry) => <>
+            <AssetLink id={entry.coin.id} label={entry.coin.symbol} />
+            <span className="font-mono text-xs tabular-nums">{entry.edgeType === "serial" ? "Full claim (100%)" : shareLabel(entry.weight)}</span>
+          </>}
+          noun="upstream links"
+        />
       </section> : null}
       {hasRoles ? <section aria-label="Scored role dependencies (not drawn)" className="space-y-2">
         <h3 className={DETAIL_MODULE_TITLE_CLASS}>Scored role dependencies (not drawn)</h3>
-          <ul className="space-y-2 text-sm">
-            {roles?.map((role) => <li key={role.edgeKey} className="flex flex-wrap items-baseline gap-x-2">
-              <AssetLink id={role.upstreamAssetId} label={CLIENT_TRACKED_META_BY_ID.get(role.upstreamAssetId)?.symbol ?? role.upstreamAssetId} />
-              <span className="text-xs text-muted-foreground">{DEPENDENCY_ROLE_LABELS[role.role]}</span>
-              <span className="font-mono text-xs tabular-nums">{shareLabel(role.weight)}</span>
-              <span className="text-xs text-muted-foreground">{role.score === null ? "Role score unavailable" : `Role score ${role.score}/100`}</span>
-            </li>)}
-          </ul>
+        <GroupedRows
+          items={roles ?? []}
+          groupLabel={(role) => DEPENDENCY_ROLE_LABELS[role.role]}
+          rowKey={(role) => role.edgeKey}
+          renderRow={(role) => <>
+            <AssetLink id={role.upstreamAssetId} label={CLIENT_TRACKED_META_BY_ID.get(role.upstreamAssetId)?.symbol ?? role.upstreamAssetId} />
+            <span className="font-mono text-xs tabular-nums">{shareLabel(role.weight)}</span>
+            <span className="text-xs text-muted-foreground">{role.score === null ? "Role score unavailable" : `Role score ${Math.round(role.score)}/100`}</span>
+          </>}
+          noun="scored roles"
+        />
       </section> : null}
       {hasCoverage ? <section aria-label="Known, not in the scored graph" className="space-y-2">
         <h3 className={DETAIL_MODULE_TITLE_CLASS}>Known, not in the scored graph</h3>
