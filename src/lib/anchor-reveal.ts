@@ -11,8 +11,15 @@ import { expandEvidenceModuleFor } from "@/components/stablecoin-detail/evidence
  * Opened disclosures stay open (owner decision 2026-08-08): navigation is a
  * statement of intent, and auto-reclosing would fight the user.
  */
+/** Dispatched on a hidden `[data-tab-panel]` that holds a hash target; its tab group selects it synchronously. */
+export const TAB_PANEL_REVEAL_EVENT = "pharos:tab-panel-reveal";
+
 function revealAnchorTarget(target: HTMLElement | null): void {
   if (!target) return;
+
+  // A target in (or on) an inactive tab panel: select the tab before measuring.
+  const panel = target.closest<HTMLElement>("[data-tab-panel]");
+  if (panel?.hidden) panel.dispatchEvent(new Event(TAB_PANEL_REVEAL_EVENT, { bubbles: true }));
 
   // Synchronous attribute flip, so the body is displayed before any scroll.
   expandEvidenceModuleFor(target);

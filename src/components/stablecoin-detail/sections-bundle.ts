@@ -31,4 +31,5 @@ export { YieldHistoryChart } from "@/components/yield-history-chart";
 export { DexLiquidityCard } from "@/components/dex-liquidity-card";
 export { DistributionSection } from "@/components/stablecoin-detail/distribution-section";
 export { SafetyScoreHistorySection } from "@/components/stablecoin-detail/safety-score-history-section";
+export { HistoryTabs } from "@/components/stablecoin-detail/history-tabs";
 export { StablecoinDepegResolverCard } from "@/components/stablecoin-detail/depeg-resolver-card";

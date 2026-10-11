@@ -45,12 +45,10 @@ export const createDetailLazySectionsMock = async () => {
       "FeedbackModal",
       "McapChart",
       "MarketDataSection",
-      "DepegHistory",
-      "DdrTrackRecordSection",
+      "HistoryTabs",
       "YieldDetailSection",
       "DexLiquidityCard",
       "DistributionSection",
-      "SafetyScoreHistorySection",
       "StablecoinDepegResolverCard",
     ].map((name) => [name, DetailSectionPlaceholder]),
   );

@@ -10,10 +10,8 @@ import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import {
   BlacklistHistorySection,
-  DdrTrackRecordSection,
-  DepegHistory,
   FlowHistorySection,
-  SafetyScoreHistorySection,
+  HistoryTabs,
 } from "./detail-lazy-sections";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
@@ -43,35 +41,18 @@ export function DetailHistoryExploreSections({
         <section id="coin-timeline" aria-label="Coin event timeline" className="xl:hidden">
           <TapeForCoinTeaser coinId={viewModel.id} />
         </section>
-        <LazySection minHeight={220}>
-          <SafetyScoreHistorySection stablecoinId={viewModel.id} />
+        <LazySection minHeight={360}>
+          <HistoryTabs
+            stablecoinId={viewModel.id}
+            isNavToken={viewModel.isNavToken}
+            observationStartedAt={viewModel.pegScoreResult?.observationStartedAt ?? null}
+            hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
+            depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
+            historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
+            recent90d={viewModel.pegScoreResult?.recent90d ?? null}
+            scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
+          />
         </LazySection>
-        {!viewModel.isNavToken ? (
-          <section
-            id="depeg-history"
-            className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
-          >
-            <LazySection minHeight={360}>
-              <DepegHistory
-                stablecoinId={viewModel.id}
-                observationStartedAt={viewModel.pegScoreResult?.observationStartedAt ?? null}
-                hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
-                depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
-                historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
-                recent90d={viewModel.pegScoreResult?.recent90d ?? null}
-                scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
-              />
-            </LazySection>
-          </section>
-        ) : null}
-        {/* Directly after the incident history it grades: DepegHistory is what
-            happened, this is how Pharos's frozen forecasts scored against it.
-            No reserved height — the module is absent for most coins. */}
-        {!viewModel.isNavToken ? (
-          <LazySection>
-            <DdrTrackRecordSection stablecoinId={viewModel.id} />
-          </LazySection>
-        ) : null}
         {viewModel.hasFlows ? (
           <LazySection minHeight={320}>
             <FlowHistorySection stablecoinId={viewModel.id} />
