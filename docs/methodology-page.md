@@ -31,7 +31,7 @@ For tooltip/deep-link changes, read [Methodology-Context Anchors](#methodology-c
 - **Changelog wrappers:** `src/app/methodology/[slug]/page.tsx` holds each lane's display config; the shared shell is `src/components/methodology-changelog-page.tsx`, which renders an overview block linking back to the current methodology and public docs archive before the version cards
 - **Changelog sitemap policy:** `METHODOLOGY_CHANGELOG_SITEMAP_PATHS` (`shared/lib/methodology-versions/registry.ts`) is derived from every `METHODOLOGY_CHANGELOG_REGISTRY` entry's `publicPath`, and `src/app/sitemap.ts` re-exports and spreads it, so registering a changelog lane automatically promotes its route. Register a lane only when its route has enough standalone context for external readers, normally through the shared overview block plus a useful latest-version summary.
 - **Scoring changelog special case:** the `scoring-changelog` slug renders every version card from its structured changelog record — `src/app/methodology/changelog-content/scoring/content.tsx` walks the machine-readable changelog and hands each entry to `StructuredChangelogDetail` in `content-shared.tsx`, which renders the entry's optional ordered `detail` body (headings, paragraphs, lists, formulas, weight rows, and tables) or its `summary` plus `impact`. `content-summary.tsx` adds the standalone quick-reference tables after the cards.
-- **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
+- **Cross-app methodology links:** `src/lib/definitions.ts` (the single term source, see [Definitions](#definitions)) hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/lib/methodology-context.ts` projects it into `METHODOLOGY_CONTEXT`, and `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
 
@@ -124,6 +124,12 @@ For the safety-score changelog specifically, update both:
 2. `src/app/methodology/changelog-content/scoring/content-shared.tsx` only when a version needs a body block kind the `detail` schema in `shared/lib/methodology-versions/base.ts` does not yet have; `content-summary.tsx` for the global quick-reference tables. Version prose itself is data — never a JSX module.
 
 ---
+
+## Definitions
+
+`src/lib/definitions.ts` is the single term source for the site. Each entry has a tooltip `label`/`short` (plus optional `detail`), and entries marked `listed` carry a citation-ready `long` text for the A–Z **Definitions** section rendered last on the page (`src/app/methodology/sections/definitions-section.tsx`, anchor `#definitions`, per-term anchors `#def-<key>` such as `#def-peg-score`). The same section emits the `DefinedTermSet` JSON-LD, and `scripts/lib/methodology-to-markdown.ts` appends the list to the methodology markdown export.
+
+Consumers are projections, not copies: `METHODOLOGY_CONTEXT` (`src/lib/methodology-context.ts`) takes entries with a `methodologyPath` (Pharos metrics), `GLOSSARY` (`src/lib/glossary.ts`) takes the DeFi-jargon entries without one (the `<Term>` popover and `[[term]]` markup), and `scripts/maintenance/generate-llms-txt.ts` cites the listed set. Numbers in definition text (Safety Score weights and grade thresholds, DEWS and PSI bands, Liquidity Score weights, depeg thresholds) are interpolated from their owning constants; edit the constant, not the copy. Product names (Digest, Cemetery, FreezeWatch) are not definitions. The retired `/learn/glossary/` route 301s to `/methodology/#definitions`.
 
 ## Methodology-Context Anchors
 

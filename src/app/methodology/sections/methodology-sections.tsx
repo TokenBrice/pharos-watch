@@ -1,4 +1,5 @@
 import { PricingPipelineMethodologySection } from "./core-sections-pricing";
+import { DefinitionsSection } from "./definitions-section";
 import { DependencyExposureMethodologySection } from "./dependency-exposure-section";
 import { InfrastructureMethodologySection } from "./core/infrastructure-section";
 import { LifecyclePhasesMethodologySection } from "./core/lifecycle-phases-section";
@@ -33,6 +34,7 @@ export function MethodologySections() {
       <DepegResolverMethodologySection />
       <BlacklistTrackerMethodologySection />
       <ChainHealthMethodologySection />
+      <DefinitionsSection />
     </>
   );
 }

@@ -18,7 +18,7 @@ import {
 } from "@shared/types/digest";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
-import { GLOSSARY_ENTRIES } from "../../src/lib/glossary-content";
+import { DEFINITIONS_PATH, getListedDefinitions } from "../../src/lib/definitions";
 import { ARCHETYPE_CONTENT } from "../../src/lib/mechanism-explainers";
 import type { StablecoinMeta } from "@shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
@@ -98,23 +98,24 @@ const methodologyLinks = [
   ] as const),
 ] as const;
 
-const glossaryHighlights = ["psi", "dews", "pegscore", "safety-score", "liquidity-score", "freezewatch"] as const;
+const definitionHighlights = ["psi", "dews", "pegScore", "safetyScore", "liquidityScore", "ddr"] as const;
+const listedDefinitions = getListedDefinitions();
 
 const learnLinks = [
   [
-    "Stablecoin Glossary",
-    absolute("/learn/glossary/"),
-    `${GLOSSARY_ENTRIES.length} citation-ready definitions for Pharos stablecoin analytics terminology.`,
+    "Stablecoin Definitions",
+    absolute(DEFINITIONS_PATH),
+    `${listedDefinitions.length} citation-ready definitions for Pharos stablecoin analytics terminology.`,
   ],
-  ...glossaryHighlights.map((id) => {
-    const entry = GLOSSARY_ENTRIES.find((candidate) => candidate.id === id);
+  ...definitionHighlights.map((key) => {
+    const entry = listedDefinitions.find((candidate) => candidate.key === key);
     if (!entry) {
-      throw new Error(`Missing glossary highlight: ${id}`);
+      throw new Error(`Missing definition highlight: ${key}`);
     }
     return [
-      `Glossary: ${entry.term}`,
-      absolute(`/learn/glossary/#${entry.id}`),
-      entry.definition,
+      `Definition: ${entry.term}`,
+      absolute(`/methodology/#${entry.anchorId}`),
+      entry.text,
     ] as const;
   }),
   [

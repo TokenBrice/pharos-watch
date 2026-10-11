@@ -5,7 +5,7 @@ Contract for the educational explainer surfaces:
 - `/learn/mechanisms/` — hub listing every configured archetype
 - `/learn/mechanisms/[archetype]/` — per-archetype deep explainer
 
-The broader `/learn/case-studies/` and `/learn/glossary/` surfaces are documented in [learn-page.md](./learn-page.md). Mechanisms are one section of the Learn namespace, not the only `/learn/*` route family.
+The broader `/learn/case-studies/` surfaces are documented in [learn-page.md](./learn-page.md). Mechanisms are one section of the Learn namespace, not the only `/learn/*` route family.
 
 Each configured `mechanismArchetype` gets a dedicated educational page covering the design, failure modes, and relevant Pharos signals. `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts` is the canonical roster.
 

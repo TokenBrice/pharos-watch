@@ -16,6 +16,12 @@
 /feedback/ /api/#partner-access 301
 /feedback /api/#partner-access 301
 
+# The glossary folded into the A-Z Definitions section of /methodology/
+# (site simplification, 2026-10-11).
+/learn/glossary/* /methodology/#definitions 301
+/learn/glossary/ /methodology/#definitions 301
+/learn/glossary /methodology/#definitions 301
+
 # Consolidated public documentation routes. The engineering and design docs
 # were withdrawn from the public set (2026-10-11); they remain internal in docs/.
 /docs/data-pipeline/* /docs/ 301

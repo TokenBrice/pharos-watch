@@ -79,7 +79,7 @@ describe("nav-config", () => {
     expect(more?.columns?.map((column) => column.key)).toEqual(["research", "watch", "methods", "pharos"]);
     expect(more?.columns?.map((column) => column.label)).toEqual(["Research", "Updates", "Transparency", "About Pharos"]);
     expect(more?.columns?.map((column) => column.items.map((item) => item.label))).toEqual([
-      ["Learn", "Mechanisms", "Case Studies", "Glossary"],
+      ["Learn", "Mechanisms", "Case Studies"],
       ["Daily Digest", "Timeline", "Changelog", "Blog"],
       ["Methodology", "Coverage", "Status"],
       ["About", "Funding", "PharosVille"],

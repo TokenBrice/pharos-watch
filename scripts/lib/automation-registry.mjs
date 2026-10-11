@@ -563,7 +563,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/lib/public-doc-manifest.json",
       "shared/lib/public-docs.ts",
       "src/lib/case-studies/**",
-      "src/lib/glossary-content.ts",
+      "src/lib/definitions.ts",
       "src/lib/mechanism-explainers/**",
     ],
   }),

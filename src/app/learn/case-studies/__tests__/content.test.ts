@@ -39,7 +39,6 @@ const KNOWN_INTERNAL_ROUTES = new Set([
   "/freezewatch/",
   "/learn/",
   "/learn/case-studies/",
-  "/learn/glossary/",
   "/learn/mechanisms/",
   "/liquidity/",
   "/methodology/",

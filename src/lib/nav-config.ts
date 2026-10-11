@@ -26,7 +26,6 @@ import {
   Landmark,
   MonitorCheck,
   BookMarked,
-  BookA,
   Coins,
   Heart,
   TableProperties,
@@ -162,10 +161,9 @@ const MORE_COLUMNS: readonly NavColumn[] = [
     key: "research",
     label: "Research",
     items: [
-      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Mechanisms, case studies, and glossary", keywords: "learn education explainers" },
+      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Mechanisms and case studies", keywords: "learn education explainers" },
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg", keywords: "mechanism archetype design how it works collateral algorithmic" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs", keywords: "case study retrospective post-mortem history terra ust svb" },
-      { href: "/learn/glossary/", label: "Glossary", icon: BookA, description: "The Pharos vocabulary, defined", keywords: "glossary terms definitions vocabulary dictionary" },
     ],
   },
   {
@@ -182,7 +180,7 @@ const MORE_COLUMNS: readonly NavColumn[] = [
     key: "methods",
     label: "Transparency",
     items: [
-      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version" },
+      { href: "/methodology/", label: "Methodology", icon: BookOpen, description: "Formulas, thresholds, and versions", keywords: "methodology formula threshold how computed calculated version glossary definitions terms" },
       { href: "/coverage/", label: "Coverage", icon: TableProperties, description: "What Pharos tracks, coin by coin", keywords: "coverage tracked supported data availability" },
       { href: "/status/", label: "Status", icon: MonitorCheck, description: "Live health of every data pipeline", keywords: "status health uptime pipeline outage" },
     ],
