@@ -277,7 +277,7 @@ export function ComplianceClient() {
                   </span>
                 </div>
                 {rows.length === 0 ? (
-                  <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
+                  <div className="pharos-empty-note px-4 py-3 text-center text-sm text-muted-foreground">
                     {regimeFilter === "genius" && !isGeniusEffective
                       ? "GENIUS rows remain in implementation watch until the regime is effective."
                       : "No stablecoins match these filters."}
