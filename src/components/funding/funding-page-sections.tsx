@@ -341,7 +341,7 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
           >
             Dwellir
           </a>{" "}
-          sponsors Pharos&apos;s multi-chain RPC access with a free one-year Developer plan (about $40/month in kind).
+          sponsors Pharos&apos;s multi-chain RPC access on its Growth plan.
           Thank you, Dwellir.
         </p>
         <div className="space-y-0.5 text-xs text-muted-foreground">
