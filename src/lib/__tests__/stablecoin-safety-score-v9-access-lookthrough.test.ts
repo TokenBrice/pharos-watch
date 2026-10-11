@@ -35,7 +35,7 @@ describe("reserve-access diagnostic presentation", () => {
     const card = makeV9Card();
     const summary = evaluateV9AccessLookthrough(makeAccessGraph())!;
     const [authority] = summary.authorities;
-    const [branch] = summary.unresolved.length > 0 ? summary.unresolved : [{ branchKey: "b0", reason: "scope-unreconciled" as const }];
+    const [branch] = summary.unresolved.length > 0 ? summary.unresolved : [{ branchKey: "b0", nodeKey: "n0", reason: "scope-unreconciled" as const, responsibility: "issuer-undisclosed" as const }];
     card.accessPosture.freezeLookthrough = {
       ...summary,
       authorities: [authority!, { ...authority!, authorityKey: "second" }, { ...authority!, authorityKey: "third" }],
