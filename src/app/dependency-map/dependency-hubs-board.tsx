@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCurrency } from "@shared/lib/format";
+import { formatEventTimestamp } from "@/lib/depeg-event-display";
 import { trackEvent } from "@/lib/analytics";
 import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 
@@ -13,7 +14,7 @@ export function DependencyHubsBoard({ model, logos, onExposure }: { model: Depen
   const hubs = model.hubs.slice(0, 6);
   if (hubs.length === 0) return null;
   const maxExposure = model.hubs[0].direct.knownUsd;
-  const asOf = model.marketCapAsOf === null ? "an unknown market-cap date" : new Date(model.marketCapAsOf * 1000).toISOString();
+  const asOf = model.marketCapAsOf === null ? "an unknown market-cap date" : formatEventTimestamp(model.marketCapAsOf, true);
   return (
     <Card className="hidden overflow-hidden rounded-xl border-border/70 shadow-none md:block">
       <CardContent className="space-y-4 p-4 sm:p-5">

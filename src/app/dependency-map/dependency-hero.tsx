@@ -2,6 +2,7 @@
 
 import { ContagionGraph } from "@/components/contagion-graph-root";
 import { formatCurrency } from "@shared/lib/format";
+import { formatEventTimestamp } from "@/lib/depeg-event-display";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
@@ -39,8 +40,8 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
             </p>}
             {supply.unknownShareEdgeCount > 0 && <p className="text-sm text-muted-foreground">Excludes {supply.unknownShareEdgeCount} links with unknown mapped shares.</p>}
             {supply.integrityFlag && <p role="alert" className="text-sm text-muted-foreground">Published basket shares exceed 100%. Exposure totals require review.</p>}
-            <p className="text-xs text-muted-foreground">V10 {methodologyVersion} · published {new Date(publishedAt * 1000).toISOString()}</p>
-            <p className="text-xs text-muted-foreground">market cap as of {model.marketCapAsOf === null ? "unknown" : new Date(model.marketCapAsOf * 1000).toISOString()}</p>
+            <p className="text-xs text-muted-foreground">V10 {methodologyVersion} · published {formatEventTimestamp(publishedAt, true)}</p>
+            <p className="text-xs text-muted-foreground">market cap as of {model.marketCapAsOf === null ? "unknown" : formatEventTimestamp(model.marketCapAsOf, true)}</p>
           </div>
           <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:flex sm:items-end sm:gap-8">
             <div className="space-y-1"><dt className="pharos-kicker">Upstream hubs</dt><dd className="pharos-numeric text-lg font-semibold text-foreground">{model.upstreamHubCount}</dd></div>
