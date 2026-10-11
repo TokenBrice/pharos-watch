@@ -1,4 +1,4 @@
-import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import { buildReportCardsV9DependencyGraph, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
@@ -80,6 +80,26 @@ describe("active Safety Score source", () => {
     const result = await loadActiveSafetyScoreSource({} as D1Database);
     expect(result.kind).toBe(status === "current" ? "v9" : "held");
     expect(result.snapshot).toEqual(semantic);
+  });
+
+  it("re-projects the dependency graph from decoded cards", async () => {
+    const semantic = makeReportCardsV9Response();
+    const label = "Staked vault share used as collateral intermediary";
+    const provenance = { source: "live-reserve" as const, evidenceAsOf: "2026-10-11", intermediary: { kind: "vault-share" as const, label, verified: true } };
+    const dependency = { score: 80, ratingStatus: "rated" as const, partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], provenance };
+    semantic.cards[0]!.dependencies = {
+      ...semantic.cards[0]!.dependencies,
+      serial: [{ ...dependency, upstreamAssetId: "parent", blocked: false, dependencyType: "wrapper", wrapperForm: "strategy-vault" }],
+      basket: [{ ...dependency, upstreamAssetId: "other", weight: 0.5, boundedUnknown: false, dependencyType: "collateral", wrapperForm: null }],
+    } as typeof semantic.cards[0]["dependencies"];
+    const cards = semantic.cards.map((card) => internV9PublicWitnessTexts(card));
+    const wire = { ...semantic, cards, dependencyGraph: buildReportCardsV9DependencyGraph(cards) };
+    expect(JSON.stringify(wire.dependencyGraph)).not.toContain(label);
+    mocks.snapshotOverride = async () => wire;
+
+    const result = await loadActiveSafetyScoreSource({} as D1Database);
+    expect(result.snapshot?.dependencyGraph).toEqual(buildReportCardsV9DependencyGraph(semantic.cards));
+    expect(result.snapshot?.dependencyGraph.edges.map((edge) => edge.provenance?.intermediary?.label)).toEqual([label, label]);
   });
 
   it("reports a held publication as its own state and keeps the snapshot", async () => {
