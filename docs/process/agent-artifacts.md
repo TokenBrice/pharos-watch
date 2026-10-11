@@ -16,6 +16,20 @@ Historical plans, one-off audits, exploratory research, point-in-time calibratio
 | Route-specific maintenance guidance             | Route doc or a dedicated subdirectory under `docs/`            |
 | Operator remediation procedure                  | `docs/runbooks/`                                               |
 | Product, API, pipeline, or methodology behavior | Existing feature/methodology doc plus structured changelog when applicable |
+| Architectural decisions                         | [Architectural decisions](#architectural-decisions) → [ADR collection](../architecture.md#architectural-decision-records) |
+
+## Architectural decisions
+
+- **Admission:** a cross-domain constraint, or one that changes write authority, interface meaning, or the authoritative runtime. Domain rulings, methodology versions, release targets, incident counts, and deploy steps stay in owning docs, structured history, or runbooks.
+- **Numbering:** next ID = highest existing `#### ADR-N` + 1; never reuse 11–18 (absent from repository history) or renumber existing records.
+- **Approval:** the maintainer's merge to protected main. Agents add, amend, or supersede ADR text only when asked, and call ADR text changes out separately in the commit body/PR.
+- **Amend vs. supersede:** amend in place for precision, scope, enforcement wording, or falsified clauses; supersede only for true reversals, retaining a tombstone and reciprocal `superseded by` / `supersedes` relations. A falsified premise gets a reciprocal `premise falsified by ADR-N` line on the earlier record in the same change.
+- **Status line:** one line after the heading, separated by a blank line, with segments only when non-default: `**Status:** … · **Relations:** … · **Enforcement:** … · **Evidence:** … · **Acceptance:** …`. Never put status text in the `####` heading; anchors derive from it.
+- **Evidence:** a verified doc or commit SHA, never ignored `agents/` scratch alone; if missing, write "approval record unavailable".
+- **Acceptance close-out:** whoever ships a record with production gates records `Acceptance:` pending/accepted/failed plus evidence; unknown stays `not recorded`.
+- **Cron ceilings:** alias/accounting-only changes adding no logical work, fetch surface, or connection pressure get a dated note on `CRON_GROWTH_HEADROOM_POLICY`, not a new ADR; other ceiling crossings still require an ADR per [Cron Trigger Budget Policy](./cron-trigger-policy.md#current-growth-gate).
+- **Required co-updates:** in the same change, update quick-nav, reciprocal relation lines, the owning doc, and `docs/doc-ownership.json` ADR background anchors for governed code areas. Update `CLAUDE.md` only if a hard rule changes, then regenerate `AGENTS.md`.
+- **Forbidden in records:** release targets, incident telemetry, and per-application notes.
 
 ## Cleanup Rule
 

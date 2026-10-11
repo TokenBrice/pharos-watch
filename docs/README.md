@@ -139,7 +139,7 @@ This process index is curated, not a complete inventory. Start with [Agent Start
 
 ## Methodology History
 
-Versioned methodology history is authored once under `shared/data/methodology-changelogs/`. The registry in `shared/lib/methodology-versions/registry.ts` powers public changelog routes and Markdown exports. ADR-3 in [architecture.md](./architecture.md#architectural-decision-records) owns the list of what a methodology change must update, including the runtime version source.
+Versioned methodology history is authored once under `shared/data/methodology-changelogs/`. The registry in `shared/lib/methodology-versions/registry.ts` powers public changelog routes and Markdown exports. ADR-3 in [architecture.md](./architecture.md#adr-3) owns the list of what a methodology change must update, including the runtime version source.
 
 Historical Markdown timeline files are intentionally not maintained.
 
