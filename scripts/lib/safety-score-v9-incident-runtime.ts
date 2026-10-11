@@ -2,7 +2,10 @@ import { V9NegativeIncidentReviewSchema, v9NegativeIncidentReviewTimeSec } from 
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../../shared/lib/safety-score-v9/evidence";
 import { ReviewEvidenceBuilder } from "../../shared/lib/safety-score-v9/review-evidence";
 
-/** Build-time projection: preserve the full reviewed payload's evidence identity. */
+/**
+ * Build-time projection: the full reviewed payload is hashed here, and the
+ * runtime rebuilds each evidence row from its sorted-source URL and digest.
+ */
 export function projectNegativeIncidentReview(value: unknown) {
   const review = V9NegativeIncidentReviewSchema.parse(value);
   const reviewedAtSec = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
@@ -12,5 +15,7 @@ export function projectNegativeIncidentReview(value: unknown) {
     payload: review, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC });
   return { reviewId: review.reviewId, assetId: review.assetId, scope: review.scope,
     reviewedAt: review.reviewedAt, windowStartSec: review.windowStartSec, windowEndSec: review.windowEndSec,
-    evidence: builder.finish().researchEvidence };
+    // Map insertion order is the builder's source index, which each evidence key embeds.
+    // Digest first: a URL ending in a key-like word must not precede the hex value.
+    sources: [...builder.evidence.values()].map((row): [string, string | null] => [row.contentSha256, row.url]) };
 }

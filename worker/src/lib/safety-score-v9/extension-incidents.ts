@@ -1,7 +1,7 @@
 import incidentRuntimeAsset from "@shared/data/safety-score-v9/incident-runtime-v1.generated.json";
 import { z } from "zod";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
-import { ResearchEvidenceSchema } from "@shared/types/safety-score-v9-research-evidence";
+import type { ResearchEvidence } from "@shared/types/safety-score-v9-research-evidence";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
@@ -39,7 +39,8 @@ const NegativeIncidentRuntimeSchema = z.object({
   reviewedAt: V9NegativeIncidentReviewSchema.shape.reviewedAt,
   windowStartSec: V9NegativeIncidentReviewSchema.shape.windowStartSec,
   windowEndSec: V9NegativeIncidentReviewSchema.shape.windowEndSec,
-  evidence: z.array(ResearchEvidenceSchema).min(1),
+  // [contentSha256, url] in the build-time builder's sorted-source index order.
+  sources: z.array(z.tuple([Sha256Schema, z.string().url().nullable()])).min(1),
 }).strict();
 type NegativeIncidentRuntime = z.infer<typeof NegativeIncidentRuntimeSchema>;
 type NegativeIncidentScope = Pick<V9NegativeIncidentReview, "assetId" | "scope" | "reviewedAt" | "windowEndSec">;
@@ -81,13 +82,28 @@ export function getSafetyScoreV9NegativeIncidentReviews(
     negativeIncidentReviewIsCurrent(review, clockSec));
 }
 
+/** Rebuilds the build-time evidence rows; each key embeds its sorted-source index. */
+export function negativeIncidentReviewEvidence(review: NegativeIncidentRuntime): ResearchEvidence[] {
+  const sourceId = `safety-score-v9.negative-incident-review.${review.reviewId}`;
+  return review.sources.map(([contentSha256, url], index) => ({
+    evidenceKey: `${sourceId}:${index}:${contentSha256.slice(0, 16)}`,
+    sourceId,
+    observedAtSec: review.windowEndSec,
+    publishedAtSec: null,
+    url,
+    contentSha256,
+    confidence: "manual-review",
+    maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+  }));
+}
+
 export function addSafetyScoreV9NegativeIncidentEvidence(
   evidence: ReviewEvidenceBuilder,
   reviews: readonly NegativeIncidentRuntime[],
 ): void {
   for (const review of reviews) {
     const bindings = evidence.bindings.get("control") ?? new Set<string>();
-    for (const row of review.evidence) {
+    for (const row of negativeIncidentReviewEvidence(review)) {
       evidence.evidence.set(row.evidenceKey, row);
       bindings.add(row.evidenceKey);
     }

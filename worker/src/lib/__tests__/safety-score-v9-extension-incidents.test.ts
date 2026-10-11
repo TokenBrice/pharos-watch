@@ -4,7 +4,8 @@ import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-fa
 import type { V9ApplicableWrapperLocalFacts } from "@shared/types/safety-score-v9-wrapper";
 import { resolveV9WrapperParentLimit } from "@shared/lib/safety-score-v9/wrapper-risk";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema } from "@shared/types/safety-score-v9-incidents";
+import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema, v9NegativeIncidentReviewTimeSec } from "@shared/types/safety-score-v9-incidents";
+import incidentRegistry from "@shared/data/safety-score-v9/incident-reviews-v1.json";
 import {
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
@@ -178,6 +179,20 @@ describe("Safety Score v9 independent negative incident routing", () => {
     expect(finished.componentEvidence).toMatchObject([{ componentKey: "control" }]);
     const rows = [control("mint-meta:fixture:controller")];
     expect(routeSafetyScoreV9NegativeIncidentReviews(rows, "fixture", NEGATIVE_CLOCK_SEC, [], [])).toBe(rows);
+  });
+
+  it("rebuilds every reviewed source's full-payload evidence identity from the compact projection", () => {
+    for (const value of incidentRegistry.negativeReviews) {
+      const review = V9NegativeIncidentReviewSchema.parse(value);
+      const clock = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
+      const original = new ReviewEvidenceBuilder(review.assetId, clock);
+      original.add({ componentKeys: ["control"], sourceId: `safety-score-v9.negative-incident-review.${review.reviewId}`,
+        reviewedAtSec: clock, observedAtSec: review.windowEndSec, confidence: "manual-review",
+        sources: review.sources, payload: review, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC });
+      const rebuilt = new ReviewEvidenceBuilder(review.assetId, clock);
+      addSafetyScoreV9NegativeIncidentEvidence(rebuilt, [projectNegativeIncidentReview(review)]);
+      expect(rebuilt.finish()).toEqual(original.finish());
+    }
   });
 });
 

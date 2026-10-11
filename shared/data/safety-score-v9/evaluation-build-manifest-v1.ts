@@ -30,7 +30,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
-      "sha256": "d7030ea518114fbb04842210606ddad571157947e9455d7284e02b6daa8ef63c"
+      "sha256": "a0f713ecdbaefa9d496d8d63a06ed70e23be10b9dcfd3dec092e66e8ebd3fba1"
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
@@ -1118,7 +1118,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-incidents.ts",
-      "sha256": "6c8dc1af4631b1e9c6f21e9282307fd10cc65cb01230a69531531f40e886c851"
+      "sha256": "1eb954276515e76ed8dac0a4ea91c27b2c68671d2f8ce525e76e83784fbc1bce"
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension-mechanism.ts",
@@ -1279,7 +1279,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-11-block-26168494-shock-coverage.json.gz"
     }
   ],
-  "digest": "0bbb77b04966d5ff2d53871ce2e96bbd75ff0ef8ea4d0c40932deb2de67a84dc"
+  "digest": "9752314a76fcc86a5a789a6591ff5fb88a72d62f400667995fe13487c9c23ef2"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
