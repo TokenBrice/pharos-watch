@@ -680,6 +680,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
         payloadSha256: domainDigest("safety-score-v9.peg.v1", {
           pegDataById: fixedInput.pegDataById,
           navPriceById: fixedInput.navPriceById ?? {},
+          ...(fixedInput.exitOutputPriceById ? { exitOutputPriceById: fixedInput.exitOutputPriceById } : {}),
           activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
         }),
         observedAtSec: extension.sources.peg.observedAtSec,

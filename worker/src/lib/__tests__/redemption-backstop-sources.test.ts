@@ -449,13 +449,13 @@ describe("buildRedemptionBackstopEntry", () => {
     },
   );
   it.each([
-    { updatedAt: now - 1, admitted: true },
-    { updatedAt: now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC, admitted: true },
-    { updatedAt: now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC - 1, admitted: false },
-    { updatedAt: now + 1, admitted: false },
-    { updatedAt: 0, admitted: false },
-    { updatedAt: now - 0.5, admitted: false },
-  ])("preserves cached output generation time and admits only fresh generations ($updatedAt)", async ({ updatedAt, admitted }) => {
+    [now - 1, now - 60, true],
+    [now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC, now - 60, true],
+    [now - STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC - 1, now - 60, false],
+    [now + 1, now - 60, false], [0, now - 60, false], [now - 0.5, now - 60, false],
+    [now - 1, now - 1_801, false], [now - 1, now + 1, false],
+  ] as const)("preserves the original quote clock and rejects stale/future quotes or cache generations (%s/%s)",
+    async (updatedAt, quoteObservedAt, admitted) => {
     const direct: ExecutableRedemptionObservation = {
       capacityRaw: 500_000_000n, capacitySource: "forest-road-controller", capacityState: "measured",
       outputAssetKeys: ["usdc-circle"], underlyingDecimals: 6, capacityKind: "live-direct-bounded",
@@ -469,10 +469,13 @@ describe("buildRedemptionBackstopEntry", () => {
       const entry = await buildEntry("usdfr-forest-road", getRedemptionBackstopConfig("usdfr-forest-road")!, 1_000_000, null, {
         executableRedemptionObservation: direct,
         stablecoinsCache: { kind: "ok", updatedAt,
-          payload: { peggedAssets: [makeAsset({ id: "usdc-circle", price: 0.98 })] } },
+          payload: { peggedAssets: [makeAsset({ id: "usdc-circle", price: 0.98,
+            priceSource: "coingecko+defillama", priceObservedAt: quoteObservedAt,
+            priceUpdatedAt: now - 1, priceConfidence: "high",
+            agreeSources: ["coingecko", "defillama", "coingecko-onchain-address"] })] } },
       });
       expect(resolver.mock.calls[resolver.mock.calls.length - 1]?.[5]?.executableObserverValuation).toEqual(admitted
-        ? { outputAssetKey: "usdc-circle", priceUsd: 0.98, observedAt: updatedAt } : null);
+        ? { outputAssetKey: "usdc-circle", priceUsd: 0.98, observedAt: quoteObservedAt } : null);
       expect(entry.immediateCapacityUsd).toBe(admitted ? 490 : null);
       expect(entry.capacityRejectionReason).toBe(admitted ? undefined : "output-valuation-unobserved");
       expect(entry.reserveInput).toBeUndefined();

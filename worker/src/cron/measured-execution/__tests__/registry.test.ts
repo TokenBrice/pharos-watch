@@ -63,4 +63,17 @@ describe("measured execution deployment registry", () => {
       expectedFactoryCodeHash: "0x7340cf80843bd721bcaefbfc050e38304cb4174c239e6e914e3056f27f39b11c",
     });
   });
+
+  it("pins the reviewed Monad Pancake deployment without granting score eligibility", () => {
+    expect(getDexMeasuredExecutionDeployment("pancakeswap-v3-quoter-v2", "MoNaD")).toEqual({
+      adapterProfileId: "pancakeswap-v3-quoter-v2",
+      protocol: "pancakeswap",
+      chain: "monad",
+      endpointAddress: "0xb048bbc1ee6b733fffcfb9e9cef7375518e25997",
+      expectedCodeHash: "0x66711e04817b6da9499b9320b3c61c2d492ca4d78c58a798a7b453ba65feb5a6",
+      factoryAddress: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
+      expectedFactoryCodeHash: "0xf6105f5817b3f67dd0f060fa27c1e23a14d9fca13c6ebd695545ca4d5c0fbe06",
+    });
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("pancakeswap-v3-quoter-v2", "monad")).toBe(false);
+  });
 });

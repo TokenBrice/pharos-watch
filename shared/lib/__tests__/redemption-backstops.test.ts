@@ -29,16 +29,29 @@ describe("getRedemptionBackstopConfig", () => {
     expect(config?.costModel).not.toHaveProperty("feeBpsMax");
   });
 
-  it.each(["usdm-monetrix", "susdat-saturn"])(
-    "does not promote %s queue diagnostics into immediate capacity, completion or all-in costs",
-    (id) => {
+  it.each([
+    { id: "usdm-monetrix", missingScoringFields: ["capacity", "settlement"], protocolFeeBps: 0 },
+    { id: "susdat-saturn", missingScoringFields: ["capacity", "settlement", "cost"], protocolFeeBps: null },
+  ])(
+    "keeps $id queue capacity and completion unproven while preserving reviewed protocol fees",
+    ({ id, missingScoringFields, protocolFeeBps }) => {
       const config = getRedemptionBackstopConfig(id)!;
       expect(resolveCapacitySemantics(config.capacityModel)).toBe("eventual-only");
       expect(config.capacityModel).not.toHaveProperty("fallbackRatio");
       expect(config.capacityModel).not.toHaveProperty("ratio");
-      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(missingScoringFields);
       expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
-      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+      for (const notional of [1_000, 1_000_000, 25_000_000]) {
+        expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBe(protocolFeeBps);
+      }
+      expect(config.costModel).not.toHaveProperty("feeBpsMax");
+      expect(config.v9RouteCostTerms?.publishedFeeSchedule).toBeUndefined();
+      if (id === "usdm-monetrix") {
+        expect(config.costModel).toMatchObject({
+          kind: "fee-bps", feeBps: 0, confidence: "fixed",
+          feeDescription: expect.stringContaining("network gas separate"),
+        });
+      }
     },
   );
 

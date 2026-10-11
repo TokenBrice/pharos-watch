@@ -333,6 +333,7 @@ function profileComponentFact(
 export function expandOverlayReview(
   overlay: MechanismReviewOverlay,
   fallbackReview?: V9MechanismRiskReview | null,
+  clockSec?: number,
 ): V9MechanismRiskReview {
   const profileProjection =
     overlay.profileReview === undefined ? null : projectV9MechanismProfile(overlay.profileReview);
@@ -416,6 +417,15 @@ export function expandOverlayReview(
       continue;
     }
     const curated = overlay.components[componentField];
+    if (curated?.review && clockSec !== undefined && !isMechanismOverlayCurrent(curated.review, clockSec)) {
+      const reviewSec = Date.parse(curated.review.reviewedAt) / 1_000;
+      review[componentField] = clockSec < reviewSec
+        ? boundedFact(kebabCase(componentField), false)
+        : clockSec < reviewSec + DAY_SEC
+          ? unsupportedFact(kebabCase(componentField))
+          : { ...boundedFact(kebabCase(componentField), true), status: status("stale", kebabCase(componentField)) };
+      continue;
+    }
     // A component the curated review does not evidence keeps the built
     // review's fact when one exists (e.g. PoR-derived assurance), otherwise
     // stays bounded-unknown; serial mechanism components are never published
@@ -458,7 +468,7 @@ const MECHANISM_OVERLAY_MAX_AGE_SEC =
   V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.mechanismOverlayMaxAgeSec;
 const DAY_SEC = 86_400;
 
-function isMechanismOverlayCurrent(overlay: MechanismReviewOverlay, clockSec: number): boolean {
+function isMechanismOverlayCurrent(overlay: Pick<MechanismReviewOverlay, "reviewedAt">, clockSec: number): boolean {
   const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00.000Z`) / 1_000;
   if (!Number.isFinite(reviewedAtSec)) return false;
   return reviewedAtSec + DAY_SEC <= clockSec && reviewedAtSec + MECHANISM_OVERLAY_MAX_AGE_SEC > clockSec;
@@ -514,20 +524,16 @@ export function getSafetyScoreV9MechanismReviewGapDisposition(
 } | null {
   const overlay = MECHANISM_REVIEW_OVERLAYS.get(assetId);
   if (!overlay || overlay.archetype !== archetype) return null;
-  const reviewedAtSec = Date.parse(`${overlay.reviewedAt}T00:00:00.000Z`) / 1_000;
-  if (
-    !Number.isFinite(reviewedAtSec) ||
-    clockSec < reviewedAtSec ||
-    reviewedAtSec + DAY_SEC <= clockSec
-  ) {
-    return null;
-  }
+  const componentKeys = Object.entries(overlay.components).filter(([, component]) => {
+    const reviewedAt = component.review?.reviewedAt ?? overlay.reviewedAt;
+    const reviewedAtSec = Date.parse(reviewedAt) / 1_000;
+    return Number.isFinite(reviewedAtSec) && reviewedAtSec <= clockSec && clockSec < reviewedAtSec + DAY_SEC;
+  }).map(([key]) => key).sort();
+  if (componentKeys.length === 0) return null;
   return {
     responsibility: "method-unsupported",
-    rationale:
-      `The ${overlay.reviewedAt} mechanism review exists, but the exact admission policy cannot use a ` +
-      "date-only review until its UTC day has elapsed.",
-    componentKeys: Object.keys(overlay.components).sort(),
+    rationale: "A mechanism component review exists, but the exact admission policy cannot use a date-only review until its UTC day has elapsed.",
+    componentKeys,
   };
 }
 
@@ -564,12 +570,14 @@ export function getSafetyScoreV9MechanismReviewedUnavailableComponents(
   for (const [componentField, curated] of Object.entries(overlay.components)) {
     if (projectedComponents?.[componentField] !== undefined) continue;
     if (!("applicability" in curated) || curated.applicability !== "unavailable") continue;
+    const reviewedAt = curated.review?.reviewedAt ?? overlay.reviewedAt;
+    if (Date.parse(reviewedAt) / 1_000 > clockSec) continue;
     rows.push({
       componentKey: componentField,
       rationale: curated.rationale,
       sourceUrl: curated.sourceUrl,
-      reviewedAt: overlay.reviewedAt,
-      searchedSurfaces: overlay.sources.map((source) => source.url),
+      reviewedAt,
+      searchedSurfaces: (curated.review?.sources ?? overlay.sources).map((source) => source.url),
     });
   }
   return rows.sort((left, right) => compareText(left.componentKey, right.componentKey));
@@ -599,6 +607,26 @@ export function getSafetyScoreV9MechanismOverlayEvidence(
         maxAgeSec: MECHANISM_OVERLAY_MAX_AGE_SEC,
       }
     : null;
+}
+
+/** Bind each independently reviewed component without renewing metrics or siblings. */
+export function getSafetyScoreV9MechanismComponentEvidence(
+  assetId: string,
+  archetype: string,
+  clockSec: number,
+) {
+  const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
+  if (!overlay) return [];
+  return Object.entries(overlay.components).flatMap(([componentKey, component]) => {
+    if (!component.review || Date.parse(component.review.reviewedAt) / 1_000 + DAY_SEC > clockSec) return [];
+    return [{
+      componentKey,
+      reviewedAt: component.review.reviewedAt,
+      sources: component.review.sources,
+      payload: component,
+      maxAgeSec: MECHANISM_OVERLAY_MAX_AGE_SEC,
+    }];
+  });
 }
 
 export interface V9MechanismExitFactProjection {
@@ -645,7 +673,11 @@ export function getSafetyScoreV9MechanismExitFacts(
 ): V9MechanismExitFactProjection[] {
   const overlay = currentMechanismOverlay(assetId, archetype, clockSec);
   if (overlay === null) return [];
-  if (overlay.archetype === "commodity-claim") return deriveCommodityClaimMechanismExitFacts(overlay);
+  if (overlay.archetype === "commodity-claim") {
+    const component = overlay.components.physicalRedemption;
+    if (component?.review && !isMechanismOverlayCurrent(component.review, clockSec)) return [];
+    return deriveCommodityClaimMechanismExitFacts(overlay);
+  }
   if (overlay.profileReview === undefined) return [];
   const projection = projectV9MechanismProfile(overlay.profileReview);
   return Object.entries(projection.exitFacts)
@@ -683,7 +715,7 @@ export function buildSafetyScoreV9MechanismReview(
           : archetype === "commodity-claim"
             ? buildCommodityClaimReview(fixedInput, meta)
             : buildBoundedFamilyReview(meta, archetype, fixedInput.clockSec);
-    const expanded = expandOverlayReview(overlay, fallbackReview);
+    const expanded = expandOverlayReview(overlay, fallbackReview, fixedInput.clockSec);
     const report = meta.proofOfReserves?.latestReport;
     const technicalObservation = fixedInput.liveReserveProvenanceMap[meta.id]?.reserveObservation?.kind === "onchain-observation" ||
       meta.reserveReview?.observations?.some(row => row.kind === "onchain-observation");

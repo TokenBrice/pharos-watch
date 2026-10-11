@@ -399,11 +399,25 @@
       "pct": 0,
       "risk": "high",
       "assetClass": "protocol-position"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:agora-ausd-lp",
+      "name": "Agora AUSD LP",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position"
+    },
+    {
+      "sourceKey": "accountable:yuzu:deployment:re-pt-reusd",
+      "name": "Re reUSD principal-token position",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4C08Usdu); classification-only USDG PT row, prior WS1.D identity caveat retained",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L45YZUSD); classification-only AUSD LP/reUSD PT rows; prior W4C08Usdu and WS1.D identity caveats retained",
     "confidence": "probable",
     "sources": [
       {
@@ -431,7 +445,7 @@
     "compositionBasis": "Accountable exposure_split snapshot dated 2026-08-28 09:26:05 UTC, normalized to the nearest contemporaneous timeline reserve total with an explicit reconciliation residual",
     "compositionAsOf": "2026-08-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4C08Usdu): the Accountable API reports exposure_split_ts 2026.10.07 13:44:59 UTC. It discloses [Global_Dollar]_PT_USDG_Loop at $1,844,356.9222082, [Re]_reUSD_LP at $1,984,911.575656435, [Re]_PT_reUSD at $1,512,260.02196848, [Agora]_AUSD_LP at $497,181.439586359, [Yuzu]_yzPRIME at $3,079,235.99381803 and Rest_of_Assets at $152,046.02170379867. The unmapped aggregate combines the AUSD LP and reUSD PT labels; Rest_of_Assets is separate. The exact configured USDG PT source key admits a zero-percent classification-only protocol-position row, not a new historical allocation or a direct USDG holding. Its ultimate obligor, held PT contract, market, expiry and liquidity remain unknown; no coinId or dependency edge is authored. The same Alpha split contains negative [Ethena]_sUSDe_Loop (-$631,943.2779085842) and [Sky]_sUSDS_Loop (-$0.107069834488867) entries; the Prime split is a separate exposure_split_rwa object and is not added to Alpha. Labels disclose neither exact held LP/PT contracts and expiries nor gross assets, strategy debt and the accounting meaning of signed values. No new whole-book weights, dependency link, liquidity horizon or maturity maximum is inferred. The authored compositionAsOf and 0.348657% knownUnknownExposurePct remain the historical August 28 composition and residual, not a measure of current unidentified exposure. Next evidence: dated gross position and debt inventory with exact LP/PT contracts, claim terms and a reconciled contemporaneous Alpha-only backing denominator.",
+    "knownUnknownExposure": "Reviewed 2026-10-09 by Sol curation campaign 2026-10-09 (W4C08Usdu): the Accountable API reports exposure_split_ts 2026.10.07 13:44:59 UTC. It discloses [Global_Dollar]_PT_USDG_Loop at $1,844,356.9222082, [Re]_reUSD_LP at $1,984,911.575656435, [Re]_PT_reUSD at $1,512,260.02196848, [Agora]_AUSD_LP at $497,181.439586359, [Yuzu]_yzPRIME at $3,079,235.99381803 and Rest_of_Assets at $152,046.02170379867. The unmapped aggregate combines the AUSD LP and reUSD PT labels; Rest_of_Assets is separate. The exact configured USDG PT source key admits a zero-percent classification-only protocol-position row, not a new historical allocation or a direct USDG holding. Its ultimate obligor, held PT contract, market, expiry and liquidity remain unknown; no coinId or dependency edge is authored. The same Alpha split contains negative [Ethena]_sUSDe_Loop (-$631,943.2779085842) and [Sky]_sUSDS_Loop (-$0.107069834488867) entries; the Prime split is a separate exposure_split_rwa object and is not added to Alpha. Labels disclose neither exact held LP/PT contracts and expiries nor gross assets, strategy debt and the accounting meaning of signed values. No new whole-book weights, dependency link, liquidity horizon or maturity maximum is inferred. The authored compositionAsOf and 0.348657% knownUnknownExposurePct remain the historical August 28 composition and residual, not a measure of current unidentified exposure. Next evidence: dated gross position and debt inventory with exact LP/PT contracts, claim terms and a reconciled contemporaneous Alpha-only backing denominator. Re-observed 2026-10-10T23:34:24Z by Sol curation campaign 2026-10-11 (L45YZUSD): the retrieved API retains that October 7 split and those exact AUSD LP/reUSD PT values. These two named categories now receive distinct high-risk source-key mappings and zero-percent classification-only protocol-position rows, following the existing USDG PT pattern. The adapter continues to determine their live amounts; the zero rows do not add historical holdings or direct AUSD/reUSD dependency claims. Held contracts, PT series/expiry, LP pool constituents, ultimate obligors and realization bounds remain unestablished. No historical percentage, compositionAsOf, denominator or knownUnknownExposurePct is refreshed by this classification review.",
     "knownUnknownExposurePct": 0.348657,
     "nonLinkDispositions": [
       {

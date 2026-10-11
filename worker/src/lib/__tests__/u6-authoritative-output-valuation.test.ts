@@ -128,7 +128,7 @@ describe("U6 authoritative redemption output valuation", () => {
         unitValueUsd: 1 - outputs.length * 5 / 10_000,
         expectedUnitValueUsd: 1,
         sourceId: "report-cards-peg-summary",
-        observedAtSec: Date.parse(`${getRedemptionBackstopConfig(assetId)!.reviewedAt}T00:00:00.000Z`) / 1_000,
+        observedAtSec: NOW - 60,
       });
       expect(compileOutputState(assetId, review, retained[0]!.observation)).toMatchObject({
         status: { observationState: "known" },

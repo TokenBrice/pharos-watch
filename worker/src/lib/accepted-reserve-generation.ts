@@ -1,7 +1,9 @@
 import { AcceptedReserveGenerationSchema, AcceptedReserveSnapshotSchema, RedemptionReserveRunMetadataSchema, type AcceptedReserveGeneration, type ConsumedReserveInput } from "@shared/types/accepted-reserve-generation";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, getLiveReserveAdapterValidationPolicy } from "@shared/lib/live-reserve-adapters";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { sha256Hex } from "./hash";
 import { executeAtomicBatch } from "./db";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "./live-reserves/store-shared";
@@ -12,6 +14,7 @@ import { parseSnapshotMetadata, parseWarningsStrict } from "./live-reserves/stor
 import { decodeLiveReserveRedemptionTelemetry, LiveReserveDiagnosticsSchema } from "@shared/types/live-reserves";
 import type { ScheduledCheckpointIdentity } from "./scheduled-recovery-checkpoint";
 import type { CronResult } from "./cron-logger";
+import { evaluateRedemptionCapacityEvidenceAdmission, readRedemptionBackstopLiveMetadata } from "./redemption-backstop/live-metadata";
 
 export const ACCEPTED_RESERVE_GENERATION_KEY = "live-reserves:accepted-generation:v2";
 export class AcceptedReserveViewError extends Error {
@@ -141,7 +144,22 @@ export function acceptedReserveMetadataMap(envelope: AcceptedReserveGeneration, 
 export function consumedReserveInput(envelope: AcceptedReserveGeneration, stablecoinId: string, record: ReserveSnapshotMetadataRecord): ConsumedReserveInput {
   const snapshot = envelope.members.find((member) => member.stablecoinId === stablecoinId)?.snapshot;
   if (!snapshot || !record.admission?.freshness) throw new Error("selected reserve input has no admission identity");
-  return { generationId: envelope.generationId, contentSha256: envelope.contentSha256, stablecoinId, attemptId: snapshot.attemptId, configFingerprint: snapshot.configFingerprint, freshness: record.admission.freshness };
+  const freshness = record.admission.freshness;
+  const capacityAdmission = evaluateRedemptionCapacityEvidenceAdmission(stablecoinId, record, freshness.assessedAt);
+  const telemetry = decodeLiveReserveRedemptionTelemetry(snapshot.metadata);
+  const live = capacityAdmission.independentNestedEvidence
+    ? readRedemptionBackstopLiveMetadata(stablecoinId, record, freshness.assessedAt) : null;
+  // Preserve the composition verdict verbatim. Only separately admitted exact
+  // on-chain redemption evidence may carry a second, capacity-scoped clock.
+  const redemption = telemetry.status === "valid" ? telemetry.telemetry : null;
+  const redemptionCapacityEvidence = live?.canUseCapacity && redemption?.sourceTimestamp != null &&
+    Number.isSafeInteger(redemption.sourceTimestamp) && redemption.sourceTimestamp > 0 &&
+    redemption.blockNumber != null && Number.isSafeInteger(redemption.blockNumber) && redemption.blockNumber > 0 &&
+    redemption.outputAssetKeys?.length
+    ? { sourceTimestamp: redemption.sourceTimestamp, blockNumber: redemption.blockNumber, outputAssetKeys: redemption.outputAssetKeys }
+    : undefined;
+  return { generationId: envelope.generationId, contentSha256: envelope.contentSha256, stablecoinId, attemptId: snapshot.attemptId, configFingerprint: snapshot.configFingerprint, freshness,
+    ...(redemptionCapacityEvidence ? { redemptionCapacityEvidence } : {}) };
 }
 
 export type RedemptionReserveQuarantineReason = "config-mismatch" | "freshness-unverified" | "stale";
@@ -184,7 +202,33 @@ export function assessConsumedRedemptionReserves(entries: readonly RedemptionBac
       ...(f.sourceTimestamp !== null ? { sourceTimestamp: f.sourceTimestamp } : {}),
       diag: { invalidFreshness: f.sourceFreshnessInvalid },
     } };
-    if (!hasScoringEligibleLiveReserveFreshness(snapshot.metadata, now)) quarantined[entry.stablecoinId] = "freshness-unverified";
+    const capacityEvidence = input.redemptionCapacityEvidence;
+    if (capacityEvidence) {
+      const model = getRedemptionBackstopConfig(entry.stablecoinId)?.capacityModel;
+      const requiredOutputs = model?.kind === "reserve-sync-metadata" || model?.kind === "executable-observer"
+        ? model.requiredOutputAssetKeys : undefined;
+      // The sealed exception is only for timestamp-less composition. It cannot
+      // repair a broken disclosure, renew old blocks, or switch route outputs.
+      if (f.freshnessMode !== "unverified" || f.sourceFreshnessInvalid ||
+          entry.sourceMode !== "dynamic" || entry.freshnessKind !== "same-run-onchain" ||
+          entry.sourceTimestamp !== capacityEvidence.sourceTimestamp || entry.liveHolderEligibility == null ||
+          (entry.capacityKind !== "live-direct" && entry.capacityKind !== "live-direct-bounded" &&
+            entry.capacityKind !== "live-queue" && entry.capacityKind !== "live-proxy-validated") ||
+          !requiredOutputs?.length || !requiredOutputs.every((key) => capacityEvidence.outputAssetKeys.includes(key)) ||
+          capacityEvidence.sourceTimestamp > f.fetchedAt + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC ||
+          capacityEvidence.sourceTimestamp > runClockSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC) {
+        quarantined[entry.stablecoinId] = "freshness-unverified";
+        continue;
+      }
+      const { sourceAgeBudgetSec } = resolveLiveReserveSourceAgeBudget(
+        config.scoring?.maxSourceAgeSec, getLiveReserveAdapterValidationPolicy(config.adapter)?.maxSourceAgeSec,
+        LIVE_RESERVE_FRESHNESS_SEC,
+      );
+      if (f.stale || now - f.fetchedAt > LIVE_RESERVE_FRESHNESS_SEC ||
+          now - capacityEvidence.sourceTimestamp > Math.min(sourceAgeBudgetSec, LIVE_RESERVE_FRESHNESS_SEC)) {
+        quarantined[entry.stablecoinId] = "stale";
+      }
+    } else if (!hasScoringEligibleLiveReserveFreshness(snapshot.metadata, now)) quarantined[entry.stablecoinId] = "freshness-unverified";
     else if (f.stale || assessReserveSnapshotFreshness(snapshot, coin, now, LIVE_RESERVE_FRESHNESS_SEC).stale) quarantined[entry.stablecoinId] = "stale";
   }
   if (consumed !== Object.keys(census).length) return UNAVAILABLE_CONSUMED_RESERVES;

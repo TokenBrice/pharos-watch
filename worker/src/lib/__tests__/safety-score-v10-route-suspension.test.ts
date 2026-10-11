@@ -37,6 +37,7 @@ function compile(fixed: ReportCardsFixedInput) {
 }
 function evaluate(asset: V9AssetFactsV3) {
   return evaluateV9Exit({ circulatingUsd: asset.supply.circulatingUsd,
+    gaps: asset.gaps,
     portfolioStatus: "reviewed-complete", routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute),
   }, V9_CANDIDATE_POLICY_V1);
 }
@@ -63,12 +64,19 @@ describe("reviewed exact-channel suspension", () => {
       const after = compile(fixed);
       const withdrawn = after.exitRoutes.find((item) => item.routeId === suspension.routeId)!;
       expect(withdrawn).toMatchObject({ scoreEligible: false, capacityCurve: [], request: null, routeSuspension: suspension });
+      expect(withdrawn.factorStatuses).toEqual({});
+      expect(withdrawn.capacityEvidenceTier).toBe("unknown");
+      expect(after.gaps.filter((gap) => gap.causeScope?.routeKey === withdrawn.routeKey)).toEqual([
+        expect.objectContaining({ causeProof: expect.objectContaining({ cause: "D" }),
+          responsibility: "measured-adverse", causeScope: expect.objectContaining({ factorKey: "suspended" }) }),
+      ]);
       expect(after.exitRoutes.filter((item) => !item.routeSuspension)).toEqual(
         before.exitRoutes.filter((item) => item.routeId !== suspension.routeId),
       );
       const result = evaluate(after);
       const trace = result.routes.find((item) => item.routeKey === withdrawn.routeKey)!;
-      expect(trace).toMatchObject({ included: false, score: null, capacityPoint: null, routeSuspension: suspension });
+      expect(trace).toMatchObject({ included: false, score: null, capacityPoint: null, routeSuspension: suspension,
+        cause: "D", scoringDisposition: "measured-adverse", causeGapIds: withdrawn.status.gapIds });
       const independentlyEvaluated = evaluate({ ...before, exitRoutes: before.exitRoutes.filter((item) => item.routeId !== suspension.routeId) });
       expect(result.score).toBe(independentlyEvaluated.score);
       expect(result.primaryRouteKey).toBe(independentlyEvaluated.primaryRouteKey);
@@ -92,11 +100,26 @@ describe("reviewed exact-channel suspension", () => {
       expect(result.reasons).not.toContain("no-viable-exit-path");
       expect(result.routes[0]).toMatchObject({ included: false, capacityPoint: null, routeSuspension: suspension });
       expect(asset.gaps.filter((gap) => gap.gapId.includes(":suspended"))).toEqual([
-        expect.objectContaining({ responsibility: "unresearched", causeProof: expect.objectContaining({ cause: "U" }) }),
+        expect.objectContaining({ responsibility: "measured-adverse", reasonCode: "unsupported-same-notional-route",
+          causeProof: expect.objectContaining({ cause: "D" }) }),
       ]);
+      const withdrawn = asset.exitRoutes[0]!;
+      expect(withdrawn.factorStatuses).toEqual({});
+      expect(withdrawn.capacityEvidenceTier).toBe("unknown");
+      expect(asset.gaps.filter((gap) => gap.causeScope?.routeKey === withdrawn.routeKey)).toHaveLength(1);
+      expect(asset.gaps.some((gap) => gap.causeScope?.routeKey === withdrawn.routeKey && gap.causeProof.cause === "U")).toBe(false);
+      expect(result.routes[0]).toMatchObject({ cause: "D", scoringDisposition: "measured-adverse" });
+      const adverseEvidence = asset.evidence.find((item) => item.evidenceId === withdrawn.status.evidenceRefIds[0])!;
+      expect(adverseEvidence).toMatchObject({ disposition: "observed", rejection: null, url: suspension.sources[0]!.url,
+        causeBinding: { assetId: ID, scope: { pillar: "exit", componentKey: "exit-route",
+          routeKey: withdrawn.routeKey, factorKey: "suspended", requiredDatum: "suspended", exposureId: null },
+          adverseFactId: `${ID}:route-suspension:${suspension.routeId}`, producerState: null, rejectionCode: null } });
       const published = evaluateV9FactSet(compileSet(fixed), V9_CANDIDATE_POLICY_V1).assets[0]!;
       expect(published.trace.finalGrade).not.toBe("F");
       expect(published.trace.adverseAttribution).toEqual([]);
+      expect(published.exit.routes.find((route) => route.routeSuspension)).toMatchObject({
+        cause: "D", scoringDisposition: "measured-adverse", included: false, score: null, capacityPoint: null,
+      });
     });
   });
 
@@ -135,6 +158,18 @@ describe("reviewed exact-channel suspension", () => {
     for (const routeStatus of ["open", "unknown"] as const) {
       expect(resolveReviewedRouteSuspension({ ...config, routeStatus, routeSuspension: undefined }, suspension.routeId, CLOCK)).toBeUndefined();
     }
+  });
+
+  it("does not author an adverse suspension or erase normal route-factor gaps before review admission", () => {
+    const fixed = makeV9FixedInput({ assetId: ID, clockSec: CLOCK });
+    const futureSuspension = { ...suspension, reviewedAt: "2026-10-03" };
+    withRedemptionBackstopConfig(ID, { routeStatus: "suspended", routeSuspension: futureSuspension }, () => {
+      const asset = compile(fixed);
+      expect(asset.exitRoutes.every((route) => route.routeSuspension === undefined)).toBe(true);
+      expect(asset.gaps.every((gap) => gap.causeScope?.factorKey !== "suspended")).toBe(true);
+      expect(asset.evidence.every((item) => item.sourceId !== "reviewed-redemption-channel-suspension")).toBe(true);
+      expect(asset.exitRoutes.every((route) => route.factorStatuses !== undefined)).toBe(true);
+    });
   });
 
   it("does not close a separately reviewed physical channel when only the exchange rail is suspended", () => {

@@ -30,6 +30,7 @@ import {
   ORACLE_RISK_CONFIDENCE_VALUES,
   ORACLE_RISK_BRANCH_APPLICABILITY_VALUES,
   ORACLE_RISK_BRANCH_MODEL_VALUES,
+  ORACLE_RISK_BRANCH_KIND_VALUES,
   ORACLE_RISK_ROLE_VALUES,
   ORACLE_RISK_LIQUIDATION_STATE_VALUES,
   ORACLE_RISK_TIER_VALUES,
@@ -185,9 +186,33 @@ export const OracleRiskProfileSchema = /* @__PURE__ */ (() => z
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     branches: z.array(OracleRiskBranchSchema).min(1).optional(),
     paths: z.array(OracleRiskPathSchema).min(1).optional(),
+    branchKindReviews: z.array(z.object({
+      kind: z.enum(ORACLE_RISK_BRANCH_KIND_VALUES),
+      branchIds: z.array(z.string().min(1)).min(1),
+      reviewedAt: z.union([ReviewDateSchema, z.string().datetime({ precision: 0 })]),
+      reviewer: z.string().min(1),
+      confidence: z.enum(ORACLE_RISK_CONFIDENCE_VALUES),
+      rationale: z.string().min(12),
+      sources: z.array(StablecoinLinkSchema).min(1),
+    }).strict()).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    const reviewedKinds = new Set<string>();
+    const branchIds = new Set((profile.branches ?? []).map((branch) => branch.id));
+    if (profile.branchKindReviews && branchIds.size !== (profile.branches ?? []).length) {
+      issue(ctx, ["branches"], "Independently reviewed oracle kinds require unique branch identities");
+    }
+    for (const [index, review] of (profile.branchKindReviews ?? []).entries()) {
+      if (reviewedKinds.has(review.kind)) {
+        issue(ctx, ["branchKindReviews", index, "kind"], "Oracle branch kinds require unique reviews");
+      }
+      reviewedKinds.add(review.kind);
+      if (new Set(review.branchIds).size !== review.branchIds.length ||
+          review.branchIds.some((id) => !branchIds.has(id))) {
+        issue(ctx, ["branchKindReviews", index, "branchIds"], "Oracle kind reviews require unique existing branch identities");
+      }
+    }
     if (profile.paths) {
       const pathIds = new Set<string>();
       const identities = new Set<string>();
@@ -329,6 +354,18 @@ const NativeInventoryReviewSchema = /* @__PURE__ */ (() => z
     }
   }))();
 
+const NativeExternalTransferReviewSchema = /* @__PURE__ */ (() => z
+  .object({
+    id: z.string().min(1),
+    routeRefs: z.array(DeploymentIdSchema).min(1),
+    tier: z.literal("external-validated-network"),
+    reviewedAt: z.union([ReviewDateSchema, z.string().datetime({ precision: 0 })]),
+    reviewer: z.string().min(1),
+    rationale: z.string().min(12),
+    sources: z.array(StablecoinLinkSchema).min(1),
+  })
+  .strict())();
+
 export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
   .object({
     tier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
@@ -341,11 +378,32 @@ export const BridgeRouteRiskProfileSchema = /* @__PURE__ */ (() => z
     sources: z.array(StablecoinLinkSchema).min(1).optional(),
     routes: z.array(BridgeRouteDeploymentSchema).min(1).optional(),
     nativeInventoryReview: NativeInventoryReviewSchema.optional(),
+    nativeExternalTransferReviews: z.array(NativeExternalTransferReviewSchema).min(1).optional(),
     controls: z.array(z.lazy(() => BridgeRouteControlSchema)).min(1).optional(),
     scopedQuestions: z.array(z.lazy(() => ControlScopedQuestionSchema)).min(1).optional(),
   })
   .strict()
   .superRefine((profile, ctx) => {
+    const transferIds = new Set<string>();
+    const transferRouteIds = new Set<string>();
+    for (const [index, transfer] of (profile.nativeExternalTransferReviews ?? []).entries()) {
+      if (transferIds.has(transfer.id)) {
+        issue(ctx, ["nativeExternalTransferReviews", index, "id"], "Native transfer rail review IDs must be unique");
+      }
+      transferIds.add(transfer.id);
+      for (const [refIndex, ref] of transfer.routeRefs.entries()) {
+        const id = normalizeDeploymentId(ref);
+        const route = profile.routes?.find((candidate) => normalizeDeploymentId(candidate.id) === id);
+        if (!route || route.reviewDisposition !== "reviewed" ||
+            route.routeClass !== "native" || route.issuanceModel !== "native-issuance") {
+          issue(ctx, ["nativeExternalTransferReviews", index, "routeRefs", refIndex], "External native transfer review must bind a reviewed native-issuance deployment");
+        }
+        if (transferRouteIds.has(id)) {
+          issue(ctx, ["nativeExternalTransferReviews", index, "routeRefs", refIndex], "A native deployment may be bound to only one external transfer tier review");
+        }
+        transferRouteIds.add(id);
+      }
+    }
     if (profile.nativeInventoryReview) {
       const nativeIds = new Set(profile.nativeInventoryReview.routeIds);
       if (
@@ -446,8 +504,18 @@ const MintAuthorityKeyCustodyAttestationSchema = /* @__PURE__ */ (() => z
     .object({
       kind: z.enum(MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES),
       sources: z.array(StablecoinLinkSchema).min(1),
+      reviewedAt: z.union([ReviewDateSchema, z.iso.datetime()]).optional(),
+      reviewer: z.string().trim().min(1).optional(),
+      confidence: z.enum(["issuer-described", "independently-verified"]).optional(),
+      rationale: z.string().trim().min(40).optional(),
     })
-    .strict())();
+    .strict()
+    .superRefine((attestation, ctx) => {
+      if (attestation.kind !== "hardware-wallet") return;
+      for (const key of ["reviewedAt", "reviewer", "confidence", "rationale"] as const) {
+        if (attestation[key] === undefined) issue(ctx, [key], "Hardware-wallet custody requires its own dated, source-bound review");
+      }
+    }))();
 
 const MintAuthorityNoLocalIssuanceExceptionSchema = /* @__PURE__ */ (() => z
   .object({

@@ -141,6 +141,8 @@ export function applyMergedMintSignals(
   // cap/claim-derived posture cannot see. Reviewed MPC or HSM custody
   // reclassifies it as an issuer-operated backend and waives the penalty — the
   // treatment the retired Mint Authority engine applied to the same fact.
+  // Hardware-wallet custody documents key storage only: it proves neither MPC
+  // distributed signing nor an HSM signing policy, so retains this penalty.
   if (
     mintControl.authority?.model === "eoa" &&
     mintControl.keyCustody !== "mpc" &&
@@ -241,6 +243,8 @@ export function gradeVerifiedControlAuthority(control: V9DeploymentControlFactV2
       if (control.keyCustody === "mpc" || control.keyCustody === "hsm") {
         return controlPolicy.mintMergedSignals.attestedKeyCustodyQuality;
       }
+      // A sourced hardware wallet is known storage, not independently enforced
+      // signing/quorum policy. It retains the same conservative single-key rung.
       // A single externally-owned key is a weak control posture: grade below 45.
       return quality["unbounded-adverse"];
     default:

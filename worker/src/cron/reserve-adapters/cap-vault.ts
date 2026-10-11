@@ -122,10 +122,6 @@ function priceForCapAsset(asset: CapVaultAssetState): number {
   return 1.0;
 }
 
-function isTrackedFixedPegStablecoin(asset: CapVaultAssetState): boolean {
-  if (asset.coinId?.match(/^(usdc|usdt|pyusd|rlusd|usdp|gusd|usds|dai)-/)) return true;
-  return /^(usdc|usdt|pyusd|rlusd|usdp|gusd|usds|dai)$/i.test(asset.name);
-}
 
 function buildOutputValuation(args: {
   assets: readonly CapVaultAssetState[];
@@ -133,7 +129,7 @@ function buildOutputValuation(args: {
   supplyUsd: number | null;
 }): LiveReserveRedemptionOutputValuation | null {
   if (
-    args.assets.length < 2 ||
+    args.assets.length < 1 ||
     args.supplyUsd == null ||
     !Number.isFinite(args.supplyUsd) ||
     args.supplyUsd <= 0 ||
@@ -145,9 +141,8 @@ function buildOutputValuation(args: {
   if (
     args.assets.some(
       (asset) =>
-        !asset.coinId ||
-        (!isTrackedFixedPegStablecoin(asset) &&
-          (!asset.priceSourceId || asset.priceObservedAt == null)),
+        !asset.coinId || asset.priceUsd == null || !Number.isFinite(asset.priceUsd) || asset.priceUsd <= 0 ||
+        !asset.priceSourceId || asset.priceObservedAt == null,
     )
   ) {
     return null;

@@ -238,6 +238,10 @@ export const RouteReviewSchema = V9ExitRouteFactBaseSchema
     // execution costs have no compiled-fact counterpart, and the review output
     // shape is the producer's own projection (`RouteOutputReviewSchema`).
     settlementHorizonSec: z.number().int().nonnegative().optional(),
+    // Explicit null clears a superseded captured unquantified-fee label.
+    feeEvidence: V9ExitRouteFactBaseSchema.shape.feeEvidence.unwrap().nullable().optional(),
+    // Only a current admitted completed-endpoint review may clear this marker.
+    settlementBoundUnproven: z.boolean().optional(),
     executionCosts: canonicalArrayBy(
       RouteExecutionCostSchema,
       canonicalV9ExecutionCostKey,

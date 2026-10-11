@@ -138,6 +138,11 @@ Findings D08-2/D08-3 (2026-09-27 review) showed that the producer republished ag
 Census scope and pagination completeness are run-scoped evidence claims, never defaults inferred from a provider's declared chains or from a missing next-page marker — rule R6 (ADR-33 in [architecture.md](./architecture.md#architectural-decision-records)), enforced by the declared `censusScope` and by `fetchPagedTokenPools()`'s `complete` flag described below.
 
 Successful CG/GT transport suppresses the next fallback only with `paginationComplete: true`; capped inventories keep their observed pools and still allow GT/DexScreener reads. Osmosis, Noble, Kava and Aquarius quarantine malformed rows while staging healthy matches and reporting positive observed counts under degraded, non-exhaustive checks. Aquarius collapses identical duplicates and quarantines conflicting pool identities.
+
+Address-bound QuoterV2 identity enrichment shares its existing 128-pool cap round-robin across reviewed deployment groups rather than admitting the first group exclusively. Sorted physical addresses rotate hourly within each group, and the first serialized group rotates too, so stable source insertion order cannot permanently starve later pools or chains. The 160-request/90-second budgets, serial RPC execution, exact factory membership checks, and active-versus-shadow admission remain unchanged. Selection, deferred probes, and failed reads prove no execution capacity; only subsequently accepted exact quotes contribute route evidence. Full portfolio coverage is not asserted merely because a bounded enrichment packet completed.
+
+Exact route admission uses the consumer's scoring clock, not the source-stage start: factory/reserve captures performed minutes into that stage and measured cohorts already published before consumption are available evidence rather than lookahead. The measured-cohort read ceiling remains pinned to that consumer clock, and validators retain their future and freshness checks. Original block, reference-price, target, registry-read and generation clocks are not restamped; registry volume continues to use its separately captured read-consumption clock.
+
 ## DEX Price Cross-Validation
 
 `dex_prices` table (migration 0011) stores DEX-implied USD prices extracted from multiple DEX sources. It is updated hourly by the `:16` `sync-dex-liquidity` consumer.

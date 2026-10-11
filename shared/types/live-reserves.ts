@@ -69,7 +69,7 @@ export const LiveReserveRedemptionOutputValuationSchema = /* @__PURE__ */ (() =>
           })
           .strict(),
       )
-      .min(2)
+      .min(1)
       .max(16)
       .superRefine((weights, ctx) => {
         const assetIds = new Set(weights.map((weight) => weight.assetId));

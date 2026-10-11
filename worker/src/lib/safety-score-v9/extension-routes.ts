@@ -1,6 +1,7 @@
 import { valuePhysicalCommodityDelivery } from "@shared/lib/physical-commodity-delivery";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { resolvedExitRouteOutputAssetKeys } from "@shared/lib/exit-route-output";
 import { isDexExitRouteCoverageComplete } from "@shared/lib/p4-exit-route-capacity";
 import {
@@ -40,7 +41,7 @@ type RouteOutputReview = NonNullable<RouteReview["output"]>;
 type RouteValuation = NonNullable<RouteOutputReview["valuation"]>;
 type TrackedStablecoinValuation = Pick<
   RouteValuation,
-  "basis" | "unitValueUsd" | "expectedUnitValueUsd" | "confidence" | "observedAtSec" | "sourceId"
+  "basis" | "unitValueUsd" | "expectedUnitValueUsd" | "confidence" | "observedAtSec" | "sourceId" | "maxAgeSec"
 >;
 type RedemptionSettlementModel = RedemptionBackstopConfig["settlementModel"];
 type ComposedDexExit = NonNullable<RedemptionBackstopConfig["v9ComposedDexExit"]>;
@@ -103,49 +104,58 @@ function trackedStablecoinValuation(
   trackedAssetId: string,
   observedAtSec: number,
 ): TrackedStablecoinValuation | null {
+  // Existing captures retain an observed current deviation, but need not carry
+  // raw-price provenance. Keep that admitted summary path and its original
+  // review budget; the optional exact-price capture is additive, not a veto.
   const peg = fixedInput.pegDataById[trackedAssetId];
-  if (peg && !isObservedPrice(peg)) return null;
-  if (peg?.currentDeviationBps !== null && peg?.currentDeviationBps !== undefined) {
-    const unitValueUsd = 1 + peg.currentDeviationBps / 10_000;
-    if (!Number.isFinite(unitValueUsd) || unitValueUsd <= 0) return null;
-    return {
-      basis: "price",
-      unitValueUsd,
-      expectedUnitValueUsd: 1,
-      confidence: "medium",
-      observedAtSec: Math.min(peg.priceObservedAt ?? observedAtSec, observedAtSec),
-      sourceId: "report-cards-peg-summary",
-    };
+  const summaryClock = peg?.priceObservedAt ?? peg?.priceUpdatedAt ?? observedAtSec;
+  if (peg && !peg.currentPriceUnavailable && isObservedPrice(peg) &&
+      peg.currentDeviationBps != null && Number.isSafeInteger(summaryClock) &&
+      summaryClock > 0 && summaryClock <= fixedInput.clockSec &&
+      fixedInput.clockSec - summaryClock <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC) {
+    const expectedUnitValueUsd = expectedTrackedStablecoinUnitValueUsd(fixedInput, trackedAssetId);
+    const unitValueUsd = expectedUnitValueUsd === null ? null :
+      expectedUnitValueUsd * (1 + peg.currentDeviationBps / 10_000);
+    if (unitValueUsd !== null && Number.isFinite(unitValueUsd) && unitValueUsd > 0) {
+      return {
+        basis: "price", unitValueUsd, expectedUnitValueUsd: expectedUnitValueUsd!, confidence: "medium",
+        observedAtSec: summaryClock, sourceId: "report-cards-peg-summary",
+        maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+      };
+    }
   }
-  const quietPegObservation =
-    peg?.pegScore !== null &&
-    peg?.pegScore !== undefined &&
-    peg.activeDepeg === false &&
-    peg.eventCount === 0 &&
-    peg.worstDeviationBps === null;
-  if (quietPegObservation) {
-    return {
-      basis: "price",
-      unitValueUsd: 1,
-      expectedUnitValueUsd: 1,
-      confidence: "medium",
-      observedAtSec: Math.min(peg.priceObservedAt ?? observedAtSec, observedAtSec),
-      sourceId: "report-cards-peg-summary",
-    };
-  }
-
   const navPrice = fixedInput.navPriceById?.[trackedAssetId];
-  if (!navPrice || !isObservedPrice({ priceSource: navPrice.sourceId })) return null;
+  if (navPrice && isObservedPrice({ priceSource: navPrice.sourceId }) &&
+      Number.isFinite(navPrice.priceUsd) && navPrice.priceUsd > 0 &&
+      navPrice.observedAtSec <= fixedInput.clockSec &&
+      fixedInput.clockSec - navPrice.observedAtSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC) {
+    return {
+      basis: "nav", unitValueUsd: navPrice.priceUsd, expectedUnitValueUsd: navPrice.priceUsd,
+      confidence: navPrice.confidence, observedAtSec: navPrice.observedAtSec,
+      sourceId: navPrice.sourceId, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC,
+    };
+  }
+  return null;
+}
+
+function currentTrackedOutputPriceValuation(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  trackedAssetId: string,
+): TrackedStablecoinValuation | null {
+  // No quiet-history par fallback: newly priceable outputs require the exact
+  // admitted observation and retain its independent current-price budget.
+  const price = fixedInput.exitOutputPriceById?.[trackedAssetId];
+  if (!price) return null;
+  const expectedUnitValueUsd = price.admission === "guarded-nav" ? price.priceUsd :
+    expectedTrackedStablecoinUnitValueUsd(fixedInput, trackedAssetId);
+  if (expectedUnitValueUsd === null || !isObservedPrice({ priceSource: price.sourceId }) ||
+      price.observedAtSec > fixedInput.clockSec ||
+      fixedInput.clockSec - price.observedAtSec > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) return null;
   return {
-    basis: "nav",
-    unitValueUsd: navPrice.priceUsd,
-    // A NAV product has no $1 fixed-peg expectation. Its own observed NAV is
-    // both the current and expected output value, so this does not create a
-    // synthetic depeg signal.
-    expectedUnitValueUsd: navPrice.priceUsd,
-    confidence: navPrice.confidence,
-    observedAtSec: Math.min(navPrice.observedAtSec, observedAtSec),
-    sourceId: navPrice.sourceId,
+    basis: price.admission === "guarded-nav" ? "nav" : "price",
+    unitValueUsd: price.priceUsd, expectedUnitValueUsd,
+    confidence: price.confidence, observedAtSec: price.observedAtSec, sourceId: price.sourceId,
+    maxAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   };
 }
 
@@ -154,15 +164,26 @@ function expectedTrackedStablecoinUnitValueUsd(
   trackedAssetId: string,
 ): number | null {
   const navPrice = fixedInput.navPriceById?.[trackedAssetId];
+  const outputPrice = fixedInput.exitOutputPriceById?.[trackedAssetId];
   if (navPrice && !isObservedPrice({ priceSource: navPrice.sourceId })) return null;
   const peg = fixedInput.pegDataById[trackedAssetId];
   const legacyUsdPeg =
     peg?.pegCurrency === undefined &&
     peg?.currentDeviationBps !== null &&
     peg?.currentDeviationBps !== undefined;
+  const reference = peg?.pegReference;
+  const commodityUnitValueUsd =
+    (peg?.pegCurrency === "GOLD" || peg?.pegCurrency === "SILVER") &&
+    reference && Number.isSafeInteger(reference.asOf) && reference.asOf > 0 &&
+    reference.asOf <= fixedInput.clockSec &&
+    fixedInput.clockSec - reference.asOf <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+      ? reference.valueUsd : null;
   const expectedUnitValueUsd =
     navPrice?.priceUsd ??
-    (peg?.pegCurrency === "USD" || legacyUsdPeg ? 1 : peg?.pegReference?.valueUsd ?? null);
+    (peg?.pegCurrency === "USD" || legacyUsdPeg ? 1 :
+      commodityUnitValueUsd ??
+      (peg?.pegCurrency ? resolveRedemptionFiatReference(peg.pegCurrency, fixedInput)?.valueUsd ?? null : null)) ??
+    (outputPrice?.admission === "guarded-nav" ? outputPrice.priceUsd : null);
   return expectedUnitValueUsd !== null &&
     Number.isFinite(expectedUnitValueUsd) &&
     expectedUnitValueUsd > 0
@@ -181,6 +202,8 @@ function pinnedDexTrackedStablecoinValuation(
     observation.outputUnitValueUsd === undefined ||
     observation.outputUnitValueSourceId === undefined ||
     observation.outputUnitValueObservedAt === undefined ||
+    observation.outputUnitValueObservedAt > fixedInput.clockSec ||
+    fixedInput.clockSec - observation.outputUnitValueObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
     (observation.outputUnitValueSourceId.startsWith("dex-amm-output-reference:") &&
       !observation.outputUnitValueSourceId.endsWith(":tracked-market")) ||
     observation.outputUnitValueObservedAt > observedAtSec + 60
@@ -205,8 +228,9 @@ function pinnedDexTrackedStablecoinValuation(
     unitValueUsd: observation.outputUnitValueUsd,
     expectedUnitValueUsd,
     confidence: observation.confidence,
-    observedAtSec: Math.min(observation.outputUnitValueObservedAt, observedAtSec),
+    observedAtSec: observation.outputUnitValueObservedAt,
     sourceId: observation.outputUnitValueSourceId,
+    maxAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   };
 }
 
@@ -216,16 +240,21 @@ function pinnedRedemptionTrackedStablecoinValuation(
   trackedAssetId: string,
   observedAtSec: number,
 ): TrackedStablecoinValuation | null {
-  if (observation.outputUnitValueUsd === undefined) return null;
+  if (observation.outputUnitValueUsd === undefined || !observation.outputUnitValueSourceId ||
+      !isObservedPrice({ priceSource: observation.outputUnitValueSourceId }) ||
+      observation.outputUnitValueObservedAt === undefined ||
+      observation.outputUnitValueObservedAt > fixedInput.clockSec ||
+      fixedInput.clockSec - observation.outputUnitValueObservedAt > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC ||
+      observation.outputUnitValueObservedAt > observedAtSec + 60) return null;
   const expectedUnitValueUsd = expectedTrackedStablecoinUnitValueUsd(fixedInput, trackedAssetId);
-  if (expectedUnitValueUsd === null) return null;
+  if (expectedUnitValueUsd === null || observation.outputUnitValueUsd / expectedUnitValueUsd > 2) return null;
   return {
     basis: fixedInput.navPriceById?.[trackedAssetId] ? "nav" : "price",
-    unitValueUsd: observation.outputUnitValueUsd,
-    expectedUnitValueUsd,
-    confidence: "high",
-    observedAtSec,
-    sourceId: "redemption-route-pinned-output-value",
+    unitValueUsd: observation.outputUnitValueUsd, expectedUnitValueUsd,
+    confidence: observation.confidence,
+    observedAtSec: observation.outputUnitValueObservedAt,
+    sourceId: observation.outputUnitValueSourceId,
+    maxAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
   };
 }
 
@@ -239,11 +268,13 @@ function outputIdentityValuation(
   assetKey: string,
   observedAtSec: number,
 ): TrackedStablecoinValuation | null {
-  const tracked = trackedStablecoinValuation(fixedInput, assetKey, observedAtSec);
+  const tracked = trackedStablecoinValuation(fixedInput, assetKey, observedAtSec) ??
+    currentTrackedOutputPriceValuation(fixedInput, assetKey);
   if (tracked) return tracked;
   const underlyingAssetId = REVIEWED_FIXED_RATE_RECEIPT_UNDERLYING[assetKey];
   if (underlyingAssetId === undefined) return null;
-  const underlying = trackedStablecoinValuation(fixedInput, underlyingAssetId, observedAtSec);
+  const underlying = trackedStablecoinValuation(fixedInput, underlyingAssetId, observedAtSec) ??
+    currentTrackedOutputPriceValuation(fixedInput, underlyingAssetId);
   if (!underlying) return null;
   // The receipt redeems one-for-one into the underlying, so it takes the
   // underlying's observed value under the reviewed conversion's own identity.
@@ -387,6 +418,9 @@ function buildOutputReview(
     observation.outputUnitValueUsd / pinnedExpectedUnitValueUsd <= 2 &&
     observation.outputUnitValueSourceId !== undefined &&
     observation.outputUnitValueObservedAt !== undefined &&
+    observation.outputUnitValueObservedAt <= fixedInput.clockSec &&
+    fixedInput.clockSec - observation.outputUnitValueObservedAt <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC &&
+    isObservedPrice({ priceSource: observation.outputUnitValueSourceId }) &&
     observation.allInCostBps !== undefined &&
     (output.kind !== "unresolved-basket" || observation.outputExpectedUnitValueUsd !== undefined) &&
     (observation.evidenceKind === "onchain-contract-state" ||
@@ -446,7 +480,7 @@ function buildOutputReview(
       observation.outputUnitValueUsd !== undefined ||
       observation.outputUnitValueSourceId !== undefined ||
       observation.outputUnitValueObservedAt !== undefined;
-    const tracked =
+    const existingTracked =
       observation.routeFamily === "dex-amm" || observation.routeFamily === "dex-orderbook"
         ? capturedValuation ??
           (carriesPinnedDexValuation
@@ -458,13 +492,14 @@ function buildOutputReview(
               observation,
               assetKeys[0]!,
               observedAtSec,
-            )
+            ) ?? capturedValuation
           : capturedValuation;
+    const tracked = existingTracked ?? currentTrackedOutputPriceValuation(fixedInput, assetKeys[0]!);
     if (tracked) {
       valuation = {
         referenceAssetKey: assetKeys[0]!,
-        ...tracked,
         ...shared,
+        ...tracked,
       };
     }
   } else if (receiptBasketKeys !== null || (output.kind === "tracked-stablecoin" && assetKeys.length > 1)) {
@@ -493,9 +528,9 @@ function buildOutputReview(
     const weakestKnownValuation = weakest
       ? {
           referenceAssetKey: weakest.assetKey,
+          ...shared,
           ...weakest.tracked,
           confidence: "medium" as const,
-          ...shared,
         }
       : null;
     const fullyPricedValuation =
@@ -509,9 +544,10 @@ function buildOutputReview(
           unitValueUsd: observation.outputUnitValueUsd!,
           expectedUnitValueUsd: pinnedExpectedUnitValueUsd,
           sourceId: observation.outputUnitValueSourceId!,
-          observedAtSec: Math.min(observation.outputUnitValueObservedAt!, observedAtSec),
+          observedAtSec: observation.outputUnitValueObservedAt!,
           confidence: "high" as const,
           ...shared,
+          maxAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
         }
       : null;
     if (weakestKnownValuation && pinnedValuation) {
@@ -845,6 +881,17 @@ function redemptionExecutionCosts(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
 ): RouteReview["executionCosts"] {
   const config = getRedemptionBackstopConfig(entry.stablecoinId);
+  if (config?.v9RouteCostTerms?.publishedFeeSchedule &&
+      observation.evidenceKind === "documented-terms" &&
+      usesPrimaryRedemptionReviewTerms(entry.stablecoinId, observation)) {
+    // A bound is not the old sampled rate. Re-evaluate every request, including
+    // above-budget bounds; expired terms remain unquantified below.
+    return canonicalExecutionCosts({
+      ...observation,
+      executionCostBps: undefined,
+      capacityCurve: observation.capacityCurve?.map((point) => ({ ...point, executionCostBps: undefined })),
+    }, (point) => resolveV9RedemptionRouteCostBpsAtNotional(config, point.requestedNotionalUsd, null, fixedInput));
+  }
   if (hasUnquantifiedDocumentedRedemptionCost(config, observation)) {
     return canonicalExecutionCosts({
       ...observation,
@@ -931,9 +978,15 @@ function buildRedemptionRouteReview(
     lane: "redemption",
     routeId: observation.routeId,
     ...(routeSuspension ? { routeSuspension } : {}),
-    // Old captures mislabeled published formulas as issuer non-disclosure.
-    // Correct provenance only: no formula evaluation or <=200 bps claim.
-    ...(hasUnquantifiedDocumentedRedemptionCost(staticConfig, observation) ||
+    // A current complete published schedule supersedes a captured unknown label,
+    // never a measured exact certificate or separately reviewed physical rail.
+    ...(staticConfig?.v9RouteCostTerms?.publishedFeeSchedule &&
+      observation.evidenceKind === "documented-terms" &&
+      usesPrimaryRedemptionReviewTerms(entry.stablecoinId, observation)
+      ? { feeEvidence: (observation.capacityCurve ?? [observation]).every((point) =>
+          resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, point.requestedNotionalUsd, null, fixedInput) !== null)
+          ? null : "disclosed-unquantified" as const }
+      : hasUnquantifiedDocumentedRedemptionCost(staticConfig, observation) ||
       ((staticConfig?.v9RouteCostTerms?.feeComponents ?? staticConfig?.costModel.feeComponents) !== undefined &&
         observation.executionCostBps === undefined &&
         !observation.capacityCurve?.some((point) => point.executionCostBps !== undefined) &&
@@ -953,6 +1006,10 @@ function buildRedemptionRouteReview(
     coverageClass: routeSuspension ? "diagnostic" : redemptionCoverageClass(entry, observation, fixedInput.clockSec),
     capacityScoringHorizon: entry.capacityProfile?.scoringHorizon ?? "unknown",
     ...redemptionSettlement(reviewedTerms.settlementModel, reviewedTerms.settlementDelaySec),
+    ...(reviewedTerms.settlementDelaySec !== undefined &&
+      usesPrimaryRedemptionReviewTerms(entry.stablecoinId, observation) &&
+      resolveReviewedRedemptionSettlementDelay(staticConfig?.v9RouteReviewTerms, fixedInput.clockSec) !== undefined
+      ? { settlementBoundUnproven: false } : {}),
     settlementHorizonSec: reviewedTerms.overridesCapturedSettlementHorizon
       ? reviewedTerms.settlementHorizonSec
       : Math.max(observation.settlementHorizonSec, reviewedTerms.settlementHorizonSec),

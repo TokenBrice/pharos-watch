@@ -87,9 +87,18 @@ export async function observeReviewedExitExecutionRoutes(args: {
       }
       if (!inputReference || !outputReference) { failures.push({ modelId: review.modelId, reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue; }
       const isVault = review.producer.kind === "erc4626-instant";
+      const refreshInputFromOutput = isVault &&
+        inputReference.observedAtSec <= args.clockSec &&
+        args.clockSec - inputReference.observedAtSec > policy.priceMaxAgeSec &&
+        outputReference.observedAtSec <= args.clockSec &&
+        args.clockSec - outputReference.observedAtSec <= policy.priceMaxAgeSec;
       const observed = isVault
-        ? await observeErc4626InstantExit({ review, inputReference, outputReference, requests, blockNumber: args.blockNumber, rpcOptions: { ...args.rpcOptions, signal: args.signal } })
+        // Only the canonical request is published/admitted. Bounded fallback
+        // simulations prove this holder's receipt without probing every grid
+        // notional on the shared serial redemption producer.
+        ? await observeErc4626InstantExit({ review, inputReference, outputReference, refreshInputFromOutput, requests: [request], blockNumber: args.blockNumber, rpcOptions: { ...args.rpcOptions, signal: args.signal } })
         : await observeSecuritizeOffRampExit({ review, inputReference, outputReference, nativeReference: args.nativeReference, requests, holderAddress: args.holderAddress, rpcOptions: { ...args.rpcOptions, signal: args.signal } });
+      if ("inputReference" in observed) inputReference = observed.inputReference;
       const observedAtSec = Math.floor(Date.now() / 1000);
       const source = observed.source;
       const completeExecution = observed.points.some((point) => point.requestedNotionalUsd === request.requestedNotionalUsd && point.executableUsd > 0 && point.certification !== "diagnostic");
@@ -123,10 +132,8 @@ export async function observeReviewedExitExecutionRoutes(args: {
         output: { kind: outputReference.assetKey.startsWith("fiat:") ? "fiat" : "tracked-stablecoin", assetKeys: review.identity.outputAssetKeys, ...(outputReference.assetKey.startsWith("fiat:") ? { currency: outputReference.assetKey.slice(5) } : { trackedAssetIds: review.identity.outputAssetKeys }) },
         evidenceKind: "onchain-contract-state", confidence: "medium", modelConfidence: "medium", scoreEligible,
         observedAt: observedAtSec, freshnessSeconds: Math.max(0, observedAtSec - source.timestamp), commonModeKeys: certificate.resourceKeys,
-        // Vault grid calls are independent executions: a larger failed redeem
-        // can fall back below a smaller successful request. Keep every receipt
-        // in the certificate, but project only the generation-bound canonical
-        // request rather than presenting those receipts as a monotonic curve.
+        // Vault receipts certify only this generation-bound canonical request,
+        // never a monotonic capacity curve inferred from independent samples.
         capacityCurve: (isVault ? [point] : observed.points.filter((entry) => !scoreEligible || entry.certification !== "diagnostic")).map((entry) => ({ requestedNotionalUsd: entry.requestedNotionalUsd, maxCostBps: entry.maxCostBps, executableUsd: entry.executableUsd, completionRatio: entry.executableUsd / entry.requestedNotionalUsd, executionCostBps: entry.certification === "diagnostic" ? 0 : entry.executionCostBps })),
         executionModelId: review.modelId, executionCertificate: certificate,
       }));

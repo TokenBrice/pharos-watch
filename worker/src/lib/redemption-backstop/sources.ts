@@ -4,6 +4,7 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { getExecutableRedemptionObserver, observeExecutableRedemptionRoute } from "../../cron/reserve-adapters/executable-redemption-observers";
 import { resolveCoinContractAddress } from "../../cron/reserve-adapters/evm";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
+import { buildExitOutputPriceById } from "../report-cards-snapshot";
 import {
   deriveModelConfidenceWithDetails,
   deriveModelConfidence,
@@ -176,14 +177,14 @@ export async function buildRedemptionBackstopEntry(
   const outputAsset = cache?.kind === "ok" && outputKey
     ? cache.payload.peggedAssets.find((asset) => asset.id === outputKey)
     : null;
-  const outputPrice = outputAsset?.price;
-  const executableObserverValuation = options.executableObserverValuation ?? (
-    cache?.kind === "ok" && outputKey && typeof outputPrice === "number" && Number.isFinite(outputPrice) &&
-    outputPrice > 0 && Number.isSafeInteger(cache.updatedAt) && cache.updatedAt > 0 &&
-    cache.updatedAt <= now && now - cache.updatedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC
-      ? { outputAssetKey: outputKey, priceUsd: outputPrice, observedAt: cache.updatedAt }
-      : null
-  );
+  const outputPrice = outputAsset && outputKey ? buildExitOutputPriceById([outputAsset], now)[outputKey] : null;
+  const executableObserverValuation = options.executableObserverValuation !== undefined
+    ? options.executableObserverValuation
+    : cache?.kind === "ok" && outputKey && outputPrice &&
+      Number.isSafeInteger(cache.updatedAt) && cache.updatedAt > 0 &&
+      cache.updatedAt <= now && now - cache.updatedAt <= STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC
+      ? { outputAssetKey: outputKey, priceUsd: outputPrice.priceUsd, observedAt: outputPrice.observedAtSec }
+      : null;
   let observedLiveMetadata = observerModel
     ? readRedemptionBackstopLiveMetadata(stablecoinId, null, now)
     : options.redemptionLiveMetadata ?? readRedemptionBackstopLiveMetadata(stablecoinId, reserveSnapshotMetadata, now);

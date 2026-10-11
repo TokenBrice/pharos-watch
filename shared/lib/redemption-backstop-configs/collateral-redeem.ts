@@ -642,6 +642,15 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Collateral redemption fee = min(redemptionFeeFloor + updated baseRate, maxRedemptionFee); baseRate decays using the branch's minuteDecayFactor and increases by half the redeemed debt fraction before the fee is charged. Sunsetting branches charge zero. Current branch parameters and same-notional execution must be observed; no fixed floor or half-life is assumed",
         "formula",
       ),
+      v9RouteCostTerms: {
+        feeBpsMax: 10_000,
+        publishedFeeSchedule: {
+          reviewedAt: "2026-10-10",
+          reviewer: "Sol curation campaign 2026-10-11 (K4ExitTermsModel)",
+          docs: [sourceRef("Bima setParameters and _calcRedemptionRate enforce a 100% maximum", "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/TroveManager.sol", ["fees"])],
+          rationale: "The implementation requires maxRedemptionFee <= BIMA_DECIMAL_PRECISION and caps floor plus updated baseRate at maxRedemptionFee. The conservative universal protocol-deduction ceiling is 100%, not a sampled branch rate. This consumes the entire output and cannot certify positive executable capacity or zero gas cost.",
+        },
+      },
       docs: [
         sourceRefRouteCapacityFees(
           "Bima mainnet TroveManager redemption and fee implementation",
@@ -890,6 +899,15 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "HLiquity redemption fee is dynamic; _calcRedemptionRate in the registry-identified source version 30f7253f635f6015267b0fcdb5554d259b76e5db (2024-05-18) caps the protocol fee at 100%; this is a ceiling, not the current rate",
         "formula",
       ),
+      v9RouteCostTerms: {
+        feeBpsMax: 10_000,
+        publishedFeeSchedule: {
+          reviewedAt: "2026-10-10",
+          reviewer: "Sol curation campaign 2026-10-11 (K4ExitTermsModel)",
+          docs: [sourceRef("HLiquity registry-identified _calcRedemptionRate 100% ceiling", "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/30f7253f635f6015267b0fcdb5554d259b76e5db/packages/contracts/contracts/TroveManager.sol", ["fees"])],
+          rationale: "The exact registry-identified source caps redemptionFeeFloor plus post-redemption baseRate at DECIMAL_PRECISION. The 100% conservative deduction ceiling is valid without sampling state or assuming a fixed minimum; at this bound no positive output survives. Execution, Hedera transaction costs and capacity remain unproved.",
+        },
+      },
       routeStatus: "open",
       docs: [
         sourceRef("HLiquity overview", "https://docs.hliquity.org/overview/overview", ["route", "access"]),
@@ -949,7 +967,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         basis: "full-system-eventual",
       },
       costModel: documentedVariableFee(
-        "3A DAO's redemption fee is governance-settable; live Polygon and Linea factory reads returned redemptionRate 0, so the reviewed current fee is 0 bps but can change with governance",
+        "Polygon Vault.calcRedeem charges floor(oracle-valued collateral * redemptionRate / 1e18), with the factory setter capped at 1%. Linea first adds floor(oracle-valued collateral * redemptionKickback / 1e18), then charges floor(that increased amount * redemptionRate / 1e18); its factory redemptionRate is capped at 10%, but VaultExtraSettings.setRedemptionKickback has no numerical cap. The complete caller payment is debtRepaid plus feeCollected. A historical zero redemptionRate is neither a complete Linea cost observation nor a permanent route-wide fee ceiling; exact vault, collateral, current parameters, valuation and gas require same-notional producer observation",
         "formula",
       ),
       reviewedAt: "2026-08-13",
@@ -980,20 +998,25 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         sourceRef("Polygon EURO3 token RPC", "https://polygon-rpc.com", ["capacity"]),
         sourceRef("Linea EURO3 token and factory RPC", "https://rpc.linea.build", ["capacity"]),
         sourceRef(
-          "Polygon factory verified source",
-          "https://repo.sourcify.dev/contracts/full_match/137/0x4760847023fa0833221ae76e01db1e483a5d20e0/sources",
+          "Polygon factory and vault verified redemption source",
+          "https://sourcify.dev/server/v2/contract/137/0x4760847023fa0833221ae76e01db1e483a5d20e0?fields=sources,abi",
           ["route", "fees", "access"],
         ),
         sourceRef(
-          "Linea factory verified source",
-          "https://repo.sourcify.dev/contracts/full_match/59144/0x65c6fd9b3a2a892096881e28f07c732ed128893e/sources",
+          "Linea factory and vault verified redemption source",
+          "https://sourcify.dev/server/v2/contract/59144/0x65c6fd9b3a2a892096881e28f07c732ed128893e?fields=sources",
           ["route", "fees", "access"],
+        ),
+        sourceRef(
+          "Linea VaultExtraSettings verified uncapped redemption kickback setter",
+          "https://sourcify.dev/server/v2/contract/59144/0xaaac30148e8cfe185d7f04291e95209891db1426?fields=sources",
+          ["route", "fees"],
         ),
       ],
       notes: [
         "EURO3 holders can deposit EURO3 into another user's eligible vault and receive its collateral less the redemption fee; the route is gated by the vault health-factor condition rather than being a generic issuer buyback.",
         "The 0.40290081 capacity ratio is the reviewed Polygon snapshot of eligible vault debt against total EURO3 debt, so it is a heuristic current-debt share and an eventual-system bound rather than a fixed liquidity guarantee.",
-        "The current live Polygon and Linea reads returned redemptionRate 0 (0 bps), while the factory and protocol materials expose a governance-adjustable fee, so the zero-fee observation is not treated as permanent.",
+        "Fee formula source review 2026-10-10T23:35:34Z by Sol curation campaign 2026-10-11 (L63ScrvUSD): Polygon's 1% redemptionRate cap and Linea's 10% redemptionRate cap do not establish one combined-route ceiling. Linea's separate uncapped redemptionKickback increases the oracle-valued principal before the redemption fee is applied. No current parameter, executable quote, all-in cost or fee-free route is inferred from the earlier zero redemptionRate observations.",
         "The reviewed deployments are Polygon and Linea; Base was not present in the official registries checked and is intentionally not implied by this config.",
       ],
     }),

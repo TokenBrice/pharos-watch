@@ -18,9 +18,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "USDGLO retains seven reviewed native-issuance routes: six EVM GloDollarV3 proxies and a native Stellar asset. The issuer's official registry additionally names VeChain USDGLO 0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e, which cannot be added to contracts or admitted routes until canonical chain support exists. Brale documents native cross-chain burn/mint swaps. Across is a generic framework reference, not evidence of a USDGLO-specific representation. This authored subset is not an exhaustive eight-chain census.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R33 primary-source deployment census reconciliation",
+    "summary": "USDGLO retains seven reviewed native-issuance routes: six EVM GloDollarV3 proxies and a native Stellar asset. Glo's dated November 18, 2025 notice states VeChain support ended January 1, 2026, although the address directory still lists 0x29c630cce4ddb23900f5fe66ab55e488c15b9f5e. This retirement disclosure supersedes the old unsupported-canonical-chain rationale, but proves neither zero residual liabilities nor complete transfer/control census. Brale documents issuer-native cross-chain burn/mint swaps, not USDGLO-specific LayerZero validation. Across remains a generic framework reference, not a reviewed USDGLO representation. Retirement status and conflicting directory evidence were observed 2026-10-10T23:44:47Z; existing route/control observations are not renewed.",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (K7NativeBridgeTier)",
     "confidence": "verified",
     "protocols": [
       {
@@ -54,6 +54,10 @@
       {
         "label": "Brale issuer-native cross-chain burn/mint swaps",
         "url": "https://docs.brale.xyz/guides/stablecoin-to-stablecoin-swap.md"
+      },
+      {
+        "label": "Glo VeChain support retirement notice (2025-11-18; effective 2026-01-01)",
+        "url": "https://www.glodollar.org/articles/glo-dollar-and-vechain"
       }
     ],
     "routes": [

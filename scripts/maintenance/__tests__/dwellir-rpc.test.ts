@@ -31,6 +31,7 @@ beforeEach(() => {
   stdout = [];
   process.exitCode = undefined;
   vi.stubEnv("DWELLIR_API_KEY", KEY);
+  vi.stubEnv("ALCHEMY_API_KEY", "alchemy-test-key");
   vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
     stdout.push(String(chunk));
     return true;
@@ -274,7 +275,194 @@ describe("pinned supplemental research RPC", () => {
 
   it("refuses to fabricate TRON historical provenance without sending a read", async () => {
     const record = await invoke(["--block", "1000"], "tron", "triggerconstantcontract", "{}");
-    expect(record).toMatchObject({ state: "error", reason: "unsupported-pinned-state", result: null, block: null });
+    expect(record).toMatchObject({ state: "unsupported", reason: "unsupported-pinned-state", result: null, block: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("pins transaction-count reads for BSC nonce evidence", async () => {
+    const record = await invoke(["--block", "1000"], "bsc", "eth_getTransactionCount", '["0x1111111111111111111111111111111111111111"]');
+    expect(record).toMatchObject({ state: "ok", params: ["0x1111111111111111111111111111111111111111", "0x3e8"], result: "0x1" });
+  });
+
+  it("returns unsupported for an unregistered network without sending a read", async () => {
+    const record = await invoke(["--block", "1000"], "not-a-network");
+    expect(record).toMatchObject({ state: "unsupported", reason: "unsupported-chain-provider", result: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  it.each([
+    ["solana", "getAccountInfo", '["11111111111111111111111111111111",{"minContextSlot":1000}]'],
+    ["solana", "getTokenSupply", '["11111111111111111111111111111111"]'],
+    ["solana", "getProgramAccounts", '["11111111111111111111111111111111"]'],
+    ["sui", "suix_getBalance", '["0x1","0x2::sui::SUI"]'],
+    ["sui", "sui_tryGetPastObject", '["0x1","1000"]'],
+  ])("refuses fabricated %s state provenance for %s before any fetch", async (chain, method, params) => {
+    const record = await invoke(["--provider", chain === "solana" ? "drpc" : "dwellir", "--block", "1000"], chain, method, params);
+    expect(record).toMatchObject({ state: "unsupported", reason: "unsupported-pinned-state", block: null, result: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("records finalized Solana block provenance and full execution data", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      expect(body.params[0]).toBe(1000);
+      expect(body.params[1].commitment).toBe("finalized");
+      return rpcResponse(body.id, { blockhash: "1".repeat(32), blockTime: 1700000000, transactions: [] });
+    });
+    const record = await invoke(["--provider", "alchemy", "--block", "1000"], "solana", "getBlock", '[1000,{"transactionDetails":"full","maxSupportedTransactionVersion":0}]');
+    expect(record).toMatchObject({ state: "ok", slot: "1000", block: { number: "1000", hash: "1".repeat(32), timestamp: "2023-11-14T22:13:20.000Z" } });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("withholds a Solana transaction from another slot", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return rpcResponse(body.id, body.method === "getTransaction" ? { slot: 999 } : { blockhash: "1".repeat(32), blockTime: 1700000000 });
+    });
+    const record = await invoke(["--provider", "alchemy", "--block", "1000"], "solana", "getTransaction", '["signature"]');
+    expect(record).toMatchObject({ state: "error", reason: "block-pin-mismatch", result: null });
+  });
+
+  it("retains Solana produced-slot range chunks, not an invented account census", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return rpcResponse(body.id, body.method === "getBlocks" ? [body.params[0], body.params[1]] : { blockhash: "1".repeat(32), blockTime: 1700000000 });
+    });
+    const record = await invoke(["--provider", "alchemy", "--block", "1001"], "solana", "getBlocks", "[500,1001]");
+    expect(record).toMatchObject({ state: "ok", range: { fromSlot: "500", toSlot: "1001" }, result: [500, 999, 1000, 1001] });
+    expect(record.chunks).toHaveLength(2);
+  });
+
+  it("pins Sui transactions to checkpoint membership and time", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return rpcResponse(body.id, body.method === "sui_getCheckpoint"
+        ? { sequenceNumber: "1000", digest: "1".repeat(32), timestampMs: "1700000000000", transactions: ["transaction-digest"] }
+        : { digest: "transaction-digest", checkpoint: "1000", effects: {} });
+    });
+    const record = await invoke(["--block", "1000"], "sui", "sui_getTransactionBlock", '["transaction-digest",{"showEffects":true}]');
+    expect(record).toMatchObject({ state: "ok", checkpoint: "1000", block: { number: "1000", timestamp: "2023-11-14T22:13:20.000Z" } });
+  });
+
+  it("withholds a Sui transaction absent from the pinned checkpoint", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return rpcResponse(body.id, body.method === "sui_getCheckpoint"
+        ? { sequenceNumber: "1000", digest: "1".repeat(32), timestampMs: "1700000000000", transactions: [] }
+        : { digest: "transaction-digest", checkpoint: "1000" });
+    });
+    const record = await invoke(["--block", "1000"], "sui", "sui_getTransactionBlock", '["transaction-digest"]');
+    expect(record).toMatchObject({ state: "error", reason: "block-pin-mismatch", result: null });
+  });
+
+  it.each(["fraxtal", "kaia", "hemi", "plume", "filecoin", "rootstock"])("uses the canonical public %s endpoint without sending a Dwellir key", async (chain) => {
+    const record = await invoke(["--provider", "public", "--block", "1000"], chain);
+    expect(record).toMatchObject({ provider: "public", state: "ok", block: { number: "1000" } });
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(init.headers).not.toHaveProperty("X-Api-Key");
+      expect(init.headers).not.toHaveProperty("Authorization");
+    }
+  });
+
+  it("uses Alchemy bearer authentication and never records its key", async () => {
+    vi.stubEnv("ALCHEMY_API_KEY", "alchemy-secret");
+    const record = await invoke(["--provider", "alchemy", "--block", "1000"], "bsc");
+    expect(record).toMatchObject({ provider: "alchemy", endpoint: "https://bnb-mainnet.g.alchemy.com/v2/", state: "ok" });
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(String(url)).not.toContain("alchemy-secret");
+      expect(init.headers).toMatchObject({ Authorization: "Bearer alchemy-secret" });
+      expect(init.headers).not.toHaveProperty("X-Api-Key");
+    }
+    expect(stdout.join("")).not.toContain("alchemy-secret");
+  });
+
+  it("uses dRPC header authentication on a keyless network URL and redacts provider echoes", async () => {
+    vi.stubEnv("DRPC_API_KEY", "drpc-secret");
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return rpcResponse(body.id, body.method === "eth_call" ? { echo: "drpc-secret" } : header(body.params[0]));
+    });
+    const record = await invoke(["--provider", "drpc", "--block", "1000"], "bsc");
+    expect(record).toMatchObject({ provider: "drpc", endpoint: "https://lb.drpc.org/ogrpc?network=bsc", state: "ok", result: { echo: "[REDACTED]" } });
+    for (const [url, init] of fetchMock.mock.calls) {
+      expect(String(url)).not.toContain("drpc-secret");
+      expect(init.headers).toMatchObject({ "Drpc-Key": "drpc-secret" });
+      expect(init.headers).not.toHaveProperty("X-Api-Key");
+    }
+    expect(stdout.join("")).not.toContain("drpc-secret");
+  });
+
+  it("pins Hedera mirror contract reads and preserves the consensus timestamp", async () => {
+    fetchMock.mockImplementation(async (url: string | URL, init: RequestInit) => {
+      if (String(url).includes("/blocks/1000")) {
+        return new Response(JSON.stringify({ number: 1000, hash: HASH, timestamp: { to: "1700000000.123456789" } }));
+      }
+      expect(String(url)).toMatch(/\/contracts\/call$/);
+      expect(JSON.parse(String(init.body))).toMatchObject({ block: "0x3e8", estimate: false });
+      return new Response(JSON.stringify({ result: "0x1" }));
+    });
+    const record = await invoke(["--provider", "public", "--block", "1000"], "hedera");
+    expect(record).toMatchObject({ state: "ok", consensusTimestamp: "1700000000.123456789", result: "0x1", block: { number: "1000", hash: HASH } });
+  });
+
+  it("does not turn a pruned Hedera call into an empty or positive result", async () => {
+    fetchMock.mockImplementation(async (url: string | URL) => String(url).includes("/blocks/")
+      ? new Response(JSON.stringify({ number: 1000, hash: HASH, timestamp: { to: "1700000000.123456789" } }))
+      : new Response(JSON.stringify({ _status: { messages: [{ message: "historical state unavailable" }] } })));
+    const record = await invoke(["--provider", "public", "--block", "1000"], "hedera");
+    expect(record).toMatchObject({ state: "error", reason: "native-api-error", result: null });
+  });
+
+  it("scopes public Sui object state through Checkpoint.query, never current root state", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      expect(body.variables.cp).toBe(1000);
+      const checkpoint = { sequenceNumber: "1000", digest: "1".repeat(32), timestamp: "2023-11-14T22:13:20Z" };
+      if (body.variables.address) {
+        expect(body.query).toContain("query { object(address: $address)");
+        return new Response(JSON.stringify({ data: { checkpoint: { ...checkpoint, query: { object: { address: "0x1", version: "99", digest: "2".repeat(32) } } } } }));
+      }
+      return new Response(JSON.stringify({ data: { checkpoint } }));
+    });
+    const record = await invoke(["--provider", "public", "--block", "1000"], "sui", "sui_getObject", '["0x1"]');
+    expect(record).toMatchObject({ state: "ok", checkpoint: "1000", result: { address: "0x1", version: "99" } });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it("withholds partial GraphQL data when the historical checkpoint is outside retention", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ data: { checkpoint: null }, errors: [{ message: "outside retention" }] })));
+    const record = await invoke(["--provider", "public", "--block", "1000"], "sui", "suix_getBalance", '["0x1","0x2::sui::SUI"]');
+    expect(record).toMatchObject({ state: "error", reason: "graphql-error", result: null });
+  });
+
+  it.each([1000, 1001])("requires Alchemy account-archive context to equal the requested slot (returned %s)", async (contextSlot) => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      if (body.method === "getAccountInfo") {
+        expect(body.params[1]).toMatchObject({ slot: 1000, commitment: "finalized" });
+        return rpcResponse(body.id, { context: { slot: contextSlot }, value: { owner: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", data: ["AA==", "base64"] } });
+      }
+      return rpcResponse(body.id, { blockhash: "1".repeat(32), blockTime: 1700000000 });
+    });
+    const record = await invoke(["--provider", "alchemy", "--block", "1000"], "solana", "getAccountInfo", '["11111111111111111111111111111111",{"encoding":"base64"}]');
+    expect(record.state).toBe(contextSlot === 1000 ? "ok" : "error");
+    if (contextSlot !== 1000) expect(record).toMatchObject({ reason: "block-pin-mismatch", result: null });
+  });
+
+  it("rejects minContextSlot instead of treating it as an Alchemy archive pin", async () => {
+    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
+      const body = JSON.parse(String(init.body));
+      return rpcResponse(body.id, { blockhash: "1".repeat(32), blockTime: 1700000000 });
+    });
+    const record = await invoke(["--provider", "alchemy", "--block", "1000"], "solana", "getAccountInfo", '["11111111111111111111111111111111",{"minContextSlot":1000}]');
+    expect(record).toMatchObject({ state: "error", reason: "invalid-arguments", result: null });
+    expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init.body)).method)).not.toContain("getAccountInfo");
+  });
+
+  it("explicitly reports unsupported for the retained Hedera bytecode read before fetching", async () => {
+    const record = await invoke(["--provider", "public", "--block", "100919357"], "hedera", "eth_getCode", '["0xf07781182b47e728b040f9e35321260e359ff9f7"]');
+    expect(record).toMatchObject({ state: "unsupported", reason: "unsupported-pinned-state", result: null, block: null });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

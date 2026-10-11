@@ -19,7 +19,7 @@ export interface DexMeasuredExecutionDeployment {
     | "hyperswap-v3-quoter-v2"
     | "kodiak-v3-quoter-v2";
   protocol: "uniswap-v3" | "pancakeswap" | "aerodrome-slipstream" | "hyperswap-v3" | "kodiak-v3";
-  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo" | "xlayer" | "hyperevm" | "berachain";
+  chain: "ethereum" | "arbitrum" | "base" | "polygon" | "bsc" | "celo" | "xlayer" | "hyperevm" | "berachain" | "monad";
   endpointAddress: `0x${string}`;
   expectedCodeHash: `0x${string}`;
   factoryAddress: `0x${string}`;
@@ -122,6 +122,17 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     expectedCodeHash: "0x945e158b4d4b58c41ade0a10f7e6df0a3c631468fcd762eced1b3fe38fe1f812",
     factoryAddress: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
     expectedFactoryCodeHash: "0x8191d3ab1d55d3da9822199f28865415c99566b6f1aee4a4b16713f57930678c",
+  },
+  // Official Pancake v3 addresses + verified MonadScan QuoterV2 ABI.
+  // Runtime pins: Monad 112315133, 2026-10-10T23:36:10Z. Collection only.
+  {
+    adapterProfileId: "pancakeswap-v3-quoter-v2",
+    protocol: "pancakeswap",
+    chain: "monad",
+    endpointAddress: "0xb048bbc1ee6b733fffcfb9e9cef7375518e25997",
+    expectedCodeHash: "0x66711e04817b6da9499b9320b3c61c2d492ca4d78c58a798a7b453ba65feb5a6",
+    factoryAddress: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
+    expectedFactoryCodeHash: "0xf6105f5817b3f67dd0f060fa27c1e23a14d9fca13c6ebd695545ca4d5c0fbe06",
   },
   {
     adapterProfileId: "uniswap-v3-quoter-v2",

@@ -202,6 +202,8 @@ describe("Safety Score V9 canonical publication resource budget", {
             process.stdout.write(JSON.stringify({
               expected: input.activeAssetIds.length, counts,
               wallMs: performance.now() - started,
+              finalHeapUsedBytes: process.memoryUsage().heapUsed,
+              peakRssBytes: process.resourceUsage().maxRSS * 1024,
             }));
             process.exit(0);
           }
@@ -270,6 +272,9 @@ describe("Safety Score V9 canonical publication resource budget", {
             replayCaptureCpuMs: (captureCpu.user + captureCpu.system) / 1000,
             replayCaptureHeapDeltaBytes: captureMemoryAfter.heapUsed - captureMemoryBefore.heapUsed,
             replayCaptureRssDeltaBytes: captureMemoryAfter.rss - captureMemoryBefore.rss,
+            wallMs: performance.now(),
+            finalHeapUsedBytes: process.memoryUsage().heapUsed,
+            peakRssBytes: process.resourceUsage().maxRSS * 1024,
           }));
         `,
         loader: "ts",
@@ -347,6 +352,7 @@ describe("Safety Score V9 canonical publication resource budget", {
       researchEvidenceCount: number;
       componentEvidenceCount: number;
     };
+    console.info({ probe: "canonical-publication", oldSpaceLimitMiB: HEAP_LIMIT_MIB, ...output });
     expect(output.extensionAssets).toBeGreaterThan(300);
     expect(output.researchEvidenceCount).toBeGreaterThan(5_000);
     expect(output.componentEvidenceCount).toBeGreaterThan(3_000);
@@ -391,6 +397,9 @@ describe("Safety Score V9 canonical publication resource budget", {
       expected: number; wallMs: number;
       counts: Array<{ evaluated: number; failed: number }>;
     };
+    console.info({
+      probe: "nine-scenario-matrix", oldSpaceLimitMiB: CONTAGION_HEAP_LIMIT_MIB, ...output,
+    });
     expect(output.counts).toHaveLength(9);
     for (const count of output.counts) {
       expect(count.evaluated).toBe(output.expected);

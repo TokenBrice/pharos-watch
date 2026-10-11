@@ -16,7 +16,7 @@ import { computeV9FactSetDigest } from "@shared/lib/safety-score-v9/facts";
 import { buildSafetyScoreV9RouteReviews } from "../safety-score-v9/extension-routes";
 import { makeV9RoleExtension, makeV9TwoAssetFixedInput, makeV9QueuedRedemptionFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { alphaMeta, localControl, metaMap, rebuildFixed, type FixedInput } from "./safety-score-v9-fact-set.test-support";
-import type { SafetyScoreV9WrapperLocalReview } from "@shared/types/safety-score-v9-wrapper-local-review";
+import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
 
 interface WrapperFixture {
   fixed: FixedInput;
@@ -223,7 +223,7 @@ describe("independent immutable wrapper roots", () => {
   });
 });
 
-function independentLocalFixture(kind: SafetyScoreV9WrapperLocalReview["kind"]) {
+function independentLocalFixture(kind: "accounting" | "holder-entitlement") {
   const fixture = immutableRootFixture();
   const identity = structuredClone(fixture.wrapper.allocationScopeIdentityReview!);
   const sourceUrl = identity.deployments[0]!.sourceUrl;
@@ -288,6 +288,7 @@ describe("independent wrapper accounting and holder entitlement", () => {
   it("binds current proxy implementation identity and rejects a changed implementation", () => {
     const fixture = independentLocalFixture("accounting");
     const review = fixture.wrapper.wrapperLocalReviews![0]!;
+    if (review.kind !== "accounting") throw new Error("Expected pinned accounting review");
     const deployment = {
       ...review.identity.deployments[0]!, codeKind: "proxy" as const,
       implementation: "0x2222222222222222222222222222222222222222",
@@ -307,6 +308,7 @@ describe("independent wrapper accounting and holder entitlement", () => {
       `rejects ${kind} %s without converting missing proof into a known fact`, (rejection) => {
         const fixture = independentLocalFixture(kind);
         const review = fixture.wrapper.wrapperLocalReviews![0]!;
+        if (review.kind !== kind) throw new Error("Expected matching pinned local review");
         const root = review.identity.deployments[0]!;
         if (rejection === "expired") review.expiresAtSec = fixture.fixed.clockSec;
         if (rejection === "future-review") review.reviewedAt = new Date((fixture.fixed.clockSec + 1) * 1_000).toISOString();
@@ -326,6 +328,127 @@ describe("independent wrapper accounting and holder entitlement", () => {
       },
     );
   }
+});
+
+function publishedLocalFixture(kind: "published-accounting" | "published-emergency-controls" | "published-withdrawal-terms") {
+  const fixture = independentLocalFixture("accounting");
+  const source = fixture.wrapper.wrapperLocalReviews![0]!;
+  if (source.kind !== "accounting") throw new Error("Expected accounting fixture");
+  const deployment = source.identity.deployments[0]!;
+  const identity = { assetId: "alpha", deployments: [{
+    chain: deployment.chain, address: deployment.address, sourceUrl: deployment.sourceUrl,
+  }] };
+  const { mechanism: _mechanism, ...common } = { ...source, identity };
+  const review = kind === "published-accounting"
+    ? { ...common, kind, mechanism: "fixed-face-accounting" }
+    : kind === "published-emergency-controls"
+      ? { ...common, kind, capabilities: ["pause", "attester-change"] }
+      : { ...common, kind, terms: [{
+        routeKey: "alpha:documented-withdrawal", deploymentKey: `${deployment.chain}:${deployment.address}`,
+        sourceUrl: deployment.sourceUrl, outputAssetIds: ["beta"], holderAccess: "allowlisted",
+        executionModel: "queued", cooldownSec: 604_800, settlementBoundSec: null,
+        fee: { kind: "fixed-bps", bps: 10 }, prerequisites: ["manual-claim"],
+      }] };
+  fixture.wrapper.wrapperLocalReviews = [SafetyScoreV9WrapperLocalReviewSchema.parse(review)];
+  // Published terms do not require an execution/runtime implementation pin.
+  fixture.wrapper.allocationScopeIdentityReview!.deployments = [];
+  return fixture;
+}
+
+describe("non-pure source-bound wrapper local facts", () => {
+  it.each([
+    ["published-accounting", "shareAccountingNavOracle", "moderate"],
+    ["published-emergency-controls", "lossAbsorptionEmergencyControls", "high"],
+    ["published-withdrawal-terms", "withdrawalTerms", "high"],
+  ] as const)("admits %s without claiming mint, oracle, or capacity evidence", (kind, factor, assessment) => {
+    const fixture = publishedLocalFixture(kind);
+    const original = structuredClone(fixture.asset);
+    const { facts, context } = fixture.build();
+    expect(facts.form).toBe("strategy-vault");
+    expect(facts.facts[factor]).toMatchObject({ disposition: "reviewed", assessment });
+    expect(context.gaps.has(`alpha:gap:wrapper-local:${factor}`)).toBe(false);
+    expect(fixture.asset).toEqual(original);
+    expect(facts.facts.measuredUnwind.assessment).toBeNull();
+    expect(fixture.asset.exitRoutes).toEqual([]);
+    expect(fixture.asset.economicControlReview.oracle.tier).toBeNull();
+    if (kind === "published-withdrawal-terms") {
+      expect(facts.facts.withdrawalTerms.signals).toContain("wrapper-withdrawal-settlement-bound-sec:unproven");
+    }
+  });
+
+  it.each(["strategy-vault", "savings-passthrough", "application-receipt"] as const)(
+    "admits fixed-face accounting for %s without a NAV peg", (instrument) => {
+      const fixture = publishedLocalFixture("published-accounting");
+      if (instrument === "application-receipt") delete fixture.wrapper.variantKind;
+      else fixture.wrapper.variantKind = instrument;
+      const { facts } = fixture.build();
+      expect(facts.facts.shareAccountingNavOracle).toMatchObject({ disposition: "reviewed", assessment: "moderate" });
+      expect(fixture.asset.peg.status.observationState).not.toBe("known");
+      expect(facts.facts.measuredUnwind.assessment).toBeNull();
+    },
+  );
+
+  for (const kind of ["published-accounting", "published-emergency-controls", "published-withdrawal-terms"] as const) {
+    it.each(["expired", "future", "wrong-asset", "wrong-deployment", "duplicate", "missing-roster"] as const)(
+      `rejects ${kind} %s`, (fault) => {
+        const fixture = publishedLocalFixture(kind);
+        const review = fixture.wrapper.wrapperLocalReviews![0]!;
+        if (fault === "expired") review.expiresAtSec = fixture.fixed.clockSec;
+        if (fault === "future") review.reviewedAt = new Date((fixture.fixed.clockSec + 1) * 1000).toISOString();
+        if (fault === "wrong-asset") review.assetId = "beta";
+        if (fault === "wrong-deployment") review.identity.deployments[0]!.address = "0x2222222222222222222222222222222222222222";
+        if (fault === "duplicate") fixture.wrapper.wrapperLocalReviews!.push(structuredClone(review));
+        if (fault === "missing-roster") delete fixture.wrapper.allocationScopeIdentityReview;
+        const factor = kind === "published-accounting" ? "shareAccountingNavOracle"
+          : kind === "published-emergency-controls" ? "lossAbsorptionEmergencyControls" : "withdrawalTerms";
+        expect(fixture.build().facts.facts[factor].assessment).toBeNull();
+      });
+  }
+
+  it("retains all documented alternative outputs and treats cooldown as eligibility only", () => {
+    const fixture = publishedLocalFixture("published-withdrawal-terms");
+    const review = fixture.wrapper.wrapperLocalReviews![0]!;
+    if (review.kind !== "published-withdrawal-terms") throw new Error("Expected terms");
+    review.terms.push({ ...review.terms[0]!, routeKey: "alternative", outputAssetIds: ["gamma"],
+      cooldownSec: 0, settlementBoundSec: 0, executionModel: "atomic" });
+    expect(fixture.build().facts.facts.withdrawalTerms.assessment).toBe("high");
+    expect(fixture.asset.exitRoutes).toEqual([]);
+  });
+
+  it("rejects unsourced terms, impossible bounds, and unpinned mutable-root claims", () => {
+    const fixture = publishedLocalFixture("published-withdrawal-terms");
+    const review = fixture.wrapper.wrapperLocalReviews![0]!;
+    if (review.kind !== "published-withdrawal-terms") throw new Error("Expected terms");
+    expect(SafetyScoreV9WrapperLocalReviewSchema.safeParse({
+      ...review, terms: [{ ...review.terms[0], sourceUrl: "https://example.com/unreviewed" }],
+    }).success).toBe(false);
+    expect(SafetyScoreV9WrapperLocalReviewSchema.safeParse({
+      ...review, terms: [{ ...review.terms[0], settlementBoundSec: 1 }],
+    }).success).toBe(false);
+    const pinned = independentLocalFixture("accounting").wrapper.wrapperLocalReviews![0]!;
+    if (pinned.kind !== "accounting") throw new Error("Expected accounting fixture");
+    const { kind: _kind, mechanism: _mechanism, ...fields } = pinned;
+    expect(SafetyScoreV9WrapperLocalReviewSchema.safeParse({
+      ...fields, kind: "contract-mutability", mutability: "upgradeable-root", minimumPublicDelaySec: null,
+    }).success).toBe(false);
+  });
+
+  it("admits a pinned upgradeable root independently of incomplete aggregate mint", () => {
+    const fixture = independentLocalFixture("accounting");
+    const review = fixture.wrapper.wrapperLocalReviews![0]!;
+    if (review.kind !== "accounting") throw new Error("Expected accounting fixture");
+    const { kind: _kind, mechanism: _mechanism, ...fields } = review;
+    const deployment = { ...fields.identity.deployments[0]!, codeKind: "proxy" as const,
+      implementation: "0x2222222222222222222222222222222222222222" };
+    fields.identity.deployments = [deployment];
+    fixture.wrapper.allocationScopeIdentityReview!.deployments = [structuredClone(deployment)];
+    fixture.wrapper.wrapperLocalReviews = [SafetyScoreV9WrapperLocalReviewSchema.parse({
+      ...fields, kind: "contract-mutability", mutability: "upgradeable-root", minimumPublicDelaySec: null,
+    })];
+    const mint = structuredClone(fixture.asset.economicControlReview.mint);
+    expect(fixture.build().facts.facts.contractMutability).toMatchObject({ disposition: "reviewed", assessment: "high" });
+    expect(fixture.asset.economicControlReview.mint).toEqual(mint);
+  });
 });
 
 const slashingControl = () => localControl({

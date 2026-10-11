@@ -148,6 +148,18 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     state.redeemFails = true;
     expect((await observeErc4626InstantExit({ ...args, review: v2Review })).points[0]).toMatchObject({ executableUsd: 0, certification: "diagnostic", reason: "erc4626-redeem-reverted" });
   });
+  it("proves a near-complete V2 adapter-funded receipt even with zero idle and zero max functions", async () => {
+    state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 97_000_000_000n;
+    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
+    const result = await observeErc4626InstantExit({ ...args, review: v2Review });
+    expect(result.points[0]).toMatchObject({
+      requestedRawInput: "100000000000", executedRawInput: "96875000000",
+      executableUsd: 96_875, certification: "exact-lower-bound",
+      reason: "erc4626-liquidity-limited", outputs: [{ rawUnits: "96875000000" }],
+    });
+    state.realizedMismatch = true;
+    await expect(observeErc4626InstantExit({ ...args, review: v2Review })).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
   it("re-measures a proven V2 ladder amount for larger requests when liquidity is in adapters, not idle", async () => {
     state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 1_000_000_000_000n;
     const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
@@ -189,6 +201,28 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(observation).toMatchObject({ scoreEligible: true, completionRatio: 1, executionModelId: "erc4626-instant", executionCertificate: { settlement: { maximumCompletionSec: 0 } } });
     expect(resolveV9ExitCapacityAtRequest(observation.capacityCurve!.map(point => ({ ...point, executionCostBps: point.executionCostBps! })), request)?.completionRatio).toBe(1);
     expect(observation.executionCertificate!.points.every(point => point.certification === "exact-complete")).toBe(true);
+    expect(observation.executionCertificate!.points).toHaveLength(1);
+    expect(observation.executionCertificate!.points[0]!.requestedNotionalUsd).toBe(request.requestedNotionalUsd);
+  });
+  it("refreshes a stale share quote from pinned gross NAV and a fresh observed underlying price", async () => {
+    const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
+    const staleInput = { ...inputReference, observedAtSec: CLOCK - 72 * 3600, unitValueUsd: 1.1, expectedUnitValueUsd: 1.1 };
+    const freshOutput = { ...outputReference, unitValueUsd: 0.9999999 };
+    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, reviews: [review], inputReference: staleInput, outputReference: freshOutput, envelope };
+    const result = await observeReviewedExitExecutionRoutes(call);
+    expect(result.failures).toEqual([]);
+    const certificate = result.observations[0]!.executionCertificate!;
+    expect(certificate.inputReference).toMatchObject({
+      sourceId: "erc4626-nav:observed-price", observedAtSec: CLOCK,
+      unitValueUsd: 0.999999, expectedUnitValueUsd: 0.999999,
+    });
+    expect(certificate.inputReference.sourceGenerationId).not.toBe(staleInput.sourceGenerationId);
+    expect(certificate.points[0]!.certification).toBe("exact-complete");
+    const staleOutput = { ...freshOutput, observedAtSec: CLOCK - 72 * 3600 };
+    expect((await observeReviewedExitExecutionRoutes({ ...call, outputReference: staleOutput })).failures)
+      .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-stale", responsibility: "producer-failed" });
+    const changedOutput = await observeReviewedExitExecutionRoutes({ ...call, outputReference: { ...freshOutput, sourceGenerationId: "different-output-generation" } });
+    expect(changedOutput.observations[0]!.executionCertificate!.inputGenerationId).not.toBe(certificate.inputGenerationId);
   });
   it("keeps fresh measured execution admitted across supply drift only while the canonical request stays unchanged", async () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
@@ -210,7 +244,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(driftedRequest.rawSupplyRequestUsd).not.toBe(selectV9ExitStressRequest(producerSupply, envelope)!.rawSupplyRequestUsd);
     expect(admitAt(211_000_000)).toMatchObject({ state: "observed", point: { certification: "exact-complete" } });
     const changedRequest = selectV9ExitStressRequest(200_000_000, envelope)!;
-    expect(certificate.points.some(point => point.requestedNotionalUsd === changedRequest.requestedNotionalUsd)).toBe(true);
+    expect(certificate.points.some(point => point.requestedNotionalUsd === changedRequest.requestedNotionalUsd)).toBe(false);
     expect(admitAt(200_000_000)).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
     expect(admitAt(211_000_000, CLOCK + certificate.sourceMaxAgeSec)).toMatchObject({ state: "observed" });
     expect(admitAt(211_000_000, CLOCK + certificate.sourceMaxAgeSec + 1)).toMatchObject({ state: "unavailable", reason: "execution-source-stale" });

@@ -177,6 +177,21 @@ describe("v10.01 named reserve reports", () => {
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
   });
 
+  it.each([
+    ["PricewaterhouseCoopers; monthly examination", "PwC signed reserve report"],
+    ["PwC monthly examination", "PricewaterhouseCoopers LLP signed reserve report"],
+  ])("recognizes the published PwC identity without changing named-report gates: %s", (provider, label) => {
+    const meta = structuredClone(usdt);
+    meta.proofOfReserves!.provider = provider;
+    for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = label;
+    const clockSec = asOfSec + 94 * 86400;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toMatchObject({
+      evidenceClass: "static-validated",
+    });
+    for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Unnamed auditor reserve report";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
+  });
+
   it("admits actual USDY through its explicit Ankura report signer without promoting partial assurance or the BVI tail", () => {
     const meta = { ...usdyCoin, ...usdyReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
     const clockSec = Date.parse(`${meta.proofOfReserves!.latestReport!.periodEnd}T00:00:00Z`) / 1000 + 94 * 86400;

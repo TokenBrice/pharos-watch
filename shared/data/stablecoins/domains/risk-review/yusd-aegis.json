@@ -65,9 +65,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Ethereum and BSC native YUSD use chain-local AegisMinting and burn/mint OFT adapters; Avalanche and Katana retain their earlier LayerZero route reviews. The expanded issuer deployment census registers Arbitrum, Base, Monad, Plasma, Starknet, and Hedera, including deployed zero-supply tokens. Arbitrum/Base verified YUSDOFT source and Plasma's immutable-masked runtime match prove direct burn/mint without canonical escrow. Starknet's verified mint/burn adapter source and pinned token/role bindings likewise prove direct burn/mint. Monad's different runtime remains source-unbound, and Hedera cannot be read through the required pinned helper despite successful keyless secondary identity reads. Whole-asset independent-liability eligibility remains withdrawn; older controls and Katana source-provenance limits are not refreshed by this census.",
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitAegis); prior controls: Codex FIX2-12 mint/bridge boundary review and Kimi P2 control cohort dc-3",
+    "summary": "Ethereum and BSC native YUSD use chain-local AegisMinting and burn/mint OFT adapters; Avalanche and Katana retain their earlier LayerZero route reviews. The expanded issuer deployment census registers Arbitrum, Base, Monad, Plasma, Starknet, and Hedera, including deployed zero-supply tokens. Arbitrum/Base verified YUSDOFT source and Plasma's immutable-masked runtime match prove direct burn/mint without canonical escrow. Starknet's verified mint/burn adapter source and pinned token/role bindings likewise prove direct burn/mint. MonadScan now exposes an exact-match verified YUSDOFT compilation proving direct burn/mint, and pinned Monad owner/quorum reads identify the local 3-of-5 Safe. Hedera still cannot be read through the required pinned helper despite successful earlier keyless secondary identity reads. Whole-asset independent-liability eligibility remains withdrawn; older controls and Katana source-provenance limits are not refreshed by this scoped Monad review.",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L58YUSD); scoped Monad review only; prior census: Sol curation campaign 2026-10-09 (W3ReadmitAegis); prior controls: Codex FIX2-12 mint/bridge boundary review and Kimi P2 control cohort dc-3",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -324,18 +324,26 @@
       },
       {
         "id": "monad:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "sourceChain": "ethereum",
         "destinationChain": "monad",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
-        "protocol": "Aegis issuer-listed YUSDOFT (exact runtime source unresolved)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Registered from issuer manifest and helper-pinned name/symbol YUSD, decimals 18, and supply 0.01 YUSD at Monad block 111930245 (hash 0x6ed3f77799dce09511de207c5562f3d0ac60f278c9096e47d3f3cbf49dcb79ca, timestamp 2026-10-09T15:19:38Z). token() names this deployment and approvalRequired() is false, but the runtime is 13,201 bytes and does not match the verified Base YUSDOFT after masking only compiler-reported immutables. Sourcify returned no match, the issuer manifest contains no runtime/source input, and explorer retrieval was restricted. Exact verified source or an independently bound compilation proving direct burn/mint and no canonical escrow is still required; getters and the shared contract name alone do not establish it. Retrieval failures are not non-disclosure evidence.",
+        "protocol": "LayerZero OFT (Aegis)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Observed 2026-10-10: MonadScan exposes exact-match verified YUSDOFT source compiled with Solidity 0.8.26, optimizer 200 runs and Paris EVM target. Its inherited OFT._debit burns the sender's balance and _credit mints the recipient's balance; YUSDOFT overrides only ERC20._update for owner-managed blacklisting. There is no canonical-token escrow or collateral-mint path in this route. Helper reads at Monad block 111930245 (hash 0x6ed3f77799dce09511de207c5562f3d0ac60f278c9096e47d3f3cbf49dcb79ca, timestamp 2026-10-09T15:19:38Z) return owner 0x4fe78ef65bd8edded480efab030ba680646503c8 and endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b; the owner's getThreshold/getOwners return 3 and five owners. Exact directed-lane DVN configuration, Safe extensions and whole-asset liability independence remain outside this scoped review.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-09",
+        "controllerChain": "monad",
+        "controllerAddress": "0xca2671dcd031a72359f456c212f62a9bda737cd7",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "observedAt": "2026-10-10",
         "observedBlock": 111930245,
         "sources": [
           {
@@ -343,7 +351,11 @@
             "url": "https://github.com/Aegis-im/aegis-contracts/blob/b48bf0644a70c308a9eca005399d279ee14c5c25/deployments/monad/YUSDOFT.json"
           },
           {
-            "label": "Pinned helper: block 111930245, timestamp 2026-10-09T15:19:38Z",
+            "label": "MonadScan exact-match verified YUSDOFT, OFT and OApp source; observed 2026-10-10",
+            "url": "https://monadscan.com/address/0xca2671dcd031a72359f456c212f62a9bda737cd7#code"
+          },
+          {
+            "label": "Pinned helper: block 111930245, timestamp 2026-10-09T15:19:38Z; owner and Safe quorum observed 2026-10-10",
             "url": "https://api-monad-mainnet-full.n.dwellir.com"
           }
         ]
@@ -808,6 +820,70 @@
           }
         ],
         "evidence": "At BSC block 116345704, storage slot 25 (_crossChainOperatorAddress in the verified layout) returned adapter 0x539e46827c37a3ef11c7ce521cc56b4d59e602e3. The verified BSC AegisMinting source restricts mintForCrossChain and burnForCrossChain to that adapter and crossChainPaused; these functions bypass native collateral, trusted signer, whitelist, and mint-limit checks. The route is conserved only when the LayerZero source burn and destination mint are both honest, so this active operator is bridge risk rather than native Mint Authority."
+      },
+      {
+        "id": "monad-yusd-oft-safe",
+        "label": "Monad YUSDOFT Safe owner",
+        "routeRefs": [
+          "monad:0xca2671dcd031a72359f456c212f62a9bda737cd7"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "peer-config"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x4fe78ef65bd8edded480efab030ba680646503c8",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:monad:0xca2671dcd031a72359f456c212f62a9bda737cd7",
+          "safe:monad:0x4fe78ef65bd8edded480efab030ba680646503c8"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x7eff43566b8c7491a39f81e3bf9e4d9b2d212787",
+            "0x89caffdd8f3ca008aaeaa69ba85332ca85d18d3e",
+            "0x0b241d2f1a060feae6968f7ced3221d4ab29d865",
+            "0xa09a1319ace58b466d71377b958248265420cf6c",
+            "0x9bd53dda93630ba2856cbbd376e3ed04d3d23d21"
+          ],
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedAt": "2026-10-10",
+          "observedBlock": 111930245,
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "unknown",
+        "routeChecks": {
+          "onchainAmountBounds": "Verified OFT._credit directly mints message amounts and has no application-level collateral or economic issuance cap. OFT's shared-decimal amount encoding is not a backing constraint.",
+          "trustedPeerOrRemote": "Verified OAppReceiver requires the configured endpoint caller and exact configured source peer. Owner-only setPeer can replace those trusted peers; the complete directed-lane peer/DVN configuration was not reviewed.",
+          "pausersAdminsUpgraders": "Verified YUSDOFT gives the owner blacklisting, peer and delegate configuration authority. The owner is a SafeProxy with helper-pinned singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, verified as SafeL2 on MonadScan. Safe modules, guards, fallback handlers and exhaustive implementation reach remain unreviewed."
+        },
+        "observedAt": "2026-10-10",
+        "observedBlock": 111930245,
+        "sources": [
+          {
+            "label": "MonadScan exact-match verified YUSDOFT and inherited OFT/OApp source",
+            "url": "https://monadscan.com/address/0xca2671dcd031a72359f456c212f62a9bda737cd7#code"
+          },
+          {
+            "label": "MonadScan local SafeProxy runtime identity",
+            "url": "https://monadscan.com/address/0x4fe78ef65bd8edded480efab030ba680646503c8#code"
+          },
+          {
+            "label": "MonadScan exact-match verified SafeL2 singleton bound by pinned masterCopy()",
+            "url": "https://monadscan.com/address/0x29fcb43b46531bca003ddc8fcb67ffe91900c762#code"
+          },
+          {
+            "label": "Pinned helper: block 111930245, timestamp 2026-10-09T15:19:38Z; owner/quorum/singleton observed 2026-10-10T23:32:19Z, 2026-10-10T23:33:07Z and 2026-10-10T23:37:33Z",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "At Monad block 111930245, helper-pinned owner() returned 0x4fe78ef65bd8edded480efab030ba680646503c8 and getThreshold()/getOwners() on that exact local authority returned 3 and five owners. Its SafeProxy runtime and pinned masterCopy() bind the verified SafeL2 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762. Exact-match verified YUSDOFT inherits direct OFT burn/mint; owner-only peer replacement and delegate assignment control its message path. No economic cap is established, and no Safe-extension absence or exhaustive execution-scope claim is made."
       }
     ]
   }

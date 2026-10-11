@@ -385,8 +385,10 @@
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
+        "controllerChain": "tempo",
+        "controllerAddress": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
         "reviewDisposition": "unresolved",
-        "reviewNote": "Tempo block 43354001 (2026-10-09T15:11:33Z) confirms issuer-listed Peso Argentino / wARS, six decimals, zero supply, currency ARS and the standard TIP-20 ISSUER_ROLE. The protocol provides local mint/burn, but Ripio's bridge deployment directory does not cover Tempo or identify this token's liability relationship to other-chain wARS. Both the previously reviewed Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 and issuer EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b return false for ISSUER_ROLE at this pin. Token-standard capability and temporary zero supply do not positively exclude canonical escrow or prove an independent issuer route. Register the deployment, withhold census eligibility until exact issuer/route binding and no-escrow proof are reviewed.",
+        "reviewNote": "Tempo block 43354001 (2026-10-09T15:11:33Z) confirms issuer-listed Peso Argentino / wARS, six decimals, zero supply, currency ARS and the standard TIP-20 ISSUER_ROLE. Sol curation campaign 2026-10-11 (L07WARS), observed 2026-10-10T23:33:08Z: pinned hasRole(address,bytes32) confirms Ripio Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 holds DEFAULT_ADMIN_ROLE and contract 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d holds ISSUER_ROLE. The issuer role's admin is DEFAULT_ADMIN_ROLE; supplyCap is 340282366920938463463374607431768211455 raw units and paused is false at the pin. TIP-20 permits the default admin to change supplyCap, transfer policy and role membership. The Safe and shared issuer EOA return false for ISSUER_ROLE as previously observed, but the actual contract minter is now identified. These observations do not establish that minter's backing reconciliation, economic cap, incident history or exact bridge/native liability relationship. Ripio's bridge directory still does not cover Tempo. Token-standard local mint/burn and zero supply do not exclude canonical escrow. Keep route classification unresolved and census eligibility withheld until exact issuer/route binding and no-escrow proof are reviewed.",
         "mappingVersion": "bridge-route-facts-v2",
         "observedAt": "2026-10-09",
         "observedBlock": 43354001,
@@ -402,6 +404,18 @@
           {
             "label": "Tempo TIP-20 native mint/burn and role specification",
             "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Tempo exact wARS explorer; role grant transactions identify default admin and issuer contract",
+            "url": "https://explore.tempo.xyz/address/0x20c0000000000000000000009EbEa3D43a08bad1?tab=token"
+          },
+          {
+            "label": "Tempo wARS DEFAULT_ADMIN_ROLE grant",
+            "url": "https://explore.tempo.xyz/tx/0x85c71ffe2900a370d74f4da5ac0bcfe2947ad4139da981e27bdb05c151331f69"
+          },
+          {
+            "label": "Tempo wARS ISSUER_ROLE grant to contract 0xfbab5dcb1647787ec8402a6509add256fa6c7f9d",
+            "url": "https://explore.tempo.xyz/tx/0xcde292612134c82a633a41861631c1e7275f3b8c246e63abcc06f1befbd860d7"
           },
           {
             "label": "Tempo pinned identity and role reads at block 43354001 (2026-10-09T15:11:33Z)",

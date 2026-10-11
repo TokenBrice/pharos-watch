@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Brazilian federal government bonds",
-      "pct": 99.98,
+      "pct": 95.53639646,
       "risk": "low",
       "assetClass": "government-security",
       "issuerOrObligor": "Federative Republic of Brazil",
@@ -12,48 +12,64 @@
     },
     {
       "name": "ETFs linked to Brazilian Treasury securities",
-      "pct": 0.02,
+      "pct": 4.46360084,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "Undisclosed Brazilian Treasury ETF issuers",
       "riskFactors": ["credit", "duration", "liquidity", "custody", "counterparty"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash and equivalents",
+      "pct": 0.0000027,
+      "risk": "medium",
+      "assetClass": "cash",
+      "issuerOrObligor": "Undisclosed reserve-account institution",
+      "riskFactors": ["credit", "custody", "counterparty"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L03BRLV)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Fact Finance BRLV proof-of-reserves report - August 2026, dated August 31",
-        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_8_2026_1ea3d5e0be.pdf"
+        "label": "Fact Finance BRLV technical proof-of-reserves memo dated September 30, 2026; observed 2026-10-10T23:32:23Z",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf"
       },
       {
-        "label": "Crown BRLV reserve transparency and monthly-report index (observed 2026-09-05; re-observed 2026-09-29 with the August 31 memo still the newest report)",
-        "url": "https://www.crown-brlv.com/en/transparency/"
+        "label": "Crown Portuguese transparency index linking September 2026 as newest monthly attestation; observed 2026-10-10T23:32:23Z",
+        "url": "https://www.crown-brlv.com/transparencia/"
       }
     ],
-    "rationale": "Verified both pages of Fact Finance's technical verification memo dated August 31, 2026, linked by Crown's current monthly-report index alongside the June and July reports. The memo reports R$380,315,618.44 of reserves against R$378,063,743.00 of circulating BRLV (100.60% coverage). Its two Brazilian Treasury bond rows total R$380,258,017.98 and its two Treasury ETF rows total R$57,540.25; R$60.21 is cash. Aggregating the stated balances and rounding to two decimals produces 99.98% government bonds and 0.02% ETFs, with cash below 0.0001%. The report labels distribution as Base but links a Base explorer URL for 0xd7Ca0e2C36d647446b782D1b72308E598373E2F5, which Crown's official deployment table and pinned Ethereum reads identify as Ethereum bridgedBRLV; the canonical Base contract is 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36. This report identity inconsistency prevents using its chain label or address as deployment-level supply evidence. It is signed by Fact Finance's technical lead and carries no accountant assurance standard or opinion; freshness does not upgrade that engagement classification.",
-    "compositionBasis": "Fact Finance BRLV technical verification memo dated August 31, 2026; category percentages computed from its stated reserve balances and rounded to two decimals; PDF SHA-256 68325f70157b6d549f534900917e84d40bdcbc9bc9348de2a717c11f8e01f8cd",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Reviewed both pages of Fact Finance's September 30, 2026 BRLV technical verification memo, linked by Crown's Portuguese transparency index. Its reserve rows reconcile exactly to R$377,991,098.61: R$361,119,074.57 in Brazilian Treasury bonds, R$16,872,013.84 in Brazilian Treasury ETFs, and R$10.20 in cash/equivalents. Category weights are computed from those stated balances to eight decimal places, retaining the cash row rather than assigning its weight to government securities. The memo reports R$377,989,540.00 of BRLV liabilities and R$1,558.61 excess reserves; no surplus credit or deployment-level supply claim is inferred. It still labels the network Base but links 0xd7ca0e2c36d647446b782d1b72308e598373e2f5, which Crown's official address table identifies as Ethereum BRLV; Base BRLV is 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36. The report is signed by Rodrigo Molin da Silva and prints CRC PR-052428/O and CNAI 10106, but describes technical PoR procedures without an identified financial-assurance standard or assurance opinion. The new signature does not establish an upgraded assurance method or attestor tier.",
+    "compositionBasis": "Fact Finance BRLV technical verification memo dated September 30, 2026, section 3; each category's reported BRL balances divided by the exact total R$377,991,098.61, expressed as percentages to eight decimal places.",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The report identifies the reserve asset categories but does not disclose security identifiers, maturities, custodian names, or provider-level allocation. Its August 31 report date is verified; its posting date is undisclosed (PDF creation metadata is September 1, and public availability was first observed September 5; the site CMS records the August memo's publication at 2026-09-02T13:09:33Z). No structured latestReport publication date is asserted. Re-checked 2026-09-29: the transparency index still lists the August 31 memo as the newest monthly report and the reviewed PDF remains byte-identical (SHA-256 prefix 68325f70 unchanged). Documentary search observed 2026-10-09T10:30:24Z by Sol curation campaign 2026-10-09 (Lane12Anemoy): Crown's current English transparency index still lists Monthly Report / August 2026 as its newest report, and the linked memo remains dated August 31. No September composition is linked. The August holdings, compositionAsOf, and original review dates are retained without renewal; the whitepaper's eligible reserve categories do not establish current holdings.",
+    "knownUnknownExposure": "The September 30 memo identifies every reserve category and balance but omits security identifiers, maturity maxima, fund issuers and look-through, reserve-account institutions, and provider-level allocations. Liquidity horizons remain unknown. Its printed report date is the composition date; the public posting date is not established. The Portuguese index currently links this September memo, whereas earlier English-index research identified August as newest. The repeated Base/Ethereum contract-label mismatch prevents treating this memo as an exact deployment census. Its technical procedures and printed accountant credentials do not establish a financial-assurance engagement.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Brazilian federal government bonds",
-        "pct": 99.98,
+        "pct": 95.53639646,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Brazilian federal government securities are external reserve assets rather than tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 1,
         "reserveName": "ETFs linked to Brazilian Treasury securities",
-        "pct": 0.02,
+        "pct": 4.46360084,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Brazilian Treasury-linked ETF shares are external reserve assets rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Cash and equivalents",
+        "pct": 0.0000027,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Reported BRL cash and equivalents are external reserve assets, not tracked stablecoin dependencies; the reserve-account institution is undisclosed."
       }
     ]
   },

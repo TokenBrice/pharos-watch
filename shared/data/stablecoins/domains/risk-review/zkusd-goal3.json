@@ -8,15 +8,15 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Goal3's verified portal implementation transfers approved stablecoins to a treasury and mints a configured return token through a vesting flow; it does not implement borrower collateral valuation or liquidation.",
+    "tier": "oracleless",
+    "summary": "At ZKsync Era block 72423600, the canonical zkUSD token and Goal3 portal still use the verified implementations whose issuance amounts are nominal token units, not oracle prices, NAVs or exchange-rate quotes. This does not establish reserves, redeemability or financial reconciliation.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-08-24",
-      "reviewer": "OpenAI Codex W1b oracle applicability review",
-      "rationale": "The verified Goal3 portal accepts owner-configured stable tokens, normalizes input only by token decimals, transfers deposits to treasury, and mints the same configured return-token amount through vesting. Campaign and drop rates are fixed parameters. The verified issuance and token implementations contain no oracle, market-price input, NAV, exchange-rate quote, redemption conversion, reserve-ratio gate, or rebalancing authority, so no price-sensitive control exists to score.",
+      "reviewedAt": "2026-10-10",
+      "reviewer": "Sol curation campaign 2026-10-11 (L79A7A5)",
+      "rationale": "Reverified from complete explorer-verified source and pinned current implementation slots: at block 72423600 (2026-10-10T23:27:13Z), zkUSD proxy 0xfc7e56298657b002b3e656400e746b7212912757 uses 0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b and portal proxy 0x8d123a2a0a7c98555931ceda6917b865b7345164 uses 0xd3227d2b5c616dcf566ace0fec42507afef8e28d. Lockdrop._lock transfers amount times input-token decimals to treasury, computes the return amount only from return-token decimals, and passes that same amount to mint and vesting; referral and campaign rates affect separate drop shares, not the return-token conversion. zkERC20.mint directly calls _mint with the authorized caller's nominal amount. Neither current implementation contains a price feed, NAV or exchange-rate quote, price-sensitive redemption conversion, collateral valuation or liquidation engine. The deployed mechanism therefore has no price-sensitive oracle control to score. Arbitrary mint authorization and owner-controlled upgrades remain separate adverse controls; no reserve, redemption, assurance or absence-of-off-chain-liabilities conclusion is drawn. RPC observed 2026-10-10T23:31:26.632Z.",
       "sources": [
         {
           "label": "Verified Goal3 portal implementation (deployed 2023-04-04)",
@@ -27,14 +27,14 @@
           "url": "https://explorer.zksync.io/address/0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b#contract"
         },
         {
-          "label": "Goal3 portal creation transaction (2023-04-04)",
-          "url": "https://explorer.zksync.io/tx/0x4106c3a4865b4b17280de54775a05e3146506c35b17c7f981dabdcb6953573ee"
+          "label": "Pinned ZKsync Era implementation slots and owners, block 72423600, hash 0xdd6efdb1842be969ca9ea64e077e38c6be2dacbf3a9c2daf134fcbd8935c255b, timestamp 2026-10-10T23:27:13Z, observed 2026-10-10T23:31:26.632Z",
+          "url": "https://api-zksync-era-mainnet-full.n.dwellir.com"
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L79A7A5)",
+    "confidence": "verified",
     "sources": [
       {
         "label": "Verified Goal3 portal implementation",
@@ -43,6 +43,10 @@
       {
         "label": "Verified zkUSD token implementation",
         "url": "https://explorer.zksync.io/address/0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b#contract"
+      },
+      {
+        "label": "Pinned canonical zkUSD and portal implementation identities, block 72423600, timestamp 2026-10-10T23:27:13Z, observed 2026-10-10T23:31:26.632Z",
+        "url": "https://api-zksync-era-mainnet-full.n.dwellir.com"
       }
     ]
   },

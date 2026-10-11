@@ -69,9 +69,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow, not additional canonical issuance. Maple's September 28, 2026 migration disclosure confirms unchanged holder token addresses and replacement CCIP pools rolling out through Q4. Historical controller pins do not establish replacement-pool authority. Remote EVM owner bypass quorums, remaining lane controls, Solana execution and runtime materiality retain their separately dated findings and bounded gaps.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow, not additional canonical issuance. Maple's September 28, 2026 migration disclosure confirms unchanged holder token addresses and replacement CCIP pools rolling out through Q4. At Ethereum block 26155000, the directory-listed escrow owner is verified RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449, with a 10800-second ordinary delay and an active ManyChainMultiSig bypasser that avoids that delay. This partial Ethereum owner census does not establish a complete execution certificate or replacement-pool authority. Remote EVM findings, remaining lane controls, Solana execution and runtime materiality retain their separately dated findings and bounded gaps.",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L34SyrupUSDT)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -85,6 +85,18 @@
       {
         "label": "Chainlink exact syrupUSDG deployments and pools",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+      },
+      {
+        "label": "Verified current Ethereum escrow RBACTimelock owner and immediate bypass semantics",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x44835bbba9d40deda9b64858095ecfb2693c9449"
+      },
+      {
+        "label": "Verified current Ethereum escrow bypasser ManyChainMultiSig execution",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x117ec8ad107976e1dbcc21717ff78407bc36aadc"
+      },
+      {
+        "label": "Pinned Ethereum escrow owner, ordinary delay and complete ADMIN/BYPASSER member census at block 26155000 (2026-10-09T12:57:47Z); observed 2026-10-10T23:38:10Z",
+        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       },
       {
         "label": "Maple syrupUSDG legal claim and risk disclosures",
@@ -322,6 +334,45 @@
         "evidence": "At block 26107703, getToken() bound this escrow to the canonical syrupUSDG pool; typeAndVersion() returned LockReleaseTokenPool 1.6.1 and owner() was 0x44835bbba9d40deda9b64858095ecfb2693c9449. Canonical escrow cannot be summed as additional monetary supply. Full limits, pause, router, owner execution and upgrade census remains unresolved."
       },
       {
+        "id": "ethereum-ccip-escrow-owner",
+        "routeRefs": [
+          "ethereum:0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a",
+          "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018",
+          "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f"
+        ],
+        "capabilities": ["admin"],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x44835bbba9d40deda9b64858095ecfb2693c9449",
+        "label": "syrupUSDG Ethereum CCIP escrow owner",
+        "authorityType": "timelock",
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": ["controller:ethereum:0x44835bbba9d40deda9b64858095ecfb2693c9449", "bridge:chainlink-ccip"],
+        "observedAt": "2026-10-10",
+        "observedBlock": 26155000,
+        "sources": [
+          {
+            "label": "Exact syrupUSDG home escrow binding",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Verified RBACTimelock owner and immediate bypass semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x44835bbba9d40deda9b64858095ecfb2693c9449"
+          },
+          {
+            "label": "Verified sole bypasser ManyChainMultiSig",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x117ec8ad107976e1dbcc21717ff78407bc36aadc"
+          },
+          {
+            "label": "Pinned owner, delay and ADMIN/BYPASSER census at block 26155000 (2026-10-09T12:57:47Z); observed 2026-10-10T23:38:10Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          }
+        ],
+        "evidence": "Sol curation campaign 2026-10-11 (L34SyrupUSDT) observed the exact directory-listed Ethereum LockRelease escrow owner at block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z. owner() resolves to this verified RBACTimelock. getMinDelay() is 10800 seconds, but live ADMIN count is one (self) and BYPASSER count is one (0x117ec8ad107976e1dbcc21717ff78407bc36aadc). Verified bypasserExecuteBatch executes arbitrary target calls without delay or blocked-selector checks; the verified ManyChainMultiSig bypasser enforces signed roots and nonce ordering, not a minimum execution delay. Zero is the owner path's delay floor, not a uniform signer quorum, independent-human proof or guaranteed reaction time. Current MCM config, proposer/executor/canceller census, owner replacement reach, router/RMN/limits and the complete downstream execution certificate remain unresolved."
+      },
+      {
         "id": "arbitrum-ccip-burn-mint-pool",
         "routeRefs": [
           "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
@@ -543,18 +594,18 @@
     "scopedQuestions": [
       {
         "controlRef": "ethereum-ccip-escrow",
-        "question": "Which remaining Ethereum owner execution routes, non-bypass MCM configurations, router/RMN-validator and live rate-limit/pause/upgrade controls cover all CCIP lanes? Remote EVM owners are now verified RBACTimelock contracts with live role census and active immediate bypass; ordinary delays do not resolve remaining controls.",
+        "question": "The Ethereum escrow owner is now pinned as RBACTimelock with a 10800-second ordinary delay, self-only ADMIN and an active immediate ManyChainMultiSig BYPASSER. Which remaining MCM config and configuration-owner paths, non-bypass roles, router/RMN-validator and live rate-limit/pause/upgrade controls cover all CCIP lanes? Neither the Ethereum nor remote EVM ordinary delays establish a complete execution certificate.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "reviewedAt": "2026-10-10",
+        "reviewer": "Sol curation campaign 2026-10-11 (L34SyrupUSDT)",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Ethereum RPC observation at block 26107703",
-            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            "label": "Pinned Ethereum escrow owner and ADMIN/BYPASSER census at block 26155000 (2026-10-09T12:57:47Z); observed 2026-10-10T23:38:10Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       },

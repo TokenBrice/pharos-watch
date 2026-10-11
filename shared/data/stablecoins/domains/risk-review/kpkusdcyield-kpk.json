@@ -1094,6 +1094,80 @@
           ]
         }
       }
+    ],
+    "branchKindReviews": [
+      {
+        "kind": "collateral-parameter",
+        "branchIds": [
+          "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+          "market-bbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+          "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+          "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+          "market-acc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+          "market-973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+          "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+          "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+          "market-e3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+        ],
+        "reviewedAt": "2026-10-10",
+        "reviewer": "Sol curation campaign 2026-10-11 (L27KPKUSDCPri)",
+        "confidence": "verified",
+        "rationale": "Independently read all nine authored branch identities through Morpho idToMarketParams(bytes32), selector 0x2c3c9157, at Ethereum block 26154662 (2026-10-09T11:50:11Z). Every loanToken is exact USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. LLTV is 770000000000000000 for weETH and YFI, 860000000000000000 for ftUSD, and 915000000000000000 for siUSD, srNUSD, savUSD, srRoyUSDC, PT-cUSD-23JUL2026 and USD3, matching the authored 77%/86%/91.5% liquidation thresholds. This review establishes only the immutable market collateral parameter at this historical pin, including retained historical branches. The issuer snapshot also lists PT-siUSD-7JAN2027 and ssftUSD, neither of which is in this authored branch census; no new current position is inferred from the snapshot. Oracle feed/admin/fallback safeguards, executable liquidation, funded backstops and shutdown recovery remain unresolved; aggregate oracle tier is not upgraded.",
+        "sources": [
+          {
+            "label": "Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; idToMarketParams reads observed 2026-10-10T23:33:05.827Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Morpho Blue MarketParams and idToMarketParams: LLTV uses 18 decimals",
+            "url": "https://docs.morpho.org/developers/contracts/blue/"
+          },
+          {
+            "label": "Exact Ethereum KPK USDC Yield vault, adapter and issuer market snapshot; not a complete current position census",
+            "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
+          }
+        ]
+      },
+      {
+        "kind": "shutdown-bad-debt",
+        "branchIds": [
+          "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+          "market-bbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+          "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+          "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+          "market-acc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+          "market-973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+          "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+          "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+          "market-e3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7"
+        ],
+        "reviewedAt": "2026-10-10",
+        "reviewer": "Sol curation campaign 2026-10-11 (L27KPKUSDCPri)",
+        "confidence": "verified",
+        "rationale": "At Ethereum block 26154662, the exact Yield adapter morpho() returned 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb and all nine authored market IDs resolved on that core. Its 15623-byte RPC runtime exactly equals the Sourcify onchain runtime (matchId 1907237, creationMatch/runtimeMatch exact_match). Verified src/Morpho.sol liquidate() writes off remaining borrower debt when collateral reaches zero by subtracting badDebtAssets from market totalSupplyAssets, reducing lender claims. The previously admitted exact VaultV2/adapter functional runtime correspondence and disclosed direct-market architecture bind that loss-bearing path to this vault; V2 realAssets/accrual then socializes loss as share-price depreciation. This is known mechanical bad-debt treatment at the historical pin, not proof of a complete current allocation census, successful liquidation, guaranteed recovery, funded backstop, or complete discretionary shutdown/cap/queue authorization certificate.",
+        "sources": [
+          {
+            "label": "Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; adapter morpho and exact core runtime observed 2026-10-10T23:39:06.893Z",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Exact Morpho core creation/runtime verification and src/Morpho.sol liquidate bad-debt write-off; observed 2026-10-10",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb?fields=all"
+          },
+          {
+            "label": "Morpho V2 realAssets/accrual loss socialization; not a funded recovery guarantee",
+            "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+          },
+          {
+            "label": "Issuer direct V2-to-market adapter architecture and distinction from separate legacy V1 depositor positions",
+            "url": "https://docs.kpk.io/vaults/vaults/morpho.md"
+          },
+          {
+            "label": "Exact Yield vault and adapter deployment identities",
+            "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
+          }
+        ]
+      }
     ]
   }
 }

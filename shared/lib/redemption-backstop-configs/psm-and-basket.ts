@@ -162,6 +162,15 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     costModel: documentedVariableFee(
       "BabelFish uses basket-balancing withdrawal fees rather than one fixed public redemption fee",
     ),
+    v9RouteCostTerms: {
+      feeBpsMax: 1_000,
+      publishedFeeSchedule: {
+        reviewedAt: "2026-10-10",
+        reviewer: "Sol curation campaign 2026-10-11 (K4ExitTermsModel)",
+        docs: [sourceRefFull("BabelFish published balancing-curve maximum penalty", "https://babelfish.gitbook.io/the-babelfish-gitbook/getting-started/balancing-curves.md")],
+        rationale: "Published Balancing Curves Parameters cap the withdrawal penalty at 10%. Use the maximum, not a sampled basket imbalance or a zero-reward branch. This is a conservative protocol deduction bound above the 200-bps request budget, not an exact execution quote or a gas-cost guarantee.",
+      },
+    },
     reviewedAt: REVIEWED_YIELD_COVERAGE_WAVE_AT,
     docs: [sourceRefFull("BabelFish", "https://babelfish.money/")],
     notes: [

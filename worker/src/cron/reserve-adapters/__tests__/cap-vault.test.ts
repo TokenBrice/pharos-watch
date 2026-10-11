@@ -424,18 +424,8 @@ describe("fetchCapVaultReserves", () => {
     expect(result.metadata).toMatchObject({
       assetCount: 2,
       totalReserveUsd: 100,
-      redemption: {
-        outputValuation: {
-          sourceId: "cap-vault:chainlink-nav:0xd13cb763c43b5c058e7ec40176962c5030f4eb49",
-          observedAt: navObservedAt,
-          unitValueUsd: 1,
-          basketWeights: [
-            { assetId: "usdc-circle", weight: 0.5 },
-            { assetId: "wtgxx-wisdomtree", weight: 0.5 },
-          ],
-        },
-      },
     });
+    expect(result.metadata).not.toHaveProperty("redemption.outputValuation");
   });
 
   it("fails the CUSD basket snapshot closed when WTGXX Chainlink NAV is stale", async () => {

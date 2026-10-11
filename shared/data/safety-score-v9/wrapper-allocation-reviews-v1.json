@@ -4919,6 +4919,1157 @@
           "description": "VaultV2.sol source SHA256=027839cf5246abd67db755454109a751fa0683aac70f49056d271068b79201f6. totalAssets calls accrueInterestView, which sums asset.balanceOf(vault) and each adapter.realAssets, applies maxRate and computes performance/management fee shares. previewDeposit/Mint/Withdraw/Redeem use newTotalSupply plus virtualShares and newTotalAssets plus 1. Loss realization explicitly decreases total assets and share value. Constructor fixes asset and decimal-derived virtualShares; no proxy implementation."
         }
       ]
+    },
+    {
+      "kind": "accounting",
+      "assetId": "hyperusdca-hyperithm",
+      "mechanism": "vault-v2-share-accounting",
+      "reviewer": "Sol curation campaign 2026-10-11 (L30XMD)",
+      "reviewedAt": "2026-10-10T23:38:46Z",
+      "observedAtSec": 1791675204,
+      "expiresAtSec": 1794268800,
+      "identity": {
+        "assetId": "hyperusdca-hyperithm",
+        "registeredDeploymentKeys": [
+          "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        ],
+        "deployments": [
+          {
+            "codeKind": "immutable",
+            "chain": "monad",
+            "address": "0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
+            "observedAtSec": 1791675204,
+            "block": 112119006,
+            "sourceUrl": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ]
+      },
+      "rationale": "Independent exact-contract VaultV2 share-accounting review. The verified VaultV2 deployment and pinned source use accrueInterestView, adapter-reported realAssets, recognized losses, fee-adjusted share supply and virtual offsets to convert shares into USDC-denominated accounting assets. This establishes a known moderate local accounting mechanism, not a fixed dollar claim, oracle-free collateral lending, independent NAV assurance, complete custody or available withdrawal capacity. Existing borrower collateral-oracle branches and their unresolved controls remain separate and unchanged.",
+      "sources": [
+        {
+          "label": "Pinned Monad block 112119006 accounting reads, block timestamp 2026-10-10T07:09:27Z; observed 2026-10-10T23:33:24.582Z",
+          "url": "https://api-monad-mainnet-full.n.dwellir.com"
+        },
+        {
+          "label": "Exact verified VaultV2 deployment, accessed 2026-10-10",
+          "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+        },
+        {
+          "label": "Pinned Morpho VaultV2 accounting implementation",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Exact Hyperithm USDC Apex deployment",
+          "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://api-monad-mainnet-full.n.dwellir.com",
+          "description": "At Monad block 112119006, hash 0xe4cca324a9ee053c09093313ce0603358fce234dbe4848128cf50be78fc117b1, timestamp 2026-10-10T07:09:27Z: asset() = 0x754704bc059f8c67012fed69bc8a327a5aafb603; totalAssets() = 54188353155175 raw USDC; totalSupply() = 52035505422780347210962568 raw shares; convertToAssets(1000000000000000000) = 1041372 raw USDC. All four calls were ok at one pin. This is accounting, not executable redemption."
+        },
+        {
+          "sourceUrl": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code",
+          "description": "Exact deployment is verified as VaultV2, compiler 0.8.28. Retained native upgradeability review identifies the same single deployment as immutable; no new proxy or implementation mapping is introduced."
+        },
+        {
+          "sourceUrl": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "description": "totalAssets returns accrueInterestView assets; convertToAssets returns previewRedeem. Adapter realAssets recognize interest and losses; preview conversions include fee-adjusted shares and virtual offsets. Borrower liquidation price authorities do not set the share conversion formula."
+        }
+      ]
+    },
+    {
+      "assetId": "usdcx-movement",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Publisher declares a fixed 1:1 USDC-backed USDCx liability. Movement ledger version 220370475 binds the registered USDCx fungible-asset metadata to its usdcx package. This is liability accounting only, not NAV, escrow reconciliation, or cross-chain capacity.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475",
+          "description": "Publisher declares a fixed 1:1 USDC-backed USDCx liability. Movement ledger version 220370475 binds the registered USDCx fungible-asset metadata to its usdcx package. This is liability accounting only, not NAV, escrow reconciliation, or cross-chain capacity."
+        }
+      ],
+      "identity": {
+        "assetId": "usdcx-movement",
+        "deployments": [
+          {
+            "chain": "movement",
+            "address": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+            "sourceUrl": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
+          }
+        ]
+      },
+      "kind": "published-accounting",
+      "mechanism": "fixed-face-accounting"
+    },
+    {
+      "assetId": "usdcx-movement",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "The exact usdcx module ABI and retained resource expose pause/unpause, attester/admin changes and minimum-burn configuration. These impairment-capable controls are adverse evidence; no current quorum, absence of other powers, reserve solvency, or capacity is certified. Ledger version 220370475 and prior reviewed risk sidecar retain block height 97379184.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://mainnet.movementnetwork.xyz/v1/accounts/0x4989d2b05833820092401455cb689460b861e7f34b761f58b07a4910bd847f83/module/usdcx?ledger_version=220370475",
+          "description": "The exact usdcx module ABI and retained resource expose pause/unpause, attester/admin changes and minimum-burn configuration. These impairment-capable controls are adverse evidence; no current quorum, absence of other powers, reserve solvency, or capacity is certified. Ledger version 220370475 and prior reviewed risk sidecar retain block height 97379184."
+        }
+      ],
+      "identity": {
+        "assetId": "usdcx-movement",
+        "deployments": [
+          {
+            "chain": "movement",
+            "address": "0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e",
+            "sourceUrl": "https://mainnet.movementnetwork.xyz/v1/accounts/0xba11833544a2f99eec743f41a228ca6ffa7f13c3b6b04681d5a79a8b75ff225e/resources?ledger_version=220370475"
+          }
+        ]
+      },
+      "kind": "published-emergency-controls",
+      "capabilities": [
+        "pause",
+        "attester-change",
+        "minimum-burn-change",
+        "admin-change"
+      ]
+    },
+    {
+      "assetId": "armusdcs-wintermute",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Exact deployed VaultV2 source implements ERC-4626 shares via totalAssets, virtual shares, fees and adapter realAssets accounting. Immutable-root pin is retained from 2026-10-02 at block 26107703; no new RPC observation or adapter completeness is claimed. This independent local accounting fact retains moderate risk and does not close borrower liquidation-oracle or allocation gaps.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "description": "Exact deployed VaultV2 source implements ERC-4626 shares via totalAssets, virtual shares, fees and adapter realAssets accounting. Immutable-root pin is retained from 2026-10-02 at block 26107703; no new RPC observation or adapter completeness is claimed. This independent local accounting fact retains moderate risk and does not close borrower liquidation-oracle or allocation gaps."
+        }
+      ],
+      "identity": {
+        "assetId": "armusdcs-wintermute",
+        "registeredDeploymentKeys": [
+          "ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+        ],
+        "deployments": [
+          {
+            "codeKind": "immutable",
+            "chain": "ethereum",
+            "address": "0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+            "observedAtSec": 1790899200,
+            "block": 26107703,
+            "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+          }
+        ]
+      },
+      "kind": "accounting",
+      "mechanism": "vault-v2-share-accounting"
+    },
+    {
+      "assetId": "kpkusdcprime-kpk",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Exact deployed VaultV2 source implements ERC-4626 shares via totalAssets, virtual shares, fees and adapter realAssets accounting. Immutable-root pin is retained from 2026-10-05 at block 26124896; no new RPC observation or adapter completeness is claimed. This independent local accounting fact retains moderate risk and does not close borrower liquidation-oracle or allocation gaps.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "description": "Exact deployed VaultV2 source implements ERC-4626 shares via totalAssets, virtual shares, fees and adapter realAssets accounting. Immutable-root pin is retained from 2026-10-05 at block 26124896; no new RPC observation or adapter completeness is claimed. This independent local accounting fact retains moderate risk and does not close borrower liquidation-oracle or allocation gaps."
+        }
+      ],
+      "identity": {
+        "assetId": "kpkusdcprime-kpk",
+        "registeredDeploymentKeys": [
+          "ethereum:0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+        ],
+        "deployments": [
+          {
+            "codeKind": "immutable",
+            "chain": "ethereum",
+            "address": "0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+            "observedAtSec": 1791158400,
+            "block": 26124896,
+            "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+          }
+        ]
+      },
+      "kind": "accounting",
+      "mechanism": "vault-v2-share-accounting"
+    },
+    {
+      "assetId": "kpkusdcyield-kpk",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Exact deployed VaultV2 source implements ERC-4626 shares via totalAssets, virtual shares, fees and adapter realAssets accounting. Immutable-root pin is retained from 2026-10-05 at block 26124896; no new RPC observation or adapter completeness is claimed. This independent local accounting fact retains moderate risk and does not close borrower liquidation-oracle or allocation gaps.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "description": "Exact deployed VaultV2 source implements ERC-4626 shares via totalAssets, virtual shares, fees and adapter realAssets accounting. Immutable-root pin is retained from 2026-10-05 at block 26124896; no new RPC observation or adapter completeness is claimed. This independent local accounting fact retains moderate risk and does not close borrower liquidation-oracle or allocation gaps."
+        }
+      ],
+      "identity": {
+        "assetId": "kpkusdcyield-kpk",
+        "registeredDeploymentKeys": [
+          "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        ],
+        "deployments": [
+          {
+            "codeKind": "immutable",
+            "chain": "ethereum",
+            "address": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+            "observedAtSec": 1791158400,
+            "block": 26124896,
+            "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          }
+        ]
+      },
+      "kind": "accounting",
+      "mechanism": "vault-v2-share-accounting"
+    },
+    {
+      "assetId": "usdat-saturn",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Current Saturn issuer terms explicitly mint USDat at 1:1 with decimal normalization and its inventory identifies Ethereum, BNB and Monad tokens. This establishes fixed-face USDat liability accounting; it does not reuse the superseded PYUSDx implementation as current reserves or certify NAV, collateral value, custody, oracle quality or executable redemption.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview/mint-and-redeem.md",
+          "description": "Current Saturn issuer terms explicitly mint USDat at 1:1 with decimal normalization and its inventory identifies Ethereum, BNB and Monad tokens. This establishes fixed-face USDat liability accounting; it does not reuse the superseded PYUSDx implementation as current reserves or certify NAV, collateral value, custody, oracle quality or executable redemption."
+        }
+      ],
+      "identity": {
+        "assetId": "usdat-saturn",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+            "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          },
+          {
+            "chain": "monad",
+            "address": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+            "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          },
+          {
+            "chain": "bsc",
+            "address": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+            "sourceUrl": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+          }
+        ]
+      },
+      "kind": "published-accounting",
+      "mechanism": "fixed-face-accounting"
+    },
+    {
+      "assetId": "pusd-polymarket",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Polymarket identifies the exact Polygon pUSD contract and describes pUSD as a standard ERC-20 USDC-backed collateral receipt representing a fixed USDC claim. Fixed-face accounting is distinct from the application position NAV, live escrow balances, financial solvency and oracle topology.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://docs.polymarket.com/resources/contracts"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.polymarket.com/concepts/pusd"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.polymarket.com/concepts/pusd",
+          "description": "Polymarket identifies the exact Polygon pUSD contract and describes pUSD as a standard ERC-20 USDC-backed collateral receipt representing a fixed USDC claim. Fixed-face accounting is distinct from the application position NAV, live escrow balances, financial solvency and oracle topology."
+        }
+      ],
+      "identity": {
+        "assetId": "pusd-polymarket",
+        "deployments": [
+          {
+            "chain": "polygon",
+            "address": "0xc011a7e12a19f7b1f670d46f03b03f3342e82dfb",
+            "sourceUrl": "https://docs.polymarket.com/resources/contracts"
+          }
+        ]
+      },
+      "kind": "published-accounting",
+      "mechanism": "fixed-face-accounting"
+    },
+    {
+      "assetId": "earnusd-lido",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Verified deployed TransparentUpgradeableProxy has an upgrade-dispatch path. Retained exact Ethereum block 26107703 (2026-10-02) binds the implementation; no date bump or new slot observation is claimed. This establishes adverse mutable root code independently of incomplete Merkle-manager mint coverage; no timelock/controller completeness benefit is granted.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.lido.fi/earn/deployment-contracts"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.lido.fi/earn/deployment-contracts",
+          "description": "Verified deployed TransparentUpgradeableProxy has an upgrade-dispatch path. Retained exact Ethereum block 26107703 (2026-10-02) binds the implementation; no date bump or new slot observation is claimed. This establishes adverse mutable root code independently of incomplete Merkle-manager mint coverage; no timelock/controller completeness benefit is granted."
+        }
+      ],
+      "identity": {
+        "assetId": "earnusd-lido",
+        "registeredDeploymentKeys": [
+          "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+        ],
+        "deployments": [
+          {
+            "codeKind": "proxy",
+            "chain": "ethereum",
+            "address": "0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
+            "implementation": "0x000000000c79d2b5cd58ae545afc83030233d7b6",
+            "observedAtSec": 1790899200,
+            "block": 26107703,
+            "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+          }
+        ]
+      },
+      "kind": "contract-mutability",
+      "mutability": "upgradeable-root",
+      "minimumPublicDelaySec": null
+    },
+    {
+      "assetId": "srusde-strata",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Strata publishes alternative srUSDe redemptions: immediate sUSDe versus USDe after a seven-day eligibility cooldown and manual claim, both at 2.5 bps. Instant processing is not a measured capacity promise; no final-completion bound is claimed. FAQ grants public holder access subject to jurisdiction restrictions.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://docs.strata.markets/technical-documentation/contracts-details.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.strata.markets/markets/ethena-usde/srusde.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.strata.markets/resources/faqs.md"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.strata.markets/resources/faqs.md",
+          "description": "Strata publishes alternative srUSDe redemptions: immediate sUSDe versus USDe after a seven-day eligibility cooldown and manual claim, both at 2.5 bps. Instant processing is not a measured capacity promise; no final-completion bound is claimed. FAQ grants public holder access subject to jurisdiction restrictions."
+        }
+      ],
+      "identity": {
+        "assetId": "srusde-strata",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+            "sourceUrl": "https://docs.strata.markets/technical-documentation/contracts-details.md"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "srusde-strata:published:susde",
+          "deploymentKey": "ethereum:0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+          "sourceUrl": "https://docs.strata.markets/markets/ethena-usde/srusde.md",
+          "outputAssetIds": [
+            "susde-ethena"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "atomic",
+          "cooldownSec": 0,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 2.5
+          },
+          "prerequisites": [
+            "jurisdiction-compliance",
+            "subject-to-protocol-liquidity"
+          ]
+        },
+        {
+          "routeKey": "srusde-strata:published:usde",
+          "deploymentKey": "ethereum:0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+          "sourceUrl": "https://docs.strata.markets/markets/ethena-usde/srusde.md",
+          "outputAssetIds": [
+            "usde-ethena"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "queued",
+          "cooldownSec": 604800,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 2.5
+          },
+          "prerequisites": [
+            "manual-claim-after-eligibility",
+            "jurisdiction-compliance",
+            "subject-to-portfolio-state"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "usdr-rise",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "M0 documents permissionless atomic extension conversions without trading fee and conditional on approved extensions; exact chain SwapFacility source confirms pause, conversion-path and approved-earner gates. Token explorer identity binds the registered holder instrument. This is conditional local conversion into M, not issuer fiat access, current approval status, USDC capacity or an execution certificate.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://explorer.risechain.com/api/v2/tokens/0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.m0.org/resources/addresses/m0-platform",
+          "description": "M0 documents permissionless atomic extension conversions without trading fee and conditional on approved extensions; exact chain SwapFacility source confirms pause, conversion-path and approved-earner gates. Token explorer identity binds the registered holder instrument. This is conditional local conversion into M, not issuer fiat access, current approval status, USDC capacity or an execution certificate."
+        }
+      ],
+      "identity": {
+        "assetId": "usdr-rise",
+        "deployments": [
+          {
+            "chain": "rise",
+            "address": "0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
+            "sourceUrl": "https://explorer.risechain.com/api/v2/tokens/0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "usdr-rise:published:swap-to-m",
+          "deploymentKey": "rise:0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
+          "sourceUrl": "https://docs.m0.org/build/accessing-liquidity",
+          "outputAssetIds": [
+            "m-m0"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "atomic",
+          "cooldownSec": 0,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 0
+          },
+          "prerequisites": [
+            "approved-earner-and-extension-path",
+            "swap-facility-not-paused",
+            "underlying-M-available",
+            "not-fiat-redemption"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "mantrausd-mantra",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "M0 documents permissionless atomic extension conversions without trading fee and conditional on approved extensions; exact chain SwapFacility source confirms pause, conversion-path and approved-earner gates. Token explorer identity binds the registered holder instrument. This is conditional local conversion into M, not issuer fiat access, current approval status, USDC capacity or an execution certificate.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://blockscout.mantrascan.io/api/v2/tokens/0xd2b95283011e47257917770d28bb3ee44c849f6f"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x21a657d7dae3f33548252d350ebbe48c82c23c3c"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.m0.org/resources/addresses/m0-platform",
+          "description": "M0 documents permissionless atomic extension conversions without trading fee and conditional on approved extensions; exact chain SwapFacility source confirms pause, conversion-path and approved-earner gates. Token explorer identity binds the registered holder instrument. This is conditional local conversion into M, not issuer fiat access, current approval status, USDC capacity or an execution certificate."
+        }
+      ],
+      "identity": {
+        "assetId": "mantrausd-mantra",
+        "deployments": [
+          {
+            "chain": "mantra",
+            "address": "0xd2b95283011e47257917770d28bb3ee44c849f6f",
+            "sourceUrl": "https://blockscout.mantrascan.io/api/v2/tokens/0xd2b95283011e47257917770d28bb3ee44c849f6f"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "mantrausd-mantra:published:swap-to-m",
+          "deploymentKey": "mantra:0xd2b95283011e47257917770d28bb3ee44c849f6f",
+          "sourceUrl": "https://docs.m0.org/build/accessing-liquidity",
+          "outputAssetIds": [
+            "m-m0"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "atomic",
+          "cooldownSec": 0,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 0
+          },
+          "prerequisites": [
+            "approved-earner-and-extension-path",
+            "swap-facility-not-paused",
+            "underlying-M-available",
+            "not-fiat-redemption"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "krusdc-keyrock",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Morpho lists exact Arc Keyrock Prime USDC Vault V2. V2 withdrawal/forceDeallocate mechanisms are subject to optional gates, available liquidity, adapter execution and possible forceDeallocate penalty up to 2%. Published gate and fee possibilities are retained; current gates, exact penalty configuration, cash capacity and completion bound are not claimed.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "description": "Morpho lists exact Arc Keyrock Prime USDC Vault V2. V2 withdrawal/forceDeallocate mechanisms are subject to optional gates, available liquidity, adapter execution and possible forceDeallocate penalty up to 2%. Published gate and fee possibilities are retained; current gates, exact penalty configuration, cash capacity and completion bound are not claimed."
+        }
+      ],
+      "identity": {
+        "assetId": "krusdc-keyrock",
+        "deployments": [
+          {
+            "chain": "arc",
+            "address": "0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+            "sourceUrl": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "krusdc-keyrock:published:vault-withdraw",
+          "deploymentKey": "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
+          "sourceUrl": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "outputAssetIds": [
+            "usdc-circle"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "deterministic",
+          "cooldownSec": null,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "formula",
+            "description": "Published VaultV2 forceDeallocate penalty may apply up to 2%; exact route/configuration-specific penalty is not observed."
+          },
+          "prerequisites": [
+            "optional-gates-may-restrict-holder",
+            "available-idle-or-adapter-liquidity",
+            "forceDeallocate-may-require-flashloan-and-adapter-market-supply"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "xgld-unitas",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Issuer explicitly identifies native BNB XGLD and permits only whitelisted holders to redeem for XAUt, with a 0.1% fee, seven-day cooldown, strategy reduction and manual claim. BNB native redemption terms do not certify bridged-chain routes, settlement SLA or cash/XAUt capacity.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://docs.unitas.so/overview/xgld.md"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.unitas.so/overview/xgld.md",
+          "description": "Issuer explicitly identifies native BNB XGLD and permits only whitelisted holders to redeem for XAUt, with a 0.1% fee, seven-day cooldown, strategy reduction and manual claim. BNB native redemption terms do not certify bridged-chain routes, settlement SLA or cash/XAUt capacity."
+        }
+      ],
+      "identity": {
+        "assetId": "xgld-unitas",
+        "deployments": [
+          {
+            "chain": "bsc",
+            "address": "0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+            "sourceUrl": "https://docs.unitas.so/overview/xgld.md"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "xgld-unitas:published:native-bnb-redemption",
+          "deploymentKey": "bsc:0xe60106a5cab7e7c64830919d36ab20caaf50ac91",
+          "sourceUrl": "https://docs.unitas.so/overview/xgld.md",
+          "outputAssetIds": [
+            "xaut-tether"
+          ],
+          "holderAccess": "allowlisted",
+          "executionModel": "queued",
+          "cooldownSec": 604800,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 10
+          },
+          "prerequisites": [
+            "whitelisting",
+            "strategy-exposure-reduced-as-needed",
+            "manual-claim-after-eligibility"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "apyusd-apyx",
+      "reviewer": "Sol curation campaign 2026-10-11 (K5WrapperNonPure)",
+      "reviewedAt": "2026-10-10T23:38:14Z",
+      "observedAtSec": 1791675494,
+      "expiresAtSec": 1794267494,
+      "rationale": "Issuer identifies Ethereum apyUSD and its exclusive UnlockToken. Shares redeem synchronously into an unlock receipt, not spendable apxUSD. Final apxUSD claim requires three-day eligibility and separate UnlockToken.redeem; another unlock resets cooldown. Published fee declines from 3.5% to 0.1%; no final completion guarantee, precise unobserved curve or capacity is inferred.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://docs.apyx.fi/resources/smart-contract-addresses.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.apyx.fi/technical-overview/unlocking.md"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://docs.apyx.fi/technical-overview/unlocking.md",
+          "description": "Issuer identifies Ethereum apyUSD and its exclusive UnlockToken. Shares redeem synchronously into an unlock receipt, not spendable apxUSD. Final apxUSD claim requires three-day eligibility and separate UnlockToken.redeem; another unlock resets cooldown. Published fee declines from 3.5% to 0.1%; no final completion guarantee, precise unobserved curve or capacity is inferred."
+        }
+      ],
+      "identity": {
+        "assetId": "apyusd-apyx",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+            "sourceUrl": "https://docs.apyx.fi/resources/smart-contract-addresses.md"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "apyusd-apyx:published:ethereum-unlock-apxusd",
+          "deploymentKey": "ethereum:0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a",
+          "sourceUrl": "https://docs.apyx.fi/technical-overview/unlocking.md",
+          "outputAssetIds": [
+            "apxusd-apyx"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "queued",
+          "cooldownSec": 259200,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "formula",
+            "description": "Published early-unlock fee declines linearly from 3.5% to 0.1%; endpoint publications do not establish an unobserved exact curve."
+          },
+          "prerequisites": [
+            "synchronous-output-is-unlock-receipt-not-spendable-parent",
+            "manual-UnlockToken-redeem-after-eligibility",
+            "additional-unlocks-reset-cooldown",
+            "unlock-cannot-be-cancelled"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "wm-m0",
+      "reviewer": "Sol curation campaign 2026-10-11 (K15SmallCapabilities)",
+      "reviewedAt": "2026-10-10T23:58:20Z",
+      "observedAtSec": 1791676700,
+      "expiresAtSec": 1794268700,
+      "rationale": "The Ethereum WrappedMToken path is a facility-mediated unwrap to nominal M, not issuer cash redemption. Verified code restricts unwrap to SwapFacility and checks pause and original-caller freeze conditions; M0 documents permissionless end-user conversions only through an enabled approved-extension path, atomically and without trading fees. This says nothing about current extension approval, capacity, gas, earning-index rounding, or downstream fiat realization.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://docs.m0.org/resources/addresses/m0-platform"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.m0.org/protocol/wrapped-m"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6d9db63afccf515f393d5e65be69d38bb3b29d13"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x6d9db63afccf515f393d5e65be69d38bb3b29d13",
+          "description": "Verified Ethereum WrappedMToken source restricts unwrap to SwapFacility; _unwrap checks pause and the original caller's freeze status, burns facility-held wM, and transfers nominal M to the facility."
+        },
+        {
+          "sourceUrl": "https://docs.m0.org/build/accessing-liquidity",
+          "description": "M0 describes end-user access through SwapFacility as permissionless and atomic, with no trading fee, subject to the approved extension/earner path. This is a conditional M conversion, not fiat or USDC redemption."
+        }
+      ],
+      "identity": {
+        "assetId": "wm-m0",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0x437cc33344a0b27a429f795ff6b469c72698b291",
+            "sourceUrl": "https://docs.m0.org/resources/addresses/m0-platform"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "wm-m0:published:ethereum-wm-to-m-via-swap-facility",
+          "deploymentKey": "ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
+          "sourceUrl": "https://docs.m0.org/build/accessing-liquidity",
+          "outputAssetIds": [
+            "m-m0"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "atomic",
+          "cooldownSec": 0,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 0
+          },
+          "prerequisites": [
+            "approved-earner-and-extension-path-enabled",
+            "swap-facility-not-paused",
+            "original-caller-not-frozen",
+            "underlying-M-available",
+            "gas-and-earning-index-rounding-excluded",
+            "output-is-M-not-fiat-or-USDC"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "steakeurcv-steakhouse",
+      "reviewer": "Sol curation campaign 2026-10-11 (K15SmallCapabilities)",
+      "reviewedAt": "2026-10-10T23:58:20Z",
+      "observedAtSec": 1791676700,
+      "expiresAtSec": 1794268700,
+      "rationale": "The exact Ethereum Morpho VaultV2 redeem path returns EURCV synchronously when its gates and liquidity/adapters permit; it is not a USD exit. Current gate configuration and available cash are not established. Ordinary redeem has no separate withdrawal-fee deduction; NAV fee accrual and rounding are separate, as is forceDeallocate and its possible penalty. No capacity or end-to-end bound is claimed.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.morpho.org/curate/concepts/gates.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+          "description": "The exact verified VaultV2 redeem/withdraw implementation checks sendShares/receiveAssets gates, obtains assets through idle balance or adapters, burns shares, and transfers the underlying in the transaction. The ordinary output is EURCV. maxWithdraw/maxRedeem reporting zero is not a measured liquidity amount."
+        },
+        {
+          "sourceUrl": "https://docs.morpho.org/curate/concepts/gates.md",
+          "description": "Morpho documents optional gates that may block senders or receivers. This does not establish the current gate state for this vault; forceDeallocate is a distinct branch, not ordinary EURCV redemption."
+        }
+      ],
+      "identity": {
+        "assetId": "steakeurcv-steakhouse",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+            "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "steakeurcv-steakhouse:published:ethereum-vaultv2-redeem-eurcv",
+          "deploymentKey": "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
+          "outputAssetIds": [
+            "eurcv-societe-generale-forge"
+          ],
+          "holderAccess": "unknown",
+          "executionModel": "atomic",
+          "cooldownSec": null,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 0
+          },
+          "prerequisites": [
+            "sendShares-and-receiveAssets-gates-must-pass; current gate state unknown",
+            "sufficient-idle-or-adapter-liquidity-and-adapter-execution",
+            "ordinary-redeem-has-no-separate-withdraw-fee; NAV-accrual-and-rounding-separate",
+            "forceDeallocate-is-distinct-and-may-carry-up-to-2-percent-penalty",
+            "output-is-EURCV-not-USD",
+            "no-capacity-or-end-to-end-settlement-bound-observed"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "wsrusd-reservoir",
+      "reviewer": "Sol curation campaign 2026-10-11 (K15SmallCapabilities)",
+      "reviewedAt": "2026-10-10T23:58:20Z",
+      "observedAtSec": 1791676700,
+      "expiresAtSec": 1794268700,
+      "rationale": "The Ethereum wsrUSD holder deployment synchronously unwraps shares into its immutable rUSD underlying, with no lock-up, stated wrapper fee, or on-chain holder-role gate. The separate downstream PSM can convert rUSD to USDC only when unpaused and liquid; this direct wrapper term therefore stops at rUSD. No current PSM liquidity, USDC capacity, all-in rounded cost, or completion guarantee is asserted. Product-interface geographic restrictions are not treated as an on-chain allowlist.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+          "description": "Verified Ethereum Savingcoin binds wsrUSD to rUSD; withdraw burns wsrUSD and mints rUSD without a holder-role gate. This term records that direct wrapper output, not the downstream PSM route."
+        },
+        {
+          "sourceUrl": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd",
+          "description": "Reservoir publishes no wsrUSD lock-up or fee and says redemptions are fulfilled immediately when PSM liquidity is available. The product also describes non-US/non-sanctioned eligibility; that interface/legal statement is not an on-chain allowlist."
+        },
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d",
+          "description": "The separate Ethereum PSM redemption is permissionless when unpaused, burns rUSD and transfers USDC; it depends on PSM liquidity and is not part of the direct wsrUSD-to-rUSD output term."
+        }
+      ],
+      "identity": {
+        "assetId": "wsrusd-reservoir",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+            "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "wsrusd-reservoir:published:ethereum-savingcoin-withdraw-rusd",
+          "deploymentKey": "ethereum:0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094",
+          "outputAssetIds": [
+            "rusd-reservoir"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "atomic",
+          "cooldownSec": 0,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "fixed-bps",
+            "bps": 0
+          },
+          "prerequisites": [
+            "sufficient-wsrUSD-and-transaction-gas",
+            "direct-output-is-rUSD-only",
+            "downstream-rUSD-to-USDC-PSM-requires-unpaused-PSM-and-available-USDC",
+            "issuer-interface-restrictions-are-non-US-and-non-sanctioned-not-on-chain-allowlist",
+            "rounding-and-end-to-end-PSM-capacity-not-quantified"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "srusd-reservoir",
+      "reviewer": "Sol curation campaign 2026-10-11 (K15SmallCapabilities)",
+      "reviewedAt": "2026-10-10T23:58:20Z",
+      "observedAtSec": 1791676700,
+      "expiresAtSec": 1794268700,
+      "rationale": "The native Ethereum SavingModule exposes permissionless synchronous srUSD redemption to rUSD; its fee is a live manager-set parameter applied by formula, not a safely reusable old point observation. The separate rUSD-to-USDC PSM is conditional on pause state and liquidity. This review records published local terms only; it does not repair the K8 redemption-reserve-input-freshness-unverified producer root, establish current fee/capacity, or certify end-to-end USDC cash settlement.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service.md"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+          "description": "Verified SavingModule redeem overloads have no holder-role gate; they burn caller shares (allowance when applicable) and mint rUSD. The share burn uses previewRedeem(amount) * (1e6 + redeemFee) / 1e6; setRedeemFee requires fee < 1e6."
+        },
+        {
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d",
+          "description": "The distinct PSM redemption burns rUSD and transfers USDC without protocol-fee logic, but is whenNotPaused and depends on available liquidity; this is not the direct srUSD term."
+        },
+        {
+          "sourceUrl": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service.md",
+          "description": "Reservoir retains jurisdiction/interface eligibility and describes that USDC realization may lag while other reserves are sold or redeemed; no whole-position cash realization bound is published."
+        }
+      ],
+      "identity": {
+        "assetId": "srusd-reservoir",
+        "deployments": [
+          {
+            "chain": "ethereum",
+            "address": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+            "sourceUrl": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses.md"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "srusd-reservoir:published:ethereum-savingmodule-redeem-rusd",
+          "deploymentKey": "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31",
+          "sourceUrl": "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+          "outputAssetIds": [
+            "rusd-reservoir"
+          ],
+          "holderAccess": "permissionless",
+          "executionModel": "atomic",
+          "cooldownSec": 0,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "formula",
+            "description": "Redeeming amount requires previewRedeem(amount) * (1e6 + redeemFee) / 1e6 srUSD shares to mint that rUSD amount; redeemFee is mutable and enforced only below 1e6 (maximum 999999/1e6), so no small static fee bound is justified."
+          },
+          "prerequisites": [
+            "sufficient-srUSD-and-transaction-gas",
+            "rUSD-is-direct-output; USDC-requires-separate-PSM-redemption",
+            "redeemFee-is-live-manager-set-parameter; do-not-substitute-old-134-per-million-observation",
+            "downstream-PSM-must-be-unpaused-and-have-available-USDC",
+            "jurisdiction-and-interface-eligibility-apply",
+            "no-current-fee-state-capacity-or-settlement-bound-claimed"
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "susd1plus-lorenzo",
+      "reviewer": "Sol curation campaign 2026-10-11 (K15SmallCapabilities)",
+      "reviewedAt": "2026-10-10T23:58:20Z",
+      "observedAtSec": 1791676700,
+      "expiresAtSec": 1794268700,
+      "rationale": "The exact BSC sUSD1+ OTF guide permits requests at any time, followed by bulk settlement in the next NAV cycle, normally 3-6 days but expressly extendable. Pending shares are unusable, burn at settlement, and pay USD1 at settlement-day Unit NAV; the screen amount is an estimate. Access restrictions are mutable and non-exhaustive. The accessible guide does not state a user withdrawal fee; the existing zero-fee config cites a Medium launch page that returned HTTP 403 in this review, so fee remains undisclosed rather than promoted to a verified zero.",
+      "sources": [
+        {
+          "label": "Primary source",
+          "url": "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/"
+        },
+        {
+          "label": "Primary source",
+          "url": "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b",
+          "description": "Lorenzo's BSC vault-detail API identifies the exact sUSD1+ OTF vault deployment and its underlying product identity. This binds the reviewed native BSC holder deployment only."
+        },
+        {
+          "sourceUrl": "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/",
+          "description": "The guide allows withdrawal requests at any time; requests settle in bulk in the next NAV cycle, normally 3-6 days, with large withdrawals/network congestion able to extend processing. Pending requested shares are unusable, burn at settlement, and pay USD1 at settlement-day Unit NAV; the request-screen amount is an estimate. It separately states 35% management/performance fees and mutable, non-exhaustive geographic restrictions."
+        }
+      ],
+      "identity": {
+        "assetId": "susd1plus-lorenzo",
+        "deployments": [
+          {
+            "chain": "bsc",
+            "address": "0x4f2760b32720f013e900dc92f65480137391199b",
+            "sourceUrl": "https://otf.lorenzo-protocol.xyz/lorenzo/v1/vault/detail/56/0x4F2760B32720F013E900DC92F65480137391199b"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "susd1plus-lorenzo:published:bsc-request-and-claim-usd1",
+          "deploymentKey": "bsc:0x4f2760b32720f013e900dc92f65480137391199b",
+          "sourceUrl": "https://lorenzo-protocol.ghost.io/susd1-otf-redemption-guide/",
+          "outputAssetIds": [
+            "usd1-world-liberty-financial"
+          ],
+          "holderAccess": "unknown",
+          "executionModel": "queued",
+          "cooldownSec": 0,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "undisclosed"
+          },
+          "prerequisites": [
+            "request-accepted-into-next-NAV-cycle",
+            "requested-shares-unusable-while-pending-and-burn-at-settlement",
+            "USD1-payout-at-settlement-day-Unit-NAV; request-screen-amount-is-an-estimate",
+            "usual-3-to-6-days-but-large-withdrawals-or-network-congestion-can-extend; no-hard-bound",
+            "claim-after-settlement-to-receive-USD1",
+            "geographic-restrictions-are-mutable-and-non-exhaustive; no-on-chain-allowlist-claim",
+            "35-percent-management-performance-fees-are-separate-from-withdrawal-fee",
+            "withdrawal-fee-not-established-by-accessible-primary-guide"
+          ]
+        }
+      ]
     }
   ]
 }

@@ -180,15 +180,47 @@ const MIDAS_LYT_CONFIGS = defineConfigFamily(
       ...midasLytBase.docs!,
     ];
     const termsGap = MIDAS_LYT_TERMS_GAPS[id];
-    const calendarReview = id === "mhyper-midas" || id === "mmev-midas"
-      ? midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10)
-      : null;
+    const calendarReview = id === "mapollo-midas"
+      ? {
+          businessDayTerms: {
+            businessDays: 6,
+            calendarId: "frankfurt-banking-target" as const,
+            cutoff: { time: "23:59", timezone: "Europe/Berlin" },
+            assurance: "binding-guarantee" as const,
+            conditional: true,
+            conditions: [
+              "15% per-settlement-day redemption gate",
+              "Market-disruption valuation/payment deferrals and qualified subordination; instant deferred-price holdback is not standard-route capacity",
+            ],
+            startEvent: "Accepted standard redemption after applicable gates",
+            stages: [
+              { name: "realisation", businessDays: 1 },
+              { name: "payment-after-realisation", businessDays: 5 },
+            ],
+          },
+          reviewedAt: "2026-10-10",
+          docs: [
+            sourceRef(
+              "mAPOLLO signed July 17, 2026 final terms: USDC output, 23:59 CET/CEST cutoff, one-day realisation and 15% gate",
+              "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media",
+              ["route", "fees", "settlement"],
+            ),
+            sourceRef(
+              "Midas July 17, 2026 base prospectus: condition 8.3(c) five-business-day payment; condition 12 market-disruption deferrals",
+              "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media",
+              ["settlement"],
+            ),
+          ],
+        }
+      : id === "mhyper-midas" || id === "mmev-midas"
+        ? midasBusinessDayReview(id === "mhyper-midas" ? 6 : 10)
+        : null;
     return {
       ...midasLytBase,
-      ...(id === "mhyper-midas" ? {
+      ...(id === "mhyper-midas" || id === "mapollo-midas" ? {
         outputAssetType: "stable-single" as const,
         outputAssets: ["usdc-circle"],
-        reviewedAt: "2026-10-09",
+        reviewedAt: id === "mapollo-midas" ? "2026-10-10" : "2026-10-09",
       } : {}),
       costModel: feeDisclosure
         ? feeDisclosure.feeBpsMax === 0

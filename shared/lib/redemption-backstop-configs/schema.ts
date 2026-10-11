@@ -156,7 +156,25 @@ const RedemptionCostShapeSchema = {
   feeComponents: z.array(RedemptionFeeComponentSchema).min(1).max(16).optional(),
 };
 
-const RedemptionCostTermsSchema = z.strictObject(RedemptionCostShapeSchema);
+const RedemptionCostTermsSchema = z.strictObject({
+  ...RedemptionCostShapeSchema,
+  // Author only when the schedule bounds every deduction in the modelled route.
+  // A partial tariff or a sampled quote cannot satisfy this review.
+  publishedFeeSchedule: z.strictObject({
+    reviewedAt: ReviewedAtSchema,
+    reviewer: z.string().trim().min(1),
+    docs: z.array(RedemptionDocSourceSchema).min(1),
+    rationale: z.string().trim().min(1),
+  }).optional(),
+}).superRefine((terms, ctx) => {
+  if (!terms.publishedFeeSchedule) return;
+  if (!terms.publishedFeeSchedule.docs.some((doc) => doc.supports?.includes("fees"))) {
+    ctx.addIssue({ code: "custom", path: ["publishedFeeSchedule", "docs"], message: "A published fee bound requires fee-scoped primary sources" });
+  }
+  if (terms.feeBpsMax === undefined) {
+    ctx.addIssue({ code: "custom", path: ["feeBpsMax"], message: "A published schedule requires an explicit conservative percentage ceiling (zero only with proof)" });
+  }
+});
 const RedemptionV9RouteScoringFieldSchema = z.enum(["capacity", "settlement", "cost"]);
 const RedemptionV9RouteReviewTermsSchema = z.strictObject({
   minRedeemUsd: NonNegativeNumberSchema.optional(),

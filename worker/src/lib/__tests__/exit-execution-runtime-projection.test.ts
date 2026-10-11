@@ -25,7 +25,8 @@ vi.mock("../exit-execution/erc4626-instant", () => ({
       const executableUsd = request.requestedNotionalUsd * completion;
       const diagnostic = state.diagnostic && request.requestedNotionalUsd === 1_000_000;
       return {
-        ...request, requestedRawInput: String(BigInt(request.requestedNotionalUsd) * 1_000_000n),
+        requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps,
+        requestedRawInput: String(BigInt(request.requestedNotionalUsd) * 1_000_000n),
         executedRawInput: String(BigInt(executableUsd) * 1_000_000n), executableUsd,
         executionCostBps: 0, allInCostBps: 0, fees: [],
         outputs: executableUsd > 0 ? [{ ...args.outputReference, rawUnits: String(BigInt(executableUsd) * 1_000_000n) }] : [],
@@ -53,7 +54,7 @@ beforeEach(() => { state.canonicalCompletion = 1; state.diagnostic = false; vi.u
 afterEach(() => vi.useRealTimers());
 
 describe("canonical ERC4626 receipt projection", () => {
-  it("retains nonmonotonic independent grid receipts without invalidating a successful canonical execution curve", async () => {
+  it("measures and projects only the generation-bound canonical request", async () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
     const request = selectV9ExitStressRequest(call.circulatingUsd, envelope)!;
     expect(request.requestedNotionalUsd).toBe(1_000_000);
@@ -64,9 +65,8 @@ describe("canonical ERC4626 receipt projection", () => {
     expect(observation.capacityCurve).toEqual([{ requestedNotionalUsd: 1_000_000, maxCostBps: 200, executableUsd: 1_000_000, completionRatio: 1, executionCostBps: 0 }]);
     expect(resolveV9ExitCapacityAtRequest(observation.capacityCurve!.map(point => ({ ...point, executionCostBps: point.executionCostBps! })), request)?.completionRatio).toBe(1);
     const certificate = observation.executionCertificate!;
-    expect(certificate.points).toHaveLength(envelope.policy.semantic.exit.stressRequest.notionalGridUsd.length);
-    expect(certificate.points.find(point => point.requestedNotionalUsd === 10_000_000))
-      .toMatchObject({ executableUsd: 40_000, certification: "exact-lower-bound" });
+    expect(certificate.points).toHaveLength(1);
+    expect(certificate.points[0]).toMatchObject({ requestedNotionalUsd: request.requestedNotionalUsd, certification: "exact-complete" });
     const changedRequest = selectV9ExitStressRequest(210_000_000, envelope)!;
     expect(admitExitExecutionCertificate({ certificate, envelope, assetId: call.assetId, clockSec: CLOCK,
       request: changedRequest, reviews: [review], observationGenerationId: certificate.observationGenerationId,

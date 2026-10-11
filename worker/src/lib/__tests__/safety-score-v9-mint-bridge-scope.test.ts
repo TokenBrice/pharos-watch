@@ -2207,3 +2207,107 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     expect(mint.status.applicability.state).toBe("required");
   });
 });
+
+describe("native external-validation transfer tiers", () => {
+  const clockSec = Date.parse("2026-10-11T00:00:00Z") / 1_000;
+  function transferMeta(): V9ExtensionRegistryMeta {
+    return meta("fixture-native-external", {
+      bridgeRouteRisk: bridgeProfile([route(ETHEREUM_ROUTE, { observedAt: "2026-10-01" })], {
+        reviewedAt: "2026-10-01",
+        nativeExternalTransferReviews: [{
+          id: "fixture-layerzero-oft", routeRefs: [ETHEREUM_ROUTE],
+          tier: "external-validated-network", reviewedAt: "2026-10-10T12:00:00Z",
+          reviewer: "Fixture reviewer", sources: [SOURCE],
+          rationale: "The issuer identifies an externally validated OFT native transfer rail.",
+        }],
+      }),
+    });
+  }
+
+  it("publishes a known tier without inventing native mint, materiality or controller closure", () => {
+    const metadata = transferMeta();
+    const { compiled } = compileFixture(metadata, { clockSec });
+    const asset = compiled.assets[0]!;
+    const bridge = asset.economicControlReview.bridge;
+    expect(bridge.status.applicability.state).toBe("required");
+    expect(bridge.routes).toHaveLength(1);
+    expect(bridge.routes[0]).toMatchObject({
+      tier: "external-validated-network", factorStatuses: { tier: { observationState: "known" } },
+    });
+    const tierEvidenceIds = bridge.routes[0]!.factorStatuses!.tier!.evidenceRefIds;
+    expect(tierEvidenceIds).toHaveLength(1);
+    const tierEvidence = asset.evidence.filter((row) => tierEvidenceIds.includes(row.evidenceId));
+    expect(tierEvidence).toHaveLength(tierEvidenceIds.length);
+    expect(tierEvidence[0]).toMatchObject({
+      sourceId: "stablecoin-meta.native-external-transfer",
+      observedAtSec: Date.parse("2026-10-10T12:00:00Z") / 1_000,
+      url: SOURCE.url,
+    });
+    expect(asset.gaps.map((gap) => gap.gapId))
+      .not.toContain(`${metadata.id}:gap:economic-control:bridge::tier`);
+    const control = asset.controls.find((row) => row.controlKey === bridge.routes[0]!.controlKey)!;
+    expect(control.capabilities).toEqual(["parameter-change"]);
+    expect(control.materialSupplyShare).toBeNull();
+    expect(control.authority?.model).toBe("unknown");
+    expect(control.claimImpairment).toBe("unknown");
+    expect(asset.gaps.some((gap) => gap.reasonCode === "unresolved-control-identity")).toBe(true);
+    expect(metadata.bridgeRouteRisk!.routes![0]!.issuanceModel).toBe("native-issuance");
+    const result = evaluateV9EconomicControlAssetFacts(
+      asset, { assetId: asset.assetId, ...asset.economicControlReview }, V9_CANDIDATE_POLICY_V1,
+    );
+    expect(result.components.some((component) =>
+      component.kind === "bridge" && component.posture === "external-validated-network")).toBe(false);
+    expect(result.reasons.map((reason) => reason.code)).toContain("selected-bridge-route-unresolved");
+  });
+
+  it("does not infer an external rail from the legacy profile tier or native issuance", () => {
+    const metadata = transferMeta();
+    delete metadata.bridgeRouteRisk!.nativeExternalTransferReviews;
+    const adapted = adaptBridgeFixture(metadata, null, undefined, clockSec);
+    expect(adapted.review.status.applicability.state).toBe("not-applicable");
+    expect(adapted.review.routes).toEqual([]);
+    expect(adapted.controls).toEqual([]);
+  });
+
+  it.each(["stale", "future", "stale-deployment", "unknown-deployment"] as const)(
+    "fails closed for %s rail evidence without claiming no bridge", (fault) => {
+      const metadata = transferMeta();
+      const transfer = metadata.bridgeRouteRisk!.nativeExternalTransferReviews![0]!;
+      if (fault === "stale") transfer.reviewedAt = "2024-01-01";
+      if (fault === "future") transfer.reviewedAt = "2026-10-12T00:00:00Z";
+      if (fault === "stale-deployment") metadata.bridgeRouteRisk!.routes![0]!.observedAt = "2024-01-01";
+      if (fault === "unknown-deployment") transfer.routeRefs = [BASE_ROUTE];
+      const adapted = adaptBridgeFixture(metadata, null, undefined, clockSec);
+      expect(adapted.review.status.applicability.state).toBe("required");
+      expect(adapted.review.routes).toEqual([]);
+    },
+  );
+
+  it("reuses structured native transfer controls rather than duplicating their capabilities", () => {
+    const metadata = transferMeta();
+    metadata.bridgeRouteRisk!.controls = [bridgeControl({
+      routeRefs: [ETHEREUM_ROUTE], capabilities: ["validator", "peer-config"],
+    })];
+    const adapted = adaptBridgeFixture(metadata, null, undefined, clockSec);
+    expect(adapted.controls).toHaveLength(1);
+    expect(adapted.review.routes).toHaveLength(1);
+    expect(adapted.review.routes[0]!.controlKey).toBe(adapted.controls[0]!.controlKey);
+    expect(adapted.controls[0]!.capabilities).not.toContain("bridge-mint");
+  });
+
+  it.each(["missing-route", "representation", "duplicate", "favorable-tier", "missing-source"] as const)(
+    "rejects inadmissible %s review shape", (fault) => {
+      const profile = structuredClone(transferMeta().bridgeRouteRisk!);
+      const transfer = profile.nativeExternalTransferReviews![0]!;
+      if (fault === "missing-route") transfer.routeRefs = [BASE_ROUTE];
+      if (fault === "representation") profile.routes![0] = representationRoute(ETHEREUM_ROUTE);
+      if (fault === "duplicate") transfer.routeRefs.push(ETHEREUM_ROUTE);
+      const input = fault === "favorable-tier" ? {
+        ...profile, nativeExternalTransferReviews: [{ ...transfer, tier: "issuer-native-burn-mint" }],
+      } : fault === "missing-source" ? {
+        ...profile, nativeExternalTransferReviews: [{ ...transfer, sources: [] }],
+      } : profile;
+      expect(BridgeRouteRiskProfileSchema.safeParse(input).success).toBe(false);
+    },
+  );
+});

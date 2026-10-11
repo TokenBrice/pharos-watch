@@ -79,6 +79,20 @@ describe("reviewed business-day completion bounds", () => {
     expect(RedemptionBusinessDayTermsSchema.safeParse({ ...terms, conditions: ["Gate"] }).success).toBe(false);
     expect(RedemptionBusinessDayTermsSchema.safeParse({ ...terms, stages: [{ name: "realisation", businessDays: 2 }] }).success).toBe(false);
   });
+  it("retains completed access prerequisites without inventing an intraday cutoff", () => {
+    const receipt: RedemptionBusinessDayTerms = { ...terms,
+      cutoff: { time: null, timezone: "UTC", basis: "receipt-day" },
+      accessPrerequisites: ["KYC completed and input delivered before eligible receipt"],
+    };
+    expect(walkBusinessDaySettlement(receipt, Date.parse("2026-10-09T23:59:59Z") / 1000, clock, calendar))
+      .toMatchObject({ state: "known", completionDate: "2026-10-12" });
+    expect(maximumBusinessDaySettlement(receipt, clock, { from: "2026-10-09", to: "2026-10-09" }, calendar))
+      .toMatchObject({ state: "known", maximumElapsedSec: 4 * 86400 });
+    expect(maximumBusinessDaySettlement({ ...receipt, conditional: true, conditions: ["Payment may be gated"] },
+      clock, undefined, calendar)).toEqual({ state: "unknown", reason: "conditional-terms" });
+    expect(RedemptionBusinessDayTermsSchema.safeParse({ ...receipt,
+      cutoff: { ...receipt.cutoff, time: "16:00" } }).success).toBe(false);
+  });
   it.each(["euri-banking-circle", "brlv-crown", "fusd-finchain", "mre7yield-midas", "mmev-midas", "mhyper-midas"])("does not turn reviewed %s normal terms into an unconditional scalar", (id) => {
     const config = getRedemptionBackstopConfig(id)!;
     expect(resolveReviewedRedemptionSettlementDelay(config.v9RouteReviewTerms, clock)).toBeUndefined();

@@ -412,12 +412,11 @@ export async function computeStablecoinScores(
   };
   targetInventoryById.clear();
 
-  // The run's route-evidence clock is pinned to its source slot. The measured
-  // lane publishes its cohort minutes later, so a read-time "latest published"
-  // cohort would postdate this clock and every profile in it would fail the
-  // no-lookahead `future-history` guard — silently dropping those exit routes
-  // from publication. Read the newest cohort the pinned clock already covered
-  // instead; the guard and its freshness bounds stay untouched.
+  // Route admission is pinned to the consumer's scoring clock, independently
+  // of the source-stage start and registry-volume clock. Same-block captures
+  // made during that stage and cohorts published before consumption are not
+  // lookahead. The read ceiling and validators still reject later cohorts and
+  // genuinely future source evidence without refreshing any evidence clock.
   const joinEvidence = await loadDexMeasuredExecutionJoinEvidence(db, signal, {
     publishedAtCeilingSec: routeObservedAt,
   });

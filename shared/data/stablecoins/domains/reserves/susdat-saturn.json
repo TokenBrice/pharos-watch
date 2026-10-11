@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "STRCon note tracking Strategy Stretch Preferred (STRC)",
-      "pct": 93.7977725084671,
+      "pct": 95.2878923029554,
       "risk": "high",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "Ondo Global Markets (BVI) Limited structured note; underlying preferred-equity obligor Strategy Inc.",
@@ -12,7 +12,7 @@
     },
     {
       "name": "USDat cash buffer held by the Saturn sUSDat vault",
-      "pct": 6.202227491532897,
+      "pct": 4.712107697044608,
       "risk": "low",
       "coinId": "usdat-saturn",
       "depType": "collateral",
@@ -23,21 +23,23 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L28USDat)",
     "confidence": "verified",
     "sources": [
       { "label": "Saturn V2 current asset and migration structure", "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md" },
       { "label": "Verified deployed vault implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
       { "label": "Ethereum observation block 26108096", "url": "https://etherscan.io/block/26108096" },
+      { "label": "Ethereum reserve census block 26155000 (2026-10-09T12:57:47Z), observed 2026-10-10T23:36:03Z", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com" },
+      { "label": "Ethereum reserve census block 26155000", "url": "https://etherscan.io/block/26155000" },
       { "label": "STRCon underlying preferred-security identity", "url": "https://app.ondo.finance/assets/strcon" },
       { "label": "Ondo structured-note issuer and holder rights", "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory.md" },
       { "label": "Saturn disclosures still describe older custody and proposed assurance", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits.md" },
       { "label": "Exact STRCon legal-document access surface", "url": "https://app.ondo.finance/legal-documentation?asset=strcon&autoOpen=true&download=doc-0" }
     ],
-    "rationale": "At Ethereum block 26108096, observed 2026-10-03T00:03:10.345094Z, the vault asset() was USDat 0x23238f20b894f29041f48d88ee91131c395aaa71. totalAssets() returned 66,668,382.380280 accounting units, exactly the sum of the actual USDat balance 4,134,924.740150 and STRConModule recognizedValue() 62,533,457.640130. The old STRCMirrorModule recognizedValue() was zero and getUnvestedSurplus() was zero. STRConModule ASSET() returned 0xecabe1ff8a9e1dc55899cf58dac8497ece5ae84c and the vault held 594,182.9100530432 STRCon. Shares outstanding were 64,115,192.98239439 at 18 decimals. Percentages are current operational NAV weights, not an independent off-chain securities/liabilities reconciliation or a claim that note holders directly own Strategy shares. BNB and Monad supplies are bridge representations and are not added to canonical supply.",
-    "compositionBasis": "Pinned Ethereum totalAssets, USDat balance, STRConModule recognizedValue/ASSET, STRCMirrorModule recognizedValue and exact STRCon balance at block 26108096",
-    "compositionAsOf": "2026-10-03",
+    "rationale": "Re-reviewed on 2026-10-10 from successful pinned Ethereum reads at block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z, observed 2026-10-10T23:36:03.384Z. The native vault and queue implementation slots still resolve to 0x2b7074cf6681382b70e239063931ebe83c0f4e0a and 0xdaf6f8523d7a707d173a12041e1523fdf1373f23. STRConModule and STRCMirrorModule still resolve to 0x3c0f0b502aa7c2ed85620f7f52b8efb8049b1ecf and 0xa2cf4b9410cebcdceb3cff772ac0219f6d1105c9. STRCon recognizedValue was 62,546,085.108382 USDat-equivalent, the vault's actual USDat balance was 3,092,983.609315, and legacy mirror recognizedValue was zero. Gross identified reserves therefore total 65,639,068.717697 USDat-equivalent. totalAssets was 65,603,124.273252 and getUnvestedSurplus was 35,944.444445; their sum equals gross identified reserves exactly. The percentages use the gross reserve denominator and include unvested USDat instead of silently excluding it. The vault held 594,182.910053043150994347 STRCon. These are contract-recognized reserve weights, not independent securities/liabilities reconciliation, executable liquidation values, direct Strategy share ownership or assurance. BNB and Monad representations are not additional underlying reserves; legal and custody conclusions retain their prior unresolved scope.",
+    "compositionBasis": "Gross identified Ethereum reserves = vault USDat balance + STRConModule recognizedValue = totalAssets + getUnvestedSurplus; zero legacy mirror; exact module and implementation identities pinned at block 26155000",
+    "compositionAsOf": "2026-10-09",
     "scope": "full-composition",
     "knownUnknownExposure": "All operational NAV positions are identified, so unresolved composition identity exposure is zero. For the dominant STRCon slice, exact current note terms, Strategy preferred seniority, dated off-chain reconciliation, Saturn deed-of-gift execution, legal priority, default recovery and realizable liquidity are not established. Those credit/legal uncertainties remain explicit in the local mechanism overlay; zero unidentified composition is not zero financial risk. Family-level Ondo safeguards are not upgraded to Saturn holder safeguards.",
     "knownUnknownExposurePct": 0,
@@ -45,7 +47,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "STRCon note tracking Strategy Stretch Preferred (STRC)",
-        "pct": 93.7977725084671,
+        "pct": 95.2878923029554,
         "disposition": "untracked-exogenous-asset",
         "rationale": "STRCon is the exact untracked Ondo security note held on-chain. The structured asset class names both the note issuer and Strategy obligor; no USDat cash-backed passthrough, invented STRCon catalog dependency or missing-parent numeric score is substituted. Exact note and Saturn recovery terms remain unavailable in the local credit overlay."
       }

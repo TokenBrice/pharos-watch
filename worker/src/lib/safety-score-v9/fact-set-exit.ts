@@ -29,6 +29,7 @@ import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
 import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
 import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
+import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
 import type {
   V9EvidenceResponsibility,
   V9ExitRouteFactV2,
@@ -99,7 +100,13 @@ function routeEvidence(
         : context.extension.routeFreshness.dexMaxAgeSec
       : observation.evidenceKind === "documented-terms"
         ? context.extension.routeFreshness.documentedTermsMaxAgeSec
-        : context.extension.routeFreshness.redemptionMaxAgeSec);
+        : retained
+          ? context.extension.routeFreshness.redemptionMaxAgeSec
+          : reserveBackedRedemptionRouteMaxAgeSec(
+              observation,
+              context.fixedInput.redemptionBackstopMap[context.asset.assetId],
+              context.extension.routeFreshness.redemptionMaxAgeSec,
+            ));
   return addEvidence(
     context,
     createV9EvidenceReference(
@@ -208,6 +215,9 @@ function routeGap(
 function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionRouteSuspension): V9ExitRouteFactV2 {
   const generationId = context.fixedInput.redemptionGenerationId;
   const routeKey = canonicalV9RouteKey("redemption", generationId, suspension.routeId);
+  const adverseFactId = `${context.asset.assetId}:route-suspension:${suspension.routeId}`;
+  const causeScope = { pillar: "exit" as const, componentKey: "exit-route", factorKey: "suspended",
+    routeKey, exposureId: null, requiredDatum: "suspended" };
   const evidenceId = addEvidence(context, createV9EvidenceReference({
     evidenceId: `${context.asset.assetId}:route-suspension:${suspension.routeId}`,
     sourceId: "reviewed-redemption-channel-suspension",
@@ -216,10 +226,19 @@ function buildSuspendedRoute(context: AssetBuildContext, suspension: RedemptionR
     observedAtSec: Date.parse(`${suspension.reviewedAt}T00:00:00Z`) / 1_000,
     contentSha256: domainDigest("safety-score-v10.route-suspension.v1", suspension),
     url: suspension.sources[0]!.url,
+    causeBinding: { assetId: context.asset.assetId, scope: causeScope,
+      producerState: null, rejectionCode: null, adverseFactId },
   }, context.fixedInput.clockSec));
-  const gapId = routeGap(context, routeKey, "suspended", "bounded-unknown",
-    "missing-same-notional-route", "integration-missing",
-    `${suspension.channel}: ${suspension.reason} This establishes no total-exit measurement.`, [evidenceId]);
+  const gapId = addGap(context, createV9FactGapV3({
+    gapId: `${context.asset.assetId}:gap:route:${routeKey}:suspended`,
+    reasonCode: "unsupported-same-notional-route",
+    ownerDomain: "exit", policyRuleId: "v9.exit.same-notional-route",
+    observationState: "bounded-unknown", responsibility: "measured-adverse",
+    causeProof: { cause: "D", adverseFactId, evidenceRefIds: [evidenceId] },
+    causeScope, path: optionalExitV9Path(routeKey),
+    message: `${suspension.channel}: ${suspension.reason} This channel has no eligible capacity; independent exits and recovery remain unmeasured.`,
+    evidenceRefIds: [evidenceId],
+  }));
   const status = createV9FactStatus({
     applicability: requiredV9Applicability("v9.exit.same-notional-route"),
     observationState: "bounded-unknown", evidenceRefIds: [evidenceId], gapIds: [gapId],
@@ -532,6 +551,8 @@ function buildRoute(
   // V9 reviews may conservatively worsen those semantics (for example, an
   // atomic producer route can become an unbounded queue), so re-apply the
   // score-bearing contract after the review has been materialized.
+  const settlementBoundUnproven = args.review.settlementBoundUnproven ??
+    (args.observation.settlementBoundUnproven === true);
   const scoreEligible = isDexExitRouteScoreEligible({
     producerScoreEligible: args.observation.scoreEligible && executionAdmission?.state !== "unavailable",
     routeState,
@@ -553,7 +574,7 @@ function buildRoute(
       ["access", args.review.holderAccess !== "unknown"],
       ["holderEligibility", args.review.holderAccess !== "unknown"],
       ["executionConfidence", args.review.executionCertainty !== "unknown" && args.review.modelConfidence !== "unknown"],
-      ["settlement", args.review.settlementSlaSec !== null && args.observation.settlementBoundUnproven !== true],
+      ["settlement", args.review.settlementSlaSec !== null && !settlementBoundUnproven],
     ] as const) {
       if (!known) continue;
       const componentKey = `exit-route:${routeKey}:${factorKey}`;
@@ -578,8 +599,9 @@ function buildRoute(
     capacityEvidenceTier: capacityEvidenceTierForObservation(args.observation),
     observationHistory: args.observation.observationHistory ?? null,
     evidenceKind: args.observation.evidenceKind,
-    ...((args.review.feeEvidence ?? args.observation.feeEvidence)
-      ? { feeEvidence: args.review.feeEvidence ?? args.observation.feeEvidence } : {}),
+    ...(args.review.feeEvidence === null ? {} :
+      (args.review.feeEvidence ?? args.observation.feeEvidence)
+        ? { feeEvidence: args.review.feeEvidence ?? args.observation.feeEvidence } : {}),
     ...(args.observation.physicalToUsd ? { physicalToUsd: args.observation.physicalToUsd } : {}),
     ...(args.observation.executionModelId ? { executionModelId: args.observation.executionModelId } : {}),
     ...(certificate ? { executionCertificate: certificate } : {}),
@@ -601,7 +623,7 @@ function buildRoute(
       ...rejectedFactorStatuses,
     },
     scoreEligible,
-    settlementBoundUnproven: args.observation.settlementBoundUnproven === true,
+    settlementBoundUnproven,
     request: {
       requestedNotionalUsd: args.observation.requestedNotionalUsd,
       maxCostBps: args.observation.maxCostBps,

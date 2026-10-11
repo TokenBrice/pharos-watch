@@ -52,6 +52,7 @@ import { validateSafetyScoreV9ShockRegistryAsset } from "./extension-shock";
 import {
   buildSafetyScoreV9MechanismReview,
   getSafetyScoreV9MechanismExitFacts,
+  getSafetyScoreV9MechanismComponentEvidence,
   getSafetyScoreV9MechanismOverlayEvidence,
   getSafetyScoreV9MechanismReviewGapDisposition,
   getSafetyScoreV9MechanismReviewedUnavailableComponents,
@@ -130,6 +131,7 @@ import {
   requiredStatus,
   researchReviewObservationState,
   reviewedObservationState,
+  reviewedKeyCustody,
   type ControlOverlay,
   type ExtensionAsset,
   type V9ExtensionRegistryMeta,
@@ -157,17 +159,14 @@ export function resolveReviewedReserveRows(input: {
   meta: V9ExtensionRegistryMeta;
   clockSec: number;
   liveReserveRows: readonly ReserveSlice[];
-  liveFallbackAllowed: boolean;
   fixedInput?: Readonly<SafetyScoreV9CompilerInput>;
 }): ReviewedReserveRows {
   if (input.liveReserveRows.length > 0) return null;
   return (
     buildSafetyScoreV9ReviewedStaticReserveRows(input.meta, input.clockSec, input.fixedInput) ??
     (input.meta.liveReservesConfig != null
-      ? input.liveFallbackAllowed
-        ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput) ??
-          buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput)
-        : null
+      ? buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput) ??
+        buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(input.meta, input.clockSec, input.fixedInput)
       : buildSafetyScoreV9ReviewedStandaloneReserveRows(input.meta, input.clockSec, input.fixedInput))
   );
 }
@@ -1110,6 +1109,7 @@ function adaptMintControl(
       : reviewComplete && !scopedMintReachUnresolved
         ? "none"
         : "unknown";
+  const keyCustody = reviewedKeyCustody(control.keyCustodyAttestation, clockSec);
   const controlKey = `mint-meta:${assetId}:${domainDigest("safety-score-v9.mint-control-key.v1", {
     chain: control.chain ?? null,
     address: control.address?.toLowerCase() ?? null,
@@ -1135,7 +1135,9 @@ function adaptMintControl(
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
     ...(scopedQuestionIsCustodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
-    keyCustody: scopedQuestionIsCustodyOnly ? "unknown" : control.keyCustodyAttestation?.kind ?? "unknown",
+    keyCustody: scopedQuestionIsCustodyOnly ? "unknown" : keyCustody,
+    ...(control.keyCustodyAttestation?.kind === "hardware-wallet" && keyCustody === "unknown"
+      ? { keyCustodyReviewUnavailable: true } : {}),
     modulesOrGuards: control.modulesOrGuardsStatus ?? "unknown",
     ...(projection.scope ? {
       executionScope: projection.scope,
@@ -2330,6 +2332,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
     [
       ...Object.values(fixedInput.pegDataById).map((peg) => peg.priceObservedAt),
       ...Object.values(fixedInput.navPriceById ?? {}).map((navPrice) => navPrice.observedAtSec),
+      ...Object.values(fixedInput.exitOutputPriceById ?? {}).map((price) => price.observedAtSec),
     ],
     fixedInput.updatedAt,
     clockSec,
@@ -2347,6 +2350,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
   const pegGenerationDigest = domainDigest("safety-score-v9.peg.v1", {
     pegDataById: fixedInput.pegDataById,
     navPriceById: fixedInput.navPriceById ?? {},
+    ...(fixedInput.exitOutputPriceById ? { exitOutputPriceById: fixedInput.exitOutputPriceById } : {}),
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
   });
   const researchOverlaysGenerationDigest = domainDigest("safety-score-v9.research-overlays.v3", {
@@ -2391,7 +2395,6 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       maxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.researchOverlayMaxAgeSec,
     },
   } satisfies SafetyScoreV9FactSetExtensionV2["sources"];
-  const liveToFallbackAssetIds = new Set(fixedInput.liveToFallbackCoins);
 
   return {
     schemaVersion: 3,
@@ -2449,18 +2452,15 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         admissionPath = "registry.mintBridgeOwnership";
         assertMintBridgeOwnership(meta);
         const liveReserves = fixedInput.liveReserveMap[assetId] ?? [];
-        // The audited fallback rung applies only where a live producer was
-        // observed returning nothing this capture. It sits inside that gate, not
-        // ahead of it, so an asset excluded from falling back is not rescued; and
-        // it is deliberately absent from the standalone branch, where no live
-        // producer exists and nothing has gone stale.
+        // The captured live-to-fallback census is operational telemetry, not
+        // authority over independently dated, reviewed registry evidence.
+        // Live rows still win; curated rows retain every source/scope/age gate.
         admissionPath = "reviewedStaticReserveRows";
         const reviewedStaticReserveRows = resolveReviewedReserveRows({
           meta,
           clockSec,
           fixedInput,
           liveReserveRows: liveReserves,
-          liveFallbackAllowed: liveToFallbackAssetIds.has(assetId),
         });
         const reserveRows = reviewedStaticReserveRows?.rows ?? liveReserves;
         admissionPath = "reserveBoundFacts";
@@ -2502,6 +2502,18 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
             payload: mechanismOverlayEvidence.payload,
             maxAgeSec: mechanismOverlayEvidence.maxAgeSec,
           });
+          for (const component of getSafetyScoreV9MechanismComponentEvidence(assetId, archetype, clockSec)) {
+            reviewEvidence.add({
+              componentKeys: [`mechanism-risk-review:${component.componentKey}`],
+              sourceId: `safety-score-v9.mechanism-review-overlay:${component.componentKey}`,
+              reviewedAt: component.reviewedAt,
+              publishedBy: "unknown",
+              confidence: "manual-review",
+              sources: component.sources,
+              payload: component.payload,
+              maxAgeSec: component.maxAgeSec,
+            });
+          }
         } else if (
           mechanismRiskReview &&
           (archetype === "ucits-trs-fund" || archetype === "shared-reserve" || archetype === "protocol-position") &&

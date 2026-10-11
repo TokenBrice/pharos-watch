@@ -1,5 +1,4 @@
 import {
-  resolveV9ExitCapacityAtRequest,
   selectV9ExitCirculatingUsd,
   selectV9ExitStressRequest,
 } from "@shared/lib/safety-score-v9/exit";
@@ -314,6 +313,19 @@ function independentWrapperLocalReview(
     identity.assetId !== review.assetId || allocationReviewClockSec(review.reviewedAt) > clock ||
     review.observedAtSec > clock || clock >= review.expiresAtSec || clock - review.observedAtSec > maxAgeSec) return null;
   const registered = new Set(identity.registeredDeploymentKeys);
+  if (review.kind === "published-accounting" || review.kind === "published-emergency-controls" ||
+    review.kind === "published-withdrawal-terms") {
+    const keys = review.identity.deployments.map((row) => `${row.chain}:${row.address}`);
+    if (registered.size === 0 || registered.size !== identity.registeredDeploymentKeys.length ||
+      new Set(keys).size !== keys.length || keys.some((key) => !registered.has(key)) ||
+      review.identity.deployments.some((row) => !review.sources.some((source) => source.url === row.sourceUrl)) ||
+      // Accounting/control claims describe the whole holder instrument; a
+      // withdrawal term instead names only its documented deployment/route.
+      (review.kind !== "published-withdrawal-terms" && keys.length !== registered.size)) return null;
+    if (review.kind === "published-withdrawal-terms" && review.terms.some((term) =>
+      !keys.includes(term.deploymentKey) || !review.sources.some((source) => source.url === term.sourceUrl))) return null;
+    return { review, evidenceRefIds: wrapperLocalReviewEvidence(context, review, maxAgeSec) };
+  }
   if (registered.size === 0 || registered.size !== identity.registeredDeploymentKeys.length ||
     registered.size !== review.identity.registeredDeploymentKeys.length ||
     review.identity.registeredDeploymentKeys.some((key) => !registered.has(key)) ||
@@ -333,15 +345,22 @@ function independentWrapperLocalReview(
     }
     seen.add(key);
   }
-  const evidenceRefIds = review.sources.map((source) => addEvidence(context, createV9EvidenceReference({
-    evidenceId: `${review.assetId}:wrapper-local-review:${kind}:${domainDigest("safety-score-v9.wrapper-local-source.v1", source).slice(0, 16)}`,
+  return { review, evidenceRefIds: wrapperLocalReviewEvidence(context, review, maxAgeSec) };
+}
+
+function wrapperLocalReviewEvidence(
+  context: AssetBuildContext,
+  review: SafetyScoreV9WrapperLocalReview,
+  maxAgeSec: number,
+): string[] {
+  return review.sources.map((source) => addEvidence(context, createV9EvidenceReference({
+    evidenceId: `${review.assetId}:wrapper-local-review:${review.kind}:${domainDigest("safety-score-v9.wrapper-local-source.v1", source).slice(0, 16)}`,
     sourceId: "safety-score-v9.wrapper-local-review",
     sourceGenerationId: context.extension.sources.researchOverlays.generationId,
     disposition: "observed", observedAtSec: review.observedAtSec, url: source.url,
     contentSha256: domainDigest("safety-score-v9.wrapper-local-review.v1", { review, source }),
     maxAgeSec: Math.min(maxAgeSec, review.expiresAtSec - review.observedAtSec),
-  }, clock)));
-  return { review, evidenceRefIds };
+  }, context.fixedInput.clockSec)));
 }
 
 function buildWrapperStructuralDimensions(
@@ -378,13 +397,21 @@ function buildWrapperStructuralDimensions(
       : null;
   let contractMutability: V9WrapperLocalDimensionFact;
   const upgrade = input.economicControlReview.mint.upgrade;
+  const mutabilityReview = independentWrapperLocalReview(context, "contract-mutability");
   // This independent lane establishes only root-code mutability. Mutable
   // roles, modules, fees and allocations remain in their existing dimensions.
   const immutableRootEvidence =
     input.economicControlReview.mint.status.observationState !== "known" && upgrade.state === "immutable"
       ? independentlyReviewedImmutableRootEvidence(context)
       : null;
-  if (immutableRootEvidence !== null) {
+  if (mutabilityReview?.review.kind === "contract-mutability") {
+    // Undisclosed authority or bypass coverage never earns a delay benefit.
+    // This review proves mutable root code independently of aggregate mint.
+    contractMutability = reviewedWrapperFact(context, "high",
+      ["wrapper-upgrade-state:reviewed", "wrapper-local-upgradeable-root",
+        `wrapper-published-upgrade-delay-sec:${mutabilityReview.review.minimumPublicDelaySec ?? "undisclosed"}`],
+      mutabilityReview.evidenceRefIds);
+  } else if (immutableRootEvidence !== null) {
     contractMutability = reviewedWrapperFact(
       context,
       "none",
@@ -673,6 +700,7 @@ function buildWrapperStructuralDimensions(
 
   let shareAccountingNavOracle: V9WrapperLocalDimensionFact;
   const accountingReview = independentWrapperLocalReview(context, "accounting");
+  const publishedAccounting = independentWrapperLocalReview(context, "published-accounting");
   if (accountingReview?.review.kind === "accounting") {
     shareAccountingNavOracle = reviewedWrapperFact(
       context,
@@ -680,6 +708,12 @@ function buildWrapperStructuralDimensions(
       [`wrapper-local-accounting:${accountingReview.review.mechanism}`, "borrower-liquidation-oracle-risk-retained-separately"],
       accountingReview.evidenceRefIds,
     );
+  } else if (publishedAccounting?.review.kind === "published-accounting") {
+    // Published fixed-face liability accounting is not a verified NAV oracle,
+    // live backing proof, or code-certified absence of local pricing risk.
+    shareAccountingNavOracle = reviewedWrapperFact(context, "moderate",
+      ["wrapper-local-accounting:fixed-face-accounting", "wrapper-accounting-published-terms-only",
+        "borrower-liquidation-oracle-risk-retained-separately"], publishedAccounting.evidenceRefIds);
   } else if (form === "pure") {
     shareAccountingNavOracle = reviewedWrapperFact(
       context,
@@ -758,6 +792,7 @@ function buildWrapperExitDimensions(
   );
   let withdrawalTerms: V9WrapperLocalDimensionFact;
   const entitlementReview = independentWrapperLocalReview(context, "holder-entitlement");
+  const publishedTerms = independentWrapperLocalReview(context, "published-withdrawal-terms");
   if (entitlementReview?.review.kind === "holder-entitlement") {
     withdrawalTerms = reviewedWrapperFact(
       context,
@@ -817,18 +852,46 @@ function buildWrapperExitDimensions(
       routeEvidenceRefIds,
     );
   }
+  if (publishedTerms?.review.kind === "published-withdrawal-terms") {
+    const termRisks = publishedTerms.review.terms.map((term): V9WrapperRiskAssessment => {
+      if (term.holderAccess === "issuer-only" || term.executionModel === "discretionary") return "critical";
+      if (term.fee.kind === "undisclosed" || term.settlementBoundSec === null) return "high";
+      if (term.executionModel === "queued" || (term.cooldownSec ?? 0) > 0) {
+        return term.settlementBoundSec > 604_800 ? "high" : "moderate";
+      }
+      // Static terms never prove a current gate configuration or execution.
+      return "moderate";
+    });
+    withdrawalTerms = reviewedWrapperFact(context,
+      worstWrapperRisk([...termRisks,
+        ...(withdrawalTerms.assessment === null ? [] : [withdrawalTerms.assessment])]),
+      [...withdrawalTerms.signals.filter((signal) => withdrawalTerms.disposition === "reviewed"),
+        "wrapper-withdrawal-published-terms:no-capacity-claim",
+        ...publishedTerms.review.terms.flatMap((term) => [
+          `wrapper-withdrawal-route:${term.routeKey}`,
+          `wrapper-withdrawal-access:${term.holderAccess}`,
+          `wrapper-withdrawal-execution:${term.executionModel}`,
+          `wrapper-withdrawal-cooldown-sec:${term.cooldownSec ?? "undisclosed"}`,
+          `wrapper-withdrawal-settlement-bound-sec:${term.settlementBoundSec ?? "unproven"}`,
+          `wrapper-withdrawal-fee:${term.fee.kind}${term.fee.kind === "fixed-bps" ? `:${term.fee.bps}` : ""}`,
+          ...term.prerequisites.map((prerequisite) => `wrapper-withdrawal-prerequisite:${prerequisite}`),
+        ])],
+      [...withdrawalTerms.evidenceRefIds, ...publishedTerms.evidenceRefIds]);
+  }
 
   const stressRequest = selectV9ExitStressRequest(
     selectV9ExitCirculatingUsd(input.supply),
     V9_CANDIDATE_POLICY_V1,
   );
-  // A modeled route or partial inventory can establish a lower bound, not
-  // observed exhaustion. Keep the same measurement gate as the Exit pillar.
+  // A transaction-simulated lower bound can prove sufficient completion, but
+  // never exhaustion. Only a complete inventory can establish adverse unwind.
   const observedUnwindRoutes = input.exitRoutes.filter(
     (route) =>
       route.status.observationState === "known" &&
       route.scoreEligible &&
-      route.coverageClass === "exact-complete" &&
+      (route.coverageClass === "exact-complete" ||
+        (route.coverageClass === "exact-lower-bound" &&
+          route.executionCertificate?.capacityBasis === "transaction-simulation")) &&
       route.evidenceKind !== "documented-terms" &&
       route.feeEvidence === undefined &&
       !route.settlementBoundUnproven &&
@@ -841,11 +904,14 @@ function buildWrapperExitDimensions(
       : observedUnwindRoutes.flatMap((route) => {
           if (!route.capacityCurve.every((point): point is typeof point & { executionCostBps: number } =>
             point.executionCostBps !== null)) return [];
-          const point = resolveV9ExitCapacityAtRequest(route.capacityCurve, stressRequest);
-          return point === null ? [] : [point.completionRatio];
+          const point = route.capacityCurve.find((candidate) =>
+            candidate.requestedNotionalUsd === stressRequest.requestedNotionalUsd &&
+            candidate.maxCostBps === stressRequest.maxCostBps);
+          return point === undefined ? [] : [point.completionRatio];
         });
   const bestCompletion = stressCompletions.length > 0 ? Math.max(...stressCompletions) : null;
-  const unwindInventoryComplete = stressCompletions.length === input.exitRoutes.length;
+  const unwindInventoryComplete = stressCompletions.length === input.exitRoutes.length &&
+    observedUnwindRoutes.every((route) => route.coverageClass === "exact-complete");
   if (bestCompletion !== null && (bestCompletion >= 0.95 || unwindInventoryComplete)) {
     measuredUnwind = reviewedWrapperFact(
       context,
@@ -965,6 +1031,17 @@ function buildWrapperLossAbsorptionFact(
         controlEvidenceRefIds,
       );
     }
+  }
+  const publishedControls = independentWrapperLocalReview(context, "published-emergency-controls");
+  if (publishedControls?.review.kind === "published-emergency-controls") {
+    // A published local impairment capability is adverse evidence, not a
+    // complete controller/quorum review or evidence that no other power exists.
+    lossAbsorptionEmergencyControls = reviewedWrapperFact(context,
+      worstWrapperRisk(["high", ...(lossAbsorptionEmergencyControls.assessment === null
+        ? [] : [lossAbsorptionEmergencyControls.assessment])]),
+      ["wrapper-emergency-controls-published-capabilities",
+        ...publishedControls.review.capabilities.map((capability) => `wrapper-local-control:${capability}`)],
+      [...lossAbsorptionEmergencyControls.evidenceRefIds, ...publishedControls.evidenceRefIds]);
   }
   return lossAbsorptionEmergencyControls;
 }

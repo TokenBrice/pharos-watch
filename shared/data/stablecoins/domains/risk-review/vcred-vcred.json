@@ -22,17 +22,17 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "The exact Hemi VCRED source declares a USD peg but has no price-sensitive mint, burn or redemption input. The linked website's staking/access-token and AI/perp-vault descriptions have not been joined to this exact deployment.",
+    "summary": "The sole catalogued Hemi VCRED deployment has no price-sensitive control in its fully verified non-proxy ERC-20 source. Owner minting and holder/allowance burns do not consult an oracle, NAV or exchange rate; the separately advertised AI/perp vaults have no established exact-token claim join.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol night-run exact-token identity review",
-      "rationale": "At Hemi block 5426142, the tracked deployment's runtime bytecode exactly matched the explorer's verified non-proxy ERC-20 source. It has owner minting and standard holder/allowance burns, with no oracle, NAV, exchange-rate, redemption payout or rebalance input. The separately advertised AI/perp vaults consume market data but have no established identity or holder-claim join to this Hemi token. This not-applicable oracle verdict is scoped to the inspected exact token implementation and grants no reserve, stablecoin-eligibility or vault-receipt claim.",
+      "reviewedAt": "2026-10-10",
+      "reviewer": "Sol curation campaign 2026-10-11 (L76DUSD)",
+      "rationale": "Source re-observed 2026-10-10T23:32:18Z at the exact Hemi contract's explorer API, which reports is_fully_verified true, proxy_type null and no implementations. VCRED inherits only the supplied OpenZeppelin ERC20, ERC20Burnable and Ownable implementations. Its sole added state-changing function is onlyOwner mint(address,uint256); inherited burn and burnFrom destroy balances without a payout. The complete source contains no collateral valuation, oracle call, NAV, exchange-rate, redemption payout or rebalance authority, so no price-sensitive control exists in this token implementation. The official site's AI/perp vaults remain unjoined to this address. This exact-token applicability finding establishes neither backing nor holder claims on those products. A new supplemental RPC read was unavailable because Hemi has no registered Dwellir endpoint; this review relies on the successfully retrieved fully verified explorer source and does not claim a new pinned runtime observation.",
       "sources": [
         {
-          "label": "Hemi explorer verified vCRED implementation (deployment dated 2025-05-19)",
+          "label": "Fully verified non-proxy Hemi VCRED source, observed 2026-10-10T23:32:18Z",
           "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
         },
         {
@@ -45,12 +45,16 @@
         }
       ]
     },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex data review",
-    "confidence": "limited",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L76DUSD)",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "vCred docs",
+        "label": "Fully verified exact Hemi VCRED source and complete imported implementations",
+        "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+      },
+      {
+        "label": "VCRED official product site, with no established exact-token vault join",
         "url": "https://vcred.trade/"
       }
     ]

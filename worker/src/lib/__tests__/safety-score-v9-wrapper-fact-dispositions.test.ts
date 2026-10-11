@@ -70,6 +70,7 @@ describe("Safety Score V9 wrapper fact dispositions", () => {
     const review = SafetyScoreV9WrapperLocalReviewSchema.parse({
       ...sourceReview, assetId: "alpha", identity: { ...sourceReview.identity, assetId: "alpha" },
     });
+    if (review.kind !== "holder-entitlement") throw new Error("Expected pinned holder-entitlement review");
     wrapper.allocationScopeIdentityReview = structuredClone(review.identity);
     const beforeSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
     const before = beforeSet.assets.find((asset) => asset.assetId === "alpha")!;

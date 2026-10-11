@@ -1351,7 +1351,9 @@ async function scoreDexLiquidityPoolState(
     poolState.metrics,
     sourceState.protocolTvlCaps,
     sourceState.stablecoinMcapById,
-    ctx.syncStartSec,
+    // State captured later in the source stage must be evaluated at consumption,
+    // not against the stage-start clock. Source/provenance clocks stay intact.
+    Math.floor(Date.now() / 1000),
     poolState.pancakeMeasuredExecutionTargets,
     ctx.signal,
     poolState.slipstreamMeasuredExecutionTargets,

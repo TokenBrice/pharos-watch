@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { adaptFrntLedgerlens } from "../frnt-ledgerlens";
+import reserveSidecar from "@shared/data/stablecoins/domains/reserves/frnt-wyoming.json";
 
 type WireNode = { t: number; s?: unknown; a?: WireNode[]; p?: { k: string[]; v: WireNode[] } };
 const capture = JSON.parse(readFileSync(new URL("./fixtures/frnt-ledgerlens.txt", import.meta.url), "utf8").replace(/<!--[^]*?-->\s*/g, "")) as WireNode;
@@ -24,9 +25,13 @@ describe("frnt-ledgerlens", () => {
   it("keeps gross composition distinct from net holder coverage and source time", () => {
     const result = adaptFrntLedgerlens(capture);
     const weights = Object.fromEntries(result.slices.map(({ sourceKey, pct }) => [sourceKey, pct]));
-    expect(weights["frnt-ledgerlens:fbo:treasury-bills"]).toBeCloseTo(355109.96 / 1006340.74 * 100, 8);
-    expect(weights["frnt-ledgerlens:fbo:repurchase-agreements"]).toBeCloseTo(600000 / 1006340.74 * 100, 8);
-    expect(weights["frnt-ledgerlens:fbo:cash"]).toBeCloseTo(51230.78 / 1006340.74 * 100, 8);
+    expect(weights["ledgerlens:frnt:treasury-bills"]).toBeCloseTo(355109.96 / 1006340.74 * 100, 8);
+    expect(weights["ledgerlens:frnt:repurchase-agreements"]).toBeCloseTo(600000 / 1006340.74 * 100, 8);
+    expect(weights["ledgerlens:frnt:cash"]).toBeCloseTo(51230.78 / 1006340.74 * 100, 8);
+    // Exact keys are the consumer join; display names must not rescue a mismatch.
+    expect(result.slices.map(row => row.sourceKey).sort()).toEqual(
+      reserveSidecar.reserves.map(row => row.sourceKey).sort(),
+    );
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Date.parse("2026-10-02T12:00:44.629Z") / 1000,
       freshnessMode: "verified", totalReserveUsd: 968051.85, supplyUsd: 968051.849913,
@@ -43,7 +48,7 @@ describe("frnt-ledgerlens", () => {
     field(summary, "trustAccountNetFmv").s = 956340.74;
     field(summary, "totalHedge").s = 956340.74;
     const result = adaptFrntLedgerlens(payload);
-    expect(result.slices.find((slice) => slice.sourceKey === "frnt-ledgerlens:fbo:cash")?.pct).toBeCloseTo(51230.78 / 1006340.74 * 100, 8);
+    expect(result.slices.find((slice) => slice.sourceKey === "ledgerlens:frnt:cash")?.pct).toBeCloseTo(51230.78 / 1006340.74 * 100, 8);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(956340.74 / 968051.849913, 10);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "reserve-undercollateralized", effect: "degraded" }));
   });

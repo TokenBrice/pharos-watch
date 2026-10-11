@@ -43,7 +43,7 @@ import {
   type V9FailureDomainRef,
   type V9ObservationState,
 } from "./safety-score-v9-fact-primitives";
-import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES, VARIANT_KIND_VALUES } from "./core";
+import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES, ORACLE_RISK_BRANCH_KIND_VALUES, VARIANT_KIND_VALUES, MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES } from "./core";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import {
   V9EvidenceCauseProofSchema, V9EvidenceCauseScopeSchema, V9EvidenceCauseBindingSchema,
@@ -769,7 +769,7 @@ const V9ControlAuthoritySchema = z
 /** Reviewed key-custody attestation for the authority holding this control. An
  * attested MPC/HSM key is an operationally different object from a bare
  * externally-owned key even though both present as one address on chain. */
-const V9KeyCustodySchema = z.enum(["mpc", "hsm", "unknown"]).default("unknown");
+const V9KeyCustodySchema = z.enum([...MINT_AUTHORITY_KEY_CUSTODY_ATTESTATION_KIND_VALUES, "unknown"]).default("unknown");
 
 /** Reviewed Safe module/guard surface. "none-detected" is positive evidence that
  * no side-door module bypasses the quorum; "present" is a reviewed extension
@@ -998,6 +998,8 @@ export const V9DeploymentControlFactBaseSchema = z
     scopedQuestionFresh: z.boolean().optional(),
     scopedQuestionSubject: V9ControlQuestionSubjectSchema.optional(),
     keyCustody: V9KeyCustodySchema,
+    /** Authored hardware storage exists but failed its independent review clock. */
+    keyCustodyReviewUnavailable: z.boolean().optional(),
     modulesOrGuards: V9ModulesOrGuardsSchema,
     executionScope: V9InProcessControlExecutionScopeSchema.optional(),
     /** Selected path on an execution-complete split fact; the full certificate still owns closure. */
@@ -1131,13 +1133,7 @@ const V9MintMechanismReviewV2Schema = z
     }
   });
 
-const V9OracleBranchKindV2Schema = z.enum([
-  "feed",
-  "collateral-parameter",
-  "liquidation",
-  "backstop",
-  "shutdown-bad-debt",
-]);
+const V9OracleBranchKindV2Schema = z.enum(ORACLE_RISK_BRANCH_KIND_VALUES);
 
 const V9OracleBranchReviewV2Schema = z
   .object({

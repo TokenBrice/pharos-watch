@@ -16,8 +16,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-10",
+    "reviewer": "Sol curation campaign 2026-10-11 (L57FUSD)",
     "confidence": "verified",
     "sources": [
       {
@@ -25,8 +25,8 @@
         "url": "https://www.supercoin.co.za/terms-of-service"
       },
       {
-        "label": "Retrieved independent reserve report",
-        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+        "label": "Current issuer archive August snapshot AUP PDF, retrieved 2026-10-10T23:32:30Z; period remains August 31",
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
       }
     ],
     "rationale": "August 31 book only: Moore obtained directly from Absa a current-account statement showing ZAR 8,412,465.96 in Super Money SA's name. Issued supply is 8,177,042, with 467,883.071866 designated non-circulating by management. Management allocates ZAR 467,883.07 of reserves to that treasury balance, leaving ZAR 7,944,582.89 against 7,709,158.928134 circulation. Bank-level segregation of that allocation was not independently established. The engagement expresses no assurance opinion.",
@@ -65,8 +65,8 @@
         "url": "https://www.supercoin.co.za/terms-of-service"
       },
       {
-        "label": "Retrieved independent reserve report",
-        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+        "label": "Current issuer archive August snapshot AUP PDF, retrieved 2026-10-10T23:32:30Z; period remains August 31",
+        "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
       }
     ],
     "uncertainty": "No verified trust, bankruptcy priority, or bank-level segregation of issuer-designated non-circulating reserve amounts. Composition is historical, not a live reserve claim. Segregation labels for the rand tokens reflect issuer terms and management representations, not independently proven bankruptcy remoteness."

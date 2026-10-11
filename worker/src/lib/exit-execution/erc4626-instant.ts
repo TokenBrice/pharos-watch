@@ -1,7 +1,8 @@
 import { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, parseAbiParameters } from "viem/utils";
 import type { ExitExecutionCertificate, ExitExecutionModelReview, ExitExecutionRequestPoint } from "@shared/types/exit-route";
-import { requestedExitRawInput, exitRawUsd } from "@shared/lib/safety-score-v9/exit-execution-units";
+import { requestedExitRawInput, exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { sha256Hex } from "@shared/lib/sha256";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmCodeAtBlock, fetchEvmStorageAtBlock, fetchEvmRpcBatchDetailed, MULTICALL3_ADDRESS, type EvmRpcOptions } from "../evm-rpc";
 
 const ABI = parseAbi([
@@ -35,6 +36,7 @@ export async function observeErc4626InstantExit(args: {
   requests: readonly { requestedNotionalUsd: number; maxCostBps: number }[];
   rpcOptions?: EvmRpcOptions;
   blockNumber?: number;
+  refreshInputFromOutput?: boolean;
 }) {
   if (args.review.producer.kind !== "erc4626-instant") throw new Error("erc4626-model-mismatch");
   const config = args.review.producer;
@@ -96,6 +98,27 @@ export async function observeErc4626InstantExit(args: {
   if (identity.slice(4, 4 + config.unrestrictedGateSelectors.length).some((value) => uint(value) !== 0n)) throw new Error("erc4626-holder-gate-active");
   const totalSupply = uint(identity[3]!);
   const paused = config.pausedSelector ? uint(identity[identity.length - 1]!) !== 0n : false;
+  let inputReference = args.inputReference;
+  if (args.refreshInputFromOutput) {
+    // A stale share-market quote cannot price a current request. The reviewed
+    // vault's gross NAV and a separately fresh underlying USD price can: pin
+    // both authorities in the input identity, without inventing dollar par.
+    const nav = await batch([{ to: vault, data: calldata("convertToAssets", [10n ** BigInt(config.inputDecimals)]) }]);
+    const navRaw = uint(nav[0]!);
+    const navUsd = exitRawUsd(navRaw, config.outputDecimals, args.outputReference.unitValueUsd);
+    if (navUsd / 10n ** 12n > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("erc4626-nav-reference-unavailable");
+    const unitValueUsd = exitUsdBoundary(navUsd);
+    if (navRaw === 0n || !Number.isFinite(unitValueUsd) || unitValueUsd <= 0) throw new Error("erc4626-nav-reference-unavailable");
+    inputReference = {
+      ...inputReference, unitValueUsd, expectedUnitValueUsd: unitValueUsd,
+      sourceId: `erc4626-nav:${args.outputReference.sourceId}`,
+      sourceGenerationId: domainDigest("safety-score-v10.erc4626-nav-reference.v1", {
+        deployment, blockHash: header.hash, navRaw: navRaw.toString(),
+        outputReference: args.outputReference,
+      }),
+      observedAtSec: Math.min(header.timestamp, args.outputReference.observedAtSec),
+    };
+  }
   // Two distinct sentinels detect ignored overrides as well as wrong mapping layouts.
   const probe = await batch([{ to: vault, data: calldata("balanceOf", [HOLDER]) }], 37n);
   const probe2 = await batch([{ to: vault, data: calldata("balanceOf", [HOLDER]) }], 71n);
@@ -104,8 +127,8 @@ export async function observeErc4626InstantExit(args: {
   const points: ExitExecutionRequestPoint[] = [];
   let provenShares = 0n;
   for (const request of args.requests) {
-    const requested = requestedExitRawInput(request.requestedNotionalUsd, args.inputReference.unitValueUsd, config.inputDecimals);
-    const empty = (reason: string, certification: ExitExecutionRequestPoint["certification"] = "diagnostic"): ExitExecutionRequestPoint => ({ ...request, requestedRawInput: requested.toString(), executedRawInput: "0", executableUsd: 0, executionCostBps: 0, allInCostBps: 0, fees: [], outputs: [], certification, reason });
+    const requested = requestedExitRawInput(request.requestedNotionalUsd, inputReference.unitValueUsd, config.inputDecimals);
+    const empty = (reason: string, certification: ExitExecutionRequestPoint["certification"] = "diagnostic"): ExitExecutionRequestPoint => ({ requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps, requestedRawInput: requested.toString(), executedRawInput: "0", executableUsd: 0, executionCostBps: 0, allInCostBps: 0, fees: [], outputs: [], certification, reason });
     if (requested > totalSupply) { points.push(empty("erc4626-request-exceeds-issued-shares")); continue; }
     const bounds = await batch([
       { to: vault, data: calldata("maxRedeem", [HOLDER]) }, { to: vault, data: calldata("maxWithdraw", [HOLDER]) },
@@ -162,6 +185,39 @@ export async function observeErc4626InstantExit(args: {
         results = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: retry[0] as `0x${string}` });
         if (results.length !== calls.length || results.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
       }
+      if (config.maxFunctions === "reviewed-non-binding-zero") {
+        // V2's zero max functions and idle balance do not describe liquidity
+        // held in its ordinary liquidity adapter. Probe at most five smaller
+        // executions with the ORIGINAL holder balance; keep only a successful
+        // receipt. Failed probes narrow this search, never certify exhaustion.
+        let lower = results[2]!.success ? amount : 0n;
+        let upper = requested;
+        for (let attempt = 0; attempt < 5 && lower * 100n < requested * 95n; attempt++) {
+          const candidate = (lower + upper) / 2n;
+          if (candidate === lower || candidate >= requested) break;
+          const candidateQuote = await batch([
+            { to: vault, data: calldata("convertToAssets", [candidate]) },
+            { to: vault, data: calldata("previewRedeem", [candidate]) },
+          ]);
+          const candidateGross = uint(candidateQuote[0]!);
+          const candidatePreview = uint(candidateQuote[1]!);
+          if (candidatePreview === 0n) { upper = candidate; continue; }
+          if (candidatePreview > candidateGross) throw new Error("erc4626-preview-max-inconsistent");
+          calls[2]!.callData = calldata("redeem", [candidate, HOLDER, HOLDER]);
+          const probe = await batch([{ to: HOLDER, data: encodeFunctionData({ abi: MULTICALL_ABI, functionName: "aggregate3", args: [calls] }) }], requested);
+          const candidateResults = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: probe[0] as `0x${string}` });
+          if (candidateResults.length !== calls.length || candidateResults.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
+          if (candidateResults[2]!.success) {
+            lower = candidate;
+            amount = candidate;
+            gross = candidateGross;
+            preview = candidatePreview;
+            results = candidateResults;
+          } else {
+            upper = candidate;
+          }
+        }
+      }
     }
     if (!results[2]!.success) {
       const disabled = config.maxFunctions === "binding" && (maxRedeem === 0n || maxWithdraw === 0n);
@@ -172,14 +228,14 @@ export async function observeErc4626InstantExit(args: {
     const received = uint(results[2]!.returnData);
     if (sharesBefore !== requested || sharesAfter > sharesBefore || sharesBefore - sharesAfter !== amount ||
         after < before || after - before !== received || received < preview || received === 0n) throw new Error("erc4626-realized-output-inconsistent");
-    const inputUsd = exitRawUsd(amount, config.inputDecimals, args.inputReference.unitValueUsd);
+    const inputUsd = exitRawUsd(amount, config.inputDecimals, inputReference.unitValueUsd);
     const outputUsd = exitRawUsd(received, config.outputDecimals, args.outputReference.unitValueUsd);
     const expectedUsd = exitRawUsd(received, config.outputDecimals, args.outputReference.expectedUnitValueUsd);
     const haircutBps = Number((gross > received ? gross - received : 0n) * 1_000_000n / gross) / 100;
     const cost = (outputValue: bigint) => Math.max(haircutBps, Number(((inputUsd > outputValue ? inputUsd - outputValue : 0n) * 1_000_000n + inputUsd - 1n) / inputUsd) / 100);
     const executionCostBps = cost(expectedUsd); const allInCostBps = cost(outputUsd);
     const aboveBudget = allInCostBps > request.maxCostBps || executionCostBps > request.maxCostBps;
-    points.push({ ...request, requestedRawInput: requested.toString(), executedRawInput: amount.toString(),
+    points.push({ requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps, requestedRawInput: requested.toString(), executedRawInput: amount.toString(),
       executableUsd: Number(amount * 1_000_000_000n / requested) / 1_000_000_000 * request.requestedNotionalUsd,
       executionCostBps, allInCostBps, fees: [{ kind: "vault-withdrawal-haircut", rawUnits: (gross > received ? gross - received : 0n).toString(), assetKey: args.outputReference.assetKey }],
       outputs: [{ ...args.outputReference, rawUnits: received.toString() }], certification: aboveBudget ? "diagnostic" : amount === requested ? "exact-complete" : "exact-lower-bound",
@@ -188,5 +244,5 @@ export async function observeErc4626InstantExit(args: {
   }
   const confirmed = await fetchEvmBlockHeader(config.chain, block, options);
   if (!confirmed || confirmed.hash !== header.hash) throw new Error("erc4626-source-reorg");
-  return { points, source: { kind: "block" as const, number: block, hash: header.hash, timestamp: header.timestamp, complete: true, truncated: false }, paused };
+  return { points, inputReference, source: { kind: "block" as const, number: block, hash: header.hash, timestamp: header.timestamp, complete: true, truncated: false }, paused };
 }

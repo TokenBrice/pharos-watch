@@ -68,6 +68,8 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
     },
     {
       id: "rusd-reservoir",
+      reviewedAt: "2026-10-10",
+      holderEligibility: "any-holder" as const,
       costModel: fixedFee(
         0,
         "The rUSD-to-USDC Peg Stability Module redeem burns rUSD 1:1 and transfers USDC; the verified PSM source contains no fee logic",
@@ -83,18 +85,23 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
           ["route"],
         ),
         sourceRef("Reservoir verified PSM implementation (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d", ["route", "access", "capacity", "fees", "settlement"]),
+        sourceRef("Reservoir verified native rUSD Stablecoin and ERC20Burnable source (observed 2026-10-10T23:37:47Z)", "https://eth.blockscout.com/api/v2/smart-contracts/0x09d4214c03d01f49544c0448dbe3a27f768f2b34", ["route", "access"]),
       ],
       notes: [
         "Added 2026-08-12: base rUSD redeems directly through Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D). Its redeem(uint256) and redeem(address,uint256) are `external whenNotPaused` with no role gate in the verified source, so the route is permissionless while the PSM is unpaused.",
         "Fresh capacity telemetry must bind canonical USDC, the PSM identity and Ethereum block/header clock; failed reads withhold the amount, while a readable pause or empty pool is an adverse measured fact. The 0.0025 documented fallback remains separate from live evidence.",
         "rUSD, srUSD and wsrUSD all share PSM 0x4809010926aec940b550d34a46a52739f996d75d; the USDC inventory is one shared resource, never three additive buffers. Balance-sheet API assets do not establish PSM cash.",
+        "Sol curation campaign 2026-10-11 (L50RUSD), observed 2026-10-10T23:37:47Z: the native Ethereum USDC PSM's two redeem overloads have no holder role or allowlist gate. The immutable rUSD token uses ERC20Burnable.burnFrom with holder balance and allowance checks and no holder whitelist. Any native rUSD holder with sufficient balance and PSM allowance can invoke the route, subject to PSM pause state and available USDC; this does not establish a currently successful execution or extend atomic settlement to the whole position.",
+        "Static terms were re-read at the same observation time: official Core addresses bind this exact PSM and native rUSD; verified _redeem burns rUSD and transfers immutable USDC in one transaction with no protocol fee; PSM documentation retains its 25 to 50 bps minimum balance target and hourly refill claim. The issuer product's non-U.S./non-sanctioned availability restriction is interface/legal context, not an on-chain holder whitelist. No gas bound, present inventory, current pause state or unconditional whole-supply deadline is inferred.",
       ],
     },
     {
       id: "srusd-reservoir",
+      reviewedAt: "2026-10-10",
+      holderEligibility: "any-holder" as const,
       executionModel: "rules-based-nav" as const,
       costModel: documentedVariableFee(
-        "srUSD exits to rUSD through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run (1.34 bps on 2026-08-12), governance-settable below 100%, and the downstream rUSD-to-USDC PSM redeem is 1:1 with no fee",
+        "srUSD exits to rUSD through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run, governance-settable below 1e6, and the downstream rUSD-to-USDC PSM redeem is 1:1 with no fee",
         "formula",
       ),
       docs: [
@@ -103,14 +110,17 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
           "Reservoir Peg Stability Module",
           "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
         ),
-        sourceRef("Reservoir verified PSM implementation (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d", ["route", "access", "capacity", "fees", "settlement"]),
-        sourceRef("Reservoir verified SavingModule implementation (reviewed 2026-10-07)", "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7", ["route", "fees", "settlement"]),
+        sourceRef("Reservoir verified PSM implementation (reviewed 2026-10-10)", "https://eth.blockscout.com/api/v2/smart-contracts/0x4809010926aec940b550d34a46a52739f996d75d", ["route", "access", "capacity", "fees", "settlement"]),
+        sourceRef("Reservoir verified SavingModule implementation (reviewed 2026-10-10)", "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7", ["route", "access", "fees", "settlement"]),
+        sourceRef("Reservoir interface eligibility and conditional redemption terms", "https://docs.reservoir.xyz/security-and-compliance/terms-of-service.md", ["access", "fees", "settlement"]),
       ],
       notes: [
         "The modeled route composes the srUSD exit into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
         "Fresh capacity telemetry must bind canonical USDC, the Ethereum block/header clock and the SavingModule identity, rounded conversion and fee burden before using downstream PSM cash; failed savings-leg reads cannot inherit base-rUSD capacity.",
         "rUSD, srUSD and wsrUSD all share PSM 0x4809010926aec940b550d34a46a52739f996d75d; the USDC inventory is one shared resource, never three additive buffers. Unavailable live evidence retains the separate 0.0025 documented fallback, not a live-direct label.",
-        "No static fee bound declared 2026-08-12: verified Etherscan-published source shows SavingModule.redeem burns `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`, so the docs' \"micro burn fee ... one day's worth of interest\" is charged on exit rather than entry. It read 134/1e6 = 1.34 bps at block 25735375, but the MANAGER role may set it anywhere below 100%, so no reviewed ceiling is defensible. The fee model is therefore formula-confidence and scores against the adapter's per-run `redeemFee()` read instead of a static number.",
+        "Holder eligibility reviewed 2026-10-10T23:34:44Z by Sol curation campaign 2026-10-11 (L66SrUSD): both verified SavingModule redeem overloads are external without a holder role or allowlist gate. They burn the caller's srUSD using allowance and mint rUSD to the requested recipient. Both verified PSM redeem overloads are external whenNotPaused without a holder role gate and burn rUSD for immutable canonical Ethereum USDC. Any holder with the necessary balance and allowance can invoke the native contract legs, subject to token authority, PSM pause and USDC liquidity. The issuer's non-U.S./non-sanctioned eligibility restrictions and interface termination rights remain legal/interface context, not invented contract whitelisting.",
+        "Fee construction reviewed 2026-10-10T23:34:44Z by Sol curation campaign 2026-10-11 (L66SrUSD): SavingModule.setRedeemFee requires fee < 1e6, so the integer parameter maximum is 999999, a 99.9999% surcharge on the rounded preview burn amount. This is a real construction bound, not an unbounded parameter or the current fee. It is not an all-in same-notional cost ceiling: previewRedeem rounds up, the final burn rounds down, exchange-rate state and gas remain separate. Retain formula-confidence and the per-run redeemFee/rounded-conversion reads; do not reuse the historical 1.34 bps observation as a current fee or publish an unverified low static ceiling.",
+        "No lock-up is documented, but immediate USDC redemption is explicitly conditional on PSM liquidity. The legal terms admit reserve-sale funding delays without a maximum, so this review creates no unconditional whole-position cash-realization SLA or supply-sized executable capacity.",
       ],
     },
   ],
@@ -124,7 +134,6 @@ const RESERVOIR_REDEEM_CONFIGS = defineConfigFamily(
         confidence: "documented-bound",
         basis: "hot-buffer",
       },
-      reviewedAt: "2026-10-07",
       ...row,
     }),
 );
@@ -1818,13 +1827,14 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Unverified users' market swaps are secondary liquidity and are excluded from the redemption backstop.",
     ],
   }),
-  "jpyt-dephaser": defineReviewedStablecoinRedeemConfig("2026-08-13", {
+  "jpyt-dephaser": defineReviewedStablecoinRedeemConfig("2026-10-10", {
     outputAssetType: "stable-basket",
     outputAssets: ["usdt-tether", "usdc-circle"],
     settlementModel: "days",
     executionModel: "rules-based-nav",
-    costModel: undisclosedReviewedFee(
-      "DePhaser's public terms disclose user-paid gas, while the contract source exposes protocol fee controls and reviewed materials do not establish an immutable numeric redemption fee",
+    costModel: fixedFee(
+      0,
+      "The pinned Optimism UsdtDepositManager and Base UsdcDepositManager withdrawal paths deduct no local protocol redemption fee: protocolFeeBps applies only to deposits. Gas, integer rounding and the average Lock-In Exchange Rate versus current JPY/USD remain separate costs or output-valuation constraints; both managers are upgradeable.",
     ),
     routeStatus: "open",
     routeExitCorrelation: "same-protocol-liquidity",
@@ -1853,11 +1863,18 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       ]),
       sourceRef("Optimism public RPC", "https://optimism-rpc.publicnode.com", ["capacity", "route"]),
       sourceRef("Base public RPC", "https://base-rpc.publicnode.com", ["capacity", "route"]),
+      sourceRef("Verified Optimism UsdtDepositManager withdrawal implementation", "https://optimism.blockscout.com/api/v2/smart-contracts/0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5", ["route", "fees"]),
+      sourceRef("Verified Base UsdcDepositManager withdrawal implementation", "https://base.blockscout.com/api/v2/smart-contracts/0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb", ["route", "fees"]),
+      sourceRef("Pinned Optimism manager implementation binding", "https://api-optimism-mainnet-archive.n.dwellir.com", ["route", "fees"]),
+      sourceRef("Pinned Base manager implementation binding", "https://api-base-mainnet-archive.n.dwellir.com", ["route", "fees"]),
+      sourceRef("DePhaser two-step redemption instructions", "https://docs.dephaser.com/operation/redeem-usdt-usdc.md", ["route", "settlement"]),
     ],
     notes: [
       "Redemption burns JPYT and unlocks USDT on Optimism or USDC on Base after the security cooldown; the reviewed route has no published reserve-capacity ceiling beyond deposit-manager/Aave liquidity.",
       "Execution is rules-based NAV: redemption pays the average Lock-In Exchange Rate, not spot JPY/USD par, so redemption value can deviate from current peg value because of the locked FX basis.",
-      "The documented completion window is no more than 24 hours, but the conservative days bucket preserves the non-atomic two-step request/execute flow.",
+      "Fee evidence observed 2026-10-10T23:35:59Z by Sol curation campaign 2026-10-11 (L64ISC): Optimism block 157978304 (2026-10-09T14:16:25Z), proxy 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9, EIP-1967 implementation 0xb46aaeeb63aa3c41728f348e06d8c4db7c5ee9f5; Base block 52383016 (2026-10-09T14:16:19Z), proxy 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276, implementation 0xf3b4eaaa9660143712fa3b3ebf5f460e3e8ea2cb. Both pinned implementation runtimes exactly match their verified deployed source; each proxy's jpyToken storage binds the reviewed JPYT deployment.",
+      "Both _requestWithdrawal functions compute the stored tokenAmount from the average rate and withdraw that amount from Aave; executeWithdrawal transfers the same tokenAmount without invoking _applyProtocolFee. The operator-set protocolFeeBps is used by _deposit/getDepositRate, not either holder withdrawal step. This establishes zero additional local redemption fee under the reviewed implementations, not a perpetual fee covenant or zero all-in USD exit cost.",
+      "The issuer's current redemption instructions describe a typical few-minute request/convert flow without a guaranteed maximum. The days bucket is unchanged; the existing settlement C classification remains open because a block cooldown and available Aave liquidity do not establish a hard elapsed-time completion SLA.",
     ],
   }),
   "suiusde-sui": defineStablecoinRedeemConfig({

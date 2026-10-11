@@ -628,17 +628,49 @@
       },
       {
         "id": "berachain:0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "sourceChain": "ethereum",
         "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
         "contractAddress": "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
-        "protocol": "Unreviewed BOLD deployment route",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "The Berachain deployment is catalogued, but its issuance model, transfer semantics and controllers have not been reviewed. The reviewed Sonic route at the same token address is chain-specific evidence and cannot establish the Berachain route.",
-        "mappingVersion": "bridge-route-facts-v1"
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Reviewed at 2026-10-10T23:37:01Z by Sol curation campaign 2026-10-11 (L14EURW). Liquity's primary contract roster binds the exact Berachain BOLD token; Chainlink's BOLD directory identifies its BurnMintTokenPool 1.5.1 at 0xcfc5092583c1b2122f221f524c198abdecbf3d1b. At Berachain block 27330196, hash 0x6da74022c44c27b146c16fd129112ea0669cf1387a06562cfb6227051e0c45f8, timestamp 2026-10-10T23:31:48Z, pinned typeAndVersion() returns BurnMintTokenPool 1.5.1 and getToken() returns this exact token. The token's MINTER_ROLE() returns 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6 and hasRole(MINTER_ROLE, pool) returns true at the same pin. The pool owner is 0x13ac97663d19ff20fe467bfa580748505e664beb and getRateLimitAdmin() returns the zero address; these observations do not establish signer custody, ownership independence, exhaustive minter permissions or an immutable claim cap. Reviewed issuer/provider disclosures and exact BOLD/Berachain/CCIP incident searches located no known relevant bridge-control incident; this is a scoped public review, not proof that undisclosed compromise never occurred. Failed optional token permission-enumeration reads and inaccessible explorer source are not positive evidence. Ethereum uses LockRelease, so no escrow-free mesh or independent remote root liabilities are inferred.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "berachain",
+        "controllerAddress": "0xcfc5092583c1b2122f221f524c198abdecbf3d1b",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0xcfc5092583c1b2122f221f524c198abdecbf3d1b"
+        ],
+        "observedAt": "2026-10-10",
+        "observedBlock": 27330196,
+        "sources": [
+          {
+            "label": "Liquity BOLD exact Berachain deployment roster, accessed 2026-10-10T23:35:40Z",
+            "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+          },
+          {
+            "label": "Chainlink BOLD directory: Berachain BurnMintTokenPool 1.5.1, accessed 2026-10-10T23:35:40Z",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Berachain RPC: pool type/token/owner/rate-limit-admin and token MINTER_ROLE/hasRole(pool), block 27330196 (2026-10-10T23:31:48Z), observed 2026-10-10T23:33:03Z and 2026-10-10T23:36:56Z",
+            "url": "https://api-berachain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Liquity BOLD CCIP adoption and bridge-security dependency",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Liquity risk disclosure reviewed for BOLD bridge-control incidents",
+            "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ]
       }
     ]
   }

@@ -373,14 +373,17 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       ],
     },
     costModel: documentedVariableFee(
-      "M0 docs describe $M as fully backed and redeemable 1:1, but direct mint and redemption access is restricted to permissioned minters and no public fee schedule is disclosed",
+      "MXON's public service terms require separate written counterparty agreements, and M0's primary-market liquidity guide requires issuer onboarding; neither retrieved disclosure publishes a binding direct M institutional redemption fee or all-in cost maximum. SwapFacility no-trading-fee extension conversions and onchain minter-debt burns are different routes",
     ),
     docs: [
       sourceRefRouteCapacityAccess("M0 FAQ", "https://www.m0.org/faq"),
       sourceRef("M0 Dashboard", "https://dashboard.m0.org/", ["capacity"]),
+      sourceRef("MXON website terms: separate counterparty service agreements (observed 2026-10-10T23:34:49Z; L31M)", "https://www.mxon.co/terms-of-use", ["fees", "access"]),
+      sourceRef("M0 primary-market issuer onboarding and distinct SwapFacility conversions (observed 2026-10-10T23:34:49Z; L31M)", "https://docs.m0.org/build/accessing-liquidity", ["fees", "access"]),
     ],
     notes: [
       "Base $M liquidity is institution-facing; most end users access M0 liquidity through branded extensions and integrations rather than direct M redemption",
+      "Cost-only disclosure review observed 2026-10-10T23:34:49Z by Sol curation campaign 2026-10-11 (L31M): MXON Website Terms of Use section 2 places services under separate written agreements. The terms print Last updated: March 2026, without an exact day; no precise evidence date or fee value is inferred. This review does not refresh capacity, settlement, access configuration or the older composed-wrap checkpoint",
     ],
   },
   "fusd-finchain": {

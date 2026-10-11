@@ -665,6 +665,24 @@ describe("v10.08 weighted topology and reviewer-scoped control questions", () =>
     },
   );
 
+  it.each([["1970-01-01T00:00:00Z", "hardware-wallet"], ["2026-10-10T23:47:08Z", "unknown"]] as const)(
+    "retains an explicit custody gap when the independent hardware review %s cannot enter",
+    (reviewedAt, expected) => {
+      const fixed = exactFixedInput();
+      const metadata = cappedMinterMeta();
+      metadata.mintAuthority!.controls![0]!.keyCustodyAttestation = {
+        kind: "hardware-wallet", reviewedAt, reviewer: "Fixture reviewer", confidence: "issuer-described",
+        rationale: "Exact issuer account keys are documented as hardware-wallet stored, without independent-human or HSM policy certification.",
+        sources: [{ label: "Exact account storage disclosure", url: "https://example.com/custody" }],
+      };
+      const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
+      const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+      const control = asset.controls.find(row => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
+      expect(control.keyCustody).toBe(expected);
+      expect(control.factorStatuses?.keyCustody?.observationState).toBe(expected === "unknown" ? "missing" : undefined);
+    },
+  );
+
   it.each([undefined, "authority-semantics", "execution-scope", "key-custody-independence"] as const)(
     "admits authored %s question subjects without letting custody-only uncertainty gate native economics",
     (subject) => {

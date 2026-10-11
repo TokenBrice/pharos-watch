@@ -38,10 +38,15 @@
       {
         "factKey": "frnt-wyoming:2026-10-07:observed-treasury-bill-roster",
         "kind": "observed-portfolio-maturity",
-        "scope": { "kind": "exposure", "exposureKey": "ledgerlens:frnt:treasury-bills" },
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:d1d9e3df5ba452d3047be2c7"
+        },
         "asOfSec": 1791374444,
         "publisher": "FRNT LedgerLens supplemental dashboard",
-        "sourceUrls": ["https://dashboard.ledgerlens.io/c/wystc"],
+        "sourceUrls": [
+          "https://dashboard.ledgerlens.io/c/wystc"
+        ],
         "assertion": "LedgerLens FRNT snapshot 6ac6346c75d8eb627b88b6a1 at 2026-10-07T12:00:44.746Z lists nine positive Treasury-bill positions in FBO_TRUST with USD FMV totaling 356091.65, exactly the complete Treasury-bill category denominator. Latest observed maturity is November 24, 2026, 48 calendar days after the snapshot. This is a supplemental non-assured current portfolio observation, not a legally binding maximum or stressed liquidity promise; zero positions excluded from the covered positive inventory and matured instruments are not presumed paid.",
         "contentDigest": "0fb1a685110bf3a2dddb14c4c8c5c60ea72b2fd9fe70e4c12508c2b4ac14db65",
         "provenance": {
@@ -56,15 +61,60 @@
         "denomination": "USD",
         "observedMaximumDays": 48,
         "instruments": [
-          { "instrumentId": "912797VN4", "maturityAtSec": 1793059200, "grossMarkedValue": 36921.56, "denomination": "USD" },
-          { "instrumentId": "912797VX2", "maturityAtSec": 1794873600, "grossMarkedValue": 43803.76, "denomination": "USD" },
-          { "instrumentId": "912797VM6", "maturityAtSec": 1792454400, "grossMarkedValue": 37947.94, "denomination": "USD" },
-          { "instrumentId": "912797VW4", "maturityAtSec": 1794268800, "grossMarkedValue": 37860.92, "denomination": "USD" },
-          { "instrumentId": "912797UL9", "maturityAtSec": 1792627200, "grossMarkedValue": 44928.45, "denomination": "USD" },
-          { "instrumentId": "912797VL8", "maturityAtSec": 1791849600, "grossMarkedValue": 38975.43, "denomination": "USD" },
-          { "instrumentId": "912797VY0", "maturityAtSec": 1795478400, "grossMarkedValue": 38794.86, "denomination": "USD" },
-          { "instrumentId": "912797VP9", "maturityAtSec": 1793664000, "grossMarkedValue": 36892.33, "denomination": "USD" },
-          { "instrumentId": "912797UK1", "maturityAtSec": 1792022400, "grossMarkedValue": 39966.4, "denomination": "USD" }
+          {
+            "instrumentId": "912797VN4",
+            "maturityAtSec": 1793059200,
+            "grossMarkedValue": 36921.56,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VX2",
+            "maturityAtSec": 1794873600,
+            "grossMarkedValue": 43803.76,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VM6",
+            "maturityAtSec": 1792454400,
+            "grossMarkedValue": 37947.94,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VW4",
+            "maturityAtSec": 1794268800,
+            "grossMarkedValue": 37860.92,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UL9",
+            "maturityAtSec": 1792627200,
+            "grossMarkedValue": 44928.45,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VL8",
+            "maturityAtSec": 1791849600,
+            "grossMarkedValue": 38975.43,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VY0",
+            "maturityAtSec": 1795478400,
+            "grossMarkedValue": 38794.86,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VP9",
+            "maturityAtSec": 1793664000,
+            "grossMarkedValue": 36892.33,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UK1",
+            "maturityAtSec": 1792022400,
+            "grossMarkedValue": 39966.4,
+            "denomination": "USD"
+          }
         ]
       }
     ],
@@ -431,7 +481,7 @@
         "kind": "contractual-maturity-maximum",
         "scope": {
           "kind": "sub-instrument",
-          "exposureKey": "reserve:ab5b22096058fae964938e4c",
+          "exposureKey": "bridge-transparency:treasury",
           "instrumentId": "bridge-building-inc-reserve:section-02-a:direct-us-treasury-bills",
           "coveredShare": null,
           "coverageAsOfSec": 1790896838

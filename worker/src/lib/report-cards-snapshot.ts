@@ -9,6 +9,10 @@
 import { ACTIVE_STABLECOINS, ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types/market";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
+import type { ExitOutputPriceObservation } from "@shared/types/exit-output-price";
+import { classifyPrimaryDepegTrust, hasFreshMultiSourcePrimaryAgreement } from "./depeg-trust-policy";
 import type { ReportCardsFixedInput } from "./report-cards-fixed-input";
 import { dexLiquidityPublishedRowFilter } from "./dex-liquidity";
 
@@ -54,6 +58,38 @@ export function buildNavPriceById(
     ]);
   }
   return Object.fromEntries(entries);
+}
+
+/** Reuses the current quote-leg trust gates; never synthesize a price from peg history. */
+export function buildExitOutputPriceById(
+  peggedAssets: readonly StablecoinData[],
+  clockSec: number,
+): Record<string, ExitOutputPriceObservation> {
+  const prices: Record<string, ExitOutputPriceObservation> = {};
+  for (const asset of peggedAssets) {
+    const meta = ACTIVE_META_BY_ID.get(asset.id);
+    const observedAtSec = asset.priceObservedAt ?? asset.priceUpdatedAt;
+    if (!meta || !isObservedPrice(asset) || !asset.priceSource ||
+        typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0 ||
+        !Number.isSafeInteger(observedAtSec) || observedAtSec! <= 0 || observedAtSec! > clockSec ||
+        clockSec - observedAtSec! > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) continue;
+    const guardedNav = meta.flags.navToken === true && asset.priceConfidence === "high" &&
+      isPricingSourceProtocolOverride(asset.priceSource);
+    // A NAV product needs its exact protocol conversion observation, not a market print.
+    if (meta.flags.navToken && !guardedNav) continue;
+    const admission = guardedNav ? "guarded-nav" :
+      classifyPrimaryDepegTrust(asset, clockSec) === "authoritative" ? "authoritative" :
+      hasFreshMultiSourcePrimaryAgreement(asset, clockSec) ? "multi-source" : null;
+    if (!admission) continue;
+    prices[asset.id] = {
+      priceUsd: asset.price,
+      sourceId: asset.priceSource,
+      observedAtSec: observedAtSec!,
+      confidence: asset.priceConfidence === "high" ? "high" : "medium",
+      admission,
+    };
+  }
+  return prices;
 }
 
 export function resolveExactDexPublicationGeneration(

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopEntrySchema, type RedemptionBackstopEntry, type RedemptionCapacityProfile } from "@shared/types/redemption";
 import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC, ExitRouteObservationSchema } from "@shared/types/exit-route";
+import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
 import {
   buildRedemptionExitRouteObservation,
   buildPhysicalToUsdExitObservation,
@@ -70,6 +71,35 @@ function build(overrides: Partial<Parameters<typeof buildRedemptionExitRouteObse
     ...overrides,
   });
 }
+
+describe("fresh exact single-output valuation", () => {
+  it.each(["fresh", "stale", "future", "wrong-identity"] as const)(
+    "admits only an exact current single-output price (%s)", (state) => {
+      const now = Date.UTC(2026, 6, 13) / 1_000;
+      const outputValuation = LiveReserveRedemptionOutputValuationSchema.parse({
+        sourceId: "protocol-redeem",
+        observedAt: state === "stale" ? now - 1_801 : state === "future" ? now + 1 : now - 60,
+        unitValueUsd: 0.99, expectedUnitValueUsd: 1,
+        basketWeights: [{ assetId: state === "wrong-identity" ? "usdt-tether" : "m-m0", weight: 1 }],
+      });
+      const observation = build({
+        stablecoinId: "usdsc-startale", now, outputValuation,
+        config: { ...config, routeFamily: "stablecoin-redeem", outputAssetType: "stable-single", outputAssets: ["m-m0"] },
+        sourceMode: "dynamic", capacityKind: "live-direct", freshnessKind: "same-run-onchain",
+        evidenceObservedAt: now,
+      })!;
+      expect(observation.output).toMatchObject({ kind: "tracked-stablecoin", trackedAssetIds: ["m-m0"] });
+      if (state === "fresh") {
+        expect(observation).toMatchObject({ outputUnitValueUsd: 0.99, outputExpectedUnitValueUsd: 1,
+          outputUnitValueSourceId: "protocol-redeem", outputUnitValueObservedAt: now - 60 });
+        expect(observation.allInCostBps).toBeCloseTo(125);
+        expect(() => ExitRouteObservationSchema.parse(observation)).not.toThrow();
+      } else {
+        expect(observation).not.toHaveProperty("outputUnitValueUsd");
+      }
+    },
+  );
+});
 
 describe("issuer payout identity", () => {
   it.each(getConfiguredRedemptionBackstopIds())("admits the real catalog producer output for %s", (stablecoinId) => {

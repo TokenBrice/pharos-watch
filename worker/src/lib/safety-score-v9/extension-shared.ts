@@ -295,6 +295,19 @@ export function conservativeDateEndSec(value: string | undefined, clockSec: numb
   return timestampSec <= clockSec ? timestampSec : null;
 }
 
+/** Hardware storage has its own review clock; it never inherits an older control pin. */
+export function reviewedKeyCustody(
+  attestation: MintAuthorityControl["keyCustodyAttestation"],
+  clockSec: number,
+): ControlOverlay["keyCustody"] {
+  if (!attestation) return "unknown";
+  if (attestation.kind !== "hardware-wallet") return attestation.kind;
+  const reviewSec = conservativeDateEndSec(attestation.reviewedAt, clockSec);
+  if (reviewSec === null || clockSec - reviewSec > V9_REVIEW_EVIDENCE_MAX_AGE_SEC) return "unknown";
+  if (attestation.reviewedAt?.length === 10 && reviewSec + 86_400 > clockSec) return "unknown";
+  return "hardware-wallet";
+}
+
 export function accessEvidenceObservationState(reviewedAt: string, clockSec: number): "current" | "stale" {
   const reviewedAtSec = Date.parse(`${reviewedAt}T00:00:00.000Z`) / 1_000;
   if (!Number.isFinite(reviewedAtSec)) throw new Error("Safety Score v9 access review has an invalid review date");

@@ -758,24 +758,32 @@
         "capabilities": ["admin", "peer-config"],
         "controllerChain": "ethereum",
         "controllerAddress": "0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "delegate:ethereum:0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
         ],
-        "observedAt": "2026-10-09",
+        "observedAt": "2026-10-10",
         "observedBlock": 26154636,
         "sources": [
           {
-            "label": "Pinned Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88, 2026-10-09T11:44:59Z; observed 2026-10-09T11:45:04.204Z",
+            "label": "Sol curation campaign 2026-10-11 (L11AxCNH): Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88, 2026-10-09T11:44:59Z; delegates(adapter) re-observed 2026-10-10T23:36:22.537Z",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           },
           {
             "label": "Verified Ethereum EndpointV2 source and delegate authorization",
             "url": "https://sourcify.dev/server/v2/contract/1/0x1a44076050125825900e736c501f859c50fe728c?fields=sources,abi"
+          },
+          {
+            "label": "Ethereum delegate account: explorer identifies a non-contract externally signing account; reviewed 2026-10-10T23:37:07Z",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
+          },
+          {
+            "label": "Delegate-signed Ethereum type-0 transaction, block 22737158 (2025-06-19T07:53:35Z), nonce 300",
+            "url": "https://eth.blockscout.com/tx/0x06a8ba61ed13cc0b528be13dc08f82d685ee08d3a9f5ea1c8cdf817d7dcef64d"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) observed delegates(adapter) equal to this distinct controller. EndpointV2 _assertAuthorized permits the OApp or delegate to set message libraries/configuration and manage authenticated message channels. This does not confer token setPeer, UUPS or native CDP issuance authority. Controller signing/execution policy is unreviewed; no multisig, EOA or independent-operator conclusion is inferred."
+        "evidence": "Sol curation campaign 2026-10-11 (L11AxCNH), reviewed 2026-10-10T23:37:07Z: at Ethereum block 26154636/hash 0x6f8596098b8887bde16ee874486360e4f50ef5f83650915c07c46e1bee95ad88 (2026-10-09T11:44:59Z), delegates(adapter) returned 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2. Blockscout independently identifies this account as non-contract and records its successful externally signed type-0 transaction 0x06a8ba61ed13cc0b528be13dc08f82d685ee08d3a9f5ea1c8cdf817d7dcef64d with nonce 300, establishing EOA authority rather than a contract quorum. The supplemental empty eth_getCode result alone was not treated as proof. EndpointV2 _assertAuthorized permits this delegate to change message libraries/configuration and manage authenticated channels, not token setPeer, UUPS or native CDP issuance. Human key custody, organizational independence, and complete bridge execution remain unestablished."
       },
       {
         "id": "pht-polygon-endpoint-delegate",
@@ -786,24 +794,32 @@
         "capabilities": ["admin", "peer-config"],
         "controllerChain": "polygon",
         "controllerAddress": "0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2",
-        "authorityType": "unknown",
+        "authorityType": "eoa",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "delegate:polygon:0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
         ],
-        "observedAt": "2026-10-09",
-        "observedBlock": 95227349,
+        "observedAt": "2026-10-10",
+        "observedBlock": 95313433,
         "sources": [
           {
-            "label": "Pinned Polygon block 95227349/hash 0x0162bb3f2ebce35cb99054e71ed6b87052cb0488d27f422235be975a3b48f3e4, 2026-10-09T11:44:03Z; observed 2026-10-09T11:44:04.690Z",
+            "label": "Sol curation campaign 2026-10-11 (L11AxCNH): Polygon block 95313433/hash 0xbd41d9adeeb92cf060481215a1a95d5efd69f657c7b65153a63dba40d7fc7e63, 2026-10-10T23:36:39Z; delegates(proxy) observed 2026-10-10T23:36:46.302Z",
             "url": "https://api-polygon-mainnet-full.n.dwellir.com"
           },
           {
             "label": "Verified Polygon EndpointV2 source and delegate authorization",
             "url": "https://sourcify.dev/server/v2/contract/137/0x1a44076050125825900e736c501f859c50fe728c?fields=sources,abi"
+          },
+          {
+            "label": "Polygon delegate account: explorer identifies a non-contract externally signing account; reviewed 2026-10-10T23:37:07Z",
+            "url": "https://polygon.blockscout.com/api/v2/addresses/0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2"
+          },
+          {
+            "label": "Delegate-signed Polygon transferOwnership transaction, block 72836268 (2025-06-16T10:55:45Z), nonce 8",
+            "url": "https://polygon.blockscout.com/tx/0xe95c27aa7fd8b83d01d6a3db4fedc4198d0198c144b462384b697ba2e64f443e"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-09 (W2L12Unitas) observed delegates(proxy) equal to this distinct controller. EndpointV2 _assertAuthorized permits the OApp or delegate to set message libraries/configuration and manage authenticated message channels. This is distinct from the token owner's setPeer/UUPS authority. Controller signing/execution policy and cross-chain operator identity are unreviewed; address equality alone proves no independence or common human custody."
+        "evidence": "Sol curation campaign 2026-10-11 (L11AxCNH), reviewed 2026-10-10T23:37:07Z: at Polygon block 95313433/hash 0xbd41d9adeeb92cf060481215a1a95d5efd69f657c7b65153a63dba40d7fc7e63 (2026-10-10T23:36:39Z), delegates(proxy) returned 0x76db01fc4fc21dd20f37bdf17dbe2d53e14bf1a2. Blockscout independently identifies this account as non-contract and records its successful externally signed type-2 transferOwnership transaction 0xe95c27aa7fd8b83d01d6a3db4fedc4198d0198c144b462384b697ba2e64f443e with nonce 8, establishing EOA authority rather than a contract quorum. The supplemental empty eth_getCode result alone was not treated as proof. EndpointV2 _assertAuthorized permits this delegate to change message libraries/configuration and manage authenticated channels. This authority is separate from the token owner's setPeer/UUPS powers. Human key custody, cross-chain organizational independence and complete bridge execution remain unestablished; no favorable route tier is claimed."
       }
     ]
   }

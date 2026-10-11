@@ -11,6 +11,7 @@ import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC } from "@shared/typ
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
 import { buildExitRouteCapacityPoint, mergeExitCurveRequests } from "@shared/lib/exit-route-capacity-point";
 import { resolveRedemptionFiatReference, resolveRedemptionFiatUsdRate, type RedemptionFiatReferenceContext } from "@shared/lib/redemption-fiat-reference";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import type {
   RedemptionBackstopEntry,
   RedemptionCapacityProfile,
@@ -319,7 +320,7 @@ export function buildRedemptionExitRouteObservation(
   const evidence = resolveRouteEvidence(input);
   const fiatReferences = input.fiatReferences
     ? { ...input.fiatReferences, clockSec: input.now }
-    : undefined;
+    : { clockSec: input.now, pegDataById: {} };
   const routeIsImmediate =
     input.capacityProfile.scoringHorizon === "immediate" &&
     (input.config.settlementModel === "atomic" || input.config.settlementModel === "immediate");
@@ -335,8 +336,10 @@ export function buildRedemptionExitRouteObservation(
   const candidateValuationAssetIds =
     input.outputValuation?.basketWeights.map((weight) => weight.assetId).sort() ?? [];
   const outputValuation =
-    input.config.outputAssetType === "stable-basket" &&
+    (input.config.outputAssetType === "stable-basket" || input.config.outputAssetType === "stable-single") &&
     input.outputValuation &&
+    input.outputValuation.observedAt <= input.now &&
+    input.now - input.outputValuation.observedAt <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC &&
     configuredOutputAssetIds.length > 0 &&
     configuredOutputAssetIds.length === candidateValuationAssetIds.length &&
     configuredOutputAssetIds.every((assetId, index) => assetId === candidateValuationAssetIds[index])
@@ -524,8 +527,11 @@ export function deriveSupplyModelExitRouteObservation(
   // a same-notional execution cost bound.
   const staticConfig = config ?? getRedemptionBackstopConfig(entry.stablecoinId);
   const hasFeeComponents = (staticConfig?.v9RouteCostTerms?.feeComponents ?? staticConfig?.costModel.feeComponents) !== undefined;
-  const feeBoundBps = hasFeeComponents && staticConfig
-    ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, modeledExitSizeUsd, entry.feeBps, fiatReferences)
+  const hasPublishedSchedule = staticConfig?.v9RouteCostTerms?.publishedFeeSchedule !== undefined;
+  const evaluatesSchedule = hasFeeComponents || hasPublishedSchedule;
+  const boundReferences = { clockSec: now, pegDataById: fiatReferences?.pegDataById ?? {} };
+  const feeBoundBps = evaluatesSchedule && staticConfig
+    ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, modeledExitSizeUsd, entry.feeBps, boundReferences)
     :
     entry.feeModelKind === "fixed-bps" && entry.feeBps != null
       ? entry.feeBps
@@ -538,20 +544,21 @@ export function deriveSupplyModelExitRouteObservation(
     (
       entry.feeModelKind === "undisclosed-reviewed" ||
       hasFeeComponents ||
+      hasPublishedSchedule ||
       entry.feeModelKind === "documented-variable" ||
       entry.feeModelKind === "formula"
     );
   const requests = mergeExitCurveRequests(modeledExitSizeUsd, eventualUsd);
   const capacityCurve = requests.map((request) => {
-    const costBps = hasFeeComponents && staticConfig
-      ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, request, entry.feeBps, fiatReferences) : feeBoundBps;
+    const costBps = evaluatesSchedule && staticConfig
+      ? resolveV9RedemptionRouteCostBpsAtNotional(staticConfig, request, entry.feeBps, boundReferences) : feeBoundBps;
     const point = buildExitRouteCapacityPoint({
       requestedNotionalUsd: request,
       maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
       capacityUsd: eventualUsd,
       admitted: (costBps !== null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) || boundedUnknownFee,
     }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
-    if (hasFeeComponents && costBps !== null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) {
+    if (evaluatesSchedule && costBps !== null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps) {
       point.executionCostBps = costBps;
     }
     return point;
@@ -580,7 +587,7 @@ export function deriveSupplyModelExitRouteObservation(
     ...capturedFiatOutputValuation(output, feeBoundBps, reviewTimestamp, fiatReferences),
     evidenceKind: "documented-terms",
     ...(boundedUnknownFee
-      ? { feeEvidence: hasFeeComponents || (entry.feeConfidence === "formula" &&
+      ? { feeEvidence: evaluatesSchedule || (entry.feeConfidence === "formula" &&
           (entry.feeModelKind === "formula" || entry.feeModelKind === "documented-variable"))
           ? "disclosed-unquantified" as const
           : "undisclosed-reviewed" as const }
