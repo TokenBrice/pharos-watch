@@ -19,7 +19,6 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import {
   FreezableSupplyMeter,
   computeFreezableSummary,
-  describeFreezableSupplyCoverage,
   formatShare,
 } from "@/components/freezewatch/freezable-supply-meter";
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
@@ -135,7 +134,6 @@ export default function FreezeWatchClient() {
   const freezableSummary = computeFreezableSummary(blacklistStatusBuckets);
   const { freezableMarketCap, freezableCount, freezableShare } = freezableSummary;
   const supplyAvailable = freezableSummary.coverage !== "unavailable";
-  const freezableCoverageNote = describeFreezableSupplyCoverage(freezableSummary);
 
   return (
     <FeaturePageShell
@@ -189,11 +187,6 @@ export default function FreezeWatchClient() {
             )}
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
               of {freezableSummary.coverage === "partial" ? "observed" : "tracked"} stablecoin market cap sits under direct, upstream, or possible issuer freeze control.
-              {freezableCoverageNote && !heroUnavailable ? (
-                <span className="block font-mono text-[10px] uppercase tracking-wider">
-                  {freezableCoverageNote}
-                </span>
-              ) : null}
             </p>
           </div>
           <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
