@@ -114,17 +114,21 @@ function ApyBenchmarkBar({ apy30d, benchmarkRate }: { apy30d: number; benchmarkR
 }
 
 // ---------------------------------------------------------------------------
-// Grid scaffolding. Each row is its own grid (depeg pattern) so columns stay
-// aligned while rows can expand into a full-width history panel between them.
+// Grid scaffolding. One parent grid owns the column template; the header and
+// every row are subgrids spanning all columns, so a column is the same width in
+// every row whatever its content (a content-sized track can no longer drift per
+// row), while a row can still expand into a full-width history panel.
 // Visible-child count must match the track count at each breakpoint: md shows
 // 7 columns, lg adds TVL + Stability (9), xl adds 30d-Range (10).
 // ---------------------------------------------------------------------------
 
 const BOARD_GRID_CLASS =
-  "grid w-full grid-cols-1 items-start gap-x-3 " +
+  "grid w-full grid-cols-1 gap-x-3 " +
   "md:grid-cols-[2.5rem_minmax(11rem,1.4fr)_minmax(8rem,1fr)_minmax(6rem,0.7fr)_minmax(8rem,1fr)_minmax(10rem,1.2fr)_minmax(4.5rem,auto)] " +
-  "lg:grid-cols-[2.5rem_minmax(11rem,1.4fr)_minmax(8rem,1fr)_minmax(6rem,0.7fr)_minmax(8rem,1fr)_minmax(10rem,1.1fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.6fr)_minmax(4.5rem,auto)] " +
-  "xl:grid-cols-[2.75rem_minmax(12rem,1.5fr)_minmax(8.5rem,1fr)_minmax(6.5rem,0.7fr)_minmax(8.5rem,1fr)_minmax(11rem,1.2fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.6fr)_5rem_minmax(5rem,auto)]";
+  "lg:grid-cols-[2.5rem_minmax(11rem,1.4fr)_minmax(8rem,1fr)_minmax(6rem,0.7fr)_minmax(8rem,1fr)_minmax(11rem,1.6fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.6fr)_minmax(4.5rem,auto)] " +
+  "xl:grid-cols-[2.75rem_minmax(12rem,1.5fr)_minmax(8.5rem,1fr)_minmax(6.5rem,0.7fr)_minmax(8.5rem,1fr)_minmax(13rem,1.9fr)_minmax(6rem,0.7fr)_minmax(5.5rem,0.6fr)_5rem_minmax(5rem,auto)]";
+
+const BOARD_SUBGRID_CLASS = "col-span-full grid grid-cols-subgrid items-start";
 
 const SORT_PILLS: ReadonlyArray<{ key: YieldTableSortKey; label: string }> = [
   { key: "pys", label: "PYS" },
@@ -254,7 +258,7 @@ function YieldInstrumentRowBase({
   const excess = benchmarkRate != null ? row.apy30d - benchmarkRate : null;
 
   return (
-    <div className="border-b border-border/55 last:border-b-0">
+    <div className={cn(BOARD_SUBGRID_CLASS, "border-b border-border/55 last:border-b-0")}>
       {/* Not a <button>/role="button": the row nests focusable controls (compare
           checkbox, watchlist star, deep-dive link, expand toggle), so a row-level
           button would be invalid (nested-interactive). Row click is a pointer
@@ -272,7 +276,7 @@ function YieldInstrumentRowBase({
         onClick={() => onToggleExpanded(row.id)}
         onMouseEnter={() => onPrefetch(row.id)}
         className={cn(
-          BOARD_GRID_CLASS,
+          BOARD_SUBGRID_CLASS,
           "cursor-pointer px-3 py-2.5 transition-colors hover:bg-muted/30",
           rowToneClass(warningCount, sourceRiskMaterial),
         )}
@@ -398,7 +402,6 @@ function YieldInstrumentRowBase({
               row={row}
               confidenceStyle={confidenceStyle}
               confidenceLabel={confidenceLabel}
-              sourceRiskScore={sourceRiskScore}
               freshness={freshness}
             />
           </div>
@@ -409,7 +412,9 @@ function YieldInstrumentRowBase({
           <MetricLabel>TVL</MetricLabel>
           <div
             className={
-              labels.tvlIsNative ? "text-sm text-muted-foreground" : "font-mono text-sm font-medium tabular-nums"
+              labels.tvlIsNative
+                ? "font-mono text-sm text-muted-foreground"
+                : "font-mono text-sm font-medium tabular-nums"
             }
           >
             <span className="sr-only">{labels.tvlSrLabel}</span>
@@ -462,7 +467,7 @@ function YieldInstrumentRowBase({
             aria-label={`${workbenchLink.label} for ${row.symbol}`}
             title={workbenchLink.label}
           >
-            <span>{workbenchLink.isWorkbench ? "Deep dive" : workbenchLink.label}</span>
+            <span className="truncate">{workbenchLink.isWorkbench ? "Deep dive" : "Opportunities"}</span>
             <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
           </Link>
           <button
@@ -485,7 +490,7 @@ function YieldInstrumentRowBase({
       </div>
 
       {expanded ? (
-        <div id={`yield-row-${row.id}-details`}>
+        <div id={`yield-row-${row.id}-details`} className="col-span-full">
           <YieldExpandedDetails
             row={row}
             benchmark={resolvedBenchmark}
@@ -606,7 +611,8 @@ export function YieldInstrumentBoard({
       </div>
 
       {/* Grid header (lg+: the md tier relies on per-cell labels to stay legible) */}
-      <div className={cn(BOARD_GRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 lg:grid")}>
+      <div className={BOARD_GRID_CLASS}>
+      <div className={cn(BOARD_SUBGRID_CLASS, "hidden border-b border-border/60 bg-background/45 px-3 py-2 lg:grid")}>
         <HeaderCell label="#" className="justify-end" />
         <HeaderCell label="Coin" />
         <HeaderCell label="APY 30d" title="30-day average annual percentage yield" />
@@ -629,11 +635,11 @@ export function YieldInstrumentBoard({
 
       {/* Rows */}
       {rows.length === 0 ? (
-        <div className="px-3 py-12 text-center text-sm text-muted-foreground">
+        <div className="col-span-full px-3 py-12 text-center text-sm text-muted-foreground">
           {emptyMessage ?? "No yield data available."}
         </div>
       ) : (
-        <div>
+        <>
           {rows.map((row, index) => (
             <YieldInstrumentRow
               key={row.id}
@@ -654,8 +660,9 @@ export function YieldInstrumentBoard({
               onToggleCompare={onToggleCompare}
             />
           ))}
-        </div>
+        </>
       )}
+      </div>
 
       {pagination ? (
         <div className="border-t border-border/70">

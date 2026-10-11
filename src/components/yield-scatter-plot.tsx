@@ -523,13 +523,14 @@ export function YieldScatterPlot({
                     : {
                         value: "Safety Score",
                         position: "insideBottom",
-                        offset: -6,
+                        offset: 0,
                         fill: "var(--color-muted-foreground)",
                         fontSize: 11,
                       }
                 }
                 tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
                 tickCount={isMobile ? 5 : 6}
+                height={hideAxisLabels ? 30 : 42}
                 allowDecimals={false}
                 tickLine={false}
                 axisLine={{ stroke: "var(--color-border)" }}
@@ -547,17 +548,17 @@ export function YieldScatterPlot({
                         value: "APY %",
                         angle: -90,
                         position: "insideLeft",
-                        offset: -2,
+                        offset: 6,
                         fill: "var(--color-muted-foreground)",
                         fontSize: 11,
                       }
                 }
                 tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
                 tickCount={isMobile ? 5 : 7}
-                tickFormatter={(v: number) => v.toFixed(0)}
+                tickFormatter={(v: number) => String(Math.round(v) || 0)}
                 tickLine={false}
                 axisLine={{ stroke: "var(--color-border)" }}
-                width={isMobile ? 28 : 34}
+                width={hideAxisLabels ? (isMobile ? 28 : 34) : isMobile ? 40 : 46}
               />
 
               <Tooltip

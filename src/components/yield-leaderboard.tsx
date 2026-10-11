@@ -538,27 +538,8 @@ export function YieldMobileCard({
                 <span className="font-semibold text-foreground">{row.symbol}</span>
                 <span className="truncate text-xs text-muted-foreground">{row.name}</span>
               </span>
-              <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{row.yieldSource}</span>
             </span>
           </Link>
-          <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} className="h-11 w-11 min-w-11" />
-          <button
-            type="button"
-            aria-pressed={isCompared}
-            disabled={compareDisabled}
-            onClick={() => onToggleCompare(row.id)}
-            aria-label={`Add ${row.symbol} to compare`}
-            className="pharos-focus-ring inline-flex h-11 w-11 min-w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span
-              aria-hidden="true"
-              className={`h-4 w-4 rounded border ${
-                isCompared
-                  ? "border-foreground bg-foreground ring-2 ring-inset ring-background"
-                  : "border-border/70 bg-background/60"
-              }`}
-            />
-          </button>
         </div>
         <div className="shrink-0 text-right">
           <p className="font-mono text-lg font-semibold leading-none tabular-nums text-foreground">
@@ -584,6 +565,7 @@ export function YieldMobileCard({
           </p>
         </div>
       </div>
+      <p className="mt-1.5 truncate text-[11px] text-muted-foreground">{row.yieldSource}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {confidenceStyle && confidenceLabel ? <span className={confidenceStyle.pill}>{confidenceLabel}</span> : null}
@@ -650,7 +632,25 @@ export function YieldMobileCard({
         </ul>
       ) : null}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <YieldWatchlistStar stablecoinId={row.id} symbol={row.symbol} className="h-11 w-11 min-w-11" />
+        <button
+          type="button"
+          aria-pressed={isCompared}
+          disabled={compareDisabled}
+          onClick={() => onToggleCompare(row.id)}
+          aria-label={`Add ${row.symbol} to compare`}
+          className="pharos-focus-ring inline-flex h-11 w-11 min-w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span
+            aria-hidden="true"
+            className={`h-4 w-4 rounded border ${
+              isCompared
+                ? "border-foreground bg-foreground ring-2 ring-inset ring-background"
+                : "border-border/70 bg-background/60"
+            }`}
+          />
+        </button>
         <button
           type="button"
           onClick={() => onToggleExpanded(row.id)}
