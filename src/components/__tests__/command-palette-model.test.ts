@@ -263,7 +263,7 @@ describe("command palette model", () => {
 
   it("floats exact-intent pages above coin substring matches", () => {
     const pageIntentQueries = [
-      { query: "api", href: "/api/", label: "API Access" },
+      { query: "api", href: "/api/", label: "API" },
       { query: "yield", href: "/yield/", label: "Yield Intelligence" },
       { query: "depeg", href: "/depeg/", label: "Depeg & Recovery" },
       { query: "psi", href: "/stability-index/", label: "Stability Index" },

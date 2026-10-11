@@ -110,14 +110,14 @@ const PHAROS_DATA_LICENSE_URL = "https://github.com/TokenBrice/pharos-watch/blob
 export const PHAROS_PUBLIC_DATA_CATALOG_NAME = "Pharos Public API Data Catalog";
 
 /** Canonical `@id` of the public data catalog every dataset node points at. */
-export const PHAROS_PUBLIC_DATA_CATALOG_ID = `${SITE_URL}/about/api/#data-catalog`;
+export const PHAROS_PUBLIC_DATA_CATALOG_ID = `${SITE_URL}/api/#data-catalog`;
 
 export function buildPharosDataCatalogReference() {
   return {
     "@type": "DataCatalog",
     "@id": PHAROS_PUBLIC_DATA_CATALOG_ID,
     name: PHAROS_PUBLIC_DATA_CATALOG_NAME,
-    url: `${SITE_URL}/about/api/`,
+    url: `${SITE_URL}/api/`,
   };
 }
 
@@ -171,14 +171,14 @@ export function buildPublicDatasetMirrorJsonLd(topic: PublicDatasetTopic) {
     "@id": `${SITE_URL}/datasets/${descriptor.slug}/#dataset`,
     name: descriptor.name,
     description: descriptor.description,
-    url: `${SITE_URL}/about/api/#dataset-${descriptor.slug}`,
+    url: `${SITE_URL}/api/#dataset-${descriptor.slug}`,
     creator: organization,
     publisher: organization,
     isAccessibleForFree: true,
     license: PHAROS_DATA_LICENSE_URL,
     includedInDataCatalog: buildPharosDataCatalogReference(),
     identifier: [buildPharosUrnJsonLdIdentifier("dataset", descriptor.slug)],
-    sameAs: `${SITE_URL}/about/api/#dataset-${descriptor.slug}`,
+    sameAs: `${SITE_URL}/api/#dataset-${descriptor.slug}`,
     ...(date ? { dateModified: date } : {}),
     keywords: descriptor.keywords,
     variableMeasured: rowFields.map((name) => ({
@@ -233,7 +233,7 @@ export function buildCoverageDatasetJsonLd() {
       {
         "@type": "CreativeWork",
         name: "Pharos API Documentation",
-        url: `${SITE_URL}/about/api/`,
+        url: `${SITE_URL}/api/`,
       },
     ],
   };

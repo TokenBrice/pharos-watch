@@ -176,7 +176,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/changelog/": ["weekly", 0.5, changelogLastModified],
     "/blog/": ["weekly", 0.6],
     "/about/": ["monthly", 0.5],
-    "/about/api/": ["monthly", 0.5],
     "/depeg/archive/": ["monthly", 0.5, (path) => lastEdited(path, "/depeg/")],
     "/learn/": ["monthly", 0.5],
     "/api/": ["monthly", 0.5],
@@ -334,7 +333,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // RSS feeds (/feed/<topic>.xml) and public datasets (.csv/.json) are excluded
   // from the sitemap — both are non-HTML URLs and the SEO check rejects entries
   // without HTML artifacts. They remain discoverable via <link rel="alternate">
-  // tags, the footer "Subscribe" cluster, /llms.txt, and /about/api/.
+  // tags, the footer "Subscribe" cluster, /llms.txt, and /api/.
 
   return [
     ...staticPages,

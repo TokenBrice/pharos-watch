@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { cache } from "react";
-import { slug as githubSlug } from "github-slugger";
 import { slugifyId } from "@shared/lib/format";
 
 export interface MarkdownParagraphBlock {
@@ -60,25 +59,9 @@ export interface ApiReferenceEndpointSummary {
   method: "GET" | "POST" | null;
   path: string;
   title: string;
-  /**
-   * Anchor slug as rendered on `/docs/api-reference/`, where headings are slugged
-   * by `rehype-slug` (github-slugger). This differs from `id` (which uses
-   * `slugifyId`), so deep-links must target `docAnchor`, not `id`.
-   */
-  docAnchor: string;
 }
 
 const API_REFERENCE_PATH = path.join(process.cwd(), "docs/api-reference.md");
-const CONCISE_API_REFERENCE_SECTION_IDS = new Set([
-  "surface-split",
-  "public-api-auth",
-  "stablecoin-ids",
-  "response-headers",
-  "response-body-freshness-meta",
-  "cache-control-profiles",
-  "polling-guidance",
-  "rate-limits",
-]);
 
 function isTableSeparatorLine(line: string) {
   const trimmed = line.trim();
@@ -396,10 +379,6 @@ export const loadApiReferenceDocument = cache(async (): Promise<ApiReferenceDocu
   return parseApiReferenceDocument(markdown);
 });
 
-export function getConciseApiReferenceSections(document: ApiReferenceDocument): ApiReferenceSection[] {
-  return document.sections.filter((section) => CONCISE_API_REFERENCE_SECTION_IDS.has(section.id));
-}
-
 export function getPublicApiEndpointSummaries(document: ApiReferenceDocument): ApiReferenceEndpointSummary[] {
   const publicEndpoints = document.sections.find((section) => section.id === "public-endpoints");
   if (!publicEndpoints) return [];
@@ -412,7 +391,6 @@ export function getPublicApiEndpointSummaries(document: ApiReferenceDocument): A
       method: section.method,
       path,
       title,
-      docAnchor: githubSlug(title),
     };
   });
 }

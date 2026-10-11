@@ -66,7 +66,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
   it.each([
     "/about/",
     "/learn/mechanisms/",
-    "/docs/api-reference/",
+    "/docs/dews/",
     "/changelog/",
     "/blog/client-runtime/",
     "/methodology/scoring-changelog/",
@@ -86,7 +86,7 @@ describe("Providers single-key shortcuts (WCAG 2.1.4 disable flag)", () => {
     expect(screen.queryByTestId("route-progress-bar")).toBeNull();
   });
 
-  it.each(["/docs/api-reference/", "/about/", "/stablecoin/usdt-tether/"])(
+  it.each(["/docs/dews/", "/about/", "/stablecoin/usdt-tether/"])(
     "opens global search by its real trigger and modified shortcut on %s without eager overlays",
     async (route) => {
       pathname = route;

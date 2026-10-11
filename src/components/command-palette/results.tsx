@@ -163,7 +163,7 @@ function buildSearchResult(
         closePalette();
         return;
       case "open-api-docs":
-        router.push("/about/api/");
+        router.push("/api/#reference");
         closePalette();
         return;
       case "compare-watchlist": {

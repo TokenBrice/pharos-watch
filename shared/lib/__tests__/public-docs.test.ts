@@ -13,7 +13,7 @@ const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
 
 describe("PUBLIC_DOCS registry", () => {
   it("contains the reviewed initial public set", () => {
-    expect(PUBLIC_DOCS.length).toBe(14);
+    expect(PUBLIC_DOCS.length).toBe(13);
   });
 
   it("points every entry at an existing single-file markdown source", () => {
@@ -46,12 +46,6 @@ describe("PUBLIC_DOCS registry", () => {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });
       expect(rendered).not.toMatch(/\]\((?:\.\.?\/|[^:/)#]+\.md)/);
       expect(rendered).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME|runbook/i);
-      if (doc.source === "api-reference.md") {
-        expect(rendered).not.toContain("## Admin Auth And Idempotency");
-        expect(rendered).toContain("## Public Endpoints");
-        expect(rendered).toContain("### `GET /api/stablecoins`");
-        expect(rendered).not.toContain("## Admin Endpoints");
-      }
     }
   });
 });

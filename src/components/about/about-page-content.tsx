@@ -64,15 +64,15 @@ const ABOUT_PAGE_JSON_LD = {
   mentions: [
     {
       "@type": "WebAPI",
-      "@id": `${SITE_ORIGIN}/about/api/#webapi`,
+      "@id": `${SITE_ORIGIN}/api/#webapi`,
       name: "Pharos API",
-      url: `${SITE_ORIGIN}/about/api/`,
+      url: `${SITE_ORIGIN}/api/`,
     },
     {
       "@type": "DataCatalog",
-      "@id": `${SITE_ORIGIN}/about/api/#data-catalog`,
+      "@id": `${SITE_ORIGIN}/api/#data-catalog`,
       name: "Pharos public data artifacts",
-      url: `${SITE_ORIGIN}/about/api/`,
+      url: `${SITE_ORIGIN}/api/`,
     },
     {
       "@type": "WebPage",

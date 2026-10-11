@@ -46,7 +46,7 @@ rg -n '/route-name/|src/app/route-name' docs
 
 ## Cross-Cutting Contracts
 
-- [api-reference.md](./api-reference.md) - public integration routes, schemas, authentication, and cache policy; [api-reference-admin.md](./api-reference-admin.md) is the internal operator-route companion and is not published through `/docs/`
+- [api-reference.md](./api-reference.md) - public integration routes, schemas, authentication, and cache policy, rendered as the Reference tab of `/api/`; [api-reference-admin.md](./api-reference-admin.md) is the internal operator-route companion and is not published through `/docs/`
 - [One-shot historical backfills](./runbooks/one-shot-backfills.md#operator-contract) - operator-only CLI rebuilds and staged captures, atomic-import availability consent, interrupted-run reconciliation and receipt cleanup
 - [pharos-urn.md](./pharos-urn.md) - stable citation identifiers and JSON-LD integration
 - [telegram-architecture.md](./telegram-architecture.md) - Telegram seam index; routes ingress/storage to Architecture, commands/dispatch/delivery to Alerts, and client/auth/state to the Mini App contract

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { KeyRound, Loader2 } from "lucide-react";
 import { DONOR_API_KEY_MIN_USD, DONOR_KEY_CLAIM_MAX_AGE_SEC } from "@shared/lib/ops-limits";
 import {
@@ -338,11 +337,11 @@ export function DonorKeyClaim() {
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
           Save it as <code className="font-mono text-foreground">PHAROS_API_KEY</code> and call from a server or
           script; browsers on other sites are blocked. Next:{" "}
-          <Link href="/about/api/#endpoint-directory" className="pharos-prose-link">endpoint directory</Link>
+          <a href="#endpoint-directory" className="pharos-prose-link">endpoint directory</a>
           {" · "}
           <a href={PUBLIC_API_ARTIFACTS.postmanCollection} className="pharos-prose-link">Postman collection</a>
           {" · "}
-          <Link href="/about/api/#polling-guidance" className="pharos-prose-link">polling guidance</Link>.
+          <a href="#polling-guidance" className="pharos-prose-link">polling guidance</a>.
         </p>
       </div>
     );

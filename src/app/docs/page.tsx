@@ -12,17 +12,19 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 const GROUP_TITLES: Record<(typeof DOC_GROUPS)[number], string> = {
-  system: "System and Data",
   methodology: "Methodology",
 };
 
+// The API reference lives on /api/ (Reference tab), rendered from docs/api-reference.md.
+const FEATURED_API_REFERENCE = {
+  href: "/api/#reference",
+  title: "API Reference",
+  label: "API integrators",
+  description:
+    "Endpoint authentication, response contracts, cache headers, pagination, and public dataset export details.",
+} as const;
+
 const FEATURED_DOCS = [
-  {
-    slug: "api-reference",
-    label: "API integrators",
-    description:
-      "Endpoint authentication, response contracts, cache headers, pagination, and public dataset export details.",
-  },
   {
     slug: "mint-burn-flows",
     label: "Flow analysts",
@@ -39,7 +41,6 @@ const FEATURED_DOCS = [
 
 export default function DocsIndexPage() {
   const byGroup: Record<(typeof DOC_GROUPS)[number], typeof PUBLIC_DOCS> = {
-    system: PUBLIC_DOCS.filter((doc) => doc.group === "system"),
     methodology: PUBLIC_DOCS.filter((doc) => doc.group === "methodology"),
   };
 
@@ -65,6 +66,16 @@ export default function DocsIndexPage() {
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
+            <Link
+              href={FEATURED_API_REFERENCE.href}
+              className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
+            >
+              <p className="pharos-kicker text-muted-foreground/80">{FEATURED_API_REFERENCE.label}</p>
+              <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
+                {FEATURED_API_REFERENCE.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{FEATURED_API_REFERENCE.description}</p>
+            </Link>
             {FEATURED_DOCS.map((featured) => {
               const doc = PUBLIC_DOCS.find((candidate) => candidate.slug === featured.slug);
               if (!doc) return null;

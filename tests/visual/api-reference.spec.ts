@@ -13,7 +13,7 @@ test.describe.configure({ timeout: 60_000 });
 
 test("nav menu descriptions stay on one line at narrow desktop width", async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
-  await page.goto("/about/api/");
+  await page.goto("/api/#reference");
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(() => document.fonts.ready);
 
@@ -43,7 +43,7 @@ test("nav menu descriptions stay on one line at narrow desktop width", async ({ 
 
 test("mobile nav drawer's last item is reachable via keyboard", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/about/api/");
+  await page.goto("/api/#reference");
   await page.waitForLoadState("domcontentloaded");
 
   await page.getByRole("button", { name: "Open API navigation" }).click();

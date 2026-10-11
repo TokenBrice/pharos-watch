@@ -1,6 +1,6 @@
 import PUBLIC_DOC_SOURCE_FILES from "./public-doc-manifest.json";
 
-export const DOC_GROUPS = ["system", "methodology"] as const;
+export const DOC_GROUPS = ["methodology"] as const;
 export type DocGroup = (typeof DOC_GROUPS)[number];
 
 export interface PublicDoc {
@@ -17,13 +17,6 @@ export interface PublicDoc {
 }
 
 const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
-  {
-    slug: "api-reference",
-    title: "API Reference",
-    summary:
-      "Public Pharos API contracts for stablecoin data: endpoints, authentication, response schemas, pagination, freshness headers, and dataset exports.",
-    group: "system",
-  },
   {
     slug: "classification",
     title: "Classification",

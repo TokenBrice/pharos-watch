@@ -47,8 +47,8 @@ describe("AboutPage", () => {
     });
     expect(aboutJsonLd?.mentions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ "@id": "https://pharos.watch/about/api/#webapi" }),
-        expect.objectContaining({ "@id": "https://pharos.watch/about/api/#data-catalog" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/api/#webapi" }),
+        expect.objectContaining({ "@id": "https://pharos.watch/api/#data-catalog" }),
         expect.objectContaining({ "@id": "https://pharos.watch/about/#principles" }),
         expect.objectContaining({ "@id": "https://pharos.watch/funding/#funding" }),
       ]),

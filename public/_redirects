@@ -22,6 +22,15 @@
 /learn/glossary/ /methodology/#definitions 301
 /learn/glossary /methodology/#definitions 301
 
+# The API access page, API reference page and API reference doc merged into
+# one /api/ page with Access | Reference tabs (site simplification, 2026-10-11).
+/about/api/* /api/#reference 301
+/about/api/ /api/#reference 301
+/about/api /api/#reference 301
+/docs/api-reference/* /api/#reference 301
+/docs/api-reference/ /api/#reference 301
+/docs/api-reference /api/#reference 301
+
 # Consolidated public documentation routes. The engineering and design docs
 # were withdrawn from the public set (2026-10-11); they remain internal in docs/.
 /docs/data-pipeline/* /docs/ 301

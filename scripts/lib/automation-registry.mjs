@@ -23,6 +23,8 @@ function uniqueSorted(values) {
 }
 
 const PAGES_EXTRA_EXACT_PATHS = [
+  // Rendered into the /api/ Reference tab at build time (src/lib/api-reference-doc.ts).
+  "docs/api-reference.md",
   "next.config.ts",
   "postcss.config.mjs",
   "scripts/ci/check-feature-flag-inlining.ts",

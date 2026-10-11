@@ -47,7 +47,6 @@ describe("sitemap", () => {
       ["/compliance/", "weekly", 0.6],
       ["/pharoswatchbot/", "weekly", 0.7], ["/methodology/", "monthly", 0.6],
       ["/changelog/", "weekly", 0.5], ["/blog/", "weekly", 0.6], ["/about/", "monthly", 0.5],
-      ["/about/api/", "monthly", 0.5],
       ["/depeg/archive/", "monthly", 0.5], ["/learn/", "monthly", 0.5],
       ["/api/", "monthly", 0.5],
       ["/stablecoins/", "weekly", 0.7], ["/stablecoins/backing/", "weekly", 0.6],
