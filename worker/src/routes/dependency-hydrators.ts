@@ -39,6 +39,7 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
     routeCtx.dwellirBudgetEnv = {
       DWELLIR_API_KEY: env.DWELLIR_API_KEY,
       DWELLIR_MAX_CREDITS_PER_MONTH: env.DWELLIR_MAX_CREDITS_PER_MONTH,
+      DWELLIR_ROUTING_DISABLED_CHAINS: env.DWELLIR_ROUTING_DISABLED_CHAINS,
     };
   },
   donorKeyClaimRateLimit(routeCtx, env) {

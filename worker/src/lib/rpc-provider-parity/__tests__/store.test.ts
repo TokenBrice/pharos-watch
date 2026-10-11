@@ -117,9 +117,52 @@ describe("rpc parity store merging", () => {
     const olderRun = decoded?.runs.find((run) => run.atSec === NOW_SEC);
     expect(olderRun?.samples.map((entry) => entry.chainId)).toEqual(prefix.chains);
   });
+
+  it("resets only the changed host's evidence while preserving other targets", () => {
+    const prior = buildParityRow([NOW_SEC - 3600]);
+    const run = fullParityRun(NOW_SEC, (chainId) => chainId === "polygon"
+      ? { dwellirHost: "new-polygon-host.n.dwellir.com" } : {});
+    const merged = mergeRpcParityRun(prior, run, { nowSec: NOW_SEC });
+    expect(merged.reset).toBe(false);
+    expect(merged.row.runs[0].samples.some((sample) => sample.chainId === "polygon")).toBe(false);
+    expect(merged.row.runs[0].samples).toHaveLength(RPC_PARITY_TARGETS.length - 1);
+    expect(prior.runs[0].samples).toHaveLength(RPC_PARITY_TARGETS.length);
+  });
 });
 
 describe("rpc parity store wire form", () => {
+  it("retains only five newest safe failure details across the window", () => {
+    const row = buildParityRow(Array.from({ length: 8 }, (_, index) => NOW_SEC - (7 - index) * 3600));
+    for (const run of row.runs) {
+      const sample = run.samples[0];
+      sample.failures = [{
+        operator: "dwellir", step: "reference", method: "eth_call", blockParam: "0x65",
+        httpStatus: 200, rpcCode: -32603, errorClass: "reference-unavailable", atSec: run.atSec,
+        message: `HeaderNotFound https://secret.example/key api-key=secret ${"x".repeat(300)}`,
+      }];
+    }
+    const encoded = encodeRpcParityStoreRow(row);
+    const decoded = decodeRpcParityStoreRow(encoded)!;
+    const failures = decoded.runs.flatMap((run) => run.samples.flatMap((sample) => sample.failures ?? []));
+    expect(failures).toHaveLength(5);
+    expect(failures[0].atSec).toBe(row.runs[3].atSec);
+    expect(failures.every((failure) => failure.message.length <= 160)).toBe(true);
+    expect(JSON.stringify(failures)).not.toContain("secret");
+    expect(failures[4]).toMatchObject({ step: "reference", rpcCode: -32603, blockParam: "0x65", httpStatus: 200 });
+    expect(encoded.length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
+  });
+
+  it.each([1, 2, 3, 4, 5])("reads v%s evidence without relabeling mixed latest calls", (version) => {
+    const legacy = {
+      v: version, chains: ["base"], comparators: [["public", "mainnet.base.org", "registry"]],
+      hosts: ["api-base-mainnet-archive.n.dwellir.com"], layouts: [[[112], []]],
+      runs: [[NOW_SEC, `0|63|2s|0|||0|0|0|${JSON.stringify([0, [100], null])}`]], latest: {},
+    };
+    const sample = decodeRpcParityStoreRow(JSON.stringify(legacy))?.runs[0].samples[0];
+    expect(sample?.calls?.dwellir[0].step).toBe("legacy-latest");
+    const row = decodeRpcParityStoreRow(JSON.stringify(legacy))!;
+    expect(decodeRpcParityStoreRow(encodeRpcParityStoreRow(row))?.runs[0].samples[0].calls).toEqual(sample?.calls);
+  });
   it("round-trips every stored field", () => {
     const run = {
       atSec: NOW_SEC,
@@ -191,8 +234,8 @@ describe("rpc parity store wire form", () => {
     const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(merged.row));
     const samples = decoded?.runs[0].samples ?? [];
     expect(samples[0].failedSteps).toEqual({
-      dwellir: { head: false, state: false, logs: false, latest: false },
-      comparator: { head: false, state: false, logs: false, latest: false },
+      dwellir: stepFailures(),
+      comparator: stepFailures(),
     });
     expect(samples[0].comparatorErrorClass).toBeNull();
     expect(samples[0].comparatorHttpStatus).toBeNull();
@@ -236,8 +279,8 @@ describe("rpc parity store wire form", () => {
     expect(sample.comparatorErrorClass).toBeNull();
     expect(sample.comparatorHttpStatus).toBeNull();
     expect(sample.failedSteps).toEqual({
-      dwellir: { head: false, state: false, logs: false, latest: false },
-      comparator: { head: false, state: false, logs: false, latest: false },
+      dwellir: stepFailures(),
+      comparator: stepFailures(),
     });
     expect(sample.calls).toBeUndefined();
     expect(sample.latestFreshness).toBeUndefined();

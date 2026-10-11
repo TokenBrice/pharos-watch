@@ -937,7 +937,7 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
 
 ### `GET /api/rpc-provider-trial`
 
-Operator-only report for the Dwellir supplemental-RPC trial. It answers three questions from one read:
+Operator-only report for Dwellir RPC parity and the scoped primary/log-routing canary. It answers three questions from one read:
 
 - credit ledger — this UTC month's metered Dwellir JSON-RPC response items against the configured cap (`budget`)
 - `dwellir-evm` circuit state, so an operator can see whether the trial is currently demoted or held open (`circuit`)
@@ -959,7 +959,7 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
     "reason": "ok",
     "window": "2026-09",
     "usedCredits": 12345,
-    "capCredits": 20000000,
+    "capCredits": 100000000,
     "observedAtSec": 1780000000
   },
   "circuit": { "state": "closed", "consecutiveFailures": 0, "updatedAtSec": 1779999000 },
@@ -973,11 +973,13 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
         "dwellirHost": "api-base-mainnet-archive.n.dwellir.com",
         "comparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
         "logsComparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
+        "routing": { "statePlacement": "after-alchemy", "logScan": false },
+        "lastFailures": [],
         "comparatorsByStep": {
           "head": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
           "state": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
           "logs": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
-          "latest": []
+          "latest": [], "reference": [], "header": [], "legacy-latest": []
         },
         "runs": 24,
         "skips": { "no-comparator": 0, "no-dwellir-entry": 0, "deadline": 0, "aborted": 0, "unknown": 0 },
@@ -993,13 +995,19 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
               "head": { "p50Ms": 180, "p95Ms": 420, "samples": 24 },
               "state": { "p50Ms": null, "p95Ms": null, "samples": 0 },
               "logs": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
+              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "reference": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "header": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
             },
             "warm": {
               "head": { "p50Ms": 70, "p95Ms": 140, "samples": 48 },
               "state": { "p50Ms": 80, "p95Ms": 160, "samples": 24 },
               "logs": { "p50Ms": 90, "p95Ms": 180, "samples": 24 },
-              "latest": { "p50Ms": 80, "p95Ms": 160, "samples": 216 }
+              "latest": { "p50Ms": 80, "p95Ms": 160, "samples": 48 },
+              "reference": { "p50Ms": 80, "p95Ms": 160, "samples": 96 },
+              "header": { "p50Ms": 80, "p95Ms": 160, "samples": 72 },
+              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
             },
             "warmRunMedian": { "p50Ms": 80, "p95Ms": 160, "samples": 24 }
           },
@@ -1008,29 +1016,41 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
               "head": { "p50Ms": 140, "p95Ms": 300, "samples": 24 },
               "state": { "p50Ms": null, "p95Ms": null, "samples": 0 },
               "logs": { "p50Ms": null, "p95Ms": null, "samples": 0 },
-              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
+              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "reference": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "header": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
             },
             "warm": {
               "head": { "p50Ms": null, "p95Ms": null, "samples": 0 },
               "state": { "p50Ms": 60, "p95Ms": 120, "samples": 24 },
               "logs": { "p50Ms": 70, "p95Ms": 140, "samples": 24 },
-              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
+              "latest": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "reference": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "header": { "p50Ms": null, "p95Ms": null, "samples": 0 },
+              "legacy-latest": { "p50Ms": null, "p95Ms": null, "samples": 0 }
             },
             "warmRunMedian": { "p50Ms": 60, "p95Ms": 120, "samples": 24 }
           }
         },
         "availability": {
           "dwellir": {
-            "head": { "attempts": 72, "successes": 72, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
-            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
-            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
-            "latest": { "attempts": 216, "successes": 216, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 }
+            "head": { "attempts": 72, "successes": 72, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "latest": { "attempts": 48, "successes": 48, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "reference": { "attempts": 96, "successes": 96, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "header": { "attempts": 72, "successes": 72, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "legacy-latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null }
           },
           "comparator": {
-            "head": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
-            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
-            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "unknownRuns": 0, "successRate": 1 },
-            "latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "unknownRuns": 24, "successRate": null }
+            "head": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "state": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "logs": { "attempts": 24, "successes": 24, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 0, "successRate": 1 },
+            "latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null },
+            "reference": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null },
+            "header": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null },
+            "legacy-latest": { "attempts": 0, "successes": 0, "capabilityRefusals": 0, "referenceUnavailable": 0, "unknownRuns": 24, "successRate": null }
           }
         },
         "latestFreshness": {
@@ -1043,8 +1063,8 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
         "errorClasses": {},
         "comparatorErrorClasses": {},
         "failedSteps": {
-          "dwellir": { "head": 0, "state": 0, "logs": 0, "latest": 0 },
-          "comparator": { "head": 0, "state": 0, "logs": 0, "latest": 0 }
+          "dwellir": { "head": 0, "state": 0, "logs": 0, "latest": 0, "reference": 0, "header": 0, "legacy-latest": 0 },
+          "comparator": { "head": 0, "state": 0, "logs": 0, "latest": 0, "reference": 0, "header": 0, "legacy-latest": 0 }
         },
         "lastComparatorFailure": null,
         "gate": { "passed": true, "failing": [] },
@@ -1069,6 +1089,10 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
 
 `comparator` names the newest primary head/lag/state baseline, or the planned baseline when no samples exist. `logsComparator` names its separate logs baseline (the same reference on ordinary targets); explicit `null` records an unavailable reviewed logs pin. `comparatorsByStep` lists the actual references behind each method's retained observations, including failed calls and legacy recorded comparisons, so a window spanning a comparator change is not attributed solely to the newest host. State `lastMismatch` and `lastComparatorFailure` also carry the reference actually read. A split target's comparator latency is a composite of its step-specific baselines, not a single provider measurement.
 
+`routing.statePlacement` is a read-only scheduled-routing readiness snapshot: `primary`, `after-alchemy`, `supplemental`, or `unavailable` when the key/budget is unusable or the circuit is not closed/half-open. Placement and log eligibility come from `DWELLIR_STATE_PLACEMENT` / `DWELLIR_LOG_SCAN_CHAINS`; `routing.logScan` additionally requires full log history. `DWELLIR_ROUTING_DISABLED_CHAINS` demotes listed chains to supplemental and removes log eligibility. This is configured policy plus observed admission readiness, not proof that a consumer used Dwellir or a request-path RPC map. The read does not advance an open circuit to half-open; a cooled open circuit may be admitted by the next scheduled run.
+
+`lastFailures` retains the newest five failed-call diagnostics per chain across both operators, newest first: `operator`, `step`, `method`, `blockParam` (tag/hex quantity/number, `fromBlock-toBlock` for `eth_getLogs`, or null; strings at most 64 characters), `httpStatus`, `rpcCode`, `message`, `errorClass`, and call clock `atSec`. Messages are sanitized with the safe-error helper, redact the actual configured header and URL-query authentication material before truncation, and are at most 160 characters. No URLs, keys, headers or full request/body payloads are retained. Older rows have no fabricated failure detail.
+
 The Dwellir-only latest check keeps an explicit chain-local block-number sentinel on 36 targets: Multicall3's external getBlockNumber view at `0xca11bde05977b3631167028862be2a173976ca11` / selector `0x42cbb15c` on 34 chains, and ArbSys's external arbBlockNumber view at `0x0000000000000000000000000000000000000064` / selector `0xa3b1b31d` on Arbitrum and Robinhood. Nitro/Orbit Multicall3 returns Ethereum's L1 height, not the local L2 height; it is not a valid freshness sentinel on those targets. Each target requires a reviewed `latestStateProbe`; runtime magnitude heuristics and automatic method fallback are not used. Live Multicall3 bytecode was 3,808 bytes on 36 targets; XDC returned `0x` for both candidate sentinels, records an unavailable sentinel, and uses discriminating token-state observations for sufficiency instead.
 
 The sentinel sequence is head H1 → `eth_call(latest)` yielding served block R → head H2, with no numeric references. The sole tolerance authority is `headLagThresholdBlocks(blockTimeSec)` in `worker/src/lib/rpc-provider-parity/report.ts`: T = `max(3, ceil(6 / blockTimeSec))`, the same six-second/minimum-three-block policy used by the head-lag gate. It is discriminating and `fresh` / `served-block-in-range` when H1−T ≤ R ≤ H2+T, or `stale` / `served-block-behind` below H1−T. This gives Arbitrum 24 blocks (0.25 seconds/block), Robinhood and HyperEVM six (one second/block), and Base three (two seconds/block). A fixed two-block allowance was insufficient for fast-chain/load-balanced skew: an Arbitrum served block 11 ahead of H2 is now inside its shared 24-block budget, not missing evidence. Ahead-of-budget results, any regressing head (which could be a reorg), or a failed step remain indeterminate; a fast advancing head does not exhaust a numeric bracket. Each sample preserves the `toleranceBlocks` actually used when acquired; summary `blockTolerance` reports the current chain's shared sentinel budget, without rewriting historical verdicts.
@@ -1084,9 +1108,11 @@ Every target also reads its own token contract's `totalSupply(latest)` (selector
 
 Samples retain `sentinelFreshness` and `tokenFreshness`, including both sub-verdicts, the exact contract/selector read, acquired tolerance, heads, latest/numeric values, and token `referenceEndBlock`. The combined `latestFreshness` is stale if either check is stale; otherwise a deployed sentinel must be fresh and the token check matched or was `bracket-too-wide`. On XDC without a deployed sentinel, the combined verdict uses the actual token verdict. A failed token read or regressing/reorg bracket never becomes a positive combined claim. A discriminating fresh sentinel remains discriminating in the combined report when a quiet token matches; token-specific discrimination remains visible separately in `.tokenState`. `lastStale` names the selected failing check's actual method, run clock, budget, heads and value/reference payload.
 
-`latency.<operator>.firstTouch` and `.warm` contain p50/p95 and sample count for every category. The first request to an origin within the run is first-touch; later requests to that origin are warm even across targets. Per-call percentiles include failed calls; `warmRunMedian` uses successful calls only, while availability gates failures separately. `latest` includes both latest-tag reads and token numeric/header checks; the initial, post-sentinel, and post-token head reads belong to `head`. The comparator has no latest-check attempts by design.
+`latency.<operator>.firstTouch` and `.warm` contain p50/p95 and sample count for every category. The first request to an origin within the run is first-touch; later requests to that origin are warm even across targets. Per-call percentiles include failed calls; `warmRunMedian` uses successful calls only, while availability gates failures separately. `latest` now counts only actual latest-tag calls; numeric near-head state reads are `reference`, block-header reads are `header`, and initial/post-sentinel/post-token heads remain `head`. Pre-v6 mixed calls appear only in `legacy-latest` and cannot satisfy `success-rate:latest` or its attempt floor. Historical pinned state/log checks remain `state` / `logs`; the comparator performs no latest check.
 
-The compressed v5 store retains the existing cache key and reads v1/v2/v3/v4 samples during seven-day retention. Legacy observations are never given fabricated token checks, contracts, selectors, or discrimination. V1 samples have unknown per-method attempts, warm latency and latest freshness; v2 fresh verdicts have unknown discrimination. V3's single comparator remains the reference for every legacy method, and v4's split-origin provenance remains intact. V5 stores both freshness sub-tuples with their exact `(to,data)` provenance and full latest/numeric values in every new sample, then derives the combined verdict when decoding. Rewritten legacy rows retain their previous newest-stale-example value policy. Split-origin calls use dictionary-encoded layouts; integer milliseconds are losslessly bit-packed and block heights delta encoded. The same per-operator bounds (20 Dwellir / four comparator calls) govern encoding and decoding. Unrecorded skip reasons remain unknown. Oldest-run pruning honors both the 240 KiB compressed row budget and the reader's 4 MiB decompressed wire ceiling, retaining at most 168 runs. Highly compressible token proofs cannot produce a gzip row that its own reader rejects; a newest run alone exceeding the raw ceiling fails persistence with `rpc-parity-raw-row-budget` instead of discarding its proof. Older readers reject v5 rows and their next write resets history; preserve the cache row before rollback.
+A numeric reference strictly above the served H2 that returns a not-found / `HeaderNotFound` / “No state available” / “header not found” RPC error records `reference-unavailable`. It increments `availability.<operator>.reference.referenceUnavailable`, never successes, and is excluded from the provider-availability denominator and provider failure aggregates. The token bracket and combined freshness stay indeterminate with that reason, even alongside a fresh sentinel. The same error at/below H2 or on an actual latest-tag call remains a provider failure. `served-block-behind` and complete stable-bracket `no-bracket-match` stale detection are unchanged.
+
+The compressed v6 store retains the existing cache key and reads v1–v5 rows during seven-day retention. Legacy observations are never given fabricated token checks, contracts, selectors, discrimination or actual-latest availability. V1 samples have unknown per-method attempts, warm latency and latest freshness; v2 fresh verdicts have unknown discrimination. V3's single comparator and v4's split-origin provenance remain intact. V5 dual freshness sub-tuples keep their exact `(to,data)` and full latest/numeric values; v6 additionally separates method buckets and retains only the newest five failure details per chain across the window. Rewritten legacy rows retain their prior newest-stale-example policy. Split-origin calls use dictionary-encoded layouts; integer milliseconds are losslessly bit-packed and block heights delta encoded. The same bounds (20 Dwellir / four comparator calls) govern encoding and decoding. Appended targets preserve existing history. A changed Dwellir host drops only that target's old samples on the next sampled write; report reads already exclude non-current-host evidence. Thus Polygon's `api-polygon-mainnet-full` → `api-polygon-mainnet` starts a new Polygon-only evidence window. Oldest-run pruning honors the 240 KiB compressed and 4 MiB raw ceilings, retaining at most 168 runs; an oversized newest raw run fails persistence with `rpc-parity-raw-row-budget`. Older readers reject v6; preserve the cache row before rollback.
 Report reads expire runs and latest evidence older than `RPC_PARITY_RETENTION_SEC` at `generatedAtSec`, even without new writes; the exact seven-day cutoff is retained. Expired windows fail sufficiency gates.
 
 `errorClasses` and `comparatorErrorClasses` count samples with provider failures (`range-cap`, `result-cap`, `rate-limited`, `capability`, `server-error`, `timeout`, `network`, `rpc-error`, `invalid-response`). `failedSteps` counts failed method categories per operator; `lastComparatorFailure` names its run clock, category, class, HTTP status and actual comparator reference. Invalid method result shapes are failures, not successes. HTTP 5xx stays `server-error` even if its body mentions an unsupported operation; HTTP range/result-cap bodies retain their specific class. Unavailable reads never count as state/log mismatches: both operators must answer for a comparison. Dwellir state/log reads are still attempted when the comparator's corresponding method fails; an unresolved logs pin skips that method without issuing either operator's log read. Astar's reviewed keyless pin is `https://evm.astar.network`, verified for historical USDC supply and recent/older logs on 2026-10-05.
@@ -1107,7 +1133,7 @@ The 2026-10-05T20:25Z smoke with the per-step comparator split completed in 40 s
 
 The 2026-10-05T22:30Z initial dual-check smoke completed in 54 seconds with 517 Dwellir credits, 37/37 heads and samples, no skipped chains and no deadline hit. HyperEVM's dRPC historical state and Alchemy exact logs matched, while its token freshness remained indeterminate (`invalid-response`); Etherlink's token check returned `rpc-error`, and zkSync's returned `invalid-response`. Worldchain's comparator `server-error` and Manta's `rate-limited` response left logs unchecked. This smoke preceded the H2-only hash-fence adjustment and raw-wire retention guard. It establishes no 24-run gate verdict.
 
-The 2026-10-05T23:26Z two-target diagnostic rerun reproduced Dwellir `latest`-category `rpc-error` failures on the first numeric `totalSupply` call at each sentinel's R=H2+1: Etherlink returned `-32603` / “No state available for block 54982591”; Blast returned `-32000` / “header not found” for block 41216502. Both known-head hash reads succeeded and both sentinels were fresh. These unavailable ahead-of-head numeric states are indeterminate, not stale or a probe defect. The keyless call traces are retained in `agents/dwellir-switch/raw/impl-stepfail-2026-10-05T23-26-58-507Z.json`; the original full-run summary alone did not retain exact failed methods/classes.
+The 2026-10-05T23:26Z two-target diagnostic rerun reproduced failures on the first numeric `totalSupply` call at each sentinel's R=H2+1: Etherlink returned `-32603` / “No state available for block 54982591”; Blast returned `-32000` / “header not found” for block 41216502. Both known-head hash reads succeeded and both sentinels were fresh. Those observations were originally counted in the mixed `latest` bucket; v6 classifies this case as `reference-unavailable`, indeterminate rather than provider failure or success. The historical raw scratch trace is no longer present; the retained original report cannot recover discarded methods/messages.
 
 `budget.reason` is `ok` when the ledger is readable and under cap; otherwise `not-configured`, `provider-budget-exhausted`, or `ledger-unreadable`. `budget.usedCredits` is `null` when the key is unconfigured or the ledger is unreadable. An absent circuit row yields a closed `circuit` object with zero failures and `updatedAtSec: null`; `circuit: null` means its read failed. `observation` is `null` with `observationError` set when stored parity samples cannot be read. Diagnostic failures still return `200`, preserving independently available budget/circuit evidence.
 

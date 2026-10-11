@@ -7,6 +7,7 @@ import type { RpcParityProbeRunResult } from "../probe";
 import { readRpcParityStore } from "../../../lib/rpc-provider-parity/store";
 import { rpcParityCircuitOutcome, syncRpcProviderParity } from "../index";
 import { RPC_PARITY_TARGETS } from "../../../lib/rpc-provider-parity/targets";
+import { DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH } from "../../../lib/rpc-provider-budget";
 import {
   fullParityRun,
   PARITY_NOW_SEC,
@@ -76,7 +77,7 @@ describe("rpc parity job", () => {
     const { db } = fixtures.open();
     const { nowSec, month, ledgerKey } = currentMonthWindow();
     await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .bind(ledgerKey, JSON.stringify({ window: month, usedCredits: 20_000_000 }), nowSec)
+      .bind(ledgerKey, JSON.stringify({ window: month, usedCredits: DWELLIR_DEFAULT_MAX_CREDITS_PER_MONTH }), nowSec)
       .run();
 
     let probed = false;

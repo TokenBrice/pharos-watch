@@ -15,20 +15,23 @@ vi.mock("../../lib/rpc-provider-parity/report", () => {
 
 const DWELLIR_API_KEY = "dwellir-trial-key-must-not-leak";
 const DWELLIR_MAX_CREDITS_PER_MONTH = "20000000";
+const DWELLIR_ROUTING_DISABLED_CHAINS = "base";
 /** What the `dwellirBudgetEnv` hydrator must hand the report loader. */
 const DWELLIR_BUDGET_ENV = {
   DWELLIR_API_KEY,
   DWELLIR_MAX_CREDITS_PER_MONTH,
+  DWELLIR_ROUTING_DISABLED_CHAINS,
 };
 
 const env = makeScheduledEnv({
   DWELLIR_API_KEY,
   DWELLIR_MAX_CREDITS_PER_MONTH,
+  DWELLIR_ROUTING_DISABLED_CHAINS,
 });
 
 const EMPTY_LATENCY = { p50Ms: null, p95Ms: null, samples: 0 };
 const METHOD_LATENCY = { p50Ms: 80, p95Ms: 160, samples: 6 };
-const SERVED_METHOD = { attempts: 6, successes: 6, capabilityRefusals: 0, unknownRuns: 0, successRate: 1 };
+const SERVED_METHOD = { attempts: 6, successes: 6, capabilityRefusals: 0, referenceUnavailable: 0, unknownRuns: 0, successRate: 1 };
 const TRIAL_REPORT = {
   provider: "dwellir",
   generatedAtSec: 1_772_000_000,
@@ -50,6 +53,8 @@ const TRIAL_REPORT = {
       {
         chainId: "base",
         dwellirHost: "api-base-mainnet-archive.n.dwellir.com",
+        routing: { statePlacement: "supplemental", logScan: false },
+        lastFailures: [],
         comparator: { operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" },
         logsComparator: { operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" },
         comparatorsByStep: {
@@ -57,6 +62,7 @@ const TRIAL_REPORT = {
           state: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
           logs: [{ operator: "alchemy", host: "base-mainnet.g.alchemy.com", source: "registry" }],
           latest: [],
+          reference: [], header: [], "legacy-latest": [],
         },
         runs: 6,
         skips: { "no-comparator": 0, "no-dwellir-entry": 0, deadline: 0, aborted: 0, unknown: 0 },
@@ -68,27 +74,32 @@ const TRIAL_REPORT = {
         prunedLogProbe: null,
         latency: {
           dwellir: {
-            firstTouch: { head: { p50Ms: 180, p95Ms: 420, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY },
+            firstTouch: { head: { p50Ms: 180, p95Ms: 420, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY, reference: EMPTY_LATENCY, header: EMPTY_LATENCY, "legacy-latest": EMPTY_LATENCY },
             warm: {
               head: { ...METHOD_LATENCY, samples: 12 }, state: METHOD_LATENCY, logs: METHOD_LATENCY,
-              latest: { ...METHOD_LATENCY, samples: 54 },
+              latest: { ...METHOD_LATENCY, samples: 12 }, reference: METHOD_LATENCY, header: METHOD_LATENCY, "legacy-latest": EMPTY_LATENCY,
             },
             warmRunMedian: METHOD_LATENCY,
           },
           comparator: {
-            firstTouch: { head: { p50Ms: 140, p95Ms: 300, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY },
-            warm: { head: EMPTY_LATENCY, state: METHOD_LATENCY, logs: METHOD_LATENCY, latest: EMPTY_LATENCY },
+            firstTouch: { head: { p50Ms: 140, p95Ms: 300, samples: 6 }, state: EMPTY_LATENCY, logs: EMPTY_LATENCY, latest: EMPTY_LATENCY, reference: EMPTY_LATENCY, header: EMPTY_LATENCY, "legacy-latest": EMPTY_LATENCY },
+            warm: { head: EMPTY_LATENCY, state: METHOD_LATENCY, logs: METHOD_LATENCY, latest: EMPTY_LATENCY, reference: EMPTY_LATENCY, header: EMPTY_LATENCY, "legacy-latest": EMPTY_LATENCY },
             warmRunMedian: METHOD_LATENCY,
           },
         },
         availability: {
           dwellir: {
             head: { ...SERVED_METHOD, attempts: 18, successes: 18 }, state: SERVED_METHOD, logs: SERVED_METHOD,
-            latest: { ...SERVED_METHOD, attempts: 54, successes: 54 },
+            latest: { ...SERVED_METHOD, attempts: 12, successes: 12 },
+            reference: SERVED_METHOD, header: SERVED_METHOD,
+            "legacy-latest": { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
           },
           comparator: {
             head: SERVED_METHOD, state: SERVED_METHOD, logs: SERVED_METHOD,
-            latest: { attempts: 0, successes: 0, capabilityRefusals: 0, unknownRuns: 6, successRate: null },
+            latest: { ...SERVED_METHOD, attempts: 0, successes: 0, unknownRuns: 6, successRate: null },
+            reference: { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
+            header: { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
+            "legacy-latest": { ...SERVED_METHOD, attempts: 0, successes: 0, successRate: null },
           },
         },
         latestFreshness: {
@@ -99,7 +110,10 @@ const TRIAL_REPORT = {
         },
         errorClasses: {},
         comparatorErrorClasses: {},
-        failedSteps: { dwellir: { head: 0, state: 0, logs: 0, latest: 0 }, comparator: { head: 0, state: 0, logs: 0, latest: 0 } },
+        failedSteps: {
+          dwellir: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
+          comparator: { head: 0, state: 0, logs: 0, latest: 0, reference: 0, header: 0, "legacy-latest": 0 },
+        },
         lastComparatorFailure: null,
         gate: { passed: false, failing: [
           "runs", "insufficient-head-attempts", "insufficient-state-attempts", "insufficient-log-attempts",

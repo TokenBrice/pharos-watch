@@ -11,13 +11,25 @@ import type { DwellirBudgetState } from "../rpc-provider-budget";
 
 export type RpcParityErrorClass =
   | "range-cap" | "result-cap" | "rate-limited" | "capability" | "server-error"
-  | "timeout" | "network" | "rpc-error" | "invalid-response";
+  | "timeout" | "network" | "rpc-error" | "invalid-response" | "reference-unavailable";
 
 export interface RpcParityLatencySummary { p50Ms: number | null; p95Ms: number | null; samples: number }
 
-/** Read categories; latest includes the latest-tag call and its numeric references. */
-export type RpcParityProbeStep = "head" | "state" | "logs" | "latest";
-export const RPC_PARITY_PROBE_STEPS: readonly RpcParityProbeStep[] = ["head", "state", "logs", "latest"];
+/** Append only: pre-v6 latest calls decode into the explicitly mixed legacy bucket. */
+export type RpcParityProbeStep = "head" | "state" | "logs" | "latest" | "reference" | "header" | "legacy-latest";
+export const RPC_PARITY_PROBE_STEPS: readonly RpcParityProbeStep[] = ["head", "state", "logs", "latest", "reference", "header", "legacy-latest"];
+export const RPC_PARITY_MAX_FAILURES = 5;
+export interface RpcParityFailure {
+  operator: "dwellir" | "comparator";
+  step: RpcParityProbeStep;
+  method: string;
+  blockParam: string | number | null;
+  httpStatus: number | null;
+  rpcCode: number | null;
+  message: string;
+  errorClass: RpcParityErrorClass;
+  atSec: number;
+}
 export const RPC_PARITY_LATEST_MAX_NUMERIC_CALLS = 10;
 export const RPC_PARITY_MAX_CALLS_PER_OPERATOR = {
   dwellir: 10 + RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, // sentinel, token bracket, stable hashes, state/logs
@@ -28,6 +40,13 @@ export type RpcParitySkipReason = (typeof RPC_PARITY_SKIP_REASONS)[number];
 export interface RpcParityChainSkip { chainId: string; reason: RpcParitySkipReason }
 export type RpcParityFailedStepCounts = Record<RpcParityProbeStep, number>;
 export type RpcParityStepFailures = Record<RpcParityProbeStep, boolean>;
+
+/** Allocate one registry-complete shape for per-step flags or counters. */
+export function createRpcParityStepRecord(initialValue: boolean): RpcParityStepFailures;
+export function createRpcParityStepRecord(initialValue: number): RpcParityFailedStepCounts;
+export function createRpcParityStepRecord(initialValue: boolean | number): Record<RpcParityProbeStep, boolean | number> {
+  return Object.fromEntries(RPC_PARITY_PROBE_STEPS.map((step) => [step, initialValue])) as Record<RpcParityProbeStep, boolean | number>;
+}
 export interface RpcParityCallObservation {
   step: RpcParityProbeStep;
   phase: "firstTouch" | "warm";
@@ -41,7 +60,7 @@ export const RPC_PARITY_LATEST_FRESHNESS_VERDICTS = ["fresh", "stale", "indeterm
 export const RPC_PARITY_LATEST_FRESHNESS_REASONS = [
   "matched-numeric-block", "no-bracket-match", "bracket-too-wide", "head-regressed", "step-failed",
   "served-block-in-range", "served-block-behind", "served-block-ahead", "bracket-reorg", "moving-bracket-no-match",
-  "sentinel-unavailable",
+  "sentinel-unavailable", "reference-unavailable",
 ] as const;
 
 /** Append only: v3–v5 persist method indices (Multicall3=0, state bracket=1, ArbSys=2). */
@@ -90,6 +109,7 @@ export interface RpcParityMethodAvailability {
   attempts: number;
   successes: number;
   capabilityRefusals: number;
+  referenceUnavailable: number;
   unknownRuns: number;
   successRate: number | null;
 }
@@ -103,6 +123,9 @@ export interface RpcParityOperatorLatency {
 export interface RpcParityChainSummary {
   chainId: string;
   dwellirHost: string;                       // e.g. "api-base-mainnet-archive.n.dwellir.com"
+  /** Current scheduled routing policy after key/budget/circuit admission and operator rollback. */
+  routing: { statePlacement: "primary" | "after-alchemy" | "supplemental" | "unavailable"; logScan: boolean };
+  lastFailures: RpcParityFailure[];
   comparator: { operator: "alchemy" | "drpc" | "public"; host: string; source: "registry" | "pin" };
   /** Newest logs baseline (planned when unsampled); null records an unavailable pin. */
   logsComparator: RpcParityComparatorRef | null;
@@ -221,6 +244,8 @@ export interface RpcParityChainSample {
   failedSteps: { dwellir: RpcParityStepFailures; comparator: RpcParityStepFailures };
   /** Absent on v1 samples: old head timings never become warm evidence. */
   calls?: Record<"dwellir" | "comparator", RpcParityCallObservation[]>;
+  /** Bounded newest call diagnostics, including indeterminate unavailable references. */
+  failures?: RpcParityFailure[];
   /** Combined verdict on dual-check samples; the single recorded check on legacy samples. */
   latestFreshness?: RpcParityLatestFreshness;
   /** Absent on legacy observations; null names an unavailable block sentinel (XDC). */

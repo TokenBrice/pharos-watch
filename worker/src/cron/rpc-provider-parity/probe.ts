@@ -4,6 +4,8 @@ import { recordDwellirCredits } from "../../lib/rpc-provider-budget";
 import { getRpcAuthHeaders, type ChainRpcConfig } from "../../lib/chain-registry";
 import { dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 import { USER_AGENT } from "../../lib/constants";
+import { safeErrorMessage } from "../../lib/safe-error-message";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   RPC_PARITY_TARGETS,
   dwellirEntryForChain,
@@ -17,13 +19,15 @@ import {
 } from "../../lib/rpc-provider-parity/targets";
 import {
   combineRpcParityLatestFreshness,
+  createRpcParityStepRecord,
   RPC_PARITY_LATEST_MAX_NUMERIC_CALLS,
+  RPC_PARITY_MAX_FAILURES,
   type RpcParityCallObservation,
+  type RpcParityFailure,
   type RpcParityChainSkip,
   type RpcParityChainSample,
   type RpcParityErrorClass,
   type RpcParityProbeStep,
-  type RpcParityStepFailures,
   type RpcParityLatestFreshness,
 } from "../../lib/rpc-provider-parity/types";
 // Sentinel tolerance shares the head-lag gate's chain-time policy.
@@ -127,6 +131,8 @@ interface RpcCallResult {
   errorClass: RpcParityErrorClass | null;
   /** HTTP status of an answered request; null when no response arrived. */
   httpStatus: number | null;
+  rpcCode?: number | null;
+  message?: string;
 }
 
 async function transportRpcEndpoint(input: {
@@ -139,6 +145,7 @@ async function transportRpcEndpoint(input: {
   timeoutMs: number;
   deadlineMs: number;
   maxResponseBytes?: number;
+  referenceHead?: number | null;
   deps: RpcParityProbeDeps;
 }): Promise<RpcCallResult> {
   if (input.deps.nowMs() >= input.deadlineMs) {
@@ -175,6 +182,7 @@ async function transportRpcEndpoint(input: {
       latencyMs,
       errorClass: classifyRpcParityTransportError(error),
       httpStatus: null,
+      message: toErrorMessage(error),
     };
   }
   const latencyMs = Math.max(0, input.deps.nowMs() - startedAtMs);
@@ -183,12 +191,19 @@ async function transportRpcEndpoint(input: {
     return { status: "error", result: null, latencyMs, errorClass: "network", httpStatus: null };
   }
   if (!outcome.response.ok) {
+    const parsedError = parseJson(outcome.body);
+    const body = parsedError.ok ? parsedError.value : null;
+    const rpcError = body && typeof body === "object" && "error" in body ? body.error : null;
+    const rpcCode = rpcError && typeof rpcError === "object" && "code" in rpcError
+      && typeof rpcError.code === "number" ? rpcError.code : null;
     return {
       status: "error",
       result: null,
       latencyMs,
       errorClass: classifyRpcParityHttpFailure(outcome.response.status, outcome.body),
       httpStatus: outcome.response.status,
+      rpcCode,
+      message: outcome.body,
     };
   }
 
@@ -207,6 +222,8 @@ async function transportRpcEndpoint(input: {
       latencyMs,
       errorClass: classifyRpcParityJsonRpcError(code, message),
       httpStatus: outcome.response.status,
+      rpcCode: code,
+      message,
     };
   }
   if (!("result" in payload)) {
@@ -222,6 +239,12 @@ function isRpcParityBlockHeader(value: unknown): value is { hash: string; number
     && (!("parentHash" in value) || (typeof value.parentHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(value.parentHash)));
 }
 
+function isBlockSentinelParams(params: readonly unknown[]): boolean {
+  const target = params[0];
+  return target !== null && typeof target === "object" && "data" in target
+    && (target.data === RPC_PARITY_MULTICALL3_BLOCK_SELECTOR || target.data === RPC_PARITY_ARBSYS_BLOCK_SELECTOR);
+}
+
 async function callRpcEndpoint(input: Parameters<typeof transportRpcEndpoint>[0]): Promise<RpcCallResult> {
   const call = await transportRpcEndpoint(input);
   // A JSON-RPC envelope is not a successful method read until its result is usable.
@@ -231,12 +254,21 @@ async function callRpcEndpoint(input: Parameters<typeof transportRpcEndpoint>[0]
       : input.method === "eth_getBlockByNumber"
         ? isRpcParityBlockHeader(call.result) && normalizeBlockNumber(call.result.number) === normalizeBlockNumber(input.params[0])
         : input.method === "eth_call"
-          ? normalizeRpcQuantity(call.result) !== null
+          ? normalizeRpcQuantity(call.result) !== null && (!isBlockSentinelParams(input.params)
+            || normalizeBlockNumber(call.result) !== null)
           : sortedLogIdentities(call.result) !== null;
     if (!valid) {
       call.status = "error";
       call.errorClass = "invalid-response";
+      call.message = `Unusable ${input.method} result${call.result === null ? ": null" : ""}`;
     }
+  }
+  // Only an explicitly above-H2 numeric reference can be unavailable without
+  // being a provider fault. Known-head/latest failures remain ordinary failures.
+  const block = input.method === "eth_call" ? normalizeBlockNumber(input.params[1]) : null;
+  if (call.status === "error" && call.errorClass === "rpc-error" && input.referenceHead != null && block !== null
+    && block > input.referenceHead && /not[\s_-]*found|no state available/i.test(call.message ?? "")) {
+    call.errorClass = "reference-unavailable";
   }
   if (call.status === "ok" || call.status === "error") {
     input.deps.observeCall?.(input.url, input.method, input.params, call);
@@ -293,10 +325,6 @@ function sortedLogIdentities(result: unknown): string[] | null {
   return identities.sort();
 }
 
-function emptyStepFailures(): RpcParityStepFailures {
-  return { head: false, state: false, logs: false, latest: false };
-}
-
 /**
  * Records one failed call against its operator and step. The first comparator
  * failure in the sample keeps its class and status: later steps only run when
@@ -308,7 +336,7 @@ function recordStepFailure(
   step: RpcParityProbeStep,
   call: RpcCallResult | null,
 ): void {
-  if (!call || call.status !== "error") return;
+  if (!call || call.status !== "error" || call.errorClass === "reference-unavailable") return;
   sample.failedSteps[operator][step] = true;
   if (operator !== "comparator" || sample.comparatorErrorClass !== null) return;
   sample.comparatorErrorClass = call.errorClass;
@@ -353,6 +381,10 @@ async function probeRpcParityChain(
   const comparatorHeaders = getRpcAuthHeaders(comparator.url) ?? {};
   const logsHeaders = target.logsComparator && input.logsComparator
     ? getRpcAuthHeaders(input.logsComparator.url) ?? {} : comparatorHeaders;
+  const queryCredentials = [input.comparator.url, input.logsComparator?.url]
+    .flatMap((endpointUrl) => endpointUrl
+      ? [...new URL(endpointUrl).searchParams].filter(([name]) => /^(dkey|api[-_]?key|key|token|access[-_]?token)$/i.test(name)).map(([, value]) => value)
+      : []);
   const sample: RpcParityChainSample = {
     chainId: target.chainId,
     comparator: comparator.ref,
@@ -374,7 +406,7 @@ async function probeRpcParityChain(
     errorClass: null,
     comparatorErrorClass: null,
     comparatorHttpStatus: null,
-    failedSteps: { dwellir: emptyStepFailures(), comparator: emptyStepFailures() },
+    failedSteps: { dwellir: createRpcParityStepRecord(false), comparator: createRpcParityStepRecord(false) },
     calls: { dwellir: [], comparator: [] },
   };
   if (target.logsComparator) sample.logsComparator = input.logsComparator?.ref ?? null;
@@ -390,7 +422,9 @@ async function probeRpcParityChain(
         touchedOrigins.add(origin);
         const step = method === "eth_blockNumber" ? "head"
           : method === "eth_getLogs" ? "logs"
-            : params[1] === toHexQuantity(sample.commonBlock ?? -1) ? "state" : "latest";
+            : method === "eth_getBlockByNumber" ? "header"
+              : params[1] === "latest" ? "latest"
+                : params[1] === toHexQuantity(sample.commonBlock ?? -1) ? "state" : "reference";
         const observation: RpcParityCallObservation = {
           step, phase, latencyMs: call.latencyMs!, errorClass: call.errorClass,
         };
@@ -398,8 +432,30 @@ async function probeRpcParityChain(
           observation.comparator = input.logsComparator.ref;
         }
         sample.calls![operator].push(observation);
+        if (call.status === "error") {
+          let message = call.message ?? `Unusable ${method} response`;
+          // A vendor may echo a configured key without any credential label.
+          // Redact the exact authentication material before the generic helper.
+          for (const credential of [dwellirApiKey, ...Object.values(comparatorHeaders), ...Object.values(logsHeaders), ...queryCredentials]) {
+            const secret = credential.replace(/^Bearer\s+/i, "");
+            if (secret) message = message.split(secret).join("[redacted]");
+          }
+          const logFilter = method === "eth_getLogs" ? params[0] as { fromBlock?: unknown; toBlock?: unknown } | undefined : undefined;
+          const rawBlockParam = method === "eth_call" ? params[1] : method === "eth_getBlockByNumber" ? params[0]
+            : logFilter && typeof logFilter.fromBlock === "string" && typeof logFilter.toBlock === "string"
+              ? `${logFilter.fromBlock}-${logFilter.toBlock}` : null;
+          const blockParam = typeof rawBlockParam === "string" ? rawBlockParam.slice(0, 64)
+            : typeof rawBlockParam === "number" ? rawBlockParam : null;
+          const failure: RpcParityFailure = {
+            operator, step, method, blockParam,
+            httpStatus: call.httpStatus, rpcCode: call.rpcCode ?? null,
+            message: safeErrorMessage(message).slice(0, 160), errorClass: call.errorClass!,
+            atSec: Math.floor(context.deps.nowMs() / 1000),
+          };
+          sample.failures = [...(sample.failures ?? []), failure].slice(-RPC_PARITY_MAX_FAILURES);
+        }
         recordStepFailure(sample, operator, step, call);
-        if (operator === "dwellir") sample.errorClass ??= call.errorClass;
+        if (operator === "dwellir" && call.errorClass !== "reference-unavailable") sample.errorClass ??= call.errorClass;
       },
     },
   };
@@ -534,8 +590,9 @@ async function probeLatestFreshness(
     url: input.dwellirUrl, method: rpcMethod, params, headers,
     metered: true, signal: context.signal, timeoutMs: remainingRequestTimeoutMs(context),
     deadlineMs: context.deadlineMs, deps: context.deps,
+    referenceHead: rpcMethod === "eth_call" && params[1] !== "latest" ? token.headAfter : null,
   });
-  let stop = sentinel ? await probeServedBlockFreshness(sample, sentinel, call) : "none" as const;
+  let stop = sentinel ? await probeServedBlockFreshness(sentinel, call) : "none" as const;
   if (stop === "none") {
     stop = await probeTokenFreshness(token, sentinel?.servedBlock ?? null, call);
   }
@@ -546,7 +603,6 @@ async function probeLatestFreshness(
 type LatestRpcCall = (method: string, params: readonly unknown[]) => Promise<RpcCallResult>;
 
 async function probeServedBlockFreshness(
-  sample: RpcParityChainSample,
   freshness: RpcParityLatestFreshness,
   call: LatestRpcCall,
 ): Promise<"none" | RpcCallStop> {
@@ -560,13 +616,7 @@ async function probeServedBlockFreshness(
   freshness.headAfter = headAfter;
   if (after.status !== "ok" || headAfter === null) return "none";
   const served = normalizeBlockNumber(latest.result);
-  if (served === null) {
-    const observation = sample.calls!.dwellir.find((entry) => entry.step === "latest");
-    if (observation) observation.errorClass = "invalid-response";
-    sample.failedSteps.dwellir.latest = true;
-    sample.errorClass ??= "invalid-response";
-    return "none";
-  }
+  if (served === null) return "none"; // Usability validation already records the failed call.
   const headBefore = freshness.headBefore!;
   const tolerance = freshness.toleranceBlocks!;
   freshness.servedBlock = served;
@@ -627,6 +677,10 @@ async function probeTokenFreshness(
   for (let block = endBlock; block >= firstBlock; block--) {
     const numeric = await call("eth_call", [freshness.call!, toHexQuantity(block)]);
     if (numeric.status === "deadline" || numeric.status === "aborted") return numeric.status;
+    if (numeric.errorClass === "reference-unavailable") {
+      freshness.reason = "reference-unavailable";
+      return "none";
+    }
     const value = normalizeRpcQuantity(numeric.result);
     if (numeric.status !== "ok" || value === null) return "none";
     freshness.numericValues!.push({ block, value });

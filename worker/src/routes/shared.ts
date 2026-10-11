@@ -11,7 +11,7 @@ import type { CloudflareD1StatusBindings } from "../lib/env";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import type { TelegramCreds } from "../lib/telegram";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import type { DwellirBudgetEnv } from "../lib/rpc-provider-budget";
+import type { RpcProviderTrialEnv } from "../lib/rpc-provider-parity/report";
 import type { FeedbackEnv } from "../api/feedback";
 import type { TelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { WorkerCanaryMode } from "../lib/canary-checks";
@@ -61,10 +61,10 @@ export interface MintBurnFreshnessRouteFields {
 /**
  * Read-only env subset for the Dwellir supplemental-RPC trial report. Hydrating
  * it never enables Dwellir on the request path: it only carries the secret
- * presence and monthly cap into the report loader.
+ * presence, monthly cap and per-chain routing rollback into the report loader.
  */
 export interface DwellirBudgetRouteFields {
-  dwellirBudgetEnv: DwellirBudgetEnv;
+  dwellirBudgetEnv: RpcProviderTrialEnv;
 }
 
 export interface AlchemyRouteFields {
