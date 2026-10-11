@@ -339,7 +339,7 @@ export function YieldSourceDetails({
       {/* Line 2: freshness · source depth. Benchmark moved off-row (redundant per row):
           it stays in the APY cell, the PYS tooltip, the expanded panel, and the
           page-level Reference Rates strip. */}
-      <div className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-[10px] text-muted-foreground">
         {sourceRiskSummary ? (
           <>
             <span className="font-medium text-amber-700 dark:text-amber-300">{sourceRiskSummary}</span>
