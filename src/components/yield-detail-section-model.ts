@@ -18,7 +18,8 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import type { StablecoinStatus, YieldRanking, YieldRankingsResponse } from "@shared/types";
 
-export const ALT_SOURCE_INITIAL_COUNT = 6;
+/** The dossier previews the top three alternate pools; the rest sit behind "Show N more". */
+export const ALT_SOURCE_INITIAL_COUNT = 3;
 
 export type YieldDetailModelMode = "embedded" | "full-page";
 
