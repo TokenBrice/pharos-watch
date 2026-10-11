@@ -202,7 +202,7 @@ export default function LearnIndexPage() {
         { name: "Learn", url: "/learn/" },
       ]}
       title="How Stables Work & Break"
-      subtitle="How stablecoins hold a dollar, why they break it, and the vocabulary Pharos uses to name the risk."
+      subtitle="How stablecoins hold a dollar, why they break it, and what the record of real depegs shows."
     >
       <OutcomeLedger total={totalStudies} counts={CASE_STUDY_OUTCOME_COUNTS} />
 
