@@ -133,9 +133,15 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   return (
     <div className="pharos-card-shell @container/ddr gap-0 overflow-hidden p-4 sm:p-5">
       <div className="space-y-3">
-        {/* Identity + verdict + direction — one inline row, direction aligned right */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        {/* Identity + direction share a row; verdict facts sit on a second row so
+            the direction chip never wraps differently between sibling cards. */}
+        <div className="flex items-center justify-between gap-x-3">
           <CoinLockup row={row} logos={logos} logoSize={52} />
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">
+            {dirGlyph} {row.direction} {row.pegCurrency}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {pegRatioLabel ? (
             <span className="pharos-numeric shrink-0 text-sm font-semibold text-foreground">{pegRatioLabel}</span>
           ) : null}
@@ -155,9 +161,6 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
                 </button>
               </MethodologyHint>
             ) : null}
-          </span>
-          <span className="ml-auto shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-            {dirGlyph} {row.direction} {row.pegCurrency}
           </span>
         </div>
 

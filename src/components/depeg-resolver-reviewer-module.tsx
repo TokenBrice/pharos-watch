@@ -370,7 +370,7 @@ function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string
     <li
       className={cn(
         "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2.5",
-        "sm:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_auto_auto]",
+        "sm:grid-cols-[minmax(0,1.7fr)_minmax(0,1.2fr)_9.5rem_10.5rem]",
         scored ? "" : "opacity-80",
       )}
     >
@@ -380,7 +380,7 @@ function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string
       <Badge
         variant="outline"
         className={cn(
-          "justify-self-end text-xs sm:col-start-3 sm:row-start-1 sm:justify-self-start",
+          "justify-self-end text-xs sm:col-start-3 sm:row-start-1 sm:justify-self-start sm:whitespace-nowrap",
           verdictStyle,
         )}
       >
@@ -389,7 +389,7 @@ function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string
       <span className="pharos-meta pharos-numeric justify-self-start uppercase tracking-wide sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
         {getRowContextLabel(row)} · {DDR_OUTCOME_LABELS[actualOutcome]}
       </span>
-      <span className="pharos-meta pharos-numeric justify-self-end sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
+      <span className="pharos-meta pharos-numeric justify-self-end sm:col-start-4 sm:row-start-1 sm:text-right">
         {durationText}
       </span>
     </li>

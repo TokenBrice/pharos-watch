@@ -30,7 +30,9 @@ export function statusClassName(row: DepegTrackerRow): string {
 }
 
 export function rowToneClassName(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "bg-red-500/[0.07] ring-1 ring-inset ring-red-500/15";
+  // Active depegs fill the top of the Attention sort, so a tint there marks every row;
+  // the LIVE status chip and deviation bar already carry that signal.
+  if (row.coin.activeDepeg) return "";
   if (row.pendingIncident) return "bg-amber-500/[0.06]";
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return "bg-orange-500/[0.05]";
   if (row.coin.depegEventCoverageLimited) return "bg-sky-500/[0.04]";
