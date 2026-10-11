@@ -183,10 +183,10 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
         <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">{signedBps(item.nowBps)}</span>
       </span>
       <span className="flex shrink-0 items-center justify-end gap-2.5">
-        <span className={cn("w-24 text-right text-[10px] font-semibold uppercase tracking-wide", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
+        <span className={cn("w-auto text-right sm:w-24 text-[10px] font-semibold uppercase tracking-wide", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
           {item.tier == null ? item.state.replaceAll("_", " ") : TIER_SHORT[item.tier]}
         </span>
-        <span className="w-28 text-right">
+        <span className="w-auto text-right sm:w-28">
           <DurationCell item={item} />
         </span>
       </span>
@@ -313,15 +313,15 @@ function ForecastZone({
 
 function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] }) {
   return (
-    <div className="space-y-2">
+    <div className="flex flex-1 flex-col gap-2">
       <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Accuracy by horizon</p>
-      <div className="flex items-end gap-2">
+      <div className="flex flex-1 items-stretch gap-2">
         {rates.map((r) => {
           const pct = Math.round(r.hitRate * 100);
           return (
             <div key={r.horizon} className="flex flex-1 flex-col items-center gap-1.5">
               <span className="pharos-numeric text-[11px] font-bold text-foreground">{pct}%</span>
-              <div className="flex h-16 w-full items-end overflow-hidden rounded-md bg-muted/50">
+              <div className="flex min-h-16 w-full flex-1 items-end overflow-hidden rounded-md bg-muted/50">
                 <div
                   className="w-full rounded-md bg-[var(--chart-primary)]/80"
                   style={{ height: `${Math.max(8, pct)}%` }}
@@ -352,7 +352,7 @@ function TrackRecordZone({
   rates: { horizon: string; hitRate: number }[];
 }) {
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div>
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="pharos-kicker">Track record</h3>
@@ -502,7 +502,7 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
             </div>
           ) : null}
           {resolverReviewerEnabled ? (
-            <div className={cn("bg-muted/20 p-4 sm:p-5", trackSpan)}>
+            <div className={cn("flex flex-col bg-muted/20 p-4 sm:p-5", trackSpan)}>
               <SourceStatus label="Reviewer" computedAt={resolverReviewData?._meta.computedAt}
                 degradedReason={resolverReviewData?._meta.degradedReason} usable={ddrrUsable} error={resolverReviewError}
                 dataUpdatedAt={resolverReview.dataUpdatedAt} meta={resolverReview.meta} loading={!resolverReviewData && !resolverReviewError}
