@@ -20,6 +20,7 @@ export * from "./classification/operational-status";
 export * from "./classification/mint-authority";
 export * from "./classification/redemption";
 export * from "./classification/psi";
+export * from "./classification/cause-of-death";
 export * from "./classification/resolve-mechanism-archetype";
 export * from "./classification/resolve-implementation-launch-date";
 export type { BadgeStyle } from "./classification/common";
@@ -27,9 +28,11 @@ export type { BadgeStyle } from "./classification/common";
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
 /** Reserve-access diagnostics never describe local holder-transfer restrictions. */
 export const ACCESS_LOOKTHROUGH_COVERAGE_LABELS: Record<string, string> = {
-  complete: "Complete reviewed reserve-access coverage (diagnostic)",
-  incomplete: "Incomplete reserve-access coverage (diagnostic)",
+  complete: "Complete",
+  incomplete: "Incomplete",
 };
+/** Stated once beside the grouped authority rows, never per row. */
+export const ACCESS_LOOKTHROUGH_NOT_ADDITIVE_NOTE = "Authorities overlap: their reach shares are not additive.";
 export const ACCESS_LOOKTHROUGH_CAPABILITY_LABELS: Record<string, string> = {
   freeze: "Reserve freeze", seize: "Reserve seizure", pause: "Claim pause",
 };
