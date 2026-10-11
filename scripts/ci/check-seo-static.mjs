@@ -498,8 +498,30 @@ function isPublicDatasetRewrite(rule) {
   return sheet != null && sheet[1] === destination[1] && destination[2] === "csv";
 }
 
+// Cloudflare Pages caps dynamic (splat/placeholder) rules at 100 and counts every
+// rule after the first dynamic one as dynamic; rules past the cap are silently
+// ignored in production.
+const MAX_DYNAMIC_REDIRECTS = 100;
+
+function isDynamicRedirectSource(source) {
+  return source.includes("*") || source.includes(":");
+}
+
+function validateRedirectOrdering(rules, errors) {
+  const firstDynamic = rules.findIndex((rule) => isDynamicRedirectSource(rule.source));
+  if (firstDynamic === -1) return;
+  const lateStatic = rules.slice(firstDynamic).filter((rule) => !isDynamicRedirectSource(rule.source));
+  for (const rule of lateStatic) {
+    errors.push(`_redirects static rule ${rule.source} follows a dynamic rule; move it above every splat/placeholder rule`);
+  }
+  if (rules.length - firstDynamic > MAX_DYNAMIC_REDIRECTS) {
+    errors.push(`_redirects has ${rules.length - firstDynamic} dynamic-counted rules; Cloudflare Pages ignores rules past ${MAX_DYNAMIC_REDIRECTS}`);
+  }
+}
+
 function validateStaticRedirects(outDir, errors) {
   const rules = collectRedirectRules(outDir);
+  validateRedirectOrdering(rules, errors);
   for (const rule of rules) {
     const destinationPath = redirectPathTemplate(rule.destination);
     if (!destinationPath) continue;

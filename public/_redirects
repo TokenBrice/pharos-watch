@@ -1,13 +1,14 @@
-/pharosville/assets/* https://pharosville.pharos.watch/pharosville/assets/:splat 302
-/pharosville/* https://pharosville.pharos.watch/ 302
+# Cloudflare Pages counts every rule placed after the first dynamic (splat or
+# placeholder) rule toward the 100-rule dynamic cap and silently ignores the rest.
+# Keep all static one-to-one rules in the first part and every dynamic rule in
+# the second part (check-seo-static enforces this ordering).
+
 /pharosville/ https://pharosville.pharos.watch/ 302
 /pharosville https://pharosville.pharos.watch/ 302
-/lighthouse/* https://pharosville.pharos.watch/ 302
 /lighthouse/ https://pharosville.pharos.watch/ 302
 /lighthouse https://pharosville.pharos.watch/ 302
 
 # Legacy Telegram landing-page alias; /pharoswatchbot/ is canonical.
-/telegram/* /pharoswatchbot/:splat 301
 /telegram/ /pharoswatchbot/ 301
 /telegram /pharoswatchbot/ 301
 
@@ -18,45 +19,34 @@
 
 # The glossary folded into the A-Z Definitions section of /methodology/
 # (site simplification, 2026-10-11).
-/learn/glossary/* /methodology/#definitions 301
 /learn/glossary/ /methodology/#definitions 301
 /learn/glossary /methodology/#definitions 301
 
 # The API access page, API reference page and API reference doc merged into
 # one /api/ page with Access | Reference tabs (site simplification, 2026-10-11).
-/about/api/* /api/#reference 301
 /about/api/ /api/#reference 301
 /about/api /api/#reference 301
-/docs/api-reference/* /api/#reference 301
 /docs/api-reference/ /api/#reference 301
 /docs/api-reference /api/#reference 301
 
 # Consolidated public documentation routes. The engineering and design docs
 # were withdrawn from the public set (2026-10-11); they remain internal in docs/.
-/docs/data-pipeline/* /docs/ 301
 /docs/data-pipeline/ /docs/ 301
 /docs/data-pipeline /docs/ 301
-/docs/design-context/* /docs/ 301
 /docs/design-context/ /docs/ 301
 /docs/design-context /docs/ 301
-/docs/architecture/* /docs/ 301
 /docs/architecture/ /docs/ 301
 /docs/architecture /docs/ 301
-/docs/worker-and-api-limits/* /docs/ 301
 /docs/worker-and-api-limits/ /docs/ 301
 /docs/worker-and-api-limits /docs/ 301
-/docs/data-flow-map/* /docs/ 301
 /docs/data-flow-map/ /docs/ 301
 /docs/data-flow-map /docs/ 301
-/docs/design-language/* /docs/ 301
 /docs/design-language/ /docs/ 301
 /docs/design-language /docs/ 301
-/docs/design-tokens/* /docs/ 301
 /docs/design-tokens/ /docs/ 301
 /docs/design-tokens /docs/ 301
 
 # Stablecoin selector route was renamed to picker; preserve old snapshot links.
-/screener/selector/* /screener/picker/:splat 301
 /screener/selector/ /screener/picker/ 301
 /screener/selector /screener/picker/ 301
 
@@ -84,14 +74,12 @@
 /depeg/usn-2026-02-14-up-49237 /stablecoin/usn-noon/ 301
 
 # MiCA tracker moved to Compliance; /compliance/ is canonical.
-/mica/* /compliance/:splat 301
 /mica/ /compliance/ 301
 /mica /compliance/ 301
 
 # Tape → Timeline rename; /timeline/ is canonical. Query string is preserved
 # by Cloudflare Pages, so existing `?event=`, `?coin=`, `?type=` permalinks
 # survive the redirect.
-/tape/* /timeline/:splat 301
 /tape/ /timeline/ 301
 /tape /timeline/ 301
 
@@ -121,56 +109,42 @@
 /methodology/pdf/pricing-pipeline-v6.06.pdf /methodology/pricing-pipeline-changelog/ 301
 /methodology/pdf/pricing-pipeline-v6.07.pdf /methodology/pricing-pipeline-changelog/ 301
 /methodology/pdf/chain-health-v1.2.pdf /methodology/chain-health-changelog/ 301
-/methodology/pdf/* /methodology/ 301
 /methodology/pdf/ /methodology/ 301
 /methodology/pdf /methodology/ 301
 
 /report-cards /safety-scores/ 301
 /report-cards/ /safety-scores/ 301
-/report-cards/* /safety-scores/:splat 301
 /risk-lab /safety-scores/ 301
 /risk-lab/ /safety-scores/ 301
-/risk-lab/* /safety-scores/:splat 301
-/blacklist/* /freezewatch/:splat 301
 /blacklist/ /freezewatch/ 301
 /blacklist /freezewatch/ 301
 /peg-tracker / 301
 /peg-tracker/ / 301
 /stability-index-alt /stability-index/ 301
 /stability-index-alt/ /stability-index/ 301
-/stability-index-alt/* /stability-index/:splat 301
 
 # Infrastructure tagging — protocol → infrastructure rename
-/stablecoins/protocol/liquity-v1/* /stablecoins/infrastructure/liquity-v1/:splat 301
 /stablecoins/protocol/liquity-v1 /stablecoins/infrastructure/liquity-v1/ 301
-/stablecoins/protocol/liquity-v2/* /stablecoins/infrastructure/liquity-v2/:splat 301
 /stablecoins/protocol/liquity-v2 /stablecoins/infrastructure/liquity-v2/ 301
-/stablecoins/protocol/liquity/* /stablecoins/infrastructure/liquity-v1/:splat 301
 /stablecoins/protocol/liquity /stablecoins/infrastructure/liquity-v1/ 301
 
 # About subpages folded into /about/ (route-tree simplification, 2026-06-09).
 # Google Search Console still records impressions for the old URLs.
-/about/principles/* /about/ 301
 /about/principles /about/ 301
-/about/editorial/* /about/ 301
 /about/editorial /about/ 301
-/about/style/* /about/ 301
 /about/style /about/ 301
 
 # Site simplification (2026-10-11): the hand-maintained human sitemap
 # duplicated /sitemap.xml; the homepage is the honest successor.
-/sitemap-tree/* / 301
 /sitemap-tree/ / 301
 /sitemap-tree / 301
 
 # /start/ duplicated the nav and methodology copy (2026-10-11); its walkthrough
 # videos moved to /about/#media.
-/start/* / 301
 /start/ / 301
 /start / 301
 
 # The Bluechip explainer folded into a section of /about/ (2026-10-11).
-/about/bluechip/* /about/#bluechip 301
 /about/bluechip/ /about/#bluechip 301
 /about/bluechip /about/#bluechip 301
 
@@ -178,9 +152,7 @@
 # what Pharos tracks and why. Old detail URLs still earn search impressions.
 /stablecoin/341/ /coverage/ 301
 /stablecoin/341 /coverage/ 301
-/stablecoin/pusd-pleasing/* /coverage/ 301
 /stablecoin/pusd-pleasing /coverage/ 301
-/stablecoin/phpc-coins-ph/* /coverage/ 301
 /stablecoin/phpc-coins-ph /coverage/ 301
 
 # BEGIN GENERATED PUBLIC DATASET ALIASES
@@ -209,41 +181,108 @@
 # Removed coin records have no exact current registry successor, so /coverage/
 # remains the honest destination. Retired surfaces use their current
 # equivalents where one exists; the hashed V9 preview follows the same route.
-/stablecoin/eura-angle/* /coverage/ 301
 /stablecoin/eura-angle /coverage/ 301
-/stablecoin/krwo-gimswap/* /coverage/ 301
 /stablecoin/krwo-gimswap /coverage/ 301
-/stablecoin/mmxn-moneta-digital/* /coverage/ 301
 /stablecoin/mmxn-moneta-digital /coverage/ 301
-/stablecoin/mnee-mnee/* /coverage/ 301
 /stablecoin/mnee-mnee /coverage/ 301
-/stablecoin/phpm-mento/* /coverage/ 301
 /stablecoin/phpm-mento /coverage/ 301
-/stablecoin/shyusd-hylo/* /coverage/ 301
 /stablecoin/shyusd-hylo /coverage/ 301
-/stablecoin/syusd-lucidly/* /coverage/ 301
 /stablecoin/syusd-lucidly /coverage/ 301
-/stablecoin/usd-nubank/* /coverage/ 301
 /stablecoin/usd-nubank /coverage/ 301
-/stablecoin/usdw-wisdomtree/* /coverage/ 301
 /stablecoin/usdw-wisdomtree /coverage/ 301
-/stablecoin/usp-pareto-credit/* /coverage/ 301
 /stablecoin/usp-pareto-credit /coverage/ 301
-/stablecoin/veur-vnx/* /coverage/ 301
 /stablecoin/veur-vnx /coverage/ 301
-/stablecoin/wstbt-matrixdock/* /coverage/ 301
 /stablecoin/wstbt-matrixdock /coverage/ 301
-/stablecoin/xai-silo-finance/* /coverage/ 301
 /stablecoin/xai-silo-finance /coverage/ 301
-/stablecoin/usd-dinari/* /coverage/ 301
 /stablecoin/usd-dinari /coverage/ 301
-/treasuries/* /coverage/ 301
 /treasuries /coverage/ 301
-/mint/* /flows/ 301
 /mint /flows/ 301
-/home-alt/* / 301
 /home-alt / 301
-/v9-preview/* /safety-scores/ 301
 /v9-preview /safety-scores/ 301
-/v9-preview-412d818c031b7bc5/* /safety-scores/ 301
 /v9-preview-412d818c031b7bc5 /safety-scores/ 301
+
+# ---- Dynamic rules: keep below every static rule. ----
+
+/pharosville/assets/* https://pharosville.pharos.watch/pharosville/assets/:splat 302
+/pharosville/* https://pharosville.pharos.watch/ 302
+/lighthouse/* https://pharosville.pharos.watch/ 302
+
+# Legacy Telegram landing-page alias; /pharoswatchbot/ is canonical. (dynamic rules)
+/telegram/* /pharoswatchbot/:splat 301
+
+# The glossary folded into the A-Z Definitions section of /methodology/ (dynamic rules)
+/learn/glossary/* /methodology/#definitions 301
+
+# The API access page, API reference page and API reference doc merged into (dynamic rules)
+/about/api/* /api/#reference 301
+/docs/api-reference/* /api/#reference 301
+
+# Consolidated public documentation routes. The engineering and design docs (dynamic rules)
+/docs/data-pipeline/* /docs/ 301
+/docs/design-context/* /docs/ 301
+/docs/architecture/* /docs/ 301
+/docs/worker-and-api-limits/* /docs/ 301
+/docs/data-flow-map/* /docs/ 301
+/docs/design-language/* /docs/ 301
+/docs/design-tokens/* /docs/ 301
+
+# Stablecoin selector route was renamed to picker; preserve old snapshot links. (dynamic rules)
+/screener/selector/* /screener/picker/:splat 301
+
+# MiCA tracker moved to Compliance; /compliance/ is canonical. (dynamic rules)
+/mica/* /compliance/:splat 301
+
+# Tape → Timeline rename; /timeline/ is canonical. Query string is preserved (dynamic rules)
+/tape/* /timeline/:splat 301
+
+# Methodology PDFs were deprecated in favor of canonical HTML methodology pages. (dynamic rules)
+/methodology/pdf/* /methodology/ 301
+
+/report-cards/* /safety-scores/:splat 301
+/risk-lab/* /safety-scores/:splat 301
+/blacklist/* /freezewatch/:splat 301
+/stability-index-alt/* /stability-index/:splat 301
+
+# Infrastructure tagging — protocol → infrastructure rename (dynamic rules)
+/stablecoins/protocol/liquity-v1/* /stablecoins/infrastructure/liquity-v1/:splat 301
+/stablecoins/protocol/liquity-v2/* /stablecoins/infrastructure/liquity-v2/:splat 301
+/stablecoins/protocol/liquity/* /stablecoins/infrastructure/liquity-v1/:splat 301
+
+# About subpages folded into /about/ (route-tree simplification, 2026-06-09). (dynamic rules)
+/about/principles/* /about/ 301
+/about/editorial/* /about/ 301
+/about/style/* /about/ 301
+
+# Site simplification (2026-10-11): the hand-maintained human sitemap (dynamic rules)
+/sitemap-tree/* / 301
+
+# /start/ duplicated the nav and methodology copy (2026-10-11); its walkthrough (dynamic rules)
+/start/* / 301
+
+# The Bluechip explainer folded into a section of /about/ (2026-10-11). (dynamic rules)
+/about/bluechip/* /about/#bluechip 301
+
+# Coins removed from the tracked catalog (bed599cc4); /coverage/ documents (dynamic rules)
+/stablecoin/pusd-pleasing/* /coverage/ 301
+/stablecoin/phpc-coins-ph/* /coverage/ 301
+
+# Retired stablecoin IDs and route-tree aliases (SEO cleanup, 2026-08-23). (dynamic rules)
+/stablecoin/eura-angle/* /coverage/ 301
+/stablecoin/krwo-gimswap/* /coverage/ 301
+/stablecoin/mmxn-moneta-digital/* /coverage/ 301
+/stablecoin/mnee-mnee/* /coverage/ 301
+/stablecoin/phpm-mento/* /coverage/ 301
+/stablecoin/shyusd-hylo/* /coverage/ 301
+/stablecoin/syusd-lucidly/* /coverage/ 301
+/stablecoin/usd-nubank/* /coverage/ 301
+/stablecoin/usdw-wisdomtree/* /coverage/ 301
+/stablecoin/usp-pareto-credit/* /coverage/ 301
+/stablecoin/veur-vnx/* /coverage/ 301
+/stablecoin/wstbt-matrixdock/* /coverage/ 301
+/stablecoin/xai-silo-finance/* /coverage/ 301
+/stablecoin/usd-dinari/* /coverage/ 301
+/treasuries/* /coverage/ 301
+/mint/* /flows/ 301
+/home-alt/* / 301
+/v9-preview/* /safety-scores/ 301
+/v9-preview-412d818c031b7bc5/* /safety-scores/ 301
