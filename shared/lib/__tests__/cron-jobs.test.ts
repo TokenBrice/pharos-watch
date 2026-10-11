@@ -4,6 +4,7 @@ import {
   CRON_GROWTH_HEADROOM_POLICY,
   CRON_INTERVALS,
   CRON_JOB_DEFINITIONS,
+  CRON_SCHEDULE_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
   SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
@@ -47,6 +48,16 @@ describe("cron job schedule metadata", () => {
     });
   });
 
+  it("requires an explicit CPU placement policy on every logical schedule", () => {
+    expect(Object.keys(CRON_SCHEDULE_DEFINITIONS)).toEqual(Object.keys(CRON_SCHEDULES));
+    for (const [scheduleKey, definition] of Object.entries(CRON_SCHEDULE_DEFINITIONS)) {
+      expect(
+        ["hourly-physical-required", "sub-hourly-allowed"],
+        scheduleKey,
+      ).toContain(definition.cpuPlacement);
+    }
+  });
+
 
   // Cloudflare caps Cron expressions with an interval below one hour at 30
   // seconds of CPU time, and 15 minutes at hourly or longer. These lanes carry
@@ -57,21 +68,10 @@ describe("cron job schedule metadata", () => {
   // expression silently re-enters the 30-second class and gets the isolate
   // killed mid-chain, which starves the chain tail.
   it("keeps CPU-heavy sub-hourly lanes on hourly physical triggers", () => {
-    const hourlyCpuClassLanes = {
-      quarterHourly: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
-      v9SupplyAttributionOffset: ["8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *"],
-      depegResolverOffset: ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"],
-      v9PublicationOffset: ["22 * * * *", "52 * * * *"],
-      statusSelfCheckOffset: ["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"],
-      halfHourlyMintBurnCritical: ["4 * * * *", "34 * * * *"],
-      halfHourlyMintBurnExtended: ["18 * * * *", "48 * * * *"],
-      halfHourlyMeasuredExecution: ["5 * * * *", "35 * * * *"],
-      halfHourlyMeasuredExecutionSupplemental: ["20 * * * *", "50 * * * *"],
-    } as const;
-
-    for (const [scheduleKey, triggerSchedules] of Object.entries(hourlyCpuClassLanes)) {
-      const key = scheduleKey as keyof typeof hourlyCpuClassLanes;
-      expect(CRON_TRIGGER_SCHEDULES[key], scheduleKey).toEqual(triggerSchedules);
+    for (const [scheduleKey, definition] of Object.entries(CRON_SCHEDULE_DEFINITIONS)) {
+      if (definition.cpuPlacement !== "hourly-physical-required") continue;
+      const key = scheduleKey as keyof typeof CRON_SCHEDULE_DEFINITIONS;
+      expect(CRON_TRIGGER_SCHEDULES[key].length, scheduleKey).toBeGreaterThan(0);
 
       for (const triggerSchedule of CRON_TRIGGER_SCHEDULES[key]) {
         expect(isHourlyCpuTrigger(triggerSchedule), `${scheduleKey}: ${triggerSchedule}`).toBe(true);

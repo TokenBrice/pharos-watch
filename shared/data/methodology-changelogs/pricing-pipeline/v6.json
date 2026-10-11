@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.47",
+    "title": "Conserved historical missing-chain attribution",
+    "date": "2026-10-11",
+    "effectiveAt": 1791763200,
+    "summary": "CoinGecko missing-chain gap-fill now attributes a historical remainder only when every existing chain has an observed bucket and their sum conserves the DefiLlama aggregate baseline. Unavailable or non-conserving history publishes the missing chain's bucket as null with explicit provenance, without changing admitted aggregate supply.",
+    "impact": [
+      "ADR-8 conservation and audit finding V-04 require the historical chain packet to conserve its aggregate, not just the current packet. Each 1d/7d/30d baseline uses the same tolerance as current supply: max($0.01, DefiLlama bucket × 1e-6).",
+      "Complete, conserving historical chain baselines retain the CoinGecko-minus-DefiLlama remainder. Otherwise the missing chain's historical bucket is null and supplyGapFill.withheldHistoricalBuckets names day, week or month. Existing observed chain values are never scaled.",
+      "Some missing-chain historical buckets and their dependent chain-local comparisons become unavailable rather than publishing a numeric mismatch. Current supply, admitted CoinGecko aggregate history, ratio bounds, hysteresis, consensus weights and scoring formulas are unchanged.",
+      "A valid-JSON non-object CoinGecko simple-price root is unavailable supplemental evidence, logged as non-object-root and routed through the existing no-decision/carry path instead of aborting healthy DefiLlama publication.",
+      "Activation is provisionally 2026-10-12 00:00 UTC (1791763200); re-date effectiveAt at release"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.46",
     "title": "Complete supply evidence and original-clock price admission",
     "date": "2026-10-10",

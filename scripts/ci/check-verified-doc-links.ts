@@ -64,6 +64,44 @@ function resolveDocTarget(sourceFile: string, target: string, repoRoot: string):
   };
 }
 
+export function collectAdrNavigationViolations(content: string): string[] {
+  const headings: string[] = [];
+  const navigation: string[] = [];
+  for (const line of splitLines(content)) {
+    const heading = /^#### ADR-(\d+)\s*$/.exec(line);
+    if (heading) headings.push(heading[1]);
+    if (line.startsWith("Read an individual decision rather than the entire record collection:")) {
+      for (const entry of line.matchAll(/\(#adr-(\d+)\)/g)) navigation.push(entry[1]);
+    }
+  }
+
+  const violations: string[] = [];
+  const headingIds = new Set(headings);
+  const navigationIds = new Set(navigation);
+  for (const id of headingIds) {
+    if (!navigationIds.has(id)) {
+      violations.push(`docs/architecture.md: ADR-${id} heading is missing from the ADR quick-nav`);
+    }
+  }
+  for (const id of navigationIds) {
+    if (!headingIds.has(id)) {
+      violations.push(`docs/architecture.md: ADR-${id} quick-nav entry has no heading`);
+    }
+  }
+  for (const [label, ids] of [["heading", headings], ["quick-nav entry", navigation]] as const) {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const id of ids) {
+      if (seen.has(id)) duplicates.add(id);
+      seen.add(id);
+    }
+    for (const id of duplicates) {
+      violations.push(`docs/architecture.md: duplicate ADR-${id} ${label}`);
+    }
+  }
+  return violations;
+}
+
 export function collectNavigationBlockViolations(
   filePaths: readonly string[],
   repoRoot = process.cwd(),
@@ -73,6 +111,9 @@ export function collectNavigationBlockViolations(
   for (const filePath of filePaths) {
     const content = readFileSync(filePath, "utf8");
     const lines = splitLines(content);
+    if (relative(repoRoot, filePath).replaceAll("\\", "/") === "docs/architecture.md") {
+      violations.push(...collectAdrNavigationViolations(content));
+    }
     if (!requiresDocNavigation(content)) continue;
 
     const hasTopNavigation = lines

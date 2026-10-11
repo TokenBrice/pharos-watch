@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { assessPublicHealth } from "../public-health-assessment";
+import { assessPublicHealth, getPublicHealthEvidenceReadFailures } from "../public-health-assessment";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
@@ -10,6 +10,8 @@ import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 import { STABLECOIN_PRICE_GAP_REVIEWS, evaluateStablecoinActivePriceCoverage, evaluateStablecoinPublicationCoverage, seedAbsentActivePriceCoverageMarketCaps } from "../stablecoin-publication-coverage";
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
 import { EXPECTED_FX_PEG_KEYS } from "../fx-config";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const MATERIAL_MARKET_CAP_USD = STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd;
@@ -80,6 +82,9 @@ function makeMintBurnAssessmentDb(
     publicationMetadata?: Record<string, unknown>;
     publicationQueryError?: unknown;
     yieldSafetyError?: unknown;
+    yieldSafetyIdentity?: SafetyScoreV9PublicationIdentity;
+    yieldSafetyLiveReadError?: unknown;
+    yieldSafetyHealthReadError?: unknown;
     producerHistoryError?: unknown;
     blacklistError?: unknown;
     dbError?: unknown;
@@ -155,12 +160,63 @@ function makeMintBurnAssessmentDb(
       rows: [],
       first: cacheRows.find((row) => row.key === "ops:d1-capacity:v1"),
     },
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["report-cards:v9:publication-health"],
+      rows: [],
+      ...(options.yieldSafetyHealthReadError
+        ? { throwError: options.yieldSafetyHealthReadError }
+        : {
+            first: options.yieldSafetyIdentity ? {
+              value: stableJsonStringifyV1({
+                schemaVersion: 2,
+                status: "current",
+                acceptedPublicationGenerationId: options.yieldSafetyIdentity.publicationGenerationId,
+                acceptedAtSec: nowSec - 60,
+                attemptedAtSec: nowSec - 60,
+                heldSinceSec: null,
+                reasons: [],
+              }),
+              updated_at: nowSec - 60,
+            } : null,
+          }),
+    },
+    {
+      match: "AS publication_identity",
+      matchBinds: ["report-cards:v9"],
+      rows: [],
+      ...(options.yieldSafetyLiveReadError
+        ? { throwError: options.yieldSafetyLiveReadError }
+        : {
+            first: options.yieldSafetyIdentity ? {
+              publication_identity: JSON.stringify({
+                candidateId: "fixture-candidate",
+                policyVersion: options.yieldSafetyIdentity.methodologyVersion,
+                publicationGenerationId: options.yieldSafetyIdentity.publicationGenerationId,
+                baseInputGenerationId: options.yieldSafetyIdentity.baseInputGenerationId,
+                factSetDigest: "d".repeat(64),
+                policyId: options.yieldSafetyIdentity.policyId,
+                policyDigest: options.yieldSafetyIdentity.policyDigest,
+                evaluationBuildDigest: options.yieldSafetyIdentity.evaluationBuildDigest,
+                resultDigest: "e".repeat(64),
+              }),
+            } : null,
+          }),
+    },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     {
       match: "stamped_identity",
       matchBinds: ["yield-rankings"],
       rows: [],
-      ...(options.yieldSafetyError ? { throwError: options.yieldSafetyError } : { first: null }),
+      ...(options.yieldSafetyError
+        ? { throwError: options.yieldSafetyError }
+        : {
+            first: options.yieldSafetyIdentity ? {
+              updated_at: nowSec - 60,
+              stamped_identity: JSON.stringify(options.yieldSafetyIdentity),
+              safety_published_at: nowSec - 60,
+            } : null,
+          }),
     },
     { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [], ...(options.circuitError ? { throwError: options.circuitError } : {}) },
     { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
@@ -823,5 +879,66 @@ describe("assessPublicHealth mint/burn subquery failures", () => {
     } finally {
       consoleWarn.mockRestore();
     }
+  });
+});
+
+describe("assessPublicHealth independent yield-safety reads", () => {
+  const identity: SafetyScoreV9PublicationIdentity = {
+    model: "v9",
+    schemaVersion: 1,
+    methodologyVersion: "9.0",
+    policyId: "fixture-policy",
+    policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+    publicationGenerationId: "fixture-safety-publication",
+  };
+
+  it.each([
+    { liveFailed: true, healthFailed: false },
+    { liveFailed: false, healthFailed: true },
+    { liveFailed: true, healthFailed: true },
+  ])("retains only failed sibling evidence (live: $liveFailed, health: $healthFailed)", async ({ liveFailed, healthFailed }) => {
+    const nowSec = 1_800_000_000;
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+        yieldSafetyIdentity: identity,
+        ...(liveFailed ? { yieldSafetyLiveReadError: new Error("live identity unavailable") } : {}),
+        ...(healthFailed ? { yieldSafetyHealthReadError: new Error("publication health unavailable") } : {}),
+      }), nowSec);
+      const failedSources = [
+        ...(liveFailed ? ["yield-safety-live-identity"] : []),
+        ...(healthFailed ? ["yield-safety-publication-health"] : []),
+      ];
+
+      expect(result.overallStatus).not.toBe("healthy");
+      expect(result.yieldSafetyQueryFailed).toBe(true);
+      expect(result.yieldSafetyQueryErrors).toEqual({
+        liveIdentity: liveFailed ? "yield-safety-live-identity-read-failed" : null,
+        publicationHealth: healthFailed ? "yield-safety-publication-health-read-failed" : null,
+      });
+      expect(result.warnings.filter((warning) => warning.startsWith("yield-safety-"))).toEqual([
+        "yield-safety-availability-unknown",
+        ...failedSources.map((source) => `${source}-read-failed`),
+      ]);
+      expect(getPublicHealthEvidenceReadFailures(result).filter((failure) => failure.startsWith("yield-safety"))).toEqual(
+        failedSources.map((source) => `${source}:read-failed`),
+      );
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it("preserves the healthy yield-safety output when both reads succeed", async () => {
+    const nowSec = 1_800_000_000;
+    const baseline = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec), nowSec);
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      yieldSafetyIdentity: identity,
+    }), nowSec);
+
+    expect(result).toEqual(baseline);
+    expect(result.yieldSafetyQueryFailed).toBe(false);
+    expect(result.warnings.some((warning) => warning.startsWith("yield-safety-"))).toBe(false);
   });
 });

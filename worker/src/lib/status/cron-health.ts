@@ -239,6 +239,7 @@ interface RunningCronSlotRow {
   started_at: number;
   updated_at: number;
   running_count?: number;
+  stale_candidate_count: number;
 }
 
 // Stale windows are 5-6 minutes and the global reconciler runs every five, so
@@ -449,17 +450,22 @@ async function fetchCronSlotEventRows(
   }
 }
 
-async function fetchRunningCronSlotRows(db: D1Database): Promise<{ rows: RunningCronSlotRow[]; failed: boolean }> {
+async function fetchRunningCronSlotRows(
+  db: D1Database,
+  now: number,
+): Promise<{ rows: RunningCronSlotRow[]; failed: boolean }> {
   try {
     const runningRows = await db
       .prepare(
         `SELECT slot_key, slot_started_at, execution_owner, started_at, updated_at,
-                COUNT(*) OVER () AS running_count
+                COUNT(*) OVER () AS running_count,
+                SUM(CASE WHEN updated_at <= ? THEN 1 ELSE 0 END) OVER () AS stale_candidate_count
            FROM cron_slot_executions
            WHERE state = 'running'
            ORDER BY updated_at ASC
            LIMIT 25`,
       )
+      .bind(now - STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC)
       .all<RunningCronSlotRow>();
     return { rows: runningRows.results ?? [], failed: false };
   } catch (err) {
@@ -483,18 +489,16 @@ function summarizeRunningCronSlots(
 ): ScheduledSlotHealthSummary {
   let oldestRunningAgeSec: number | null = null;
   let oldestStaleAgeSec: number | null = null;
-  let staleCandidateSlots = 0;
   for (const row of rows) {
     const ageSec = Math.max(0, now - row.updated_at);
     oldestRunningAgeSec = Math.max(oldestRunningAgeSec ?? 0, ageSec);
     if (ageSec >= STATUS_RUNNING_SLOT_STALE_CANDIDATE_SEC) {
-      staleCandidateSlots++;
       oldestStaleAgeSec = Math.max(oldestStaleAgeSec ?? 0, ageSec);
     }
   }
   return {
     runningSlots: rows[0]?.running_count ?? rows.length,
-    staleCandidateSlots,
+    staleCandidateSlots: rows[0]?.stale_candidate_count ?? 0,
     oldestRunningAgeSec,
     oldestStaleAgeSec,
     queryFailed,
@@ -522,7 +526,7 @@ export async function loadCronHealth(
     fetchCronLeaseRows(db, cronJobInClause),
     fetchCronProgressRows(db, cronJobInClause),
     fetchCronSlotEventRows(db, eventKeyInClause),
-    fetchRunningCronSlotRows(db),
+    fetchRunningCronSlotRows(db, now),
   ]);
   const scheduledSlotEventMarkerQueryFailed = slotEventResult.failed;
   const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);

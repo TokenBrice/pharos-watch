@@ -10,11 +10,11 @@
  *   measures the same route against a *stress* request snapped to the policy
  *   notional grid.
  *
- * The constant tables below are now the single definition. The V9 methodology
- * policy JSON (`semantic.exit`) remains the versioned, replay-pinned artifact
- * the evaluator reads — it is not generated at runtime, but it is CI-validated
- * against this module by `exit-policy-constants-pin.test.ts`, so the two can no
- * longer drift silently.
+ * The V9 methodology policy JSON (`semantic.exit`) is the versioned,
+ * replay-pinned scoring source the Safety evaluator reads. The shared tables
+ * below provide redemption/exit view primitives, not a whole-policy mirror.
+ * Safety v10.01 (`44cf5bd80`) intentionally raised the policy's unknown
+ * observation-confidence factor from 0.35 to 0.6; that factor is policy-owned.
  *
  * Both views compose the same primitives here (breakpoint interpolation, band
  * resolution, the capacity blend, the weighted component sum). What stays with
@@ -50,7 +50,6 @@ export type ExitHolderEligibility =
   | "issuer-discretionary"
   | "unknown";
 export type ExitModeledConfidence = "high" | "medium" | "low";
-export type ExitObservationConfidence = "high" | "medium" | "low" | "unknown";
 
 export interface ExitBreakpoint {
   value: number;
@@ -133,10 +132,9 @@ export function hasMaterialExitCapacity(
 }
 
 /**
- * The reviewed exit scoring tables. Every value here is mirrored into
- * `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
- * (`semantic.exit`) and pinned by test; change one and the pin fails until the
- * policy JSON is reissued with a methodology version bump.
+ * Reviewed redemption/exit view tables. The Safety evaluator supplies its own
+ * versioned `semantic.exit` policy to the shared primitives; whole-table parity
+ * is not a contract.
  *
  * Route-family score ceilings:
  * - `queueRedeem` (70): queued redemption inherently involves multi-hour or
@@ -246,12 +244,6 @@ export const EXIT_ROUTE_SCORING_TABLES = {
     medium: 0.75,
     low: 0.35,
   },
-  observationConfidenceFactors: {
-    high: 1,
-    medium: 0.85,
-    low: 0.6,
-    unknown: 0.35,
-  },
   scoreableEvidenceKinds: {
     dex: ["measured-executable-depth", "reserve-based-amm-simulation", "direct-orderbook-depth"],
     redemption: ["documented-terms", "live-reserve-state", "onchain-contract-state"],
@@ -281,7 +273,6 @@ export const EXIT_ROUTE_SCORING_TABLES = {
   minimumRedeemBands: readonly ExitThresholdBand[];
   holderEligibilityMultipliers: Record<ExitHolderEligibility, number>;
   modeledConfidenceFactors: Record<ExitModeledConfidence, number>;
-  observationConfidenceFactors: Record<ExitObservationConfidence, number>;
   scoreableEvidenceKinds: { dex: readonly string[]; redemption: readonly string[] };
   documentedTermsMaxAgeSec: number;
 };

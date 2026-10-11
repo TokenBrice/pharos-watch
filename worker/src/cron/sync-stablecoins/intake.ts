@@ -78,8 +78,9 @@ const DL_PARSE_MAX_ATTEMPTS = 3;
 const DL_PARSE_RETRY_BASE_DELAY_MS = 500;
 // Transport-level retries run on the first attempt only. The parse-retry loop
 // below re-fetches on a corrupt body, so leaving `fetchTextWithRetry` at its
-// 2-retry default on every pass allowed 3 x 3 = 9 upstream requests in the worst
-// case, against the ADR-4 per-run request budget. Capped at 3 + 1 + 1 = 5.
+// 2-retry default on every pass allowed 3 x 3 = 9 sequential upstream requests
+// in the worst case. That amplification, not ADR-4 (which bounds concurrent
+// connections, not total requests), is why the total is capped at 3 + 1 + 1 = 5.
 const DL_TRANSPORT_RETRIES_FIRST_ATTEMPT = 2;
 
 /** Parsed-but-unvalidated DefiLlama body; `validateDefillamaEnvelope` proves its shape. */

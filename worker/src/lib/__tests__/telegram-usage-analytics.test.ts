@@ -8,8 +8,11 @@ import {
   loadTelegramTopFollowedCoins,
   recordTelegramDeliveryOutcomes,
   recordTelegramUsageEvent,
+  refreshTelegramLifecycleSnapshotIfStale,
 } from "../telegram/usage-analytics";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { publishTelegramPulseSnapshot } from "../../api/telegram-pulse";
+import { cachedPulse, pulseCacheTables } from "../../api/__tests__/telegram-pulse.test-support";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
@@ -55,6 +58,96 @@ describe("telegram usage analytics", () => {
 
     expect(snapshot.pendingDeliveries).toBe(3);
   });
+
+  it.each([
+    { precomputed: false, existingSnapshotAt: null },
+    { precomputed: true, existingSnapshotAt: null },
+    { precomputed: false, existingSnapshotAt: 1_771_832_700 },
+    { precomputed: true, existingSnapshotAt: 1_771_832_700 },
+  ])("skips lifecycle upserts on failed pending reads ($precomputed, $existingSnapshotAt)", async ({
+    precomputed,
+    existingSnapshotAt,
+  }) => {
+    const nowSec = 1_771_833_600;
+    const db = mockD1([
+      { match: "FROM telegram_subscribers s", rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [] },
+      { match: "FROM telegram_pending_alerts", rows: [], throwError: new Error("pending read failed") },
+      {
+        match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily",
+        rows: existingSnapshotAt == null ? [] : [{ snapshot_at: existingSnapshotAt }],
+      },
+    ]);
+    const current = precomputed
+      ? await computeTelegramCurrentLifecycleSnapshot(db, nowSec)
+      : undefined;
+
+    const snapshot = await refreshTelegramLifecycleSnapshotIfStale(db, nowSec, current);
+
+    expect(snapshot.unavailableFields).toEqual(["pendingDeliveries"]);
+    expect(snapshot.newWatchers).toBe(0);
+    expect(snapshot.churnedWatchers).toBe(0);
+    expect(snapshot.reactivatedWatchers).toBe(0);
+    expect(snapshot.presetImpliedCoinFollows).toBe(0);
+    expect(db.getHistory().filter((entry) => entry.sql.includes("FROM telegram_pending_alerts"))).toHaveLength(1);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT INTO telegram_watcher_lifecycle_daily"),
+    )).toBe(false);
+  });
+
+  it.each([0, 7])("persists an observed pending-delivery count of %i", async (pendingCount) => {
+    const nowSec = 1_771_833_600;
+    const db = mockD1([
+      { match: "FROM telegram_subscribers s", rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [] },
+      { match: "FROM telegram_pending_alerts", rows: [{ pending_count: pendingCount }] },
+      { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily", rows: [] },
+      { match: "INSERT INTO telegram_watcher_lifecycle_daily", rows: [] },
+    ]);
+
+    const snapshot = await refreshTelegramLifecycleSnapshotIfStale(db, nowSec);
+
+    expect(snapshot.pendingDeliveries).toBe(pendingCount);
+    expect(snapshot.unavailableFields).toEqual([]);
+    const upserts = db.getHistory().filter((entry) =>
+      entry.sql.includes("INSERT INTO telegram_watcher_lifecycle_daily"),
+    );
+    expect(upserts).toHaveLength(1);
+    expect(upserts[0]?.binds[14]).toBe(pendingCount);
+  });
+
+  it("keeps public pulse pending deliveries null with partial quality on a failed read", async () => {
+    const nowSec = 1_771_833_600;
+    const db = mockD1([
+      ...pulseCacheTables(cachedPulse(nowSec), nowSec),
+      { match: "FROM telegram_subscribers s", rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [] },
+      { match: "FROM telegram_pending_alerts", rows: [], throwError: new Error("pending read failed") },
+      { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily", rows: [] },
+      // Empty cached history triggers a heavy-section rebuild; keep every other read available.
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "FROM telegram_watcher_lifecycle_daily", rows: [] },
+      { match: "FROM telegram_usage_daily", rows: [] },
+      { match: "FROM telegram_adoption_daily", rows: [] },
+      { match: "FROM telegram_adoption_retention_daily", rows: [] },
+      { match: "INSERT INTO telegram_adoption_retention_daily", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    const pulse = await publishTelegramPulseSnapshot(db, nowSec);
+
+    expect(pulse.pendingDeliveries).toBeNull();
+    expect(pulse.quality).toEqual({ status: "partial", unavailableFields: ["pendingDeliveries"] });
+    expect(pulse.privacy.suppressedFields).not.toContain("pendingDeliveries");
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT INTO telegram_watcher_lifecycle_daily"),
+    )).toBe(false);
+  });
+
   it("counts subscribe, unsubscribe, and reactivate transitions independently", async () => {
     const { sqlite, db } = fixtures.open();
     const nowSec = Math.floor(Date.now() / 1000);

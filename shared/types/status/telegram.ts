@@ -20,7 +20,7 @@ export const AlertReserveSourceEnvelopeSchema = z.object({
 export type AlertReserveSourceEnvelope = z.infer<typeof AlertReserveSourceEnvelopeSchema>;
 
 export const TelegramTelemetryQualitySchema = z.object({
-  status: z.enum(["complete", "partial"]),
+  status: z.enum(["complete", "partial", "unknown"]),
   unavailableFields: z.array(z.string()),
   errors: z.record(z.string(), z.string()).optional(),
 });
@@ -318,7 +318,7 @@ export const TelegramPulseSchema = TelegramPulseBaseSchema.transform((pulse) => 
   currentSnapshotAt: pulse.currentSnapshotAt ?? pulse.updatedAt,
   lifecycleHistoryUpdatedAt: pulse.lifecycleHistoryUpdatedAt ?? null,
   lifecycleHistoryEverySeconds: pulse.lifecycleHistoryEverySeconds ?? 900,
-  quality: pulse.quality ?? { status: "complete" as const, unavailableFields: [] },
+  quality: pulse.quality ?? { status: "unknown" as const, unavailableFields: [] },
   privacy: pulse.privacy ?? { exactActiveWatchers: true, lowCardinalityThreshold: 5, suppressedFields: [] },
 }));
 export type TelegramPulse = z.infer<typeof TelegramPulseSchema>;

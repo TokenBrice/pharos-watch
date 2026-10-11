@@ -3,14 +3,21 @@ import type { PeggedAsset } from "../enrich-prices";
 import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
 import type * as FetchRetry from "../../../lib/fetch-retry";
+import type * as StructuredLog from "../../../lib/structured-log";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { canonicalizeChainCirculating } from "@shared/lib/chains/circulating";
 
 const fetchTextWithRetryMock = vi.hoisted(() => vi.fn());
+const logWorkerEventMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
   ...(await importOriginal<typeof FetchRetry>()),
   fetchTextWithRetry: fetchTextWithRetryMock,
+}));
+
+vi.mock("../../../lib/structured-log", async (importOriginal) => ({
+  ...(await importOriginal<typeof StructuredLog>()),
+  logWorkerEvent: logWorkerEventMock,
 }));
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
@@ -99,6 +106,7 @@ function previousGapFilled(): Map<string, PeggedAsset> {
 
 beforeEach(() => {
   fetchTextWithRetryMock.mockReset();
+  logWorkerEventMock.mockReset();
   vi.mocked(fetchCuratedAggregateOnChainMcap).mockReset();
 });
 
@@ -120,6 +128,46 @@ describe("supply-gap reconciliation ordering", () => {
 });
 
 describe("CoinGecko missing-chain remainder reconciliation", () => {
+  it.each([null, [], 42, "unavailable", false])("treats non-object simple-price root %j as no-decision", async (root) => {
+    const asset = makeAsset();
+    const before = structuredClone(asset);
+    const healthy = makeAsset();
+    healthy.chainCirculating["XRP Ledger"] = { chainId: "xrpl", current: 0 };
+    const healthyBefore = structuredClone(healthy);
+    fetchTextWithRetryMock.mockResolvedValue({ response: { ok: true }, body: JSON.stringify(root) });
+
+    const result = await reconcileTrackedSupplyGaps([asset, healthy]);
+
+    expect(result.totalReconciled).toBe(0);
+    expect(result.reconciledIds).toEqual([]);
+    expect(result.gapFillRejections).toEqual([]);
+    expect(asset).toEqual(before);
+    expect(healthy).toEqual(healthyBefore);
+    expect(fetchTextWithRetryMock).toHaveBeenCalledTimes(1);
+    expect(fetchTextWithRetryMock.mock.calls[0][0]).toContain("/simple/price");
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "sync-stablecoins.coingecko-current-market-cap-unavailable",
+      level: "warn",
+      metadata: { reason: "non-object-root" },
+    }));
+  });
+
+  it("uses the existing bounded carry when simple-price returns a null root", async () => {
+    const previous = makeAsset();
+    mockCoinGeckoAt(130);
+    await reconcileTrackedSupplyGaps([previous]);
+    const current = makeAsset();
+    fetchTextWithRetryMock.mockResolvedValue({ response: { ok: true }, body: "null" });
+
+    const result = await reconcileTrackedSupplyGaps([current], undefined, null, undefined, undefined, new Map([[previous.id, previous]]));
+
+    expect(result.totalReconciled).toBe(0);
+    expect(current.circulating).toEqual(previous.circulating);
+    expect(current.chainCirculating).toEqual(previous.chainCirculating);
+    expect(current.supplyGapFill).toEqual({ ...previous.supplyGapFill, carryForwardRuns: 1 });
+    expect(current.supplyRestored).toBe(true);
+  });
+
   it.each([undefined, null])("admits an undated prior gap-fill (%s) within the publication carry limit", async (observedAt) => {
     const original = makeAsset();
     mockCoinGeckoAt(130);
@@ -275,6 +323,10 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(asset.circulatingPrevMonth).toEqual({ peggedEUR: 75 });
     // Every history remainder conserves the observed DefiLlama baseline.
     expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({ chainId: "xrpl", current: 30, circulatingPrevDay: 5, circulatingPrevWeek: 30, circulatingPrevMonth: 5 });
+    for (const field of ["circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"] as const) {
+      const chainSum = Object.values(asset.chainCirculating).reduce((sum, row) => sum + (row[field] as number), 0);
+      expect(chainSum).toBe(asset[field]?.peggedEUR);
+    }
     const chainCurrent = [...canonicalizeChainCirculating(asset.chainCirculating).values()]
       .reduce((sum, row) => sum + (row.current ?? 0), 0);
     expect(chainCurrent).toBe(getCirculatingRawOrNull(asset));
@@ -301,6 +353,114 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(result.assets[0].observedAgeSec).toBeLessThanOrEqual(2);
     expect(asset.supplyObservedAt).toBe(Math.floor(nowMs / 1000));
     expect(result.gapFillRejections).toEqual([]);
+  });
+
+  it("withholds the AstraA non-conserving previous-day remainder without changing the admitted aggregate", async () => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+    asset.chainCirculating.Ethereum.circulatingPrevDay = 44;
+    const observedChains = structuredClone(asset.chainCirculating);
+    mockCoinGeckoHistory([
+      [nowMs - (30 * DAY_MS), 75],
+      [nowMs - (7 * DAY_MS), 110],
+      [nowMs - DAY_MS, 95],
+      [nowMs, 130],
+    ]);
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(1);
+    expect(result.gapFillRejections).toEqual([]);
+    expect(asset.circulating).toEqual({ peggedEUR: 130 });
+    expect(asset.circulatingPrevDay).toEqual({ peggedEUR: 95 });
+    expect(asset.circulatingPrevWeek).toEqual({ peggedEUR: 110 });
+    expect(asset.circulatingPrevMonth).toEqual({ peggedEUR: 75 });
+    expect(asset.chainCirculating["XRP Ledger"]).toEqual({
+      chainId: "xrpl", current: 30, circulatingPrevDay: null, circulatingPrevWeek: 30, circulatingPrevMonth: 5,
+    });
+    expect(asset.supplyGapFill?.withheldHistoricalBuckets).toEqual(["day"]);
+    expect(asset.supplyGapFill?.withheldHistoricalBucketReasons).toEqual({ day: "nonconserving" });
+    for (const [label, row] of Object.entries(observedChains)) {
+      expect(asset.chainCirculating[label]).toEqual(row);
+    }
+  });
+
+  it.each([
+    { key: "day", field: "circulatingPrevDay" },
+    { key: "week", field: "circulatingPrevWeek" },
+    { key: "month", field: "circulatingPrevMonth" },
+  ] as const)("withholds $key when an existing chain's historical observation is null or absent", async ({ key, field }) => {
+    for (const value of [null, undefined]) {
+      const asset = makeAsset();
+      asset.chainCirculating.Ethereum[field] = value;
+      const observedChains = structuredClone(asset.chainCirculating);
+      mockCoinGeckoAt(130);
+
+      const result = await reconcileTrackedSupplyGaps([asset]);
+
+      expect(result.totalReconciled).toBe(1);
+      expect(asset.circulating).toEqual({ peggedEUR: 130 });
+      expect(asset[field]).toEqual({ peggedEUR: key === "day" ? 90 : key === "week" ? 80 : 70 });
+      expect(asset.chainCirculating["XRP Ledger"][field]).toBeNull();
+      expect(asset.supplyGapFill?.withheldHistoricalBuckets).toEqual([key]);
+      expect(asset.supplyGapFill?.withheldHistoricalBucketReasons).toEqual({ [key]: "history-unobserved" });
+      expect(canonicalizeChainCirculating(asset.chainCirculating).get("xrpl")?.[field]).toBeUndefined();
+      for (const [label, row] of Object.entries(observedChains)) {
+        expect(asset.chainCirculating[label]).toEqual(row);
+      }
+    }
+  });
+
+  it("names every withheld historical window in bucket order", async () => {
+    const asset = makeAsset();
+    asset.chainCirculating.Ethereum.circulatingPrevDay = 44;
+    asset.chainCirculating.Solana.circulatingPrevWeek = null;
+    asset.chainCirculating.Stellar.circulatingPrevMonth = null;
+    mockCoinGeckoAt(130);
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(1);
+    expect(asset.chainCirculating["XRP Ledger"]).toEqual({
+      chainId: "xrpl", current: 30, circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null,
+    });
+    expect(asset.supplyGapFill?.withheldHistoricalBuckets).toEqual(["day", "week", "month"]);
+    expect(asset.supplyGapFill?.withheldHistoricalBucketReasons).toEqual({
+      day: "nonconserving", week: "history-unobserved", month: "history-unobserved",
+    });
+  });
+
+  it.each([
+    { scale: 1, discrepancy: 0.005, withheld: false },
+    { scale: 1, discrepancy: 0.02, withheld: true },
+    { scale: 1_000_000, discrepancy: 45, withheld: false },
+    { scale: 1_000_000, discrepancy: 100, withheld: true },
+  ])("uses the current conservation tolerance for historical scale $scale discrepancy $discrepancy", async ({ scale, discrepancy, withheld }) => {
+    const nowMs = Date.now();
+    const asset = makeAsset();
+    for (const field of ["circulating", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"] as const) {
+      asset[field] = { peggedEUR: asset[field]!.peggedEUR * scale };
+    }
+    for (const row of Object.values(asset.chainCirculating)) {
+      for (const field of ["current", "circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"] as const) {
+        row[field] = (row[field] as number) * scale;
+      }
+    }
+    asset.chainCirculating.Ethereum.circulatingPrevDay = 54 * scale - discrepancy;
+    mockCoinGeckoHistory([
+      [nowMs - (30 * DAY_MS), 75 * scale],
+      [nowMs - (7 * DAY_MS), 110 * scale],
+      [nowMs - DAY_MS, 95 * scale],
+      [nowMs, 130 * scale],
+    ], 130 * scale);
+
+    const result = await reconcileTrackedSupplyGaps([asset]);
+
+    expect(result.totalReconciled).toBe(1);
+    expect(asset.circulatingPrevDay).toEqual({ peggedEUR: 95 * scale });
+    expect(asset.chainCirculating["XRP Ledger"].circulatingPrevDay).toBe(withheld ? null : 5 * scale);
+    expect(asset.supplyGapFill?.withheldHistoricalBuckets).toEqual(withheld ? ["day"] : undefined);
+    expect(asset.supplyGapFill?.withheldHistoricalBucketReasons).toEqual(withheld ? { day: "nonconserving" } : undefined);
   });
 
   it.each([
@@ -392,7 +552,9 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(result.totalReconciled).toBe(1);
     expect(asset.circulatingPrevDay).toBeNull();
     expect(asset.circulatingPrevWeek).toEqual({ peggedEUR: 80 });
-    expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({ chainId: "xrpl", current: 30, circulatingPrevWeek: 0, circulatingPrevMonth: 0 });
+    expect(asset.chainCirculating?.["XRP Ledger"]).toEqual({ chainId: "xrpl", current: 30, circulatingPrevDay: null, circulatingPrevWeek: 0, circulatingPrevMonth: 0 });
+    expect(asset.supplyGapFill?.withheldHistoricalBuckets).toEqual(["day"]);
+    expect(asset.supplyGapFill?.withheldHistoricalBucketReasons).toEqual({ day: "history-unobserved" });
   });
 
   it("rejects conflicting chain attribution: an unavailable attributed chain or several missing chains", async () => {

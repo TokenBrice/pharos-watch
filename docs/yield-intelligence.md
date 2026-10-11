@@ -16,6 +16,8 @@ Yield versions are bumped when APY source resolution, source arbitration, histor
 
 The v8.48 release tightens receipt-symbol ownership and contradictory-address admission, preserves Royco's critical-evidence and underlying-unrating gates, and retains valid negative holder returns in weighted portfolios. Midas annualization uses actual oracle observation intervals; Zephyr counts each hourly source observation once, and Hashnote rejects future reports beyond the existing five-minute allowance. Benchmark provider selection respects source observation bounds independently of fetch age or fallback mode. These input and history corrections can move or withhold PYS without changing its weights.
 
+**Release obligations recorded 2026-10-10:** for v8.48, fixed-clock input/output comparison and owner review of changed yield outcomes remain release gates; fresh admitted producer observations and production resource evidence are separate prerequisites. Replay cannot reconstruct pruned mint evidence or infer legacy Midas observation clocks. The migration-first prerequisite remains in [Persistence And Publication](#persistence-and-publication); none of these requirements asserts completed replay, producer repair or production health.
+
 Detailed release history lives under `shared/data/methodology-changelogs/yield-methodology/` and is rendered at `/methodology/yield-changelog/`. Keep version deltas in that structured source rather than duplicating them in this methodology reference.
 
 The current scoring contract is:

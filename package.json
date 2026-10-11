@@ -132,6 +132,7 @@
     "check:doc-sync": "tsx scripts/ci/check-doc-sync.ts && npm run check:doc-symbols",
     "check:env-contract": "node --import tsx scripts/ci/check-env-contract.ts",
     "check:migrations": "node --import tsx scripts/ci/check-worker-migrations.ts",
+    "check:remote-d1-baseline-ledger": "node --import tsx scripts/ci/check-remote-d1-baseline-ledger.ts",
     "check:cron-connections": "tsx scripts/ci/check-cron-connection-budget.ts",
     "check:telegram-load": "tsx scripts/ci/check-telegram-load.ts --enforce-target-slo",
     "check:sql-safety": "node --import tsx scripts/ci/check-sql-interpolation-safety.ts",

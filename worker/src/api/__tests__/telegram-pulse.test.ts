@@ -104,7 +104,7 @@ describe("handleTelegramPulse", () => {
       currentSnapshotAt: cachedPulse.updatedAt,
       lifecycleHistoryUpdatedAt: null,
       lifecycleHistoryEverySeconds: 900,
-      quality: { status: "complete", unavailableFields: [] },
+      quality: { status: "unknown", unavailableFields: [] },
       privacy: {
         exactActiveWatchers: true,
         lowCardinalityThreshold: 5,
@@ -441,6 +441,38 @@ describe("handleTelegramPulse", () => {
 });
 
 describe("publishTelegramPulseSnapshot", () => {
+  function observePulseReads(sqlite: Parameters<typeof createSqliteD1>[0]) {
+    const observed = { sql: [] as string[], pendingUnavailable: false };
+    const prepare = sqlite.prepare.bind(sqlite);
+    vi.spyOn(sqlite, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      const all = statement.all.bind(statement);
+      const get = statement.get.bind(statement);
+      vi.spyOn(statement, "all").mockImplementation((...values) => {
+        observed.sql.push(sql);
+        return Reflect.apply(all, statement, values);
+      });
+      vi.spyOn(statement, "get").mockImplementation((...values) => {
+        observed.sql.push(sql);
+        if (observed.pendingUnavailable && sql.includes("FROM telegram_pending_alerts")) {
+          throw new Error("pending table unavailable");
+        }
+        return Reflect.apply(get, statement, values);
+      });
+      return statement;
+    });
+    return observed;
+  }
+
+  function expectHeavyReads(sql: string[]) {
+    expect(sql).toEqual(expect.arrayContaining([
+      expect.stringContaining("GROUP BY stablecoin_id"),
+      expect.stringContaining("WHERE day >= ? AND day < ?"),
+      expect.stringContaining("FROM telegram_usage_daily"),
+      expect.stringContaining("stage = 'first_mutation' AND outcome = 'success'"),
+    ]));
+  }
+
   it("reuses heavy public sections on the slower pulse cadence", async () => {
     const nowSec = Math.floor(Date.parse("2026-05-12T12:00:00.000Z") / 1000);
     const cachedPulse = buildCachedPulse(nowSec - 600, {
@@ -593,6 +625,92 @@ describe("publishTelegramPulseSnapshot", () => {
       .toEqual({ value: String(age === 900 ? now : now - age) });
   });
 
+  it.each(["legacy", "unknown"] as const)("rebuilds %s-quality cached heavy sections within the reuse window", async (quality) => {
+    const now = 1_800_000_000;
+    const { db, sqlite } = persistedPulseDb();
+    const initial = await publishTelegramPulseSnapshotWithOutcome(db, now);
+    expect(initial.pulse.quality.status).toBe("complete");
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'telegram:pulse:snapshot'").run(
+      JSON.stringify({
+        ...initial.pulse,
+        quality: quality === "legacy" ? undefined : { status: "unknown", unavailableFields: [] },
+      }),
+    );
+    const reads = observePulseReads(sqlite);
+    const observedDb = createSqliteD1(sqlite);
+
+    const recovered = await publishTelegramPulseSnapshotWithOutcome(observedDb, now + 899);
+
+    expect(recovered.heavySectionsRecomputed).toBe(true);
+    expectHeavyReads(reads.sql);
+    expect(recovered.pulse.quality).toEqual({ status: "complete", unavailableFields: [] });
+    expect(recovered.status).toBe("ok");
+  });
+
+  it("prefers unavailable rebuilt metrics over unknown cached quality", async () => {
+    const now = 1_800_000_000;
+    const { db, sqlite } = persistedPulseDb();
+    const initial = await publishTelegramPulseSnapshotWithOutcome(db, now);
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'telegram:pulse:snapshot'").run(
+      JSON.stringify({
+        ...initial.pulse,
+        quality: { status: "unknown", unavailableFields: ["topCoins"] },
+      }),
+    );
+    let injected = false;
+    const failingDb = createSqliteD1(sqlite, { onAll(sql) {
+      if (sql.includes("GROUP BY stablecoin_id")) {
+        injected = true;
+        throw new Error("top coins unavailable");
+      }
+    } });
+
+    const rebuilt = await publishTelegramPulseSnapshotWithOutcome(failingDb, now + 899);
+
+    expect(injected).toBe(true);
+    expect(rebuilt.heavySectionsRecomputed).toBe(true);
+    expect(rebuilt.pulse.quality).toEqual({ status: "partial", unavailableFields: ["topCoins"] });
+    expect(rebuilt.status).toBe("degraded");
+  });
+
+  it("does not launder unknown heavy-section provenance through pending-count failure and recovery", async () => {
+    const now = 1_800_000_000;
+    const { db, sqlite } = persistedPulseDb();
+    const initial = await publishTelegramPulseSnapshotWithOutcome(db, now);
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'telegram:pulse:snapshot'").run(
+      JSON.stringify({ ...initial.pulse, quality: undefined }),
+    );
+    const reads = observePulseReads(sqlite);
+    const observedDb = createSqliteD1(sqlite);
+    reads.pendingUnavailable = true;
+
+    const failedPending = await publishTelegramPulseSnapshotWithOutcome(observedDb, now + 300);
+
+    expect(failedPending.heavySectionsRecomputed).toBe(true);
+    expectHeavyReads(reads.sql);
+    expect(failedPending.pulse.pendingDeliveries).toBeNull();
+    expect(failedPending.pulse.quality).toEqual({
+      status: "partial",
+      unavailableFields: ["pendingDeliveries"],
+    });
+    expect(failedPending.status).toBe("degraded");
+    const rebuiltReads = [...reads.sql];
+    reads.sql.length = 0;
+    reads.pendingUnavailable = false;
+
+    const recovered = await publishTelegramPulseSnapshotWithOutcome(observedDb, now + 600);
+
+    expect(recovered.heavySectionsRecomputed).toBe(false);
+    expect(recovered.pulse.quality).toEqual({ status: "complete", unavailableFields: [] });
+    expect(recovered.status).toBe("ok");
+    expectHeavyReads(rebuiltReads);
+    expect(reads.sql.some((sql) => sql.includes("FROM telegram_pending_alerts"))).toBe(true);
+    expect(reads.sql.some((sql) => sql.includes("GROUP BY stablecoin_id"))).toBe(false);
+    expect(reads.sql.some((sql) => sql.includes("WHERE day >= ? AND day < ?"))).toBe(false);
+    expect(reads.sql.some((sql) => sql.includes("FROM telegram_usage_daily"))).toBe(false);
+    expect(reads.sql.some((sql) => sql.includes("stage = 'first_mutation' AND outcome = 'success'"))).toBe(false);
+  });
+
   it("preserves unavailable heavy metrics on reuse and clears quality after recovery", async () => {
     const now = 1_800_000_000;
     const { db, sqlite } = persistedPulseDb();
@@ -718,6 +836,24 @@ describe("publishTelegramPulseSnapshotWithOutcome", () => {
       (entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === PULSE_SNAPSHOT_KEY,
     );
     expect(snapshotWrites).toHaveLength(1);
+  });
+
+  it("degrades a skipped publication when the retained legacy pulse lacks quality", async () => {
+    const newerAt = 1_800_000_000;
+    const { db, sqlite } = persistedPulseDb();
+    const legacyPulse = { ...buildCachedPulse(newerAt), quality: undefined };
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      PULSE_SNAPSHOT_KEY,
+      JSON.stringify(legacyPulse),
+      newerAt,
+    );
+
+    const outcome = await publishTelegramPulseSnapshotWithOutcome(db, newerAt - 60);
+
+    expect(outcome.snapshotPublished).toBe(false);
+    expect(outcome.staleWriteSkipped).toBe(true);
+    expect(outcome.pulse.quality).toEqual({ status: "unknown", unavailableFields: [] });
+    expect(outcome.status).toBe("degraded");
   });
 
   it("does not let an older pulse generation replace a newer publication", async () => {

@@ -48,3 +48,62 @@ it("rejects static template Worker imports", async () => {
   const [result] = await eslint.lintText('export const load = () => import(`../../worker/src/lib/auth`);', { filePath: "src/lib/__boundary-fixture.ts" });
   expect(result.messages.some((message) => message.ruleId === "pharos/frontend-dynamic-import-boundaries")).toBe(true);
 });
+
+describe("ESLint shared alias boundary", () => {
+  const callerPaths = [
+    ["src/lib/__boundary-fixture.ts", "../../shared/lib/sha256"],
+    ["worker/src/lib/__boundary-fixture.ts", "../../../shared/lib/sha256"],
+    ["functions/__boundary-fixture.ts", "../shared/lib/sha256"],
+  ];
+
+  const importForms = [
+    ['import "{{specifier}}";'],
+    ['export { sha256Hex } from "{{specifier}}";'],
+    ['export * from "{{specifier}}";'],
+    ['export const load = () => import("{{specifier}}");'],
+    ["export const load = () => import(`{{specifier}}`);"],
+  ];
+
+  describe.each(callerPaths)("caller %s", (filePath, specifier) => {
+    it.each(importForms)("rejects relative root-shared imports in %s", async (source) => {
+      const [result] = await eslint.lintText(source.replace("{{specifier}}", specifier), { filePath });
+      expect(result.messages.filter((message) => message.ruleId === "pharos/require-shared-alias")).toMatchObject([
+        { severity: 2, messageId: "alias" },
+      ]);
+    });
+
+    it.each(importForms)("permits the shared alias in %s", async (source) => {
+      const [result] = await eslint.lintText(source.replace("{{specifier}}", "@shared/lib/sha256"), { filePath });
+      expect(result.messages.filter((message) => message.severity === 2)).toEqual([]);
+    });
+  });
+
+  it("resolves normalized paths instead of guessing shared path patterns", async () => {
+    const [result] = await eslint.lintText('export * from "../lib/../../shared/lib/sha256";', {
+      filePath: "src/lib/__boundary-fixture.ts",
+    });
+    expect(result.messages.filter((message) => message.ruleId === "pharos/require-shared-alias")).toMatchObject([
+      { severity: 2, messageId: "alias" },
+    ]);
+  });
+
+  it.each([
+    ["shared/lib/__boundary-fixture.ts", "./sha256"],
+    ["shared/lib/__boundary-fixture.ts", "../types"],
+    ["src/lib/coverage/__boundary-fixture.ts", "./shared"],
+    ["worker/src/cron/dex-discovery/__boundary-fixture.ts", "../shared/capped-delete"],
+    ["functions/local/__boundary-fixture.ts", "../shared/helper"],
+    ["src/lib/__boundary-fixture.ts", "../../shared-other/helper"],
+    ["scripts/__boundary-fixture.ts", "../shared/lib/sha256"],
+  ])("permits relative imports from %s to %s", async (filePath, specifier) => {
+    const [result] = await eslint.lintText(`export * from "${specifier}";`, { filePath });
+    expect(result.messages.filter((message) => message.severity === 2)).toEqual([]);
+  });
+
+  it("retains the alias ban within production shared/lib", async () => {
+    const [result] = await eslint.lintText('export { sha256Hex } from "@shared/lib/sha256";', {
+      filePath: "shared/lib/__boundary-fixture.ts",
+    });
+    expect(result.messages.some((message) => message.ruleId === "no-restricted-imports" && message.severity === 2)).toBe(true);
+  });
+});

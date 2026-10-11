@@ -275,7 +275,19 @@ async function fetchCurrentCoinGeckoMarketCaps(
   }
 
   try {
-    return JSON.parse(result.body) as Record<string, CoinGeckoCurrentMcapRow>;
+    const payload: unknown = JSON.parse(result.body);
+    if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "sync-stablecoins.coingecko-current-market-cap-unavailable",
+        job: "sync-stablecoins",
+        message: "CoinGecko current market-cap payload is not an object",
+        metadata: { reason: "non-object-root" },
+      });
+      return {};
+    }
+    return payload as Record<string, CoinGeckoCurrentMcapRow>;
   } catch (error) {
     logWorkerEvent({
       scope: "lib",
@@ -549,8 +561,9 @@ const HISTORY_BUCKETS = [
  * current (with hysteresis) and between the DL baseline and hard ceiling at every bucket DL also observed. When
  * admitted, every published aggregate bucket comes from the single CoinGecko series (never a per-bucket
  * max that splices providers into a flow); a bucket DL did not observe stays absent because its
- * supplemental contribution cannot be bounded. The missing chain carries only the nonnegative remainder,
- * so no amount is counted twice, and the row records the retained DL facts as provenance.
+ * supplemental contribution cannot be bounded. Historical remainder attribution additionally requires
+ * every existing chain to observe and conserve that bucket to DL; otherwise the missing chain publishes
+ * null with provenance. Observed chains are never scaled, and the aggregate admission stays unchanged.
  */
 function applySingleMissingChainGap(
   candidate: MissingChainSupplyGapCandidate,
@@ -600,12 +613,18 @@ function applySingleMissingChainGap(
   }
 
   const publishedHistory: Record<HistoryBucketKey, number | null> = { day: null, week: null, month: null };
-  const remainderHistory: Record<HistoryBucketKey, number | undefined> = { day: undefined, week: undefined, month: undefined };
-  for (const { key } of HISTORY_BUCKETS) {
+  const remainderHistory: Record<HistoryBucketKey, number | null> = { day: null, week: null, month: null };
+  const withheldHistoricalBuckets: HistoryBucketKey[] = [];
+  const withheldHistoricalBucketReasons: NonNullable<SupplyGapFillProvenance["withheldHistoricalBucketReasons"]> = {};
+  for (const { key, field } of HISTORY_BUCKETS) {
     const cgValue = totals[key];
     if (cgValue == null) return { reconciledCurrent: null, rejection: "history-incomplete" };
     const dlValue = dlHistory[key];
-    if (dlValue == null) continue;
+    if (dlValue == null) {
+      withheldHistoricalBuckets.push(key);
+      withheldHistoricalBucketReasons[key] = "history-unobserved";
+      continue;
+    }
     if (dlValue <= 0 || cgValue / dlValue > COINGECKO_GAP_FILL_POLICY.maxRatio) {
       return { reconciledCurrent: null, rejection: "history-ratio-above-bound" };
     }
@@ -613,7 +632,27 @@ function applySingleMissingChainGap(
       return { reconciledCurrent: null, rejection: "history-below-baseline" };
     }
     publishedHistory[key] = cgValue;
-    remainderHistory[key] = cgValue - dlValue;
+    let attributedHistory = 0;
+    let allChainsObserved = true;
+    for (const row of canonicalRows) {
+      const value = row[field];
+      if (value == null) {
+        allChainsObserved = false;
+        break;
+      }
+      attributedHistory += value;
+    }
+    const historyTolerance = Math.max(0.01, dlValue * 1e-6);
+    if (
+      allChainsObserved
+      && Number.isFinite(attributedHistory)
+      && Math.abs(attributedHistory - dlValue) <= historyTolerance
+    ) {
+      remainderHistory[key] = cgValue - dlValue;
+    } else {
+      withheldHistoricalBuckets.push(key);
+      withheldHistoricalBucketReasons[key] = allChainsObserved ? "nonconserving" : "history-unobserved";
+    }
   }
 
   const remainderCurrent = totals.current - dlCurrent;
@@ -626,8 +665,7 @@ function applySingleMissingChainGap(
   const chainCirculating = candidate.asset.chainCirculating ?? {};
   const remainderRow: Record<string, unknown> = { chainId, current: remainderCurrent };
   for (const { key, field } of HISTORY_BUCKETS) {
-    const remainder = remainderHistory[key];
-    if (remainder !== undefined) remainderRow[field] = remainder;
+    remainderRow[field] = remainderHistory[key];
   }
   chainCirculating[chainLabel] = remainderRow;
   candidate.asset.chainCirculating = chainCirculating;
@@ -648,6 +686,7 @@ function applySingleMissingChainGap(
     ratio,
     maxRatio: COINGECKO_GAP_FILL_POLICY.maxRatio,
     observedAt,
+    ...(withheldHistoricalBuckets.length > 0 ? { withheldHistoricalBuckets, withheldHistoricalBucketReasons } : {}),
   };
   return { reconciledCurrent: totals.current };
 }

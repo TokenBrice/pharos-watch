@@ -37,7 +37,11 @@ describe("lossless Worker full catalog generator", () => {
       expect(Buffer.from(decode(row), "utf8").length).toBe(row[1]);
       expect(Buffer.from(row[2], "base64").subarray(4, 8)).toEqual(Buffer.alloc(4));
     }
-    expect(buildWorkerStablecoinCatalog([])).toEqual({ version: 1, maxUncompressedBytes: 0, coins: [] });
+  });
+
+  it("rejects an empty source catalog before building or rendering an artifact", () => {
+    expect(() => buildWorkerStablecoinCatalog([])).toThrow("Cannot generate an empty Worker stablecoin catalog");
+    expect(() => renderWorkerStablecoinCatalog([])).toThrow("Cannot generate an empty Worker stablecoin catalog");
   });
 
   it("matches every canonical source record and serialized hash without lifecycle normalization", () => {

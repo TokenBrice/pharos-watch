@@ -34,6 +34,18 @@ describe("Worker full stablecoin catalog", () => {
     }
   });
 
+  it("rejects empty catalogs and zero-size manifests before decoding", () => {
+    expect(() => decodeWorkerStablecoinCatalog({
+      version: 1, maxUncompressedBytes: 0, coins: [],
+    })).toThrow("Invalid packed stablecoin catalog manifest");
+    expect(() => decodeWorkerStablecoinCatalog({
+      version: 1, maxUncompressedBytes: 1, coins: [],
+    })).toThrow("Invalid packed stablecoin catalog manifest");
+    expect(() => decodeWorkerStablecoinCatalog({
+      ...fixture({ id: "fixture" }), maxUncompressedBytes: 0,
+    })).toThrow("Invalid packed stablecoin catalog manifest");
+  });
+
   it("rejects identity and inflate-length mismatches before publishing a catalog", () => {
     expect(() => decodeWorkerStablecoinCatalog(fixture({ id: "wrong" }))).toThrow("identity mismatch");
     const invalidSize = fixture({ id: "fixture" });

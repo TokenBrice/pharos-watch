@@ -19,6 +19,7 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 - Use named scratch D1 databases and the remote-target flag for rehearsal. Do not validate a production squash only against the local emulator.
 - Use the latest squash commit `5ea2d360f` as the implementation reference, then re-check current Wrangler behavior before executing.
 - For every existing target (including preview databases and Time Travel restores), read `SELECT name FROM d1_migrations WHERE name = '0000_baseline.sql';` and run `wrangler d1 migrations list <database> --remote` against the proposed tree before any apply. Require the exact replacement-baseline filename in the ledger and no pending baseline. Absorbed migration names do not satisfy this prerequisite. If either check fails, stop for a separately reviewed baseline-adoption plan; do not insert a ledger row or replay the baseline as an improvised fix.
+- The deploy workflow enforces adoption immediately before its shared-D1 apply with `npm run check:remote-d1-baseline-ledger`, comparing the local migration tree to strict read-only `wrangler d1 execute --remote --json` table/ledger receipts (Wrangler's pending-only `migrations list` initializes the ledger and has no JSON mode), failing on command/parse errors or a pending baseline on an existing database, and permitting the baseline only for a fresh database with an absent/empty ledger and no application tables.
 
 ## Procedure
 

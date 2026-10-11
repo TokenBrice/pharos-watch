@@ -20,6 +20,13 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
 const envelope = V9_CANDIDATE_POLICY_V1;
 
+describe("redemption/exit view table ownership", () => {
+  it("keeps only modeled confidence factors in the shared view tables", () => {
+    expect(Object.keys(EXIT_ROUTE_SCORING_TABLES).filter((key) => key.endsWith("ConfidenceFactors")))
+      .toEqual(["modeledConfidenceFactors"]);
+  });
+});
+
 describe("the one exit request, two denominators", () => {
   it.each([
     [1_000, 100_000, 100_000],

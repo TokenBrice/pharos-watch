@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   AS_OF_SEC,
   SOURCE_FINGERPRINTS,
@@ -25,6 +25,7 @@ import { bridgeControl, bridgeSupplyRow, commonDomainFixture, staleBridgeStatus,
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
 import { CompiledV9FactSetV3Schema } from "../../types/safety-score-v9-facts";
 import { buildV9EvidenceGapQueue } from "../safety-score-v9/evidence-gap-queue";
+import * as backingArchetypes from "../safety-score-v9/archetypes";
 
 function mutableNativeFactSet() {
   // Schema parsing creates an authoring DTO; structuredClone preserves compiled aliasing.
@@ -199,30 +200,103 @@ describe("Safety Score v9 fact evaluation", () => {
     }));
     expect(evaluated.trace.boundedUncertaintyAttribution.flatMap((row) => row.causeGapIds ?? [])).not.toContain(decoy.gapId);
   });
-  it("keeps floating-point reserve concentration shares within the public percentage contract", () => {
+  it.each([
+    { label: "in-range", cashWeights: [0.5, 0.1, 0.013], betaWeight: 0.118, remainderWeight: 0.269, clamped: false },
+    { label: "floating-point tail", cashWeights: [0.7020000000000001, 0.17600000000000002, 0.004], betaWeight: 0.11800000000000001, remainderWeight: 0, clamped: true },
+  ])("preserves the backing structural percentage contract for $label shares", ({ cashWeights, betaWeight, remainderWeight, clamped }) => {
     const input = coreFixture();
     const alpha = input.assets.find((asset) => asset.assetId === "alpha")! as unknown as V9AssetFactsV2;
     const cash = alpha.reserveExposures[0]!;
     const beta = alpha.reserveExposures[1]!;
     const sharedCustodian = [{ kind: "reserve-custodian" as const, key: "custodian:shared" }];
-    const betaWeight = 0.11800000000000001;
     alpha.reserveExposures = [
-      { ...cash, exposureKey: "exposure:base", weight: 0.7020000000000001, failureDomains: sharedCustodian },
-      { ...cash, exposureKey: "exposure:avalanche", weight: 0.17600000000000002, failureDomains: sharedCustodian },
+      { ...cash, exposureKey: "exposure:base", weight: cashWeights[0]!, failureDomains: sharedCustodian },
+      { ...cash, exposureKey: "exposure:avalanche", weight: cashWeights[1]!, failureDomains: sharedCustodian },
       { ...beta, weight: betaWeight, failureDomains: sharedCustodian },
-      { ...cash, exposureKey: "exposure:katana", weight: 0.004, failureDomains: sharedCustodian },
+      { ...cash, exposureKey: "exposure:katana", weight: cashWeights[2]!, failureDomains: sharedCustodian },
+      ...(remainderWeight > 0 ? [{ ...cash, exposureKey: "exposure:remainder", weight: remainderWeight }] : []),
     ];
     alpha.dependencies.mappedLiveReserveWeight = betaWeight;
     alpha.dependencies.edges = alpha.dependencies.edges.map((edge) =>
       edge.dependencyType === "collateral" ? { ...edge, weight: betaWeight } : edge,
     );
+    const factSet = compileNativeV3FactSet(input);
+    const evaluateBacking = backingArchetypes.evaluateV9Backing;
+    // Compilation can remove the source weights' float tail. Inject arithmetic
+    // noise into the backing result that the structural projection actually reads.
+    const backing = clamped ? vi.spyOn(backingArchetypes, "evaluateV9Backing").mockImplementation((asset, review, policy) => {
+      const result = evaluateBacking(asset, review, policy);
+      return asset.assetId !== "alpha" ? result : {
+        ...result,
+        structuralReasons: result.structuralReasons.map((reason) =>
+          reason.pathKey === "common-mode:reserve-custodian:custodian:shared"
+            ? { ...reason, materialShare: 1.0000000000308 }
+            : reason,
+        ),
+      };
+    }) : null;
 
-    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
-    const signal = evaluated.assets
-      .find((asset) => asset.assetId === "alpha")!
-      .scoreInput.pillars.backing.structuralSignals.find((item) => item.kind === "unsafe-backing");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const evaluated = evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1)
+        .assets.find((asset) => asset.assetId === "alpha")!;
+      const reason = evaluated.backing.structuralReasons.find((item) =>
+        item.pathKey === "common-mode:reserve-custodian:custodian:shared",
+      )!;
+      const signal = evaluated.scoreInput.pillars.backing.structuralSignals.find((item) =>
+        item.failureDomainKeys?.includes("reserve-custodian:custodian:shared"),
+      );
 
-    expect(signal?.materialSharePct).toBe(100);
+      if (clamped) {
+        expect(reason.materialShare).toBeGreaterThan(1);
+        expect(signal?.materialSharePct).toBe(100);
+        expect(warn).toHaveBeenCalledWith("safety_score_v9_structural_signal_percentage_clamped", {
+          assetId: "alpha",
+          fieldPath: "structuralSignals[*].materialSharePct",
+          rawValue: reason.materialShare! * 100,
+          arithmetic: `${reason.materialShare} * 100`,
+        });
+      } else {
+        expect(reason.materialShare).toBeCloseTo(0.731);
+        expect(signal?.materialSharePct).toBe(reason.materialShare! * 100);
+        expect(warn).not.toHaveBeenCalledWith("safety_score_v9_structural_signal_percentage_clamped", expect.anything());
+      }
+    } finally {
+      backing?.mockRestore();
+      warn.mockRestore();
+    }
+  });
+  it.each([-0.01, 1.01])("rejects an out-of-range backing structural share (%s) at the asset quarantine boundary", (materialShare) => {
+    const factSet = compileNativeV3FactSet(coreFixture());
+    const evaluateBacking = backingArchetypes.evaluateV9Backing;
+    // Validated facts cannot admit these shares. Inject a defective evaluator
+    // result to prove the projection does not hide it behind a generic clamp.
+    const backing = vi.spyOn(backingArchetypes, "evaluateV9Backing").mockImplementation((asset, review, policy) => {
+      const result = evaluateBacking(asset, review, policy);
+      return asset.assetId !== "alpha" ? result : {
+        ...result,
+        structuralReasons: [...result.structuralReasons, {
+          kind: "unsafe-backing",
+          severity: "high",
+          responsibility: "measured-adverse",
+          pathKey: "fixture:out-of-range",
+          materialShare,
+          ceiling: policy.policy.semantic.backing.structural.unsafeExposureQuality,
+          evidenceRefIds: [],
+          failureDomains: [],
+        }],
+      };
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      expect(() => evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1)).toThrowError(
+        /asset alpha evaluation failed at structuralSignals\[\d+\]\.materialSharePct/,
+      );
+      expect(warn).not.toHaveBeenCalledWith("safety_score_v9_structural_signal_percentage_clamped", expect.anything());
+    } finally {
+      backing.mockRestore();
+      warn.mockRestore();
+    }
   });
   it("transports a technical serial parent gap without manufacturing NR or parent quality", () => {
     const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();

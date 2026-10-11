@@ -15,13 +15,22 @@ export type CronGroupKey =
   | "daily"
   | "other";
 
+interface CronScheduleDefinition {
+  schedule: string;
+  triggerSchedules?: readonly string[];
+  intervalSec: number;
+  offsetSec: number;
+  // Existing measured placement policy; reclassification requires workload review.
+  cpuPlacement: "hourly-physical-required" | "sub-hourly-allowed";
+}
+
 /**
  * Cron expression + trigger topology for each lane. Cadence lengths and slot
  * offsets are imported from `cron-cadences.ts` (the Safety Score v9 evaluator
  * pins that module) so each number is authored once; this table stays the
  * ADR-7 schedule authority.
  */
-const CRON_SCHEDULE_DEFINITIONS = {
+export const CRON_SCHEDULE_DEFINITIONS = {
   // Paired hourly physical triggers, not "*/15 * * * *". Cloudflare caps Cron
   // expressions with intervals below one hour at 30 seconds of CPU time, and
   // this lane's sync-stablecoins leg parses the full DefiLlama payload and runs
@@ -32,6 +41,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // :30/:45 grid and the same logical 900s cadence while qualifying each
   // invocation for the 15-minute hourly CPU class.
   quarterHourly: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "*/15 * * * *",
     triggerSchedules: ["0 * * * *", "15 * * * *", "30 * * * *", "45 * * * *"],
     ...CRON_SCHEDULE_CADENCES.quarterHourly,
@@ -47,6 +57,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // single sub-hourly expression the 30-second class killed the isolate on ~29% of
   // slots (measured 2026-08-21).
   v9SupplyAttributionOffset: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "8,23,38,53 * * * *",
     triggerSchedules: ["8 * * * *", "23 * * * *", "38 * * * *", "53 * * * *"],
     ...CRON_SCHEDULE_CADENCES.v9SupplyAttributionOffset,
@@ -59,6 +70,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // Worker service may still reuse a warm isolate, so production observation is
   // required.
   depegResolverOffset: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "13,28,43,58 * * * *",
     triggerSchedules: ["13 * * * *", "28 * * * *", "43 * * * *", "58 * * * *"],
     ...CRON_SCHEDULE_CADENCES.depegResolverOffset,
@@ -68,6 +80,7 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // preserves its :22/:52 cadence and slot identity, while the two hourly
   // aliases prevent platform termination in Cloudflare's 30-second class.
   v9PublicationOffset: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "22,52 * * * *",
     triggerSchedules: ["22 * * * *", "52 * * * *"],
     ...CRON_SCHEDULE_CADENCES.v9PublicationOffset,
@@ -78,28 +91,32 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // data-invariant-canary and cron-staleness-watchdog were starved for stretches of
   // 75 and 90 minutes, blinding the very lanes that detect staleness.
   statusSelfCheckOffset: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "9,24,39,54 * * * *",
     triggerSchedules: ["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"],
     ...CRON_SCHEDULE_CADENCES.statusSelfCheckOffset,
   },
-  sixHourlyBlacklist: { schedule: "3 */6 * * *", ...CRON_SCHEDULE_CADENCES.sixHourlyBlacklist },
+  sixHourlyBlacklist: { cpuPlacement: "sub-hourly-allowed", schedule: "3 */6 * * *", ...CRON_SCHEDULE_CADENCES.sixHourlyBlacklist },
   halfHourlyMintBurnCritical: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "4,34 * * * *",
     triggerSchedules: ["4 * * * *", "34 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnCritical,
   },
-  twoHourlyDexDiscovery: { schedule: "6 */2 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
+  twoHourlyDexDiscovery: { cpuPlacement: "sub-hourly-allowed", schedule: "6 */2 * * *", ...CRON_SCHEDULE_CADENCES.twoHourlyDexDiscovery },
   // Keep the minute-long extended scan clear of the DEX/V9 publication chain.
   // The logical cadence remains half-hourly, but each physical trigger is an
   // hourly expression so Cloudflare grants the hourly Cron CPU class. The
   // combined sub-hourly expression repeatedly exhausted its 30-second CPU
   // class and was reconciled as platform-abandoned in production on 2026-09-01.
   halfHourlyMintBurnExtended: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "18,48 * * * *",
     triggerSchedules: ["18 * * * *", "48 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended,
   },
   halfHourlyMeasuredExecution: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "0,30 * * * *",
     // Keep the logical :00/:30 evidence slots, but dispatch five minutes later
     // so this RPC-heavy graph does not overlap the rich quarter-hourly graph in
@@ -110,21 +127,24 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // U-DEX-CAPACITY: a second bounded active EVM opportunity between the
   // original slots. Hourly aliases retain the CPU class and 3/6 peak.
   halfHourlyMeasuredExecutionSupplemental: {
+    cpuPlacement: "hourly-physical-required",
     schedule: "15,45 * * * *",
     triggerSchedules: ["20 * * * *", "50 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyMeasuredExecutionSupplemental,
   },
   halfHourlyOffset: {
+    cpuPlacement: "sub-hourly-allowed",
     schedule: "10 * * * *",
     ...CRON_SCHEDULE_CADENCES.halfHourlyOffset,
   },
   halfHourlyChartsOffset: {
+    cpuPlacement: "sub-hourly-allowed",
     schedule: "16,46 * * * *",
     triggerSchedules: ["16 * * * *", "46 * * * *"],
     ...CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset,
   },
-  dewsPsiOffset: { schedule: "26,56 * * * *", ...CRON_SCHEDULE_CADENCES.dewsPsiOffset },
-  fourHourlyReserveSync: { schedule: "11 */4 * * *", ...CRON_SCHEDULE_CADENCES.fourHourlyReserveSync },
+  dewsPsiOffset: { cpuPlacement: "sub-hourly-allowed", schedule: "26,56 * * * *", ...CRON_SCHEDULE_CADENCES.dewsPsiOffset },
+  fourHourlyReserveSync: { cpuPlacement: "sub-hourly-allowed", schedule: "11 */4 * * *", ...CRON_SCHEDULE_CADENCES.fourHourlyReserveSync },
   // Single hourly expression on purpose. Cloudflare caps Cron expressions with
   // intervals below one hour at 30 seconds of CPU time, and the yield source and
   // publication graph needs several minutes of runtime, so a twice-hourly expression
@@ -135,32 +155,36 @@ const CRON_SCHEDULE_DEFINITIONS = {
   // minutes after the :52 V9 publication (recent production maximum: 56s), so
   // normal yield runs finish before the active safety identity rolls over.
   // See docs/yield-intelligence-operations.md.
-  hourlyYieldSync: { schedule: "55 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
+  hourlyYieldSync: { cpuPlacement: "sub-hourly-allowed", schedule: "55 * * * *", ...CRON_SCHEDULE_CADENCES.hourlyYieldSync },
   fourHourlyYieldSupplemental: {
+    cpuPlacement: "sub-hourly-allowed",
     schedule: "25 */4 * * *",
     ...CRON_SCHEDULE_CADENCES.fourHourlyYieldSupplemental,
   },
   fiveMinuteTelegramAlerts: {
+    cpuPlacement: "sub-hourly-allowed",
     schedule: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *",
     ...CRON_SCHEDULE_CADENCES.fiveMinuteTelegramAlerts,
   },
   fiveMinuteReserveRecovery: {
+    cpuPlacement: "sub-hourly-allowed",
     schedule: "1,6,11,16,21,26,31,36,41,46,51,56 * * * *",
     ...CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery,
   },
-  digestTriggerPoll: { schedule: "*/5 * * * *", ...CRON_SCHEDULE_CADENCES.digestTriggerPoll },
+  digestTriggerPoll: { cpuPlacement: "sub-hourly-allowed", schedule: "*/5 * * * *", ...CRON_SCHEDULE_CADENCES.digestTriggerPoll },
   // Preserve the 03:00 logical daily slot while moving its physical invocation
   // off the quarter-hourly + measured-execution :00 collision.
   daily0300Utc: {
+    cpuPlacement: "sub-hourly-allowed",
     schedule: "0 3 * * *",
     triggerSchedules: ["3 3 * * *"],
     ...CRON_SCHEDULE_CADENCES.daily0300Utc,
   },
-  daily0800Utc: { schedule: "0 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0800Utc },
-  daily0805Utc: { schedule: "5 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0805Utc },
-  daily0810Utc: { schedule: "10 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0810Utc },
-  monthlyYieldAudit: { schedule: "0 6 1 * *", ...CRON_SCHEDULE_CADENCES.monthlyYieldAudit },
-} as const;
+  daily0800Utc: { cpuPlacement: "sub-hourly-allowed", schedule: "0 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0800Utc },
+  daily0805Utc: { cpuPlacement: "sub-hourly-allowed", schedule: "5 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0805Utc },
+  daily0810Utc: { cpuPlacement: "sub-hourly-allowed", schedule: "10 8 * * *", ...CRON_SCHEDULE_CADENCES.daily0810Utc },
+  monthlyYieldAudit: { cpuPlacement: "sub-hourly-allowed", schedule: "0 6 1 * *", ...CRON_SCHEDULE_CADENCES.monthlyYieldAudit },
+} as const satisfies Record<keyof typeof CRON_SCHEDULE_CADENCES, CronScheduleDefinition>;
 
 export const CRON_CONNECTION_BUDGET = {
   maxPerTrigger: 6,
@@ -187,10 +211,13 @@ export const CRON_CONNECTION_BUDGET = {
  * burn cadence for one net expression, bringing the topology to 39. ADR-23
  * pairs the extended mint/burn cadence after same-version production runs
  * proved the same CPU-class fault, bringing the topology to 40 without adding
- * logical work, fetch surface, or connection pressure. The P2-09 topology
- * review applies the same hourly-alias correction to the RPC-heavy measured-
- * execution lane, bringing the topology to 41 without changing logical work,
- * fetch surface, or connection pressure. The binding constraints remain the
+ * logical work, fetch surface, or connection pressure.
+ *
+ * Dated note (2026-09-17, P2-09, 80aa18d0b): the hourly-alias split of the
+ * RPC-heavy measured-execution lane moved the physical count from 40 to 41.
+ * This was accounting-only: no added logical work, fetch surface, or connection
+ * pressure. Per ADR-10, such alias/accounting-only changes are recorded as a
+ * dated note here, not a new ADR. The binding constraints remain the
  * fetch-capable-entry and per-trigger connection limits below, plus
  * Cloudflare's 250-Cron-Triggers-per-account platform ceiling.
  */

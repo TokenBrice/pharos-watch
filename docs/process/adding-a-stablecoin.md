@@ -831,7 +831,7 @@ After all authorized specialist edits land, the coordinator owns the single gene
 - high-value active additions have either a reviewed `mintAuthority` profile or a documented intentional gap
 - the source inputs and applicable Phase 4b test snapshots are ready for Phase 4a/4c generation
 - downstream coverage decision notes cover every Phase 5 branch
-- every per-coin or per-chain map this addition touches (native-peg currency, canonical mint/burn chain, Bluechip slug, redemption-backstop config) is derived from the registry or covered by a registry-iterating test that fails on the next unmapped addition — rule R5, ADR-32 in [../architecture.md](../architecture.md#architectural-decision-records); a "keep in sync" comment is not a mechanism
+- every per-coin or per-chain map this addition touches (native-peg currency, canonical mint/burn chain, Bluechip slug, redemption-backstop config) is derived from the registry or covered by a registry-iterating test that fails on the next unmapped addition — rule R5, ADR-32 in [../architecture.md](../architecture.md#adr-32); a "keep in sync" comment is not a mechanism
 
 For a normal stablecoin addition, generate the working-tree projections once and run focused checks:
 
