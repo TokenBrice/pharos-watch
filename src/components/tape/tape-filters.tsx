@@ -77,15 +77,15 @@ interface TapeFiltersProps {
   onClearCoin?: () => void;
 }
 
-// Wire-service chip primitives (see docs/tape-page.md Aesthetic Lock).
-// Square borders, mono uppercase, active state via foreground color.
+// Filter chips use the standard control pill (sans, rounded); only the event
+// stream below is the mono wire-service surface (see docs/tape-page.md).
 const CHIP_BASE =
-  "pharos-focus-ring inline-flex min-h-11 items-center border px-3 py-2 text-xs uppercase tracking-wide transition-colors sm:min-h-0 sm:px-2 sm:py-0.5";
-const CHIP_INACTIVE = "border-border/50 text-muted-foreground hover:border-foreground/40 hover:text-foreground";
-const CHIP_ACTIVE = "border-foreground bg-foreground/10 text-foreground";
+  "pharos-focus-ring pharos-control-pill min-h-11 px-3 py-1.5 font-sans sm:min-h-8";
+const CHIP_INACTIVE = "";
+const CHIP_ACTIVE = "pharos-control-pill-active";
 
 const COMBOBOX_TRIGGER =
-  "min-h-11 border border-border/50 px-3 py-2 text-xs uppercase tracking-wide text-muted-foreground hover:border-foreground/40 hover:text-foreground sm:min-h-0 sm:px-2 sm:py-0.5";
+  "min-h-11 rounded-full border border-border/60 px-3 py-1.5 font-sans text-xs sm:min-h-8";
 
 // `q` is server-driven (`/api/events?q=`) so each keystroke would refetch.
 // Debounce 200ms locally and only push to the URL after the user stops
@@ -157,7 +157,7 @@ export function TapeFilters({ state, setParam, coin, onClearCoin }: TapeFiltersP
         <button
           type="button"
           onClick={() => setParam("type", "")}
-          className={`${CHIP_BASE} border-dashed ${CHIP_INACTIVE}`}
+          className={`${CHIP_BASE} border-dashed`}
         >
           Clear classes
         </button>

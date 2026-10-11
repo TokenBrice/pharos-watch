@@ -104,6 +104,14 @@
   pointer-events: none;
 }
 
+/* Phone widths: the lighthouse lands behind the headline, so it recedes to a
+   faint backdrop rather than competing with the copy. */
+@media (max-width: 639px) {
+  .pharos-night-scene {
+    opacity: 0.28;
+  }
+}
+
 .pharos-night-scene svg {
   display: block;
   width: 100%;
