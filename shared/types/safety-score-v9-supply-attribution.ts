@@ -108,7 +108,7 @@ const ApiAmountReadSchema = z.strictObject({
   generationPath: z.array(CanonicalTextSchema).min(1),
 });
 /** Source-reviewed non-proxy vault; its runtime hash includes immutable bindings. */
-export const Erc4626ConversionReadSchema = z.strictObject({
+const Erc4626ConversionReadSchema = z.strictObject({
   kind: z.literal("evm-erc4626-convert-to-assets"), sourceId: CanonicalTextSchema,
   chainId: CanonicalChainIdSchema, vaultAddress: z.string().regex(/^0x[0-9a-f]{40}$/),
   vaultRuntimeCodeSha256: Sha256Schema, immutable: z.literal(true),
@@ -117,7 +117,6 @@ export const Erc4626ConversionReadSchema = z.strictObject({
 }).superRefine((source, ctx) => {
   if (CHAIN_META[source.chainId]?.type !== "evm") ctx.addIssue({ code: "custom", message: "ERC-4626 conversion requires an exact EVM chain" });
 });
-export type Erc4626ConversionRead = z.infer<typeof Erc4626ConversionReadSchema>;
 // Reviewed enumerable pending queue: count and indexed ids prove coverage, not an
 // escrow-minus-receipts estimate. Amounts are raw canonical token units.
 const EvmPendingStateReadSchema = z.strictObject({

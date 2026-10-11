@@ -865,7 +865,7 @@ function buildWrapperExitDimensions(
     withdrawalTerms = reviewedWrapperFact(context,
       worstWrapperRisk([...termRisks,
         ...(withdrawalTerms.assessment === null ? [] : [withdrawalTerms.assessment])]),
-      [...withdrawalTerms.signals.filter((signal) => withdrawalTerms.disposition === "reviewed"),
+      [...(withdrawalTerms.disposition === "reviewed" ? withdrawalTerms.signals : []),
         "wrapper-withdrawal-published-terms:no-capacity-claim",
         ...publishedTerms.review.terms.flatMap((term) => [
           `wrapper-withdrawal-route:${term.routeKey}`,

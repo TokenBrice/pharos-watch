@@ -14,14 +14,7 @@ import { makePublicationDexRow, makePublicationPegRow } from "./safety-score-v9-
 
 // Pin the authoring scenario without independent incident curation. The native
 // review may resolve mint history, but bridge incident absence needs its own proof.
-vi.mock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
-  default: {
-    schemaVersion: 1,
-    digest: "0".repeat(64),
-    incidents: [],
-    negativeReviews: [],
-  },
-}));
+vi.mock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({ default: { schemaVersion: 1, digest: "0".repeat(64), incidents: [], negativeReviews: [] } }));
 
 const AS_OF_SEC = 1_785_456_000;
 // Derived, never hardcoded: the extension rejects a reviewedAt later than the

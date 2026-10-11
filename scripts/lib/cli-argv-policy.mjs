@@ -23,6 +23,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
     strict(".codex/skills/stablecoin-pulse-report/scripts/build-pulse-pdf.mjs"),
     strict(".codex/skills/stablecoin-pulse-report/scripts/fetch-pulse-data.mjs"),
+    strict("scripts/build-data/generate-safety-score-v9-incident-runtime.ts"),
     strict("scripts/build-data/generate-worker-stablecoin-catalog.ts"),
     strict("scripts/ci/check-dex-census-provider-drift.ts"),
     strict("scripts/ci/check-doc-symbols.ts"),

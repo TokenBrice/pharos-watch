@@ -13,14 +13,7 @@ import { makePublicationDexRow, makePublicationPegRow } from "./safety-score-v9-
 
 // This regression models reviewed native controls without independent bridge
 // incident research; current campaign curation must not close its intended gap.
-vi.mock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
-  default: {
-    schemaVersion: 1,
-    digest: "0".repeat(64),
-    incidents: [],
-    negativeReviews: [],
-  },
-}));
+vi.mock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({ default: { schemaVersion: 1, digest: "0".repeat(64), incidents: [], negativeReviews: [] } }));
 
 // Evaluate after the newest registry review so the D14 control refresh is
 // admitted alongside the reviewed custody/mechanism evidence.
