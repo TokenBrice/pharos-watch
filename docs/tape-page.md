@@ -33,7 +33,7 @@ Primary audience:
 
 The page renders through `FeaturePageShell` with `breadcrumbName="Timeline"`, `path="/timeline/"`, title `Timeline`, and the lead paragraph authored in `src/app/timeline/page.tsx`.
 
-Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/timeline/`, route-specific title and description, static OG image `${SITE_URL}/og-timeline.png`, and the default shared page-metadata helper path. No dynamic `/api/og/timeline` generator exists.
+Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/timeline/`, route-specific title and description, static OG image `${SITE_URL}/og-timeline.png`, and the default shared page-metadata helper path. The route is `noindex, follow` and is not in the sitemap or `public-route-inventory.ts` (2026-10-11): its static shell is a thin client mount, and the per-class trackers, coin pages, and homepage tape are the indexable surfaces. It keeps its nav slot. No dynamic `/api/og/timeline` generator exists.
 
 ---
 

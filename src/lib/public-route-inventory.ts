@@ -37,7 +37,7 @@ export const PUBLIC_PRIMARY_ROUTE_PATHS = [
   "/", "/coverage/", "/alt-pegs/", "/start/", "/freezewatch/", "/depeg/", "/cemetery/",
   "/compare/", "/liquidity/", "/upcoming/", "/digest/", "/safety-scores/", "/safety-scores/map/",
   "/stability-index/",
-  "/dependency-map/", "/yield/", "/screener/", "/funding/", "/status/", "/flows/", "/timeline/",
+  "/dependency-map/", "/yield/", "/screener/", "/funding/", "/status/", "/flows/",
   "/compliance/", "/pharoswatchbot/", "/methodology/",
 ] as const;
 

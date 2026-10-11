@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import TimelinePage from "@/app/timeline/page";
+import TimelinePage, { metadata } from "@/app/timeline/page";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -29,5 +29,9 @@ describe("TimelinePage", () => {
     expect(html).toContain("datePublished");
     expect(html).toContain("2026-05-15T00:00:00Z");
     expect(html).toContain("dateModified");
+  });
+
+  it("stays out of the index while following links", () => {
+    expect(metadata.robots).toEqual({ index: false, follow: true });
   });
 });

@@ -43,7 +43,7 @@ describe("sitemap", () => {
       ["/safety-scores/map/", "daily", 0.6], ["/stability-index/", "daily", 0.8],
       ["/dependency-map/", "daily", 0.7], ["/yield/", "daily", 0.7], ["/screener/", "daily", 0.7],
       ["/funding/", "weekly", 0.5], ["/status/", "daily", 0.4], ["/flows/", "daily", 0.7],
-      ["/timeline/", "hourly", 0.75], ["/compliance/", "weekly", 0.6],
+      ["/compliance/", "weekly", 0.6],
       ["/pharoswatchbot/", "weekly", 0.7], ["/methodology/", "monthly", 0.6],
       ["/changelog/", "weekly", 0.5], ["/blog/", "weekly", 0.6], ["/about/", "monthly", 0.5],
       ["/about/api/", "monthly", 0.5], ["/about/bluechip/", "monthly", 0.5],

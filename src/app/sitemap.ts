@@ -169,7 +169,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/funding/": ["weekly", 0.5, fundingLastModified],
     "/status/": ["daily", 0.4, liveDataLastModified],
     "/flows/": ["daily", 0.7],
-    "/timeline/": ["hourly", 0.75, liveDataLastModified],
     "/compliance/": ["weekly", 0.6],
     "/pharoswatchbot/": ["weekly", 0.7],
     "/methodology/": ["monthly", 0.6],
