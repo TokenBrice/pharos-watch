@@ -197,6 +197,8 @@ The frontend `apiFetchWithMeta()` helper (`src/lib/api.ts`) reads generic `_meta
 
 ## Cache-Control Profiles
 
+Active `GET /api/stablecoin/{stablecoinId}` reads refresh expired detail caches in the background only while `buildFreshnessMeta` classifies the generation as fresh using `API_FRESHNESS_MAX_AGE_SEC.stablecoins`. Older generations refresh synchronously so the first visitor receives the refreshed detail; provider failures may retain the original stale generation below the 24-hour cache ceiling, with its original clock and warning.
+
 These profiles are ceilings, not a fresh lifetime renewed on each read. Freshness-aware responses clamp browser `max-age`, shared `s-maxage`, and the combined TTL plus `stale-while-revalidate` window to the remaining fresh runway. At the boundary (no whole second remains), or for a non-fresh/invalid timestamp, the response is `no-store`. Generic responses retain 8x/12x bands, chains 1x/2x, and yield its own publication bands; no cadence or SLO is changed. Edge cache reads reject entries whose HTTP `Age`/`Date` has exhausted that bounded lifetime. Proxies preserve `Age` and `Date`; clients interpreting cached `_meta` must distinguish its `assessedAt` from the current wall clock.
 
 Profile strings below come from `API_CACHE_PROFILES` (`shared/lib/api-cache-profiles.ts`), except route-local immutable snapshots (`IMMUTABLE_CACHE_CONTROL` in `worker/src/api/snapshot.ts`) and telegram-pulse's equivalent custom policy.
@@ -377,8 +379,6 @@ For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionElig
 ## Public Endpoints
 
 On `https://api.pharos.watch`, these routes require `X-API-Key` unless marked `Authentication: exempt`. [OpenAPI schemas](https://pharos.watch/openapi.json) describe bodies; `shared/lib/api-endpoints/definitions.ts` owns auth/cache flags.
-
-Active `GET /api/stablecoin/{stablecoinId}` reads refresh expired detail caches in the background only while `buildFreshnessMeta` classifies the generation as fresh using `API_FRESHNESS_MAX_AGE_SEC.stablecoins`. Older generations refresh synchronously so the first visitor receives the refreshed detail; provider failures may retain the original stale generation below the 24-hour cache ceiling, with its original clock and warning.
 
 `GET /api/stablecoin/{stablecoinId}` supply-history/stablecoins-cache fallbacks publish `_meta`: newest served token source time, response assessment time, 72-hour history budgets and stale floor `detail-history-fallback`. They emit `Warning: 110`, `Cache-Control: no-store`, and neither enqueue detail-cache publication nor renew old rows. Invalid/missing history clocks stay null/unknown with the timestamp-admission reason. Stale external history without fresher D1 rescue uses this same contract.
 
