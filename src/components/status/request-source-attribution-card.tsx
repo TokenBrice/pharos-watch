@@ -142,7 +142,7 @@ export function RequestSourceAttributionCard({
             </div>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
             <div className="rounded-xl border border-border/60 bg-background/45 p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div className="text-sm font-medium text-foreground">Top route groups</div>
