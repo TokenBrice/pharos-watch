@@ -376,7 +376,14 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
           title: EVIDENCE_LABEL[figure.evidence],
         }))}
       />
-      <section aria-labelledby={`${FAILURE_SCENARIO_MODULE_ID}-route`} className="min-w-0 space-y-3">
+      {/* The route map folds by default: the verdict, premise and key figures
+          carry the summary, and the fold label keeps the step and
+          missing-defense counts visible while closed. */}
+      <ModuleDisclosure
+        id={`${FAILURE_SCENARIO_MODULE_ID}-route-map`}
+        label={`Scenario route: ${route.length} steps, ${lockCount} missing ${lockCount === 1 ? "defense" : "defenses"}`}
+      >
+      <section aria-labelledby={`${FAILURE_SCENARIO_MODULE_ID}-route`} className="min-w-0 space-y-3 pt-2">
         <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1.5">
           <h4 id={`${FAILURE_SCENARIO_MODULE_ID}-route`} className={SUBHEADING_CLASS}>
             Scenario path{" "}
@@ -409,6 +416,7 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
         </div>
         <RouteMap route={route} anchorPrefix={FAILURE_SCENARIO_MODULE_ID} onOpenStep={openStep} sharedLabel={sharedLabel} />
       </section>
+      </ModuleDisclosure>
     </EvidenceModule>
   );
 }
