@@ -42,7 +42,7 @@ describe("PUBLIC_DOCS registry", () => {
   });
 
   it("rewrites or removes non-public relative links before publication", () => {
-    for (const { doc, body } of DOC_SOURCES) {
+    for (const { body } of DOC_SOURCES) {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });
       expect(rendered).not.toMatch(/\]\((?:\.\.?\/|[^:/)#]+\.md)/);
       expect(rendered).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME|runbook/i);

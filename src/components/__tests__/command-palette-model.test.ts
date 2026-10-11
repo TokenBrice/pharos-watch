@@ -3,7 +3,6 @@ import {
   buildCommandPaletteResultDescriptors,
   buildCommandPaletteActionDefinitions,
   buildPopularStablecoinDescriptors,
-  COMMAND_PALETTE_PAGES,
   fuzzyMatch,
   groupCommandPaletteResults,
   rankCommandPaletteResults,
