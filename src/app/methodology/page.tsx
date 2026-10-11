@@ -230,6 +230,7 @@ export default function MethodologyPage() {
         sections={METHODOLOGY_SECTIONS}
         railLabel="Jump to Section"
         navAriaLabel="Methodology section controls"
+        edgeFade
         rightSlot={
           <div className="hidden items-center gap-3 md:flex">
             <ShowYourWorkToggle className="pharos-toggle-pill pharos-focus-ring min-h-9" />

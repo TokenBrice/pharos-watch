@@ -50,6 +50,12 @@ interface LongformScrollspyNavProps {
    * pill (no frost), flanked by decorative hairlines on desktop.
    */
   emphasis?: "watch-rail" | "pill-tabs";
+  /**
+   * Banner only: fade the right edge of the scrolling pill row at every
+   * breakpoint, so a pill cut by the edge reads as "more to scroll" rather
+   * than a truncated label. Use when the rail cannot fit on desktop.
+   */
+  edgeFade?: boolean;
 }
 
 const STICKY_SUMMARY_VAR = "--pharos-sticky-summary-h";
@@ -149,6 +155,7 @@ export function LongformScrollspyNav({
   stickyOffsetPx,
   variant = "banner",
   emphasis,
+  edgeFade = false,
 }: LongformScrollspyNavProps) {
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -377,6 +384,7 @@ export function LongformScrollspyNav({
               className="pharos-pill-tabs-rule pharos-pill-tabs-rule-left hidden h-px w-28 shrink-0 lg:block xl:w-36 2xl:w-44"
             />
           ) : null}
+          <div className={edgeFade ? "relative min-w-0 flex-1" : "contents"}>
           <nav
             ref={bannerScrollerRef}
             aria-label={navAriaLabel}
@@ -386,7 +394,11 @@ export function LongformScrollspyNav({
             )}
           >
             <div
-              className={cn("flex min-w-max snap-x snap-mandatory items-center", isPillTabs ? "gap-0.5" : "gap-1.5")}
+              className={cn(
+                "flex min-w-max snap-x snap-mandatory items-center",
+                isPillTabs ? "gap-0.5" : "gap-1.5",
+                edgeFade && "pr-10",
+              )}
             >
               {sections.map((section) => {
                 const Icon = section.icon;
@@ -434,6 +446,13 @@ export function LongformScrollspyNav({
               })}
             </div>
           </nav>
+          {edgeFade ? (
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent"
+              aria-hidden="true"
+            />
+          ) : null}
+          </div>
           {isPillTabs ? (
             <span
               aria-hidden="true"
