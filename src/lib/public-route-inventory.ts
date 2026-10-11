@@ -75,7 +75,7 @@ const PUBLIC_ROUTE_CANDIDATES: readonly PublicRouteInventoryEntry[] = [
   ...entries("docs", PUBLIC_DOCS.map((doc) => `/docs/${doc.slug}/`)),
 ];
 
-export const PUBLIC_ROUTE_INVENTORY: readonly PublicRouteInventoryEntry[] = Array.from(
+const PUBLIC_ROUTE_INVENTORY: readonly PublicRouteInventoryEntry[] = Array.from(
   new Map(PUBLIC_ROUTE_CANDIDATES.map((route) => [route.href, route])).values(),
 );
 

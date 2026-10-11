@@ -570,7 +570,7 @@ export function liveCompositionDiffers(
 }
 
 /** The Reserves visual draws at most this many slices; the rest fold beneath it. */
-export const RESERVE_VISUAL_SLICE_LIMIT = 5;
+const RESERVE_VISUAL_SLICE_LIMIT = 5;
 
 export interface CondensedReserveSlices {
   /** Drawn by the visual, largest first. */

@@ -656,7 +656,7 @@ export interface ListedDefinition {
 }
 
 /** `pegScore` -> `def-peg-score`; `basis-trade` -> `def-basis-trade`. */
-export function definitionAnchorId(key: string): string {
+function definitionAnchorId(key: string): string {
   return `def-${key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}`;
 }
 

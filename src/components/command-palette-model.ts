@@ -58,7 +58,7 @@ export {
   rankCommandPaletteResults,
 } from "./command-palette-scoring";
 
-export const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
+const COMMAND_PALETTE_EXTRA_PAGES: readonly NavItem[] = [
   {
     href: "/stablecoins/",
     label: "Stablecoins",
