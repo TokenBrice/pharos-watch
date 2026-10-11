@@ -118,9 +118,9 @@ describe("controlled exposure graph", () => {
     render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} onUseAsExposureRoot={onUseAsExposureRoot} />);
     const picker = screen.getByLabelText("Choose neighborhood");
     fireEvent.change(picker, { target: { value: "coin-7" } });
-    const button = screen.getAllByRole("button", { name: "Use as exposure root" })[0];
+    const button = screen.getByRole("button", { name: /^Use .* as exposure root$/ });
     fireEvent.click(button);
-    expect(onUseAsExposureRoot).toHaveBeenCalledWith("coin-6");
+    expect(onUseAsExposureRoot).toHaveBeenCalledWith("coin-7");
     expect(button.classList.contains("min-h-11")).toBe(true);
     expect(picker.classList.contains("min-h-11")).toBe(true);
   });
@@ -147,8 +147,8 @@ describe("controlled exposure graph", () => {
     render(<ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} onUseAsExposureRoot={onUseAsExposureRoot} />);
     fireEvent.click(screen.getByRole("button", { name: "Fullscreen graph" }));
     fireEvent.click(screen.getByRole("tab", { name: "List" }));
-    fireEvent.click(screen.getAllByRole("button", { name: "Use as exposure root" })[0]);
-    expect(onUseAsExposureRoot).toHaveBeenCalledWith("coin-0");
+    fireEvent.click(screen.getByRole("button", { name: /^Use .* as exposure root$/ }));
+    expect(onUseAsExposureRoot).toHaveBeenCalledWith("coin-1");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
   it("keeps Explore and the mode controls available after all exposure roots are cleared", () => {

@@ -35,6 +35,7 @@ export function ContagionGraphShell({ graph, stage, modeControls }: ContagionGra
     if (link.srcId === root) neighborhood.add(link.tgtId);
     if (link.tgtId === root) neighborhood.add(link.srcId);
   }
+  const rootNode = graph.nodes.find(node => node.id === root);
   const list = (
     <div className="space-y-2 p-3">
       <label className="block text-xs">
@@ -43,13 +44,15 @@ export function ContagionGraphShell({ graph, stage, modeControls }: ContagionGra
           {graph.nodeSelectOptions.map(node => <option key={node.id} value={node.id}>{graphNodeLabel(node)}</option>)}
         </select>
       </label>
-      <p className="text-xs text-muted-foreground">Neighborhood and linked coins. Select a coin here instead of using small canvas targets.</p>
+      <p className="text-xs text-muted-foreground">Neighborhood and linked coins. Select a coin here instead of using small canvas targets; the selected coin becomes the exposure root.</p>
       {graph.emptyFocusCoin && <p role="status" className="text-sm text-muted-foreground">{graph.emptyFocusCoin.name} has no published dependency links in this publication.</p>}
+      {graph.onUseAsExposureRoot && rootNode && (
+        <button type="button" data-use-exposure-root className="pharos-focus-ring min-h-11 w-full rounded-sm border px-2 text-xs" onClick={() => graph.onUseAsExposureRoot?.(rootNode.id)}>Use {graphNodeLabel(rootNode)} as exposure root</button>
+      )}
       <ul className="divide-y">
         {graph.nodes.filter(node => neighborhood.has(node.id)).map(node => (
           <li key={node.id} className="flex flex-wrap items-center gap-2">
             <button type="button" className="pharos-focus-ring min-h-11 flex-1 rounded-sm px-2 text-left text-sm" aria-pressed={graph.pinnedSelectionId === node.id} onClick={() => graph.handleNodeClick(node.id)}>{graphNodeLabel(node)}</button>
-            {graph.onUseAsExposureRoot && <button type="button" data-use-exposure-root className="pharos-focus-ring min-h-11 rounded-sm border px-2 text-xs" onClick={() => graph.onUseAsExposureRoot?.(node.id)}>Use as exposure root</button>}
           </li>
         ))}
       </ul>
