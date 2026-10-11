@@ -149,7 +149,7 @@ export function CompareRadarV9({
             />
           ) : null}
           {series.map(({ card, color }) => (
-            <Radar key={card.id} dataKey={card.id} stroke={color} fill={color} fillOpacity={0.15} strokeWidth={2} />
+            <Radar key={card.id} dataKey={card.id} stroke={color} fill={color} fillOpacity={0.15} strokeWidth={2} isAnimationActive={false} />
           ))}
         </RechartsRadarChart>
       ) : (

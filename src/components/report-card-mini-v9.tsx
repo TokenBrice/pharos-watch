@@ -10,7 +10,7 @@ import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-regist
 import type {
   SafetyScorePublicationIdentity,
 } from "@shared/types";
-import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
+import { hasCompleteV9RadarPillars, type V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export function ReportCardMiniV9({
   card,
@@ -52,20 +52,28 @@ export function ReportCardMiniV9({
             versionInteractive={false}
           />
           {card.partialEvidence !== null ? (
-            <p role="status" className="text-center text-xs text-muted-foreground">
-              Partial evidence: pipeline gap · {card.partialEvidence.causes.map((cause) =>
-                cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}
-              {card.partialEvidence.excludedPillars.length > 0 ? ` · Excluded: ${card.partialEvidence.excludedPillars.join(", ")}` : ""}
+            <p
+              role="status"
+              className="text-center text-xs text-muted-foreground"
+              title={`${card.partialEvidence.causes.map((cause) =>
+                cause === "A" ? "A — pipeline unavailable" : "B — public data awaiting curation").join(" · ")}${
+                card.partialEvidence.excludedPillars.length > 0 ? ` · Excluded: ${card.partialEvidence.excludedPillars.join(", ")}` : ""}`}
+            >
+              Partial evidence · pipeline gap
             </p>
           ) : null}
 
-          <div className="w-full max-w-[11rem]">
-            <CompareRadarV9
-              series={[{ card, identity, color: "#10b981" }]}
-              cohortSeries={[]}
-              size={140}
-            />
-          </div>
+          {hasCompleteV9RadarPillars(card) ? (
+            <div className="w-full max-w-[11rem]">
+              <CompareRadarV9
+                series={[{ card, identity, color: "#10b981" }]}
+                cohortSeries={[]}
+                size={140}
+              />
+            </div>
+          ) : (
+            <p className="py-1 text-center text-xs text-muted-foreground">Pillar radar unavailable</p>
+          )}
         </CardContent>
       </Card>
     </Link>
