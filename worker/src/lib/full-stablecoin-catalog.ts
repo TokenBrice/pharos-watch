@@ -33,7 +33,7 @@ function isValidBase64(value: string): boolean {
 /** Decode one complete source record at a time without keeping inflate buffers. */
 export function decodeWorkerStablecoinCatalog(asset: PackedCatalog): readonly StablecoinMeta[] {
   if (asset.version !== 1 || !Number.isSafeInteger(asset.maxUncompressedBytes)
-    || asset.maxUncompressedBytes <= 0) {
+    || asset.maxUncompressedBytes <= 0 || asset.coins.length === 0) {
     throw new Error("Invalid packed stablecoin catalog manifest");
   }
   const output = new Uint8Array(asset.maxUncompressedBytes);
