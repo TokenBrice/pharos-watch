@@ -945,7 +945,6 @@
         "docs/process/font-assets.md",
         "docs/screener-page.md",
         "docs/screener-picker-page.md",
-        "docs/sitemap-tree-page.md",
         "docs/stablecoin-detail-page.md",
         "docs/stablecoin-taxonomy-pages.md",
         "docs/upcoming-page.md"
@@ -971,7 +970,6 @@
         "docs/process/font-assets.md",
         "docs/screener-page.md",
         "docs/screener-picker-page.md",
-        "docs/sitemap-tree-page.md",
         {"path": "docs/stablecoin-detail-page.md", "anchor": "route-shape"},
         "docs/stablecoin-taxonomy-pages.md",
         "docs/upcoming-page.md"

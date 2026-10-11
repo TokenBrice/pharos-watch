@@ -86,7 +86,7 @@ export interface NavColumn {
 export interface NavGroup {
   key: string;
   label: string;
-  /** Flat membership: mobile drawer, command palette, `/sitemap-tree/`. */
+  /** Flat membership: mobile drawer and command palette. */
   items: readonly NavItem[];
   /** Desktop panel layout. When present, `items` is exactly its flattening. */
   columns?: readonly NavColumn[];

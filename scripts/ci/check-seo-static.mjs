@@ -41,6 +41,7 @@ const RETIRED_INTERNAL_ROUTE_PREFIXES = [
   { prefix: "/about/principles", replacement: "/about/" },
   { prefix: "/about/editorial", replacement: "/about/" },
   { prefix: "/about/style", replacement: "/about/" },
+  { prefix: "/sitemap-tree", replacement: "/" },
   { prefix: "/stablecoin/pusd-pleasing", replacement: "/coverage/" },
   { prefix: "/stablecoin/phpc-coins-ph", replacement: "/coverage/" },
   { prefix: "/feed/digest", replacement: "/feed/digest.xml" },

@@ -104,6 +104,17 @@ describe("AccessPosturePanel", () => {
     expect(container.querySelector("[data-evidence-module]")).toBeNull();
   });
 
+  it("folds the rail's diagnostics behind a counted disclosure, like the strip", () => {
+    const authorityRow = { key: "reserve-access:a", label: "Claim pause", value: "Plasma ×4 · reach unquantified" };
+    render(<AccessPosturePanel rows={[...scoredRows, diagnosticRow, authorityRow]} variant="rail" />);
+
+    const fold = screen.getByText(diagnosticRow.label).closest("details");
+    expect(fold?.open).toBe(false);
+    expect(fold?.querySelector("summary")?.textContent).toMatch(/Reserve-access diagnostics.*2/);
+    expect(screen.getAllByText(/not additive/)).toHaveLength(1);
+    expect(screen.getByText("Governance").closest("details")).toBeNull();
+  });
+
   it("draws the strip as one evidence module with all four scored enums as labelled cells", () => {
     const { container } = render(
       <AccessPosturePanel rows={[...scoredRows, diagnosticRow]} review={review} variant="strip" />,

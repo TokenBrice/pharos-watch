@@ -87,8 +87,8 @@ describe("nav-config", () => {
       ["Methodology", "Coverage", "Status"],
       ["Start Here", "About", "Funding", "PharosVille"],
     ]);
-    // `items` must stay the exact flattening, or the mobile drawer and
-    // /sitemap-tree/ silently drop rows the desktop panel still shows.
+    // `items` must stay the exact flattening, or the mobile drawer and the
+    // command palette silently drop rows the desktop panel still shows.
     expect(more?.items).toEqual(more?.columns?.flatMap((column) => column.items));
   });
 

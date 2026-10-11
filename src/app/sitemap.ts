@@ -183,7 +183,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/depeg/archive/": ["monthly", 0.5, (path) => lastEdited(path, "/depeg/")],
     "/learn/": ["monthly", 0.5],
     "/learn/glossary/": ["monthly", 0.5],
-    "/sitemap-tree/": ["monthly", 0.3],
     "/api/": ["monthly", 0.5],
     "/stablecoins/": ["weekly", 0.7],
     "/stablecoins/backing/": ["weekly", 0.6],

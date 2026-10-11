@@ -49,7 +49,7 @@ describe("sitemap", () => {
       ["/about/api/", "monthly", 0.5], ["/about/bluechip/", "monthly", 0.5],
       ["/depeg/archive/", "monthly", 0.5], ["/learn/", "monthly", 0.5],
       ["/learn/glossary/", "monthly", 0.5],
-      ["/sitemap-tree/", "monthly", 0.3], ["/api/", "monthly", 0.5],
+      ["/api/", "monthly", 0.5],
       ["/stablecoins/", "weekly", 0.7], ["/stablecoins/backing/", "weekly", 0.6],
       ["/stablecoins/governance/", "weekly", 0.6], ["/stablecoins/infrastructure/", "weekly", 0.6],
       ["/privacy/", "yearly", 0.3], ["/docs/", "monthly", 0.6],
