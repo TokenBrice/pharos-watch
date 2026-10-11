@@ -155,7 +155,7 @@ describe("buildCurationExpiryQueue", () => {
     expect(markdown).toContain("| zero | 0 | known |");
   });
 
-  it("keeps named-firm fallback admitted before 120 days and lists only newly expired eligible reports", () => {
+  it("keeps named-firm reports admitted before 120 days regardless of fallback membership", () => {
     const auditedNearEvidenceBound = auditedMeta("audited-near-evidence-bound", isoDaysAgo(36));
     const auditedNearAdmissionBound = auditedMeta("audited-near-admission-bound", isoDaysAgo(115));
     const excludedFromFallback = auditedMeta("excluded-from-fallback", isoDaysAgo(115));
@@ -175,9 +175,9 @@ describe("buildCurationExpiryQueue", () => {
         ["excluded-from-fallback", excludedFromFallback],
       ]),
     );
-    // The named firm's original report remains admitted through 120 days.
-    // The configured live lane still requires captured fallback permission.
-    expect(rows.map((row) => row.assetId)).toEqual(["audited-near-admission-bound"]);
+    // The named firm's original report remains admitted through 120 days, and
+    // admission no longer depends on fallback-census membership.
+    expect(rows.map((row) => row.assetId)).toEqual(["excluded-from-fallback", "audited-near-admission-bound"]);
   });
 
 });

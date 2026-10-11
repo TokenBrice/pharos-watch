@@ -395,7 +395,7 @@ export function makeV9BoundedUnknownFeeRedemptionFixedInput(
       modeledExitSizeUsd: 10_000_000,
     },
     feeConfidence: "undisclosed-reviewed",
-    feeModelKind: "documented-variable",
+    feeModelKind: "undisclosed-reviewed",
     modelConfidence: "high",
     feeBps: null,
     updatedAt: observedAtSec,
