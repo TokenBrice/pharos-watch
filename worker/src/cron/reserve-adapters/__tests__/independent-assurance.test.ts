@@ -162,16 +162,16 @@ function assuranceCandidate(
   return `<a href="${url}">${label}</a>`;
 }
 
-const FIDD_VIEWER_URL = "https://fwc.widen.net/s/drcwdbtqzk/fidelity-digital-assets---fidd-reserve-attestation-report---july26";
-const FIDD_AUGUST_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---august26";
-const FIDD_VIEWER_HTML = '<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---July26.pdf</title></head><body><a id="download" href="/content/iizyowcatt/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---July26.pdf?u=zfczv1&amp;download=true">Download</a></body></html>';
-const FIDD_AUGUST_VIEWER_HTML = FIDD_VIEWER_HTML.replaceAll("July26", "August26");
+const FIDD_VIEWER_URL = "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026";
+const FIDD_SEPTEMBER_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---september-2026";
+const FIDD_VIEWER_HTML = '<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf</title></head><body><a id="download" href="/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&amp;download=true">Download</a></body></html>';
+const FIDD_SEPTEMBER_VIEWER_HTML = FIDD_VIEWER_HTML.replaceAll("August-2026", "September-2026");
 
 function assuranceFenceCases() {
   const ausd = getIndependentAssuranceManifest("AUSD");
   const agoraReviewed =
     `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com${new URL(ausd.reportUrl).pathname}?X-Amz-Signature=fixture`;
-  const fiddIndex = `<a href="${FIDD_VIEWER_URL}">July</a>`;
+  const fiddIndex = `<a href="${FIDD_VIEWER_URL}">August</a>`;
   return [
     {
       adapter: "agora-independent-assurance",
@@ -241,11 +241,11 @@ function assuranceFenceCases() {
       coinId: "fidd-fidelity",
       product: "FIDD",
       html: fiddIndex,
-      newerHtml: `${fiddIndex}<a href="${FIDD_AUGUST_VIEWER_URL}">August</a>`,
+      newerHtml: `${fiddIndex}<a href="${FIDD_SEPTEMBER_VIEWER_URL}">September</a>`,
       options: {
         extraHtml: {
           [FIDD_VIEWER_URL]: FIDD_VIEWER_HTML,
-          [FIDD_AUGUST_VIEWER_URL]: FIDD_AUGUST_VIEWER_HTML,
+          [FIDD_SEPTEMBER_VIEWER_URL]: FIDD_SEPTEMBER_VIEWER_HTML,
         },
       },
     },

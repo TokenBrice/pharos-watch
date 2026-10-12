@@ -294,8 +294,7 @@ export async function fetchOnchainLogs(options: OnchainLogsOptions): Promise<Onc
       const logs: OnchainLogEntry[] = [];
       const pendingRanges: Array<{ from: number; to: number }> = [{ from: options.fromBlock, to: options.toBlock }];
       const spans = logScanRpcEndpoints(options.ctx?.chainRpcs?.get(options.chain))
-        .flatMap((endpoint) => endpoint.operator !== "dwellir" || endpoint.maxLogBlockSpan == null
-          ? [] : [endpoint.maxLogBlockSpan]);
+        .flatMap((endpoint) => endpoint.maxLogBlockSpan == null ? [] : [endpoint.maxLogBlockSpan]);
       const maxSpan = Math.min(...spans);
       while (pendingRanges.length > 0) {
         const range = pendingRanges.pop()!;

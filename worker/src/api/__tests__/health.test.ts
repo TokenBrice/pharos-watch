@@ -351,6 +351,8 @@ describe("handleHealth", () => {
     [2701, "stale", "heavy_scheduled_delivery_stalled"],
     [null, "degraded", "heavy_scheduler_liveness_unavailable"],
   ] as const)("detects heavy delivery loss (%s) through a healthy cached projection", async (age, status, warning) => {
+    // Keep the exact age assertion independent of a wall-clock second boundary.
+    vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const now = Math.floor(Date.now() / 1000);
     const row = makeRawStatusSnapshotRow(now, 60);
     const snapshot = JSON.parse(row.value);

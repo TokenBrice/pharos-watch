@@ -204,6 +204,17 @@ describe("methodology registry", () => {
     expect(getMethodologyVersionAt(key, 1_791_763_200)).toBe(version);
   });
 
+  it("activates reviewed low-volume recovery without relabeling earlier pricing publications", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    expect(methodology.entries.find((candidate) => candidate.version === "6.49")).toMatchObject({
+      date: "2026-10-12",
+      effectiveAt: 1_791_849_600,
+      reconstructed: false,
+    });
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_791_849_599)).toBe("6.48");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_791_849_600)).toBe("6.49");
+  });
+
   it("retains standalone Liquidity and Redemption versions at the campaign boundary", () => {
     expect(getMethodologyVersionAt("liquidity-score", 1_791_763_200)).toBe("6.94");
     expect(getMethodologyVersionAt("redemption-backstop", 1_791_763_200)).toBe("4.49");
@@ -237,7 +248,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.48");
+    expect(methodology.currentLabel).toBe("v6.49");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -253,7 +264,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 2).map((candidate) => candidate.version)).toEqual(["6.48", "6.47"]);
+    expect(methodology.entries.slice(0, 3).map((candidate) => candidate.version)).toEqual(["6.49", "6.48", "6.47"]);
   });
 
   it("provides an LLM-facing description for every changelog", () => {

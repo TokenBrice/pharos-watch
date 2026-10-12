@@ -124,7 +124,8 @@ async function observeBrokerCapacity(
     adapterKey: "mento broker-pool",
     fields: [
       addressObservation({ label: "managerBroker", contract: MENTO_BIPOOL_MANAGER_ADDRESS, data: brokerCall("function broker() view returns(address)") }),
-      addressObservation({ label: "reserve", contract: MENTO_BROKER, data: brokerCall("function exchangeReserve(address) view returns(address)", [MENTO_BIPOOL_MANAGER_ADDRESS]) }),
+      // Celo's deployed Broker uses one reserve; exchangeReserve(address) belongs to a newer implementation.
+      addressObservation({ label: "reserve", contract: MENTO_BROKER, data: brokerCall("function reserve() view returns(address)") }),
       addressObservation({ label: "oracle", contract: MENTO_BIPOOL_MANAGER_ADDRESS, data: brokerCall("function sortedOracles() view returns(address)") }),
       addressObservation({ label: "breaker", contract: MENTO_BIPOOL_MANAGER_ADDRESS, data: brokerCall("function breakerBox() view returns(address)") }),
       boolObservation({ label: "provider", contract: MENTO_BROKER, data: brokerCall("function isExchangeProvider(address) view returns(bool)", [MENTO_BIPOOL_MANAGER_ADDRESS]) }),

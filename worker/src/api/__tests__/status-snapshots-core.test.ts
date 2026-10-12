@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { StatusResponseSchema } from "@shared/types/status";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConservationCacheKey } from "../../lib/mint-burn-conservation";
 import {
@@ -390,7 +391,9 @@ describe("handleStatus", () => {
       entry.binds.every((bind) => typeof bind === "string" && bind.startsWith("mint-burn:conservation:")));
     expect(conservationReads.length).toBeGreaterThan(0);
     expect(conservationReads.flatMap((entry) => entry.binds))
-      .toEqual([...new Set(MINT_BURN_CONFIGS.map(mintBurnConservationCacheKey))]);
+      .toEqual([...new Set(MINT_BURN_CONFIGS
+        .filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId))
+        .map(mintBurnConservationCacheKey))]);
     const nonSupplementalBatchCacheReads = batchCacheReads.filter((entry) =>
       !entry.binds.every((bind) => typeof bind === "string" &&
         (bind.startsWith("circuit:") || bind.startsWith("cron:event:") || bind.startsWith("mint-burn:conservation:"))));

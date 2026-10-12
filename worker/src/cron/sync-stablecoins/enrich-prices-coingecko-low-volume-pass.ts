@@ -45,6 +45,10 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "usdkg-gold-dollar",
   "fusd-freedom-dollar",
   "chfau-allunity",
+  // 2026-10-12: these observed quotes are hours old, inside the unchanged
+  // seven-day budget, while primary consensus requires 15-minute freshness.
+  "nxusd-nereus",
+  "usdh-hermetica",
 ]);
 
 export async function runCoingeckoLowVolumePass(

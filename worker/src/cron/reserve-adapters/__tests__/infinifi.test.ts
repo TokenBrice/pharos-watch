@@ -356,6 +356,23 @@ describe("adaptInfiniFi", () => {
     ]);
   });
 
+  it("recognizes reviewed Monad USDC and Pendle reUSD farms", () => {
+    const response = farmResponse([
+      { name: "pendle-v3-PT-reUSD-10DEC2026", label: "Pendle PT-reUSD-10DEC2026", assetsNormalized: 97, type: "ILLIQUID", underlyingAssetSymbol: "PT-reUSD-10DEC2026" },
+      { name: "monad-aavev3", label: "Aave USDC", assetsNormalized: 2.8, type: "ILLIQUID", underlyingAssetSymbol: "USDC" },
+      { name: "morpho-v2-august-usdc", label: "August USDC", assetsNormalized: 0.2, type: "ILLIQUID", underlyingAssetSymbol: "AugustUSDCv2" },
+    ], 100);
+
+    const result = adaptInfiniFi(response);
+    expect(result.unknownFarms).toEqual([]);
+    expect(result.unknownExposurePct).toBe(0);
+    expect(result.slices).toEqual([
+      { sourceKey: "infinifi:pendle-v3-pt-reusd-10dec2026", name: "Pendle PT-reUSD-10DEC2026", pct: 97, risk: "high", coinId: "reusd-re-protocol", depType: "collateral" },
+      { sourceKey: "infinifi:monad-aavev3", name: "Aave USDC", pct: 2.8, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "infinifi:morpho-v2-august-usdc", name: "August USDC", pct: 0.2, risk: "medium", coinId: "usdc-circle", depType: "collateral" },
+    ]);
+  });
+
   it("flags and preserves unknown positive farms", () => {
     const response = farmResponse([
       ...SAMPLE_RESPONSE.data.farms,

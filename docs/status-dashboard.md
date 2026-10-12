@@ -926,7 +926,7 @@ Data is sourced from the admin-only `GET /api/status` payload. Optional dedicate
 
 ## Mint/Burn Reconciliation Card
 
-The operator card is **Mint/Burn Integrity**, a permanent per-contract native conservation diagnostic. The API field name `mintBurnReconciliation` remains; `conservationVersion: 1` identifies the native verdict. Configured identities are enumerated independently of supply-cache/comparison availability. The unmatched circulating-supply comparison and unused native summary counts are retired without aliases; older payloads without native proof remain unverified.
+The operator card is **Mint/Burn Integrity**, a permanent per-contract native conservation diagnostic. The API field name `mintBurnReconciliation` remains; `conservationVersion: 1` identifies the native verdict. Configured active identities are enumerated independently of supply-cache/comparison availability, using the same active-ID universe as the producer; retained configs for excluded variants or cash equivalents do not create permanent lag/missing-evidence warnings. The unmatched circulating-supply comparison and unused native summary counts are retired without aliases; older payloads without native proof remain unverified.
 
 ### Matched-block integrity
 
