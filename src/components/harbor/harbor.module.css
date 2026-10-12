@@ -1,0 +1,570 @@
+/*
+ * Harbor 2.0 (`/chains/`): scene tokens, faces, layout, tag, card, legend and phone sheet.
+ *
+ * The Cemetery's visual language: light "surveyor's daylight" materials with a "lamplit night" counterpart under
+ * `.dark`, one light from the east-north-east, one non-scaling hairline, no filters and no idle motion. Data hues
+ * arrive as custom properties set from `CHAIN_HEALTH_HEX` and `HARBOR_CARGO_HEX` (`harborTokenStyle`); everything
+ * else here is atmosphere and encodes nothing. Frost blue is used only by the beam.
+ */
+
+/* ------------------------------------------------------------------ tokens: surveyor's daylight */
+.tokens {
+  composes: tokens from "../scene/scene-tokens.module.css";
+  --scene-col: url(#harbor-g-col);
+  --sea: oklch(0.905 0.014 215);
+  --sea-line: oklch(0.52 0.02 215 / 0.2);
+  --quay-t: oklch(0.945 0.012 85);
+  --quay-e: oklch(0.88 0.02 78);
+  --quay-s: oklch(0.82 0.024 72);
+  --hull-t: oklch(0.965 0.006 88);
+  --hull-e: oklch(0.42 0.018 250);
+  --hull-s: oklch(0.5 0.02 250);
+  --barge-t: oklch(0.93 0.012 80);
+  --barge-e: oklch(0.55 0.02 70);
+  --barge-s: oklch(0.62 0.022 70);
+  --iron: oklch(0.36 0.012 80);
+  --jetty-t: oklch(0.86 0.03 70);
+  --jetty-s: oklch(0.72 0.035 65);
+  --beam-0: color-mix(in oklab, var(--frost-blue) 22%, transparent);
+  --beam-blend: multiply;
+  --cargo-mix: 62%;
+  --cargo-base: oklch(0.97 0.006 88);
+  --shade-s: 16%;
+  --shade-e: 28%;
+  --wake-up: oklch(0.55 0.13 155);
+  --wake-down: oklch(0.55 0.17 27);
+  --mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* ------------------------------------------------------------------ tokens: lamplit night */
+:global(.dark) .tokens {
+  --sea: oklch(0.2 0.014 230);
+  --sea-line: oklch(0.7 0.02 220 / 0.14);
+  --quay-t: oklch(0.27 0.008 80);
+  --quay-e: oklch(0.22 0.008 70);
+  --quay-s: oklch(0.18 0.008 70);
+  --hull-t: oklch(0.5 0.008 250);
+  --hull-e: oklch(0.24 0.008 250);
+  --hull-s: oklch(0.3 0.008 250);
+  --barge-t: oklch(0.42 0.01 80);
+  --barge-e: oklch(0.24 0.01 70);
+  --barge-s: oklch(0.28 0.01 70);
+  --iron: oklch(0.7 0.008 80);
+  --jetty-t: oklch(0.36 0.02 70);
+  --jetty-s: oklch(0.26 0.02 65);
+  --beam-0: color-mix(in oklab, var(--frost-blue) 26%, transparent);
+  --beam-blend: screen;
+  --cargo-mix: 70%;
+  --cargo-base: oklch(0.3 0.008 250);
+  --shade-s: 30%;
+  --shade-e: 45%;
+  --wake-up: oklch(0.72 0.14 155);
+  --wake-down: oklch(0.7 0.15 27);
+}
+
+/* Retained (stale or errored) data: desaturated scene, outline-only flags. */
+.tokens[data-retained="true"] .scene {
+  filter: saturate(0.25);
+}
+.tokens[data-retained="true"] .flag {
+  fill-opacity: 0;
+  stroke: var(--flag);
+  stroke-width: 0.9;
+}
+
+/* ------------------------------------------------------------------ layout */
+.hero {
+  position: relative;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 6px;
+}
+.stamp {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.stamp[data-retained="true"] {
+  color: var(--foreground);
+}
+.skip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  transform: translateY(-200%);
+  opacity: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--foreground);
+}
+.skip:focus {
+  transform: none;
+  opacity: 1;
+}
+.stage {
+  position: relative;
+}
+.frame {
+  position: relative;
+  width: 100%;
+}
+.frame > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.reserve {
+  width: 100%;
+  aspect-ratio: var(--harbor-ar, 2.6);
+}
+.caption {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted-foreground);
+}
+
+/* ------------------------------------------------------------------ scene faces (kit faces: e, sea, lh-*, rock) */
+.scene {
+  composes: scene from "../scene/scene-tokens.module.css";
+}
+.quay-t {
+  fill: var(--quay-t);
+}
+.quay-e {
+  fill: var(--quay-e);
+}
+.quay-s {
+  fill: var(--quay-s);
+}
+.bollard-t,
+.bollard-e,
+.bollard-s {
+  fill: var(--iron);
+}
+.jetty-t {
+  fill: var(--jetty-t);
+}
+.jetty-e,
+.jetty-s {
+  fill: var(--jetty-s);
+}
+.breakwater-t {
+  fill: var(--quay-t);
+}
+.breakwater-e {
+  fill: var(--quay-e);
+}
+.breakwater-s {
+  fill: var(--quay-s);
+}
+.hull-t {
+  fill: var(--hull-t);
+}
+.hull-e {
+  fill: var(--hull-e);
+}
+.hull-s {
+  fill: var(--hull-s);
+}
+.barge-t {
+  fill: var(--barge-t);
+}
+.barge-e {
+  fill: var(--barge-e);
+}
+.barge-s {
+  fill: var(--barge-s);
+}
+/* cargo: data hue mixed into the stone base (the Cemetery's tinted materials), shaded per face toward the light */
+.cg-usdt-t,
+.cg-usdt-e,
+.cg-usdt-s {
+  --cg: var(--cargo-usdt);
+}
+.cg-usdc-t,
+.cg-usdc-e,
+.cg-usdc-s {
+  --cg: var(--cargo-usdc);
+}
+.cg-other-t,
+.cg-other-e,
+.cg-other-s {
+  --cg: var(--cargo-other);
+}
+.cg-pool-t,
+.cg-pool-e,
+.cg-pool-s {
+  --cg: var(--cargo-pool);
+}
+.cg-usdt-t,
+.cg-usdc-t,
+.cg-other-t,
+.cg-pool-t {
+  fill: color-mix(in oklab, var(--cg) var(--cargo-mix), var(--cargo-base));
+}
+.cg-usdt-s,
+.cg-usdc-s,
+.cg-other-s,
+.cg-pool-s {
+  fill: color-mix(in oklab, color-mix(in oklab, var(--cg) var(--cargo-mix), var(--cargo-base)), black var(--shade-s));
+}
+.cg-usdt-e,
+.cg-usdc-e,
+.cg-other-e,
+.cg-pool-e {
+  fill: color-mix(in oklab, color-mix(in oklab, var(--cg) var(--cargo-mix), var(--cargo-base)), black var(--shade-e));
+}
+/* unattributed and partial: a plain plate under the kit's "not recorded" hatch */
+.cg-unattr-t,
+.partial-t {
+  fill: var(--cargo-base);
+}
+.cg-unattr-s,
+.partial-s {
+  fill: color-mix(in oklab, var(--cargo-base), black var(--shade-s));
+}
+.cg-unattr-e,
+.partial-e {
+  fill: color-mix(in oklab, var(--cargo-base), black var(--shade-e));
+}
+.hatch-t,
+.hatch-e,
+.hatch-s {
+  fill: url(#harbor-hatch);
+}
+.stencil {
+  fill: var(--cargo-base);
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.mast {
+  stroke: var(--iron);
+  stroke-width: 0.9px;
+  vector-effect: non-scaling-stroke;
+}
+.flag {
+  fill: var(--flag);
+}
+.flag-robust {
+  --flag: var(--band-robust);
+}
+.flag-healthy {
+  --flag: var(--band-healthy);
+}
+.flag-mixed {
+  --flag: var(--band-mixed);
+}
+.flag-fragile {
+  --flag: var(--band-fragile);
+}
+.flag-concentrated {
+  --flag: var(--band-concentrated);
+}
+.flag-text {
+  fill: white;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.nr-plate {
+  fill: var(--band-unrated);
+}
+.nr-text {
+  fill: white;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+.wake-up,
+.wake-down,
+.wake-break {
+  fill: none;
+  stroke-width: 1.1px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.wake-up {
+  stroke: var(--wake-up);
+}
+.wake-down,
+.wake-break {
+  stroke: var(--wake-down);
+}
+
+/* ------------------------------------------------------------------ berths, ring, beam */
+.berth {
+  cursor: pointer;
+  outline: none;
+}
+.hit {
+  fill: transparent;
+  stroke: none;
+}
+.ring {
+  fill: var(--ring-fill);
+  stroke: var(--ring);
+  stroke-width: 1px;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+}
+.berth[data-lit="true"] .ring {
+  opacity: 1;
+}
+.berth:focus-visible .ring {
+  opacity: 1;
+  stroke: var(--ring);
+  stroke-dasharray: none;
+  stroke-width: 2px;
+}
+.beam {
+  fill: var(--beam-0);
+  mix-blend-mode: var(--beam-blend);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ labels over the frame (CSS px, not scaled) */
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.label {
+  position: absolute;
+  transform: translate(-100%, -50%);
+  white-space: nowrap;
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: var(--foreground);
+  padding-right: 4px;
+}
+.label[data-side="above"] {
+  transform: translate(0, -100%);
+  padding: 0 0 3px;
+}
+.label b {
+  font-weight: 600;
+}
+.label .num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin-left: 5px;
+}
+.label[data-lit="true"] b {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.wakeLabel {
+  position: absolute;
+  transform: translate(4px, -50%);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.wakeLabel[data-dir="up"] {
+  color: var(--wake-up);
+}
+.wakeLabel[data-dir="down"] {
+  color: var(--wake-down);
+}
+.tag {
+  position: absolute;
+  z-index: 5;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--foreground);
+}
+
+/* ------------------------------------------------------------------ record card */
+.card {
+  position: relative;
+  z-index: 6;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 360px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 6px 20px oklch(0 0 0 / 0.08);
+  font-size: 13px;
+}
+@media (min-width: 1280px) {
+  .card[data-docked="true"] {
+    position: absolute;
+    margin: 0;
+    width: 320px;
+    overflow-y: auto;
+  }
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cardTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+}
+.close {
+  border: 0;
+  background: none;
+  color: var(--muted-foreground);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 10px 0 0;
+}
+.facts dt {
+  color: var(--muted-foreground);
+}
+.facts dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+  text-align: right;
+}
+.cargo {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cargo li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 0;
+  border-top: 1px solid var(--border);
+}
+.cargo .num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+.note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.members {
+  margin: 8px 0 0;
+  max-height: 160px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.actions a,
+.actions button {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* ------------------------------------------------------------------ legend */
+.legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
+  gap: 6px 20px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+/* the wake key is a sentence: give it the full row */
+.legend li.wide {
+  grid-column: 1 / -1;
+}
+.legend svg {
+  flex: none;
+  overflow: visible;
+}
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid var(--edge);
+}
+
+/* ------------------------------------------------------------------ phone sheet */
+.sheet {
+  --sheet-bottom: calc(var(--mobile-bottom-nav-safe-height, 0px) + 1px);
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--sheet-bottom);
+  z-index: 56;
+  max-height: 52dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--card);
+  color: var(--foreground);
+  border-top: 1px solid var(--border-strong);
+  border-radius: 14px 14px 0 0;
+  padding: 12px max(16px, env(safe-area-inset-right)) 14px max(16px, env(safe-area-inset-left));
+  box-shadow: 0 -8px 24px oklch(0 0 0 / 0.12);
+}
+.sheet .card {
+  margin: 0;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: none;
+}
+.wakeKey[data-dir="up"] {
+  color: var(--wake-up);
+}
+.wakeKey[data-dir="down"] {
+  color: var(--wake-down);
+}

@@ -24,8 +24,6 @@
   "src/app/admin/sections/__tests__/crons-section.test.tsx": 13,
   "src/app/alt-pegs/alt-peg-cohort-history-chart.test.tsx": 13,
   "src/app/chains/[chain]/page.tsx": 13,
-  "src/app/chains/nautical-geometry.ts": 21,
-  "src/app/chains/nautical-ships.tsx": 33,
   "src/app/pharoswatchbot/app/client.tsx": 13,
   "src/app/pharoswatchbot/app/use-mini-app-mutations.ts": 13,
   "src/app/timeline/client.test.tsx": 23,

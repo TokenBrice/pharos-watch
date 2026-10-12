@@ -20,6 +20,7 @@ export * from "./classification/operational-status";
 export * from "./classification/mint-authority";
 export * from "./classification/redemption";
 export * from "./classification/psi";
+export * from "./classification/chain-health";
 export * from "./classification/cause-of-death";
 export * from "./classification/resolve-mechanism-archetype";
 export * from "./classification/resolve-implementation-launch-date";

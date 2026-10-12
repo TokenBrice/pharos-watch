@@ -4,8 +4,7 @@ import {
   CHAIN_HEALTH_METHODOLOGY_VERSION,
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/constants";
-import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildChainDirectoryJsonLd } from "@/lib/chain-json-ld";
 import type { FaqItem } from "@/lib/faq";
@@ -21,7 +20,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Ranking blockchain networks by stablecoin supply, health score, and composition. Explore per-chain stablecoin analytics on Pharos.",
   canonical: "/chains/",
-  ogImage: `${SITE_URL}/og-chains.png`,
+  ogImage: buildLiveRouteOgImageUrl("chains"),
 });
 
 const CHAINS_FAQ_ITEMS = [
@@ -43,7 +42,7 @@ function ChainDirectory({ entries }: { entries: readonly ChainDirectoryEntry[] }
       <div className="space-y-1.5">
         <h2
           id="chain-directory-heading"
-          className="pharos-kicker"
+          className="pharos-label"
         >
           Chain Profile Directory
         </h2>
