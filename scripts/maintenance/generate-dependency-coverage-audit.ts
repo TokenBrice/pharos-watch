@@ -1293,14 +1293,13 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
         count + (card.dependencyCoverage ?? []).filter((row) => row.reason === "coinId-without-depType").length
       ), 0);
   const publishedKindMismatchCount = parsedReportCards == null ? null : activeCoins.reduce((count, coin) => (
-    count + (coin.reserves ?? []).filter((slice) => {
-      if (!slice.coinId || !slice.depType) return false;
-      const expectedKind = slice.depType === "collateral" ? "basket" : "serial";
+    count + deriveEffectiveDependencySet(coin).dependencies.filter((dependency) => {
+      const expectedKind = (dependency.type ?? "collateral") === "collateral" ? "basket" : "serial";
       if (parsedReportCards.edges.some((edge) => (
-        edge.to === coin.id && edge.from === slice.coinId && edge.reportKind === expectedKind
+        edge.to === coin.id && edge.from === dependency.id && edge.reportKind === expectedKind
       ))) return false;
       return parsedReportCards.edges.some((edge) => (
-        edge.to === coin.id && edge.from === slice.coinId && edge.reportKind !== expectedKind
+        edge.to === coin.id && edge.from === dependency.id && edge.reportKind !== expectedKind
       ));
     }).length
   ), 0);
@@ -1346,6 +1345,20 @@ export function buildDependencyCoverageAudit(input: DependencyCoverageAuditInput
   }
   const trackedById = new Map(trackedCoins.map((coin) => [coin.id, coin]));
   for (const card of cardsById.values()) {
+    // Withheld outside-active-set claims retain a reference without publishing a graph edge.
+    for (const row of card.dependencyCoverage ?? []) {
+      if (!row.identityVerified || !row.upstreamAssetId || row.reason !== `outside-active-set:${row.upstreamAssetId}`) continue;
+      const lifecycle = lifecycleForMeta(trackedById.get(row.upstreamAssetId));
+      if (lifecycle === "active" || lifecycle === "unknown") continue;
+      const scores = targetScoreabilities.get(row.upstreamAssetId) ?? [];
+      scores.push(classifyTargetScoreability({
+        availability: undefined,
+        consumedScore: undefined,
+        lifecycle,
+        hasReportCards,
+      }));
+      targetScoreabilities.set(row.upstreamAssetId, scores);
+    }
     for (const role of card.dependencies.roles ?? []) {
       const scores = targetScoreabilities.get(role.upstreamAssetId) ?? [];
       scores.push(classifyTargetScoreability({

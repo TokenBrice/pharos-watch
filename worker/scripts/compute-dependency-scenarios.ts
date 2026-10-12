@@ -16,8 +16,10 @@ import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/po
 import type { ContagionShock } from "@shared/types/contagion";
 import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
+import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
+import { parseSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
+import { parseSafetyScoreV9PublicationHealthCache, SAFETY_SCORE_V9_CACHE_KEYS } from "../src/lib/safety-score-v9/publication-store";
+import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../src/lib/report-cards-v9-cache";
 import { parseSafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
 import { parseActiveWorkerVersionMarker } from "../src/lib/worker-version-first-seen";
 
@@ -91,23 +93,25 @@ async function main(): Promise<void> {
   // A new plan or an unverified/rejected compute must never reuse an old stamp.
   if (values.mode !== "publish") rmSync(stampPath, { force: true });
   if (values.mode === "plan") {
-    const apiKey = process.env.PHAROS_API_KEY;
-    if (!apiKey) throw new Error("PHAROS_API_KEY is required for accepted-publication capture");
-    const response = await fetch("https://api.pharos.watch/api/report-cards/v9", { headers: { "X-API-Key": apiKey } });
-    if (!response.ok) throw new Error(`Publication capture failed: ${response.status}`);
-    const source = ReportCardsV9CurrentResponseSchema.parse(await response.json());
-    writeFileSync(sourcePath, JSON.stringify(source));
-    const raw = JSON.parse(remote("--command", `SELECT key, value FROM cache WHERE key IN ('${SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY}')`));
-    const rows: Array<{ key: string; value: string }> = raw[0]?.results ?? [];
-    const delta = rows.find(row => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY);
-    const base = rows.find(row => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY);
-    if (!delta) throw new Error("accepted-publication-replay-delta-unavailable");
-    if (!base) throw new Error("accepted-publication-replay-base-unavailable");
-    const fixedInput = await parseSafetyScoreV9ReplayFixedInput(base.value);
-    const capture = await parseSafetyScoreV9PublicationReplayCapture(delta.value, fixedInput);
+    // Read one snapshot so HTTP caching or a concurrent publication cannot split generations.
+    const raw = JSON.parse(remote("--command", `SELECT key, value, updated_at FROM cache WHERE key IN ('${SAFETY_SCORE_V9_CACHE_KEYS.publication}', '${SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY}', '${SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY}')`));
+    const replayRows = parseSafetyScoreV9PublicationReplayCacheRows(raw);
+    const rows: Array<{ key: string; value: string; updated_at: number }> = raw[0].results;
+    const publicationRow = rows.find(row => row.key === SAFETY_SCORE_V9_CACHE_KEYS.publication);
+    const healthRow = rows.find(row => row.key === SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth);
+    if (!publicationRow || !healthRow) throw new Error("accepted-publication-snapshot-unavailable");
+    const publication = await parseSafetyScoreV9Publication(publicationRow.value);
+    if (publicationRow.updated_at !== publication.publishedAtSec || replayRows.retainedAtSec !== publication.publishedAtSec) {
+      throw new Error("accepted-publication-replay-retention-clock-mismatch");
+    }
+    const source = projectSafetyScoreV9PublicationToPublicSnapshot(publication,
+      parseSafetyScoreV9PublicationHealthCache({ value: healthRow.value, updatedAt: healthRow.updated_at }));
+    const fixedInput = await parseSafetyScoreV9ReplayFixedInput(replayRows.baseValue);
+    const capture = await parseSafetyScoreV9PublicationReplayCapture(replayRows.deltaValue, fixedInput);
     if (capture.publicationGenerationId !== source.safetyScoreIdentity.publicationGenerationId) {
       throw new Error(`accepted-publication-replay-capture-generation-mismatch: publicationGenerationId accepted=${source.safetyScoreIdentity.publicationGenerationId} capture=${capture.publicationGenerationId}`);
     }
+    writeFileSync(sourcePath, JSON.stringify(source));
     writeFileSync(resolve(directory, "capture.json"), JSON.stringify(capture));
     console.log(JSON.stringify({ sourcePublicationGenerationId: source.safetyScoreIdentity.publicationGenerationId }));
     return;

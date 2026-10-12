@@ -276,7 +276,7 @@ Scheduled artifact PR secret:
 Route share cards are no longer screenshots: data-bearing routes select the live Worker card `/api/og/page/:slug` and every other route a committed timeless card ([OG Images](./og-images.md#1-route-cards)). After a Worker deploy, `GET` each live slug and decode the PNG; `X-Og-Status: timeless` names its `X-Og-Reason`.
 The [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) and [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) pages document the append-only measurement PR paths and their freshness gates.
 
-Workflow incident reporting needs repository Actions secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID`. They are **not provisioned** for the workflow alert path: incident issues/report summaries remain the available evidence, and first-failure Telegram delivery is an open operational prerequisite, not completed alerting.
+Workflow incident reporting needs repository Actions secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID`. Both names are provisioned, but the 2026-10-12 scheduled reporters received Telegram HTTP 401. Credential repair remains an open operational prerequisite; incident issues/report summaries do not prove Telegram delivery.
 
 Repository variables used by the Pages build:
 
