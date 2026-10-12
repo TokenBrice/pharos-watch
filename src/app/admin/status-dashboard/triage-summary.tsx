@@ -136,10 +136,10 @@ export function TriageSummary({
   });
   const reserveForecastTone =
     reserveForecast.state === "blocked"
-      ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-900 dark:text-red-200")
+      ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-state-danger-strong")
       : reserveForecast.state === "clear"
-        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
-        : cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-950 dark:text-amber-100");
+        ? "border-state-positive bg-state-positive-subtle text-state-positive-strong"
+        : cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink");
 
   return (
     <section
@@ -175,7 +175,7 @@ export function TriageSummary({
             </span>
             <span
               className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                "inline-flex items-center rounded-full border px-2.5 py-1 text-2xs font-medium",
                 getEvidenceBadgeClass(resolvedEvidence.state),
               )}
             >
@@ -185,7 +185,7 @@ export function TriageSummary({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={cn("cursor-help rounded-full border px-2.5 py-1 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
+                    <span className={cn("cursor-help rounded-full border px-2.5 py-1 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
                       recovery hold — raw {data.rawOverallStatus}
                     </span>
                   </TooltipTrigger>
@@ -244,12 +244,12 @@ export function TriageSummary({
             }
           />
           <SummaryBadge
-            label="Public Health"
+            label="Public health"
             value={healthData?.status ?? "unknown"}
             className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
           />
           <span className="mx-1 hidden self-center border-l border-border/40 py-2 sm:block" />
-          <SummaryBadge label="Reserve Drift" value={data.sectionErrors.reserveDrift || !data.reserveDrift ? "Unknown" : String(data.reserveDrift.length)} />
+          <SummaryBadge label="Reserve drift" value={data.sectionErrors.reserveDrift || !data.reserveDrift ? "Unknown" : String(data.reserveDrift.length)} />
         </div>
 
         {reserveScoreInputHold ? (
@@ -268,24 +268,24 @@ export function TriageSummary({
                 <SummaryBadge
                   label="Reserve"
                   value={data.reserveComposition.status}
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
                 <SummaryBadge
                   label="Next"
                   value={formatNextRunWindow(reserveForecast.nextRunAt, data.timestamp)}
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
                 <SummaryBadge
                   label="Runs"
                   value={
                     reserveForecast.estimatedRunsToClear == null ? "—" : String(reserveForecast.estimatedRunsToClear)
                   }
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
                 <SummaryBadge
                   label="Score-grade"
                   value={formatReserveCoverage(data.reserveComposition.authoritativeFreshCoverageRatio)}
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
               </div>
             </div>
@@ -311,7 +311,7 @@ export function TriageSummary({
           <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Current issues</h3>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 {activeIssues.length > 0
                   ? areIssuesExpanded
                     ? `${activeIssues.length} shown`
@@ -327,14 +327,14 @@ export function TriageSummary({
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          "rounded-full px-2 py-0.5 text-2xs font-medium",
                           getIssueKindBadgeClass(issue.kind),
                         )}
                       >
                         {issue.impactLabel}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">{issue.affectedSurface}</span>
-                      <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{issue.code}</span>
+                      <span className="text-2xs text-muted-foreground">{issue.affectedSurface}</span>
+                      <span className="font-mono tabular-nums text-2xs text-muted-foreground">{issue.code}</span>
                     </div>
                     <div className="mt-1.5 text-sm leading-relaxed text-foreground">{issue.message}</div>
                     {issue.runbookUrl && (
@@ -342,7 +342,7 @@ export function TriageSummary({
                         href={issue.runbookUrl}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary underline underline-offset-2"
+                        className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-2xs font-medium text-primary underline underline-offset-2"
                       >
                         Runbook →
                       </a>
@@ -368,7 +368,7 @@ export function TriageSummary({
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2 border-t border-border/60 pt-3">
-              <SummaryBadge label="Last Transition" value={formatTransitionLabel(latestTransition)} />
+              <SummaryBadge label="Last transition" value={formatTransitionLabel(latestTransition)} />
               <SummaryBadge
                 label="Changed"
                 value={
@@ -383,7 +383,7 @@ export function TriageSummary({
           <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Needs attention</h3>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 {attentionSections.length > 0 ? `${attentionSections.length} lanes` : "clear"}
               </span>
             </div>
@@ -455,7 +455,7 @@ export function TriageSummary({
           <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center gap-2 rounded-md text-sm font-medium text-foreground">
             State machine, probe, and discrepancy diagnostics
             {diagnosticsHasNewSignal && !isDiagnosticsOpen ? (
-              <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
+              <span className={cn("rounded-full border px-2 py-0.5 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
                 New signal
               </span>
             ) : null}
@@ -463,11 +463,11 @@ export function TriageSummary({
           {isDiagnosticsOpen ? (
             <div className="mt-3 space-y-4 pb-3">
               <div className="flex flex-wrap gap-2">
-                <SummaryBadge label="State Eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
-                <SummaryBadge label="Status Payload" value={formatTimestampSeconds(data.timestamp)} />
-                <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
-                <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
-                <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
+                <SummaryBadge label="State eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
+                <SummaryBadge label="Status payload" value={formatTimestampSeconds(data.timestamp)} />
+                <SummaryBadge label="Status fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
+                <SummaryBadge label="Health fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
+                <SummaryBadge label="Probe fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
                 <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
                 <FreshnessIndicator
                   updatedAtMs={freshnessFloorMs ?? 0}

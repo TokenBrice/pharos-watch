@@ -68,7 +68,7 @@ export function FiatWorldAtlas({ embedded = false }: { embedded?: boolean } = {}
       <div data-alt-peg-layout="responsive-atlas" className="block">
         <a
           href="#alt-peg-history-share"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-skip focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
         >
           Skip peg map
         </a>

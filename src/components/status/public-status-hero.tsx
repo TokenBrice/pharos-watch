@@ -31,18 +31,18 @@ const HERO_COPY = {
     headline: "Public surface steady.",
     /* Flat card; no accent stripe when healthy. */
     shell: "",
-    accentDot: "bg-emerald-500",
+    accentDot: "bg-state-positive-solid",
   },
   degraded: {
     headline: "Public surface under pressure.",
     /* Data-driven severity accent for a real degraded state. */
-    shell: "border-l-[3px] border-l-amber-500",
-    accentDot: "bg-amber-500",
+    shell: "border-l-[3px] border-l-state-warn-solid",
+    accentDot: "bg-state-warn-solid",
   },
   stale: {
     headline: "Public surface compromised.",
-    shell: "border-l-[3px] border-l-red-500",
-    accentDot: "bg-red-500",
+    shell: "border-l-[3px] border-l-state-danger-solid",
+    accentDot: "bg-state-danger-solid",
   },
 } as const;
 
@@ -166,17 +166,17 @@ export function PublicStatusHero({
         {/* ── 4-metric strip ── */}
         <div className="grid gap-x-6 gap-y-3 border-t border-border/60 pt-4 sm:grid-cols-2 lg:grid-cols-4">
           <SignalTile
-            label="Cache Pressure"
+            label="Cache pressure"
             value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : worstCacheStatus === "healthy" ? "—" : "missing"}
             tone={worstCacheStatus}
           />
           <SignalTile
-            label="Browser Probes"
+            label="Browser probes"
             value={probeValue}
             tone={probeSummary?.status ?? (probesLoading && !probesFailed ? "loading" : "unknown")}
           />
           <SignalTile
-            label="Circuit Breakers"
+            label="Circuit breakers"
             value={circuitValue}
             tone={openCircuits == null || halfOpenCircuits == null ? "unknown" : openCircuits > 0 ? "stale" : halfOpenCircuits > 0 ? "degraded" : "healthy"}
           />

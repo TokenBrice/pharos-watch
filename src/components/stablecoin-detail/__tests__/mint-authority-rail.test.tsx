@@ -76,7 +76,7 @@ describe("MintAuthorityRail", () => {
     const eoa = { authorityTypeKey: "eoa", authorityTypeLabel: "Externally owned account", threshold: null, signerCount: null };
     const roleNamed = renderToStaticMarkup(<MintAuthorityRail {...BASE_PROPS} controls={[makeControl(eoa)]} />);
     expect(roleNamed).toContain(">Minter admin EOA<");
-    expect(roleNamed).toContain("text-amber-700");
+    expect(roleNamed).toContain("text-state-warn");
     const generic = renderToStaticMarkup(
       <MintAuthorityRail {...BASE_PROPS} controls={[makeControl({ ...eoa, roleKey: "unknown", roleLabel: "Unknown" })]} />,
     );

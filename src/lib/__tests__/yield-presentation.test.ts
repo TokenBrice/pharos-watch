@@ -66,7 +66,7 @@ describe("buildRankChangeChipDisplay", () => {
       signedRank: "+4",
       short: "APY",
     });
-    expect(display?.colorClass).toContain("emerald");
+    expect(display?.colorClass).toContain("state-positive");
   });
 
   it("renders negative rankDelta as a rank decline", () => {
@@ -81,6 +81,6 @@ describe("buildRankChangeChipDisplay", () => {
       signedRank: "-2",
       short: "Source risk",
     });
-    expect(display?.colorClass).toContain("red");
+    expect(display?.colorClass).toContain("state-danger");
   });
 });

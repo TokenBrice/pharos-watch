@@ -92,7 +92,7 @@ describe("ScreenerTable mobile cards", () => {
     await waitFor(() => {
       expect(screen.getAllByText("USDT").length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("Sort Results")).toBeTruthy();
+    expect(screen.getByText("Sort results")).toBeTruthy();
     expect(screen.getAllByText(/Peg/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/DEWS/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Liq/).length).toBeGreaterThan(0);
@@ -116,7 +116,7 @@ describe("ScreenerTable desktop table", () => {
     await waitFor(() => {
       expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
     });
-    expect(screen.queryByText("Sort Results")).toBeNull();
+    expect(screen.queryByText("Sort results")).toBeNull();
     expect(screen.getByText("Adequate")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Open Safety Score waterfall for USDT/i })).toBeTruthy();
   });
@@ -155,7 +155,7 @@ describe("ScreenerTable desktop table", () => {
     // The cell renders two endpoint samples (all-time worst, current), so the
     // column must not claim a 30-day window.
     expect(screen.queryByText("30d Peg")).toBeNull();
-    expect(screen.getByText("Peg Range").closest("th")?.getAttribute("title")).toBe(
+    expect(screen.getByText("Peg range").closest("th")?.getAttribute("title")).toBe(
       "Peg range: worst / current deviation (±bps around the peg)",
     );
   });

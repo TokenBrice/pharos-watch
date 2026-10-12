@@ -318,7 +318,7 @@ export function ApiKeyTable({
           <TableHead className="px-3 py-2 font-medium">Limit</TableHead>
           <TableHead className="px-3 py-2 font-medium">Expiry</TableHead>
           <TableHead className="px-3 py-2 font-medium">Last used</TableHead>
-          <TableHead className="sticky right-0 z-20 border-l border-border/70 bg-muted px-3 py-2 font-medium shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]">
+          <TableHead className="sticky right-0 z-10 border-l border-border/70 bg-muted px-3 py-2 font-medium shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]">
             Actions
           </TableHead>
         </TableRow>
@@ -341,7 +341,7 @@ export function ApiKeyTable({
                 <div className="flex flex-wrap gap-1.5">
                   <StatusPill className={apiKeyStatusBadgeClassName(keyStatus)}>{keyStatus}</StatusPill>
                   {expiringSoon ? (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-medium text-amber-700 dark:text-amber-400">
+                    <span className="rounded-full bg-state-warn-solid/15 px-2 py-0.5 text-2xs font-medium text-state-warn">
                       expiring soon
                     </span>
                   ) : null}
@@ -375,8 +375,8 @@ export function ApiKeyTable({
               <TableCell
                 className={
                   isSelected
-                    ? "sticky right-0 z-[5] border-l border-border/70 bg-muted px-3 py-2 align-top shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]"
-                    : "sticky right-0 z-[5] border-l border-border/70 bg-background px-3 py-2 align-top shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]"
+                    ? "sticky right-0 z-5 border-l border-border/70 bg-muted px-3 py-2 align-top shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]"
+                    : "sticky right-0 z-5 border-l border-border/70 bg-background px-3 py-2 align-top shadow-[-8px_0_12px_-12px_rgba(0,0,0,0.45)]"
                 }
               >
                 <div className="flex flex-wrap gap-2">

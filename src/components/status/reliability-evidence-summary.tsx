@@ -6,7 +6,7 @@ export function ReliabilityEvidenceSummary({ gaps }: { gaps: ReliabilityEvidence
   return (
     <section
       aria-labelledby="reliability-evidence-title"
-      className="border-y border-amber-500/30 bg-amber-500/[0.06] px-3 py-3 text-amber-950 dark:text-amber-100"
+      className="border-y border-state-warn bg-state-warn-solid/[0.06] px-3 py-3 text-state-warn-ink"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 id="reliability-evidence-title" className="text-sm font-semibold">

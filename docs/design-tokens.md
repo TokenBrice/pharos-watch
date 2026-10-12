@@ -21,7 +21,7 @@ Raw values with no semantic meaning. Do not reference directly in components unl
 - **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent (`#4BC4DE`, sampled from Figma); scale stops run 50–900 in OKLch (red extends to 950; neutral runs 50–975 with additional 850/925/950/975 stops)
 - **Spacing** — 4px-based scale from `--p-space-0` to `--p-space-20`, with `--p-space-0-5` (2px) and `--p-space-1-5` (6px) half steps for tight UI alignment
 - **Typography** — Font sizes (`--p-text-3xs` to `--p-text-5xl`), line heights, tracking (see [Type scale](#type-scale))
-- **Radius** — `--p-radius-none` to `--p-radius-full`
+- **Radius** — `--p-radius-none` to `--p-radius-full`. Usage rule: chips, pills, avatars and dots `rounded-full`; buttons, inputs, selects and other controls `rounded-md`; top-level cards, panels, shells and dialogs `rounded-xl`; surfaces nested inside a card or panel (callouts, inner tiles, notices, stat boxes) `rounded-lg`, one step below their parent; inline tags, badges, `kbd` and inline code `rounded-sm`; table, image and chart wrappers inherit their container.
 
 Naming: `--p-{category}-{value}` (e.g., `--p-blue-500`, `--p-space-4`)
 
@@ -34,6 +34,7 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 | Surfaces            | `--surface-base`, `--surface-raised`, `--surface-overlay`                                               | Page bg, elevated cards, modals         |
 | Text                | `--text-primary`, `--text-secondary`, `--text-tertiary`                                                 | Content hierarchy                       |
 | Borders             | `--border-default`, `--border-subtle`, `--border-strong`                                                | Separator hierarchy                     |
+| UI State            | `--state-{positive,warn,danger,info}-{text,text-bright,text-strong,text-ink,solid,subtle,border}`      | [UI state utilities](#ui-state-utilities) |
 | Severity            | `--severity-healthy` through `--severity-severe`                                                        | Peg deviation bands                     |
 | PSI Bands           | `--psi-bedrock` through `--psi-meltdown`                                                                | Stability index zones                   |
 | DEWS Threat Bands   | `--dews-calm` through `--dews-danger`                                                                   | DEWS threat level zones                 |
@@ -49,16 +50,42 @@ This table covers the categories referenced most often in product code, not the 
 
 - `--text-secondary` and `--text-tertiary` are intentionally darker in light mode than earlier revisions to keep metadata and helper text readable on pale surfaces.
 - `--ring` is blue in both themes (`blue-500` light, `blue-400` dark) to keep keyboard focus visible against neutral backgrounds.
-- For semantic status/accent text classes used in badges and KPI callouts, use the two-theme pattern:
-  - `text-*-700 dark:text-*-400`
+- For status/accent text in badges and KPI callouts, use the [UI state utilities](#ui-state-utilities) (`text-state-warn` is the former `text-amber-700 dark:text-amber-400` pair) rather than spelling a two-theme palette pair.
 - Avoid unscoped `text-*-300` / `text-*-400` in app code unless the element only renders on dark-only surfaces.
 - DEWS radar guide lines should stay theme-tuned via tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`); dark mode requires visibly higher alpha than `0.04` to keep axis spokes readable.
 - Dense interactive controls should use the `--control-pill-*` token family rather than ad-hoc translucent button backgrounds.
 - Selected pills have one style: `.pharos-control-pill-active`, `.pharos-toggle-pill[data-state="on"]` and `.pharos-pill-tab-active` all paint `--control-pill-active-bg` (the `--interactive-active` neutral), `--control-pill-active-text` and a 1px `--control-pill-active-ring`. Never a solid ink fill, and never a `.dark` hex override (tokens carry both themes). Navigation keeps its own frost-lit `.pharos-rail-tab-active`.
 - Secondary mode, view and window switches (dependency-map Explore/Exposure and Watershed/Network, the exposure workspace tabs, the watershed relationship filter, the home Freezes 24h/7d window) use `.pharos-segmented` with `.pharos-segmented-item` children: one bordered track, selection from `aria-pressed` / `aria-selected`, painted with the shared active tokens. `ControlPillToggle` renders it with `variant="segmented"`.
 - `--table-header-top` is the bottom edge of the sticky site chrome (60px for the 768–1023px header, 59px for the lg+ TopNav, 56px on phones); sticky table headers pin there and `scroll-padding-top` uses it.
-- Stacking uses the named layers from the `@theme` block in `globals.css`, lowest first: `z-chrome` (sticky desktop header, floating page controls), `z-chrome-dock` (mobile bottom nav), `z-chrome-header` (mobile header), `z-regime` (PSI regime line and its panel), `z-modal` (dialogs, sheets, popovers, dropdowns, tooltips) and `z-toast` / `z-skip`. New fixed or portalled surfaces pick a layer instead of a numeric `z-[…]`.
+- Stacking uses the named layers from the `@theme` block in `globals.css`, lowest first: `z-chrome` (sticky desktop header, floating page controls), `z-chrome-dock` (mobile bottom nav), `z-chrome-header` (mobile header), `z-progress` (route progress bar, just under the regime line), `z-regime` (PSI regime line and its panel), `z-modal` (dialogs, sheets, popovers, dropdowns, tooltips) and `z-toast` / `z-skip`. New fixed or portalled surfaces pick a layer instead of a numeric `z-[…]`.
 - Dedicated chart stages should use the `--chart-stage-*` token family so chart canvases stay visually distinct from the outer card shell.
+
+#### UI state utilities
+
+UI and operational state (ok, warning, error, informational: job status, stale/degraded pills, notice banners, validation, toasts) uses one vocabulary, defined once in `semantic.css` with `light-dark()` and exposed as Tailwind utilities at the end of that file. Values are the Tailwind palette stops the product previously spelled by hand, so a migrated class renders identically.
+
+| Tone | Hue | Typical use |
+| --- | --- | --- |
+| `positive` | emerald | succeeded, healthy, verified |
+| `warn` | amber | stale, degraded, needs review, caution banners |
+| `danger` | red | failed, error, unavailable |
+| `info` | sky | running, pending, provisional, informational |
+
+| Utility | Light / dark value | Replaces |
+| --- | --- | --- |
+| `text-state-{tone}` | 700 / 400 | `text-X-700 dark:text-X-400` |
+| `text-state-{tone}-bright` | 700 / 300 | `text-X-700 dark:text-X-300` (text on a tint) |
+| `text-state-{tone}-strong` | 800 / 200 | `text-X-800 dark:text-X-200` (callout body copy) |
+| `text-state-{tone}-ink` | 950 / 100 | `text-X-950 dark:text-X-100` (callout heading/ink) |
+| `bg-state-{tone}-subtle` | 500 at 10% | `bg-X-500/10` |
+| `border-state-{tone}` | 500 at 30% | `border-X-500/30` |
+| `{bg,border,border-l,text,fill,stroke,ring,…}-state-{tone}-solid[/N]` | 500 | `bg-X-500`, `bg-X-500/15`, `border-X-500/25`, `border-l-X-500/70` … |
+
+- The `-solid` colour is a theme colour (`--color-state-{tone}-solid`), so it takes any utility and opacity modifier; the other roles are fixed utilities without modifiers.
+- Neutral state keeps the existing neutral tokens (`text-muted-foreground`, `bg-muted/30`, `border-border/60`). `SEVERITY_TONE_CLASS` in `src/lib/severity-tone.ts` composes these utilities for pill/banner/text/bar slots.
+- State utilities are not for classification scales. A colour chosen by a data band, grade, tier or category (peg-deviation severity, score tiers, PSI/DEWS bands, chain health, coverage/feature palettes, mechanism or event categories) belongs to `shared/lib/classification.ts` or the documented engine that owns it (`src/lib/severity-colors.ts`).
+- `light-dark()` resolves against `color-scheme`: `:root` sets `light` and `.dark` sets `dark` (next-themes also sets it inline on `<html>`). A subtree with its own `color-scheme` (the Telegram mini-app follows the Telegram theme) resolves these tokens against that scheme, not the `.dark` class.
+- ESLint `pharos/no-raw-palette-colour` bans raw palette colour classes (`text-amber-700`, `bg-red-500/10`, `border-l-sky-500/70` …) in `src/components/` and `src/app/`, except the editorial carve-outs (cemetery, digest, timeline/tape, blog, depeg event briefings, AI summaries, error/404 pages). Existing call sites are grandfathered per file in `eslint-suppressions.json`, under the same ratchet as the type-scale rule.
 
 #### Hex Companion Variables
 
@@ -168,6 +195,6 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 ### Adding a New Token
 
 1. If it's a raw color/spacing value → add to `primitives.css`
-2. If it maps a primitive to a purpose → add to `semantic.css` (both `:root` and `.dark`)
+2. If it maps a primitive to a purpose → add to `semantic.css` `:root`, using `light-dark(light, dark)` for a colour that differs by theme (a `.dark` override only for non-colour values such as shadows, gradients or opacities)
 3. If a non-CSS chart/runtime consumer needs it → add a `-hex` companion in `semantic.css` AND update the JS token map
 4. If it's scoped to one component type → add as a component token in `semantic.css`

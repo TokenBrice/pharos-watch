@@ -139,7 +139,7 @@ function TableSearchField({
         aria-label={placeholder}
         className={cn(
           "pharos-focus-ring w-full border border-border/70 bg-background/40 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-border",
-          variant === "figmaOverview" ? "h-8 rounded-lg pl-8 pr-3" : "h-11 rounded-full pl-9 pr-3 sm:h-9",
+          variant === "figmaOverview" ? "h-8 rounded-md pl-8 pr-3" : "h-11 rounded-full pl-9 pr-3 sm:h-9",
         )}
       />
     </div>
@@ -159,7 +159,7 @@ export function TableToolbar({
   searchValue,
   onSearchChange,
   searchPlaceholder = "Search stablecoins",
-  eyebrow = "Table Controls",
+  eyebrow = "Table controls",
   description = DEFAULT_TOOLBAR_DESCRIPTION,
   titleId,
   meta,
@@ -183,14 +183,14 @@ export function TableToolbar({
         setVisibleColumns={onVisibleColumnsChange}
         resetColumns={onResetColumns}
         defaultColumns={defaultColumns}
-        triggerClassName={variant === "figmaOverview" ? "h-8 min-h-8 w-auto rounded-lg px-2 sm:px-3" : undefined}
+        triggerClassName={variant === "figmaOverview" ? "h-8 min-h-8 w-auto rounded-md px-2 sm:px-3" : undefined}
         compactOnMobile={variant === "figmaOverview"}
       />
       <Button
         variant="outline"
         size="sm"
         aria-label={variant === "figmaOverview" ? "Export CSV" : undefined}
-        className={cn("rounded-lg", variant === "figmaOverview" ? "h-8 min-h-8 px-2 sm:px-3" : "min-h-11 sm:min-h-8")}
+        className={cn("rounded-md", variant === "figmaOverview" ? "h-8 min-h-8 px-2 sm:px-3" : "min-h-11 sm:min-h-8")}
         onClick={onExport}
         disabled={exportDisabled}
       >

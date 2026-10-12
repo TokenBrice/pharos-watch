@@ -36,16 +36,16 @@ export function PublicStatusReliabilitySection({
         <>
           {probeSummary && probeSummary.failCount > 0 && (
             <StatusSummaryBadge
-              label="Probe Failures"
+              label="Probe failures"
               value={`${probeSummary.failCount}/${probeSummary.sampleCount}`}
               status="degraded"
             />
           )}
           {publicImpactCircuits == null && (
-            <StatusSummaryBadge label="Circuit Breakers" value="Unavailable" status="degraded" />
+            <StatusSummaryBadge label="Circuit breakers" value="Unavailable" status="degraded" />
           )}
           {openCircuits != null && openCircuits > 0 && (
-            <StatusSummaryBadge label="Open Breakers" value={String(openCircuits)} status="stale" />
+            <StatusSummaryBadge label="Open breakers" value={String(openCircuits)} status="stale" />
           )}
           {halfOpenCircuits != null && halfOpenCircuits > 0 && (
             <StatusSummaryBadge label="Half-open" value={String(halfOpenCircuits)} status="degraded" />

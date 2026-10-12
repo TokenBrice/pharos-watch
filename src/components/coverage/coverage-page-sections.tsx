@@ -355,7 +355,7 @@ export function CoverageMatrixCard(
                 value={model.search}
                 onChange={(event) => model.setSearch(event.target.value)}
                 placeholder="Search stablecoin or ticker"
-                className="h-11 rounded-lg border-border/65 bg-background/45 pl-10 sm:h-10"
+                className="h-11 rounded-md border-border/65 bg-background/45 pl-10 sm:h-10"
                 aria-label="Search stablecoin coverage table"
               />
             </div>
@@ -437,7 +437,7 @@ export function CoverageMatrixCard(
         {model.unavailableFeatures.length > 0 ? (
           <div
             role="status"
-            className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm leading-relaxed text-amber-800 dark:text-amber-200"
+            className="rounded-xl border border-state-warn bg-state-warn-subtle px-4 py-3 text-sm leading-relaxed text-state-warn-strong"
           >
             Some feature feeds are unavailable, so affected cells are marked Data n/a, or Checking for reserve sync,
             instead of being counted as coverage gaps: {unavailableFeatureLabels}.

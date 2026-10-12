@@ -61,13 +61,13 @@ export function DependencyScenarioView({ response, roots, selection, selectedId,
   selectedId: string; onSelect: (id: string) => void; label: (id: string) => string;
 }) {
   const candidates = response?.artifact?.scenarios.filter(row => roots.includes(row.rootId)) ?? [];
-  return <section aria-label="Modeled Safety Score results" className="space-y-2 rounded border border-border p-3">
+  return <section aria-label="Modeled Safety Score results" className="space-y-2 rounded-xl border border-border p-3">
     <h4 className="font-semibold">Published → modeled grade</h4>
     {!selection.current && <p role="status" className="text-sm">{selection.state}</p>}
     {selection.generation && <p className="break-all text-xs text-muted-foreground">Modeled with the production Safety Score evaluator on publication {selection.generation}; not a forecast</p>}
     <p className="text-xs text-muted-foreground">Artifact age {selection.ageSec === null ? "unavailable" : `${Math.floor(selection.ageSec / 60)} minutes`} · freshness budget {DEPENDENCY_SCENARIOS_FRESHNESS_BUDGET_SEC / 3600} hours</p>
     {candidates.length > 0 ? <>
-      <label className="block text-sm">Scenario type <select className="min-h-11 max-w-full rounded border border-border bg-background px-2" value={selection.scenario?.id ?? selectedId} onChange={event => onSelect(event.target.value)}>{candidates.map(row => <option key={row.id} value={row.id}>{label(row.rootId)}: {scenarioLabel(row)}</option>)}</select></label>
+      <label className="block text-sm">Scenario type <select className="min-h-11 max-w-full rounded-md border border-border bg-background px-2" value={selection.scenario?.id ?? selectedId} onChange={event => onSelect(event.target.value)}>{candidates.map(row => <option key={row.id} value={row.id}>{label(row.rootId)}: {scenarioLabel(row)}</option>)}</select></label>
       <h5 className="text-sm font-medium">Stated assumptions</h5>
       <ul className="list-inside list-disc text-sm">{selection.scenario?.assumptions.map((assumption, index) => <li key={index}>{assumption}</li>)}</ul>
       <p className="text-xs text-muted-foreground">Modeled results include role dependencies. The exposure table uses mapped collateral and wrapper relationships only. Stored rows include changed coins and the upstream root; missing rows are not numeric estimates.</p>

@@ -20,17 +20,17 @@ const HEALTH_PRESENTATION: Record<CommsDeliveryHealth, { label: string; classNam
   {
     healthy: {
       label: "Healthy",
-      className: "text-emerald-700 dark:text-emerald-300",
+      className: "text-state-positive-bright",
       icon: CircleCheck,
     },
     degraded: {
       label: "Degraded",
-      className: "text-amber-700 dark:text-amber-300",
+      className: "text-state-warn-bright",
       icon: AlertTriangle,
     },
     failed: {
       label: "Failed",
-      className: "text-red-700 dark:text-red-300",
+      className: "text-state-danger-bright",
       icon: CircleX,
     },
     unknown: {
@@ -173,7 +173,7 @@ function PriorityValue({ metric, model }: { metric: CommsPriorityMetric; model: 
         <span
           className={cn(
             "font-mono text-lg font-semibold tabular-nums",
-            (delivery.permanentFailures.total ?? 0) > 0 && "text-red-700 dark:text-red-300",
+            (delivery.permanentFailures.total ?? 0) > 0 && "text-state-danger-bright",
           )}
         >
           {formatCount(delivery.permanentFailures.total)}
@@ -235,9 +235,9 @@ function RecoverySummary({ model }: { model: CommsWorkbenchModel }) {
       className={cn(
         "min-w-0 border-l-2 py-2 pl-3",
         delivery.health === "failed"
-          ? "border-red-500"
+          ? "border-state-danger-solid"
           : delivery.health === "degraded"
-            ? "border-amber-500"
+            ? "border-state-warn-solid"
             : "border-border",
       )}
       data-testid="comms-recovery-summary"
@@ -272,8 +272,8 @@ function TelemetryNotice({ model }: { model: CommsWorkbenchModel }) {
   if (model.quality.status === "complete" && !model.quality.sectionError) return null;
 
   return (
-    <div className="min-w-0 border-l-2 border-amber-500 py-2 pl-3 text-sm" data-testid="telegram-telemetry-notice">
-      <p className="font-medium text-amber-800 dark:text-amber-200">
+    <div className="min-w-0 border-l-2 border-state-warn-solid py-2 pl-3 text-sm" data-testid="telegram-telemetry-notice">
+      <p className="font-medium text-state-warn-strong">
         {model.quality.status === "partial" ? "Telegram telemetry is partial." : "Telegram telemetry is Unknown."}
       </p>
       {model.quality.unavailableFields.length > 0 ? (
@@ -312,7 +312,7 @@ function BacklogTelemetry({ model }: { model: CommsWorkbenchModel }) {
         <MetricRow label="Expired" value={formatCount(delivery.backlog.expired)} />
         <MetricRow label="Near TTL" value={formatCount(delivery.backlog.nearTtl)} />
         <MetricRow label="Sending" value={formatCount(delivery.backlog.sending)} />
-        <MetricRow label="Execution Unknown" value={formatCount(delivery.backlog.executionUnknown)} />
+        <MetricRow label="Execution unknown" value={formatCount(delivery.backlog.executionUnknown)} />
         <MetricRow label="Pending execution Unknown" value={formatCount(delivery.backlog.pendingExecutionUnknown)} />
         <MetricRow label="Fresh execution Unknown" value={formatCount(delivery.backlog.freshExecutionUnknown)} />
         <MetricRow
@@ -428,12 +428,12 @@ function LatestDispatch({ model }: { model: CommsWorkbenchModel }) {
         <MetricRow label="Reserve alerts suppressed" value={formatBoolean(dispatch.reserveAlertsSuppressed)} />
       </dl>
       {dispatch.skipped ? (
-        <p className="mt-2 min-w-0 break-words text-xs text-amber-700 [overflow-wrap:anywhere] dark:text-amber-300">
+        <p className="mt-2 min-w-0 break-words text-xs text-state-warn-bright [overflow-wrap:anywhere]">
           Skipped: {dispatch.skipped}
         </p>
       ) : null}
       {dispatch.error ? (
-        <p className="mt-2 min-w-0 break-words font-mono text-xs text-red-700 [overflow-wrap:anywhere] dark:text-red-300">
+        <p className="mt-2 min-w-0 break-words font-mono text-xs text-state-danger-bright [overflow-wrap:anywhere]">
           {dispatch.error}
         </p>
       ) : null}

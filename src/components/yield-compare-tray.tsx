@@ -22,9 +22,9 @@ export function YieldCompareTray({ rows, logos, onOpenDrawer }: YieldCompareTray
     <div
       role="region"
       aria-label="Compare selection"
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-utility-safe-offset)+0.75rem)] z-50 flex justify-center px-3 print:hidden sm:bottom-4 sm:px-4"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(var(--mobile-utility-safe-offset)+0.75rem)] z-chrome flex justify-center px-3 print:hidden sm:bottom-4 sm:px-4"
     >
-      <div className="pointer-events-auto flex w-full max-w-xl items-center gap-2 rounded-lg border border-border/70 bg-background/95 px-3 py-2 shadow-lg backdrop-blur sm:w-auto sm:gap-3 sm:rounded-full sm:px-4">
+      <div className="pointer-events-auto flex w-full max-w-xl items-center gap-2 rounded-xl border border-border/70 bg-background/95 px-3 py-2 shadow-lg backdrop-blur sm:w-auto sm:gap-3 sm:rounded-full sm:px-4">
         <span className="text-xs font-medium text-foreground">{ids.length} selected</span>
         <div className="flex -space-x-2" aria-hidden="true">
           {ids.map((id) => {

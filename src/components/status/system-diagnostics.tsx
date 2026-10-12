@@ -38,7 +38,7 @@ export function SystemDiagnostics({
   probe,
   discrepancy,
   browserProbe,
-  browserProbeLabel = "Browser Probe Loop",
+  browserProbeLabel = "Browser probe loop",
   error,
   nowSeconds,
 }: SystemDiagnosticsProps) {
@@ -74,7 +74,7 @@ export function SystemDiagnostics({
       <div className="min-w-0 border-y border-border/60 py-2">
         <div className="text-xs text-muted-foreground">Status Freshness</div>
         <div
-          className={`font-mono text-sm ${staleness.isStale ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}
+          className={`font-mono text-sm ${staleness.isStale ? "text-state-danger" : "text-state-positive"}`}
         >
           {staleness.isStale ? "stale" : "fresh"}
         </div>
@@ -121,7 +121,7 @@ export function SystemDiagnostics({
         <div className="text-xs text-muted-foreground">Divergence</div>
         <div
           className={`font-mono text-sm ${
-            discrepancy.statusSeverity == null ? "text-muted-foreground" : discrepancy.hasDivergence ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
+            discrepancy.statusSeverity == null ? "text-muted-foreground" : discrepancy.hasDivergence ? "text-state-warn" : "text-state-positive"
           }`}
         >
           {discrepancy.statusSeverity == null ? "unavailable" : discrepancy.hasDivergence ? "detected" : "none"}

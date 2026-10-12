@@ -12,7 +12,7 @@ import { PublicSignalCard } from "./public-signal-card";
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
   { key: "public", label: "Public" },
   { key: "admin", label: "Admin" },
-  { key: "manual", label: "Manual Actions" },
+  { key: "manual", label: "Manual actions" },
 ];
 
 interface EndpointHealthGridProps {
@@ -32,7 +32,7 @@ export function EndpointHealthGrid({
 }: EndpointHealthGridProps) {
   if (isLoading && !probes) {
     return (
-      <PublicSignalCard title="Browser Endpoint Probes" contentClassName="mt-3">
+      <PublicSignalCard title="Browser endpoint probes" contentClassName="mt-3">
         <p className="text-sm text-muted-foreground">Probing endpoints...</p>
       </PublicSignalCard>
     );
@@ -64,7 +64,7 @@ export function EndpointHealthGrid({
       : "Shows public canary coverage only. Admin and manual action routes are intentionally excluded.");
 
   return (
-    <PublicSignalCard title="Browser Endpoint Probes">
+    <PublicSignalCard title="Browser endpoint probes">
         <p className="text-xs text-muted-foreground">
           {description ??
             (isAdminView
@@ -134,17 +134,17 @@ export function EndpointHealthGrid({
                         {probe ? (
                           <>
                             {isOk && (
-                              <Badge className="bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-400">
+                              <Badge className="bg-state-positive-solid/15 text-xs text-state-positive">
                                 {statusLabel}
                               </Badge>
                             )}
                             {isSemanticDegraded && (
-                              <Badge className="bg-amber-500/15 text-xs text-amber-700 dark:text-amber-400">
+                              <Badge className="bg-state-warn-solid/15 text-xs text-state-warn">
                                 {statusLabel}
                               </Badge>
                             )}
                             {isError && (
-                              <Badge className="bg-red-500/15 text-xs text-red-700 dark:text-red-400">
+                              <Badge className="bg-state-danger-solid/15 text-xs text-state-danger">
                                 {statusLabel}
                               </Badge>
                             )}

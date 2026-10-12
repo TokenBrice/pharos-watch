@@ -94,7 +94,7 @@ function PagesReleaseCorrelation({
               </p>
             ) : firstDegrade ? (
               <p>
-                <span className="font-medium text-amber-700 dark:text-amber-300">
+                <span className="font-medium text-state-warn-bright">
                   First degradation after release:{" "}
                 </span>
                 <span className="font-mono text-xs tabular-nums">{formatTransitionLabel(firstDegrade)}</span>{" "}
@@ -229,7 +229,7 @@ export function HistorySection({
   return (
     <StatusSection
       id="history"
-      kicker="Incident Log"
+      kicker="Incident log"
       title="Incident History"
       headingLevel="h1"
       variant="workspace"
@@ -280,7 +280,7 @@ export function HistorySection({
       {historyEvidence.state !== "ready" || historyEvidence.completeness !== "complete" ? (
         <div
           role={historyEvidence.state === "error" ? "alert" : "status"}
-          className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-100"
+          className="border-l-2 border-state-warn-solid bg-state-warn-solid/[0.06] px-3 py-2.5 text-xs text-state-warn-ink"
         >
           <p className="font-medium">
             {historyEvidence.source === "status-fallback"
@@ -315,7 +315,7 @@ export function HistorySection({
         historyCoverage={historyCoverage}
       />
       {reserveComposition.runBudgetTruncated ? (
-        <div className="border-l-2 border-amber-500 bg-amber-500/[0.06] px-3 py-2.5 text-xs text-amber-950 dark:text-amber-100">
+        <div className="border-l-2 border-state-warn-solid bg-state-warn-solid/[0.06] px-3 py-2.5 text-xs text-state-warn-ink">
           Live reserve sync last truncated by run budget; resumes at{" "}
           {reserveComposition.nextCursorStablecoinId ?? "next configured coin"}.
         </div>

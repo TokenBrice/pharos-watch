@@ -221,7 +221,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
                 className={cn(
                   "inline-flex items-baseline gap-1 rounded-full border px-2 py-0.5 text-2xs",
                   chip.tone === "watch"
-                    ? "border-amber-500/40 bg-amber-500/[0.07] text-amber-800 dark:text-amber-200"
+                    ? "border-state-warn-solid/40 bg-state-warn-solid/[0.07] text-state-warn-strong"
                     : "border-border/60 bg-background/55 text-foreground",
                 )}
               >
@@ -319,7 +319,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
         {rec.confidence != null && rec.confidence < 60 ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/[0.07] px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">
+          <span className="inline-flex items-center gap-1 rounded-full border border-state-warn-solid/40 bg-state-warn-solid/[0.07] px-2 py-0.5 text-xs font-medium text-state-warn-strong">
             <Clock className="h-3 w-3" aria-hidden="true" />
             Lower confidence — limited data
           </span>

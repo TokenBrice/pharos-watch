@@ -50,7 +50,7 @@ export function CommandManual() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder='Filter commands — try "mute", "recap", "usdt"'
-          className="pharos-focus-ring h-11 w-full rounded-lg border border-border/60 bg-background/60 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/70"
+          className="pharos-focus-ring h-11 w-full rounded-md border border-border/60 bg-background/60 pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/70"
         />
       </div>
       <p aria-live="polite" className="mt-2 text-xs text-muted-foreground">

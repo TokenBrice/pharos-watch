@@ -9,11 +9,11 @@ const RISK_BUDGET_STYLES: Record<
   { dot: string; dotBorder: string; ring: string; trackFill: string; text: string; activeCount: string }
 > = {
   conservative: {
-    dot: "bg-emerald-500",
-    dotBorder: "border-emerald-500",
-    ring: "ring-emerald-500/25",
-    trackFill: "bg-emerald-500",
-    text: "text-emerald-700 dark:text-emerald-300",
+    dot: "bg-state-positive-solid",
+    dotBorder: "border-state-positive-solid",
+    ring: "ring-state-positive-solid/25",
+    trackFill: "bg-state-positive-solid",
+    text: "text-state-positive-bright",
     activeCount: "text-emerald-700 dark:text-emerald-200",
   },
   balanced: {
@@ -25,11 +25,11 @@ const RISK_BUDGET_STYLES: Record<
     activeCount: "text-green-700 dark:text-green-200",
   },
   opportunistic: {
-    dot: "bg-amber-500",
-    dotBorder: "border-amber-500",
-    ring: "ring-amber-500/25",
-    trackFill: "bg-amber-500",
-    text: "text-amber-700 dark:text-amber-300",
+    dot: "bg-state-warn-solid",
+    dotBorder: "border-state-warn-solid",
+    ring: "ring-state-warn-solid/25",
+    trackFill: "bg-state-warn-solid",
+    text: "text-state-warn-bright",
     activeCount: "text-amber-700 dark:text-amber-200",
   },
   all: {
@@ -131,7 +131,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
           // WHY: h-11 (44px) meets WCAG 2.5.5 advisory target size while
           // -translate-y-1/2 keeps the hit corridor centered on the dot row;
           // the visual layer renders beneath with pointer-events disabled.
-          className="pharos-focus-ring absolute inset-x-2.5 top-[1.5rem] z-20 h-11 w-[calc(100%-1.25rem)] -translate-y-1/2 cursor-pointer appearance-none bg-transparent opacity-0"
+          className="pharos-focus-ring absolute inset-x-2.5 top-[1.5rem] z-10 h-11 w-[calc(100%-1.25rem)] -translate-y-1/2 cursor-pointer appearance-none bg-transparent opacity-0"
         />
         {/* Visual stops + labels — non-interactive; the input above owns events */}
         <div className="pointer-events-none relative flex justify-between">

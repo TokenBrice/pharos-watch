@@ -31,10 +31,10 @@ function ProbeRows({ probes }: { probes: EndpointProbeResult[] }) {
               <StatusPill
                 className={
                   healthy
-                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                    ? "bg-state-positive-solid/15 text-state-positive-bright"
                     : degraded
-                      ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
-                      : "bg-red-500/15 text-red-700 dark:text-red-300"
+                      ? "bg-state-warn-solid/15 text-state-warn-strong"
+                      : "bg-state-danger-solid/15 text-state-danger-bright"
                 }
               >
                 {getProbeStatusLabel(probe)}

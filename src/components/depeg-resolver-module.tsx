@@ -47,7 +47,7 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
           ) : null}
           <Badge
             variant="outline"
-            className="border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-3xs uppercase text-amber-700 dark:text-amber-400"
+            className="border-state-warn bg-state-warn-subtle px-1.5 py-0 text-3xs uppercase text-state-warn"
           >
             Beta
           </Badge>
@@ -105,7 +105,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
         {book.total === 1 ? "forecast" : "forecasts"} across {book.rowCount} incident rows ·{" "}
         {hiddenCount > 0 ? `showing the ${visible.length} most urgent` : `showing all ${visible.length}`}
         {book.pastPeakCount > 0 ? (
-          <span className="text-amber-700 dark:text-amber-400">
+          <span className="text-state-warn">
             {" "}
             · {book.pastPeakCount === 1 ? "1 is" : `${book.pastPeakCount} are`} past their worst
           </span>
@@ -132,7 +132,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
       ) : (
         <>
           {showStaleRows ? (
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
               Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
             </p>
           ) : null}

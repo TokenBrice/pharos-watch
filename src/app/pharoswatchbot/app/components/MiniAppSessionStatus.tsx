@@ -49,7 +49,7 @@ export function MiniAppSessionStatus({
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {message} Editing is read-only until Refresh succeeds.
               </p>
-              <dl className="mt-2 grid gap-1 text-[11px] text-muted-foreground">
+              <dl className="mt-2 grid gap-1 text-2xs text-muted-foreground">
                 <div className="flex min-w-0 gap-2">
                   <dt className="font-semibold text-foreground">Revision</dt>
                   <dd className="min-w-0 break-all font-mono">{confirmedMeta.revision}</dd>

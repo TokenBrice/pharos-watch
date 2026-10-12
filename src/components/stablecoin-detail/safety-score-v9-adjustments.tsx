@@ -13,9 +13,9 @@ export function ScoreAdjustment({ card }: { card: SafetyScoreV9CurrentCard }) {
   return (
     <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-adjustment`}>
       <div className="flex items-center gap-2">
-        <Award className="h-4 w-4 text-emerald-700 dark:text-emerald-400" aria-hidden="true" />
+        <Award className="h-4 w-4 text-state-positive" aria-hidden="true" />
         <h3 id={`${card.id}-v9-adjustment`} className="text-sm font-semibold">{adjustment.label}</h3>
-        <span className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+        <span className="font-mono text-xs font-semibold text-state-positive">
           +{adjustment.appliedPoints.toFixed(0)}
         </span>
       </div>
@@ -39,7 +39,7 @@ export function CapSection({ card }: { card: SafetyScoreV9CurrentCard }) {
   return (
     <section className="border-b border-border/40 pb-3" aria-labelledby={`${card.id}-v9-cap`}>
       <div className="flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 text-amber-700 dark:text-amber-400" aria-hidden="true" />
+        <ShieldCheck className="h-4 w-4 text-state-warn" aria-hidden="true" />
         <h3 id={`${card.id}-v9-cap`} className="text-sm font-semibold">
           {wrapperLimit ? "Capped by parent asset" : "Binding cap"}
         </h3>

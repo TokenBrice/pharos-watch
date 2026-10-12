@@ -429,7 +429,7 @@ export function LiquidityExitRouteMap({
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold tracking-tight">Exit Route Map</CardTitle>
+            <CardTitle className="text-lg font-semibold tracking-tight">Exit route map</CardTitle>
             <p className="exit-route-map__summary text-sm text-muted-foreground">
               DEX depth by venue and chain. This maps secondary-market exits only; issuer redemption capacity is scored separately.
             </p>

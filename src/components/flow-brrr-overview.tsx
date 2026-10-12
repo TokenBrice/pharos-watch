@@ -102,7 +102,7 @@ function buildSnapshot(
  */
 const GAUGE_ALARM_BANDS: ReadonlySet<string> = new Set(["STRESS", "CRISIS"]);
 const CAUTION_BADGE_CLASS =
-  "border-amber-600/35 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300";
+  "border-amber-600/35 bg-state-warn-subtle text-state-warn-bright dark:border-state-warn-solid/40 dark:bg-state-warn-solid/15";
 const NEUTRAL_GAUGE_PANEL_CLASS = "border-border/60 bg-background/55 dark:bg-background/35";
 
 function LoadingState() {
@@ -199,7 +199,7 @@ export function FlowBrrrOverview({
                 {snapshot.pressureUi.label}
               </span>
               {gauge?.flightToQuality === true && (
-                <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-2xs font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                <span className="inline-flex rounded-full border border-amber-600/35 bg-state-warn-solid/15 px-2 py-0.5 text-2xs font-semibold text-state-warn-bright dark:border-state-warn-solid/40">
                   FTQ{gauge.flightIntensity != null ? ` ${Math.round(gauge.flightIntensity)}%` : ""}
                 </span>
               )}

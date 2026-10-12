@@ -150,7 +150,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
 
         <MetricStatCard
           variant="compact"
-          title={<MethodologyLabel topic="liquidityScore" className="-my-2.5 md:my-0">Avg Liq Score</MethodologyLabel>}
+          title={<MethodologyLabel topic="liquidityScore" className="-my-2.5 md:my-0">Avg liq score</MethodologyLabel>}
           value={stats.avgScore == null ? "NR" :
             <>
               {stats.avgScore}
@@ -170,7 +170,7 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
         {stats.avgBalance != null && (
           <MetricStatCard
             variant="compact"
-            title="Avg Pool Balance"
+            title="Avg pool balance"
             value={`${stats.avgBalance}%`}
             subtext="TVL-weighted average"
           />

@@ -42,7 +42,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
   const mobileInspectedNode = graph.nodeMap.get(graph.pinnedSelectionId ?? graph.activeHoveredId ?? "") ?? null;
   if (graph.emptyFocusCoin) {
     const memberships = commonModeGroups?.filter(group => group.memberAssetIds.includes(graph.emptyFocusCoin!.id));
-    return <div role="status" className="space-y-2 rounded-lg border p-6 text-sm">
+    return <div role="status" className="space-y-2 rounded-xl border p-6 text-sm">
       <p className="font-semibold">{graph.emptyFocusCoin.name} has no published dependency links in this publication.</p>
       <p className="text-muted-foreground">This is not evidence of no dependencies or shared risks.</p>
       {memberships === undefined ? <p>Shared failure-domain memberships were not published for this generation.</p> : memberships.length === 0 ? <p>No shared failure-domain memberships are listed for this coin in this publication.</p> : <>

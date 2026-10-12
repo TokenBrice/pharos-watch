@@ -287,7 +287,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="pharos-palette-spring-in inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[12vh] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:border sm:border-border/75 z-[100] overflow-hidden bg-card p-0 shadow-[var(--elevation-raised)]"
+        className="pharos-palette-spring-in inset-x-0 top-0 translate-x-0 translate-y-0 flex h-[100dvh] max-w-none flex-col rounded-none border-0 sm:inset-x-auto sm:top-[12vh] sm:left-[50%] sm:h-auto sm:max-h-none sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-0 sm:rounded-xl sm:border sm:border-border/75 z-modal overflow-hidden bg-card p-0 shadow-[var(--elevation-raised)]"
         showCloseButton={false}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
@@ -434,7 +434,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       <span className="truncate block">
                         {item.label}
                         {item.frozen ? (
-                          <span className="ml-2 rounded border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500">
+                          <span className="ml-2 rounded-sm border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500">
                             Frozen
                           </span>
                         ) : null}
@@ -462,7 +462,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       </span>
                     ) : item.stablecoinHealth?.kind === "nav" ? (
                       <span
-                        className="ml-2 shrink-0 rounded border border-sky-500/30 px-1 py-0.5 font-mono text-3xs leading-none text-sky-500"
+                        className="ml-2 shrink-0 rounded-sm border border-sky-500/30 px-1 py-0.5 font-mono text-3xs leading-none text-sky-500"
                         title={getStablecoinHealthLabel(item.stablecoinHealth)}
                       >
                         NAV<span className="sr-only">-priced token</span>
@@ -487,13 +487,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         </div>
         <div className="hidden shrink-0 items-center gap-4 border-t border-border/70 bg-muted/15 px-4 py-2 text-xs text-muted-foreground sm:flex">
           <span>
-            <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#8593;&#8595;</kbd> navigate
+            <kbd className="rounded-sm border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#8593;&#8595;</kbd> navigate
           </span>
           <span>
-            <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#9166;</kbd> select
+            <kbd className="rounded-sm border border-border/70 bg-background/55 px-1 py-0.5 font-mono">&#9166;</kbd> select
           </span>
           <span>
-            <kbd className="rounded border border-border/70 bg-background/55 px-1 py-0.5 font-mono">esc</kbd> close
+            <kbd className="rounded-sm border border-border/70 bg-background/55 px-1 py-0.5 font-mono">esc</kbd> close
           </span>
         </div>
       </DialogContent>

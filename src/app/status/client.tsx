@@ -114,7 +114,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     );
   } else if (healthError && !healthData) {
     content = (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-red-700 dark:text-red-300">
+      <div className="rounded-xl border border-state-danger bg-state-danger-subtle p-6 text-state-danger-bright">
         Failed to load public status data: {healthError.message}
       </div>
     );
@@ -163,7 +163,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
         <NoticeRail notices={notices} />
 
         {divergence.kind !== "in-sync" && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-200">
+          <div className="rounded-xl border border-state-warn bg-state-warn-subtle p-4 text-sm text-amber-900 dark:text-amber-200">
             {divergence.detail}
           </div>
         )}

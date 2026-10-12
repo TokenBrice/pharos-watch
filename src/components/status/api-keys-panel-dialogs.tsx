@@ -58,7 +58,7 @@ export function TokenRevealDialog({
         <div
           role="status"
           aria-live="assertive"
-          className={cn("rounded-md border p-3 text-sm text-amber-900 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}
+          className={cn("rounded-md border p-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}
         >
           {revealedToken.label}. The token is ready. Copy it to the approved credential store now.
         </div>
@@ -72,7 +72,7 @@ export function TokenRevealDialog({
           </pre>
           <CopyButton
             text={revealedToken.token}
-            className="size-11 border border-amber-500/30 bg-background text-foreground hover:bg-muted hover:text-foreground"
+            className="size-11 border border-state-warn bg-background text-foreground hover:bg-muted hover:text-foreground"
           />
         </div>
 
@@ -92,7 +92,7 @@ export function TokenRevealDialog({
             />
             I copied this token to the approved credential store.
           </label>
-          <label className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
+          <label className="flex items-start gap-2 text-sm text-state-warn-ink">
             <input
               type="radio"
               name="token-acknowledgement"
@@ -143,7 +143,7 @@ export function TokenUnavailableReplayDialog({
         </DialogHeader>
         <div
           role="alert"
-          className={cn("rounded-md border p-3 text-sm text-amber-900 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}
+          className={cn("rounded-md border p-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}
         >
           <p className="font-medium">
             {apiKey.name} · ID {apiKey.id} · <span className="font-mono">{apiKey.maskedToken}</span>

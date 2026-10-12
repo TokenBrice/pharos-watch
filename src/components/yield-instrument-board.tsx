@@ -175,8 +175,8 @@ function MetricLabel({ children }: { children: ReactNode }) {
 }
 
 function rowToneClass(warningCount: number, sourceRiskMaterial: boolean): string {
-  if (warningCount >= 2) return "bg-amber-500/[0.06]";
-  if (warningCount === 1 || sourceRiskMaterial) return "bg-amber-500/[0.035]";
+  if (warningCount >= 2) return "bg-state-warn-solid/[0.06]";
+  if (warningCount === 1 || sourceRiskMaterial) return "bg-state-warn-solid/[0.035]";
   return "";
 }
 

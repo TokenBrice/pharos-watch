@@ -177,7 +177,7 @@ describe("ReservesSection", () => {
     renderSection();
     const ladder = screen.getByLabelText("Liquidity horizon ladder");
     expect(within(ladder).getByText("> 7 days")).toBeDefined();
-    expect(ladder.innerHTML).not.toMatch(/bg-red|bg-amber|bg-emerald/);
+    expect(ladder.innerHTML).not.toMatch(/bg-red|bg-amber|bg-emerald|bg-state-/);
     const names = Array.from(screen.getByLabelText("Reserve slices").querySelectorAll("li p span"));
     expect(names.map((node) => node.textContent)).toEqual(["U.S. Treasury bills", "Bank deposits"]);
   });
@@ -372,7 +372,7 @@ describe("ReservesSection", () => {
     it("turns a stale validation error into one amber header chip with the detail in a disclosure", () => {
       const { container } = renderSection({ reserves: STALE_USDC });
       const chip = screen.getByRole("button", { name: "Reserve feed stale · last report 24 Sep · 7-day budget" });
-      expect(chip.innerHTML).toContain("amber");
+      expect(chip.innerHTML).toContain("state-warn");
       expect(container.textContent).not.toMatch(/Validation failed|1066290|604800/);
       expect(container.textContent).not.toContain("RESERVE EVIDENCE");
       const status = within(container.querySelector("details#reserve-feed-status") as HTMLElement);

@@ -53,7 +53,7 @@ export function ScoringChangelogSummaryTables() {
       {/* ──────────── Summary tables ──────────── */}
       <Card className="rounded-xl">
         <CardHeader>
-          <CardTitle as="h2">Quick Reference</CardTitle>
+          <CardTitle as="h2">Quick reference</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <div className="space-y-2">

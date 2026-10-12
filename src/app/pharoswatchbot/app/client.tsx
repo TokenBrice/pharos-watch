@@ -330,7 +330,7 @@ export function PharosWatchBotMiniAppClient() {
   return (
     <section className="pharos-mini-app min-h-[max(var(--telegram-viewport-height,100svh),100svh)] [overflow-wrap:anywhere] bg-[var(--telegram-bg,var(--background))] text-[var(--telegram-text,var(--foreground))]">
       <div className="mx-auto flex max-w-2xl flex-col px-3 pb-[calc(env(safe-area-inset-bottom)+var(--telegram-safe-area-bottom,0px)+1rem)] sm:px-4">
-        <div className="sticky top-0 z-20 -mx-3 border-b border-border/60 bg-[var(--telegram-bg,var(--background))] px-3 pb-3 pt-[calc(env(safe-area-inset-top)+var(--telegram-safe-area-top,0px)+0.5rem)] sm:-mx-4 sm:px-4">
+        <div className="sticky top-0 z-chrome -mx-3 border-b border-border/60 bg-[var(--telegram-bg,var(--background))] px-3 pb-3 pt-[calc(env(safe-area-inset-top)+var(--telegram-safe-area-top,0px)+0.5rem)] sm:-mx-4 sm:px-4">
           <header className="flex items-center justify-between gap-3 pb-2">
             <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight text-foreground">{heading}</h1>
             <button

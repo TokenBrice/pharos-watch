@@ -132,7 +132,7 @@ export function FlowReceiptBand({
             id="flow-receipt-band-heading"
             className="flex items-center gap-2 text-base font-semibold"
           >
-            <ReceiptText className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden />
+            <ReceiptText className="h-4 w-4 text-state-info-bright" aria-hidden />
             Printer and shredder accounting
           </h3>
         </div>
@@ -183,7 +183,7 @@ export function FlowReceiptBand({
         </div>
 
         {model.syncWarning ? (
-          <p className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-300">
+          <p className="mt-3 rounded-md border border-state-warn bg-state-warn-subtle p-2 text-xs text-state-warn-bright">
             {model.syncWarning}
           </p>
         ) : null}

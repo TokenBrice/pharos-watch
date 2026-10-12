@@ -595,7 +595,7 @@ export function PriceTransparencyCard({
             <button
               type="button"
               onClick={() => setShowAll(!showAll)}
-              className="pharos-focus-ring flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+              className="pharos-focus-ring flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
             >
               <ChevronDown
                 aria-hidden="true"

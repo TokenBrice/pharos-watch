@@ -123,6 +123,60 @@ const pharosBoundaryPlugin = {
         };
       },
     },
+    "no-arbitrary-z-index": {
+      meta: {
+        type: "suggestion",
+        schema: [],
+        messages: {
+          z: "Arbitrary or page-level z-index {{value}}: use a named layer (z-chrome, z-chrome-dock, z-chrome-header, z-progress, z-regime, z-modal, z-toast, z-skip) or a local z-0..z-10 (docs/design-tokens.md).",
+        },
+      },
+      create(context) {
+        // `z-[…]` and numeric `z-N` above 10, with variants and important forms.
+        const pattern = /(?:^|[\s:"'`])(!?-?z-(?:\[[^\]\s]*\]|\d+)!?)(?![\w-])/g;
+        function check(node, text) {
+          if (typeof text !== "string") return;
+          for (const match of text.matchAll(pattern)) {
+            const digits = /^!?-?z-(\d+)!?$/.exec(match[1]);
+            if (digits && Number(digits[1]) <= 10) continue;
+            context.report({ node, messageId: "z", data: { value: match[1] } });
+          }
+        }
+        return {
+          Literal: (node) => check(node, node.value),
+          TemplateElement: (node) => check(node, node.value.cooked),
+        };
+      },
+    },
+    "no-raw-palette-colour": {
+      meta: {
+        type: "suggestion",
+        schema: [],
+        messages: {
+          raw: "Raw palette colour {{value}}: use a UI-state utility (text-state-warn, bg-state-danger-subtle, border-state-info, bg-state-positive-solid/15 …) or, for a classification scale, the palette in shared/lib/classification.ts (docs/design-tokens.md#ui-state-utilities).",
+        },
+      },
+      create(context) {
+        // Colour utilities on a Tailwind palette hue step (`text-amber-700`,
+        // `dark:bg-red-500/10`, `border-l-sky-500/70`, `!fill-rose-400`) inside
+        // any string or template chunk; arbitrary `[color:var(--x)]` stays legal.
+        // Per-token test (variants stripped) keeps the pattern linear.
+        const pattern =
+          /^!?(?:text|bg|border(?:-[trblxy])?|ring|ring-offset|fill|stroke|from|to|via|outline|decoration|divide|shadow|accent|caret|placeholder)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-(?:50|[1-9]00|950)(?:\/|!|$)/;
+        function check(node, text) {
+          if (typeof text !== "string") return;
+          for (const token of text.split(/\s|["'`]/)) {
+            if (token && pattern.test(token.slice(token.lastIndexOf(":") + 1))) {
+              context.report({ node, messageId: "raw", data: { value: token } });
+            }
+          }
+        }
+        return {
+          Literal: (node) => check(node, node.value),
+          TemplateElement: (node) => check(node, node.value.cooked),
+        };
+      },
+    },
     "require-shared-alias": {
       meta: {
         type: "problem",
@@ -365,10 +419,73 @@ const eslintConfig = defineConfig([
     // bulk suppressions, a count ratchet): new violations fail, and once a
     // sweep removes some, `npx eslint --prune-suppressions` lowers the baseline.
     files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
-    ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    // Editorial carve-outs keep their bespoke type registers (SWEEP.md §4).
+    ignores: [
+      "**/__tests__/**",
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+      "src/app/cemetery/**",
+      "src/components/cemetery/**",
+      "src/app/digest/**",
+      "src/components/digest-*.tsx",
+      "src/components/daily-digest.tsx",
+      "src/components/home-alt-mini-cards/daily-digest-card.tsx",
+      "src/components/editorial-masthead.tsx",
+      "src/components/editorial-colophon.tsx",
+      "src/app/timeline/**",
+      "src/components/tape/**",
+      "src/components/homepage-tape.tsx",
+      "src/components/tape-for-coin-teaser.tsx",
+      "src/app/depeg/[[]event[]]/**",
+      "src/app/blog/**",
+      "src/components/ai-summary*.tsx",
+      "src/components/page-error-editorial.tsx",
+      "src/app/not-found.tsx",
+    ],
     plugins: { pharos: pharosBoundaryPlugin },
     rules: {
       "pharos/no-arbitrary-text-px": "error",
+    },
+  },
+  {
+    // Stacking guardrail (docs/design-tokens.md): page-level layers
+    // are named; only local z-0..z-10 stays numeric.
+    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: {
+      "pharos/no-arbitrary-z-index": "error",
+    },
+  },
+  {
+    // UI-state colour guardrail (docs/design-tokens.md#ui-state-utilities).
+    // Editorial carve-outs keep their bespoke palettes; pre-existing call
+    // sites elsewhere are grandfathered in eslint-suppressions.json.
+    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    ignores: [
+      "**/__tests__/**",
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+      "src/app/cemetery/**",
+      "src/components/cemetery/**",
+      "src/app/digest/**",
+      "src/components/digest-*",
+      "src/components/daily-digest*",
+      "src/components/editorial-*",
+      "src/app/timeline/**",
+      "src/components/tape/**",
+      "src/components/homepage-tape*",
+      "src/app/blog/**",
+      "src/app/depeg/[[]event]/**",
+      "src/components/ai-summary*",
+      "src/app/**/error.tsx",
+      "src/app/global-error.tsx",
+      "src/app/not-found.tsx",
+      "src/components/page-error-editorial.tsx",
+    ],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: {
+      "pharos/no-raw-palette-colour": "error",
     },
   },
   {

@@ -322,7 +322,7 @@ export function PsiMethodologyCard({
             {methodology.versionLabel}
           </Badge>
           {!methodology.isCurrent && (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
+            <Badge variant="outline" className="bg-state-warn-subtle text-state-warn border-state-warn">
               latest {methodology.currentVersionLabel}
             </Badge>
           )}
@@ -439,7 +439,7 @@ export function PsiContributorsTableCard({
                 {rows.map((row, index) => (
                   <TableRow
                     key={row.id}
-                    className={cn("hover:bg-muted/30", index === 0 && "bg-amber-500/5")}
+                    className={cn("hover:bg-muted/30", index === 0 && "bg-state-warn-solid/5")}
                   >
                     <TableCell className={CONTRIBUTOR_CELL_CLASS}>
                       <Link
@@ -449,7 +449,7 @@ export function PsiContributorsTableCard({
                         <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
                         <span className={cn(index === 0 && "font-semibold")}>{row.symbol}</span>
                         {index === 0 && (
-                          <span className="ml-1 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                          <span className="ml-1 rounded-full bg-state-warn-solid/15 px-1.5 py-0.5 text-xs font-semibold text-state-warn">
                             Top
                           </span>
                         )}

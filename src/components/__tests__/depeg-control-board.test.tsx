@@ -144,7 +144,7 @@ describe("DepegControlBoard", () => {
 
     const row = screen.getByRole("button", { name: /open susd depeg detail/i });
     expect(row.className).not.toContain("border-l-2");
-    expect(row.className).not.toContain("bg-red-500");
+    expect(row.className).not.toMatch(/bg-red-500|bg-state-danger/);
     expect(screen.getByText("worst -6988 bps")).toBeTruthy();
     expect(screen.getAllByText("Peg health").length).toBeGreaterThan(0);
     expect(screen.queryByText("Peg score")).toBeNull();

@@ -30,7 +30,7 @@ export function ApiReferenceMobileNav({ sections, activeId, onNavigate }: ApiRef
   };
 
   return (
-    <div className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background px-4 py-2.5 lg:hidden">
+    <div className="sticky top-0 z-chrome -mx-4 border-b border-border/60 bg-background px-4 py-2.5 lg:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <div className="flex items-center justify-between">
           <div>

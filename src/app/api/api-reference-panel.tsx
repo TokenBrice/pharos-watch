@@ -122,7 +122,7 @@ function CodeExampleCard({ example }: { example: (typeof CODE_EXAMPLES)[number] 
   );
 }
 
-const INLINE_CODE_CLASS = "rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground [overflow-wrap:anywhere]";
+const INLINE_CODE_CLASS = "rounded-sm bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground [overflow-wrap:anywhere]";
 const METHOD_BADGE_CLASS =
   "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-2xs font-bold leading-tight";
 const METHOD_BADGE_STYLES = {

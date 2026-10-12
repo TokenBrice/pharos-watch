@@ -45,7 +45,7 @@ function DomainRows({ rows }: { rows: readonly SharedFailureDomainRow[] }) {
           <ul className="space-y-2 text-xs">{row.effects.slice(0, EFFECTS_PREVIEW).map(renderEffect)}</ul>
           {row.effects.length > EFFECTS_PREVIEW && <details className="mt-2 text-xs"><summary className="pharos-focus-ring cursor-pointer rounded-sm py-1 text-muted-foreground hover:text-foreground">Show {row.effects.length - EFFECTS_PREVIEW} more priced effects</summary><ul className="mt-2 space-y-2">{row.effects.slice(EFFECTS_PREVIEW).map(renderEffect)}</ul></details>}
         </>}
-        {row.pricedEffectsIncomplete && <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Priced effects incomplete: an evaluated structural signal has no matching published cap or deployment adjustment reference. Published scores are unchanged.</p>}
+        {row.pricedEffectsIncomplete && <p className="mt-2 text-xs text-state-warn">Priced effects incomplete: an evaluated structural signal has no matching published cap or deployment adjustment reference. Published scores are unchanged.</p>}
       </TableCell>
     </TableRow>
   ))}</TableBody>;

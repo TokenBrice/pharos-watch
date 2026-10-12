@@ -134,7 +134,7 @@ describe("projectReserveQualityClientSummary", () => {
     const summary = projectReserveQualityClientSummary(coinWith(USDC_LIKE_SLICES, USDC_LIKE_REVIEW));
     expect(summary).not.toBeNull();
     expect(summary!.chipLabel).toBe("Highly liquid");
-    expect(summary!.chipToneClass).toContain("emerald");
+    expect(summary!.chipToneClass).toContain("state-positive");
     expect(summary!.lede).toBe("2 reviewed reserve slices — 100% convertible within one day.");
     expect(summary!.ladder).toEqual([
       { key: "immediate", label: "Immediate", pct: 20 },
@@ -216,7 +216,7 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.chipLabel).toBe("Highly liquid");
-    expect(summary!.chipToneClass).toContain("emerald");
+    expect(summary!.chipToneClass).toContain("state-positive");
   });
 
   it("calls a basket mostly liquid exactly at the 60% one-day boundary", () => {
@@ -239,7 +239,7 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.chipLabel).toBe(label);
-    expect(summary!.chipToneClass).toContain("amber");
+    expect(summary!.chipToneClass).toContain("state-warn");
   });
 
   it("prefers liquid coverage when both liquidity and opacity thresholds are met", () => {
@@ -267,7 +267,7 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.chipLabel).toBe("Mixed liquidity");
-    expect(summary!.chipToneClass).toContain("amber");
+    expect(summary!.chipToneClass).toContain("state-warn");
   });
 
   it("sums self-reserve dispositions into the self-exposure share", () => {

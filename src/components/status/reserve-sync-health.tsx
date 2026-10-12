@@ -64,8 +64,8 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         {scoreInputHold ? (
-          <div className={cn("rounded-lg border p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200", SEVERITY_TONE_CLASS.watch.banner)}>
-            <div className="text-sm font-medium text-amber-950 dark:text-amber-100">
+          <div className={cn("rounded-lg border p-3 text-xs leading-relaxed text-state-warn-strong", SEVERITY_TONE_CLASS.watch.banner)}>
+            <div className="text-sm font-medium text-state-warn-ink">
               Report-card inputs are conservative
             </div>
             <p className="mt-1">
@@ -88,19 +88,19 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           </div>
           <div>
             <div className="text-muted-foreground">Fresh</div>
-            <div className="font-mono text-lg text-emerald-600 dark:text-emerald-400">{health.freshCoins}</div>
+            <div className="font-mono text-lg text-state-positive">{health.freshCoins}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Error</div>
-            <div className="font-mono text-lg text-red-600 dark:text-red-400">{health.errorCoins}</div>
+            <div className="font-mono text-lg text-state-danger">{health.errorCoins}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Corrupt</div>
-            <div className="font-mono text-lg text-red-600 dark:text-red-400">{health.corruptCoins}</div>
+            <div className="font-mono text-lg text-state-danger">{health.corruptCoins}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Degraded</div>
-            <div className="font-mono text-lg text-amber-600 dark:text-amber-400">{health.degradedCoins}</div>
+            <div className="font-mono text-lg text-state-warn">{health.degradedCoins}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Stale</div>
@@ -108,11 +108,11 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           </div>
           <div>
             <div className="text-muted-foreground">Missing</div>
-            <div className="font-mono text-lg text-red-600 dark:text-red-400">{health.missingCoins}</div>
+            <div className="font-mono text-lg text-state-danger">{health.missingCoins}</div>
           </div>
           <div>
             <div className="text-muted-foreground">Deferred</div>
-            <div className="font-mono text-lg text-amber-600 dark:text-amber-400">{health.deferredCoins}</div>
+            <div className="font-mono text-lg text-state-warn">{health.deferredCoins}</div>
           </div>
         </div>
 
@@ -145,13 +145,13 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div>
               <div className="text-muted-foreground">Independent eligible</div>
-              <div className="font-mono text-base text-emerald-600 dark:text-emerald-400">
+              <div className="font-mono text-base text-state-positive">
                 {health.independentFreshEligible}
               </div>
             </div>
             <div>
               <div className="text-muted-foreground">Independent unverified</div>
-              <div className="font-mono text-base text-amber-600 dark:text-amber-400">
+              <div className="font-mono text-base text-state-warn">
                 {health.independentFreshUnverified}
               </div>
             </div>
@@ -165,11 +165,11 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             </div>
             <div>
               <div className="text-muted-foreground">Write-timeout uncertain</div>
-              <div className="font-mono text-base text-red-600 dark:text-red-400">{health.writeTimeoutUncertain}</div>
+              <div className="font-mono text-base text-state-danger">{health.writeTimeoutUncertain}</div>
             </div>
           </div>
           {health.persistentlyStaleIndependentCoins.length > 0 ? (
-            <div className="text-xs text-amber-700 dark:text-amber-300">
+            <div className="text-xs text-state-warn-bright">
               Persistently stale independent feeds:{" "}
               {formatPersistentStaleIndependentFeeds(health.persistentlyStaleIndependentCoins)}
             </div>
@@ -201,9 +201,9 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
                   <TableRow key={row.adapterKey}>
                     <TableCell className="font-mono">{row.adapterKey}</TableCell>
                     <TableCell className="text-right font-mono">{row.attempts}</TableCell>
-                    <TableCell className="text-right font-mono text-emerald-600 dark:text-emerald-400">{row.ok}</TableCell>
-                    <TableCell className="text-right font-mono text-amber-600 dark:text-amber-400">{row.degraded}</TableCell>
-                    <TableCell className="text-right font-mono text-red-600 dark:text-red-400">{row.error}</TableCell>
+                    <TableCell className="text-right font-mono text-state-positive">{row.ok}</TableCell>
+                    <TableCell className="text-right font-mono text-state-warn">{row.degraded}</TableCell>
+                    <TableCell className="text-right font-mono text-state-danger">{row.error}</TableCell>
                     <TableCell className="text-right font-mono">{row.skipped}</TableCell>
                     <TableCell className="text-right font-mono">
                       {row.successRate != null ? formatRatioPct(row.successRate) : "—"}

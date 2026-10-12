@@ -36,7 +36,7 @@ export function InfrastructureMethodologySection() {
       <p>
         <span className="text-foreground">M0</span> is an <em>issuance-platform lineage</em> &mdash; coins built on
         M0&apos;s smart-contract rails (minter governance, the SwapFacility, and the{" "}
-        <code className="text-xs bg-muted px-1 py-0.5 rounded">MExtension.sol</code> contract pattern). M0 provides the
+        <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">MExtension.sol</code> contract pattern). M0 provides the
         issuance machinery; the reserve composition is set by the issuer and{" "}
         <span className="text-foreground">may or may not include the underlying $M token</span>. Some M0-built coins
         are simple $M wrappers; others manage diversified collateral via M0&apos;s infrastructure. A governance

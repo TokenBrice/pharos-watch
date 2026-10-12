@@ -167,7 +167,7 @@ export function CoinSelector({
       </Button>
 
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+        <div className="absolute z-modal mt-1 w-full rounded-md border bg-popover shadow-md">
           <div className="p-2">
             <input
               ref={inputRef}

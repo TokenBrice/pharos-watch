@@ -17,9 +17,9 @@ import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function MetricCard({ label, value, pct, severity }: { label: string; value: number; pct: string; severity: string }) {
   const colors: Record<string, string> = {
-    green: "text-emerald-600 dark:text-emerald-400",
-    amber: "text-amber-600 dark:text-amber-400",
-    red: "text-red-600 dark:text-red-400",
+    green: "text-state-positive",
+    amber: "text-state-warn",
+    red: "text-state-danger",
     neutral: "text-muted-foreground",
   };
   return (
@@ -42,7 +42,7 @@ export function PriceSourceHealthCard({
 }) {
   if (!health) {
     return (
-      <StatusCardEmptyState title="Price Source Health">
+      <StatusCardEmptyState title="Price source health">
         {error ? `Price source health loader failed: ${error.message}` : "No price source data available yet."}
       </StatusCardEmptyState>
     );
@@ -102,7 +102,7 @@ export function PriceSourceHealthCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle as="h3" className="text-base">Price Source Health</CardTitle>
+          <CardTitle as="h3" className="text-base">Price source health</CardTitle>
           <span className="text-xs text-muted-foreground">
             {totalAssets} {health.active ? "active assets" : "cached assets"} · synced {formatElapsedSeconds(lastSyncAgeSeconds)} ago
           </span>

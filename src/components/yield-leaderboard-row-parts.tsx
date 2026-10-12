@@ -76,7 +76,7 @@ export function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number;
     >
       <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-muted" />
       <div
-        className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500"
+        className="absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-state-positive-solid"
         style={{ left: `${position}%` }}
       />
     </div>
@@ -116,7 +116,7 @@ function YieldBenchmarkMismatchDot({
   interactive: boolean;
 }) {
   if (!interactive) {
-    return <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />;
+    return <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-state-warn-solid" />;
   }
 
   return (
@@ -133,7 +133,7 @@ function YieldBenchmarkMismatchDot({
             if (event.key === "Enter" || event.key === " ") event.stopPropagation();
           }}
         >
-          <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
+          <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-state-warn-solid" />
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-[260px] text-2xs">
@@ -342,7 +342,7 @@ export function YieldSourceDetails({
       <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-3xs text-muted-foreground">
         {sourceRiskSummary ? (
           <>
-            <span className="font-medium text-amber-700 dark:text-amber-300">{sourceRiskSummary}</span>
+            <span className="font-medium text-state-warn-bright">{sourceRiskSummary}</span>
             <span aria-hidden="true">·</span>
           </>
         ) : null}
@@ -380,15 +380,15 @@ export function YieldSignalsIndicator({
       <Tooltip>
         <TooltipTrigger asChild>
           <span className={warningSignalCount > 0
-            ? "inline-flex cursor-help items-center gap-1 text-amber-700 dark:text-amber-400"
+            ? "inline-flex cursor-help items-center gap-1 text-state-warn"
             : "inline-flex cursor-help items-center gap-1 text-amber-700/80 dark:text-amber-400/80"}
           >
             <AlertTriangle
               className={warningSignalCount >= 2
-                ? "h-3.5 w-3.5 fill-amber-500/20 text-amber-500"
+                ? "h-3.5 w-3.5 fill-state-warn-solid/20 text-state-warn-solid"
                 : warningSignalCount === 1
-                  ? "h-3.5 w-3.5 text-amber-500"
-                  : "h-3.5 w-3.5 text-amber-500/70"}
+                  ? "h-3.5 w-3.5 text-state-warn-solid"
+                  : "h-3.5 w-3.5 text-state-warn-solid/70"}
               aria-hidden="true"
             />
             <span>{warningSignalCount > 0
@@ -420,7 +420,7 @@ export function YieldSignalsIndicator({
             className="inline-flex pharos-focus-ring"
             aria-label={`Source-risk penalty ${(rawSourceRiskPenalty ?? 0).toFixed(2)} times`}
           >
-            <AlertTriangle className="h-4 w-4 text-amber-500/70" />
+            <AlertTriangle className="h-4 w-4 text-state-warn-solid/70" />
           </button>
         </TooltipTrigger>
         <TooltipContent className="max-w-[260px] text-xs">
@@ -443,7 +443,7 @@ export function YieldSignalsIndicator({
           aria-label={`${warningSignalCount} warning signal${warningSignalCount > 1 ? "s" : ""}`}
         >
           <AlertTriangle
-            className={warningSignalCount >= 2 ? "h-4 w-4 fill-amber-500/20 text-amber-500" : "h-4 w-4 text-amber-500"}
+            className={warningSignalCount >= 2 ? "h-4 w-4 fill-state-warn-solid/20 text-state-warn-solid" : "h-4 w-4 text-state-warn-solid"}
           />
         </button>
       </TooltipTrigger>
@@ -456,7 +456,7 @@ export function YieldSignalsIndicator({
                 <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
                 <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
                 {isLast && sourceRiskMaterial ? (
-                  <span className="mt-1 block text-amber-500">
+                  <span className="mt-1 block text-state-warn-solid">
                     + source-risk {(rawSourceRiskPenalty ?? 0).toFixed(2)}×
                   </span>
                 ) : null}
@@ -574,7 +574,7 @@ export function YieldExpandedDetails({
             ) : null}
             {row.warningSignals.length > 0 ? (
               <ExpandedMetricSection title="Signals">
-                <ul className="mt-0.5 space-y-0.5 text-xs text-amber-500">
+                <ul className="mt-0.5 space-y-0.5 text-xs text-state-warn-solid">
                   {row.warningSignals.map((signal) => (
                     <li key={signal}>
                       <span>{formatYieldWarningSignal(signal)}</span>

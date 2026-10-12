@@ -409,7 +409,7 @@ export function TopNav() {
                   <ChevronDown className="size-3 opacity-50" aria-hidden />
                 </button>
                 {isOpen ? (
-                  <div id={panelId} className="absolute right-0 top-full z-50 pt-2">
+                  <div id={panelId} className="absolute right-0 top-full z-modal pt-2">
                     <div
                       className={cn(
                         "bg-popover text-popover-foreground animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 min-w-[8rem] origin-top-right overflow-x-hidden overflow-y-auto rounded-md border shadow-md",

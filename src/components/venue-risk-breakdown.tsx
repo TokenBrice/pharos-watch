@@ -56,7 +56,7 @@ export function VenueRiskBreakdown({ scores, tier, weighted, confidence }: Venue
             <span className="font-mono tabular-nums text-muted-foreground">{weighted.toFixed(1)}/5</span>
           ) : null}
           {confidence && confidence !== "verified" ? (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-3xs text-amber-700 dark:text-amber-300">
+            <span className="rounded-full border border-state-warn bg-state-warn-subtle px-1.5 py-0.5 text-3xs text-state-warn-bright">
               {confidence} confidence
             </span>
           ) : null}

@@ -223,7 +223,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
     },
     {
       key: "peg",
-      title: "Peg Track Record",
+      title: "Peg track record",
       description: "Current stress plus the reviewed observation window behind Peg Score.",
       metrics: [
         { key: "active-depeg", label: "Open recorded incident", render: (coin) => coin.pegDetails ? (coin.pegDetails.activeDepeg ? "Yes" : "No") : NULL_VALUE },
@@ -238,7 +238,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
     },
     {
       key: "safety",
-      title: "Safety Construction",
+      title: "Safety construction",
       description: "Exact V10 pillars, binding constraints, access posture, and dependency exposure.",
       metrics: [
         { key: "backing-pillar", label: "Backing pillar", numeric: true, render: (coin) => formatScore100(coin.safetyCard?.pillars.backing.score) },
@@ -339,7 +339,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
 function FrozenBadge({ frozenAt }: { frozenAt?: string }) {
   return (
     <span
-      className="rounded border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500"
+      className="rounded-sm border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500"
       title={frozenAt ? `Frozen on ${frozenAt}` : "Frozen"}
     >
       Frozen
@@ -383,7 +383,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
               <TableHead scope="col" key={coin.id} className="min-w-[9.5rem] text-center align-top">
                 <Link
                   href={buildStablecoinUrl(coin.id)}
-                  className="pharos-focus-ring inline-flex w-full flex-col items-center gap-1 rounded-lg px-2 py-2"
+                  className="pharos-focus-ring inline-flex w-full flex-col items-center gap-1 rounded-md px-2 py-2"
                 >
                   <StablecoinLogo src={logos?.[coin.id]} name={coin.name} size={28} />
                   <span className="flex items-center gap-1 text-xs font-semibold">

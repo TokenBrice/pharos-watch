@@ -140,7 +140,7 @@ export function ProtocolBar({ protocolTvl }: { protocolTvl: Record<string, numbe
 
   return (
     <BreakdownSection
-      title="Protocol Breakdown"
+      title="Protocol breakdown"
       entries={entries}
       total={total}
       legendValueFormatter={(_, percent) => `${percent.toFixed(0)}%`}
@@ -158,7 +158,7 @@ export function ChainBar({ chainTvl }: { chainTvl: Record<string, number> }) {
 
   return (
     <BreakdownSection
-      title="Chain Breakdown"
+      title="Chain breakdown"
       entries={entries}
       total={total}
       legendLogoClassName="h-3.5 w-3.5 rounded-full object-contain shrink-0"
@@ -176,7 +176,7 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
       <p className="pharos-label">
         {totalPoolCount != null && totalPoolCount > displayed
           ? `Top ${displayed} of ${totalPoolCount} pools`
-          : "Top Pools"}
+          : "Top pools"}
       </p>
       <TableFrame
         tableId="dex-liquidity-top-pools"

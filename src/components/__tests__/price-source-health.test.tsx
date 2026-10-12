@@ -46,7 +46,7 @@ describe("price confidence severity calibration", () => {
 
   it("colors High green when corroborated prices cover material value despite a low count share", () => {
     render(<PriceSourceHealthCard health={PriceSourceHealthSchema.parse(liveShape)} nowSeconds={100} />);
-    expect(screen.getByText("115").className).toContain("text-emerald");
+    expect(screen.getByText("115").className).toContain("text-state-positive");
     expect(screen.getByText("96.5% of value")).toBeTruthy();
     expect(screen.getByText("3.4% of value")).toBeTruthy();
   });
@@ -92,7 +92,7 @@ describe("price confidence severity calibration", () => {
       active: { ...liveShape.active, sourceDistribution: { missing: 9 }, acknowledgedMissingCount: 5 },
     });
     render(<PriceSourceHealthCard health={health} nowSeconds={100} />);
-    expect(screen.getByText("4").className).toContain("text-red");
+    expect(screen.getByText("4").className).toContain("text-state-danger");
     expect(screen.getByText(/5 acknowledged/)).toBeTruthy();
   });
 
@@ -102,7 +102,7 @@ describe("price confidence severity calibration", () => {
       active: { ...liveShape.active, sourceDistribution: { missing: 7 }, acknowledgedMissingCount: 5 },
     });
     render(<PriceSourceHealthCard health={health} nowSeconds={100} />);
-    expect(screen.getByText("2").className).toContain("text-amber");
+    expect(screen.getByText("2").className).toContain("text-state-warn");
   });
 });
 

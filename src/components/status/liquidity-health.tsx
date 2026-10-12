@@ -7,7 +7,7 @@ import { formatCurrency } from "@shared/lib/format";
 import { StatusCardEmptyState } from "@/components/status/page-primitives";
 
 function guardTone(active: boolean): string {
-  return active ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground";
+  return active ? "text-state-warn" : "text-muted-foreground";
 }
 
 function CoverageMix({
@@ -39,7 +39,7 @@ export function LiquidityHealthCard({
 }) {
   if (!health) {
     return (
-      <StatusCardEmptyState title="Liquidity Health">
+      <StatusCardEmptyState title="Liquidity health">
         {error ? `Liquidity health loader failed: ${error.message}` : "No liquidity health data available yet."}
       </StatusCardEmptyState>
     );
@@ -52,7 +52,7 @@ export function LiquidityHealthCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle as="h3" className="text-base">Liquidity Health</CardTitle>
+          <CardTitle as="h3" className="text-base">Liquidity health</CardTitle>
           <span className="text-xs text-muted-foreground">
             Last run {health.lastRunStatus ?? "unknown"}
           </span>
@@ -61,7 +61,7 @@ export function LiquidityHealthCard({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatTile
-            label="Covered Coins"
+            label="Covered coins"
             value={String(health.currentCoverage)}
             subtext={
               health.previousCoverage != null
@@ -96,7 +96,7 @@ export function LiquidityHealthCard({
             }
           />
           <StatTile
-            label="Failed Sources"
+            label="Failed sources"
             value={String(health.failedSources.length)}
             subtext={health.failedSources.length > 0 ? health.failedSources.join(", ") : "none"}
           />

@@ -124,7 +124,7 @@ export function YieldSourceBoard({ model, activeFilters, onFilterChange }: Yield
                     description="A source changed when the selected source differs from the prior published snapshot. Click for the audit list."
                     open={openDisclosure === "switches"}
                     controls={disclosureId}
-                    toneClass={cn(SEVERITY_TONE_CLASS.sky.pill, "hover:bg-sky-500/15")}
+                    toneClass={cn(SEVERITY_TONE_CLASS.sky.pill, "hover:bg-state-info-solid/15")}
                     onClick={() => toggleDisclosure("switches")}
                   />
                 ) : null}
@@ -134,7 +134,7 @@ export function YieldSourceBoard({ model, activeFilters, onFilterChange }: Yield
                     description="Anomalies flag source-observation quality issues such as low venue TVL or APY that diverges from recent history. Click for the audit list."
                     open={openDisclosure === "anomalies"}
                     controls={disclosureId}
-                    toneClass={cn(SEVERITY_TONE_CLASS.watch.pill, "hover:bg-amber-500/15")}
+                    toneClass={cn(SEVERITY_TONE_CLASS.watch.pill, "hover:bg-state-warn-solid/15")}
                     onClick={() => toggleDisclosure("anomalies")}
                   />
                 ) : null}

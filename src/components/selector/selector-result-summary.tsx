@@ -187,7 +187,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
                 className={cn(
                   "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm",
                   banner.tone === "amber"
-                    ? "border-amber-500/35 bg-amber-500/[0.07] text-amber-950 dark:text-amber-100"
+                    ? "border-state-warn-solid/35 bg-state-warn-solid/[0.07] text-state-warn-ink"
                     : "border-frost-blue/35 bg-frost-blue/[0.06] text-foreground",
                 )}
               >

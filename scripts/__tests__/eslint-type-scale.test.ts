@@ -32,4 +32,16 @@ describe("pharos/no-arbitrary-text-px", () => {
   it("does not apply outside src/components and src/app", async () => {
     expect(await arbitraryPxSizes('export const c = "text-[11px]";', "src/lib/__type-scale-fixture.ts")).toEqual([]);
   });
+
+  it.each([
+    "src/app/cemetery/__fixture.tsx",
+    "src/components/tape/__fixture.tsx",
+    "src/components/digest-nameplate.tsx",
+    "src/app/depeg/[event]/__fixture.tsx",
+    "src/app/blog/__fixture.tsx",
+    "src/components/ai-summary.tsx",
+    "src/app/not-found.tsx",
+  ])("ignores editorial carve-out %s", async (filePath) => {
+    expect(await arbitraryPxSizes('export const c = "text-[11px]";', filePath)).toEqual([]);
+  });
 });

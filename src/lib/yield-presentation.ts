@@ -204,9 +204,9 @@ export function buildRankChangeChipDisplay(
   const arrow = rankDelta > 0 ? "▲" : rankDelta < 0 ? "▼" : "■";
   const colorClass =
     rankDelta > 0
-      ? "text-emerald-700 dark:text-emerald-400"
+      ? "text-state-positive"
       : rankDelta < 0
-        ? "text-red-700 dark:text-red-400"
+        ? "text-state-danger"
         : "text-muted-foreground";
   const signedRank = rankDelta > 0 ? `+${rankDelta}` : rankDelta < 0 ? `-${Math.abs(rankDelta)}` : "0";
   return {

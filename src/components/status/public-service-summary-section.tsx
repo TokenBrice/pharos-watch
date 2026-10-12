@@ -32,14 +32,14 @@ export function PublicServiceSummarySection({
   return (
     <StatusSection
       id="overview"
-      kicker="Service Health"
+      kicker="Service health"
       title="Public service summary"
       summary={
         <>
           <StatusSummaryBadge label="Status" status={healthData.status} />
           {blacklistStatus !== "healthy" && (
             <StatusSummaryBadge
-              label="Blacklist Gaps"
+              label="Blacklist gaps"
               value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
               status={blacklistStatus}
             />
@@ -53,14 +53,14 @@ export function PublicServiceSummarySection({
           )}
           {telegramSummary && (telegramSummary.pendingDeliveries ?? 0) > 0 && (
             <StatusSummaryBadge
-              label="Alert Queue"
+              label="Alert queue"
               value={String(telegramSummary.pendingDeliveries)}
               status="degraded"
             />
           )}
           {telegramSummary?.safetyAlertsSuppressed && (
             <StatusSummaryBadge
-              label="Safety Alerts"
+              label="Safety alerts"
               value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
               status="degraded"
             />
@@ -79,7 +79,7 @@ export function PublicServiceSummarySection({
                 )}
                 {healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && (
                   <StatusSummaryBadge
-                    label="Major Stale"
+                    label="Major stale"
                     value={String(healthData.mintBurn.majorStaleCount)}
                     status="degraded"
                   />
@@ -111,19 +111,19 @@ export function PublicServiceSummarySection({
             ) : null}
           </div>
           {healthData.mintBurn.staleMajorSymbols != null && healthData.mintBurn.staleMajorSymbols.length > 0 ? (
-            <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
               Impacted majors: {healthData.mintBurn.staleMajorSymbols.join(", ")}
             </div>
           ) : null}
         </PublicSignalCard>
 
         <PublicSignalCard
-          title="Blacklist Ingestion"
+          title="Blacklist ingestion"
           badges={
             blacklistStatus !== "healthy" ? (
               <div className="flex flex-wrap gap-2">
                 <StatusSummaryBadge
-                  label="Missing Amounts"
+                  label="Missing amounts"
                   value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
                   status={blacklistStatus}
                 />
@@ -160,7 +160,7 @@ export function PublicServiceSummarySection({
 
       {telegramSummary && (
         <PublicSignalCard
-          title="Telegram Bot Health"
+          title="Telegram bot health"
           badges={
             (telegramSummary.pendingDeliveries ?? 0) > 0
             || telegramSummary.safetyAlertsSuppressed
@@ -175,14 +175,14 @@ export function PublicServiceSummarySection({
                 )}
                 {telegramSummary.safetyAlertsSuppressed && (
                   <StatusSummaryBadge
-                    label="Safety Alerts"
+                    label="Safety alerts"
                     value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
                     status="degraded"
                   />
                 )}
                 {telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok" && (
                   <StatusSummaryBadge
-                    label="Last Dispatch"
+                    label="Last dispatch"
                     value={telegramSummary.lastDispatchStatus}
                     status="stale"
                   />
@@ -210,12 +210,12 @@ export function PublicServiceSummarySection({
             </div>
           </div>
           {(telegramSummary.pendingDeliveries ?? 0) > 0 && (
-            <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
               {telegramSummary.pendingDeliveries} {pluralizeCount(telegramSummary.pendingDeliveries ?? 0, "alert")} pending delivery
             </div>
           )}
           {telegramSummary.safetyAlertsSuppressed && (
-            <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
               Safety alerts are paused because the live report-card source is {telegramSummary.safetyAlertSourceState ?? "unavailable"}
               {telegramSummary.safetyAlertSourceAgeSeconds != null
                 ? ` (${telegramSummary.safetyAlertSourceAgeSeconds}s old)`
@@ -230,7 +230,7 @@ export function PublicServiceSummarySection({
         badges={
           impactedPublicSurfaces.length > 0 ? (
             <StatusSummaryBadge
-              label="Impacted Surfaces"
+              label="Impacted surfaces"
               value={String(impactedPublicSurfaces.length)}
               status="degraded"
             />

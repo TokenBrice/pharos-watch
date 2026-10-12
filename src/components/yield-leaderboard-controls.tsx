@@ -274,7 +274,7 @@ export function YieldLeaderboardControls({
               leadingIcon={
                 <Star
                   aria-hidden="true"
-                  className={cn("h-3 w-3", watchlistActive ? "fill-amber-500 text-amber-500" : "fill-none")}
+                  className={cn("h-3 w-3", watchlistActive ? "fill-state-warn-solid text-state-warn-solid" : "fill-none")}
                 />
               }
             />
@@ -289,7 +289,7 @@ export function YieldLeaderboardControls({
               leadingIcon={
                 <AlertTriangle
                   aria-hidden="true"
-                  className={cn("h-3 w-3", attentionActive ? "fill-amber-500 text-amber-500" : "fill-none")}
+                  className={cn("h-3 w-3", attentionActive ? "fill-state-warn-solid text-state-warn-solid" : "fill-none")}
                 />
               }
             />

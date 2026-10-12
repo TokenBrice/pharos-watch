@@ -17,10 +17,10 @@ const toastIcons: Record<ToastType, typeof Info> = {
 };
 
 const toastStyles: Record<ToastType, string> = {
-  success: "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400",
+  success: "border-state-positive bg-state-positive-subtle text-state-positive",
   info: "border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/10 text-foreground",
-  warning: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  error: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  warning: "border-state-warn bg-state-warn-subtle text-state-warn",
+  error: "border-state-danger bg-state-danger-subtle text-state-danger",
 };
 
 function ToastItem({
@@ -66,7 +66,7 @@ export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2 p-4 sm:bottom-6 sm:right-6"
+      className="fixed bottom-4 right-4 z-toast flex w-full max-w-sm flex-col gap-2 p-4 sm:bottom-6 sm:right-6"
     >
       {toasts.map((toast, index) => (
         <ToastItem

@@ -109,11 +109,11 @@ export function OpsShell({ children }: { children: ReactNode }) {
     >
       <a
         href="#ops-main-content"
-        className="pharos-focus-ring fixed left-3 top-3 z-50 -translate-y-24 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-transform focus:translate-y-0 motion-reduce:transition-none"
+        className="pharos-focus-ring fixed left-3 top-3 z-skip -translate-y-24 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-transform focus:translate-y-0 motion-reduce:transition-none"
       >
         Skip to operator workspace
       </a>
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-chrome border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-[96rem] flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/admin/" className="pharos-focus-ring flex shrink-0 items-center gap-2 rounded-md">
@@ -130,8 +130,8 @@ export function OpsShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <span className="mr-1 inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-2xs font-medium text-emerald-800 dark:text-emerald-200">
-              <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+            <span className="mr-1 inline-flex items-center gap-1.5 rounded-md border border-state-positive bg-state-positive-subtle px-2 py-1 text-2xs font-medium text-state-positive-strong">
+              <span className="size-1.5 rounded-full bg-state-positive-solid" aria-hidden="true" />
               <span className="sm:hidden">Prod</span>
               <span className="hidden sm:inline">Production</span>
             </span>

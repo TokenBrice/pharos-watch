@@ -58,7 +58,7 @@ function HopLock({ defense, className }: { defense: string; className?: string }
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={cn("absolute z-[1] inline-flex", className)}>
+        <span className={cn("absolute z-1 inline-flex", className)}>
           <MissingDefenseMark />
         </span>
       </TooltipTrigger>

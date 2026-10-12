@@ -41,28 +41,28 @@ describe("DepegHistory provenance badges", () => {
     mockEvents([recent], { isFullyLoaded: false, isFetchingNextPage: true });
     const view = render(<DepegHistory stablecoinId="usdc-circle"
       historyCoverage={{ startedAt: now - 90 * day, source: "first-observation", status: "verified" }} />);
-    expect(screen.queryByText("Worst Depeg")).toBeNull();
+    expect(screen.queryByText("Worst depeg")).toBeNull();
     mockEvents([recent, old]);
     view.rerender(<DepegHistory stablecoinId="usdc-circle"
       historyCoverage={{ startedAt: now - 90 * day, source: "first-observation", status: "verified" }} />);
-    expect(screen.getByText("Worst Depeg").parentElement?.textContent).toContain("-1200 bps");
+    expect(screen.getByText("Worst depeg").parentElement?.textContent).toContain("-1200 bps");
     view.rerender(<DepegHistory stablecoinId="usdc-circle"
       historyCoverage={{ startedAt: now - 365 * day, source: "audited-replay", status: "verified" }} />);
-    expect(screen.getByText("Worst Depeg").parentElement?.textContent).toContain("-1200 bps");
+    expect(screen.getByText("Worst depeg").parentElement?.textContent).toContain("-1200 bps");
   });
   it("withholds partial metrics until all history has loaded", () => {
     const events = [makeEvent()];
     mockEvents(events, { data: { events, total: 2, totalExact: true }, isFullyLoaded: false, isFetchingNextPage: true });
     const view = render(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.getByText(/Loading full history.*1 \/ 2 incidents/)).toBeTruthy();
-    expect(screen.queryByText("Worst Depeg")).toBeNull();
-    expect(screen.queryByText("Current Streak")).toBeNull();
+    expect(screen.queryByText("Worst depeg")).toBeNull();
+    expect(screen.queryByText("Current streak")).toBeNull();
     expect(screen.queryByLabelText("Go to next page")).toBeNull();
     mockEvents([...events, makeEvent({ id: 2, peakDeviationBps: -350, endedAt: null })]);
     view.rerender(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.queryByText(/Loading full history/)).toBeNull();
-    expect(screen.getByText("Worst Depeg").parentElement?.textContent).toContain("-350 bps");
-    expect(screen.getByText("Current Streak").parentElement?.textContent).toContain("Depegged now");
+    expect(screen.getByText("Worst depeg").parentElement?.textContent).toContain("-350 bps");
+    expect(screen.getByText("Current streak").parentElement?.textContent).toContain("Depegged now");
   });
 
   it("never presents the cursor API's inexact page total as the incident count", () => {

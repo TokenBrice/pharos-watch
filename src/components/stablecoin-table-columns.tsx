@@ -269,7 +269,7 @@ export function ColumnFitToggle({
     <Button
       variant="outline"
       size="sm"
-      className={compact ? "h-8 min-h-8 rounded-lg px-2 sm:px-3" : "rounded-lg min-h-11 sm:min-h-8"}
+      className={compact ? "h-8 min-h-8 rounded-md px-2 sm:px-3" : "rounded-md min-h-11 sm:min-h-8"}
       onClick={onToggle}
       title={fitToWidth
         ? `${hiddenCount} column${plural} hidden to fit the width — show all with horizontal scroll`

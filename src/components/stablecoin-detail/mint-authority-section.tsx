@@ -537,7 +537,7 @@ export function MintAuthoritySection({
             <ModuleDisclosure id="mint-primary-controls" label="Primary controls" count={totalControlCount}>
               <div className="mt-2 space-y-3">
                 {hasVerificationGaps ? (
-                  <div className="rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+                  <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/8 px-3 py-2 text-sm text-state-warn-strong">
                     <p className="text-xs font-semibold">Verification gaps</p>
                     {profile.sourceFreeRationale ? (
                       <p className="mt-1 text-xs leading-relaxed">{profile.sourceFreeRationale}</p>
@@ -648,13 +648,13 @@ export function MintAuthoritySection({
       ) : null}
 
       {activeIncidents.length > 0 ? (
-        <div className="flex gap-2 rounded-lg border border-red-500/25 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+        <div className="flex gap-2 rounded-lg border border-state-danger-solid/25 bg-state-danger-solid/8 px-3 py-2 text-sm text-state-danger-bright">
           <TriangleAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             {activeIncidents.length > 1 ? (
               <p className="pb-1 font-medium">Active mint incidents ({activeIncidents.length})</p>
             ) : null}
-            <div className="divide-y divide-red-500/20">
+            <div className="divide-y divide-state-danger-solid/20">
               {activeIncidents.map((incident) => (
                 <div key={incident.date} className="py-1.5 first:pt-0 last:pb-0">
                   <p className="font-medium">

@@ -45,9 +45,9 @@ describe("CommsSection", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Audience Coverage" })).toBeTruthy();
     expect(screen.getByText(/missing evidence kept explicitly Unknown/i)).toBeTruthy();
     expect(screen.getByText("Delivery").nextElementSibling?.textContent).toBe("Healthy");
-    expect(screen.getByText("Oldest Backlog").nextElementSibling?.textContent).toBe("Unknown");
-    expect(screen.getByText("Permanent Failures").nextElementSibling?.textContent).toBe("0");
-    expect(screen.getByText("Latest Dispatch").nextElementSibling?.textContent).toBe("ok");
+    expect(screen.getByText("Oldest backlog").nextElementSibling?.textContent).toBe("Unknown");
+    expect(screen.getAllByText("Permanent failures")[0].nextElementSibling?.textContent).toBe("0");
+    expect(screen.getAllByText("Latest dispatch")[0].nextElementSibling?.textContent).toBe("ok");
   });
 
   it("does not manufacture healthy Comms state when section and dispatch telemetry are unavailable", () => {
@@ -59,8 +59,8 @@ describe("CommsSection", () => {
     render(<CommsSection data={data} />);
 
     expect(screen.getByText("Delivery").nextElementSibling?.textContent).toBe("Unknown");
-    expect(screen.getByText("Permanent Failures").nextElementSibling?.textContent).toBe("Unknown");
-    expect(screen.getByText("Latest Dispatch").nextElementSibling?.textContent).toBe("Unknown");
+    expect(screen.getAllByText("Permanent failures")[0].nextElementSibling?.textContent).toBe("Unknown");
+    expect(screen.getAllByText("Latest dispatch")[0].nextElementSibling?.textContent).toBe("Unknown");
     expect(screen.getByText("Telegram query unavailable")).toBeTruthy();
   });
 });

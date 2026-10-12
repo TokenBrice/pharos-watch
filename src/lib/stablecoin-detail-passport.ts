@@ -90,8 +90,8 @@ function formatLaunchDate(launchDate: string | undefined): string | null {
 // Same data-driven freeze tones as the retired identity FreezablePill — amber
 // for any freeze surface, emerald only for a reviewed clear status. Text-only:
 // passport entries are flat document fields, not tinted pills.
-const FREEZE_TONE_RESTRICTED = "text-amber-700 dark:text-amber-400";
-const FREEZE_TONE_CLEAR = "text-emerald-700 dark:text-emerald-400";
+const FREEZE_TONE_RESTRICTED = "text-state-warn";
+const FREEZE_TONE_CLEAR = "text-state-positive";
 
 // A clean peg record earns the same emerald as a reviewed clear freeze status;
 // a non-zero count stays default foreground — it is history, not an alarm.

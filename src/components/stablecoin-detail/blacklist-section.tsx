@@ -57,7 +57,7 @@ export function BlacklistSection({ symbol }: BlacklistSectionProps) {
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
           <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
-            <MethodologyLabel topic="blacklistTracker">Blacklist Activity</MethodologyLabel>
+            <MethodologyLabel topic="blacklistTracker">Blacklist activity</MethodologyLabel>
           </StablecoinModuleTitle>
           <FreshnessIndicator
             compact
@@ -117,7 +117,7 @@ export function BlacklistHistorySection({ symbol }: BlacklistSectionProps) {
       <Card className={DETAIL_MODULE_SHELL_CLASS}>
         <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
           <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>
-            <MethodologyLabel topic="blacklistTracker">Recent Blacklist Events</MethodologyLabel>
+            <MethodologyLabel topic="blacklistTracker">Recent blacklist events</MethodologyLabel>
           </StablecoinModuleTitle>
         </CardHeader>
         <CardContent className={`${DETAIL_MODULE_BODY_CLASS} space-y-4`}>

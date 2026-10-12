@@ -219,7 +219,7 @@ describe("DexLiquidityCard", () => {
     // The opening line is now the component-derived verdict (when components
     // are published); the old disclaimer lives in the methodology hint.
     expect(screen.queryByText("Aggregate DEX market score; not a single-route execution test.")).toBeNull();
-    const effectiveLabel = screen.getByText("Effective Liquidity");
+    const effectiveLabel = screen.getByText("Effective liquidity");
     const effectiveValue = screen.getByText("$910.71K");
     const totalAmmLabel = screen.getByText("Total AMM Liquidity TVL");
     const totalAmmValue = screen.getByText("$10.20M");

@@ -432,7 +432,7 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
             className={cn(
               "px-1.5 py-0 text-xs uppercase",
               calibrating
-                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                ? "border-state-warn bg-state-warn-subtle text-state-warn"
                 : "border-border/60 bg-muted/40 text-muted-foreground",
             )}
           >
@@ -557,7 +557,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
           <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
 
           {data._meta.degraded ? (
-            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-state-warn-strong">
               Reviewer snapshot is degraded: {data._meta.degradedReason ?? "unknown"}.
             </p>
           ) : null}

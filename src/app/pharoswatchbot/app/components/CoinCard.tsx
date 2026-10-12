@@ -104,7 +104,7 @@ export function CoinCard({ coin, globalAlerts, presets, canMutate, isMutating, p
             <h3 className="min-w-0 max-w-full truncate text-base font-semibold text-foreground">{coin.symbol}</h3>
             <span
               className={cn(
-                "max-w-full shrink truncate rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                "max-w-full shrink truncate rounded-full border px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide",
                 sourceChip.className,
               )}
             >

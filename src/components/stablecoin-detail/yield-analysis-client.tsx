@@ -536,7 +536,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={readyModel}>
       <QueryErrorNotice error={rankingsQuery.error} hasData onRetry={() => { void rankingsQuery.refetch(); }} />
       {rankingsQuery.meta?.warning ? (
-        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+        <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
           {rankingsQuery.meta.warning}
         </div>
       ) : null}
@@ -593,7 +593,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         </CardHeader>
         <CardContent>
           {historyWarning ? (
-            <div className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            <div className="mb-3 rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
               {historyWarning}
             </div>
           ) : null}
@@ -620,10 +620,10 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                   {currentWarningSignals.map((signal) => (
                     <li
                       key={signal}
-                      className="flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2"
+                      className="flex items-start gap-2 rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2"
                     >
-                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                      <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-state-warn-solid" />
+                      <div className="text-sm text-state-warn-strong">
                         <span className="font-medium">{formatYieldWarningSignal(signal)}</span>
                         <span className="block text-xs text-amber-700/80 dark:text-amber-300/75">
                           {formatYieldWarningSignalDescription(signal)}
@@ -639,10 +639,10 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
               {warningEvents.map((event, index) => (
                 <li
                   key={`${event.latestTimestamp}-${event.signal}-${index}`}
-                  className="flex items-start gap-3 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2"
+                  className="flex items-start gap-3 rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2"
                 >
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                  <div className="min-w-0 flex-1 text-sm text-amber-800 dark:text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-state-warn-solid" />
+                  <div className="min-w-0 flex-1 text-sm text-state-warn-strong">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                       <span className="font-medium">{formatYieldWarningSignal(event.signal)}</span>
                       {event.count > 1 ? (
@@ -672,7 +672,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         </CardHeader>
         <CardContent className="space-y-3">
           {historyWarning ? (
-            <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+            <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
               {historyWarning}
             </div>
           ) : null}
@@ -708,10 +708,10 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
                 {sourceSwitchEvents.map((event) => (
                   <li
                     key={`${event.timestamp}-${event.toSourceKey ?? "switch"}`}
-                    className="flex items-start gap-3 rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2"
+                    className="flex items-start gap-3 rounded-lg border border-state-info-solid/25 bg-state-info-solid/5 px-3 py-2"
                   >
                     <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-300" />
-                    <div className="min-w-0 flex-1 text-sm text-sky-800 dark:text-sky-200">
+                    <div className="min-w-0 flex-1 text-sm text-state-info-strong">
                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                         <span className="font-medium">
                           {event.fromSourceLabel

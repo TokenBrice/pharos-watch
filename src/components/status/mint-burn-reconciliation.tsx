@@ -32,14 +32,14 @@ function auditDate(timestamp: number): string | undefined {
 }
 
 function statusTone(status: IntegrityStatus): string {
-  if (status === "Critical") return "text-red-700 dark:text-red-300";
-  if (status === "Verified") return "text-emerald-700 dark:text-emerald-300";
+  if (status === "Critical") return "text-state-danger-bright";
+  if (status === "Verified") return "text-state-positive-bright";
   return "text-muted-foreground";
 }
 
 function statusTileTone(status: IntegrityStatus): string {
-  if (status === "Critical") return "border-red-500/25 bg-red-500/[0.045]";
-  if (status === "Verified") return "border-emerald-500/20 bg-emerald-500/[0.04]";
+  if (status === "Critical") return "border-state-danger-solid/25 bg-state-danger-solid/[0.045]";
+  if (status === "Verified") return "border-state-positive-solid/20 bg-state-positive-solid/[0.04]";
   return "border-border/60 bg-background/35";
 }
 

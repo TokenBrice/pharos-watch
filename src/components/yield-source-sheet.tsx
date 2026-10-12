@@ -294,7 +294,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                           <span
                             className={cn(
                               "font-mono tabular-nums text-3xs",
-                              delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
+                              delta >= 0 ? "text-state-positive-solid" : "text-muted-foreground",
                             )}
                           >
                             {formatYieldApyDelta(delta)}
@@ -323,7 +323,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                 <button
                   type="button"
                   onClick={() => setShowAllSheetSources(true)}
-                  className="mt-2 w-full rounded-lg border border-border/60 bg-background/55 py-1.5 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
+                  className="mt-2 w-full rounded-md border border-border/60 bg-background/55 py-1.5 text-xs text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
                 >
                   Show {sourceExplorer.retainedAlternates.length - 6} more
                 </button>

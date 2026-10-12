@@ -49,7 +49,7 @@ export default function PrivacyPage() {
         </div>
 
         <section className="space-y-2">
-          <h2 className="pharos-section-title">What We Collect</h2>
+          <h2 className="pharos-section-title">What we collect</h2>
           <p>
             When Google Analytics 4 (GA4) is enabled, public pages on pharos.watch
             collect anonymized usage analytics such as page views, session duration, approximate
@@ -70,18 +70,18 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="pharos-section-title">Stablecoin Picker Storage</h2>
+          <h2 className="pharos-section-title">Stablecoin picker storage</h2>
           <p>
-            The Picker at <code className="text-xs bg-muted px-1 py-0.5 rounded">/screener/picker/</code> uses
+            The Picker at <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/screener/picker/</code> uses
             functional browser storage. The long-lived local key in the current build is the callout dismissal key,{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.selector.callout.v1</code>. It is scoped to
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">pharos.selector.callout.v1</code>. It is scoped to
             this site, does not contain an IP address or user identifier, and remains until you clear browser site data.
-            A tab-scoped <code className="text-xs bg-muted px-1 py-0.5 rounded">sessionStorage</code> key,{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">pharos.selector.sessionResult.v1</code>, can hold the
+            A tab-scoped <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sessionStorage</code> key,{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">pharos.selector.sessionResult.v1</code>, can hold the
             last successful live result for accidental navigation recovery and clears when the browser session ends.
           </p>
           <p>
-            Picker share links use a <code className="text-xs bg-muted px-1 py-0.5 rounded">sid</code> that points to a
+            Picker share links use a <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sid</code> that points to a
             Cloudflare Pages KV snapshot of the form answers and resulting output. Snapshot IDs are content-addressed,
             so identical answers against an identical dataset produce the same ID. Anyone with the link can view the
             frozen artifact. Snapshots do not include IP addresses, browser fingerprints, or account identifiers, and
@@ -103,8 +103,8 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Per-coin and preset subscriptions</strong>: live settings are retained until{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/unsubscribe all</code> or{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code>. Inactivity cleanup removes only
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/unsubscribe all</code> or{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code>. Inactivity cleanup removes only
               inert per-coin rows after 180 days; preset follows and meaningful per-coin settings do not expire for
               inactivity.
             </li>
@@ -123,25 +123,25 @@ export default function PrivacyPage() {
               and enabled state are retained while configured. Sent and skipped aggregate target metadata is retained
               for 30 days; cancelled, expired, execution-unknown, and permanently failed audit metadata is retained for
               90 days. Pending message bodies follow the delivery-queue lifecycle above.{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes the preference, target
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes the preference, target
               metadata, and chat-attributable pending or dead-letter rows immediately.
             </li>
             <li>
               <strong>Alert job manifests and per-target audit</strong>: 90-day retention. A private-chat{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s target
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes that chat&apos;s target
               rows and per-target item lineage, planning snapshots, rendered target plans, and transport-failure
               observations; aggregate job manifests remain until their normal prune.
             </li>
             <li>
               <strong>Freeze event and recipient lineage</strong>: immutable Tape and blacklist source identities plus
               the one-time opt-in recipient cohort are retained for 90 days. A private-chat{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code> removes that chat&apos;s freeze
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code> removes that chat&apos;s freeze
               target rows immediately; source events remain until their normal audit prune.
             </li>
             <li>
               <strong>Dead-letter audit trail</strong> for expired or permanently failed deliveries: 90-day retention,
               or immediate removal for that chat through{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/forget</code>.
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/forget</code>.
             </li>
             <li>
               <strong>Processed-update idempotency claims</strong>: 7-day prune.
@@ -156,13 +156,13 @@ export default function PrivacyPage() {
             </li>
             <li>
               <strong>Per-chat delivery diagnostics</strong> used by{" "}
-              <code className="text-xs bg-muted px-1 py-0.5 rounded">/health</code>: kept while the subscriber exists,
+              <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/health</code>: kept while the subscriber exists,
               with a 90-day stale prune.
             </li>
           </ul>
           <p>
             For the PharosWatchBot Mini App, the signed Telegram{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code> body is never persisted. It is
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">initData</code> body is never persisted. It is
             validated request-locally through Telegram&apos;s HMAC signature and freshness window. Mutations use a
             5-minute auth window plus a bounded per-user Pharos edit budget, while read-only session and watchlist
             portability requests accept a Telegram-signed launch up to 24 hours old so an open panel stays usable
@@ -187,7 +187,7 @@ export default function PrivacyPage() {
             incident response. Telegram-specific custom log records are limited to operation names, bounded counts,
             status codes, retry timing, and fixed error categories. They exclude chat and user IDs, update and callback
             identifiers, message or callback content, URLs, bot tokens, and Mini App{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">initData</code>. Cloudflare processes these records in
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">initData</code>. Cloudflare processes these records in
             the Pharos Cloudflare account, where access follows the account&apos;s permissions. This repository does not
             configure a separate Logpush archive or a Telegram-log retention duration. Per-chat incident investigation
             uses the private operator diagnostics backed by D1 instead of general logs.
@@ -195,7 +195,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-2">
-          <h2 className="pharos-section-title">No Accounts</h2>
+          <h2 className="pharos-section-title">No accounts</h2>
           <p>
             Pharos does not require user accounts or logins for the website. Optional feedback contact details and
             API-access request details sent by direct message are self-declared and are not used as site accounts.
@@ -241,15 +241,15 @@ export default function PrivacyPage() {
           <p>
             On GA4-enabled public website routes, the only cookies set by Pharos are those required by Google Analytics
             4 (e.g.,{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">_ga</code>,{" "}
-            <code className="text-xs bg-muted px-1 py-0.5 rounded">_ga_*</code>) for distinguishing unique visitors. No
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">_ga</code>,{" "}
+            <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">_ga_*</code>) for distinguishing unique visitors. No
             advertising or tracking cookies are used. The embedded PharosWatchBot Mini App does not load GA4 or set
             GA4 cookies.
           </p>
         </section>
 
         <section className="space-y-2">
-          <h2 className="pharos-section-title">Data Retention</h2>
+          <h2 className="pharos-section-title">Data retention</h2>
           <p>
             When GA4 is enabled, analytics retention is controlled by the externally configured GA4 property rather than
             guaranteed by repository code. We do not

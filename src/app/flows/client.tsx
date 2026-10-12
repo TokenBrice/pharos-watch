@@ -44,7 +44,7 @@ function FlowsHeaderSupplement({ syncWarning }: { syncWarning: string | null }) 
         aggregates that baseline-relative pressure across tracked issuance and redemption activity.
       </p>
       {syncWarning ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+        <div className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-state-warn-bright">
           {syncWarning}
         </div>
       ) : null}

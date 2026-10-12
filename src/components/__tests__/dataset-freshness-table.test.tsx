@@ -30,7 +30,7 @@ describe("DatasetFreshnessTable", () => {
       />,
     );
 
-    expect(screen.getByText("Pipeline Freshness")).toBeTruthy();
+    expect(screen.getByText("Pipeline freshness")).toBeTruthy();
     expect(screen.getByText(/last successful writer evaluation per domain/i)).toBeTruthy();
     expect(screen.getByText(/Cadence is the writer schedule/i)).toBeTruthy();
     const tableShell = screen.getByTestId("dataset-freshness-table");

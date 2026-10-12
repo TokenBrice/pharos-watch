@@ -273,7 +273,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
         <div className="border-b border-border/40 px-4 py-4 sm:px-5 lg:border-b-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-foreground">
-              <MethodologyLabel topic="pressureShift">Pressure Shift</MethodologyLabel>{" "}
+              <MethodologyLabel topic="pressureShift">Pressure shift</MethodologyLabel>{" "}
               <span className="text-muted-foreground">· 30d</span>
             </p>
             <span

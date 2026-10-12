@@ -71,9 +71,9 @@ export function RequestSourceAttributionCard({
       description={
         <>
           Total request demand across same-origin{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">/_site-data/*</code>{" "}
+          <code className="rounded-sm bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">/_site-data/*</code>{" "}
           and{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">api.pharos.watch</code>.
+          <code className="rounded-sm bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">api.pharos.watch</code>.
           Site demand includes Pages cache hits plus website-owned public API keys; external excludes those keys.
         </>
       }

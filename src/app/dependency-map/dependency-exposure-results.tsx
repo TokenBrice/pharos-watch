@@ -56,7 +56,7 @@ export function DependencyExposureResults({ result, publication, roots, options,
     {roles.length > 0 && <div className="space-y-2"><h4 className="font-semibold">Role dependencies (not drawn)</h4><ul className="text-sm">{roles.map(({ root, role, index }) => <li key={`${root}:${role.upstreamAssetId}:${role.economicRole}:${index}`}>{label(root)} → {label(role.upstreamAssetId)} · {DEPENDENCY_ROLE_LABELS[role.economicRole]} · {Number.isFinite(role.weight) ? `${Math.round(role.weight * 100)}%` : "Unknown share"}</li>)}</ul></div>}
     <DependencyScenarioView response={scenarios.data} roots={roots} selection={scenarioSelection} selectedId={selectedScenarioId} onSelect={setSelectedScenarioId} label={label} />
     {!result.reached ? <p className="text-sm text-muted-foreground">No mapped downstream exposure found. Other dependencies and transmission channels may be missing.</p> : <>
-      <div className="flex flex-wrap items-center gap-4"><label className="text-sm">Sort <select className="min-h-11 rounded border border-border bg-background px-2" value={sort} onChange={event => setSort(event.target.value)}><option value="usd">Known USD</option><option value="share">Mapped share</option></select></label><label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={unknownOnly} onChange={event => setUnknownOnly(event.target.checked)} />Unknown supply</label></div>
+      <div className="flex flex-wrap items-center gap-4"><label className="text-sm">Sort <select className="min-h-11 rounded-md border border-border bg-background px-2" value={sort} onChange={event => setSort(event.target.value)}><option value="usd">Known USD</option><option value="share">Mapped share</option></select></label><label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={unknownOnly} onChange={event => setUnknownOnly(event.target.checked)} />Unknown supply</label></div>
       <TableFrame tableId="dependency-exposure-results" density="compact" chrome="embedded" tableClassName="min-w-[40rem] text-left text-sm">
         <TableCaption className="sr-only">Mapped dependents, excluding roots</TableCaption>
         <TableHeader><TableRow>
@@ -83,10 +83,10 @@ export function DependencyExposureResults({ result, publication, roots, options,
             </>;
           })()}</TableCell>
           {scenarioSelection.scenario && <TableCell><DependencyScenarioChange selection={scenarioSelection} assetId={row.id} /></TableCell>}
-          <TableCell><button type="button" className="pharos-focus-ring min-h-11 rounded px-2 underline" onClick={() => onInspect(row.id)}>Inspect path</button><Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded px-2 underline">Open coin</Link></TableCell>
+          <TableCell><button type="button" className="pharos-focus-ring min-h-11 rounded-md px-2 underline" onClick={() => onInspect(row.id)}>Inspect path</button><Link href={buildStablecoinUrl(row.id)} className="pharos-focus-ring inline-flex min-h-11 items-center rounded px-2 underline">Open coin</Link></TableCell>
         </TableRow>)}</TableBody>
       </TableFrame>
     </>}
-    {inspected && <div aria-live="polite" className="space-y-2 rounded border border-border p-3"><h4 className="font-semibold">Paths to {label(inspected.id)}</h4>{inspected.paths.length ? <ol className="space-y-1 text-sm">{inspected.paths.map((path, index) => <li key={index}>{path.map(label).join(" → ")}</li>)}</ol> : <p className="text-sm">No path details published for this row.</p>}</div>}
+    {inspected && <div aria-live="polite" className="space-y-2 rounded-xl border border-border p-3"><h4 className="font-semibold">Paths to {label(inspected.id)}</h4>{inspected.paths.length ? <ol className="space-y-1 text-sm">{inspected.paths.map((path, index) => <li key={index}>{path.map(label).join(" → ")}</li>)}</ol> : <p className="text-sm">No path details published for this row.</p>}</div>}
   </section>;
 }

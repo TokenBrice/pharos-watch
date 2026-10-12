@@ -33,7 +33,7 @@ export class SectionErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       const canRetry = this.state.retryCount < MAX_RETRIES;
       return (
-        <div role="alert" className="rounded-lg border border-border/50 bg-muted/30 p-6 text-center">
+        <div role="alert" className="rounded-xl border border-border/50 bg-muted/30 p-6 text-center">
           <p className="text-sm font-medium text-foreground">The {this.props.name} section is temporarily unavailable.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {this.props.supportingText ?? "Please try again. Existing page content is still safe to use."}

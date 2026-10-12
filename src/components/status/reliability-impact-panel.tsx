@@ -25,7 +25,7 @@ export function ReliabilityImpactPanel({
     <div className="space-y-5">
       <div className="grid items-start gap-3 md:grid-cols-2">
         <section
-          className="border-l-2 border-sky-500 bg-sky-500/[0.05] px-4 py-3"
+          className="border-l-2 border-state-info-solid bg-state-info-solid/[0.05] px-4 py-3"
           aria-labelledby="public-impact-title"
         >
           <h3 id="public-impact-title" className="text-sm font-semibold text-foreground">
@@ -43,7 +43,7 @@ export function ReliabilityImpactPanel({
           </p>
         </section>
         <section
-          className="border-l-2 border-amber-500 bg-amber-500/[0.05] px-4 py-3"
+          className="border-l-2 border-state-warn-solid bg-state-warn-solid/[0.05] px-4 py-3"
           aria-labelledby="operator-impact-title"
         >
           <h3 id="operator-impact-title" className="text-sm font-semibold text-foreground">
@@ -76,7 +76,7 @@ export function ReliabilityImpactPanel({
                   <code className="mt-1 block break-all text-3xs text-muted-foreground">{issue.rawCode}</code>
                 </div>
                 <span
-                  className={cn("shrink-0 rounded border px-2 py-1 text-2xs font-medium", KIND_CLASS[issue.kind])}
+                  className={cn("shrink-0 rounded-sm border px-2 py-1 text-2xs font-medium", KIND_CLASS[issue.kind])}
                 >
                   {issue.kind}
                 </span>

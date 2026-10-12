@@ -66,7 +66,7 @@ function PinnedCell({ row, model }: RowCellsProps) {
           title={`${row.isPinned ? "Unstar" : "Star"} ${row.coin.symbol}`}
           className={`pharos-focus-ring inline-flex items-center justify-center rounded-md transition-colors ${
             row.isPinned
-              ? "bg-amber-500/10 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300"
+              ? "bg-state-warn-subtle text-state-warn-bright hover:bg-state-warn-solid/15"
               : "text-muted-foreground opacity-80 hover:text-foreground lg:pointer-fine:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
           } ${model.isOverview ? "size-5 opacity-100 group-hover:opacity-100 focus-visible:opacity-100" : "size-11 lg:size-6"}`}
           onClick={(event) => {

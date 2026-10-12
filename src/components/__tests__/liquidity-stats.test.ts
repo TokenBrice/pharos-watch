@@ -54,7 +54,7 @@ describe("LiquidityStats", () => {
       }),
     );
 
-    expect(screen.getByText("Exit Route Map")).toBeTruthy();
+    expect(screen.getByText("Exit route map")).toBeTruthy();
     expect(screen.getByTestId("exit-route-instrument").getAttribute("role")).toBe("img");
     expect(screen.getByTestId("exit-route-fallback-list")).toBeTruthy();
     expect(screen.queryByText("Read the route map")).toBeNull();
@@ -137,7 +137,7 @@ describe("LiquidityStats", () => {
     }));
 
     const tvlCard = screen.getByText("Total DEX TVL").closest('[data-slot="card"]')!;
-    const scoreCard = screen.getByText("Avg Liq Score").closest('[data-slot="card"]')!;
+    const scoreCard = screen.getByText("Avg liq score").closest('[data-slot="card"]')!;
     expect(within(tvlCard as HTMLElement).getByText(tvlText)).toBeTruthy();
     expect(within(scoreCard as HTMLElement).getByText((_content, node) =>
       node?.textContent === scoreText && node.children.length === (avgScore == null ? 0 : 1),

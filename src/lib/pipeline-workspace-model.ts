@@ -18,9 +18,9 @@ export type PipelineMode = (typeof PIPELINE_MODES)[number]["id"];
 export type PipelineSeverity = WorkspaceSeverity;
 
 export const PIPELINE_STATE_META: Record<PipelineSeverity, { label: string; className: string }> = {
-  healthy: { label: "Healthy", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" },
-  watch: { label: "Watch", className: "bg-amber-500/15 text-amber-800 dark:text-amber-300" },
-  critical: { label: "Critical", className: "bg-red-500/15 text-red-700 dark:text-red-300" },
+  healthy: { label: "Healthy", className: "bg-state-positive-solid/15 text-state-positive-bright" },
+  watch: { label: "Watch", className: "bg-state-warn-solid/15 text-state-warn-strong" },
+  critical: { label: "Critical", className: "bg-state-danger-solid/15 text-state-danger-bright" },
   unknown: { label: "Unknown", className: "bg-muted text-muted-foreground" },
 };
 

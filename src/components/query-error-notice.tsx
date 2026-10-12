@@ -43,7 +43,7 @@ export function QueryErrorNotice({ error, hasData = false, onRetry }: QueryError
     <div
       role="status"
       aria-live="polite"
-      className={`rounded-lg border px-4 py-3 shadow-sm ${tone}`}
+      className={`rounded-xl border px-4 py-3 shadow-sm ${tone}`}
     >
       <div className="flex items-start gap-3">
         <div className={`shrink-0 rounded-full ${iconBg} p-1.5`}>

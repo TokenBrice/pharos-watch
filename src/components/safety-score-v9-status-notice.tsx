@@ -19,7 +19,7 @@ export function SafetyScoreV9StatusNotice({
 
   return (
     <div
-      className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300"
+      className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-amber-800 dark:text-amber-300"
       role="status"
     >
       Ratings are held at the last verified snapshot

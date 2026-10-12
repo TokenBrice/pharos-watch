@@ -6,6 +6,10 @@
 
 /* ── Light Mode (default) ──────────────────────────────────────── */
 :root {
+  /* light-dark() resolves against color-scheme; .dark flips it below
+     (next-themes also sets it inline on <html>). */
+  color-scheme: light;
+
   /* ── Surfaces ─────────────────────────────────────────────────── */
   --surface-base: oklch(0.985 0 0);
   --surface-raised: oklch(0.97 0 0);
@@ -44,29 +48,64 @@
   /* ── Severity (peg deviation) ─────────────────────────────────── */
   --severity-healthy: var(--p-green-500);
   /* WCAG 1.4.3: amber-300 fails AA on light surfaces. Light theme uses amber-700;
-     .dark restores amber-300 (which passes on dark). */
-  --severity-mild: var(--p-amber-700);
+     dark restores amber-300 (which passes on dark). */
+  --severity-mild: light-dark(var(--p-amber-700), var(--p-amber-300));
   --severity-moderate: var(--p-orange-500);
-  --severity-severe: var(--p-red-600);
+  --severity-severe: light-dark(var(--p-red-600), var(--p-red-400));
 
   /* ── Risk Alert States ─────────────────────────────────────────── */
-  --risk-alert-border: var(--p-amber-500);
-  --risk-alert-bg: oklch(0.98 0.02 85 / 0.6);
-  --risk-danger-border: var(--p-red-500);
-  --risk-danger-bg: oklch(0.97 0.03 25 / 0.5);
+  --risk-alert-border: light-dark(var(--p-amber-500), var(--p-amber-400));
+  --risk-alert-bg: light-dark(oklch(0.98 0.02 85 / 0.6), oklch(0.22 0.03 85 / 0.25));
+  --risk-danger-border: light-dark(var(--p-red-500), var(--p-red-400));
+  --risk-danger-bg: light-dark(oklch(0.97 0.03 25 / 0.5), oklch(0.2 0.04 25 / 0.35));
   --risk-calm-border: var(--p-green-500);
-  --risk-calm-bg: oklch(0.98 0.02 145 / 0.4);
+  --risk-calm-bg: light-dark(oklch(0.98 0.02 145 / 0.4), oklch(0.22 0.03 145 / 0.15));
+
+  /* ── UI State ─────────────────────────────────────────────────
+     Operational/UI state (ok, warning, error, informational), defined once
+     with light-dark(). Values are the Tailwind palette stops the product
+     spelled by hand (e.g. text-amber-700 dark:text-amber-400), so the
+     utilities below render identically. Classification scales (grades,
+     PSI/DEWS bands, peg severity) stay in shared/lib/classification.ts. */
+  --state-positive-text: light-dark(var(--color-emerald-700), var(--color-emerald-400));
+  --state-positive-text-bright: light-dark(var(--color-emerald-700), var(--color-emerald-300));
+  --state-positive-text-strong: light-dark(var(--color-emerald-800), var(--color-emerald-200));
+  --state-positive-text-ink: light-dark(var(--color-emerald-950), var(--color-emerald-100));
+  --state-positive-solid: var(--color-emerald-500);
+  --state-positive-subtle: color-mix(in oklab, var(--state-positive-solid) 10%, transparent);
+  --state-positive-border: color-mix(in oklab, var(--state-positive-solid) 30%, transparent);
+  --state-warn-text: light-dark(var(--color-amber-700), var(--color-amber-400));
+  --state-warn-text-bright: light-dark(var(--color-amber-700), var(--color-amber-300));
+  --state-warn-text-strong: light-dark(var(--color-amber-800), var(--color-amber-200));
+  --state-warn-text-ink: light-dark(var(--color-amber-950), var(--color-amber-100));
+  --state-warn-solid: var(--color-amber-500);
+  --state-warn-subtle: color-mix(in oklab, var(--state-warn-solid) 10%, transparent);
+  --state-warn-border: color-mix(in oklab, var(--state-warn-solid) 30%, transparent);
+  --state-danger-text: light-dark(var(--color-red-700), var(--color-red-400));
+  --state-danger-text-bright: light-dark(var(--color-red-700), var(--color-red-300));
+  --state-danger-text-strong: light-dark(var(--color-red-800), var(--color-red-200));
+  --state-danger-text-ink: light-dark(var(--color-red-950), var(--color-red-100));
+  --state-danger-solid: var(--color-red-500);
+  --state-danger-subtle: color-mix(in oklab, var(--state-danger-solid) 10%, transparent);
+  --state-danger-border: color-mix(in oklab, var(--state-danger-solid) 30%, transparent);
+  --state-info-text: light-dark(var(--color-sky-700), var(--color-sky-400));
+  --state-info-text-bright: light-dark(var(--color-sky-700), var(--color-sky-300));
+  --state-info-text-strong: light-dark(var(--color-sky-800), var(--color-sky-200));
+  --state-info-text-ink: light-dark(var(--color-sky-950), var(--color-sky-100));
+  --state-info-solid: var(--color-sky-500);
+  --state-info-subtle: color-mix(in oklab, var(--state-info-solid) 10%, transparent);
+  --state-info-border: color-mix(in oklab, var(--state-info-solid) 30%, transparent);
 
   /* ── Severity hex values (for Recharts / canvas) ──────────────── */
   --severity-healthy-hex: #22c55e;
-  --severity-mild-hex: #b45309;
+  --severity-mild-hex: light-dark(#b45309, #f59e0b);
   --severity-moderate-hex: #f97316;
   --severity-severe-hex: #ef4444;
 
   /* ── PSI Bands ────────────────────────────────────────────────── */
   --psi-bedrock: var(--p-green-500);
   --psi-steady: var(--p-teal-400);
-  --psi-tremor: var(--p-amber-700);
+  --psi-tremor: light-dark(var(--p-amber-700), var(--p-amber-300));
   --psi-fracture: var(--p-orange-500);
   --psi-crisis: var(--p-red-500);
   --psi-meltdown: var(--p-red-950);
@@ -74,7 +113,7 @@
   /* ── PSI Band hex values (for Recharts) ───────────────────────── */
   --psi-bedrock-hex: #22c55e;
   --psi-steady-hex: #14b8a6;
-  --psi-tremor-hex: #a16207;
+  --psi-tremor-hex: light-dark(#a16207, #eab308);
   --psi-fracture-hex: #f97316;
   --psi-crisis-hex: #ef4444;
   --psi-meltdown-hex: #991b1b;
@@ -83,14 +122,14 @@
   /* ── DEWS Threat Bands ────────────────────────────────────────── */
   --dews-calm: var(--p-green-500);
   --dews-watch: var(--p-teal-400);
-  --dews-alert: var(--p-amber-700);
+  --dews-alert: light-dark(var(--p-amber-700), var(--p-amber-300));
   --dews-warning: var(--p-orange-500);
   --dews-danger: var(--p-red-500);
 
   /* ── DEWS hex values (for Recharts) ─────────────────────────── */
   --dews-calm-hex: #22c55e;
   --dews-watch-hex: #14b8a6;
-  --dews-alert-hex: #a16207;
+  --dews-alert-hex: light-dark(#a16207, #eab308);
   --dews-warning-hex: #f97316;
   --dews-danger-hex: #ef4444;
   --dews-radar-spoke: oklch(0.54 0.01 260 / 0.22);
@@ -103,7 +142,7 @@
   /* ── Score Tiers ──────────────────────────────────────────────── */
   --score-green: var(--p-green-500);
   --score-blue: var(--p-blue-500);
-  --score-amber: var(--p-amber-700);
+  --score-amber: light-dark(var(--p-amber-700), var(--p-amber-300));
   --score-red: var(--p-red-500);
 
   /* ── Mechanism Archetype Accents ──────────────────────────────── */
@@ -119,7 +158,7 @@
   /* ── Interactive States ───────────────────────────────────────── */
   --interactive-hover: oklch(0.95 0.005 260);
   --interactive-active: oklch(0.91 0.005 260);
-  --interactive-focus: var(--p-blue-400);
+  --interactive-focus: light-dark(var(--p-blue-400), var(--p-blue-500));
   --interactive-disabled: var(--p-neutral-200);
   --control-pill-bg: oklch(1 0 0 / 0.78);
   --control-pill-border: oklch(0.87 0.01 255 / 0.78);
@@ -136,7 +175,7 @@
   --chart-primary: var(--p-frost-blue);
   --chart-secondary: #3bcc87;
   --chart-tertiary: #23a7c8;
-  --chart-negative: var(--p-red-500);
+  --chart-negative: light-dark(var(--p-red-500), var(--p-red-400));
   --chart-stage-bg: oklch(0.995 0.003 260 / 0.78);
   --chart-stage-border: oklch(0.9 0.008 255 / 0.82);
   --chart-stage-shadow: inset 0 1px 0 oklch(1 0 0 / 0.78);
@@ -195,6 +234,8 @@
 
 /* ── Dark Mode ─────────────────────────────────────────────────── */
 .dark {
+  color-scheme: dark;
+
   /* ── Surfaces ─────────────────────────────────────────────────── */
   /* One step above pure black (was 0.085): saturated band colors vibrated
      against it, and cards (0.2) still separate clearly. */
@@ -212,18 +253,6 @@
   --border-default: oklch(1 0 0 / 12%);
   --border-subtle: oklch(1 0 0 / 8%);
   --border-strong: oklch(1 0 0 / 18%);
-
-  /* ── Severity (same hues, adjusted lightness for dark bg) ────── */
-  --severity-severe: var(--p-red-400);
-  /* Restore the bright amber stop on dark surfaces (passes AA against the
-     dark background); the light theme darkened these to amber-700 for AA. */
-  --severity-mild: var(--p-amber-300);
-  --severity-mild-hex: #f59e0b;
-  --psi-tremor: var(--p-amber-300);
-  --psi-tremor-hex: #eab308;
-  --dews-alert: var(--p-amber-300);
-  --dews-alert-hex: #eab308;
-  --score-amber: var(--p-amber-300);
 
   /* ── Mechanism Archetype Accents (Dark) ────────────────────────
      Same hues, lifted lightness/chroma for legibility on dark bg. */
@@ -253,17 +282,9 @@
   --surface-zone-research: oklch(0.175 0.008 255 / 0.55);
   --section-rule: oklch(1 0 0 / 0.14);
 
-  /* ── Risk Alert States (Dark) ─────────────────────────────────── */
-  --risk-alert-border: var(--p-amber-400);
-  --risk-alert-bg: oklch(0.22 0.03 85 / 0.25);
-  --risk-danger-border: var(--p-red-400);
-  --risk-danger-bg: oklch(0.2 0.04 25 / 0.35);
-  --risk-calm-bg: oklch(0.22 0.03 145 / 0.15);
-
   /* ── Interactive States ───────────────────────────────────────── */
   --interactive-hover: oklch(0.245 0.006 260);
   --interactive-active: oklch(0.275 0.008 260);
-  --interactive-focus: var(--p-blue-500);
   --interactive-disabled: var(--p-neutral-800);
   --control-pill-bg: oklch(1 0 0 / 0.05);
   --control-pill-border: oklch(1 0 0 / 0.1);
@@ -275,7 +296,6 @@
   --chart-grid-opacity: 0.08;
   --chart-fill-opacity: 0.24;
   --chart-primary: var(--p-frost-blue);
-  --chart-negative: var(--p-red-400);
   --chart-stage-bg: oklch(1 0 0 / 0.03);
   --chart-stage-border: oklch(1 0 0 / 0.08);
   --chart-stage-shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
@@ -305,4 +325,89 @@
   --table-header-shadow: inset 0 -1px 0 oklch(1 0 0 / 0.08);
   --table-sticky-column-bg: oklch(0.205 0.01 255 / 0.96);
   --table-sticky-column-shadow: 12px 0 24px oklch(0 0 0 / 0.28);
+}
+
+/* ── UI State utilities ────────────────────────────────────────────
+   text-state-{tone}[-bright|-strong|-ink], bg-state-{tone}-subtle,
+   border-state-{tone}, and the opacity-capable colour
+   {bg,border,text,fill,…}-state-{tone}-solid[/N]. See
+   docs/design-tokens.md#ui-state-utilities. */
+@theme inline {
+  --color-state-positive-solid: var(--state-positive-solid);
+  --color-state-warn-solid: var(--state-warn-solid);
+  --color-state-danger-solid: var(--state-danger-solid);
+  --color-state-info-solid: var(--state-info-solid);
+}
+
+@utility text-state-positive {
+  color: var(--state-positive-text);
+}
+@utility text-state-positive-bright {
+  color: var(--state-positive-text-bright);
+}
+@utility text-state-positive-strong {
+  color: var(--state-positive-text-strong);
+}
+@utility text-state-positive-ink {
+  color: var(--state-positive-text-ink);
+}
+@utility bg-state-positive-subtle {
+  background-color: var(--state-positive-subtle);
+}
+@utility border-state-positive {
+  border-color: var(--state-positive-border);
+}
+@utility text-state-warn {
+  color: var(--state-warn-text);
+}
+@utility text-state-warn-bright {
+  color: var(--state-warn-text-bright);
+}
+@utility text-state-warn-strong {
+  color: var(--state-warn-text-strong);
+}
+@utility text-state-warn-ink {
+  color: var(--state-warn-text-ink);
+}
+@utility bg-state-warn-subtle {
+  background-color: var(--state-warn-subtle);
+}
+@utility border-state-warn {
+  border-color: var(--state-warn-border);
+}
+@utility text-state-danger {
+  color: var(--state-danger-text);
+}
+@utility text-state-danger-bright {
+  color: var(--state-danger-text-bright);
+}
+@utility text-state-danger-strong {
+  color: var(--state-danger-text-strong);
+}
+@utility text-state-danger-ink {
+  color: var(--state-danger-text-ink);
+}
+@utility bg-state-danger-subtle {
+  background-color: var(--state-danger-subtle);
+}
+@utility border-state-danger {
+  border-color: var(--state-danger-border);
+}
+@utility text-state-info {
+  color: var(--state-info-text);
+}
+@utility text-state-info-bright {
+  color: var(--state-info-text-bright);
+}
+@utility text-state-info-strong {
+  color: var(--state-info-text-strong);
+}
+@utility text-state-info-ink {
+  color: var(--state-info-text-ink);
+}
+@utility bg-state-info-subtle {
+  background-color: var(--state-info-subtle);
+}
+@utility border-state-info {
+  border-color: var(--state-info-border);
 }

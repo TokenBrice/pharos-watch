@@ -62,7 +62,7 @@ describe("default Triage workspace performance budgets", () => {
       .closest("details") as HTMLDetailsElement;
     expect(diagnostics.open).toBe(false);
     // Closed disclosure must not keep its deep diagnostics subtree mounted.
-    expect(screen.queryByText("State Eval")).toBeNull();
+    expect(screen.queryByText("State eval")).toBeNull();
     expect(container.querySelectorAll("details > *:not(summary)").length).toBe(0);
   });
 });

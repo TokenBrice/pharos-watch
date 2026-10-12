@@ -88,7 +88,7 @@ export function D1UsageCard({
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-3">
           <StatTile
-            label="Database Size"
+            label="Database size"
             value={formatBytes(summary.databaseSizeBytes)}
             subtext={summary.capacity
               ? `${summary.capacity.utilizationPercent}% used · ${summary.capacity.thresholdState}`
@@ -98,7 +98,7 @@ export function D1UsageCard({
           />
           {summary.capacity && capacityForecast ? (
             <StatTile
-              label="Capacity Forecast"
+              label="Capacity forecast"
               value={capacityForecast.value}
               subtext={capacityForecast.subtext}
             />

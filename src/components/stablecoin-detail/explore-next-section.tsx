@@ -135,7 +135,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
       aria-labelledby="explore-next-heading"
     >
       <div className="space-y-1.5">
-        <DetailSectionTitle id="explore-next-heading" className={DETAIL_MODULE_TITLE_CLASS}>Explore Next</DetailSectionTitle>
+        <DetailSectionTitle id="explore-next-heading" className={DETAIL_MODULE_TITLE_CLASS}>Explore next</DetailSectionTitle>
         <p className="text-sm text-muted-foreground">
           Move from this coin into the next useful surface: peer benchmarks, taxonomy cohorts, or live trackers that add
           context to what you just read.

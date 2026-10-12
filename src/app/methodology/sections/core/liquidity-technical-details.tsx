@@ -96,7 +96,7 @@ export function LiquidityTechnicalDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Pool Quality Adjustments</h3>
+        <h3 className="text-foreground font-medium">Pool quality adjustments</h3>
         <ul className="list-disc list-inside space-y-1">
           <li>
             <span className="text-foreground">Balance health</span> &mdash; continuous ratio (not binary threshold):

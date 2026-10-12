@@ -223,7 +223,7 @@ export function YieldHistoryTooltip({
       ) : null}
       {point.warningSignals.length > 0 ? (
         <div className="mt-2 border-t border-border/60 pt-2">
-          <p className="text-3xs font-medium text-amber-700 dark:text-amber-400">
+          <p className="text-3xs font-medium text-state-warn">
             Warning signals
           </p>
           <div className="mt-1 space-y-1">

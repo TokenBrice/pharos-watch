@@ -80,7 +80,7 @@ export function ContagionGraphShell({ graph, stage, modeControls }: ContagionGra
         </Card>
       )}
       <Dialog open={isFullscreenOpen} onOpenChange={setIsFullscreenOpen}>
-        <DialogContent className="fixed inset-0 z-[70] flex h-auto w-auto max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-md p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:max-w-none" showCloseButton={false}
+        <DialogContent className="fixed inset-0 z-modal flex h-auto w-auto max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-md p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:max-w-none" showCloseButton={false}
           onClickCapture={event => {
             if ((event.target as Element).closest("[data-use-exposure-root]")) {
               closingForRoot.current = true;

@@ -259,18 +259,18 @@ function buildDashboardSections({ data, pipelineTone, browserProbeSummary, cronG
     {
       id: "reliability", title: "Probes, breakers, and cache pressure",
       value: browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "Unknown",
-      valueClassName: browserProbeSummary && browserProbeSummary.failCount > 0 ? "text-amber-700 dark:text-amber-400" : "text-foreground",
+      valueClassName: browserProbeSummary && browserProbeSummary.failCount > 0 ? "text-state-warn" : "text-foreground",
       summary: `${data.summary.availabilityImpactingCronErrors ?? "unavailable"} impacting cron errors, ${browserProbeSummary ? `${browserProbeSummary.failCount} failing browser probes` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio == null ? "unavailable" : `${data.summary.worstCacheRatio.toFixed(2)}x`}`,
     },
     {
       id: "crons", title: "Cron Lanes", value: data.summary.availabilityImpactingUnhealthyCrons == null ? "Unavailable" : `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,
-      valueClassName: data.summary.availabilityImpactingUnhealthyCrons == null ? "text-muted-foreground" : data.summary.availabilityImpactingUnhealthyCrons > 0 ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400",
+      valueClassName: data.summary.availabilityImpactingUnhealthyCrons == null ? "text-muted-foreground" : data.summary.availabilityImpactingUnhealthyCrons > 0 ? "text-state-danger" : "text-state-positive",
       summary: `${cronGroups.length} groups, ${data.summary.watchUnhealthyCrons ?? "unavailable"} watch unhealthy, ${data.summary.degradedCrons ?? "unavailable"} degraded jobs, ${runningCrons} running now`,
     },
     {
       id: "comms", title: "Comms",
       value: commsModel.delivery.health === "unknown" ? "Unknown" : commsModel.delivery.health === "failed" ? "Failed" : `${commsModel.delivery.pendingDeliveries ?? 0} pending`,
-      valueClassName: commsModel.delivery.health === "failed" ? "text-red-700 dark:text-red-400" : commsModel.delivery.health === "degraded" ? "text-amber-700 dark:text-amber-400" : commsModel.delivery.health === "healthy" ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground",
+      valueClassName: commsModel.delivery.health === "failed" ? "text-state-danger" : commsModel.delivery.health === "degraded" ? "text-state-warn" : commsModel.delivery.health === "healthy" ? "text-state-positive" : "text-muted-foreground",
       summary: `${commsModel.delivery.healthReason} ${commsModel.audience.deliverableChats == null ? "Alert-ready audience Unknown." : `${commsModel.audience.deliverableChats} alert-ready chats.`}`,
     },
   ];

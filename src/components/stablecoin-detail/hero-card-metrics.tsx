@@ -149,7 +149,7 @@ export function HeroPriceMetric({
           {price}
         </p>
         {limitedDepegCoverageNote ? (
-          <p className="mt-2 max-w-[24ch] text-2xs leading-snug text-amber-700 dark:text-amber-400">
+          <p className="mt-2 max-w-[24ch] text-2xs leading-snug text-state-warn">
             {limitedDepegCoverageNote}
           </p>
         ) : null}
@@ -167,7 +167,7 @@ export function HeroPriceMetric({
       </p>
       <p className={`pharos-numeric mt-1 text-xs ${referenceClass}`}>{referenceLine}</p>
       {limitedDepegCoverageNote ? (
-        <p className="mt-1 text-2xs text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>
+        <p className="mt-1 text-2xs text-state-warn">{limitedDepegCoverageNote}</p>
       ) : null}
     </div>
   );
@@ -204,7 +204,7 @@ function HeroMarketCapMetric({
         {coin.flags.pegCurrency !== "USD" ? (
           <p className="mt-2 text-2xs text-muted-foreground">USD-normalized</p>
         ) : null}
-        <SupplyRestoredNotice coinData={coinData} className="mt-2 text-2xs text-amber-700 dark:text-amber-400" />
+        <SupplyRestoredNotice coinData={coinData} className="mt-2 text-2xs text-state-warn" />
       </CompactMetricCell>
     );
   }
@@ -214,7 +214,7 @@ function HeroMarketCapMetric({
       <p className={HERO_METRIC_LABEL_CLASS}>Market Cap</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-2xs text-muted-foreground">USD-normalized</p>}
-      <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-2xs text-amber-700 dark:text-amber-400" />
+      <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-2xs text-state-warn" />
       <p className={`mt-1 text-xs pharos-numeric ${prevDayTrendClass}`}>
         {formatTrendPercent(mcap, safePrevDay)} <span className="text-muted-foreground">24h</span>
       </p>
@@ -427,7 +427,7 @@ export function HeroTertiaryMetrics({
       ) : null}
 
       {activeDepeg && (
-        <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400">
+        <div className="mt-3 rounded-lg border border-state-danger-solid/20 bg-state-danger-solid/8 px-3 py-2 text-xs text-state-danger">
           Active depeg detected
         </div>
       )}

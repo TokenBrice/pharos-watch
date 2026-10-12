@@ -26,7 +26,7 @@ describe("ApiKeysPanel lifecycle mutations", () => {
     renderPanel([makeKey()]);
 
     fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
-    fireEvent.change(screen.getByLabelText("Expires At"), { target: { value: "2026-04-10T12:30" } });
+    fireEvent.change(screen.getByLabelText("Expires at"), { target: { value: "2026-04-10T12:30" } });
     fireEvent.click(screen.getByRole("button", { name: /^Save changes to Ops Key/ }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());

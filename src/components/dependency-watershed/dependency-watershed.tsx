@@ -132,8 +132,8 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
               <p className="text-xs font-medium">Linked coins; not a loss forecast</p>
               {pinBeam && pinnedId && (
                 <>
-                  <button type="button" className="pharos-focus-ring rounded text-xs font-medium text-foreground underline underline-offset-2" onClick={() => trace(pinnedId)}>Trace exposure →</button>
-                  <button type="button" className="pharos-focus-ring rounded text-xs text-muted-foreground underline underline-offset-2" onClick={() => setPinnedId(null)}>Clear</button>
+                  <button type="button" className="pharos-focus-ring rounded-md text-xs font-medium text-foreground underline underline-offset-2" onClick={() => trace(pinnedId)}>Trace exposure →</button>
+                  <button type="button" className="pharos-focus-ring rounded-md text-xs text-muted-foreground underline underline-offset-2" onClick={() => setPinnedId(null)}>Clear</button>
                 </>
               )}
             </div>

@@ -220,7 +220,7 @@ export function MechanismComparisonMatrix() {
                 <TableHead
                   scope="row"
                   className={cn(
-                    "sticky left-0 z-[1] h-auto whitespace-normal px-3 py-2.5 align-top text-left font-medium text-foreground",
+                    "sticky left-0 z-1 h-auto whitespace-normal px-3 py-2.5 align-top text-left font-medium text-foreground",
                     i % 2 === 1 ? "bg-muted/10" : "bg-background",
                   )}
                 >

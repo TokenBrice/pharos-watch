@@ -109,7 +109,7 @@ describe("ContagionSnapshot", () => {
     const { rerender } = render(content());
     expect(screen.queryByTestId("contagion-graph")).toBeNull();
     expect(screen.getByText("Loading dependency graph...")).toBeTruthy();
-    expect(screen.getByText("Dependency Context")).toBeTruthy();
+    expect(screen.getByText("Dependency context")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Related asset" }).getAttribute("href")).toBe("/stablecoin/usde-ethena");
     expect(screen.getByRole("heading", { name: "Used by 1" })).toBeTruthy();
 
@@ -128,7 +128,7 @@ describe("ContagionSnapshot", () => {
       />,
     );
 
-    expect(screen.getByText("Dependency Context")).toBeTruthy();
+    expect(screen.getByText("Dependency context")).toBeTruthy();
     const graph = screen.getByTestId("contagion-graph");
     expect(graph.getAttribute("data-focus")).toBe("usde-ethena");
     expect(graph.getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
@@ -356,7 +356,7 @@ describe("ContagionSnapshot", () => {
       />,
     );
 
-    expect(screen.getByText("Dependency Context")).toBeTruthy();
+    expect(screen.getByText("Dependency context")).toBeTruthy();
     expect(screen.getByTestId("variant-card").textContent).toBe("VARIANT");
   });
 

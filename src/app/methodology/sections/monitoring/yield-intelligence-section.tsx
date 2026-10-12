@@ -30,8 +30,8 @@ const YIELD_PIPELINE = {
         ] },
       { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "Effective Yield", subtitle: "APY + 25% spread, USD-rebased hurdle" }] },
       { wrapperClassName: "flex flex-col gap-2 flex-1", cards: [
-          { className: "flex-1", title: "Row Utility", subtitle: "Effective yield ÷ source risk" },
-          { className: "flex-1", title: "Yield Efficiency", subtitle: "Row utility ÷ curved safety penalty" },
+          { className: "flex-1", title: "Row utility", subtitle: "Effective yield ÷ source risk" },
+          { className: "flex-1", title: "Yield efficiency", subtitle: "Row utility ÷ curved safety penalty" },
           { className: "flex-1", title: "Sustainability", subtitle: "penalises high variance" },
         ] },
       { cards: [{ className: "w-32 flex flex-shrink-0 flex-col justify-center", title: "PYS Score", subtitle: "0–100" }] },
@@ -48,7 +48,7 @@ const YIELD_PIPELINE = {
         ] },
       { cards: [{ className: "w-full", title: "Effective Yield", subtitle: "APY + 25% spread, USD-rebased hurdle" }] },
       { wrapperClassName: "grid grid-cols-3 gap-2 w-full", cards: [
-          { title: "Row Utility", titleClassName: "text-xs text-foreground font-medium", subtitle: "yield ÷ source risk", subtitleClassName: "text-xs text-muted-foreground" },
+          { title: "Row utility", titleClassName: "text-xs text-foreground font-medium", subtitle: "yield ÷ source risk", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Efficiency", titleClassName: "text-xs text-foreground font-medium", subtitle: "utility ÷ safety", subtitleClassName: "text-xs text-muted-foreground" },
           { title: "Sustainability", titleClassName: "text-xs text-foreground font-medium", subtitle: "penalises variance", subtitleClassName: "text-xs text-muted-foreground" },
         ] },
@@ -128,7 +128,7 @@ export function YieldIntelligenceMethodologySection() {
                     href="/api/#get-api-yield-adapter-manifest"
                     className="text-foreground underline underline-offset-2 hover:text-foreground/80 transition-colors"
                   >
-                    <code className="text-xs bg-muted px-1 py-0.5 rounded">/api/yield-adapter-manifest</code>
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">/api/yield-adapter-manifest</code>
                   </Link>
                   {" "}with a 5-minute cache, stamped with the current methodology version on every entry.
                 </p>
@@ -171,8 +171,8 @@ export function YieldIntelligenceMethodologySection() {
                       protocol-owned APIs and protocol-specific on-chain venue readers when the canonical savings path is
                       not representable as a reliable DeFiLlama pool; these rows stay in the curated tier rather than
                       inheriting Tier 1 deterministic precedence reserved for native wrapper readers. Royco Dawn senior
-                      and junior tranches publish here as <code className="text-xs bg-muted px-1 py-0.5 rounded">structured-tranche</code>{" "}
-                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>, while Midas mMEV publishes a NAV-appreciation row from the issuer-listed mMEV/USD oracle
+                      and junior tranches publish here as <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">structured-tranche</code>{" "}
+                      rows keyed by <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">royco-dawn:&lt;chainId&gt;:&lt;marketId&gt;:&lt;side&gt;</code>, while Midas mMEV publishes a NAV-appreciation row from the issuer-listed mMEV/USD oracle
                     </li>
                     <li>
                       <span className="text-foreground">Tier 3 &mdash; Price-derived</span>: derives APY from 7-45 day
@@ -247,12 +247,12 @@ export function YieldIntelligenceMethodologySection() {
                     source switches no longer contaminate the displayed 7d/30d averages.
                   </p>
                   <p>
-                    Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded">data-stale</code> warnings are also
-                    cadence-aware: hourly families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded">sync-yield-data</code>{" "}
-                    intervals (about 3 hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded">price-derived</code>{" "}
-                    rows wait 30 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded">supply_history</code>{" "}
-                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded">rate-derived</code> rows wait 36 hours
-                    for the daily benchmark producer. Each source class also emits a midpoint <code className="text-xs bg-muted px-1 py-0.5 rounded">aging</code>{" "}
+                    Read-time <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">data-stale</code> warnings are also
+                    cadence-aware: hourly families attach only after three missed <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">sync-yield-data</code>{" "}
+                    intervals (about 3 hours at the current publisher), while <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">price-derived</code>{" "}
+                    rows wait 30 hours because they are backed by daily <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">supply_history</code>{" "}
+                    snapshots and <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">rate-derived</code> rows wait 36 hours
+                    for the daily benchmark producer. Each source class also emits a midpoint <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">aging</code>{" "}
                     warning (27h price-derived, 30h rate-derived) once an observation misses its refresh slot but has not
                     reached the stale bound. Ordinary exchange-rate anchors expire after 14 days; price-derived and
                     Midas/Ondo NAV anchors remain valid through their configured 45-day comparison window.

@@ -137,7 +137,7 @@ export function StatusPanel({ state, nowSec, canMutate, isMutating, pendingOpera
           <div className="flex items-center justify-between gap-3">
             <p className="pharos-kicker">Snooze alerts</p>
             {snoozeActive ? (
-              <span className="mini-selected shrink-0 rounded-md border px-2 py-1 text-[11px] font-semibold">
+              <span className="mini-selected shrink-0 rounded-md border px-2 py-1 text-2xs font-semibold">
                 {paused
                   ? "Paused indefinitely"
                   : snoozeUntil != null

@@ -61,8 +61,8 @@ function publicImpactPill(publicImpact: IncidentPublicImpact) {
   return (
     <StatusPill
       className={cn(
-        publicImpact === "impacting" && "bg-red-500/15 text-red-700 dark:text-red-300",
-        publicImpact === "not-impacting" && "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+        publicImpact === "impacting" && "bg-state-danger-solid/15 text-state-danger-bright",
+        publicImpact === "not-impacting" && "bg-state-positive-solid/12 text-state-positive-bright",
         publicImpact === "unknown" && OPERATIONAL_PILL_CLASS.unknown,
       )}
     >
@@ -83,7 +83,7 @@ function TransitionDuration({ row }: { row: IncidentTransitionView }) {
           Resolved at {formatStatusTimestamp(row.resolvedAt)}
         </p>
       ) : row.resolution === "unresolved" ? (
-        <p className="whitespace-normal text-amber-700 dark:text-amber-300">Resolution not present in loaded history</p>
+        <p className="whitespace-normal text-state-warn-bright">Resolution not present in loaded history</p>
       ) : (
         <p className="text-muted-foreground">
           {transition.transitionType === "init" ? "Initial state" : "No incident resolution"}
@@ -203,7 +203,7 @@ export function TransitionTimeline({
       )}
 
       {view.isFlapping ? (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/[0.06] px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+        <div className="rounded-md border border-state-warn-solid/40 bg-state-warn-solid/[0.06] px-3 py-2.5 text-sm text-state-warn-ink">
           <span className="font-medium">Flapping detected.</span> {view.transitionsLast24h} transitions were recorded in
           the last 24 hours; the stable baseline is at most {INCIDENT_FLAPPING_TRANSITION_THRESHOLD}.
         </div>

@@ -13,13 +13,13 @@ const STATE_COPY: Record<
     badge: "Pending lock",
     title: "Prediction lock pending",
     body: "This incident has not reached forecast readiness or the 72h backstop. DDR shows live facts only until the official lock run.",
-    tone: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
+    tone: "border-state-info bg-state-info-subtle text-state-info",
   },
   lock_deferred: {
     badge: "Lock deferred",
     title: "Health deferral",
     body: "The lock point has arrived, but a system-health predicate failed. DDR will retry on the next healthy run.",
-    tone: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    tone: "border-state-warn bg-state-warn-subtle text-state-warn",
   },
   publication_retry_pending: {
     badge: "Publication delayed",
@@ -37,7 +37,7 @@ const STATE_COPY: Record<
     badge: "Invalidated",
     title: "Prediction invalidated by erratum",
     body: "The first-published lock outcome remains visible for audit, but an append-only erratum invalidated the source event or input.",
-    tone: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+    tone: "border-state-danger bg-state-danger-subtle text-state-danger",
   },
 };
 
@@ -82,7 +82,7 @@ export function StateOnlyCard({
         <LiveFacts row={row} />
 
         {state === "lock_deferred" && deferralReason ? (
-          <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5 text-xs">
+          <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/[0.06] px-3 py-2.5 text-xs">
             <p className="text-foreground" title={deferralReason}>
               Deferral reason: {formatDdrReason(deferralReason)}
             </p>

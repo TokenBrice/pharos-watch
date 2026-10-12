@@ -58,9 +58,9 @@ describe("severity-colors", () => {
     expect(getDurabilityColor(40)).toBe("text-amber-700 dark:text-amber-400");
     expect(getDurabilityColor(39)).toBe("text-red-700 dark:text-red-400");
 
-    expect(getDurabilityBgColor(70)).toBe("bg-emerald-500");
-    expect(getDurabilityBgColor(40)).toBe("bg-amber-500");
-    expect(getDurabilityBgColor(39)).toBe("bg-red-500");
+    expect(getDurabilityBgColor(70)).toBe("bg-state-positive-solid");
+    expect(getDurabilityBgColor(40)).toBe("bg-state-warn-solid");
+    expect(getDurabilityBgColor(39)).toBe("bg-state-danger-solid");
   });
 
   it("supports parametric score color mapping", () => {

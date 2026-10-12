@@ -21,7 +21,7 @@ const LOGO_INNER = HORIZON_CONSTELLATION_LAYOUT.logoInner;
 const NARROW_LANE_DOTS = HORIZON_CONSTELLATION_LAYOUT.narrowLaneDots;
 
 const DOT_LINK_CLASS =
-  "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-10 hover:scale-125 focus-visible:z-20 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
+  "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-5 hover:scale-125 focus-visible:z-10 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
 
 const DOT_CLASS =
   "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-3xs font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-white/90 dark:text-zinc-700 dark:group-hover:bg-white";

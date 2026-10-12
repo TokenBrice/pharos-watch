@@ -28,7 +28,7 @@ export function PageError({
         <button
           type="button"
           onClick={handleRetry}
-          className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+          className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
         >
           {retryLabel}
         </button>
