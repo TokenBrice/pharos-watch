@@ -1,23 +1,23 @@
-import type { MintBurnCoinFlow, MintBurnValuationCompleteness } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnValuationCompleteness } from "../types";
 import {
   getNetFlowDirection24h,
   getPressureShiftState,
   type NetFlowDirection24h,
   type PressureShiftState,
-} from "@shared/lib/mint-burn-signals";
+} from "./mint-burn-signals";
 import {
   combineMintBurnValuationCompleteness,
   mintBurnSignedNetBound,
   provenNetFlowDirection24h,
   resolveMintBurnValuation,
-} from "@shared/lib/mint-burn-valuation";
+} from "./mint-burn-valuation";
 import {
   describeMintBurnSignedNetBound,
   describeUnpricedEvents,
   resolveMintBurnSignedNet,
   sumMintBurnSignedNets,
   type MintBurnSignedNetView,
-} from "@/lib/mint-burn-valuation-display";
+} from "./mint-burn-valuation-display";
 
 export type MintBurnNetWindow = "24h" | "7d" | "30d" | "90d";
 

@@ -6,7 +6,7 @@ import {
   resolvePressureScore,
   resolvePressureState,
   resolveNetDirection,
-} from "../mint-burn-coin-helpers";
+} from "@shared/lib/mint-burn-coin-helpers";
 import type { MintBurnCoinFlow, MintBurnValuation } from "@shared/types";
 
 function valuation24h(overrides: Partial<MintBurnValuation> = {}): NonNullable<MintBurnCoinFlow["valuation"]> {

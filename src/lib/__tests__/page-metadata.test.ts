@@ -67,7 +67,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => ({
   TRACKED_META_BY_ID: fixtures.metaById,
 }));
 
-vi.mock("@/lib/blacklist-status", () => ({
+vi.mock("@shared/lib/blacklist-status", () => ({
   getResolvedBlacklistStatus: () => null,
 }));
 

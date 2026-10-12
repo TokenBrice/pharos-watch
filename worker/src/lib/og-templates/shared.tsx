@@ -61,6 +61,27 @@ export function MetricLabel({
   );
 }
 
+/**
+ * The on-light Pharos mark — the same art as public/pharos-mark-on-light.svg,
+ * inlined because satori cannot fetch a same-origin asset.
+ */
+export function PharosMark({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 400 400" fill="none">
+      <defs>
+        <clipPath id="pharos-mark-disc">
+          <rect width="400" height="400" rx="200" fill="white"/>
+        </clipPath>
+      </defs>
+      <g clipPath="url(#pharos-mark-disc)">
+        <path d="M0 199.955C0 89.4981 89.5431 -0.0449219 200 -0.0449219C310.457 -0.0449219 400 89.4981 400 199.955C400 310.412 310.457 399.955 200 399.955C89.5431 399.955 0 310.412 0 199.955Z" fill="#0A0A0A"/>
+        <path fillRule="evenodd" clipRule="evenodd" d="M280.906 400.602H122.977L201.934 225.845L280.906 400.602Z" fill="#EEEEEE"/>
+        <path d="M208.675 122.569C208.836 125.476 210.853 156.915 228.73 163.317C238.333 166.747 248.509 161.533 260.496 153.873C278.58 142.348 304.57 122.866 332.349 90.4873C317.268 111.959 304.113 131.35 292.974 148.111C277.228 171.847 270.742 182.457 274.386 192.93C277.091 200.704 284.379 205.506 303.608 213.12C321.004 220.026 345.574 228.19 376.698 233.746H234.342C234.342 215.387 219.208 200.504 200.539 200.504C181.87 200.504 166.736 215.387 166.736 233.746H23.301C54.4488 228.19 78.9958 220.026 96.3918 213.12C115.621 205.506 122.932 200.704 125.637 192.93C129.258 182.457 122.795 171.847 107.027 148.111C95.9106 131.35 82.7317 111.959 67.6506 90.4873C95.429 122.866 121.42 142.348 139.503 153.873C151.49 161.533 161.667 166.747 171.27 163.317C189.146 156.915 191.164 125.476 191.324 122.569C194.235 98.7424 197.1 74.9149 200.011 51.0879C202.899 74.9149 205.787 98.7424 208.675 122.569Z" fill="#EEEEEE"/>
+      </g>
+    </svg>
+  );
+}
+
 export function CardFrame({
   title,
   subtitle,
@@ -95,22 +116,9 @@ export function CardFrame({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {/* Pharos brand mark. Card BG is light, so this is the on-light variant (dark disc,
-              light star) — the same file as public/pharos-mark-on-light.svg, inlined because
-              satori cannot fetch a same-origin asset. The emblem carries its own disc, so there
-              is no plate behind it. */}
+              light star). The emblem carries its own disc, so there is no plate behind it. */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <svg width="40" height="40" viewBox="0 0 400 400" fill="none">
-              <defs>
-                <clipPath id="pharos-mark-disc">
-                  <rect width="400" height="400" rx="200" fill="white"/>
-                </clipPath>
-              </defs>
-              <g clipPath="url(#pharos-mark-disc)">
-                <path d="M0 199.955C0 89.4981 89.5431 -0.0449219 200 -0.0449219C310.457 -0.0449219 400 89.4981 400 199.955C400 310.412 310.457 399.955 200 399.955C89.5431 399.955 0 310.412 0 199.955Z" fill="#0A0A0A"/>
-                <path fillRule="evenodd" clipRule="evenodd" d="M280.906 400.602H122.977L201.934 225.845L280.906 400.602Z" fill="#EEEEEE"/>
-                <path d="M208.675 122.569C208.836 125.476 210.853 156.915 228.73 163.317C238.333 166.747 248.509 161.533 260.496 153.873C278.58 142.348 304.57 122.866 332.349 90.4873C317.268 111.959 304.113 131.35 292.974 148.111C277.228 171.847 270.742 182.457 274.386 192.93C277.091 200.704 284.379 205.506 303.608 213.12C321.004 220.026 345.574 228.19 376.698 233.746H234.342C234.342 215.387 219.208 200.504 200.539 200.504C181.87 200.504 166.736 215.387 166.736 233.746H23.301C54.4488 228.19 78.9958 220.026 96.3918 213.12C115.621 205.506 122.932 200.704 125.637 192.93C129.258 182.457 122.795 171.847 107.027 148.111C95.9106 131.35 82.7317 111.959 67.6506 90.4873C95.429 122.866 121.42 142.348 139.503 153.873C151.49 161.533 161.667 166.747 171.27 163.317C189.146 156.915 191.164 125.476 191.324 122.569C194.235 98.7424 197.1 74.9149 200.011 51.0879C202.899 74.9149 205.787 98.7424 208.675 122.569Z" fill="#EEEEEE"/>
-              </g>
-            </svg>
+            <PharosMark size={40} />
             <span
               style={{
                 fontSize: 22,

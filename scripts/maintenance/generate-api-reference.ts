@@ -321,7 +321,7 @@ function renderSupplementalRoute(definition: EndpointDefinition): string {
 function renderOgRoute(): string {
   return [
     "### `GET /api/og/*`", "",
-    "Dynamic social-card PNGs are omitted from OpenAPI. Missing DEWS counts, safety coverage and window averages stay unavailable; fewer than two PSI history observations yield no sparkline. PSI 24h change uses a sample within one hour before source-minus-24h, else unavailable. Labels retain source time; PSI/safety freshness headers name assessment clock, budget and generation where available.", "",
+    "Dynamic social-card PNGs, omitted from OpenAPI. Unavailable inputs stay unavailable; labels keep source time; freshness headers name budget and generation ([OG Images](./og-images.md#8-dynamic-worker-cards-apiog)). `/api/og/page/:slug` serves a stamped route figure, or the route's timeless card (`200`, `X-Og-Reason`) when its source is missing, stale, held or failing.", "",
     "- **Path:** `/api/og/*`",
     "- **Parameters:** Route-specific path segments select the supported image family.",
     "- **Success response schema:** PNG image bytes; not represented by a JSON component schema.",

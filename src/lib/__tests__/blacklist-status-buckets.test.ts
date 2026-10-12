@@ -7,11 +7,11 @@ import {
   filterStablecoinsByBlacklistStatus,
   getBlacklistStatusBucketForStablecoin,
   resolveBlacklistStatusBucket,
-} from "@/lib/blacklist-status-buckets";
+} from "@shared/lib/blacklist-status-buckets";
 import {
   computeFreezableSummary,
   describeFreezableSupplyCoverage,
-} from "@/components/freezewatch/freezable-supply-meter";
+} from "@shared/lib/freezewatch/freezable-summary";
 
 const { TRACKED_STATUS_BY_ID } = vi.hoisted(() => ({
   TRACKED_STATUS_BY_ID: {

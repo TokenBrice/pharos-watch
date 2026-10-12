@@ -1,8 +1,8 @@
 import {
   getBlacklistStatusLabel,
   type BlacklistStatus,
-} from "@shared/lib/report-card-blacklist-matchers";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+} from "./report-card-blacklist-matchers";
+import { CLIENT_TRACKED_META_BY_ID } from "./stablecoins/client-registry";
 
 function isResolvedBlacklistStatus(value: unknown): value is BlacklistStatus {
   return value === true || value === false || value === "possible" || value === "inherited";

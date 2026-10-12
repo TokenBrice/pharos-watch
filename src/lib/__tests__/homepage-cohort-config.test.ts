@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
-import { HOMEPAGE_COHORT_BUCKET_IDS } from "@/lib/homepage-cohort-config";
+import { HOMEPAGE_COHORT_BUCKET_IDS } from "@shared/lib/homepage-cohort-config";
 
 describe("HOMEPAGE_COHORT_BUCKET_IDS", () => {
   it("references only active stablecoin ids", () => {

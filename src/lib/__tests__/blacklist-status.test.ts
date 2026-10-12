@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus, getResolvedBlacklistStatusLabel } from "@shared/lib/blacklist-status";
 
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
   CLIENT_TRACKED_META_BY_ID: new Map([

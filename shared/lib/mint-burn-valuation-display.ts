@@ -1,9 +1,9 @@
-import type { MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "@shared/types";
+import type { MintBurnSignedNetBound, MintBurnValuation, MintBurnValuationCompleteness } from "../types";
 import {
   boundMintBurnSignedNetRange,
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,
-} from "@shared/lib/mint-burn-valuation";
+} from "./mint-burn-valuation";
 
 /**
  * Frontend presentation of mint/burn USD valuation completeness (D11-2).

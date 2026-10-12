@@ -1,0 +1,118 @@
+{
+  "generatedBy": "scripts/maintenance/build-og-route-timeless.ts",
+  "fonts": {
+    "geistSans": "df9eb3d0dadf211a5ab393b698e4140d2bf2dd834e1dafed5a369f7b9b702ee5",
+    "geistSansBold": "dc2b773d8d72131f9f1176b3c1833533e46ddefc3a64a9d1341a5a7f98f7a71e",
+    "geistMono": "a4022744c97e497a45bc1d05e68221104df6829f6cac74552e0fdb03a331c648"
+  },
+  "cards": [
+    {
+      "file": "og-card.png",
+      "key": "home",
+      "svgSha256": "a5f98cc4249cf081982d31815f841e7b44bc75c63a42c3a30fb86a36a7e32f77",
+      "pngSha256": "e5762074256ea923bb7f991d78c5bfd46b49060f067c49747dc94e64add8a166"
+    },
+    {
+      "file": "og-chains.png",
+      "key": "chains",
+      "svgSha256": "248f803dbd205420e4420ec51f8bf3935a24f237de642323cd10ecc39f1ed5d5",
+      "pngSha256": "bae097e799f1c338874873b48bc91e62010b1ef913020e718b2886b5563dcd58"
+    },
+    {
+      "file": "og-dependency-map.png",
+      "key": "dependency-map",
+      "svgSha256": "4e45aad477c44c081330f2689dac36314d5c0cb268b812aec29a4de8f4308c93",
+      "pngSha256": "c2b7c6f8ab117525cc8d4fdc21f2ddf659c5de4a74ff1c0543b9a9eb88940db1"
+    },
+    {
+      "file": "og-timeline.png",
+      "key": "timeline",
+      "svgSha256": "74febdf6dc43d70e77de9c0595f8ba9ba63b0de35fce1f52db52a9eeb6d9de33",
+      "pngSha256": "90c2615f98d7ddc6dcd372d983fb6d25e9e93ec8abe960a3974739ca1f37d15e"
+    },
+    {
+      "file": "og-flows.png",
+      "key": "flows",
+      "svgSha256": "563f8fd8f70132be9629e53ca6bae472d915aab4f11c13f1e48d36c7a528f3e0",
+      "pngSha256": "186aabc825fbb8a80609a73e42acb9b37c4126b480caa3eefb749a3f1a7ce8c7"
+    },
+    {
+      "file": "og-blacklist.png",
+      "key": "freezewatch",
+      "svgSha256": "042619ba8b6a01dca02019ac76d4116b82201ca639fe9d6ccd70a0fa67c8f056",
+      "pngSha256": "dd498f44221c9e1d82be2c008c284492d7ef24149ae5562cb9f3debe2572dde1"
+    },
+    {
+      "file": "og-liquidity.png",
+      "key": "liquidity",
+      "svgSha256": "36d9ee4e69ade8ab4912f34a538ec62a1e74940c5203ff104fa4e09093a2b96b",
+      "pngSha256": "71856e2243976daa05bf3ebb9614ca8292984e0bb0edec7501dc0ba32c94ede1"
+    },
+    {
+      "file": "og-yield.png",
+      "key": "yield",
+      "svgSha256": "00ca83e0d33b4b7d6393d7f42947c2abc60567eaab9bc6139d932d275bc8fdfc",
+      "pngSha256": "6bd05ecac493b21202f3de477fb9285d948190d9ebe7263d5595e142c1f8085b"
+    },
+    {
+      "file": "og-alt-pegs.png",
+      "key": "alt-pegs",
+      "svgSha256": "148302cf83bf934c6cef95dc95ea6bf400dec53ca70232c5cb6c38daf0dda7a6",
+      "pngSha256": "b4dc5ffec7f33d224a3c87f83f03e42cf63da98ff7c4ce8e9ad07f80b63e0fba"
+    },
+    {
+      "file": "og-coverage.png",
+      "key": "coverage",
+      "svgSha256": "4ef9fa4c84a51fd10f36c15439a0bdee19c263d51545932e6d7da25d8d09ff4b",
+      "pngSha256": "4a0208cb01c6ecdb3eb998d2ff4a118dc7fcf722a30452b86b41d1f98eaaacb2"
+    },
+    {
+      "file": "og-stablecoins.png",
+      "key": "stablecoins",
+      "svgSha256": "3817eb69492c73136a4779ac6c4d28ea5ac9d5a8898b82fe0ef3157e5f343871",
+      "pngSha256": "f9d89b8c0f1e11e0d61b485e7f3c42f4b1f1b7ff100dcb07a89fef4df7d4087b"
+    },
+    {
+      "file": "og-upcoming.png",
+      "key": "upcoming",
+      "svgSha256": "4f2e169899bc235b974fefd90c56889b42ff7455aaf22c0c754d1f97f23de575",
+      "pngSha256": "a3f96517814f738aaf29172a8e1a34316289bca0a013f41b8e5b5320fee3ec99"
+    },
+    {
+      "file": "og-compare.png",
+      "key": "compare",
+      "svgSha256": "a8b7c1387b638b5896e97ae9984e9e6808249a07b2f1effd113973db4e2e25b2",
+      "pngSha256": "58428d753abae2b3f8da2cb2c5fae770a6d7e9d145994dadc57e2da265a62742"
+    },
+    {
+      "file": "og-default.png",
+      "key": "screener",
+      "svgSha256": "df571753a5eb9eaa4e35c5c9d6b91b5f9e5de9a31106eeefdaee6097fd3d4e20",
+      "pngSha256": "2e3b6620ec832b13bbe5094934889def7e8e6a482f2d2e02286cf0041d11b85c"
+    },
+    {
+      "file": "og-funding.png",
+      "key": "funding",
+      "svgSha256": "68a9c510535d893075804a76721e11c7886c8599fcda05bb6544e8b363b8f32c",
+      "pngSha256": "4f31dd1f3d9ba5079f14fbaf0c1cfe1f13545b2099d1ba3a070be04fa7a05ea2"
+    },
+    {
+      "file": "og-pharoswatchbot.png",
+      "key": "pharoswatchbot",
+      "svgSha256": "215aea59073e7eaff3f1e7205c01c7f7149ff6bc3c466a79bedcd3986518407f",
+      "pngSha256": "7d36926da8c7a964de02b10b60516c2a2f0d57bd508e07ca7d38e2073106b111"
+    },
+    {
+      "file": "og-changelog.png",
+      "key": "changelog",
+      "svgSha256": "cd3d59d17dfc683bc07a51ce5da222bf02c7156ca6661d27c8729ea59a11aed6",
+      "pngSha256": "761e30142b9f063727f3c50d83a4c9fe7b3ff7bda7bb41db831c09e3ff1d24da"
+    },
+    {
+      "file": "og-portfolio.png",
+      "key": "portfolio",
+      "svgSha256": "d4dbcb46a165f7d4d51c41344945d3bc2a548b91cf11d3cc87d7c6646da1120e",
+      "pngSha256": "e87987b1594cfb661602634798a01dc1a4f93194bf662d3f59e6e4b593a22500"
+    }
+  ]
+}

@@ -1,10 +1,10 @@
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getResolvedBlacklistStatus } from "./blacklist-status";
+import { getCirculatingRawOrNull } from "./supply";
 import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
-} from "@shared/lib/stablecoins/client-registry";
-import type { StablecoinData } from "@shared/types";
+} from "./stablecoins/client-registry";
+import type { StablecoinData } from "../types";
 
 export type BlacklistStatusBucketKey = "yes" | "upstream" | "possible" | "no";
 

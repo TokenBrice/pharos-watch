@@ -1,6 +1,7 @@
 import * as React from "react";
 import { CardFrame, MetricLabel, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS, TRACK_BG } from "./shared";
 import { formatCurrency } from "@shared/lib/format";
+import { CHAIN_HEALTH_HEX, CHAIN_HEALTH_UNRATED_HEX } from "@shared/lib/classification";
 
 export interface ChainCardTopStablecoin {
   symbol: string;
@@ -22,16 +23,8 @@ export interface ChainCardData {
   lastUpdated?: string;
 }
 
-const HEALTH_BAND_HEX: Record<string, string> = {
-  robust: "#22c55e",
-  healthy: "#4ade80",
-  mixed: "#f59e0b",
-  fragile: "#f97316",
-  concentrated: "#ef4444",
-};
-
 function healthBandColor(band: string | null): string {
-  return (band && HEALTH_BAND_HEX[band]) || SEMANTIC_COLORS.neutral;
+  return band != null && band in CHAIN_HEALTH_HEX ? CHAIN_HEALTH_HEX[band as keyof typeof CHAIN_HEALTH_HEX] : CHAIN_HEALTH_UNRATED_HEX;
 }
 
 export function ChainCard({ data }: { data: ChainCardData }) {
@@ -125,6 +118,28 @@ export function ChainCard({ data }: { data: ChainCardData }) {
             <span style={{ color: TEXT_SECONDARY }}>{formatCurrency(coin.supplyUsd, 1)}</span>
           </div>
         ))}
+      </div>
+    </CardFrame>
+  );
+}
+
+/**
+ * A chain absent from the current aggregate has no supply observation this
+ * generation. Absence is not an observed zero, so the card carries no figure.
+ */
+export function ChainUnavailableCard({ name, lastUpdated }: { name: string; lastUpdated?: string }) {
+  return (
+    <CardFrame
+      title={`${name} Stablecoins`}
+      subtitle="Chain supply & health"
+      borderTopColor={SEMANTIC_COLORS.neutral}
+      lastUpdated={lastUpdated}
+    >
+      <div style={{ display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", gap: 12 }}>
+        <span style={{ fontSize: 36, fontWeight: 700 }}>No current supply observation</span>
+        <span style={{ fontSize: 20, color: TEXT_SECONDARY }}>
+          This chain is not in the current stablecoin aggregate.
+        </span>
       </div>
     </CardFrame>
   );
