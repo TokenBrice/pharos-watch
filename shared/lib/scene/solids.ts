@@ -56,7 +56,7 @@ export function faceMatrixG(p: SceneProjection, i: number, j: number, z = 0): Sc
 }
 
 /** Start angle (radians) of the camera-facing half of a horizontal circle. */
-export function frontArcStart(p: SceneProjection): number {
+function frontArcStart(p: SceneProjection): number {
   const ta = Math.atan2(p.B[0], p.A[0]);
   const ty = Math.atan2(p.B[1], p.A[1]);
   let d = ty - ta;

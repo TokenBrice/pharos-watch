@@ -21,4 +21,4 @@ export const OG_PAGE_LOADERS: Readonly<Record<OgPageSlug, OgPageLoader>> = {
   yield: loadYieldOgPage,
 };
 
-export type { OgPageFigure, OgPageLoad } from "./types";
+export type { OgPageLoad } from "./types";

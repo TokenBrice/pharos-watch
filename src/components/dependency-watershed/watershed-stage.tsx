@@ -16,13 +16,13 @@ const WRAPPER_FORM_LABELS: Record<string, string> = {
   pure: "Pure wrapper",
 };
 
-export function watershedDeltaChip(delta: WatershedDelta): string {
+function watershedDeltaChip(delta: WatershedDelta): string {
   const count = `${delta.leafIds.length}${delta.remainder ? " more" : ""} ${delta.leafIds.length === 1 ? "dependent" : "dependents"}`;
   const known = delta.leafIds.length > delta.unknownCount ? ` · ${formatCurrency(delta.knownUsd, 2)}` : " · USD unknown";
   return `${count}${known}${delta.unknownCount > 0 && delta.leafIds.length > delta.unknownCount ? ` (+${delta.unknownCount} unknown)` : ""}`;
 }
 
-export function watershedRibbonSummary(ribbon: WatershedRibbon, labelOf: (id: string) => string): string {
+function watershedRibbonSummary(ribbon: WatershedRibbon, labelOf: (id: string) => string): string {
   const usd = ribbon.usd === null ? "USD unknown" : formatCurrency(ribbon.usd, 2);
   return `${labelOf(ribbon.to)} supply mapped to ${labelOf(ribbon.from)}: ${usd}`;
 }

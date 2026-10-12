@@ -27,9 +27,9 @@ export const WAKE_BREAK_PCT = 10;
 /** Below this |%| no wake is drawn. */
 export const WAKE_MIN_PCT = 0.5;
 /** Conservation tolerance between drawn containers and the published totals. */
-export const CONSERVATION_TOLERANCE_USD = 1;
+const CONSERVATION_TOLERANCE_USD = 1;
 
-export const HARBOR_CARGO_IDS = { usdt: "usdt-tether", usdc: "usdc-circle" } as const;
+const HARBOR_CARGO_IDS = { usdt: "usdt-tether", usdc: "usdc-circle" } as const;
 
 export type HarborCargoKind = "usdt" | "usdc" | "other" | "pool" | "unattributed";
 /**
@@ -230,7 +230,7 @@ function hullUnitsOf(containers: readonly HarborContainer[]): number {
   return hull;
 }
 
-export function harborFlag(chain: Pick<HarborChainInput, "healthBand" | "healthScore">, input: Pick<HarborSceneInput, "_meta">): HarborFlag {
+function harborFlag(chain: Pick<HarborChainInput, "healthBand" | "healthScore">, input: Pick<HarborSceneInput, "_meta">): HarborFlag {
   if (chain.healthBand) {
     return {
       kind: "band",
@@ -247,7 +247,7 @@ export function harborFlag(chain: Pick<HarborChainInput, "healthBand" | "healthS
   return { kind: "unrated", reason: "Not rated: insufficient Chain Health coverage" };
 }
 
-export function harborWake(chain: Pick<HarborChainInput, "change7d" | "change7dPct">): HarborWake {
+function harborWake(chain: Pick<HarborChainInput, "change7d" | "change7dPct">): HarborWake {
   if (chain.change7dPct == null || !Number.isFinite(chain.change7dPct)) {
     return chain.change7dPct == null && chain.change7d != null && chain.change7d > 0
       ? { kind: "new" }

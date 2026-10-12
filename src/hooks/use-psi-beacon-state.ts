@@ -27,7 +27,7 @@ export interface PsiBeaconHealth {
  * meta.updatedAt and current.computedAt), so a fresh response holding an old
  * sample never reads as current. Shared by every PSI beacon surface.
  */
-export function derivePsiBeaconHealth(query: PsiQueryLike, nowMs?: number): PsiBeaconHealth {
+function derivePsiBeaconHealth(query: PsiQueryLike, nowMs?: number): PsiBeaconHealth {
   const { current, meta } = query;
   if (!current) {
     return {

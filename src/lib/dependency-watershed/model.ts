@@ -35,7 +35,7 @@ export interface WatershedLayout {
   expandLimit: number;
 }
 
-export const DEFAULT_WATERSHED_LAYOUT: WatershedLayout = {
+const DEFAULT_WATERSHED_LAYOUT: WatershedLayout = {
   width: 1200, padLeft: 4, padRight: 210, padTop: 6, padBottom: 6, barWidth: 10,
   minRow: 20, deltaRow: 26, labelBand: 12, gap: 6, groupGap: 14, waypointGap: 3,
   maxRibbonPx: 36, floorPx: 1, deltaStub: 16, expandLimit: 12,

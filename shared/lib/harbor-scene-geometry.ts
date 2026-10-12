@@ -27,7 +27,7 @@ import {
 export type HarborPreset = "wide" | "narrow";
 
 const S = SCENE_UNIT;
-export const HARBOR_PROJECTIONS: Readonly<Record<HarborPreset, SceneProjection>> = {
+const HARBOR_PROJECTIONS: Readonly<Record<HarborPreset, SceneProjection>> = {
   wide: SCENE_DIMETRIC,
   // Plan view for phones: hulls run left → right, berths stack down the page, a small shear shows the south faces.
   narrow: { name: "harbor-portrait", A: [S, 0], B: [S * 0.04, S * 0.55], C: [0, -S * 0.55], shadow: [-0.3, 0.3] },

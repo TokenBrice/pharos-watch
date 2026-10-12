@@ -22,7 +22,7 @@ import { HARBOR_KEYS_ID, HarborDefs, HarborSceneSvg, harborTokenStyle } from "./
 import { useHarborSelection } from "./harbor-selection-context";
 import styles from "./harbor.module.css";
 
-export const HARBOR_NARROW_QUERY = "(max-width: 760px)";
+const HARBOR_NARROW_QUERY = "(max-width: 760px)";
 const DOCK_QUERY = "(min-width: 1280px)";
 /** Sticky chrome height and the Feedback button's corner (viewport px), as the Cemetery's card avoids them. */
 const CHROME_TOP = 67;

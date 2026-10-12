@@ -152,11 +152,6 @@ export function isOgPageSlug(value: string): value is OgPageSlug {
   return (OG_LIVE_PAGE_SLUGS as readonly string[]).includes(value);
 }
 
-/** Absolute URL of a route's committed timeless card. */
-export function ogRouteTimelessImageUrl(siteUrl: string, key: OgRouteCardKey): string {
-  return `${siteUrl}/${OG_ROUTE_CARDS[key].file}`;
-}
-
 /** "pharos.watch/chains" — the footer line of a timeless card. */
 export function ogRouteCardHost(path: string): string {
   const trimmed = path.replace(/^\/+|\/+$/g, "");
@@ -216,17 +211,14 @@ export type OgRouteVisual =
   | { kind: "pair-bars"; bars: readonly { label: string; value: number; text: string }[] };
 
 /** Closed vocabulary for `X-Og-Reason` when a live card falls back to its timeless variant. */
-export const OG_PAGE_UNAVAILABLE_REASONS = [
-  "cache-missing",
-  "stale-cache",
-  "held-publication",
-  "incomplete-coverage",
-  "figure-null",
-  "owner-error",
-  "render-error",
-] as const;
-
-export type OgPageUnavailableReason = (typeof OG_PAGE_UNAVAILABLE_REASONS)[number];
+export type OgPageUnavailableReason =
+  | "cache-missing"
+  | "stale-cache"
+  | "held-publication"
+  | "incomplete-coverage"
+  | "figure-null"
+  | "owner-error"
+  | "render-error";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
 

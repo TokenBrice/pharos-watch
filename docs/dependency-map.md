@@ -16,7 +16,7 @@ Primary files:
 - `shared/lib/dependency-hubs-model.ts`
 - `src/app/dependency-map/dependency-hubs-board.tsx`
 - `src/components/dependency-map-basin-list.tsx` — mobile per-hub basin list with hop-grouped drill-down
-- `src/lib/dependency-watershed/` — pure Watershed view model (`model.ts`), ranks/cycle check (`ranks.ts`), tributary ordering (`order.ts`), ribbon geometry (`geometry.ts`), capacity check (`capacity.ts`) and `view` URL helper (`view-url.ts`)
+- `src/lib/dependency-watershed/` — pure Watershed view model (`model.ts`), ranks/cycle check (`ranks.ts`), tributary ordering (`order.ts`), ribbon geometry (`geometry.ts`) and `view` URL helper (`view-url.ts`)
 - `src/components/dependency-watershed/` — Watershed stage, legend, other-basins strip, table view and CSS module
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout
 - `src/components/contagion-graph-root.tsx` — graph shell and shared interaction state
@@ -169,7 +169,6 @@ The Watershed is the default desktop (`md` and up) view. **Network** keeps the f
 - **Unknown is not zero.** A link with unpublished supply or share draws as a dashed neutral hairline with a `?` cap, counts in **Unknown USD (N links)**, and contributes nothing to USD totals.
 - **Printed figures** come only from the shared exposure module: hub figures from `buildDirectHubExposures` (shared books counted once), previews and the committed beam from `computeDependencyExposure`, the same engine as Exposure mode. Geometry is never summed into a printed total.
 - **Relationship encoding** reuses the map's two relationships: Collateral solid slate, Wrapper dotted violet (texture as well as hue). The Relationship filter dims non-matching links and never changes totals.
-- `validateWatershedCapacity` (`capacity.ts`) checks row pitch, column overlap, label room and a 1,200px canvas budget, so growth that breaks the layout fails a test.
 
 Hovering or focusing a hub previews its downstream footprint and shows **Downstream of X: $Y of mapped dependent supply across N coins**, its direct and indirect totals, and its three largest reached coins. Clicking, Enter or Space commits the hub through the Exposure workspace's `addRoot`, so the URL, analytics, results panel, Reset and multi-root union are shared with Exposure mode. The committed headline repeats **Linked coins; not a loss forecast**. A lit link means "reached through published edges", not "affected". The beam reveal staggers by `minHop`; reduced motion shows the final state. Hubs are `role="button"` inside a `role="group"` SVG with a roving tab stop: Up/Down move within a column, Left/Right move to the strongest drawn upstream or downstream hub, Escape clears the preview. `dependency_map_action` records `view_switch` (Watershed/Network). The folded-dependents stub is informational; selecting its hub expands it.
 

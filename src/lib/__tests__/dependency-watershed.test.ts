@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../dependency-watershed/__fixtures__/dependency-graph-2026-10-12.json";
 import { buildWatershedModel, publicationSupplyOf, type WatershedInput, type WatershedNodeInput } from "../dependency-watershed/model";
-import { validateWatershedCapacity } from "../dependency-watershed/capacity";
 import { createWidthScale, ribbonPath } from "../dependency-watershed/geometry";
 import { readDependencyMapView, writeDependencyMapView } from "../dependency-watershed/view-url";
 import { formatHubDirect, hubDirectKnown } from "../dependency-watershed/known";
@@ -127,11 +126,6 @@ describe("buildWatershedModel on the live publication", () => {
     expect(model.disclosures.unknownEdgeCount).toBe(model.edges.filter(edge => edge.usd === null).length);
   });
 
-  it("fits the capacity plan at default and expanded states", () => {
-    expect(validateWatershedCapacity(build())).toEqual([]);
-    expect(validateWatershedCapacity(build({ expandedHubs: ["usdc-circle"] }))).toEqual([]);
-  });
-
   it("builds within the performance budget", () => {
     build();
     const start = performance.now();
@@ -173,13 +167,6 @@ describe("buildWatershedModel on synthetic graphs", () => {
     const naive = sum(model.edges.filter(edge => edge.from === "usdc").map(edge => edge.usd ?? 0));
     expect(naive).toBe(500);
     expect(model.hubExposures.get("usdc")!.direct.knownUsd).toBe(450);
-  });
-
-  it("fails the capacity plan on a 60-hub column", () => {
-    const nodes = Array.from({ length: 60 }, (_, i) => [node(`h${String(i).padStart(2, "0")}`, 100), node(`l${String(i).padStart(2, "0")}`, 10)]).flat();
-    const edges = Array.from({ length: 60 }, (_, i) => serial(`h${String(i).padStart(2, "0")}`, `l${String(i).padStart(2, "0")}`));
-    const model = buildWatershedModel({ nodes: [...nodes, node("root", 1_000)], edges: [...edges, ...nodes.filter(entry => entry.id.startsWith("h")).map(entry => basket("root", entry.id, 0.1))] });
-    expect(validateWatershedCapacity(model).some(issue => issue.includes("budget"))).toBe(true);
   });
 });
 

@@ -291,7 +291,7 @@ export function DepegClient() {
   useEffect(() => {
     if (!gradingScrollPending.current || !gradingOpen || isPegLoading) return;
     gradingScrollPending.current = false;
-    document.getElementById("forecast-grading")?.scrollIntoView();
+    document.getElementById("forecast-grading")?.scrollIntoView?.();
   }, [gradingOpen, isPegLoading]);
 
   // Loading state

@@ -33,7 +33,7 @@ export const API_CACHE_PROFILE_DOCUMENTED_KEYS = [
 export const PER_COIN_CACHE_TTL_SECONDS = 5 * 60;
 
 /** Edge/browser lifetime of a rendered OG image (the `ogImage` profile). */
-export const OG_IMAGE_CACHE_TTL_SECONDS = 15 * 60;
+const OG_IMAGE_CACHE_TTL_SECONDS = 15 * 60;
 const OG_IMAGE_MIN_CACHE_TTL_SECONDS = 60;
 
 /**

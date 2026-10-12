@@ -20,7 +20,7 @@ Runtime-neutral thresholds, labels, and palettes belong in `shared/lib/` when bo
 
 The Cemetery plot map is the reference split for a metaphor scene. `buildCemeteryPlotMap` in `src/lib/cemetery-plot-map.ts` is the pure, deterministic view model: lanes, shared year blocks, lot packing, peak classes, clamped stone heights, weathering classes, depth order and section-zoom cameras, all seeded by id and dated against the latest recorded death rather than the clock. `src/lib/cemetery-plot-geometry.ts` turns graves into drawn marks, and the components in `src/components/cemetery/` render them and own focus, pointer, zoom and selection. `validatePlotMapCapacity` checks the layout constants against the current data (overlapping lots, lane overflow, empty runs, the plain-stone and zoom legibility floors), so growth that breaks the plan fails a test instead of drawing badly.
 
-The dependency Watershed is the second reference split. `buildWatershedModel` in `src/lib/dependency-watershed/model.ts` (with `ranks.ts`, `order.ts` and `geometry.ts`) is the pure, deterministic view model, and `validateWatershedCapacity` (`capacity.ts`) checks row pitch, column overlap, label room and a 1,200 px height budget against the live data. The renderers live in `src/components/dependency-watershed/`, and its "Table view" disclosure is the equivalent data surface.
+The dependency Watershed is the second reference split. `buildWatershedModel` in `src/lib/dependency-watershed/model.ts` (with `ranks.ts`, `order.ts` and `geometry.ts`) is the pure, deterministic view model. The renderers live in `src/components/dependency-watershed/`, and its "Table view" disclosure is the equivalent data surface.
 
 Existing exceptions are documented rather than treated as the standard: `HomeAltHeroChart` still computes sampling, scales, and SVG geometry in the component (`src/components/home-alt-hero-chart.tsx`), and `BlacklistChart` still derives peak quarters and chart series in-component (`src/components/blacklist-chart.tsx`).
 
@@ -32,7 +32,7 @@ Isometric metaphor scenes are assembled from the scene kit, extracted from the C
 
 | Layer | Location | Contents |
 | --- | --- | --- |
-| Geometry (pure, Worker-safe) | `shared/lib/scene/` | `projection.ts` (linear camera `SCENE_DIMETRIC`, `project`, `round1`/`round3`, hull/bbox, `format*`), `seed.ts` (`fnv1a`, `seededStream`), `marks.ts` (`SceneMark` union), `solids.ts` (boxes, cylinders, octagonal prisms, face frames, shadows), `objects/lighthouse.ts` (the one lighthouse), `placement.ts` (hover tag, docked inspector card), `capacity.ts` (`CapacityReport`, footprint overlap, face floor), `atlas.ts` (logo-atlas manifest reader), `svg-string.ts` (marks as an SVG string for server-rendered cards) |
+| Geometry (pure, Worker-safe) | `shared/lib/scene/` | `projection.ts` (linear camera `SCENE_DIMETRIC`, `project`, `round1`/`round3`, hull/bbox, `format*`), `seed.ts` (`fnv1a`, `seededStream`), `marks.ts` (`SceneMark` union), `solids.ts` (boxes, cylinders, octagonal prisms, face frames, shadows), `objects/lighthouse.ts` (the one lighthouse), `placement.ts` (hover tag, docked inspector card), `capacity.ts` (`CapacityReport`, footprint overlap, face floor), `atlas.ts` (logo-atlas manifest reader) |
 | Rendering (React) | `src/components/scene/` | `SceneMarks` / `AtlasWindow` (`scene-marks.tsx`), `SceneDefs` / `SceneKitDefs` (`scene-defs.tsx`), `useSceneLayout` (`use-scene-layout.ts`), `scene-tokens.module.css` |
 | Build tooling | `scripts/lib/` | `scene-atlas.ts` (logo atlas WebP, manifest, input signature), `scene-og.ts` (CSS-module document, token closure, Firefox render, document-hash signature) |
 
@@ -42,7 +42,7 @@ Kit rules:
 
 - **Geometry is pure.** No DOM, clock or randomness; the only seed is `seededStream(fnv1a(id))`, so the same input in any order draws byte-identical marks.
 - **Rounding is part of the contract.** Screen coordinates round to 0.1 SVG units, face-local data and matrix coefficients to 0.001, and −0 folds to 0.
-- **Geometry never carries colour.** Every mark has `cls`, a list of class tokens; `SceneMarks` requires `classOf`, and `marksToSvgString` requires a paint resolver. Colour lives in custom properties behind the class.
+- **Geometry never carries colour.** Every mark has `cls`, a list of class tokens; `SceneMarks` requires `classOf`. Colour lives in custom properties behind the class.
 - **Paint servers are hosted once and never hidden.** `SceneDefs` renders a 0×0 host SVG (never `display: none`, which breaks every `url(#…)` reference while a scene is hidden) inside the element that sets the scene's tokens; IDs are `${idPrefix}-…`, one prefix per scene.
 - **Capacity fails tests, not readers.** A scene validates its layout constants against the data and returns a `CapacityReport`; overlap and legibility floors are test failures.
 - **Materials are kit tokens.** `scene-tokens.module.css` owns the material layer (sea, earth, lawn, gravel, rock, the lighthouse, hairlines, shadow, plates) in light ("surveyor's daylight") and dark ("lamplit night"). A scene composes `tokens` into its root and `scene` into each SVG, and adds its own art direction and data colours on top. These tokens encode materials, never data; data colours still come from the shared palettes.

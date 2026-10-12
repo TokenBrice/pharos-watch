@@ -15,7 +15,7 @@ import { formatMatrix, formatPoints } from "@shared/lib/scene/projection";
 export type SceneClassOf = (tokens: string) => string;
 
 /** One kit mark as one SVG element. */
-export function sceneMarkElement(mark: SceneMark, key: number, classOf: SceneClassOf): ReactElement {
+function sceneMarkElement(mark: SceneMark, key: number, classOf: SceneClassOf): ReactElement {
   switch (mark.kind) {
     case "polygon":
       return <polygon key={key} className={classOf(mark.cls)} points={formatPoints(mark.points)} />;

@@ -30,7 +30,7 @@ export function SceneKitDefs({ gradients = [] }: { gradients?: readonly SceneGra
 }
 
 /** The id of a scene paint server: `sceneDefId("cem", "hatch")`, `sceneDefId("cem", "g-col")`. */
-export function sceneDefId(idPrefix: string, name: string): string {
+function sceneDefId(idPrefix: string, name: string): string {
   return `${idPrefix}-${name}`;
 }
 
