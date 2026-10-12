@@ -1,0 +1,8 @@
+{
+  "timelock": "0xd8236031d8279d82e615af2bfab5fc0127a329ab",
+  "deploymentBlock": 22867448,
+  "throughBlock": 26176412,
+  "blockHash": "0x56f2912d76897450bce60bae7090204c9b7fdc54223472a5d54571b319b999d1",
+  "proposerRole": "0xb09aa5aeb3702cfd50b6b62bc4532604938f21248a27a1d5ca736082b6819cc1",
+  "proposers": ["0xb8fc49402df3ee4f8587268fb89fda4d621a8793"]
+}

@@ -3955,5 +3955,532 @@
       "reviewedAt": "2026-10-08T07:24:03.188Z",
       "contentSha256": "37b72756f554efa46ae1d7e90d7aaf79371ae09001823e5be34046203a37158f"
     }
+  },
+  "cusd-cap": {
+    "coinId": "cusd-cap",
+    "title": "How does cUSD break?",
+    "thesis": "Three of five Cap Safe keys can freeze cUSD redemption or borrow away its liquid reserves with no delay; the one-day timelock never engages.",
+    "premise": "Hypothetical: three of the five signer keys on Cap's developer Safe are compromised, coerced, or collude; no such compromise has been observed. The Safe is Cap's sole timelock proposer, but at block 26,176,412 it also holds direct zero-delay roles: all fourteen Yearn role bits on the USDC fractional-reserve vault, Delegation network and agent registration, agent-manager configuration, and vault reserve controls. Operational context, documented not inferred: a single-key EOA paused the protocol twice on 2026-06-09 and the same Safe unpaused within twenty minutes; that is emergency use, not a compromise. Consequences that depend on market responses stay qualified: no sale, run, or default was simulated, and the reallocation branch's final transfer step could not be completed on the fork.",
+    "stages": [
+      {
+        "id": "take-keys",
+        "kind": "premise",
+        "title": "Take three Safe keys",
+        "actor": "Attacker",
+        "action": "Obtain 3-of-5 signatures on Cap's developer Safe",
+        "targets": [
+          {
+            "label": "Developer Safe",
+            "address": "0xb8fc49402df3ee4f8587268fb89fda4d621a8793",
+            "chainId": 1
+          }
+        ],
+        "elapsed": "T+0",
+        "cost": "Off-chain: phishing, coercion, or collusion; not observed",
+        "missingDefense": "No guard or module screens signer-approved calls",
+        "explanation": "At the pin the Safe is a plain 3-of-5 Safe 1.4.1 with no modules and a zero guard slot. It is the sole proposer on Cap's one-day timelock, but roughly thirty live selectors, including every Yearn fractional-reserve role on the USDC vault and Delegation agent onboarding, answer to it directly with no delay.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "dev-safe",
+          "timelock",
+          "access-control"
+        ]
+      },
+      {
+        "id": "price-discovery",
+        "kind": "market-shock",
+        "title": "Discover price without depth",
+        "actor": "cUSD and stcUSD holders",
+        "action": "Sell into the remaining venues after redemption fails",
+        "elapsed": "T+0 → T+1d",
+        "cost": "Market-dependent; no sale simulated",
+        "missingDefense": "No meaningful secondary exit",
+        "explanation": "At block 26,176,553 the Curve cUSD pool held 15.34 cUSD against 5.00 crvUSD; its get_dy quotes put 3.59 cUSD of selling at 1% average slippage and 4.90 at 5%, and the Uniswap v4 pools add hundreds of dollars. Aggregator history records a 0.5153 low print on the day after the June 2026 pauses; that print is documented, not a replayed trade, and causation is unestablished. No sale path was simulated.",
+        "evidence": "inferred",
+        "sourceIds": [
+          "curve-pool",
+          "price-history"
+        ]
+      },
+      {
+        "id": "stale-marks",
+        "kind": "counterparty-failure",
+        "title": "Mark stcUSD at stale value",
+        "actor": "Downstream stcUSD markets",
+        "action": "MegaETH keeps pricing stcUSD off the cUSD ratio; the PawnBroker oracle marks impairment to liquidation instead",
+        "elapsed": "T+0 → T+7d",
+        "cost": "No action needed by the attacker",
+        "missingDefense": "Only one downstream venue prices cUSD credit risk",
+        "explanation": "97.64% of cUSD sits in stcUSD. On MegaETH, Aave prices stcUSD collateral as the cUSD ratio times capped USDC/USD with no cUSD fundamental leg, so a $5.95m borrowed position at health factor 1.09 keeps no dollar-recovery trigger while nominal accounting holds. On Ethereum, a Yearn strategy is owed 6.05m USDC secured by 6.39m stcUSD of borrower collateral at a 91.5% liquidation threshold; that oracle does read a cUSD fundamental feed, so impairment there surfaces as liquidation pressure on the borrower rather than silence.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "stcusd",
+          "megaeth-aave-oracle",
+          "yearn-pawn"
+        ]
+      },
+      {
+        "id": "residual-backing",
+        "kind": "holder-outcome",
+        "title": "Hold operator claims",
+        "actor": "Remaining cUSD holders",
+        "action": "Queue on operator repayments and fund-token redemption",
+        "elapsed": "T+1d →",
+        "cost": "Recovery pace unverified",
+        "missingDefense": "No loss write-down in vault accounting",
+        "explanation": "After either branch, dollar redemption rests on 55.46m USDC of operator loans and about 80k wWTGXX of KYC-gated fund tokens. The largest borrower owes 29.84m USDC, 53.76% of all debt, against 582 LBTC of coverage at health 1.30; a full default with 50% coverage realization leaves 5.52m USDC uncovered, 7.57% of supply, before interest accounting and legal recovery. Vault accounting carries principal, not realizable value.",
+        "evidence": "inferred",
+        "sourceIds": [
+          "lender",
+          "cusd-token"
+        ]
+      }
+    ],
+    "branchPoint": {
+      "afterStageId": "take-keys",
+      "branches": [
+        {
+          "id": "freeze-exit",
+          "label": "Freeze the exit",
+          "keys": "3 of 5",
+          "premise": "Hypothetical: the captured Safe blocks fractional-reserve withdrawal first, converting every redemption above the idle cash floor into a revert.",
+          "stages": [
+            {
+              "id": "install-limit-module",
+              "kind": "redemption-blocked",
+              "title": "Install a zero withdrawal limit",
+              "actor": "Compromised developer Safe",
+              "action": "set_withdraw_limit_module(module that returns zero)",
+              "actionIsCode": true,
+              "targets": [
+                {
+                  "label": "USDC fractional-reserve vault",
+                  "address": "0x3ed6aa32c930253fc990de58ff882b9186cd0072",
+                  "chainId": 1
+                }
+              ],
+              "elapsed": "T+0",
+              "cost": "One transaction",
+              "missingDefense": "No delay on the Safe's Yearn role bits",
+              "explanation": "On mainnet forks pinned to the evidence block, installing a module that returns zero made 5,000- and 5,000,000-cUSD burns and redemptions revert; removing the module let identical controls pay. Only 2,984 USDC of vault cash sits outside the fractional reserve, and the first payable burn consumes that floor, so beyond roughly 3,000 cUSD cumulative the module blocks every exit size.",
+              "evidence": "verified-onchain",
+              "sourceIds": [
+                "yearn-fr-usdc",
+                "cusd-token"
+              ]
+            },
+            {
+              "id": "reallocate-float",
+              "kind": "authority-capture",
+              "title": "Reallocate the fractional float",
+              "actor": "Compromised developer Safe",
+              "action": "add_strategy(attacker ERC4626) · update_max_debt_for_strategy(max) · update_debt(shift out of Aave and Ondo)",
+              "actionIsCode": true,
+              "targets": [
+                {
+                  "label": "USDC fractional-reserve vault",
+                  "address": "0x3ed6aa32c930253fc990de58ff882b9186cd0072",
+                  "chainId": 1
+                }
+              ],
+              "elapsed": "T+0 → T+1h",
+              "cost": "Two to three transactions",
+              "missingDefense": "No central-timelock visibility into Yearn vault roles",
+              "explanation": "Every required role call executed from the Safe with zero delay on the fork, and update_debt recalled 17,255,343.04 USDC from Aave in one transaction; the final push into an attacker strategy could not be completed on the fork, so the diverted amount stays inferred. The Cap timelock holds no role on this vault.",
+              "evidence": "inferred",
+              "sourceIds": [
+                "yearn-fr-usdc",
+                "docs-fractional-reserves"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "fictitious-coverage",
+          "label": "Borrow against fictitious coverage",
+          "keys": "3 of 5",
+          "premise": "Hypothetical: the captured Safe registers a middleware that reports coverage out of thin air, onboards an agent against it, and the agent borrows the vault's liquid reserves.",
+          "stages": [
+            {
+              "id": "register-fake-network",
+              "kind": "governance",
+              "title": "Register an answering middleware",
+              "actor": "Compromised developer Safe",
+              "action": "Delegation.registerNetwork(attackerMiddleware) · EigenAgentManager.setServiceManager(attackerMiddleware)",
+              "actionIsCode": true,
+              "targets": [
+                {
+                  "label": "Delegation",
+                  "address": "0xf3e3eae671000612ce3fd15e1019154c1a4d693f",
+                  "chainId": 1
+                },
+                {
+                  "label": "EigenAgentManager",
+                  "address": "0xa82f6f9e67e127621f3e5f3953beef926b4b5ba9",
+                  "chainId": 1
+                }
+              ],
+              "elapsed": "T+0",
+              "cost": "Two transactions",
+              "missingDefense": "No validation of reported coverage or collateral",
+              "explanation": "All three calls executed from the Safe with zero delay on the fork. Delegation trusts the registered middleware's coverage and slashable-collateral answers, Lender derives maxBorrowable directly from that coverage with no independent restaking proof, and agent onboarding needs no collateral deposit.",
+              "evidence": "verified-onchain",
+              "sourceIds": [
+                "delegation",
+                "eigen-agent-manager",
+                "lender"
+              ]
+            },
+            {
+              "id": "borrow-against-nothing",
+              "kind": "counterparty-failure",
+              "title": "Borrow the liquid reserves",
+              "actor": "Attacker-controlled agent",
+              "action": "EigenAgentManager.addEigenAgent(attacker, ltv 0.95) · Lender.borrow(USDC, availableBalance)",
+              "actionIsCode": true,
+              "targets": [
+                {
+                  "label": "Lender",
+                  "address": "0x15622c3dbbc5614e6dfa9446603c1779647f01fc",
+                  "chainId": 1
+                }
+              ],
+              "elapsed": "T+0",
+              "cost": "One transaction after registration",
+              "missingDefense": "Vault liquidity is the only binding cap",
+              "explanation": "On independent mainnet forks pinned to the evidence block, the Safe-only sequence registered the fake middleware, accepted a fictitious coverage report of arbitrary size, and one borrow paid out 17,358,417.50 USDC — exactly the vault's available balance — synchronously divesting Aave and Ondo. Idle and available balances fell to zero and a post-drain burn reverted.",
+              "evidence": "verified-onchain",
+              "sourceIds": [
+                "lender",
+                "delegation",
+                "yearn-fr-usdc"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "keyFigures": [
+      {
+        "value": "3 of 5",
+        "label": "Safe keys for zero-delay reserve control",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "dev-safe",
+          "access-control"
+        ]
+      },
+      {
+        "value": "23.81%",
+        "label": "Synchronous redemption share of supply",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "cusd-token"
+        ]
+      },
+      {
+        "value": "3.6 cUSD",
+        "label": "Curve sale size at 1% slippage",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "curve-pool"
+        ]
+      },
+      {
+        "value": "76.08%",
+        "label": "Supply lent to operators",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "cusd-token",
+          "lender"
+        ]
+      }
+    ],
+    "window": {
+      "label": "Capture-to-discovery window",
+      "fromStageId": "take-keys",
+      "toStageId": "price-discovery",
+      "duration": "Zero scheduled delay",
+      "note": "Every branch action is one to four Safe or agent transactions with no scheduled delay, so discovery depends on watchers, not a governance calendar. Cap's documented one-day timelock covers upgrades and the mint root, not these Yearn vault roles or direct selector grants."
+    },
+    "defenders": [
+      {
+        "name": "The Safe's other two signers",
+        "verdict": "cannot-stop",
+        "why": "On the three-key route the two remaining owners cannot veto a transaction signed by the compromised majority, and no guard or module screens the calls.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "dev-safe"
+        ]
+      },
+      {
+        "name": "Cap's one-day timelock",
+        "verdict": "cannot-stop",
+        "why": "It never engages on this path: the Yearn fractional-reserve roles are external to it, and network registration plus agent-manager configuration are direct Safe grants. It gates upgrades and the mint root, which this scenario does not touch.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "access-control",
+          "yearn-fr-usdc",
+          "delegation",
+          "docs-access-controls",
+          "docs-addresses"
+        ]
+      },
+      {
+        "name": "Canceller Safe",
+        "verdict": "cannot-stop",
+        "why": "Its independent 3-of-6 quorum can cancel scheduled timelock operations, but no timelock operation exists on this path to cancel.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "timelock"
+        ]
+      },
+      {
+        "name": "Protocol pausers",
+        "verdict": "partial",
+        "why": "A single-key EOA pause halts mint, burn, redeem, borrow and repay in one transaction; on the fork it stopped the fictitious-coverage borrow until unpaused. The captured Safe holds unpause itself, a pause cannot reverse an allocation or refund anyone, and blocking exit is itself holder harm; it buys watchers time only.",
+        "evidence": "verified-onchain",
+        "sourceIds": [
+          "cusd-token",
+          "pause-tx"
+        ]
+      },
+      {
+        "name": "Borrower operators",
+        "verdict": "partial",
+        "why": "Repaying their 55.46m USDC of loans would restore vault liquidity over time. The largest borrower's LBTC coverage exceeds its debt at model prices, but realization pace, BTC price risk and legal recovery are unverified.",
+        "evidence": "inferred",
+        "sourceIds": [
+          "lender"
+        ]
+      },
+      {
+        "name": "The market",
+        "verdict": "partial",
+        "why": "Holders can seek exit during and after the capture, but the pegged exit is bounded by redemption capacity and secondary depth is negligible; realized prices depend on buyers no simulation models.",
+        "evidence": "inferred",
+        "sourceIds": []
+      },
+      {
+        "name": "Circle",
+        "verdict": "unverified",
+        "why": "As USDC issuer it can blacklist receiving addresses. Whether it would act for Cap flows, and how quickly, is unevidenced for this scenario.",
+        "evidence": "unverified",
+        "sourceIds": []
+      }
+    ],
+    "falsifiers": [
+      {
+        "id": "safe-composition",
+        "condition": "The developer Safe's threshold differs from three, its owner count from five, its guard slot from zero, or its module list is not empty",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      },
+      {
+        "id": "fr-vault-roles",
+        "condition": "The Safe's Yearn role mask on the USDC fractional-reserve vault loses ADD_STRATEGY_MANAGER, DEBT_MANAGER, MAX_DEBT_MANAGER or WITHDRAW_LIMIT_MANAGER, or the vault runtime changes",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      },
+      {
+        "id": "central-direct-roles",
+        "condition": "The central AccessControl no longer grants the Safe Delegation network registration or EigenAgentManager service-manager configuration, or either runtime changes",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      },
+      {
+        "id": "redemption-capacity-share",
+        "condition": "Synchronous USDC redemption capacity reaches half of cUSD supply, or direct idle cash alone reaches five percent",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      },
+      {
+        "id": "operator-lending-share",
+        "condition": "Operator USDC borrows total a quarter of cUSD supply or less",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      },
+      {
+        "id": "curve-depth",
+        "condition": "The Curve cUSD pool's one-percent average-slippage sale size reaches one million cUSD",
+        "status": "not-met",
+        "checkedAtBlock": 26176553
+      },
+      {
+        "id": "docs-timelock-scope",
+        "condition": "Cap's documentation moves the fractional-reserve vault roles, Delegation network registration or agent-manager configuration behind a delay",
+        "status": "not-met"
+      },
+      {
+        "id": "timelock-proposer",
+        "condition": "The timelock's PROPOSER role gains any member besides the developer Safe, or its minimum delay drops below one day",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      },
+      {
+        "id": "vault-reserve-roles",
+        "condition": "The Safe loses its direct grants for vault reserve controls (setReserve, rescueERC20) or protocol pause on the cUSD vault",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      },
+      {
+        "id": "add-eigen-agent",
+        "condition": "The Safe loses its direct grant for agent onboarding on the EigenAgentManager",
+        "status": "not-met",
+        "checkedAtBlock": 26176412
+      }
+    ],
+    "exposure": [
+      {
+        "label": "cUSD holders",
+        "detail": "72,896,407.97 cUSD at the pin, of which 97.64% is held through stcUSD; stcUSD converts to an immediate cUSD claim that competes for the same reserves, with reward vesting only. The rows below overlap this supply and must not be added to it.",
+        "evidence": "verified-onchain"
+      },
+      {
+        "label": "Synchronous exit",
+        "detail": "17,358,417.50 USDC (23.81% of supply) including fractional-reserve withdrawal; direct idle cash is only 2,984.02 USDC. About 80,028 wWTGXX adds fund tokens whose cash redemption is KYC-gated.",
+        "evidence": "verified-onchain"
+      },
+      {
+        "label": "Operator claims",
+        "detail": "55.46m USDC lent to operators, 76.08% of supply; 44 registered agents, 17 with debt. The largest owes 29,838,481.84 USDC (53.76%) against 582.0051 LBTC of coverage at health 1.30405.",
+        "evidence": "verified-onchain"
+      },
+      {
+        "label": "Downstream leverage",
+        "detail": "On MegaETH, Aave holds 6,668,486.91 stcUSD shares backing $5.95m of debt, one holder at health factor 1.0938 under an oracle without a cUSD fundamental leg. On Ethereum, a Yearn strategy is owed 6,045,897.86 USDC secured by 6,392,939.74 stcUSD of borrower collateral at a 91.5% liquidation threshold with permissioned liquidation.",
+        "evidence": "verified-onchain"
+      },
+      {
+        "label": "stcUSD concentration",
+        "detail": "Three labelled ether.fi vaults hold 44.72% of stcUSD; concentrated strategy unwinds pressure the same thin issuer exit.",
+        "evidence": "verified-onchain"
+      }
+    ],
+    "sources": [
+      {
+        "id": "dev-safe",
+        "label": "Cap developer Safe (3-of-5, sole timelock proposer)",
+        "url": "https://etherscan.io/address/0xb8fc49402df3ee4f8587268fb89fda4d621a8793",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "timelock",
+        "label": "Cap TimelockController (86400-second delay)",
+        "url": "https://etherscan.io/address/0xd8236031d8279d82e615af2bfab5fc0127a329ab",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "access-control",
+        "label": "Cap central AccessControl (selector-role ACL)",
+        "url": "https://etherscan.io/address/0x7731129a10d51e18cde607c5c115f26503d2c683",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "delegation",
+        "label": "Cap Delegation (network and agent registry)",
+        "url": "https://etherscan.io/address/0xf3e3eae671000612ce3fd15e1019154c1a4d693f#code",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "eigen-agent-manager",
+        "label": "Cap EigenAgentManager",
+        "url": "https://etherscan.io/address/0xa82f6f9e67e127621f3e5f3953beef926b4b5ba9#code",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "lender",
+        "label": "Cap Lender (borrow and repay)",
+        "url": "https://etherscan.io/address/0x15622c3dbbc5614e6dfa9446603c1779647f01fc#code",
+        "observedAt": "2026-10-12",
+        "block": 26176407
+      },
+      {
+        "id": "cusd-token",
+        "label": "cUSD CapToken vault proxy",
+        "url": "https://etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "stcusd",
+        "label": "stcUSD StakedCap vault",
+        "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "yearn-fr-usdc",
+        "label": "USDC fractional-reserve Yearn V3 vault (EIP-1167 clone)",
+        "url": "https://etherscan.io/address/0x3ed6aa32c930253fc990de58ff882b9186cd0072",
+        "observedAt": "2026-10-12",
+        "block": 26176412
+      },
+      {
+        "id": "yearn-pawn",
+        "label": "Yearn PawnBroker strategy borrowing against stcUSD",
+        "url": "https://etherscan.io/address/0xe63a2abc24cd9538398d825a4bfe5778d25687df",
+        "observedAt": "2026-10-12",
+        "block": 26176406
+      },
+      {
+        "id": "megaeth-aave-oracle",
+        "label": "MegaETH Aave stcUSD price-cap adapter (verified source)",
+        "url": "https://megaeth.blockscout.com/address/0xbbc579ee0a3fd6e9240965c5f57b7e5b3e3809a8",
+        "observedAt": "2026-10-12",
+        "block": 29011657
+      },
+      {
+        "id": "curve-pool",
+        "label": "Curve StableSwap NG cUSD/crvUSD pool",
+        "url": "https://etherscan.io/address/0x2d1eb1704d0ee227b7528c5bdb4fd256d6ac5b09",
+        "observedAt": "2026-10-12",
+        "block": 26176553
+      },
+      {
+        "id": "price-history",
+        "label": "cUSD aggregator price history including the June 2026 low print",
+        "url": "https://www.coingecko.com/en/coins/cap-usd",
+        "observedAt": "2026-10-12"
+      },
+      {
+        "id": "pause-tx",
+        "label": "2026-06-09 protocol pause transaction (single-key EOA)",
+        "url": "https://eth.blockscout.com/tx/0x9907b9d025edc334869d3e5ade824832b08a3ac6448c31ecc88db42907edcd53",
+        "observedAt": "2026-10-12"
+      },
+      {
+        "id": "docs-access-controls",
+        "label": "Cap docs: access controls",
+        "url": "https://docs.cap.app/concepts/access-controls",
+        "observedAt": "2026-10-12"
+      },
+      {
+        "id": "docs-addresses",
+        "label": "Cap docs: contract addresses",
+        "url": "https://docs.cap.app/developers/addresses",
+        "observedAt": "2026-10-12"
+      },
+      {
+        "id": "docs-fractional-reserves",
+        "label": "Cap docs: fractional reserves",
+        "url": "https://docs.cap.app/concepts/vault/fractional-reserves.md",
+        "observedAt": "2026-10-12"
+      }
+    ],
+    "evidencePin": {
+      "chainId": 1,
+      "block": 26176412,
+      "observedAt": "2026-10-12"
+    },
+    "review": {
+      "status": "draft",
+      "note": "Draft for maintainer exact-content review; not approved."
+    }
   }
 }
