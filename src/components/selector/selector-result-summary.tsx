@@ -205,7 +205,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
           <div className="grid gap-3 rounded-lg border border-border/50 bg-background/35 p-3 md:grid-cols-[1fr_auto]">
             {answerChips.length > 0 ? (
               <div className="min-w-0 space-y-2">
-                <p className="pharos-kicker">Answers</p>
+                <p className="pharos-label">Answers</p>
                 <div className="flex flex-wrap gap-2">
                   {answerChips.map((chip) => (
                     <button
@@ -225,7 +225,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
             ) : null}
             {priorityLabels.length > 0 ? (
               <div className="min-w-0 space-y-2 md:max-w-xs">
-                <p className="pharos-kicker">Prioritized</p>
+                <p className="pharos-label">Prioritized</p>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   {priorityLabels.join(", ")}
                 </p>
@@ -237,12 +237,12 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
         {filterChips.length > 0 ? (
           <div className="space-y-2 rounded-lg border border-dashed border-border/45 bg-background/25 p-3">
             <div className="space-y-2">
-              <p className="pharos-kicker">Screener handoff filters</p>
+              <p className="pharos-label">Screener handoff filters</p>
               <div className="flex flex-wrap gap-1.5">
                 {filterChips.map((chip) => (
                   <span
                     key={`${chip.label}:${chip.value}`}
-                    className="inline-flex max-w-full items-baseline gap-0 rounded-md border border-border/45 bg-card/35 font-mono text-[11px]"
+                    className="inline-flex max-w-full items-baseline gap-0 rounded-md border border-border/45 bg-card/35 font-mono text-2xs"
                   >
                     <span className="shrink-0 px-1.5 py-0.5 text-muted-foreground">{chip.label}</span>
                     <span className="border-l border-border/45 px-1.5 py-0.5 text-foreground">{chip.value}</span>
@@ -316,7 +316,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
                 <input
                   readOnly
                   value={shareFallbackUrl}
-                  className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-[11px] text-foreground"
+                  className="pharos-focus-ring w-full rounded-md border border-border/60 bg-background px-2 py-1 font-mono text-2xs text-foreground"
                   onFocus={(event) => event.currentTarget.select()}
                 />
               </label>

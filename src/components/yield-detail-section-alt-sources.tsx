@@ -70,9 +70,9 @@ export function YieldDetailSectionAltSources({
   return (
     <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Retained alternates</p>
+        <p className="pharos-label">Retained alternates</p>
         {totalSourceCount && totalSourceCount > 1 ? (
-          <p className="text-[11px] text-muted-foreground/80">
+          <p className="text-2xs text-muted-foreground/80">
             {totalSourceCount} sources tracked · canonical chosen by confidence, not highest APY
           </p>
         ) : null}
@@ -125,7 +125,7 @@ export function YieldDetailSectionAltSources({
                       {source.displayLabel}
                     </TableSourceLink>
                     {isBest ? (
-                      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-3xs font-medium text-emerald-700 dark:text-emerald-400">
                         Best
                       </span>
                     ) : null}
@@ -133,27 +133,27 @@ export function YieldDetailSectionAltSources({
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     <Badge
                       variant="outline"
-                      className={cn("text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
+                      className={cn("text-3xs", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
                     >
                       {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
                     </Badge>
-                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                    <span className="font-mono text-2xs tabular-nums text-muted-foreground">
                       TVL {source.sourceTvlUsd !== null ? formatCurrency(source.sourceTvlUsd) : "—"}
                     </span>
                     {confidence ? (
-                      <span className="text-[11px] text-muted-foreground">{confidence}</span>
+                      <span className="text-2xs text-muted-foreground">{confidence}</span>
                     ) : null}
                     <span
-                      className="text-[11px] text-muted-foreground"
+                      className="text-2xs text-muted-foreground"
                       title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}
                     >
                       {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
                     </span>
-                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                    <span className="font-mono text-2xs tabular-nums text-muted-foreground">
                       Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
                     </span>
                     {source.rejectionHint ? (
-                      <span className="text-[11px] text-muted-foreground" title={source.rejectionHint.description}>
+                      <span className="text-2xs text-muted-foreground" title={source.rejectionHint.description}>
                         Reason {source.rejectionHint.label}
                       </span>
                     ) : null}
@@ -163,7 +163,7 @@ export function YieldDetailSectionAltSources({
                   <p className="font-mono text-sm font-semibold tabular-nums">{formatPercent(source.apy30d)}</p>
                   <p
                     className={cn(
-                      "mt-0.5 font-mono text-[11px] tabular-nums",
+                      "mt-0.5 font-mono text-2xs tabular-nums",
                       delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
                     )}
                   >
@@ -276,12 +276,12 @@ export function YieldDetailSectionAltSources({
                       {source.displayLabel}
                     </TableSourceLink>
                     {isBest ? (
-                      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-3xs font-medium text-emerald-700 dark:text-emerald-400">
                         Best
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-3xs text-muted-foreground">
                     {confidence ? <span>{confidence}</span> : null}
                     <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
                       {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
@@ -294,7 +294,7 @@ export function YieldDetailSectionAltSources({
                 <TableCell className="px-0 py-2 text-center">
                   <Badge
                     variant="outline"
-                    className={cn("text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
+                    className={cn("text-3xs", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
                   >
                     {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
                   </Badge>
@@ -305,14 +305,14 @@ export function YieldDetailSectionAltSources({
                 <TableCell className="px-0 py-2 text-right">
                   <span
                     className={cn(
-                      "font-mono tabular-nums text-[10px]",
+                      "font-mono tabular-nums text-3xs",
                       delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
                     )}
                   >
                     {formatYieldApyDelta(delta)}
                   </span>
                 </TableCell>
-                <TableCell className="px-0 py-2 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+                <TableCell className="px-0 py-2 text-right font-mono text-3xs tabular-nums text-muted-foreground">
                   {formatYieldSourceRiskCompact(source.sourceRisk)}
                 </TableCell>
                 <TableCell className="px-0 py-2 text-right font-mono tabular-nums text-muted-foreground">

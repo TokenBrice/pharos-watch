@@ -65,7 +65,7 @@ export function SelectorEmptyState({
 
       {closestSurvivors.length > 0 ? (
         <div className="space-y-1.5">
-          <p className="pharos-kicker">Closest survivors fail on:</p>
+          <p className="pharos-label">Closest survivors fail on:</p>
           <ul className="space-y-1 text-sm leading-relaxed">
             {closestSurvivors.map((survivor) => (
               <li key={survivor.id} className="text-foreground">
@@ -81,7 +81,7 @@ export function SelectorEmptyState({
 
       {relaxableConstraints.length > 0 ? (
         <div className="space-y-2">
-          <p className="pharos-kicker">Relax a constraint</p>
+          <p className="pharos-label">Relax a constraint</p>
           <div className="flex flex-wrap gap-2">
             {relaxableConstraints.map((constraint) => (
               <button
@@ -99,7 +99,7 @@ export function SelectorEmptyState({
       ) : null}
 
       <div className="space-y-1.5">
-        <p className="pharos-kicker">Or refine in the Screener</p>
+        <p className="pharos-label">Or refine in the Screener</p>
         <Link
           href={screenerHandoffHref}
           className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border/65 bg-background/60 px-3.5 text-sm font-medium text-foreground hover:bg-background/85 sm:min-h-9"

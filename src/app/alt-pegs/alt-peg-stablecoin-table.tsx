@@ -128,12 +128,12 @@ function AltPegChipStrip({ groups, allCount, selected, onSelect }: AltPegChipStr
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="pharos-kicker">Filter by peg</h3>
+        <h3 className="pharos-label">Filter by peg</h3>
         {selected && (
           <button
             type="button"
             onClick={() => onSelect(null)}
-            className="pharos-focus-ring text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="pharos-focus-ring text-2xs font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             Clear
           </button>
@@ -141,7 +141,7 @@ function AltPegChipStrip({ groups, allCount, selected, onSelect }: AltPegChipStr
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mr-0.5">
+          <span className="pharos-label mr-0.5">
             All
           </span>
           <AltPegChipButton
@@ -154,7 +154,7 @@ function AltPegChipStrip({ groups, allCount, selected, onSelect }: AltPegChipStr
         </div>
         {groups.map((group) => (
           <div key={group.label} className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mr-0.5">
+            <span className="pharos-label mr-0.5">
               {group.label}
             </span>
             {group.items.map((item) => (
@@ -196,7 +196,7 @@ function AltPegChipButton({ label, count, colorHex, isSelected, onClick }: AltPe
     >
       <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colorHex }} aria-hidden="true" />
       <span>{label}</span>
-      <span className="pharos-numeric text-[11px] text-muted-foreground/80">{count}</span>
+      <span className="pharos-numeric text-2xs text-muted-foreground/80">{count}</span>
     </button>
   );
 }

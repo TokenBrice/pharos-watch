@@ -102,7 +102,7 @@ export function DEWSFiringList({ signals }: { signals: Record<string, DEWSFiring
 
   return (
     <div className="space-y-1">
-      <h4 className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">Signals firing</h4>
+      <h4 className="pharos-label">Signals firing</h4>
       {firing.length === 0 ? (
         <p className="text-xs text-muted-foreground">No stress signals firing</p>
       ) : (
@@ -253,7 +253,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={!showBreakdown}
                 onClick={() => setShowBreakdown(false)}
                 className={cn(
-                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-[11px] font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
+                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
                   !showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -264,7 +264,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                 aria-pressed={showBreakdown}
                 onClick={() => setShowBreakdown(true)}
                 className={cn(
-                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-[11px] font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
+                  "pharos-focus-ring min-h-11 rounded-[4px] px-3 py-2 text-2xs font-medium leading-none transition-colors md:min-h-0 md:px-2 md:py-1",
                   showBreakdown ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -316,14 +316,14 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
               <div key={key} className={cn("space-y-2", isInactive && "opacity-60")}>
                 {/* Below sm the label and its metric restack instead of
                     truncating the label ("POOL BALANCE DRIFT · 52 / 100"). */}
-                <div className="flex flex-col gap-0.5 font-mono text-[11px] uppercase tracking-[0.08em] sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                <div className="flex flex-col gap-0.5 text-xs sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                   <span className="min-w-0 break-words">
                     <span className="text-foreground">{meta.name}</span>
                     <span className="text-muted-foreground"> · {Math.round(signal.value)} / 100</span>
                   </span>
                   <span className="text-muted-foreground sm:shrink-0 sm:whitespace-nowrap" title={meta.metricLabel}>
                     {meta.metricLabel} ·{" "}
-                    <span className="text-foreground">{formatMetric(meta.metricKey, metricVal)}</span>
+                    <span className="pharos-numeric text-foreground">{formatMetric(meta.metricKey, metricVal)}</span>
                   </span>
                 </div>
                 <ProgressBar value={signal.value} />
@@ -348,7 +348,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
             named in both — otherwise a signal with no reading is indistinguishable
             from one that was never listed. */}
         {unavailableSignals.length > 0 && (
-          <p className="text-[11px] text-muted-foreground">{unavailableSignals.join("; ")}</p>
+          <p className="text-2xs text-muted-foreground">{unavailableSignals.join("; ")}</p>
         )}
 
         {/* History chart */}
@@ -367,7 +367,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                   </defs>
                   <TimeGrid />
                   <TimeXAxis dataKey="ts" tickFormatter={(ts: number) => formatChartDate(ts, "short")} />
-                  <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} width={40} />
+                  <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} tickKind="score" width={40} />
                   {(showBreakdown ? signalYMax : chartYMax) >= 50 && (
                     <ReferenceLine y={DEWS_THREAT_BANDS[1].upper} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />
                   )}
@@ -413,7 +413,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
             {/* Breakdown legend */}
             {showBreakdown && (
-              <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground">
                 {Object.entries(SIGNAL_META).map(([key, meta]) => (
                   <div key={key} className="flex items-center gap-1">
                     <div className="h-2 w-2 rounded-full" style={{ backgroundColor: SIGNAL_CHART_COLORS[key] }} />

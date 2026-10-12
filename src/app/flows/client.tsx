@@ -173,7 +173,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
 
         <section aria-labelledby="chart-heading" className="order-2 md:order-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="chart-heading" className="pharos-kicker">
+            <h2 id="chart-heading" className="pharos-label">
               Aggregate Flows
             </h2>
             <ControlPillToggle
@@ -192,7 +192,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
 
         <section className="order-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="pharos-card-shell px-4 py-4">
-            <p className="pharos-kicker">Flow Interpretation</p>
+            <p className="pharos-label">Flow interpretation</p>
             <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
               <p>
                 Mint and burn totals are useful, but the pressure shift is the stress signal: it asks whether the

@@ -11,47 +11,15 @@ import { cn } from "@/lib/utils";
 
 const NAV_BY_HREF = new Map<string, NavItem>(NAV_ITEMS.map((item) => [item.href, item]));
 
-// Per-destination icon tone, keyed by nav href. Mirrors the Figma "Shortcuts"
-// band where each chip carries a colored category glyph. Static class strings
-// only — color stays confined to the icon tile so the unified shortcut panel
-// remains calm while the twelve default routes are individually recognizable.
-const SHORTCUT_ICON_TONE: Record<string, string> = {
-  "/chains/": "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300",
-  "/upcoming/": "border-amber-500/25 bg-amber-500/12 text-amber-600 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300",
-  "/portfolio/": "border-purple-500/20 bg-purple-500/10 text-purple-600 dark:border-purple-400/20 dark:bg-purple-400/10 dark:text-purple-300",
-  "/alt-pegs/": "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-300",
-  "/cemetery/": "border-red-500/20 bg-red-500/10 text-red-600 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300",
-  "https://pharosville.pharos.watch/": "border-teal-500/20 bg-teal-500/10 text-teal-600 dark:border-teal-400/20 dark:bg-teal-400/10 dark:text-teal-300",
-  "/yield/": "border-lime-500/25 bg-lime-500/12 text-lime-700 dark:border-lime-400/20 dark:bg-lime-400/10 dark:text-lime-300",
-  "/liquidity/": "border-cyan-500/20 bg-cyan-500/10 text-cyan-600 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-300",
-  "/screener/": "border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:border-indigo-400/20 dark:bg-indigo-400/10 dark:text-indigo-300",
-  "/compare/": "border-orange-500/25 bg-orange-500/12 text-orange-600 dark:border-orange-400/20 dark:bg-orange-400/10 dark:text-orange-300",
-  "/dependency-map/": "border-violet-500/20 bg-violet-500/10 text-violet-600 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-300",
-  "/timeline/": "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300",
-};
-const FALLBACK_SHORTCUT_ICON_TONE =
-  "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-300";
-
 function externalLinkProps(item: NavItem): { target?: string; rel?: string } {
   return item.external ? { target: "_blank", rel: "noopener noreferrer" } : {};
 }
 
-// Flat icon tile shared by view + edit chips. The tile stays neutral; only the
-// glyph takes a per-destination category hue so the row reads as colored
-// categories while the chips themselves remain calm.
+// Plain muted glyph shared by view + edit chips. Destinations are wayfinding,
+// not state, so they carry no category hue (semantic color only).
 function ShortcutIcon({ item }: { item: NavItem }): JSX.Element {
   const Icon = item.icon;
-  const iconTone = SHORTCUT_ICON_TONE[item.href] ?? FALLBACK_SHORTCUT_ICON_TONE;
-  return (
-    <span
-      className={cn(
-        "grid size-9 shrink-0 place-items-center rounded-lg border",
-        iconTone,
-      )}
-    >
-      <Icon aria-hidden="true" className="size-[18px]" strokeWidth={1.85} />
-    </span>
-  );
+  return <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.85} />;
 }
 
 // Default (non-editing) cell: a link to the destination. Carries hairline
@@ -63,12 +31,12 @@ function ShortcutLink({ item, className }: { item: NavItem; className?: string }
       href={item.href}
       {...externalLinkProps(item)}
       className={cn(
-        "pharos-focus-ring flex items-center gap-3 border-b border-r border-border/70 px-4 py-3.5 transition-colors hover:bg-muted/30",
+        "pharos-focus-ring group flex items-center gap-2.5 border-b border-r border-border/60 px-3.5 py-2.5 transition-colors hover:bg-muted/30",
         className,
       )}
     >
       <ShortcutIcon item={item} />
-      <span className="min-w-0 truncate text-sm font-medium text-foreground">{item.label}</span>
+      <span className="min-w-0 truncate text-sm text-muted-foreground group-hover:text-foreground">{item.label}</span>
     </Link>
   );
 }
@@ -161,19 +129,14 @@ export function ShortcutsSection(): JSX.Element {
   );
 
   return (
-    <section aria-labelledby="shortcuts-title" className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-        <div className="space-y-1.5">
-          <h2 id="shortcuts-title" className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Shortcuts
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Your saved shortcuts — fast access to what you check most.
-          </p>
-        </div>
+    <section aria-labelledby="shortcuts-title" className="space-y-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h2 id="shortcuts-title" className="text-sm font-semibold text-foreground">
+          Explore <span className="font-normal text-muted-foreground">· your saved shortcuts</span>
+        </h2>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => setEditing((value) => !value)}
           aria-pressed={editing}
@@ -213,7 +176,7 @@ export function ShortcutsSection(): JSX.Element {
         // One unified bordered panel: cells carry right/bottom hairlines and the
         // grid is nudged 1px past the rounded, clipped frame so the trailing
         // edge borders disappear and only the internal dividers read.
-        <div className="overflow-hidden rounded-xl border border-border/70">
+        <div className="overflow-hidden rounded-lg border border-border/60">
           <div className="-mb-px -mr-px grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             {items.map((item) => (
               <ShortcutLink key={item.href} item={item} />
@@ -228,7 +191,7 @@ export function ShortcutsSection(): JSX.Element {
       {editing && (
         <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
           <div className="flex items-center justify-between gap-3">
-            <p className="pharos-kicker">Add a shortcut</p>
+            <p className="pharos-label">Add a shortcut</p>
             <button
               type="button"
               onClick={reset}
@@ -252,7 +215,7 @@ export function ShortcutsSection(): JSX.Element {
                     onClick={() => add(item.href)}
                     aria-label={`Add ${item.label} shortcut`}
                     className={cn(
-                      "pharos-focus-ring inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card/60 px-2.5 py-1.5 text-[13px] font-medium text-foreground transition-colors",
+                      "pharos-focus-ring inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card/60 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors",
                       "hover:border-border hover:bg-muted/50",
                     )}
                   >

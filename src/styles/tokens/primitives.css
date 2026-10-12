@@ -145,8 +145,11 @@
   --p-space-20:  5rem;      /* 80px */
 
   /* ── Typography Scale ────────────────────────────────────────────
-     Using Tailwind-compatible names for easy mapping.
+     Using Tailwind-compatible names for easy mapping. globals.css maps
+     these onto Tailwind's `text-*` utilities (`text-3xs` … `text-5xl`).
      ─────────────────────────────────────────────────────────────── */
+  --p-text-3xs:  0.625rem;  /* 10px — dense chart/legend annotations only */
+  --p-text-2xs:  0.6875rem; /* 11px — compact labels, chips, table meta */
   --p-text-xs:   0.75rem;   /* 12px */
   --p-text-sm:   0.875rem;  /* 14px */
   --p-text-base: 1rem;      /* 16px */
@@ -167,6 +170,7 @@
   --p-tracking-tight:   -0.025em;
   --p-tracking-normal:  0em;
   --p-tracking-wide:    0.025em;
+  --p-tracking-eyebrow: 0.08em;   /* the only positive tracking: uppercase eyebrows */
 
   /* ── Radius Scale ────────────────────────────────────────────────
      ─────────────────────────────────────────────────────────────── */

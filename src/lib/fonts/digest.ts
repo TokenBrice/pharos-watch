@@ -6,6 +6,9 @@ export const digestDisplay = localFont({
     { path: "../../assets/fonts/Newsreader-Italic-Variable.subset.woff2", weight: "200 800", style: "italic" },
   ],
   display: "swap",
+  // Mounting `digestDisplay.variable` on an editorial subtree makes the
+  // `font-serif` utility resolve to Newsreader there (globals.css).
+  variable: "--font-newsreader",
   fallback: ["Georgia", "Times New Roman", "serif"],
   // Lazy: Newsreader is mounted by the digest archive preview and dated digest
   // pages. preload: false keeps it off routes without a digest surface.

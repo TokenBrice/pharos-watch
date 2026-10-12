@@ -56,10 +56,6 @@ export function DailyDigestCard(): React.JSX.Element {
 
   return (
     <div className="pharos-card-shell relative h-full min-h-0 overflow-hidden px-5 pt-7 text-center">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-[-18%] bottom-[-4.25rem] h-44 bg-[radial-gradient(ellipse_at_center,oklch(0.64_0.11_190_/_0.32),oklch(0.36_0.07_205_/_0.18)_42%,transparent_72%)]"
-      />
       <div className="relative z-10 space-y-2">
         <h3 className={`${digestDisplay.className} text-[2rem] font-semibold leading-none tracking-[-0.02em] text-foreground`}>
           Daily Digest
@@ -78,16 +74,17 @@ export function DailyDigestCard(): React.JSX.Element {
         </DigestCardAction>
       </div>
 
-      {/* Serif promo on a subtle layered-card stack — back leaves peek above
-          and beside the front card to fake depth without using shadows. */}
+      {/* Serif promo on a squared edition stack — the two previous editions
+          peek above the front card as straight offset leaves (no tilt), so
+          the archive reads as a filed record rather than a loose paper pile. */}
       <div className="absolute inset-x-0 bottom-3 z-10 h-[164px] text-left">
         <DigestFoldPreview
           entry={previousEditions[1]}
-          className="left-10 right-7 top-0 h-[150px] -rotate-[5deg] border-border/35 bg-card/80 pt-2.5"
+          className="left-10 right-7 top-0 h-[150px] border-border/35 bg-card/80 pt-2.5"
         />
         <DigestFoldPreview
           entry={previousEditions[0]}
-          className="left-8 right-5 top-8 h-[152px] -rotate-[1deg] border-border/45 bg-card/90 pt-3"
+          className="left-8 right-5 top-8 h-[152px] border-border/45 bg-card/90 pt-3"
         />
         <div className="absolute inset-x-4 bottom-[-2.25rem] top-[4.625rem] overflow-hidden rounded-xl border border-border/65 bg-card/95 p-4">
           <h4 className={`${digestDisplay.className} text-sm font-semibold uppercase leading-snug tracking-wide`}>

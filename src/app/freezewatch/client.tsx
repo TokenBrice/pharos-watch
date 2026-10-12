@@ -16,11 +16,10 @@ import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import {
-  FreezableSupplyMeter,
-  computeFreezableSummary,
-  formatShare,
-} from "@/components/freezewatch/freezable-supply-meter";
+import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
+import { UniverseChip } from "@/components/universe-chip";
+import { FreezableSupplyMeter } from "@/components/freezewatch/freezable-supply-meter";
+import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
 import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice";
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
@@ -46,7 +45,7 @@ function FreezeWatchSection({
   return (
     <section className="space-y-3 animate-in fade-in duration-300">
       <div className="space-y-1">
-        <p className="pharos-kicker">{eyebrow}</p>
+        <p className="pharos-label">{eyebrow}</p>
         <h2 className="pharos-section-title">{title}</h2>
         {description ? <p className="pharos-meta max-w-3xl">{description}</p> : null}
       </div>
@@ -58,7 +57,7 @@ function FreezeWatchSection({
 function HeroStat({ label, value, loading }: { label: string; value: string; loading: boolean }) {
   return (
     <div className="space-y-1">
-      <dt className="pharos-kicker">{label}</dt>
+      <dt className="pharos-label">{label}</dt>
       {loading ? (
         <Skeleton className="h-7 w-24" />
       ) : (
@@ -134,6 +133,8 @@ export default function FreezeWatchClient() {
   const freezableSummary = computeFreezableSummary(blacklistStatusBuckets);
   const { freezableMarketCap, freezableCount, freezableShare } = freezableSummary;
   const supplyAvailable = freezableSummary.coverage !== "unavailable";
+  // Every active coin with a freeze-control bucket: the hero's coin denominator.
+  const classifiedCount = freezableSummary.ordered.reduce((sum, bucket) => sum + bucket.count, 0);
 
   return (
     <FeaturePageShell
@@ -144,8 +145,9 @@ export default function FreezeWatchClient() {
         version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       }}
+      header="instrument"
       leadParagraphs={[
-        "The stablecoin freeze and blacklist tracker: live issuer freeze, release, and wipe events — with affected addresses, frozen value, and direct vs. upstream exposure per asset.",
+        "Live issuer freeze, release, and wipe events, with affected addresses, frozen value, and direct vs. upstream exposure per asset.",
       ]}
     >
       {focusedCoinId ? (
@@ -179,7 +181,7 @@ export default function FreezeWatchClient() {
             {heroLoading && !heroUnavailable ? (
               <Skeleton className="h-10 w-32" />
             ) : (
-              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+              <p className={HERO_KPI_VALUE_CLASS}>
                 {heroUnavailable || freezableShare === null || freezableSummary.coverage === "unavailable"
                   ? "—"
                   : formatShare(freezableShare)}
@@ -188,6 +190,9 @@ export default function FreezeWatchClient() {
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
               of {freezableSummary.coverage === "partial" ? "observed" : "tracked"} stablecoin market cap sits under direct, upstream, or possible issuer freeze control.
             </p>
+            {heroUnavailable || heroLoading ? null : (
+              <UniverseChip universe="active" value={`${classifiedCount} coins classified`} />
+            )}
           </div>
           <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
             <HeroStat
@@ -197,7 +202,7 @@ export default function FreezeWatchClient() {
             />
             <HeroStat
               label="Freezable coins"
-              value={heroUnavailable ? "—" : String(freezableCount)}
+              value={heroUnavailable ? "—" : `${freezableCount} / ${classifiedCount}`}
               loading={heroLoading && !heroUnavailable}
             />
           </dl>

@@ -26,7 +26,7 @@ export function HomeAltUpcomingHorizonConstellation(): React.JSX.Element | null 
             />
           </div>
         </div>
-        <p className="max-w-[13rem] text-[10px] leading-snug text-muted-foreground sm:max-w-none sm:text-sm">
+        <p className="max-w-[13rem] text-3xs leading-snug text-muted-foreground sm:max-w-none sm:text-sm">
           Explore announced stablecoins and their varying levels of readiness.
         </p>
       </div>

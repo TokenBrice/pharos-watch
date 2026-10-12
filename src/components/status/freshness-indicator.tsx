@@ -111,7 +111,7 @@ export function FreshnessIndicator({
             data-state={isUnavailable ? "unavailable" : isStale ? "stale" : "current"}
             data-stale={isStale ? "true" : "false"}
             className={cn(
-              "inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium",
+              "inline-flex cursor-help items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-medium",
               compact && "min-h-6 rounded-md px-2 py-0 leading-none",
               isStale || isUnavailable
                 ? SEVERITY_TONE_CLASS.watch.pill
@@ -134,7 +134,7 @@ export function FreshnessIndicator({
             <span className="sr-only">{fullLabel}</span>
           </time>
         </TooltipTrigger>
-        <TooltipContent className="text-[11px]">{fullLabel}</TooltipContent>
+        <TooltipContent className="text-2xs">{fullLabel}</TooltipContent>
       </Tooltip>
       <FreshnessTransitionAnnouncer
         labelPrefix={labelPrefix}

@@ -136,7 +136,7 @@ export function ScreenerToolbar({
         <div className="min-w-0" aria-live="polite">
           <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {/* One Beam: the live matched-coin count is the page's single frost figure. */}
-            <span className="pharos-numeric text-2xl font-semibold leading-none text-frost-blue">
+            <span className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
               {matchingRows.toLocaleString("en-US")}
             </span>
             <span className="text-sm font-medium text-muted-foreground">
@@ -167,8 +167,8 @@ export function ScreenerToolbar({
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
         <div className="space-y-2">
-          <span className="pharos-kicker" id={`${groupId}-safety-grades`}>
-            Safety Grade
+          <span className="pharos-label" id={`${groupId}-safety-grades`}>
+            Safety grade
           </span>
           {/* Grade pills keep the semantic green→red ramp (a data-driven
               indicator), so they use the pill shape + focus ring but their own
@@ -370,7 +370,7 @@ function FilterPillGroup<V extends string>({
   const labelId = useId();
   return (
     <div className="space-y-2">
-      <span className="pharos-kicker" id={labelId}>
+      <span className="pharos-label" id={labelId}>
         {kicker}
       </span>
       <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={labelId}>
@@ -434,7 +434,7 @@ function ThresholdField({
 
   return (
     <div className="space-y-2">
-      <span className="pharos-kicker" id={`${id}-label`}>
+      <span className="pharos-label" id={`${id}-label`}>
         {label}
       </span>
       <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">

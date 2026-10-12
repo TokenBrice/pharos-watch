@@ -60,7 +60,7 @@ export function MethodologyVersionCard({
       </summary>
       <div className="space-y-4 border-t border-border/60 px-5 pb-5 pt-4 text-sm text-muted-foreground leading-relaxed sm:px-6">
         <div className="rounded-xl border border-border/50 bg-background/45 px-4 py-3">
-          <p className="pharos-kicker">Impact Notes</p>
+          <p className="pharos-label">Impact notes</p>
           <ul className="mt-3 grid gap-2 sm:grid-cols-2">
             {entry.impact.map((item) => (
               <li key={item} className="flex items-start gap-2">

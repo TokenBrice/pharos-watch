@@ -84,7 +84,7 @@ export function LiquidityClient() {
 
   const leaderboardToolbar = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <h2 className="pharos-kicker">Liquidity Leaderboard</h2>
+      <h2 className="pharos-label">Liquidity leaderboard</h2>
       <div className="flex flex-wrap items-center gap-2">
         <ControlPillToggle
           className="flex flex-wrap gap-1.5"
@@ -161,7 +161,7 @@ export function LiquidityClient() {
       {unratedRows.length > 0 && (
         <div className="space-y-3">
           <div className="space-y-1">
-            <h2 className="pharos-kicker">Unrated / Not Observed</h2>
+            <h2 className="pharos-label">Unrated / not observed</h2>
             <p className="text-sm text-muted-foreground">
               These assets are tracked, but the current liquidity pipeline has not observed enough DEX coverage to
               assign a Liquidity Score.

@@ -215,7 +215,7 @@ function DeliveryPriority({ model }: { model: CommsWorkbenchModel }) {
     <dl className="grid min-w-0 grid-cols-1 gap-x-5 sm:grid-cols-2 xl:grid-cols-3" data-testid="comms-priority-order">
       {model.priorityMetrics.map((metric) => (
         <div key={metric.id} className="min-w-0 border-t border-border/60 py-3" data-metric-id={metric.id}>
-          <dt className="text-xs font-medium uppercase text-muted-foreground">{metric.label}</dt>
+          <dt className="pharos-label">{metric.label}</dt>
           <dd className="min-w-0 pt-1 [overflow-wrap:anywhere]">
             <PriorityValue metric={metric} model={model} />
           </dd>

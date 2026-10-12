@@ -10,8 +10,8 @@ import {
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,
 } from "@shared/lib/mint-burn-valuation";
-import { aggregateCoinFlows24h, resolveCoinNetFlow } from "@/lib/mint-burn-coin-helpers";
-import { describeMintBurnVolumeBound, sumMintBurnSignedNets } from "@/lib/mint-burn-valuation-display";
+import { aggregateCoinFlows24h, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
+import { describeMintBurnVolumeBound, sumMintBurnSignedNets } from "@shared/lib/mint-burn-valuation-display";
 
 export type FlowReceiptTone = "mint" | "burn" | "net" | "scope";
 

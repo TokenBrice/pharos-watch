@@ -11,8 +11,8 @@ const TILE_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {
 
 const LABEL_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {
   default: "text-xs text-muted-foreground",
-  tile: "text-[11px] uppercase tracking-[0.18em] text-muted-foreground",
-  yield: "text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+  tile: "pharos-label",
+  yield: "pharos-label",
 };
 
 const VALUE_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {
@@ -24,7 +24,7 @@ const VALUE_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {
 const SUBTEXT_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {
   default: "text-xs text-muted-foreground",
   tile: "text-xs text-muted-foreground",
-  yield: "text-[11px] text-muted-foreground",
+  yield: "text-2xs text-muted-foreground",
 };
 
 const VALUE_WRAP_CLASS_BY_VARIANT: Record<StatTileVariant, string> = {

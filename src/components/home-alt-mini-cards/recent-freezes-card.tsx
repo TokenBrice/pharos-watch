@@ -138,7 +138,7 @@ export function RecentFreezesCard(): React.JSX.Element {
             onClick={() => setWindowKey("24h")}
             aria-pressed={windowKey === "24h"}
             data-state={windowKey === "24h" ? "on" : "off"}
-            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-2xs leading-none"
           >
             24h
           </button>
@@ -147,7 +147,7 @@ export function RecentFreezesCard(): React.JSX.Element {
             onClick={() => setWindowKey("7d")}
             aria-pressed={windowKey === "7d"}
             data-state={windowKey === "7d" ? "on" : "off"}
-            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-[11px] leading-none"
+            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-2xs leading-none"
           >
             7d
           </button>
@@ -183,7 +183,7 @@ export function RecentFreezesCard(): React.JSX.Element {
         <span aria-hidden="true" className="font-mono text-sm text-muted-foreground/40">
           ·
         </span>
-        <span className="pharos-numeric text-[11px] uppercase tracking-wider text-muted-foreground/70">
+        <span className="pharos-numeric text-2xs uppercase text-muted-foreground/70">
           {count.toLocaleString("en-US")}X
         </span>
       </div>
@@ -205,7 +205,7 @@ export function RecentFreezesCard(): React.JSX.Element {
                   <span aria-hidden="true" className="text-muted-foreground/40">
                     ·
                   </span>
-                  <span className="uppercase pharos-numeric text-muted-foreground/80">
+                  <span className="pharos-numeric text-muted-foreground/80">
                     {formatRelativeDurationSeconds(ev.ageSec, { nowLabel: "now" })}
                   </span>
                 </span>

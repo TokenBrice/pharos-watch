@@ -115,9 +115,9 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
         aria-controls={panelId}
       >
         <span className="flex items-center gap-2">
-          <span className="pharos-kicker text-sky-700 dark:text-sky-400">Inputs · {item.title}</span>
+          <span className="pharos-label text-sky-700 dark:text-sky-400">Inputs · {item.title}</span>
           {table.versionLabel ?? item.versionLabel ? (
-            <span className="font-mono text-[10px] text-muted-foreground">
+            <span className="font-mono text-3xs text-muted-foreground">
               {table.versionLabel ?? item.versionLabel}
             </span>
           ) : null}
@@ -130,7 +130,7 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
 
       {open ? (
         <div id={panelId} className="mt-2 space-y-2">
-          <p className="font-mono text-[11px] text-muted-foreground">{table.formula}</p>
+          <p className="font-mono text-2xs text-muted-foreground">{table.formula}</p>
 
           <TableFrame
             tableId={`show-your-work-${table.topic}`}
@@ -184,7 +184,7 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
           <button
             type="button"
             onClick={() => setFeedbackOpen(true)}
-            className="pharos-focus-ring rounded-sm text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
+            className="pharos-focus-ring rounded-sm text-2xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
           >
             Discrepancy? Report it
           </button>

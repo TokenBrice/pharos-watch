@@ -20,7 +20,7 @@ Raw values with no semantic meaning. Do not reference directly in components unl
 
 - **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent (`#4BC4DE`, sampled from Figma); scale stops run 50–900 in OKLch (red extends to 950; neutral runs 50–975 with additional 850/925/950/975 stops)
 - **Spacing** — 4px-based scale from `--p-space-0` to `--p-space-20`, with `--p-space-0-5` (2px) and `--p-space-1-5` (6px) half steps for tight UI alignment
-- **Typography** — Font sizes (`--p-text-xs` to `--p-text-5xl`), line heights, tracking
+- **Typography** — Font sizes (`--p-text-3xs` to `--p-text-5xl`), line heights, tracking (see [Type scale](#type-scale))
 - **Radius** — `--p-radius-none` to `--p-radius-full`
 
 Naming: `--p-{category}-{value}` (e.g., `--p-blue-500`, `--p-space-4`)
@@ -75,6 +75,35 @@ Scoped to specific UI components. Optional — use when a component needs tokens
 - **Table** — `--table-header-bg`, `--table-row-hover`, `--table-row-stripe`, `--table-border`, `--table-header-shadow`, `--table-sticky-column-*`
 - **Code surface** — `--code-surface-bg`, `--code-surface-fg`, `--code-surface-muted`, `--code-surface-border` (terminal code blocks stay deliberately dark in both themes)
 
+## Type scale
+
+The `--p-text-*` primitives are the single source for Tailwind's `text-*` sizes: a `@theme` block in `globals.css` maps each one, so `text-xs` and `var(--p-text-xs)` cannot drift.
+
+| Utility | Size | Line height | Use |
+| --- | --- | --- | --- |
+| `text-3xs` | 10px | 14px | Dense chart, legend and axis annotations only |
+| `text-2xs` | 11px | 16px | Compact chips, table meta, uppercase eyebrows |
+| `text-xs` | 12px | 16px | Labels (`.pharos-label`), captions, `.pharos-meta` |
+| `text-sm` | 14px | 20px | Body and UI text |
+| `text-base` … `text-5xl` | 16–48px | Tailwind defaults | Titles and display (`.pharos-section-title`, `.pharos-page-title`) |
+
+- Arbitrary pixel sizes (`text-[11px]`, `sm:text-[10.5px]`) are banned in `src/components/` and `src/app/` by the ESLint rule `pharos/no-arbitrary-text-px`. Existing call sites are grandfathered per file in the root `eslint-suppressions.json` (ESLint bulk suppressions: a per-file count ratchet). A new violation fails `npm run lint`; after removing some, run `npx eslint src/app src/components --prune-suppressions` so the baseline only shrinks. Never add entries by hand or re-run `--suppress-rule` to absorb new violations.
+- Map `text-[10px]` → `text-3xs`, `text-[11px]` → `text-2xs`, `text-[12px]` → `text-xs`, `text-[13px]` / `text-[15px]` → the nearest step (`text-xs`/`text-sm`, `text-sm`/`text-base`) unless a tight cell layout needs a reviewed exception. `text-[clamp(...)]` and rem display sizes on editorial/hero titles stay legal.
+- One positive tracking step exists: `tracking-eyebrow` (`--p-tracking-eyebrow`, 0.08em), for uppercase eyebrows only. Sentence-case labels use normal tracking; titles use `tracking-tight`.
+
+### Label and figure utilities
+
+| Utility | Face | Treatment | Use |
+| --- | --- | --- | --- |
+| `.pharos-label` | sans | 12px, 600, sentence case, muted, normal tracking | Section labels, card kickers, stat/field labels (`dt`), group headings |
+| `.pharos-kicker` | — | Legacy name of `.pharos-label` (same rule) | Rename to `.pharos-label` when touched |
+| `.pharos-eyebrow` | sans | 11px, 600, UPPERCASE, `tracking-eyebrow`, muted | At most one short route/hero eyebrow above a title |
+| `.pharos-numeric` | JetBrains Mono | `tabular-nums slashed-zero` | Figures, tickers, addresses, codes, timestamps |
+
+Labels never use mono; mono never carries a label or prose. Write label strings in sentence case in source ("Top contributors", not "TOP CONTRIBUTORS" or "Top Contributors"); acronyms and tickers keep their capitals.
+
+`.pharos-page-title`, `.pharos-display` and `.pharos-section-title` set `text-wrap: balance`; `.pharos-lead`, `.pharos-page-lead` (18–20px editorial subtitle) and `.pharos-page-deck` (16px deck under every `FeaturePageShell` H1) set `text-wrap: pretty`.
+
 ## Bridge Layer (`src/app/globals.css`)
 
 Existing shadcn/ui variables (`--background`, `--card`, `--foreground`, etc.) are wired to semantic tokens through a bridge layer in `globals.css`. This means:
@@ -102,7 +131,7 @@ Authored shell utilities live in `src/app/globals.css` under `@layer components`
 
 - `pharos-control-pill` — canonical small-control shell (`src/app/globals.css`). Use for time-range controls, density toggles, lens pills, hero tertiary chips, scrollspy pills, and any dense secondary action surface. See [`design-language.md`](design-language.md#control-pills) for the visual contract.
 
-Other shared utilities (`pharos-card-shell`, `pharos-kicker`, `pharos-focus-ring`, `pharos-interactive-card`, `pharos-chart-stage`, `pharos-table-shell`, etc.) are catalogued in [`design-language.md`](design-language.md#shared-utility-classes).
+Label and figure utilities are indexed under [Type scale](#label-and-figure-utilities). Other shared utilities (`pharos-card-shell`, `pharos-focus-ring`, `pharos-interactive-card`, `pharos-chart-stage`, `pharos-table-shell`, etc.) are catalogued in [`design-language.md`](design-language.md#shared-utility-classes).
 
 ## JS Token Maps
 
@@ -130,7 +159,7 @@ For colors needed at JS runtime (Recharts, canvas, dynamic styles):
 - Reference primitives (`--p-blue-500`) directly in components, except when a documented local visualization intentionally needs a primitive ramp before a semantic token exists
 - Hardcode hex values in chart components — use the runtime maps (`PEG_BAND_HEX` belongs to `shared/lib/classification.ts`). The market-cap delta colors in `src/components/mcap-chart.tsx` are an intentional local exception.
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
-- Define one-off color variables in individual component files
+- Define one-off color variables in individual component files. Exception: isometric scenes keep a local atmospheric layer in `src/components/scene/scene-tokens.module.css` (sea, earth, rock, the lighthouse, hairlines, light and dark), plus each scene's art direction. These tokens encode materials, never data ([Data Visualization: Scene Kit](./data-visualization.md#scene-kit)).
 
 ### Adding a New Token
 

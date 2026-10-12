@@ -12,6 +12,7 @@ import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
+import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { PegSummaryCoin } from "@shared/types";
 
@@ -32,8 +33,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
   const logoMap = logos ?? {};
 
   const activeCoins = useMemo(
-    () => (pegSummaryData?.coins ?? []).filter((coin) =>
-      ACTIVE_STABLECOIN_ID_SET.has(coin.id) && coin.activeDepeg),
+    () => selectActiveDepegCoins(pegSummaryData?.coins ?? [], ACTIVE_STABLECOIN_ID_SET),
     [pegSummaryData?.coins],
   );
   // The complete summary owns the incident census; the event page supplies detail only.
@@ -92,7 +92,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
       }
       emptyContent={
         <div className="flex flex-1 items-center justify-center">
-          <span className="font-mono text-sm uppercase tracking-wider text-green-700 dark:text-green-400">
+          <span className="pharos-label text-sm text-green-700 dark:text-green-400">
             No active incidents
           </span>
         </div>
@@ -101,9 +101,9 @@ export function ActiveDepegsCard(): React.JSX.Element {
     >
       <div className="flex items-baseline gap-2 pharos-numeric font-bold tracking-tight">
         <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>{activeCount}</span>
-        <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">active</span>
+        <span className="pharos-label">active</span>
         {activeRows.length > 4 ? (
-          <span className="ml-auto hidden font-mono text-[10px] font-normal uppercase tracking-wider text-muted-foreground sm:inline">
+          <span className="ml-auto hidden pharos-meta sm:inline">
             Top 4 by deviation
           </span>
         ) : null}
@@ -156,7 +156,7 @@ function DepegRow({
             )}
           </span>
         </span>
-        <span className="uppercase pharos-numeric text-muted-foreground">
+        <span className="pharos-numeric text-muted-foreground">
           {row.ageSec != null ? formatElapsedSeconds(row.ageSec) : "Age unavailable"}
         </span>
       </Link>

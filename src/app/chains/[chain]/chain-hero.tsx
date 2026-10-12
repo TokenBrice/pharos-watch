@@ -166,7 +166,7 @@ function FactorRow({
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-2 text-xs">
         <MethodologyLabel topic={methodology} className="text-xs">
-          <span className="pharos-kicker cursor-help">
+          <span className="pharos-label cursor-help">
             {label} <span className="font-mono normal-case tracking-normal text-muted-foreground/80">({Math.round(weight * 100)}%)</span>
           </span>
         </MethodologyLabel>
@@ -183,7 +183,7 @@ function FactorRow({
         )}
       </div>
       {context ? (
-        <p className="text-[11px] leading-snug text-muted-foreground">{context}</p>
+        <p className="text-2xs leading-snug text-muted-foreground">{context}</p>
       ) : null}
     </div>
   );
@@ -254,8 +254,8 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
   return (
     <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
       <div>
-        <p className="pharos-kicker">{unavailableCount > 0 ? "Partial Supply" : "Total Supply"}</p>
-        <div className="pharos-numeric mt-1 text-2xl font-bold leading-none text-frost-blue">
+        <p className="pharos-label">{unavailableCount > 0 ? "Partial Supply" : "Total Supply"}</p>
+        <div className="pharos-numeric mt-1 text-2xl font-bold leading-none text-foreground">
           {chain ? formatCompactUsd(chain.totalUsd) : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-24" />}
         </div>
         {unavailableCount > 0 ? (
@@ -263,7 +263,7 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
         ) : null}
       </div>
       <div>
-        <p className="pharos-kicker">{partialShare ? "Partial Global Share" : "Global Share"}</p>
+        <p className="pharos-label">{partialShare ? "Partial Global Share" : "Global Share"}</p>
         <div className="mt-1 font-mono text-2xl font-bold leading-none tabular-nums">
           {chain ? `${(chain.dominanceShare * 100).toFixed(1)}%` : supplyUnavailable ? "Unavailable" : <Skeleton className="h-7 w-16" />}
         </div>
@@ -273,7 +273,7 @@ function MarketMetrics({ chain, supplyCoverage, supplyUnavailable }: {
       </div>
       {TREND_WINDOWS.map(({ key, label }) => (
         <div key={key}>
-          <p className="pharos-kicker">{label}</p>
+          <p className="pharos-label">{label}</p>
           <div className="mt-1 leading-none">
             {chain ? <TrendValue value={chain[key]} /> : <Skeleton className="h-5 w-16" />}
           </div>
@@ -297,7 +297,7 @@ function HealthZone({
   return (
     <section className="space-y-5" aria-label="Chain Health">
       <div className="flex items-start justify-between gap-3">
-        <p className="pharos-kicker">Chain Health Score</p>
+        <p className="pharos-label">Chain health score</p>
         <MethodologyHint topic="chainHealth" />
       </div>
 

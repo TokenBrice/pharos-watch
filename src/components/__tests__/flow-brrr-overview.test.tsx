@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
-import { MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@/lib/mint-burn-valuation-display";
+import { MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@shared/lib/mint-burn-valuation-display";
 import { formatSignedCurrency } from "@shared/lib/format";
 
 vi.mock("@/components/flow-machine-scene", () => ({

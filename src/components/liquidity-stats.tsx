@@ -47,7 +47,7 @@ function AggregateBreakdownCard({
   return (
     <Card className="rounded-xl">
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">{title}</CardTitle>
+        <CardTitle className="pharos-label">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <BreakdownBar

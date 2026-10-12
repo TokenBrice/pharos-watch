@@ -26,7 +26,7 @@ export function TableViewport({
   return (
     <>
       {mobileScrollHint ? (
-        <div className="border-b border-border/50 px-4 py-2 text-[11px] font-medium text-muted-foreground sm:hidden">
+        <div className="border-b border-border/50 px-4 py-2 text-2xs font-medium text-muted-foreground sm:hidden">
           {mobileScrollHint}
         </div>
       ) : null}

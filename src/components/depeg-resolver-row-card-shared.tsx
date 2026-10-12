@@ -15,7 +15,7 @@ import {
 } from "@/components/depeg-resolver-row-card-model";
 
 export function StageLabel({ children }: { children: ReactNode }) {
-  return <p className="pharos-kicker">{children}</p>;
+  return <p className="pharos-label">{children}</p>;
 }
 
 function MetadataPill({ label, value }: { label: string; value: ReactNode }) {
@@ -82,7 +82,7 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
-      <span className="pharos-kicker font-sans">
+      <span className="pharos-label font-sans">
         Live incident
       </span>
       <span>
@@ -96,7 +96,7 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
           now <span className="text-foreground">{formatBps(currentDeviationBps)}</span>
         </span>
       ) : null}
-      {status ? <span className="uppercase tracking-wide text-foreground/70">{status}</span> : null}
+      {status ? <span className="uppercase text-foreground/70">{status}</span> : null}
       {live.degradedReason ? (
         <span className="w-full text-muted-foreground">Live overlay degraded: {live.degradedReason}.</span>
       ) : null}

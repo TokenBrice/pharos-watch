@@ -3,8 +3,8 @@ import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-he
 /**
  * Shared interior-page hero shell, modeled on the locked homepage `HomeAltHero`
  * composition (DESIGN.md §5 "Homepage Composition"). A single flat
- * `pharos-card-shell` split into a frost-blue "One Beam" headline figure on the
- * left and a drawn metaphor / live chart on the right, separated by hairline
+ * `pharos-card-shell` split into a neutral headline figure (answer KPI plus its
+ * universe chip) on the left and a drawn metaphor / live chart on the right, separated by hairline
  * dividers. Consumed by the Markets-tab pages (liquidity, alt-pegs, yield,
  * upcoming). The homepage hero stays its own bespoke component — this does not
  * replace it.
@@ -13,16 +13,24 @@ import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-he
  * first child inside the shell, not as a title replacement.
  */
 
-const DEFAULT_BEAM_VALUE_CLASS =
-  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]";
+/**
+ * The rail-page hero KPI recipe, shared by heroes that do not use this split
+ * shell (FreezeWatch, Depeg). Neutral ink: a hero figure takes color only from
+ * a semantic scale in `shared/lib/classification.ts` (grade, severity, regime),
+ * never from the frost brand accent.
+ */
+export const HERO_KPI_VALUE_CLASS =
+  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]";
 
 export interface FeatureHeroSplitProps {
   /** Small muted label above the beam figure (e.g. "Aggregate DEX Depth"). */
   beamLabel: React.ReactNode;
-  /** The frost-blue headline figure — caller pre-formats the value. */
+  /** The headline figure (neutral ink) — caller pre-formats the value. */
   beamValue: React.ReactNode;
-  /** Override the default frost numeric recipe (rarely needed). */
+  /** Override the default numeric recipe (rarely needed). */
   beamValueClassName?: string;
+  /** Denominator chip under the figure (`UniverseChip`), naming what it counts. */
+  universe?: React.ReactNode;
   /** Optional `title` tooltip on the beam label (e.g. shadow-asset note). */
   beamTitle?: string;
   /** Corner module-jump button. Omit to hide. */
@@ -50,6 +58,7 @@ export function FeatureHeroSplit({
   beamValue,
   beamValueClassName,
   beamTitle,
+  universe,
   expand,
   subKicker,
   sub,
@@ -75,7 +84,8 @@ export function FeatureHeroSplit({
             </p>
             {expand ? <CardExpandButton href={expand.href} expandLabel={expand.label} className="-mr-2" /> : null}
           </div>
-          <p className={beamValueClassName ?? DEFAULT_BEAM_VALUE_CLASS}>{beamValue}</p>
+          <p className={beamValueClassName ?? HERO_KPI_VALUE_CLASS}>{beamValue}</p>
+          {universe ? <div>{universe}</div> : null}
         </div>
       </div>
 
@@ -89,7 +99,7 @@ export function FeatureHeroSplit({
         <div
           className={`${mobileSubBeforeVisual ? "order-2" : ""} space-y-2 p-5 sm:p-6 lg:order-none lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7`}
         >
-          {subKicker ? <p className="pharos-kicker">{subKicker}</p> : null}
+          {subKicker ? <p className="pharos-label">{subKicker}</p> : null}
           {sub}
         </div>
       ) : null}

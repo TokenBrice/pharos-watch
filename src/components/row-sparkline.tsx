@@ -239,7 +239,7 @@ export function RowSparkline({
   if (prepared.length < minPoints) {
     return emptyContent !== undefined ? emptyContent : (
       <span
-        className={cn("inline-flex font-mono text-[10px] text-muted-foreground", className)}
+        className={cn("inline-flex font-mono text-3xs text-muted-foreground", className)}
         aria-label={ariaLabel}
         data-testid="row-sparkline-empty"
       >

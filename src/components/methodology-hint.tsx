@@ -91,11 +91,11 @@ function HintBody({ topic, className }: { topic: MethodologyContextKey; classNam
   return (
     <div className={cn("space-y-2", className)}>
       <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{item.title}</p>
+        <p className="pharos-label">{item.title}</p>
         <p className="text-xs leading-relaxed text-foreground">{item.summary}</p>
-        {item.detail ? <p className="text-[11px] leading-relaxed text-muted-foreground">{item.detail}</p> : null}
+        {item.detail ? <p className="text-2xs leading-relaxed text-muted-foreground">{item.detail}</p> : null}
       </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground">
         <MethodologyLinks item={item} />
       </div>
     </div>
@@ -118,10 +118,12 @@ export function MethodologyHint({
   const renderTrigger = (): ReactNode => {
     if (!hasInlineTrigger) {
       return (
+        // The visual circle stays 24px at every width; the transparent `after`
+        // overlay extends the touch target to 44px without enlarging the icon.
         <MethodologyTriggerButton
           topic={topic}
           className={cn(
-            "pharos-focus-ring inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:h-6 md:w-6 dark:text-frost-blue",
+            "pharos-focus-ring relative inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-frost-blue/25 bg-frost-blue/10 text-sky-700 transition-colors after:absolute after:-inset-2.5 after:content-[''] hover:border-frost-blue/45 hover:bg-frost-blue/14 hover:text-foreground md:after:hidden dark:text-frost-blue",
             buttonClassName,
           )}
         >
@@ -152,7 +154,7 @@ export function MethodologyHint({
           <SheetTrigger asChild>{renderTrigger()}</SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-3xl border-border/70 bg-background/98 pb-6" showCloseButton>
             <SheetHeader className="space-y-2 border-b border-border/60 pb-4">
-              <p className="pharos-kicker">Methodology Context</p>
+              <p className="pharos-label">Methodology context</p>
               <SheetTitle>{item.title}</SheetTitle>
               <SheetDescription>How this metric is computed and how to read it.</SheetDescription>
             </SheetHeader>
@@ -200,7 +202,7 @@ export function MethodologyLabel({
         topic={topic}
         buttonClassName={
           compact
-            ? "!h-11 !w-11 !min-h-11 border-frost-blue/35 bg-frost-blue/12 text-frost-blue md:!h-6 md:!w-6 md:!min-h-0"
+            ? "border-frost-blue/35 bg-frost-blue/12 text-frost-blue"
             : undefined
         }
       />

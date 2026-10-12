@@ -31,7 +31,15 @@ import {
 } from "@/lib/severity-colors";
 import { eventClassSlug } from "@/lib/tape-collapse";
 import { tapeClassRowBg, tapeClassChipBg } from "@/lib/tape-class-style";
-import { baseEventType, deriveTicker, firstSentence, formatAbsoluteDate } from "@/lib/tape-derive";
+import {
+  baseEventType,
+  deriveTicker,
+  firstSentence,
+  formatAbsoluteDate,
+  formatTapeEventSummary,
+  formatTapeEventTitle,
+} from "@/lib/tape-derive";
+import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { formatCompactUsd, formatUtcDayLabel, getNetPrefix } from "@shared/lib/format";
@@ -275,9 +283,10 @@ function YieldEnrichment({ event }: { event: TapeEvent }) {
       {visible.map((signal) => (
         <span
           key={signal}
+          title={formatYieldWarningSignalDescription(signal)}
           className="inline-flex items-center rounded border border-border/60 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-400"
         >
-          {signal}
+          {formatYieldWarningSignal(signal)}
         </span>
       ))}
       {signals.length > visible.length ? (
@@ -451,7 +460,8 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
   // For coin events the title is redundant with [ticker + type + enrichment];
   // for non-coin events (methodology, lifecycle without coin) the title is the
   // primary descriptive content and we surface it as the body line.
-  const summaryLine = event.summary && event.summary.length > 0 ? event.summary : (!coinId ? event.title : "");
+  const displaySummary = formatTapeEventSummary(event);
+  const summaryLine = displaySummary.length > 0 ? displaySummary : (!coinId ? formatTapeEventTitle(event) : "");
   const { copied, copy } = useCopyToClipboard();
 
   const handleCopyPermalink = useCallback((e: React.MouseEvent) => {
@@ -465,7 +475,7 @@ function EventCardImpl({ event, logoSrc, highlighted = false, domId, count = 1 }
   const typeSlug = event.type.toLowerCase();
   const absoluteHhMm = formatHhMm(event.ts);
   const relativeShort = formatRelativeTimeMs(event.ts, { withSuffix: false });
-  const summarySentence = event.summary ? firstSentence(event.summary) : "";
+  const summarySentence = displaySummary ? firstSentence(displaySummary) : "";
   const ariaParts = [
     ticker,
     humanizeEventType(event.type),

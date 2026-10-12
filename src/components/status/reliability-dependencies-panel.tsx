@@ -61,7 +61,7 @@ export function ReliabilityDependenciesPanel({ model }: { model: ReliabilityDepe
                 <TableRow key={root.id}>
                   <TableCell className="min-w-52 whitespace-normal align-top">
                     <div className="font-medium text-foreground">{root.label}</div>
-                    <code className="text-[10px] text-muted-foreground">{root.id}</code>
+                    <code className="text-3xs text-muted-foreground">{root.id}</code>
                   </TableCell>
                   <TableCell className="align-top">
                     <StatusPill className={stateClass(root.status)}>{root.status}</StatusPill>
@@ -169,7 +169,7 @@ export function ReliabilityDependenciesPanel({ model }: { model: ReliabilityDepe
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-foreground">{check.label}</div>
                   <p className="mt-1 text-xs text-muted-foreground">{check.error ?? check.description}</p>
-                  <code className="mt-1 block text-[10px] text-muted-foreground">{check.checkId}</code>
+                  <code className="mt-1 block text-3xs text-muted-foreground">{check.checkId}</code>
                 </div>
                 <StatusPill className={stateClass(check.status)}>{check.status}</StatusPill>
               </div>

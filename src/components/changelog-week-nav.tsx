@@ -107,7 +107,7 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
           return (
             <span key={month.key} className="contents">
               {showYear && (
-                <span className="pharos-numeric shrink-0 pl-1 pr-0.5 text-[11px] font-medium text-muted-foreground/70">
+                <span className="pharos-numeric shrink-0 pl-1 pr-0.5 text-2xs font-medium text-muted-foreground/70">
                   {month.year}
                 </span>
               )}
@@ -130,7 +130,7 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
                 />
                 <span className="pharos-numeric">{month.label}</span>
                 {isLatest && (
-                  <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-sans font-semibold uppercase tracking-wider text-foreground">
+                  <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-3xs font-sans font-semibold uppercase text-foreground">
                     Latest
                   </span>
                 )}

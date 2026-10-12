@@ -213,13 +213,13 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
       <CardTrendStrips coinId={rec.id} symbol={rec.symbol} safetyGrade={rec.safetyGrade} isMobile={isMobile} />
 
       <div className="mt-3 space-y-1.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Evidence checked</p>
+        <p className="pharos-label">Evidence checked</p>
         <ul className="flex flex-wrap gap-1.5" aria-label="Profile-conditioned evidence">
           {chips.map((chip) => (
             <li key={`${chip.label}:${chip.value}`}>
               <span
                 className={cn(
-                  "inline-flex items-baseline gap-1 rounded-full border px-2 py-0.5 text-[11px]",
+                  "inline-flex items-baseline gap-1 rounded-full border px-2 py-0.5 text-2xs",
                   chip.tone === "watch"
                     ? "border-amber-500/40 bg-amber-500/[0.07] text-amber-800 dark:text-amber-200"
                     : "border-border/60 bg-background/55 text-foreground",
@@ -242,7 +242,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
 
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-foreground">
         <div className="space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+          <p className="pharos-label">
             Why it ranked here
           </p>
           {resolvedWhyText && resolvedWhyText.length > 0 ? (
@@ -255,7 +255,7 @@ export function SelectorShortlistCard(props: SelectorShortlistCardProps) {
           )}
         </div>
         <div className="space-y-1 text-muted-foreground">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">What to watch</p>
+          <p className="pharos-label text-foreground">What to watch</p>
           {resolvedWatchText && resolvedWatchText.length > 0 ? (
             <p className="break-words">{resolvedWatchText}</p>
           ) : (
@@ -389,7 +389,7 @@ function CardTrendStrips({
     <div className="mt-3 grid gap-2 sm:grid-cols-2">
       {pegAvailable ? (
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">7d peg</p>
+          <p className="pharos-label">7d peg</p>
           <RowSparkline
             data={pegSeries}
             signed
@@ -405,7 +405,7 @@ function CardTrendStrips({
       ) : null}
       {!isMobile && supplyAvailable ? (
         <div className="flex flex-col gap-0.5">
-          <p className="text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">30d supply</p>
+          <p className="pharos-label">30d supply</p>
           <RowSparkline
             data={supplySeries}
             positiveColor={tint}

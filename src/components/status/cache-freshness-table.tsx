@@ -108,7 +108,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
       <TableRow key={key} className="border-b last:border-0">
         <TableCell className="py-2 align-top">
           <div className="font-mono tabular-nums text-xs">{key}</div>
-          <div className="mt-1 text-[11px] text-muted-foreground">
+          <div className="mt-1 text-2xs text-muted-foreground">
             availability budget {formatElapsedSeconds(cache.availabilityMaxAge ?? cache.maxAge)}
           </div>
         </TableCell>
@@ -123,12 +123,12 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         <TableCell className="py-2 align-top text-xs">
           {cache.endpointMaxAge != null ? `basis ${formatElapsedSeconds(cache.endpointMaxAge)}` : "—"}
           {cache.endpointMaxAge != null ? (
-            <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            <div className="mt-1 text-2xs leading-relaxed text-muted-foreground">
               warning after {formatElapsedSeconds(cache.endpointMaxAge * getCacheRatioThresholds(key).degraded)}
             </div>
           ) : null}
           {budgetsDiffer ? (
-            <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            <div className="mt-1 text-2xs leading-relaxed text-muted-foreground">
               endpoint basis differs from availability budget
             </div>
           ) : null}
@@ -148,7 +148,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
         <TableCell className="py-2 align-top">
           <StatusPill className={band.className}>{band.label}</StatusPill>
           {band.thresholdLabel ? (
-            <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{band.thresholdLabel}</div>
+            <div className="mt-1 text-2xs leading-relaxed text-muted-foreground">{band.thresholdLabel}</div>
           ) : null}
         </TableCell>
         <TableCell className="py-2 align-top text-xs leading-relaxed text-muted-foreground">

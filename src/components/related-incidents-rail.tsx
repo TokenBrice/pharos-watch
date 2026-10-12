@@ -148,7 +148,7 @@ export function RelatedIncidentsRail({
       aria-label="Related incidents"
       className={`space-y-3 border-t border-border/50 pt-4 ${className ?? ""}`}
     >
-      <p className="pharos-kicker">Related incidents</p>
+      <p className="pharos-label">Related incidents</p>
       <div className="space-y-4">
         {groups.map((group) => (
           <div key={group.label} className="space-y-1.5">

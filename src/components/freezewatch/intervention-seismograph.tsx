@@ -119,7 +119,7 @@ export function InterventionSeismograph({ stats, chart, isLoading }: Interventio
     <section aria-labelledby={titleId} className="pharos-card-shell p-4 animate-in fade-in duration-300 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
-          <p className="pharos-kicker">Intervention Seismograph</p>
+          <p className="pharos-label">Intervention seismograph</p>
           <h2 id={titleId} className="pharos-section-title">
             Quarterly freeze, release, and wipe events
           </h2>
@@ -156,11 +156,11 @@ export function InterventionSeismograph({ stats, chart, isLoading }: Interventio
         <SeismographSvg points={points} peakTotal={Math.max(1, peakTotal)} />
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-2xs text-muted-foreground">
         <LegendSwatch color={EVENT_CHART_COLORS.blacklist} label={EVENT_LABELS.blacklist} />
         <LegendSwatch color={EVENT_CHART_COLORS.destroy} label={EVENT_LABELS.destroy} />
         <LegendSwatch color={EVENT_CHART_COLORS.unblacklist} label={EVENT_LABELS.unblacklist} />
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
+        <span className="pharos-meta ml-auto">
           height = quarterly event count
         </span>
       </div>
@@ -290,7 +290,7 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
         ))}
       </svg>
       {/* Labels are HTML over the stretched SVG so preserveAspectRatio="none" cannot distort the type. */}
-      <div className="pointer-events-none absolute font-mono text-[10px]" style={{ inset: "0.75rem" }} aria-hidden="true">
+      <div className="pointer-events-none absolute font-mono text-3xs" style={{ inset: "0.75rem" }} aria-hidden="true">
         {annotations.map((annotation) => (
           <span
             key={`label-${annotation.quarter}`}
@@ -327,9 +327,9 @@ function SeismographSvg({ points, peakTotal }: { points: QuarterPoint[]; peakTot
 function SignalStat({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
     <div className="rounded-lg border border-border/65 bg-background/65 px-3 py-2">
-      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+      <p className="pharos-label">{label}</p>
       <p className="mt-0.5 pharos-numeric text-sm font-semibold text-foreground">{value}</p>
-      {detail ? <p className="text-[10px] text-muted-foreground">{detail}</p> : null}
+      {detail ? <p className="text-3xs text-muted-foreground">{detail}</p> : null}
     </div>
   );
 }

@@ -112,7 +112,7 @@ export default function MethodologyPage() {
             <div className="pharos-card-shell px-4 py-4 md:hidden">
               <div className="space-y-3">
                 <div className="space-y-2">
-                  <p className="pharos-kicker">Reader Guide</p>
+                  <p className="pharos-label">Reader guide</p>
                   <p className="text-sm text-foreground">{READER_GUIDE_COPY}</p>
                 </div>
                 <MethodologyModeToggle className="w-full justify-between border-border/70 bg-background/90" />
@@ -123,8 +123,8 @@ export default function MethodologyPage() {
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {METHODOLOGY_READING_STEPS.map((step) => (
                     <div key={step.label} className="rounded-md border border-border/50 bg-background/40 p-2">
-                      <p className="text-[11px] font-semibold text-foreground">{step.label}</p>
-                      <p className="text-[10px] text-muted-foreground leading-snug">{step.description}</p>
+                      <p className="text-2xs font-semibold text-foreground">{step.label}</p>
+                      <p className="text-3xs text-muted-foreground leading-snug">{step.description}</p>
                     </div>
                   ))}
                 </div>
@@ -132,7 +132,7 @@ export default function MethodologyPage() {
             </div>
           </div>
           <div className="hidden pharos-card-shell px-4 py-4 md:block">
-            <p className="pharos-kicker">Reader Guide</p>
+            <p className="pharos-label">Reader guide</p>
             <p className="mt-2 text-sm text-foreground">
               {READER_GUIDE_COPY} Use the jump rail toggle to switch modes without losing your place in the page.
             </p>
@@ -169,7 +169,7 @@ export default function MethodologyPage() {
                 index > 0 ? "xl:border-l xl:pl-4" : "xl:border-l-0 xl:pl-0",
               )}
             >
-              <p className="pharos-kicker">{step.label}</p>
+              <p className="pharos-label">{step.label}</p>
               <p className="text-foreground">{step.description}</p>
             </div>
           ))}
@@ -181,7 +181,7 @@ export default function MethodologyPage() {
         aria-label="Editorial preface"
         className="mx-auto w-full max-w-[88ch] border-y border-border/60 py-10 md:py-12"
       >
-        <p className="pharos-kicker text-foreground/80">Editorial Preface</p>
+        <p className="pharos-label text-foreground/80">Editorial preface</p>
         <h2
           className="mt-3 text-[clamp(1.65rem,3.2vw,2.35rem)] font-semibold leading-tight tracking-tight text-foreground [text-wrap:balance]"
         >

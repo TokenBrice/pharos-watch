@@ -33,21 +33,21 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <div className="flex items-center gap-2.5">
-          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-[0.08em] text-background">
+          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-2xs font-bold text-background">
             DDR
           </span>
           <h2 className="pharos-section-title">Depeg Duration Resolver</h2>
           {versionLabel ? (
             <Badge
               variant="outline"
-              className="border-border/60 bg-muted/40 px-1.5 py-0 text-[10px] font-mono uppercase tracking-wide text-muted-foreground"
+              className="border-border/60 bg-muted/40 px-1.5 py-0 text-3xs font-mono uppercase text-muted-foreground"
             >
               {versionLabel}
             </Badge>
           ) : null}
           <Badge
             variant="outline"
-            className="border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-400"
+            className="border-amber-500/30 bg-amber-500/10 px-1.5 py-0 text-3xs uppercase text-amber-700 dark:text-amber-400"
           >
             Beta
           </Badge>
@@ -63,7 +63,7 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
           />
         </div>
         {lineage ? (
-          <p className="pharos-numeric text-[10px] text-muted-foreground">
+          <p className="pharos-numeric text-3xs text-muted-foreground">
             calibrated on {lineage.incidentCount.toLocaleString()} recovered incidents · {lineage.coinCount} coins
           </p>
         ) : null}

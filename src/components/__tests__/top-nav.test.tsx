@@ -123,7 +123,7 @@ describe("TopNav", () => {
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
     const resources = NAV_GROUPS.find((menu) => menu.key === "more");
-    const columnHeadings = [...document.querySelectorAll("p.pharos-kicker")].map((node) => node.textContent);
+    const columnHeadings = [...document.querySelectorAll("p.pharos-label")].map((node) => node.textContent);
     expect(columnHeadings).toEqual(resources?.columns?.map((column) => column.label));
     expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: true });
 

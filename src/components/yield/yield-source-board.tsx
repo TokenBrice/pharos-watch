@@ -39,7 +39,7 @@ function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoard
               className={cn("pharos-focus-ring inline-flex cursor-help items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}
             >
               <span>{driver.label}</span>
-              <span className="pharos-numeric text-[10px] opacity-75">{driver.count}</span>
+              <span className="pharos-numeric text-3xs opacity-75">{driver.count}</span>
             </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-[260px] text-xs">
@@ -96,7 +96,7 @@ export function YieldSourceBoard({ model, activeFilters, onFilterChange }: Yield
       <section aria-labelledby="yield-source-board-heading" className="pharos-card-shell overflow-hidden">
         <div className="pharos-panel-header space-y-5">
           <div className="space-y-1">
-            <p className="pharos-kicker">Yield Sources</p>
+            <p className="pharos-label">Yield sources</p>
             <h2 id="yield-source-board-heading" className="text-lg font-semibold tracking-tight text-foreground">
               Source mix in the current view
             </h2>

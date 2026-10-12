@@ -20,7 +20,7 @@ function PortfolioPreview() {
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <p className="pharos-kicker">What appears after you add holdings</p>
+        <p className="pharos-label">What appears after you add holdings</p>
         <h3 className="text-base font-semibold text-foreground">
           Weighted grade, radar view, and upstream concentration
         </h3>

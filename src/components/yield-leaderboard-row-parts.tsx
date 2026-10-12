@@ -88,7 +88,7 @@ export function YieldRankChangeChip({ rankChip, compact = false }: { rankChip: Y
     <Tooltip>
       <TooltipTrigger asChild>
         <span
-          className={`inline-flex cursor-help items-center gap-0.5 rounded-full border border-border/40 bg-background/60 px-1.5 py-0 text-[10px] font-medium ${rankChip.colorClass}`}
+          className={`inline-flex cursor-help items-center gap-0.5 rounded-full border border-border/40 bg-background/60 px-1.5 py-0 text-3xs font-medium ${rankChip.colorClass}`}
           aria-label={`Rank change: ${rankChip.signedRank}, driver ${rankChip.short}`}
         >
           <span aria-hidden="true">{rankChip.arrow}</span>
@@ -96,7 +96,7 @@ export function YieldRankChangeChip({ rankChip, compact = false }: { rankChip: Y
           {!compact ? <span className="ml-0.5">{rankChip.short}</span> : null}
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-[260px] text-[11px]">
+      <TooltipContent className="max-w-[260px] text-2xs">
         <span className="block">{rankChip.long}</span>
         {rankChip.pysDeltaLabel ? (
           <span className="block font-mono tabular-nums text-muted-foreground">{rankChip.pysDeltaLabel}</span>
@@ -136,7 +136,7 @@ function YieldBenchmarkMismatchDot({
           <span aria-hidden="true" className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />
         </span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-[260px] text-[11px]">
+      <TooltipContent className="max-w-[260px] text-2xs">
         Benchmarked against USD because the {peg} reference rate isn{"’"}t wired yet. PYS may overstate excess yield.
       </TooltipContent>
     </Tooltip>
@@ -209,7 +209,7 @@ export function YieldPysValue({
         <TooltipTrigger asChild>
           <span className={`cursor-help font-mono text-lg font-semibold tabular-nums ${pysColor}`}>{"—"}</span>
         </TooltipTrigger>
-        <TooltipContent className="max-w-[220px] text-[11px]">{pysNullReasonText}</TooltipContent>
+        <TooltipContent className="max-w-[220px] text-2xs">{pysNullReasonText}</TooltipContent>
       </Tooltip>
     );
   }
@@ -236,7 +236,7 @@ export function YieldSafetyBadge({
   // language. The marker keeps them from reading as the stablecoin's Safety
   // Score.
   const marker = opportunityDerived ? (
-    <span aria-hidden="true" className="ml-0.5 align-super text-[9px] leading-none">
+    <span aria-hidden="true" className="ml-0.5 align-super text-3xs leading-none">
       {"\u2020"}
     </span>
   ) : null;
@@ -247,7 +247,7 @@ export function YieldSafetyBadge({
     return (
       <Badge
         variant="outline"
-        className={`${compact ? "px-1.5 py-0.5 text-[10px]" : "px-1 py-0 text-sm"} font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
+        className={`${compact ? "px-1.5 py-0.5 text-3xs" : "px-1 py-0 text-sm"} font-mono ${REPORT_CARD_GRADE_COLORS[grade] ?? ""}`}
         title={describe(safetyScore !== null ? `${grade} (${Math.round(safetyScore)}/100)` : grade)}
         aria-label={describe(safetySrLabel)}
       >
@@ -295,7 +295,7 @@ export function YieldSourceIdentity({
         <span className={confidenceStyle.pill} aria-label={`${confidenceLabel} confidence`}>{confidenceLabel}</span>
       ) : null}
       {sourceChanged ? (
-        <span className={cn("shrink-0 rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
+        <span className={cn("shrink-0 rounded-full border px-1.5 py-0.5 text-3xs", SEVERITY_TONE_CLASS.sky.pill)}>
           {YIELD_SOURCE_FACT_LABELS.changed}
         </span>
       ) : null}
@@ -339,7 +339,7 @@ export function YieldSourceDetails({
       {/* Line 2: freshness · source depth. Benchmark moved off-row (redundant per row):
           it stays in the APY cell, the PYS tooltip, the expanded panel, and the
           page-level Reference Rates strip. */}
-      <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-[10px] text-muted-foreground">
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-1 text-3xs text-muted-foreground">
         {sourceRiskSummary ? (
           <>
             <span className="font-medium text-amber-700 dark:text-amber-300">{sourceRiskSummary}</span>
@@ -396,7 +396,7 @@ export function YieldSignalsIndicator({
               : "Source-risk"}</span>
           </span>
         </TooltipTrigger>
-        <TooltipContent className="max-w-[260px] text-[11px]">
+        <TooltipContent className="max-w-[260px] text-2xs">
           {warningSignalCount > 0
             ? sourceRiskMaterial
               ? `${warningSignalCount} warning signal${warningSignalCount === 1 ? "" : "s"} + source-risk ${(rawSourceRiskPenalty ?? 0).toFixed(2)}×`
@@ -472,7 +472,7 @@ export function YieldSignalsIndicator({
 function ExpandedMetricSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{title}</p>
+      <p className="pharos-label">{title}</p>
       {children}
     </div>
   );
@@ -538,7 +538,7 @@ export function YieldExpandedDetails({
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/55 px-3 py-3">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Source</p>
+              <p className="pharos-label">Source</p>
               <div className="mt-1 flex min-w-0 items-center gap-1.5">
                 <TableSourceLink
                   href={row.yieldSourceUrl}
@@ -555,7 +555,7 @@ export function YieldExpandedDetails({
                   {row.yieldSource}
                 </TableSourceLink>
                 {row.provenance?.sourceSwitch ? (
-                  <span className={cn("rounded-full border px-1.5 py-0.5 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
+                  <span className={cn("rounded-full border px-1.5 py-0.5 text-3xs", SEVERITY_TONE_CLASS.sky.pill)}>
                     source changed
                   </span>
                 ) : null}

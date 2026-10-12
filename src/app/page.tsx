@@ -5,7 +5,7 @@ import { HomeAltHero } from "@/components/home-alt-hero";
 import { HomeMediaStrip } from "@/components/home-media-strip";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -16,7 +16,6 @@ import {
   TRACKED_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
 
-const HOMEPAGE_OG_IMAGE = `${SITE_URL}/og-card.png?v=market-pulse-2026-06-28`;
 // Build-time reference clock for the hero's static-fallback age gate. The
 // statically exported page renders once at build; the client re-evaluates
 // expiry with its own clock after hydration (see HomeAltHero).
@@ -28,7 +27,7 @@ export const metadata: Metadata = buildPageMetadata({
   description:
     "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
   canonical: "/",
-  ogImage: HOMEPAGE_OG_IMAGE,
+  ogImage: buildLiveRouteOgImageUrl("home"),
 });
 
 export default function HomePage() {
@@ -60,8 +59,8 @@ export default function HomePage() {
             }),
           )}
       />
-      <HomeBlogBanner />
       <HomeAltHero snapshot={heroSnapshot} fallbackSelectedAtMs={HERO_FALLBACK_SELECTED_AT_MS} />
+      <HomeBlogBanner />
       <HomeAltClient />
       <HomeMediaStrip />
     </div>

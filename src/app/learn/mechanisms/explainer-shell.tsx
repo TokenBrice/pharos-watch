@@ -92,7 +92,7 @@ function HowItWorks({
           <li key={step.title} className="relative">
             <span
               aria-hidden="true"
-              className="absolute -left-[1.875rem] top-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background font-mono text-[11px] font-semibold tabular-nums text-muted-foreground sm:-left-[2.375rem] sm:h-7 sm:w-7 sm:text-xs"
+              className="absolute -left-[1.875rem] top-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-background font-mono text-2xs font-semibold tabular-nums text-muted-foreground sm:-left-[2.375rem] sm:h-7 sm:w-7 sm:text-xs"
             >
               {i + 1}
             </span>
@@ -100,7 +100,7 @@ function HowItWorks({
               <h3 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
                 {step.title}
               </h3>
-              <p className="text-[15px] leading-relaxed text-muted-foreground">
+              <p className="text-base leading-relaxed text-muted-foreground">
                 {step.body}
               </p>
             </div>
@@ -133,7 +133,7 @@ function RiskProfile({
             <dt className="text-base font-semibold tracking-tight text-foreground">
               {item.headline}
             </dt>
-            <dd className="text-[15px] leading-relaxed text-muted-foreground">
+            <dd className="text-base leading-relaxed text-muted-foreground">
               {item.body}
             </dd>
           </div>
@@ -191,7 +191,7 @@ function Variations({
             <dt className="text-base font-semibold tracking-tight text-foreground">
               {item.title}
             </dt>
-            <dd className="text-[15px] leading-relaxed text-muted-foreground">
+            <dd className="text-base leading-relaxed text-muted-foreground">
               {item.body}
             </dd>
           </div>
@@ -234,17 +234,17 @@ function Decommissioned({
                 ) : null}
                 <span className="min-w-0 leading-tight">{item.name}</span>
               </span>
-              <span className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+              <span className="pharos-numeric text-xs text-muted-foreground">
                 {item.date}
               </span>
-              <p className="text-[15px] leading-relaxed text-muted-foreground">
+              <p className="text-base leading-relaxed text-muted-foreground">
                 {item.obituary}
               </p>
             </li>
           );
         })}
       </ul>
-      <p className="pt-2 text-[15px] text-muted-foreground">
+      <p className="pt-2 text-base text-muted-foreground">
         Full obituaries, peak market caps, and post-mortems in the{" "}
         <Link
           href="/cemetery/"
@@ -283,7 +283,7 @@ function TrackedCoinRow({
               ↳
             </span>
           ) : null}
-          <span className="font-mono text-sm font-semibold uppercase tracking-[0.04em] text-foreground transition-colors group-hover:text-frost-blue">
+          <span className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
             {coin.symbol}
           </span>
         </div>
@@ -372,7 +372,7 @@ function TrackedCoinList({
           })}
         </ul>
       ) : null}
-      <div className="space-y-1.5 pt-2 text-[15px]">
+      <div className="space-y-1.5 pt-2 text-base">
         <p>
           <Link
             href={screenerHref}
@@ -424,7 +424,7 @@ function MechanismCaseStudies({
               className="pharos-focus-ring group grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-6"
             >
               <div className="space-y-1">
-                <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                <p className="pharos-label">
                   {study.eyebrow}
                 </p>
                 <h3 className="text-base font-semibold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-lg">
@@ -433,7 +433,7 @@ function MechanismCaseStudies({
               </div>
               <span
                 className={cn(
-                  "inline-flex shrink-0 items-center self-start rounded-full border px-2 py-0.5 font-mono text-[11px] uppercase tracking-[0.12em] sm:self-baseline",
+                  "inline-flex shrink-0 items-center self-start rounded-full border px-2 py-0.5 text-2xs sm:self-baseline",
                   CASE_STUDY_OUTCOME_CHIPS[study.outcome],
                 )}
               >

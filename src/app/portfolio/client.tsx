@@ -153,7 +153,7 @@ export function PortfolioClient() {
         <Card className="pharos-card-shell">
           <CardContent className="space-y-5 pt-6">
             <div>
-              <p className="pharos-kicker">{v9Projection.value.partialEvidence ? "Known-only weighted V10 safety subtotal" : "Weighted V10 safety aggregate"}</p>
+              <p className="pharos-label">{v9Projection.value.partialEvidence ? "Known-only weighted V10 safety subtotal" : "Weighted V10 safety aggregate"}</p>
               <p className="mt-1 pharos-numeric text-3xl font-semibold text-foreground">
                 {v9Projection.value.score === null ? "Pipeline gap" : <>{v9Projection.value.score}<span className="text-sm text-muted-foreground">/100</span></>}
               </p>
@@ -170,7 +170,7 @@ export function PortfolioClient() {
                 const score = v9Projection.value.pillars[pillar];
                 return (
                 <div key={pillar} className="rounded-lg border border-border/60 px-3 py-3">
-                  <dt className="pharos-kicker">{pillar === "control" ? "Economic control" : pillar}{v9Projection.value.partialEvidence && " · known-only subtotal"}</dt>
+                  <dt className="pharos-label">{pillar === "control" ? "Economic control" : pillar}{v9Projection.value.partialEvidence && " · known-only subtotal"}</dt>
                   <dd className="mt-1 pharos-numeric text-lg font-semibold">{score === null ? "Unavailable" : `${score}/100`}</dd>
                   {v9Projection.value.partialEvidence && <p className="mt-1 text-xs text-muted-foreground">Included holdings: {v9Projection.value.coverageUsd.pillars[pillar]} USD of {v9Projection.value.coverageUsd.total} USD</p>}
                 </div>
@@ -187,7 +187,7 @@ export function PortfolioClient() {
 
       {portfolio.holdings.length > 0 && (
         <>
-          <h2 className="pharos-kicker">Holdings Safety Grades</h2>
+          <h2 className="pharos-label">Holdings safety grades</h2>
           {v9Projection?.status === "unavailable" && v9Projection.reason === "portfolio-empty" && (
             <p className="text-sm text-muted-foreground">Enter an amount for at least one holding to compute the weighted safety aggregate.</p>
           )}

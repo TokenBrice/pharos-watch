@@ -74,7 +74,7 @@ function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, 
   const legend = segments.map((segment) => `${segment.count} ${segment.label}`).join(", ");
   return (
     <div className="space-y-3">
-      <p className="pharos-kicker">Active coins by mechanism</p>
+      <p className="pharos-label">Active coins by mechanism</p>
       <div
         className="flex h-2 w-full overflow-hidden rounded-full bg-border/40"
         role="img"
@@ -96,10 +96,10 @@ function MechanismDistribution({ counts }: { counts: Record<MechanismArchetype, 
               className="h-2 w-2 rounded-sm"
               style={{ backgroundColor: segment.color }}
             />
-            <span className="pharos-numeric text-[13px] font-semibold text-foreground">
+            <span className="pharos-numeric text-xs font-semibold text-foreground">
               {segment.count}
             </span>
-            <span className="text-[11px] text-muted-foreground">{segment.label}</span>
+            <span className="text-2xs text-muted-foreground">{segment.label}</span>
           </li>
         ))}
       </ul>
@@ -134,7 +134,7 @@ export default function MechanismExplainersHub() {
         beamValue={mechanismTotal}
         subKicker={`Across ${MECHANISM_ARCHETYPE_VALUES.length} designs`}
         sub={
-          <div className="space-y-1 text-[13px] sm:text-right">
+          <div className="space-y-1 text-xs sm:text-right">
             <p className="pharos-numeric text-muted-foreground">
               <span className="text-foreground">{MECHANISM_ARCHETYPE_VALUES.length}</span> mechanisms
             </p>
@@ -209,15 +209,15 @@ export default function MechanismExplainersHub() {
               >
                 <div className="flex flex-col gap-3">
                   <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">
-                    <span className="pharos-numeric mr-3 text-[0.5em] font-semibold tracking-[0.12em] text-muted-foreground align-baseline">
+                    <span className="pharos-numeric mr-3 text-[0.5em] font-semibold text-muted-foreground align-baseline">
                       {indexLabel}.
                     </span>
                     {getMechanismArchetypeLabel(archetype)}
                   </h2>
-                  <p className="text-[15px] leading-relaxed text-muted-foreground">
+                  <p className="text-base leading-relaxed text-muted-foreground">
                     {getMechanismArchetypeOneLiner(archetype)}
                   </p>
-                  <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <p className="pharos-numeric text-2xs text-muted-foreground">
                     {countParts.join(" · ")}
                   </p>
                   <span className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">

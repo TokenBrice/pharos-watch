@@ -321,7 +321,7 @@ export function LongformScrollspyNav({
         className={cn("sticky top-[calc(env(safe-area-inset-top)+4.5rem)] w-[14rem] self-start", className)}
         style={stickyOffsetPx == null ? undefined : { top: stickyOffsetPx }}
       >
-        <p className="px-2 pb-3 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="pharos-label px-2 pb-3">
           {railLabel}
         </p>
         <nav aria-label={navAriaLabel}>
@@ -339,7 +339,7 @@ export function LongformScrollspyNav({
                     }}
                     aria-current={isActive ? "true" : undefined}
                     className={cn(
-                      "pharos-focus-ring relative -ml-px block truncate border-l py-1.5 pl-3 pr-2 font-mono text-[11px] uppercase tracking-[0.12em] transition-colors",
+                      "pharos-focus-ring relative -ml-px block truncate border-l py-1.5 pl-3 pr-2 text-xs transition-colors",
                       isActive
                         ? "border-foreground text-foreground"
                         : "border-transparent text-muted-foreground hover:border-foreground/40 hover:text-foreground",

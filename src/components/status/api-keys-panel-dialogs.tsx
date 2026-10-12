@@ -76,7 +76,7 @@ export function TokenRevealDialog({
           />
         </div>
 
-        <div className="font-mono text-[11px] text-muted-foreground">
+        <div className="font-mono text-2xs text-muted-foreground">
           replay {revealedToken.idempotentReplay ? "yes" : "no"} · certainty{" "}
           {revealedToken.executionCertainty ?? "confirmed"} · intent {revealedToken.idempotencyKey}
         </div>
@@ -149,7 +149,7 @@ export function TokenUnavailableReplayDialog({
             {apiKey.name} · ID {apiKey.id} · <span className="font-mono">{apiKey.maskedToken}</span>
           </p>
           <p className="mt-2">{recovery}</p>
-          <p className="mt-2 font-mono text-[11px]">
+          <p className="mt-2 font-mono text-2xs">
             replay {idempotentReplay ? "yes" : "no"} · certainty {executionCertainty ?? "confirmed"} · intent{" "}
             {idempotencyKey}
           </p>

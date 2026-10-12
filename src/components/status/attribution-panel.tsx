@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 function AttributionWindowBadge({ hours }: { hours: number | null }) {
   if (hours == null) return null;
   return (
-    <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+    <span className="rounded-full border border-border/60 bg-background/50 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
       {hours}h window
     </span>
   );
@@ -27,7 +27,7 @@ export function AttributionBadge({ tone, children }: { tone?: SeverityTone; chil
   return (
     <span
       className={cn(
-        "rounded-full border px-2.5 py-1 text-[11px] font-medium",
+        "rounded-full border px-2.5 py-1 text-2xs font-medium",
         tone ? SEVERITY_TONE_CLASS[tone].pill : "border-border/60 bg-background/50 text-muted-foreground",
       )}
     >

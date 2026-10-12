@@ -36,8 +36,8 @@ import {
 } from "@/components/flow-table-logic";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { FlowSignedNetValue, FlowVolumeValue } from "@/components/flow-valuation-value";
-import { resolveCoinNetFlow, resolvePressureUnavailableNote } from "@/lib/mint-burn-coin-helpers";
-import type { MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import { resolveCoinNetFlow, resolvePressureUnavailableNote } from "@shared/lib/mint-burn-coin-helpers";
+import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { stablecoinLabel } from "@/lib/stablecoin-label";
 
 interface FlowTableProps {

@@ -19,7 +19,7 @@ function CoverageMix({
 }) {
   return (
     <div className="rounded-lg border border-border/50 p-3">
-      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</div>
+      <div className="mb-2 pharos-label">{title}</div>
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>Primary: <span className="pharos-numeric">{classes.primary}</span></div>
         <div>Mixed: <span className="pharos-numeric">{classes.mixed}</span></div>

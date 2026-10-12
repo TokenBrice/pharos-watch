@@ -67,7 +67,7 @@ export function IssuedTokenPanel({
 
       <div className="overflow-hidden rounded-xl border border-emerald-500/35 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
         <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-4 py-3">
-          <span className="text-xs font-semibold uppercase text-[var(--code-surface-muted)]">Token</span>
+          <span className="pharos-label text-[var(--code-surface-muted)]">Token</span>
           <Button
             ref={copyTokenButtonRef}
             type="button"
@@ -87,7 +87,7 @@ export function IssuedTokenPanel({
 
       <div className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
         <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase text-[var(--code-surface-muted)]">
+          <span className="pharos-label inline-flex items-center gap-1.5 text-[var(--code-surface-muted)]">
             <Terminal className="h-3.5 w-3.5" aria-hidden="true" />
             Sample
           </span>

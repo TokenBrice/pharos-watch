@@ -33,7 +33,7 @@ export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "err
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-2">
-        <p className="pharos-kicker">Coverage Matrix</p>
+        <p className="pharos-label">Coverage matrix</p>
         <CardTitle as="h2" className="text-xl">
           {isError ? "Coverage snapshot unavailable" : "Loading coverage snapshot"}
         </CardTitle>
@@ -79,39 +79,39 @@ export function CoverageFeatureSnapshotCard({
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-end">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <p className="pharos-kicker">Coverage Overview</p>
+              <p className="pharos-label">Coverage overview</p>
               <CardTitle as="h2" className="pharos-display text-2xl font-bold leading-tight tracking-tight">
                 Feature breadth by surface
               </CardTitle>
             </div>
             <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border/40 pt-3">
               <div className="min-w-0">
-                <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+                <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
                   {activeCoinTotal}
                 </p>
-                <p className="mt-1.5 pharos-kicker">
+                <p className="mt-1.5 pharos-label">
                   active coins tracked
                 </p>
               </div>
               <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 pb-0.5">
                 <div className="flex items-baseline gap-1.5">
-                  <dt className="pharos-kicker">
+                  <dt className="pharos-label">
                     Avg. reach
                   </dt>
-                  <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
+                  <dd className="pharos-numeric text-sm font-semibold leading-none text-foreground">
                     {averageCoveragePct == null ? "n/a" : `${averageCoveragePct.toFixed(0)}%`}
                   </dd>
-                  <span className="text-[11px] text-muted-foreground">headline</span>
+                  <span className="text-2xs text-muted-foreground">headline</span>
                 </div>
                 <span aria-hidden="true" className="h-3 w-px bg-border/60" />
                 <div className="flex items-baseline gap-1.5">
-                  <dt className="pharos-kicker">
+                  <dt className="pharos-label">
                     Surfaces
                   </dt>
-                  <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
+                  <dd className="pharos-numeric text-sm font-semibold leading-none text-foreground">
                     {featureSummaries.length}
                   </dd>
-                  <span className="text-[11px] text-muted-foreground">tracked</span>
+                  <span className="text-2xs text-muted-foreground">tracked</span>
                 </div>
               </dl>
             </div>
@@ -209,7 +209,7 @@ export function CoverageSafetyScoreDataCard({
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-1.5 pb-3">
-        <p className="pharos-kicker">Safety Score Coverage</p>
+        <p className="pharos-label">Safety Score coverage</p>
         <CardTitle as="h2" className="text-xl tracking-tight">
           Score input coverage
         </CardTitle>
@@ -235,7 +235,7 @@ export function CoveragePricingSourcesCard({
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-2">
-        <p className="pharos-kicker">Pricing Sources</p>
+        <p className="pharos-label">Pricing sources</p>
         <CardTitle as="h2" className="text-xl tracking-tight">
           Where Pharos gets its prices
         </CardTitle>
@@ -253,7 +253,7 @@ export function CoveragePricingSourcesCard({
             >
               <span className="text-sm font-semibold text-foreground">{getPricingSourceLabel(source.name)}</span>
               <span className="pharos-numeric text-2xl font-semibold text-foreground">{source.count}</span>
-              <span className="text-[11px] text-muted-foreground">coins</span>
+              <span className="text-2xs text-muted-foreground">coins</span>
             </div>
           ))}
         </div>
@@ -261,10 +261,10 @@ export function CoveragePricingSourcesCard({
         {authoritativeSources.length > 0 ? (
           <div className={cn("space-y-3 rounded-xl border p-4", AUTHORITATIVE_ACCENT.container)}>
             <div className="flex items-center gap-2">
-              <p className="pharos-kicker">Authoritative Overrides</p>
+              <p className="pharos-label">Authoritative overrides</p>
               <span
                 className={cn(
-                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-3xs font-medium",
                   AUTHORITATIVE_ACCENT.badge,
                 )}
               >
@@ -287,7 +287,7 @@ export function CoveragePricingSourcesCard({
                     {getPricingSourceLabel(source.name)}
                   </span>
                   <span className="pharos-numeric text-2xl font-semibold text-foreground">{source.count}</span>
-                  <span className="text-[11px] text-muted-foreground">coins</span>
+                  <span className="text-2xs text-muted-foreground">coins</span>
                 </div>
               ))}
             </div>
@@ -327,7 +327,7 @@ export function CoverageMatrixCard(
       <CardHeader className="space-y-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="pharos-kicker">Coverage Matrix</p>
+            <p className="pharos-label">Coverage matrix</p>
             {model.dataUpdatedAt ? (
               <span className="text-xs text-muted-foreground">
                 Updated {new Date(model.dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -456,7 +456,7 @@ export function CoverageMatrixCard(
           <div className="space-y-5 border-t border-border/60 px-4 py-4">
             {getLegendGroups().map((group) => (
               <div key={group.label}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="pharos-label mb-2">
                   {group.label}
                 </p>
                 <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

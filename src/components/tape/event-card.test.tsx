@@ -423,6 +423,21 @@ describe("EventCard enrichment", () => {
     expect(screen.queryByText("legacy_signal")).toBeNull();
   });
 
+  it("yield.warning_emitted shows warning labels, not stored keys, in pills and summary", () => {
+    const event = makeEvent({
+      type: "yield.warning_emitted",
+      severity: "warning",
+      title: "USDX yield warning: opportunity-evidence-missing",
+      summary: "New yield warning signal (opportunity-evidence-missing) detected on selected source.",
+      coinId: "usdx-issuer",
+      payload: { newSignals: ["opportunity-evidence-missing"] },
+    });
+    render(<EventCard event={event} />);
+    expect(screen.getByText("Opportunity evidence incomplete")).toBeTruthy();
+    expect(screen.getByText("New yield warning signal (Opportunity evidence incomplete) detected on selected source.")).toBeTruthy();
+    expect(screen.queryByText(/opportunity-evidence-missing/)).toBeNull();
+  });
+
   it.each([
     { direction: "mint", amountUsd: 2_500_000, badge: "$2.5M", verb: "minted" },
     { direction: "burn", amountUsd: 750_000, badge: "$750K", verb: "burned" },

@@ -12,7 +12,7 @@ import {
 } from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 
 export type StablecoinTableSourceGenerations = Partial<Record<"stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards", number | null>>;
 

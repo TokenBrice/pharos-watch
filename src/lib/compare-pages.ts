@@ -2,7 +2,7 @@ import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shar
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { STATIC_COMPARE_PAIRS, buildLiveCompareUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";

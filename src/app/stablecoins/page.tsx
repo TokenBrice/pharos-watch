@@ -102,7 +102,7 @@ export default function StablecoinsHubPage() {
       <div className="space-y-10">
         <section className="space-y-3" aria-labelledby="stablecoin-profile-directory-heading">
           <div className="space-y-1.5">
-            <h2 id="stablecoin-profile-directory-heading" className="pharos-kicker">
+            <h2 id="stablecoin-profile-directory-heading" className="pharos-label">
               All Tracked Stablecoin Profiles
             </h2>
             <p className="text-sm text-muted-foreground">

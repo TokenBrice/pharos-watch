@@ -105,11 +105,11 @@ export function CredentialSummaryCard() {
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
             {items.map((item) => (
               <div key={item.label} className="min-w-0 border-y border-border/60 py-2">
-                <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
+                <div className="pharos-label">{item.label}</div>
                 <div className={cn("mt-1 pharos-numeric text-xl font-semibold text-foreground", item.emphasisClassName)}>
                   {item.value}
                 </div>
-                <div className="text-[11px] text-muted-foreground">{item.detail}</div>
+                <div className="text-2xs text-muted-foreground">{item.detail}</div>
               </div>
             ))}
           </div>

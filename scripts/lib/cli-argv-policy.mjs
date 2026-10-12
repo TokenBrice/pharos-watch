@@ -212,7 +212,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/maintenance/run-pr-checks.ts", "test"),
     exempt("scripts/maintenance/run-pr-static-checks.ts", "test"),
     exempt("scripts/maintenance/run-pr-tests.ts", "test"),
-    exempt("scripts/maintenance/screenshot-og.mjs", "build"),
     exempt("scripts/maintenance/serve-static-export.ts", "test"),
     exempt("scripts/maintenance/setup-agent-hooks.ts", "build"),
     exempt("scripts/maintenance/smoke-api.mjs", "test"),

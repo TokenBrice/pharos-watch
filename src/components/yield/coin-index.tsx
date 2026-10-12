@@ -109,7 +109,7 @@ export function YieldCoinIndex() {
       className="pharos-card-shell overflow-hidden"
     >
       <div className="pharos-panel-header space-y-1">
-        <p className="pharos-kicker">Browse</p>
+        <p className="pharos-label">Browse</p>
         <h2
           id="yield-coin-index-heading"
           className="text-lg font-semibold tracking-tight text-foreground"
@@ -130,11 +130,11 @@ export function YieldCoinIndex() {
           >
             <dt className="flex shrink-0 items-center gap-2 sm:w-44 sm:shrink-0">
               {group.badgeClassName ? (
-                <Badge variant="outline" className={`text-[11px] ${group.badgeClassName}`}>
+                <Badge variant="outline" className={`text-2xs ${group.badgeClassName}`}>
                   {group.label}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                <Badge variant="outline" className="text-2xs text-muted-foreground">
                   {group.label}
                 </Badge>
               )}

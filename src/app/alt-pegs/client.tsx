@@ -64,7 +64,7 @@ function AltPegMixBand({
   return (
     <section aria-label="All alt-peg mix" className="pharos-card-shell space-y-4 p-5 sm:p-6">
       <div className="space-y-1">
-        <p className="pharos-kicker">All Alt-Peg Mix</p>
+        <p className="pharos-label">All alt-peg mix</p>
         <p className="pharos-meta">Commodities vs. all other non-USD pegs across the tracked alt-peg market.</p>
         {supplyUnavailableCount > 0 ? <p className="pharos-meta">Known supply subtotals · {supplyUnavailableCount} assets without supply observations; mix shares unavailable.</p> : null}
       </div>
@@ -74,7 +74,7 @@ function AltPegMixBand({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <p className="pharos-kicker flex items-center gap-2">
+          <p className="pharos-label flex items-center gap-2">
             <span className="size-2 rounded-full" style={{ backgroundColor: CHART_AMBER }} aria-hidden="true" />
             Commodities
           </p>
@@ -84,7 +84,7 @@ function AltPegMixBand({
           <p className="mt-0.5 text-xs text-muted-foreground">{formatShare(commodityShare)} of alt-peg market</p>
         </div>
         <div>
-          <p className="pharos-kicker flex items-center gap-2">
+          <p className="pharos-label flex items-center gap-2">
             <span className="size-2 rounded-full bg-[color:var(--brand-accent)]" aria-hidden="true" />
             Non-commodity non-USD
           </p>
@@ -111,7 +111,7 @@ function AltPegDistributionCard({
     <section className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="space-y-1">
-          <p className="pharos-kicker">Current Distribution</p>
+          <p className="pharos-label">Current distribution</p>
           <h2 className="pharos-section-title">Which Non-USD Pegs Matter Now</h2>
           <p className="pharos-meta">
             Ranked by observed market cap; incomplete cohorts publish known subtotals, not complete ranks, with direct links into each peg cohort page. EUR stablecoins are
@@ -132,10 +132,10 @@ function AltPegDistributionCard({
 
       <div className="pharos-card-shell overflow-hidden">
         <div className="pharos-panel-header hidden grid-cols-[minmax(0,1.35fr)_minmax(0,0.7fr)_minmax(0,0.6fr)_minmax(0,0.85fr)] gap-4 md:grid">
-          <span className="pharos-kicker">Peg</span>
-          <span className="pharos-kicker">Market Cap</span>
-          <span className="pharos-kicker">Share</span>
-          <span className="pharos-kicker">Leading Observed Coin</span>
+          <span className="pharos-label">Peg</span>
+          <span className="pharos-label">Market cap</span>
+          <span className="pharos-label">Share</span>
+          <span className="pharos-label">Leading observed coin</span>
         </div>
         <div className="divide-y divide-border/40">
           {rows.map((row) => (
@@ -155,7 +155,7 @@ function AltPegDistributionCard({
                   >
                     {row.label}
                   </Link>
-                  <span className="pharos-numeric rounded-full border border-border/60 bg-muted/15 px-2 py-0.5 text-[11px] text-muted-foreground">
+                  <span className="pharos-numeric rounded-full border border-border/60 bg-muted/15 px-2 py-0.5 text-2xs text-muted-foreground">
                     {row.coinCount} coin{row.coinCount === 1 ? "" : "s"}
                   </span>
                 </div>
@@ -173,18 +173,18 @@ function AltPegDistributionCard({
               </div>
 
               <div className="space-y-1">
-                <p className="pharos-kicker md:hidden">Market Cap</p>
+                <p className="pharos-label md:hidden">Market cap</p>
                 <p className="pharos-numeric text-sm font-semibold text-foreground">{formatMarketCap(row.marketCap)}</p>
                 {row.supplyUnavailableCount > 0 ? <p className="text-xs text-muted-foreground">{row.supplyObservedCount}/{row.coinCount} assets observed · {row.marketCap !== null ? "known subtotal" : "supply unavailable"}</p> : null}
               </div>
 
               <div className="space-y-1">
-                <p className="pharos-kicker md:hidden">Share</p>
+                <p className="pharos-label md:hidden">Share</p>
                 <p className="pharos-numeric text-sm font-semibold text-foreground">{formatShare(row.sharePct)}</p>
               </div>
 
               <div className="space-y-1">
-                <p className="pharos-kicker md:hidden">Leading Observed Coin</p>
+                <p className="pharos-label md:hidden">Leading observed coin</p>
                 {row.supplyObservedCount > 0 ? (
                   <>
                     <Link
@@ -356,7 +356,7 @@ export function AltPegsClient() {
         <section id="alt-peg-history-share" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="space-y-1">
-              <p className="pharos-kicker">History</p>
+              <p className="pharos-label">History</p>
               <h2 className="pharos-section-title">How Much Of The Total Stablecoin Market Sits Outside USD?</h2>
               <p className="pharos-meta">
                 {trendStats?.yearlyMarketCapChangePct != null ? (

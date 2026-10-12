@@ -33,7 +33,7 @@ function TimelineSeverityLegend() {
   return (
     <ul
       aria-label="Severity legend"
-      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] uppercase tracking-[0.12em] text-muted-foreground"
+      className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pharos-label"
     >
       {SEVERITY_LEGEND.map(({ severity, label }) => (
         <li key={severity} className="inline-flex items-center gap-1.5">
@@ -57,7 +57,7 @@ function formatTimelineDate(dateISO: string): string {
 
 function TimelineDate({ dateISO }: { dateISO: string }) {
   return (
-    <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+    <p className="pharos-numeric text-2xs text-muted-foreground">
       {formatTimelineDate(dateISO)}
     </p>
   );
@@ -72,7 +72,7 @@ function TimelineHeadline({ children }: { children: string }) {
 }
 
 function TimelineBody({ children }: { children: string }) {
-  return <p className="text-[15px] leading-relaxed text-muted-foreground">{children}</p>;
+  return <p className="text-base leading-relaxed text-muted-foreground">{children}</p>;
 }
 
 function TimelineSourceLink({ href, headline }: { href: string; headline: string }) {
@@ -213,7 +213,7 @@ function VerticalTimeline({
 function DesktopLinearTimeline({ entries }: { entries: readonly CaseStudyTimelineEntry[] }) {
   return (
     <details className="hidden rounded-xl border border-border/50 bg-card/30 p-5 lg:block">
-      <summary className="pharos-focus-ring cursor-pointer font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-frost-blue">
+      <summary className="pharos-focus-ring cursor-pointer text-2xs text-muted-foreground transition-colors hover:text-frost-blue">
         Linear timeline
       </summary>
       <VerticalTimeline entries={entries} desktop />

@@ -54,7 +54,7 @@ export function MobileUtilityDock() {
               onClick={() => setFeedbackOpen(true)}
               aria-label="Send feedback"
               tabIndex={showFeedback ? undefined : -1}
-              className="pharos-focus-ring flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground"
+              className="pharos-focus-ring flex size-11 items-center justify-center rounded-full border border-border/70 bg-card text-muted-foreground transition-colors hover:text-foreground"
             >
               <MessageSquarePlus className="h-4 w-4" />
             </button>

@@ -38,7 +38,7 @@ function ArticleMeta({ study }: { study: CaseStudy }) {
   const minutes = estimateCaseStudyReadingMinutes(study);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 pb-5">
-      <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="pharos-numeric text-2xs text-muted-foreground">
         By <Link href="/about/#editorial-ai-policy" className="pharos-focus-ring underline underline-offset-4">Pharos</Link>
         {" · Published "}<time dateTime={study.datePublished}>{formatUtcDayLabel(new Date(study.datePublished))}</time>
         {" · "}~{minutes} min read
@@ -70,14 +70,14 @@ function ArticleWayfinding({ study }: { study: CaseStudy }) {
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <Link
           href="/learn/case-studies/"
-          className="pharos-focus-ring inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-frost-blue"
+          className="pharos-focus-ring inline-flex items-center gap-1.5 text-2xs text-muted-foreground transition-colors hover:text-frost-blue"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           Back to case studies
         </Link>
-        <span className="pharos-kicker text-muted-foreground">Contents</span>
+        <span className="pharos-label">Contents</span>
       </div>
-      <ol className="flex gap-2 overflow-x-auto pb-1 whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+      <ol className="flex gap-2 overflow-x-auto pb-1 whitespace-nowrap pharos-label">
         {items.map((item) => (
           <li key={item.href}>
             <a
@@ -106,7 +106,7 @@ function Takeaways({ study }: { study: CaseStudy }) {
         {takeaways.map((point, i) => (
           <li
             key={i}
-            className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3 text-[15px] leading-relaxed text-foreground"
+            className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3 text-base leading-relaxed text-foreground"
           >
             <ArrowRight
               className="mt-1 h-4 w-4 shrink-0 text-frost-blue"
@@ -163,14 +163,14 @@ function PrevNextPager({ study }: { study: CaseStudy }) {
         href={`/learn/case-studies/${prev.slug}/`}
         className="pharos-card-shell pharos-focus-ring group flex flex-col gap-1 px-5 py-4 transition-colors hover:border-frost-blue/60"
       >
-        <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 pharos-label">
           <ArrowLeft
             className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5"
             aria-hidden="true"
           />
           Previous
         </span>
-        <span className="text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
+        <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
           {prev.title}
         </span>
       </Link>
@@ -178,14 +178,14 @@ function PrevNextPager({ study }: { study: CaseStudy }) {
         href={`/learn/case-studies/${next.slug}/`}
         className="pharos-card-shell pharos-focus-ring group flex flex-col gap-1 px-5 py-4 text-right transition-colors hover:border-frost-blue/60 sm:items-end"
       >
-        <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 pharos-label">
           Next
           <ArrowRight
             className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"
           />
         </span>
-        <span className="text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
+        <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
           {next.title}
         </span>
       </Link>
@@ -210,10 +210,10 @@ function RelatedStudies({ study }: { study: CaseStudy }) {
               className="pharos-focus-ring group grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-8"
             >
               <div className="flex flex-col gap-1">
-                <span className="pharos-kicker">
+                <span className="pharos-label">
                   {item.eyebrow}
                 </span>
-                <span className="text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
+                <span className="text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
                   {item.title}
                 </span>
               </div>
@@ -236,7 +236,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
   return (
     <dl className="pharos-card-shell grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-4 sm:p-6">
       <div className="space-y-1">
-        <dt className="pharos-kicker text-muted-foreground">Outcome</dt>
+        <dt className="pharos-label">Outcome</dt>
         <dd>
           <span
             className={cn(
@@ -249,13 +249,13 @@ function FactStrip({ study }: { study: CaseStudy }) {
         </dd>
       </div>
       <div className="space-y-1">
-        <dt className="pharos-kicker text-muted-foreground">When</dt>
+        <dt className="pharos-label">When</dt>
         <dd className="pharos-numeric text-sm text-foreground">
           {study.eventDateLabel}
         </dd>
       </div>
       <div className="space-y-1">
-        <dt className="pharos-kicker text-muted-foreground">Mechanism</dt>
+        <dt className="pharos-label">Mechanism</dt>
         <dd className="text-sm text-foreground">
           <Link
             href={getMechanismExplainerPath(study.archetype)}
@@ -266,7 +266,7 @@ function FactStrip({ study }: { study: CaseStudy }) {
         </dd>
       </div>
       <div className="space-y-1">
-        <dt className="pharos-kicker text-muted-foreground">Peak deviation</dt>
+        <dt className="pharos-label">Peak deviation</dt>
         <dd className="pharos-numeric text-sm text-foreground">
           {peak != null ? `${peak > 0 ? "+" : ""}${peak} bps` : "—"}
           {low != null ? (
@@ -307,11 +307,11 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
     <div className="pharos-card-shell p-5 sm:p-6">
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-1">
-          <p className="pharos-kicker text-muted-foreground">Event window</p>
+          <p className="pharos-label">Event window</p>
           <p className="pharos-numeric text-sm text-foreground">{windowLabel}</p>
         </div>
         <div className="space-y-1">
-          <p className="pharos-kicker text-muted-foreground">Peak deviation</p>
+          <p className="pharos-label">Peak deviation</p>
           <p className="pharos-numeric text-sm text-foreground">
             {study.eventWindow.peakDeviationBps != null
               ? `${study.eventWindow.peakDeviationBps > 0 ? "+" : ""}${study.eventWindow.peakDeviationBps} bps`
@@ -324,13 +324,13 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
           </p>
         </div>
         <div className="space-y-1">
-          <p className="pharos-kicker text-muted-foreground">Lowest print</p>
+          <p className="pharos-label">Lowest print</p>
           <p className="pharos-numeric text-sm text-foreground">
             {study.eventWindow.lowPrice != null ? `$${study.eventWindow.lowPrice.toFixed(3)}` : "n/a"}
           </p>
         </div>
       </div>
-      <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-muted-foreground">
+      <p className="mt-4 max-w-3xl text-base leading-relaxed text-muted-foreground">
         This retrospective is anchored to the archived event window, source-backed timeline, and Pharos records rather than a live embedded series.
       </p>
       {recordLinks.length ? (
@@ -339,7 +339,7 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
             <Link
               key={`${link.href}-${link.label}`}
               href={link.href}
-              className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+              className="pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 text-2xs text-muted-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
             >
               {link.label}
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
@@ -395,7 +395,7 @@ function Narrative({ study }: { study: CaseStudy }) {
         <section key={i} id={caseStudySectionId(i, section.heading)} className="space-y-4">
           <SectionKicker>Section {String(i + 1).padStart(2, "0")}</SectionKicker>
           <SectionHeading>{section.heading}</SectionHeading>
-          <div className="space-y-3 text-[15px] leading-relaxed text-muted-foreground">
+          <div className="space-y-3 text-base leading-relaxed text-muted-foreground">
             {section.paragraphs.map((paragraph, j) => (
               <p key={j}>{paragraph}</p>
             ))}
@@ -441,7 +441,7 @@ function Sources({ study }: { study: CaseStudy }) {
               href={source.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="pharos-focus-ring group flex items-start justify-between gap-3 py-2.5 text-[15px] leading-snug text-foreground transition-colors hover:text-frost-blue"
+              className="pharos-focus-ring group flex items-start justify-between gap-3 py-2.5 text-sm leading-snug text-foreground transition-colors hover:text-frost-blue"
             >
               <span>{source.label}</span>
               <ArrowUpRight

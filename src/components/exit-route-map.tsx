@@ -43,7 +43,7 @@ function ExitRouteMetric({
     <div className={`exit-route-metric rounded-xl border p-3 ${active ? "exit-route-metric--active" : "border-border/60 bg-background/35"}`}>
       <div className="flex items-center gap-2 text-muted-foreground">
         {icon}
-        <span className="pharos-kicker">{label}</span>
+        <span className="pharos-label">{label}</span>
       </div>
       <p className="pharos-numeric mt-1 text-lg font-bold">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
@@ -56,15 +56,15 @@ function SelectedExitRoutePanel({ selection }: { selection: LiquidityExitRouteSe
   return (
     <div className="exit-route-selection-panel" data-testid="selected-exit-route-panel">
       <div>
-        <p className="pharos-kicker">{kindLabel}</p>
+        <p className="pharos-label">{kindLabel}</p>
         <p className="mt-1 text-sm font-semibold text-foreground">{selection.label}</p>
       </div>
       <div>
-        <p className="pharos-kicker">Depth</p>
+        <p className="pharos-label">Depth</p>
         <p className="mt-1 font-mono text-sm font-bold tabular-nums">{formatCurrency(selection.valueUsd, 0)}</p>
       </div>
       <div>
-        <p className="pharos-kicker">Share</p>
+        <p className="pharos-label">Share</p>
         <p className="mt-1 font-mono text-sm font-bold tabular-nums">
           {selection.sharePct == null ? "100%" : formatPercent(selection.sharePct, 1)}
         </p>
@@ -208,11 +208,11 @@ function ExitRouteInstrumentScene({
             <line x1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridLeft} y1={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridBottom} x2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridRight} y2={EXIT_ROUTE_INSTRUMENT_GEOMETRY.gridBottom} />
           </g>
 
-          <text x="54" y="30" fill="var(--route-caption)" fontSize="10" fontWeight="700" letterSpacing="1.8" aria-hidden="true">
-            PROTOCOL DOORS
+          <text x="54" y="30" fill="var(--route-caption)" fontSize="10" fontWeight="700" aria-hidden="true">
+            Protocol doors
           </text>
-          <text x={EXIT_ROUTE_SCENE.laneX} y="30" fill="var(--route-caption)" fontSize="10" fontWeight="700" letterSpacing="1.8" aria-hidden="true">
-            CHAIN LANES
+          <text x={EXIT_ROUTE_SCENE.laneX} y="30" fill="var(--route-caption)" fontSize="10" fontWeight="700" aria-hidden="true">
+            Chain lanes
           </text>
 
           <path className="exit-route-instrument__channel" d={throat.channelPath} fill="url(#exit-route-channel-fill)" opacity="0.78" aria-hidden="true" />
@@ -336,7 +336,7 @@ function ExitRouteInstrumentScene({
               {formatCurrency(model.totalTvlUsd, 0)}
             </text>
             <text x={EXIT_ROUTE_SCENE.throatX} y="231" textAnchor="middle" fill="var(--route-caption)" fontSize="9" fontWeight="700" letterSpacing="0.45" textLength="116" lengthAdjust="spacingAndGlyphs" fontFamily="ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
-              SECONDARY EXIT TVL
+              Secondary exit TVL
             </text>
             <text x={EXIT_ROUTE_SCENE.throatX} y="249" textAnchor="middle" fill="var(--route-throat-marker)" fontSize="10" fontWeight="700" letterSpacing="1.4" fontFamily="ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
               {throat.band.toUpperCase()} CROWDING
@@ -384,7 +384,7 @@ function ExitRouteFallbackList({
             onClick={() => onSelect(row)}
           >
             <span>
-              <span className="block text-xs uppercase tracking-wide text-muted-foreground">{row.kind === "protocol" ? "Protocol door" : row.kind === "chain" ? "Chain lane" : "Exit throat"}</span>
+              <span className="pharos-label block">{row.kind === "protocol" ? "Protocol door" : row.kind === "chain" ? "Chain lane" : "Exit throat"}</span>
               <span className="font-medium text-foreground">{row.label}</span>
             </span>
             <span className="text-right font-mono text-sm font-semibold tabular-nums">

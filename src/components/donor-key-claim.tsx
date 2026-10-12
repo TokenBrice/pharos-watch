@@ -318,7 +318,7 @@ export function DonorKeyClaim() {
   if (status === "issued" && issued) {
     return (
       <div className="mt-4">
-        <p className="pharos-kicker">Supporter Key Issued</p>
+        <p className="pharos-label">Supporter key issued</p>
         <IssuedTokenPanel
           token={issued.token}
           keyPrefix={issued.key.keyPrefix}

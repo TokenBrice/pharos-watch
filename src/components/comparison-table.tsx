@@ -52,7 +52,7 @@ import {
   resolvePressureState,
   resolvePressureUnavailableNote,
   type MintBurnNetWindow,
-} from "@/lib/mint-burn-coin-helpers";
+} from "@shared/lib/mint-burn-coin-helpers";
 
 /** Signed flow net gated by valuation completeness: unavailable renders the placeholder, never $0. */
 function renderFlowNet(coin: ComparisonCoinEntry, window: MintBurnNetWindow): ReactNode {
@@ -336,7 +336,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
 function FrozenBadge({ frozenAt }: { frozenAt?: string }) {
   return (
     <span
-      className="rounded border border-zinc-500/30 px-1 text-[9px] uppercase tracking-wide text-zinc-500"
+      className="rounded border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500"
       title={frozenAt ? `Frozen on ${frozenAt}` : "Frozen"}
     >
       Frozen
@@ -356,7 +356,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
       <div className="pharos-subtle-band">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="pharos-kicker">Comparison Matrix</p>
+            <p className="pharos-label">Comparison matrix</p>
             <p className="mt-1 text-sm text-foreground">Exact values across market, risk, exit, activity, and structure.</p>
           </div>
           <p className="pharos-meta">A dash means that source has no comparable value; it is not a zero.</p>
@@ -388,7 +388,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                     {coin.meta.status === "frozen" ? <FrozenBadge frozenAt={coin.meta.frozenAt} /> : null}
                   </span>
                   <span className="max-w-[8.5rem] truncate text-xs font-normal text-muted-foreground">{coin.name}</span>
-                  {detailErrors?.[coin.id] ? <span className="text-[10px] text-destructive">History unavailable</span> : null}
+                  {detailErrors?.[coin.id] ? <span className="text-3xs text-destructive">History unavailable</span> : null}
                 </Link>
               </TableHead>
             ))}

@@ -10,8 +10,8 @@ import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCompactUsd } from "@shared/lib/format";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { inferHas24hActivity, resolveCoinNetFlow } from "@/lib/mint-burn-coin-helpers";
-import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import { inferHas24hActivity, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
+import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 
 interface Mover {
@@ -76,7 +76,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                 {gauge.band ? gauge.band.charAt(0) + gauge.band.slice(1).toLowerCase() : "—"}
               </div>
             ) : null}
-            <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <p className="pharos-meta pharos-numeric mt-1.5">
               {gauge ? (
                 <>
                   {gauge.score !== null && (
@@ -99,9 +99,9 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
           </div>
           <ul className="ml-auto flex flex-1 flex-col justify-center gap-1 text-xs" aria-label="Top 24h flow movers">
             {state === "empty" ? (
-              <li className="font-mono uppercase tracking-wider text-muted-foreground">No 24h activity</li>
+              <li className="pharos-meta">No 24h activity</li>
             ) : topMovers.length === 0 ? (
-              <li className="font-mono uppercase tracking-wider text-muted-foreground">
+              <li className="pharos-meta">
                 {hasUnavailableNet ? "Net flows unavailable" : "Balanced 24h mint / burn activity"}
               </li>
             ) : (

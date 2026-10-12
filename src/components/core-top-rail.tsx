@@ -17,7 +17,7 @@ export function CoreTopRail() {
 
   if (isChromelessPath(pathname)) return null;
   if (pathname !== "/" && isBelowDesktop) {
-    return <div data-testid="core-top-rail-placeholder" aria-hidden="true" className="hidden min-h-[46px] lg:block" />;
+    return <div data-testid="core-top-rail-placeholder" aria-hidden="true" className="hidden min-h-10 lg:block" />;
   }
   const mobileDisplayClass = pathname === "/" ? "contents" : "hidden";
 

@@ -54,7 +54,7 @@ export function RelatedCoinsList({
                     />
                   ) : null}
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-mono text-sm font-semibold uppercase tracking-[0.04em] text-foreground transition-colors group-hover:text-frost-blue">
+                    <span className="font-mono text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
                       {meta.symbol}
                     </span>
                     <span className="text-xs leading-snug text-muted-foreground">
@@ -62,7 +62,7 @@ export function RelatedCoinsList({
                     </span>
                   </div>
                 </div>
-                <p className="text-[15px] leading-relaxed text-muted-foreground">
+                <p className="text-base leading-relaxed text-muted-foreground">
                   {coin.note}
                 </p>
                 <ArrowUpRight

@@ -17,7 +17,7 @@ export function CompositionSection({ model }: { model: ChainRouteViewModel }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">Stablecoin Composition</CardTitle>
+        <CardTitle className="pharos-label">Stablecoin composition</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Segment widths are proportional to each coin's share of chain supply. */}

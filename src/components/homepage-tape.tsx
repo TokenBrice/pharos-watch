@@ -7,6 +7,7 @@ import { useLatestEvents } from "@/hooks/use-events";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
+import { formatTapeEventTitle } from "@/lib/tape-derive";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import {
@@ -14,6 +15,7 @@ import {
   ACTIVE_VARIANT_STABLECOIN_COUNT,
   CORE_AGGREGATE_STABLECOIN_COUNT,
 } from "@/lib/stablecoin-static-data";
+import { UNIVERSES } from "@/lib/universe-vocabulary";
 import { SEVERITY_DOT_CLASS, SEVERITY_LABEL } from "@shared/types/tape-event-constants";
 import type { TapeEvent } from "@shared/types/tape-event";
 
@@ -38,12 +40,12 @@ function StackedCoinLogos({ coinIds, logos }: { coinIds: ReadonlyArray<string>; 
   return (
     <span className="inline-flex items-center" aria-label={`${coinIds.length} coins`}>
       {visible.map((coinId, idx) => (
-        <span key={coinId} className={idx === 0 ? "" : "-ml-2"}>
-          <StablecoinLogo src={getLogoSrc(logos, coinId)} name={coinId} size={22} />
+        <span key={coinId} className={idx === 0 ? "" : "-ml-1.5"}>
+          <StablecoinLogo src={getLogoSrc(logos, coinId)} name={coinId} size={18} />
         </span>
       ))}
       {overflow > 0 ? (
-        <span className="-ml-2 inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full border border-border/60 bg-background/80 px-1 text-[10px] font-semibold tabular-nums text-foreground/80">
+        <span className="-ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full border border-border/60 bg-background/80 px-1 text-[10px] font-semibold tabular-nums text-foreground/80">
           +{overflow}
         </span>
       ) : null}
@@ -63,34 +65,49 @@ type HomepageTapePlacement = "inline" | "top";
 
 // The "top" chrome strip leads with the global registry counts (replacing the
 // retired masthead), then the live events ticker flows to the right.
-const TAPE_STATS: ReadonlyArray<{ label: string; value: number }> = [
-  { label: "Core", value: CORE_AGGREGATE_STABLECOIN_COUNT },
-  { label: "Variants", value: ACTIVE_VARIANT_STABLECOIN_COUNT },
-  { label: "Pegs", value: ACTIVE_PEG_CURRENCY_COUNT },
-  { label: "Chains", value: Object.keys(CHAIN_META).length },
+// Each count names its universe in a hover tooltip so the bare numbers are not
+// read as one census. Coin-set universes take the shared vocabulary; pegs and
+// chains are not coin sets, so they define themselves here.
+const TAPE_STATS: ReadonlyArray<{ label: string; value: number; definition: string }> = [
+  { label: UNIVERSES.core.label, value: CORE_AGGREGATE_STABLECOIN_COUNT, definition: UNIVERSES.core.definition },
+  { label: UNIVERSES.variants.label, value: ACTIVE_VARIANT_STABLECOIN_COUNT, definition: UNIVERSES.variants.definition },
+  {
+    label: "Pegs",
+    value: ACTIVE_PEG_CURRENCY_COUNT,
+    definition: "Distinct peg currencies across active tracked assets.",
+  },
+  {
+    label: "Chains",
+    value: Object.keys(CHAIN_META).length,
+    definition: "Chains in the Pharos chain registry.",
+  },
 ];
 
-const STAT_CHIP_CLASS =
-  "inline-flex h-6 items-center gap-1 rounded-md border border-border/35 bg-background/20 px-2 text-xs text-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.025)]";
+const STAT_CHIP_CLASS = "inline-flex h-6 cursor-help items-center gap-1 px-1 text-xs text-muted-foreground";
 
-function TapeStatChip({ label, value }: { label: string; value: number }) {
+function TapeStatChip({ label, value, definition }: { label: string; value: number; definition: string }) {
   return (
-    <span className={STAT_CHIP_CLASS}>
+    <span className={STAT_CHIP_CLASS} title={`${label} (${value}): ${definition}`}>
       <span>{label}</span>
-      <span aria-hidden="true" className="h-1 w-1 rounded-full bg-muted-foreground/35" />
-      <span className="pharos-numeric font-semibold text-foreground">{value}</span>
+      <span className="pharos-numeric font-semibold text-foreground/90">{value}</span>
     </span>
   );
 }
 
-// `min-h-[46px]` keeps the strip's box identical across the loading text state
+// `min-h-10` keeps the strip's box identical across the loading text state
 // and the populated track. Without it, events resolving (~loading→loaded) grows
-// the strip ~13px and pushes the whole page — including the hero LCP element —
+// the strip and pushes the whole page — including the hero LCP element —
 // down, which Lighthouse attributes as the top homepage layout shift.
+// `CoreTopRail` reserves the same height before hydration.
 const TAPE_SHELL_CLASS: Record<HomepageTapePlacement, string> = {
-  inline: "pharos-tape-shell relative -mx-3 min-h-[46px] overflow-hidden border-y border-border/60 bg-card/40 sm:-mx-4",
-  top: "pharos-tape-shell relative min-h-[46px] w-full overflow-hidden border-b border-border/70 bg-card dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))]",
+  inline: "pharos-tape-shell relative -mx-3 min-h-10 overflow-hidden border-y border-border/60 bg-card/40 sm:-mx-4",
+  top: "pharos-tape-shell relative min-h-10 w-full overflow-hidden border-b border-border/70 bg-card dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))]",
 };
+
+// Edge fade on the scrolling viewport so items enter and leave softly instead
+// of clipping mid-word against a hard edge, whatever the strip background.
+const TAPE_VIEWPORT_CLASS =
+  "relative min-w-0 flex-1 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_1.5rem,black_calc(100%-3rem),transparent)] motion-reduce:overflow-x-auto";
 
 function resolveEventLogoId(event: TapeEvent, logos: Record<string, string>): string | null {
   if (event.coinId) return event.coinId;
@@ -114,35 +131,35 @@ function resolveEventHref(event: TapeEvent): string {
 function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
   const { event, count, coinIds } = entry;
   const consolidated = coinIds && coinIds.length > 1;
-  const title = consolidated ? (consolidatedDewsTitle(event) ?? event.title) : event.title;
+  const title = consolidated ? (consolidatedDewsTitle(event) ?? formatTapeEventTitle(event)) : formatTapeEventTitle(event);
   const badgeValue = consolidated ? coinIds.length : count;
 
   return (
     <Link
       prefetch={false}
       href={resolveEventHref(event)}
-      className="pharos-focus-ring inline-flex items-center gap-2 rounded-md border border-border/50 bg-card/50 px-2 py-1 whitespace-nowrap text-sm text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+      className="pharos-focus-ring group inline-flex items-center gap-1.5 rounded-md px-2 py-1 whitespace-nowrap text-xs text-muted-foreground hover:bg-muted/40 hover:text-foreground"
     >
       {consolidated ? (
         <StackedCoinLogos coinIds={coinIds} logos={logos} />
       ) : logoName ? (
-        <StablecoinLogo src={logoSrc} name={logoName} size={22} />
+        <StablecoinLogo src={logoSrc} name={logoName} size={18} />
       ) : (
         <span
           aria-label={SEVERITY_LABEL[event.severity]}
           className={`inline-block h-2 w-2 rounded-full ${SEVERITY_DOT_CLASS[event.severity]}`}
         />
       )}
-      <span className="text-foreground">{title}</span>
+      <span className="text-foreground/80 group-hover:text-foreground">{title}</span>
       {badgeValue > 1 ? (
         <span
           aria-label={consolidated ? `${badgeValue} coins` : `${badgeValue} similar events`}
-          className="rounded-sm border border-border/60 px-1 text-[10px] font-medium tabular-nums text-foreground/80"
+          className="rounded-sm border border-border/60 px-1 text-[10px] font-medium tabular-nums text-muted-foreground"
         >
           ×{badgeValue}
         </span>
       ) : null}
-      <span className="text-xs tabular-nums text-muted-foreground">{formatRelativeTimeMs(event.ts)}</span>
+      <span className="tabular-nums text-muted-foreground/80">{formatRelativeTimeMs(event.ts)}</span>
     </Link>
   );
 }
@@ -152,7 +169,7 @@ function TapeTerminator() {
     <Link
       prefetch={false}
       href="/timeline/"
-      className="pharos-focus-ring inline-flex items-center gap-1 rounded-md px-2 py-1 whitespace-nowrap text-sm text-muted-foreground hover:text-foreground"
+      className="pharos-focus-ring inline-flex items-center gap-1 rounded-md px-2 py-1 whitespace-nowrap text-xs text-muted-foreground hover:text-foreground"
     >
       <span>View all events</span>
       <ChevronRight aria-hidden="true" className="h-3 w-3" />
@@ -189,9 +206,11 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
     >
       <div className="relative flex flex-col items-stretch sm:flex-row">
         {placement === "top" ? (
-          <div className="sticky left-0 z-10 hidden shrink-0 items-center gap-2 border-r border-border/60 bg-card px-3 py-2 whitespace-nowrap dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))] sm:flex">
+          // Desktop-only: on phones the counts cost a second chrome row, so the
+          // strip stays a single ticker line there.
+          <div className="sticky left-0 z-10 hidden shrink-0 items-center gap-1.5 border-r border-border/60 bg-card px-3 py-1.5 whitespace-nowrap dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))] sm:flex">
             {TAPE_STATS.map((stat) => (
-              <TapeStatChip key={stat.label} label={stat.label} value={stat.value} />
+              <TapeStatChip key={stat.label} {...stat} />
             ))}
           </div>
         ) : (
@@ -203,7 +222,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
             Events
           </div>
         )}
-        <div className="relative min-w-0 flex-1 overflow-hidden">
+        <div className={TAPE_VIEWPORT_CLASS}>
           {isLoading ? (
             <div className="flex items-center px-3 py-2 text-xs text-muted-foreground" aria-live="polite">
               Loading recent events…
@@ -232,18 +251,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
               <TapeTerminator />
             </div>
           )}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-background to-transparent"
-          />
         </div>
-        {placement === "top" ? (
-          <div className="flex items-center gap-2 overflow-x-auto border-t border-border/60 bg-card px-3 py-2 whitespace-nowrap dark:bg-[color:color-mix(in_oklab,var(--background)_30%,var(--card))] sm:hidden">
-            {TAPE_STATS.map((stat) => (
-              <TapeStatChip key={stat.label} label={stat.label} value={stat.value} />
-            ))}
-          </div>
-        ) : null}
       </div>
     </section>
   );

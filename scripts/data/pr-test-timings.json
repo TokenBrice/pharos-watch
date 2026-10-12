@@ -394,7 +394,6 @@
     "scripts/__tests__/run-safety-score-v9-policy-sensitivity.test.ts": 747,
     "scripts/__tests__/safety-score-v9-missing-data-registry.test.ts": 166,
     "scripts/__tests__/safety-score-v9-operational-report-clis.test.ts": 332,
-    "scripts/__tests__/screenshot-og.test.ts": 12,
     "scripts/__tests__/seo-sitemap.test.ts": 1,
     "scripts/__tests__/serve-static-export.test.ts": 391,
     "scripts/__tests__/setup-agent-hooks.test.ts": 4,

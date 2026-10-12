@@ -20,7 +20,7 @@ const COVERAGE_DATASET_JSON_LD = buildCoverageDatasetJsonLd();
 
 const COVERAGE_STATIC_SECTION = (
   <section className="pharos-card-shell px-4 py-4">
-    <p className="pharos-kicker">How To Read Coverage</p>
+    <p className="pharos-label">How to read coverage</p>
     <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
       <p>
         Coverage answers whether Pharos can show a feature for a specific asset today. A blank or unavailable state is a

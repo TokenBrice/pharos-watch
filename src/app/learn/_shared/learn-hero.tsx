@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  */
 
 const DEFAULT_BEAM_VALUE_CLASS =
-  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]";
+  "pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]";
 
 export interface LearnHeroProps {
   /** Muted label above the beam figure (e.g. "Active coins tracked"). */
@@ -61,7 +61,7 @@ export function LearnHero({
         </div>
         {hasSub ? (
           <div className="space-y-2 sm:min-w-[14rem] sm:text-right">
-            {subKicker ? <p className="pharos-kicker">{subKicker}</p> : null}
+            {subKicker ? <p className="pharos-label">{subKicker}</p> : null}
             {sub}
           </div>
         ) : null}

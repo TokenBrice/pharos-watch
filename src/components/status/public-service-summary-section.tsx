@@ -96,14 +96,14 @@ export function PublicServiceSummarySection({
           </p>
           <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <div className="border-t border-border/60 pt-3">
-              <div className="pharos-kicker">Last Successful Sync</div>
+              <div className="pharos-label">Last successful sync</div>
               <div className="mt-1.5 pharos-numeric text-sm text-foreground">
                 {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
               </div>
             </div>
             {healthData.mintBurn.latestHourlyTs != null ? (
               <div className="border-t border-border/60 pt-3">
-                <div className="pharos-kicker">Latest Hourly Rollup</div>
+                <div className="pharos-label">Latest hourly rollup</div>
                 <div className="mt-1.5 pharos-numeric text-sm text-foreground">
                   {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
                 </div>
@@ -135,7 +135,7 @@ export function PublicServiceSummarySection({
             Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
           </p>
           <div className="border-t border-border/60 pt-3">
-            <div className="pharos-kicker">Public Health Interpretation</div>
+            <div className="pharos-label">Public health interpretation</div>
             <div className="mt-1.5 leading-relaxed text-foreground">
               {healthData.blacklist.missingAmounts == null
                 ? `Blacklist health evidence unavailable (${healthData.blacklist.unavailableReason ?? "unavailable"}).`
@@ -193,7 +193,7 @@ export function PublicServiceSummarySection({
         >
           <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <div className="border-t border-border/60 pt-3">
-              <div className="pharos-kicker" title={TELEGRAM_METRIC_SEMANTICS.registeredChats.description}>
+              <div className="pharos-label" title={TELEGRAM_METRIC_SEMANTICS.registeredChats.description}>
                 {TELEGRAM_METRIC_SEMANTICS.registeredChats.label}
               </div>
               <div className="mt-1.5 pharos-numeric text-sm text-foreground">
@@ -201,7 +201,7 @@ export function PublicServiceSummarySection({
               </div>
             </div>
             <div className="border-t border-border/60 pt-3">
-              <div className="pharos-kicker">Last Dispatch</div>
+              <div className="pharos-label">Last dispatch</div>
               <div className="mt-1.5 pharos-numeric text-sm text-foreground">
                 {telegramSummary.lastDispatchAt
                   ? formatTimestampSeconds(telegramSummary.lastDispatchAt)

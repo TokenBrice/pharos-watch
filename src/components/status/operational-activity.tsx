@@ -121,10 +121,10 @@ function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; n
               <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
                 Safe structured detail
               </summary>
-              <p className="mt-2 text-[11px] text-muted-foreground">
+              <p className="mt-2 text-2xs text-muted-foreground">
                 Sensitive fields, assignments, and token-shaped values are redacted.
               </p>
-              <pre className="mt-2 max-h-56 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-[11px] text-foreground">
+              <pre className="mt-2 max-h-56 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-2xs text-foreground">
                 {JSON.stringify(entry.detail, null, 2)}
               </pre>
             </details>

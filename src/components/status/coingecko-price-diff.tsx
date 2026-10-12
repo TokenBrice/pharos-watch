@@ -91,7 +91,7 @@ export function CoinGeckoPriceDiffCard({
                   </div>
                 </div>
                 <span
-                  className={`rounded-full border px-2.5 py-1 pharos-numeric text-[11px] font-medium ${getDiffBadgeClass(row.diffPct)}`}
+                  className={`rounded-full border px-2.5 py-1 pharos-numeric text-2xs font-medium ${getDiffBadgeClass(row.diffPct)}`}
                 >
                   {row.diffPct.toFixed(2)}%
                 </span>

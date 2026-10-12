@@ -61,10 +61,10 @@ function SignalTile({
 
   return (
     <div>
-      <p className="pharos-kicker">{label}</p>
+      <p className="pharos-label">{label}</p>
       <div className="mt-1.5 flex items-baseline justify-between gap-2">
         <span className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</span>
-        <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", presentation.badgeClassName)}>
+        <span className={cn("rounded-full border px-2 py-0.5 text-2xs font-medium", presentation.badgeClassName)}>
           {presentation.label}
         </span>
       </div>
@@ -81,7 +81,7 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="pharos-kicker">{label}</span>
+      <span className="pharos-label">{label}</span>
       <span className="pharos-numeric text-xs text-foreground">{value}</span>
     </div>
   );
@@ -127,7 +127,7 @@ export function PublicStatusHero({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className={cn("rounded-full border px-3 py-1 text-[11px] font-medium", statusTone.badgeClassName)}>
+              <span className={cn("rounded-full border px-3 py-1 text-2xs font-medium", statusTone.badgeClassName)}>
                 {statusTone.label}
               </span>
               <FreshnessIndicator
@@ -141,7 +141,7 @@ export function PublicStatusHero({
                 labelPrefix="Probe fetch"
               />
               {healthData.warnings.length > 0 && (
-                <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5 text-2xs text-muted-foreground">
                   <span className={cn("h-2 w-2 rounded-full", hero.accentDot)} />
                   {healthData.warnings.length} warning{healthData.warnings.length !== 1 ? "s" : ""}
                 </span>

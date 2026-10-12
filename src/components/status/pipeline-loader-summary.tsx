@@ -24,7 +24,7 @@ export function PipelineLoaderSummary({ errors }: { errors: PipelineLoaderError[
             <span className="opacity-85">
               ({PIPELINE_MODES.find((mode) => mode.id === error.mode)?.label ?? error.mode}): {error.message}
             </span>
-            <span className="mt-0.5 block break-all font-mono text-[10px] opacity-70">
+            <span className="mt-0.5 block break-all font-mono text-3xs opacity-70">
               {error.rawKey} · {error.code}
             </span>
           </li>

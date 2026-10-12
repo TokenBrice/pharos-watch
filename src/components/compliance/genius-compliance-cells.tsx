@@ -88,7 +88,7 @@ export function GeniusReserveCell({ row }: { row: GeniusComplianceRow }) {
 export function GeniusReviewDetails({ evidence: row }: { evidence: GeniusComplianceEvidence }) {
   return (
     <div className="min-w-0 space-y-2 text-xs text-muted-foreground">
-      <p className="pharos-kicker">Review Details</p>
+      <p className="pharos-label">Review details</p>
       {row.reviewedAt || row.reviewer ? (
         <p>
           Reviewed{row.reviewedAt ? ` ${row.reviewedAt}` : ""}

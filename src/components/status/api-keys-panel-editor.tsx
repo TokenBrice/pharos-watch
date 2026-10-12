@@ -244,7 +244,7 @@ function ApiKeyAuditHistory({
                 <span className="text-sm font-medium text-foreground">{formatAuditAction(entry.action)}</span>
                 <time
                   dateTime={new Date(entry.createdAt * 1000).toISOString()}
-                  className="font-mono text-[11px] tabular-nums text-muted-foreground"
+                  className="font-mono text-2xs tabular-nums text-muted-foreground"
                 >
                   {formatStatusTimestamp(entry.createdAt)}
                 </time>
@@ -255,7 +255,7 @@ function ApiKeyAuditHistory({
                   <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
                     Event detail
                   </summary>
-                  <pre className="mt-2 max-h-40 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-[11px] text-foreground">
+                  <pre className="mt-2 max-h-40 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-2xs text-foreground">
                     {JSON.stringify(entry.detail, null, 2)}
                   </pre>
                 </details>
@@ -315,12 +315,12 @@ export function ApiKeyDetailEditor({
           <div className="flex flex-wrap gap-2">
             <StatusPill className={apiKeyStatusBadgeClassName(keyStatus)}>{keyStatus}</StatusPill>
             {expiringSoon ? (
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-medium text-amber-700 dark:text-amber-400">
                 expiring soon
               </span>
             ) : null}
             {apiKey.expiresAt == null ? (
-              <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="rounded-full bg-muted/70 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                 non-expiring exception
               </span>
             ) : null}

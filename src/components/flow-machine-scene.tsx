@@ -41,7 +41,7 @@ export function FlowMachineScene({
       </div>
 
       {subText ? (
-        <p className="mt-1 text-[11px] text-muted-foreground/85">{subText}</p>
+        <p className="mt-1 text-2xs text-muted-foreground/85">{subText}</p>
       ) : null}
 
       {isShredder ? (

@@ -54,7 +54,7 @@ describe("HomepageTape", () => {
     const { rerender } = render(<HomepageTape placement="top" />);
     expect(screen.getByRole("region", { name: "Recent events tape" })).toBeTruthy();
     for (const label of ["Core", "Variants", "Pegs", "Chains"]) {
-      expect(screen.getAllByText(label)).toHaveLength(2);
+      expect(screen.getAllByText(label)).toHaveLength(1);
     }
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("href")))
       .toContain("/stablecoin/usdc-circle#peg-history");
@@ -312,5 +312,30 @@ describe("HomepageTape", () => {
     const tapeLink = screen.getByText("View all events").closest("a");
     // Next.js Link may normalize trailing slash; accept either.
     expect(tapeLink?.getAttribute("href")).toMatch(/^\/timeline\/?$/);
+  });
+
+  it("renders yield warning keys and chain ids in plain language", () => {
+    mockEvents([
+      makeTapeEvent({
+        id: "1747200000000-yield-aaa11111",
+        type: "yield.warning_emitted",
+        coinId: "usdc-circle",
+        title: "USDC yield warning: opportunity-evidence-missing, tvl-outflow",
+        payload: { newSignals: ["opportunity-evidence-missing", "tvl-outflow"] },
+      }),
+      makeTapeEvent({
+        id: "1747200000000-mint-bbb22222",
+        type: "mint_burn.large_burn",
+        coinId: "usdt-tether",
+        chain: "ethereum",
+        title: "USDT burned $49.0M · ethereum",
+      }),
+    ]);
+
+    render(<HomepageTape />);
+
+    expect(screen.getAllByText("USDC yield warning: Opportunity evidence incomplete, TVL outflow").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("USDT burned $49.0M · Ethereum").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/opportunity-evidence-missing/)).toBeNull();
   });
 });

@@ -167,7 +167,7 @@ function ChainRouteCta({
     <section className="rounded-xl border border-border/60 bg-muted/20 px-4 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <p className="pharos-kicker">Next Check</p>
+          <p className="pharos-label">Next check</p>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Compare the leading {chainName} stablecoins side by side, then subscribe to depeg and safety alerts for the
             assets you actually hold.
@@ -210,7 +210,7 @@ function ChainDeploymentAnchors({
       <div className="space-y-1.5">
         <h2
           id="chain-deployment-anchors-heading"
-          className="pharos-kicker"
+          className="pharos-label"
         >
           Tracked Stablecoins On {chainName}
         </h2>
@@ -243,7 +243,7 @@ function ChainResearchSurfaces({ chainName }: { chainName: string }) {
   return (
     <section className="space-y-3" aria-label={`${chainName} stablecoin research surfaces`}>
       <div className="space-y-1.5">
-        <h2 className="pharos-kicker">
+        <h2 className="pharos-label">
           Stablecoin Research Surfaces
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -265,7 +265,7 @@ function ChainRelatedHubs({ chainId, taxonomyLinks }: { chainId: string; taxonom
       <div className="space-y-1.5">
         <h2
           id={`${chainId}-related-hubs-heading`}
-          className="pharos-kicker"
+          className="pharos-label"
         >
           Related Stablecoin Hubs
         </h2>

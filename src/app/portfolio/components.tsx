@@ -24,8 +24,8 @@ export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: n
     <section className="pharos-card-shell px-5 py-5 sm:px-6 sm:py-6" aria-label="Portfolio overview">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <p className="pharos-kicker">{hasHoldings ? "Total portfolio value" : "Modelable stablecoins"}</p>
-          <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+          <p className="pharos-label">{hasHoldings ? "Total portfolio value" : "Modelable stablecoins"}</p>
+          <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
             {hasHoldings ? (totalUsd > 0 ? formatUsd(totalUsd) : "Enter amounts") : PORTFOLIO_COIN_OPTIONS.length}
           </p>
           <p className="pharos-meta">
@@ -36,7 +36,7 @@ export function PortfolioHeroStrip({ holdingCount, totalUsd }: { holdingCount: n
         </div>
         <dl>
           <div className="space-y-1">
-            <dt className="pharos-kicker">Holdings</dt>
+            <dt className="pharos-label">Holdings</dt>
             <dd className="pharos-numeric text-lg font-semibold text-foreground">{holdingCount}</dd>
           </div>
         </dl>
@@ -165,7 +165,7 @@ export function PortfolioHoldingsEditor({
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Wallet className="h-5 w-5 text-primary/80 shrink-0" />
-            <CardTitle className="pharos-kicker">My Holdings</CardTitle>
+            <CardTitle className="pharos-label">My holdings</CardTitle>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span role="status" aria-live="polite" className="text-xs text-muted-foreground animate-fade-in">

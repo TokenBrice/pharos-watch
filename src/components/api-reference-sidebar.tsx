@@ -27,7 +27,7 @@ function MethodBadge({ method }: { method: "GET" | "POST" }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 rounded-full border px-1.5 py-px font-mono text-[10px] font-bold leading-tight",
+        "inline-flex shrink-0 rounded-full border px-1.5 py-px font-mono text-3xs font-bold leading-tight",
         method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
         method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-400",
       )}
@@ -64,7 +64,7 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
 
   return (
     <nav aria-label="API reference navigation" className={cn("space-y-1 text-sm", className)}>
-      <p className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="px-2 pb-2 pharos-label">
         API Reference
       </p>
       {sections.map((section) => {
@@ -82,7 +82,7 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
               onClick={() => onNavigate(section.id)}
               aria-current={isActive ? "true" : undefined}
               className={cn(
-                "pharos-focus-ring flex w-full items-center rounded-md px-2 py-1.5 text-left text-[13px] transition-colors",
+                "pharos-focus-ring flex w-full items-center rounded-md px-2 py-1.5 text-left text-xs transition-colors",
                 isActive
                   ? "border-l-2 border-foreground/50 bg-muted/60 font-medium text-foreground"
                   : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
@@ -100,7 +100,7 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
               type="button"
               onClick={() => toggleGroup(section.id)}
               className={cn(
-                "pharos-focus-ring flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-[13px] font-medium transition-colors",
+                "pharos-focus-ring flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs font-medium transition-colors",
                 isActive || activeParent === section.id
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground",
@@ -133,7 +133,7 @@ export function ApiReferenceSidebar({ sections, activeId, onNavigate, className 
                       )}
                     >
                       {sub.method && <MethodBadge method={sub.method} />}
-                      <span className="truncate font-mono text-[12px]">{sub.label}</span>
+                      <span className="truncate font-mono text-xs">{sub.label}</span>
                     </button>
                   );
                 })}

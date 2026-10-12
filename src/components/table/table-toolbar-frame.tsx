@@ -32,7 +32,7 @@ export function TableToolbarFrame({
           {titleId ? (
             <h2
               id={titleId}
-              className="font-mono text-base font-semibold uppercase tracking-tight text-foreground sm:text-lg"
+              className="text-base font-semibold text-foreground sm:text-lg"
             >
               {eyebrow}
               {meta ? (
@@ -42,7 +42,7 @@ export function TableToolbarFrame({
               ) : null}
             </h2>
           ) : (
-            <p className="pharos-kicker">{eyebrow}</p>
+            <p className="pharos-label">{eyebrow}</p>
           )}
           {description ? (
             <p className="pharos-meta hidden sm:block">{description}</p>

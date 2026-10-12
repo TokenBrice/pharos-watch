@@ -1,9 +1,9 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import Link from "next/link";
 import { Area, AreaChart } from "recharts";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -95,6 +95,8 @@ function WatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
   const rawGradientId = useId();
   const gradientId = `night-watch-growth-${rawGradientId.replace(/:/g, "")}`;
   const rangeDays = lifecycleRangeDays(data);
+  const watcherCounts = useMemo(() => data.map((point) => point.activeWatchers), [data]);
+  const valueAxis = useNiceValueAxis(watcherCounts, { kind: "count" });
   // Month-boundary ticks when the series spans ~4+ months: explicit monthly
   // positions (no duplicate month labels), month-only text when the whole
   // series sits in one calendar year, year suffix when it crosses years.
@@ -130,6 +132,7 @@ function WatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
           <MonoYAxis
             width={42}
             allowDecimals={false}
+            {...valueAxis}
             tickFormatter={(value) => COMPACT_NUMBER_FORMATTER.format(Number(value))}
           />
           <DateTooltip formatter={(value, name) => [formatCount(Number(value)), String(name)]} />

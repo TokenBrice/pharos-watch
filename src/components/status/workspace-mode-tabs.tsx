@@ -102,7 +102,7 @@ export function WorkspaceModeTabs<TMode extends string>({
               <span>{mode.label}</span>
               <span
                 className={cn(
-                  "inline-flex min-w-5 items-center justify-center rounded border px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
+                  "inline-flex min-w-5 items-center justify-center rounded border px-1.5 py-0.5 font-mono text-3xs tabular-nums",
                   isActive
                     ? "border-background/30 bg-background/10 text-background forced-colors:border-[Highlight] forced-colors:text-[Highlight]"
                     : SEVERITY_CLASS[mode.severity],

@@ -22,9 +22,9 @@ export function FeedbackButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
-        className="pharos-focus-ring fixed right-6 bottom-6 z-50 hidden min-h-11 items-center justify-center gap-2 rounded-full border border-primary/70 bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-[transform,background-color,border-color] hover:border-primary/85 hover:bg-primary/92 active:translate-y-[1px] sm:flex"
+        className="pharos-focus-ring fixed right-4 bottom-4 z-50 hidden h-8 items-center justify-center gap-1.5 rounded-md border border-border/70 bg-background/90 px-2.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm transition-colors hover:border-border hover:bg-card hover:text-foreground sm:flex"
       >
-        <MessageSquarePlus className="h-4 w-4 shrink-0" />
+        <MessageSquarePlus aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
         <span>Feedback</span>
       </button>
       {open && <FeedbackModal open={open} onOpenChange={setOpen} />}

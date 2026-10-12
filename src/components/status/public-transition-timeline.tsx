@@ -93,7 +93,7 @@ export function PublicTransitionTimeline({
                     </TableCell>
                     <TableCell className="py-2.5">
                       <span
-                        className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${toTone.badgeClassName}`}
+                        className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${toTone.badgeClassName}`}
                       >
                         {TYPE_LABELS[transition.transitionType] ?? transition.transitionType}
                       </span>

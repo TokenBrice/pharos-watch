@@ -91,11 +91,11 @@ function GapOwnerLegend({ model }: { model: DataCoverageModel }) {
               OWNER_SWATCHES[owner.responsibility] ?? "bg-muted-foreground",
             )}
           />
-          <span className="text-[11px] text-muted-foreground lg:hidden">
+          <span className="text-2xs text-muted-foreground lg:hidden">
             {OWNER_SHORT_LABELS[owner.responsibility] ?? owner.label}
           </span>
-          <span className="hidden text-[11px] text-muted-foreground lg:inline">{owner.label}</span>
-          <span className="pharos-numeric text-[11px] font-semibold tabular-nums text-foreground">
+          <span className="hidden text-2xs text-muted-foreground lg:inline">{owner.label}</span>
+          <span className="pharos-numeric text-2xs font-semibold tabular-nums text-foreground">
             {formatCount(owner.count)}
           </span>
         </li>
@@ -119,7 +119,7 @@ function GapOwnerDetail({ model }: { model: DataCoverageModel }) {
           />
           <span className="min-w-0 flex-1">
             <span className="block text-xs font-medium text-foreground">{owner.label}</span>
-            <span className="block text-[11px] leading-snug text-muted-foreground">{owner.detail}</span>
+            <span className="block text-2xs leading-snug text-muted-foreground">{owner.detail}</span>
           </span>
           <span className="pharos-numeric shrink-0 text-sm font-semibold tabular-nums text-foreground">
             {formatCount(owner.count)}
@@ -156,7 +156,7 @@ function StatDetail({ model }: { model: DataCoverageModel }) {
       {rows.map((row) => (
         <li key={row.label} className="min-w-0">
           <span className="block text-xs font-medium text-foreground">{row.label}</span>
-          <span className="pharos-numeric block text-[11px] leading-snug text-muted-foreground">
+          <span className="pharos-numeric block text-2xs leading-snug text-muted-foreground">
             {row.detail}
           </span>
         </li>
@@ -169,7 +169,7 @@ function GapTypeRow({ label, assetCount }: { label: string; assetCount: number }
   return (
     <li className="flex items-baseline justify-between gap-3 border-b border-border/30 py-1.5 last:border-b-0">
       <span className="min-w-0 text-xs text-foreground/85">{label}</span>
-      <span className="pharos-numeric shrink-0 text-[11px] tabular-nums text-muted-foreground">
+      <span className="pharos-numeric shrink-0 text-2xs tabular-nums text-muted-foreground">
         {formatCount(assetCount)} {assetCount === 1 ? "asset" : "assets"}
       </span>
     </li>
@@ -233,7 +233,7 @@ export function SafetyScoreDataCoverage({ model }: { model: DataCoverageModel | 
         </ul>
       ) : null}
       {backingKnownPct !== null ? (
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <p className="text-2xs leading-relaxed text-muted-foreground">
           Reserve inputs are the one set with a published observation state:{" "}
           <span className="font-medium text-foreground">{backingKnownPct}%</span> of{" "}
           {formatCount(model.backingObservedCount)} are fully known. Exit and economic-control
@@ -258,8 +258,8 @@ export function SafetyScoreDataCoverage({ model }: { model: DataCoverageModel | 
       */}
       <details className="group">
         <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-sm md:min-h-0">
-          {hasOwners ? <GapOwnerLegend model={model} /> : <span className="pharos-kicker">Score inputs</span>}
-          <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+          {hasOwners ? <GapOwnerLegend model={model} /> : <span className="pharos-label">Score inputs</span>}
+          <span className="flex shrink-0 items-center gap-1.5 text-2xs font-medium text-muted-foreground">
             {model.gapTypes.length > 0
               ? `Which inputs are missing (${formatCount(model.gapTypes.length)})`
               : "Coverage detail"}

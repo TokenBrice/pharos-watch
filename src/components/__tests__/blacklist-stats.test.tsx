@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
-import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
+import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { BlacklistDetailStats } from "@/components/stablecoin-detail/blacklist-detail-stats";
 
 
@@ -185,7 +185,7 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.getByText("Data Quality")).toBeTruthy();
+    expect(screen.getByText("Data quality")).toBeTruthy();
     expect(screen.getByText(/3 events have an ambiguous order/)).toBeTruthy();
     expect(screen.getByText(/Tron transfers in separate transactions/)).toBeTruthy();
   });
@@ -242,7 +242,7 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.getByText("Data Quality")).toBeTruthy();
+    expect(screen.getByText("Data quality")).toBeTruthy();
     expect(screen.getByText("Freeze ledger coverage is stale")).toBeTruthy();
     expect(screen.getByText("4 current-balance provider failures")).toBeTruthy();
     expect(screen.getByText("2 tracked ledger gaps")).toBeTruthy();
@@ -281,7 +281,7 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.queryByText("Data Quality")).toBeNull();
+    expect(screen.queryByText("Data quality")).toBeNull();
   });
 
   it("keeps extra precision for sub-0.1% market-share values", () => {

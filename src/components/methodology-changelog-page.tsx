@@ -92,7 +92,7 @@ export function MethodologyChangelogPage({
       >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
           <div className="space-y-2">
-            <p className="pharos-kicker">What This Controls</p>
+            <p className="pharos-label">What this controls</p>
             <h2 className="text-xl font-semibold text-foreground">{title} version history</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Use this changelog to trace how Pharos changed the related scoring, data-source, threshold, or
@@ -101,7 +101,7 @@ export function MethodologyChangelogPage({
             </p>
           </div>
           <div className="space-y-2 border-border/50 lg:border-l lg:pl-5">
-            <p className="pharos-kicker">Primary References</p>
+            <p className="pharos-label">Primary references</p>
             <div className="flex flex-col gap-2 text-sm">
               <Link
                 href="/methodology/"
@@ -134,7 +134,7 @@ export function MethodologyChangelogPage({
             >
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(16rem,0.8fr)]">
                 <div className="space-y-3">
-                  <p className="pharos-kicker">Latest Version</p>
+                  <p className="pharos-label">Latest version</p>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="inline-block rounded-full border border-border/60 bg-muted/55 px-2.5 py-0.5 text-xs pharos-numeric font-medium text-foreground">
                       {toMethodologyVersionLabel(latestEntry.version)}
@@ -152,7 +152,7 @@ export function MethodologyChangelogPage({
                   <p className="text-sm leading-relaxed text-muted-foreground">{latestEntry.summary}</p>
                 </div>
                 <div className="border-border/50 lg:border-l lg:pl-5">
-                  <p className="pharos-kicker">Impact Snapshot</p>
+                  <p className="pharos-label">Impact snapshot</p>
                   {latestEntry.impact.length > 0 ? (
                     <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                       {latestEntry.impact.slice(0, 4).map((item) => (

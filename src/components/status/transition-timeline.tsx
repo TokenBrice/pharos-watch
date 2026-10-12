@@ -109,7 +109,7 @@ function CauseDetails({ transition }: { transition: StatusTransition }) {
           </div>
           <p className="mt-1 whitespace-normal break-words text-xs text-muted-foreground">{cause.message}</p>
           {cause.metric ? (
-            <p className="mt-1 whitespace-normal break-all font-mono text-[11px] text-muted-foreground">
+            <p className="mt-1 whitespace-normal break-all font-mono text-2xs text-muted-foreground">
               {cause.metric}
               {cause.value != null ? `=${cause.value}` : ""}
               {cause.threshold != null ? ` (threshold ${cause.threshold})` : ""}
@@ -119,7 +119,7 @@ function CauseDetails({ transition }: { transition: StatusTransition }) {
             <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
               Raw cause data
             </summary>
-            <pre className="mt-2 max-h-48 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-[11px] text-foreground">
+            <pre className="mt-2 max-h-48 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-2xs text-foreground">
               {JSON.stringify(cause, null, 2)}
             </pre>
           </details>
@@ -349,7 +349,7 @@ export function TransitionTimeline({
                       <div className="font-mono tabular-nums text-foreground">
                         {transition.from ?? "init"} -&gt; {transition.to}
                       </div>
-                      <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                      <div className="mt-1 font-mono text-2xs text-muted-foreground">
                         raw {transition.rawStatus} · {transition.transitionType}
                       </div>
                     </TableCell>
@@ -365,7 +365,7 @@ export function TransitionTimeline({
                     </TableCell>
                     <TableCell className="max-w-[22rem] whitespace-normal py-2 align-top text-xs text-muted-foreground">
                       <p className="break-words">{transition.reason}</p>
-                      <p className="mt-1 font-mono text-[11px] tabular-nums">
+                      <p className="mt-1 font-mono text-2xs tabular-nums">
                         confidence {(transition.confidence * 100).toFixed(1)}%
                       </p>
                     </TableCell>

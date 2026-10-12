@@ -57,7 +57,7 @@ export default function DocsIndexPage() {
       <div className="space-y-10">
         <section aria-labelledby="docs-start-here" className="space-y-4 border-y border-border/60 py-5">
           <div className="space-y-2">
-            <p className="pharos-kicker">Start Here</p>
+            <p className="pharos-label">Start here</p>
             <h2 id="docs-start-here" className="pharos-display text-2xl font-bold tracking-tight text-foreground">
               High-signal public docs
             </h2>
@@ -70,7 +70,7 @@ export default function DocsIndexPage() {
               href={FEATURED_API_REFERENCE.href}
               className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
             >
-              <p className="pharos-kicker text-muted-foreground/80">{FEATURED_API_REFERENCE.label}</p>
+              <p className="pharos-label text-muted-foreground/80">{FEATURED_API_REFERENCE.label}</p>
               <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
                 {FEATURED_API_REFERENCE.title}
               </h3>
@@ -85,7 +85,7 @@ export default function DocsIndexPage() {
                   href={`/docs/${featured.slug}/`}
                   className="pharos-focus-ring group block border-t border-border/60 pt-4 md:border-t-0 md:pt-0"
                 >
-                  <p className="pharos-kicker text-muted-foreground/80">{featured.label}</p>
+                  <p className="pharos-label text-muted-foreground/80">{featured.label}</p>
                   <h3 className="mt-1 text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">
                     {doc.title}
                   </h3>

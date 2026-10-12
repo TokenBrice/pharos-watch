@@ -334,7 +334,7 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
             >
               {event.direction === "below" ? "Below" : "Above"}
             </Badge>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-2xs text-muted-foreground">
               {event.source}
               {(event.constituentEventCount ?? 1) > 1 ? ` · ${event.constituentEventCount} crossings` : ""}
             </span>
@@ -350,7 +350,7 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
           </p>
         </div>
       </div>
-      <dl className="mt-2 grid grid-cols-3 gap-2 border-t border-border/40 pt-2 text-[11px]">
+      <dl className="mt-2 grid grid-cols-3 gap-2 border-t border-border/40 pt-2 text-2xs">
         <div>
           <dt className="text-muted-foreground">Start</dt>
           <dd className="mt-0.5 font-mono tabular-nums">

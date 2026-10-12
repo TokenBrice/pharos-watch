@@ -44,7 +44,7 @@ function FactorList({ kind, factors }: { kind: "kill" | "anchor"; factors: DdrFa
 
   return (
     <div className="min-w-0 space-y-1.5">
-      <p className={cn("pharos-kicker", headTone)}>{heading}</p>
+      <p className={cn("pharos-label", headTone)}>{heading}</p>
       {factors.length === 0 ? (
         <p className="text-xs italic text-muted-foreground">none fired</p>
       ) : (
@@ -53,7 +53,7 @@ function FactorList({ kind, factors }: { kind: "kill" | "anchor"; factors: DdrFa
             <li key={factor.code} className="flex items-start gap-2 text-xs">
               <SeverityPips kind={kind} weight={SEVERITY_WEIGHT[factor.severity]} />
               <span className="min-w-0 break-words leading-snug text-foreground/90">{factor.label}</span>
-              <span className="pharos-meta ml-auto shrink-0 pl-1 font-mono uppercase tracking-wide">
+              <span className="pharos-meta ml-auto shrink-0 pl-1">
                 {SEVERITY_LABEL[factor.severity]}
               </span>
             </li>
@@ -137,7 +137,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
             the direction chip never wraps differently between sibling cards. */}
         <div className="flex items-center justify-between gap-x-3">
           <CoinLockup row={row} logos={logos} logoSize={52} />
-          <span className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase tracking-wide text-muted-foreground">
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase text-muted-foreground">
             {dirGlyph} {row.direction} {row.pegCurrency}
           </span>
         </div>
@@ -147,7 +147,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           ) : null}
           <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
             <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
-            <span className={cn("text-sm font-bold uppercase tracking-wide leading-none", meta.accent)}>{meta.label}</span>
+            <span className={cn("text-sm font-bold uppercase leading-none", meta.accent)}>{meta.label}</span>
             {frozen ? (
               /* The chip itself opens the contextual-methodology popover —
                  "frozen" reads as "stale/broken" without an explainer. */
@@ -235,7 +235,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         {showTension ? (
           <details className="group border-t border-border/50 pt-3">
             <summary className={DISCLOSURE_SUMMARY}>
-              <span className="pharos-kicker group-hover:text-foreground">
+              <span className="pharos-label group-hover:text-foreground">
                 Will it recover?
               </span>
               <span className="pharos-meta pharos-numeric">

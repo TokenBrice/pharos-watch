@@ -112,7 +112,7 @@ function CodeExampleCard({ example }: { example: (typeof CODE_EXAMPLES)[number] 
   return (
     <article className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
       <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--code-surface-muted)]">{example.label}</span>
+        <span className="text-2xs font-semibold text-[var(--code-surface-muted)]">{example.label}</span>
         <CopyButton text={example.code} />
       </div>
       <pre className="overflow-x-auto px-3 py-3 text-xs leading-relaxed">
@@ -124,7 +124,7 @@ function CodeExampleCard({ example }: { example: (typeof CODE_EXAMPLES)[number] 
 
 const INLINE_CODE_CLASS = "rounded bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground [overflow-wrap:anywhere]";
 const METHOD_BADGE_CLASS =
-  "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-[11px] font-bold leading-tight";
+  "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-2xs font-bold leading-tight";
 const METHOD_BADGE_STYLES = {
   section: {
     GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
@@ -246,7 +246,7 @@ function MarkdownBlockRenderer({
       <div className="overflow-hidden rounded-xl border border-border/60 bg-[var(--code-surface-bg)] text-[var(--code-surface-fg)]">
         <div className="flex items-center justify-between border-b border-[var(--code-surface-border)] px-3 py-2">
           {block.language ? (
-            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--code-surface-muted)]">
+            <span className="text-2xs font-semibold text-[var(--code-surface-muted)]">
               {block.language}
             </span>
           ) : (
@@ -268,7 +268,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
   return (
     <section id={section.id} className="pharos-card-shell space-y-5 px-4 py-5 sm:px-5 sm:py-6">
       <div className="space-y-2">
-        <p className="pharos-kicker">Reference Section</p>
+        <p className="pharos-label">Reference section</p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground"><InlineMarkdown text={section.title} /></h2>
       </div>
 
@@ -323,7 +323,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
   return (
     <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
       <div className="space-y-2">
-        <p className="pharos-kicker">Endpoint Directory</p>
+        <p className="pharos-label">Endpoint directory</p>
         <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public API routes</h2>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Every public route on one screen. Each links to its field tables, examples, and edge-case contract above.
@@ -400,7 +400,7 @@ export async function ApiReferencePanel() {
             <section key={lane.title} className="pharos-card-shell px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5">
-                  <p className="pharos-kicker">{lane.eyebrow}</p>
+                  <p className="pharos-label">{lane.eyebrow}</p>
                   <h2 className="text-lg font-semibold tracking-tight text-foreground">{lane.title}</h2>
                 </div>
                 <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-border/60 bg-background/75 text-foreground">
@@ -413,7 +413,7 @@ export async function ApiReferencePanel() {
         })}
 
         <div className="pharos-card-shell px-4 py-4">
-          <p className="pharos-kicker">Quick Facts</p>
+          <p className="pharos-label">Quick facts</p>
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
             <li>
               <span className="font-semibold text-foreground">Public auth:</span> <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode>
@@ -430,7 +430,7 @@ export async function ApiReferencePanel() {
 
       <section id="quickstart" className="pharos-card-shell space-y-4 px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-2">
-          <p className="pharos-kicker">Quickstart</p>
+          <p className="pharos-label">Quickstart</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Call Pharos from your stack</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Send your key in the <InlineCode>{PUBLIC_API_KEY_HEADER}</InlineCode> header and call the API from a
@@ -446,7 +446,7 @@ export async function ApiReferencePanel() {
 
       <section id="public-datasets" className="pharos-card-shell space-y-5 px-4 py-5 sm:px-5 sm:py-6">
         <div className="space-y-2">
-          <p className="pharos-kicker">No API Key Required</p>
+          <p className="pharos-label">No API key required</p>
           <h2 className="text-2xl font-semibold tracking-tight text-foreground">Public dataset downloads</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
             These exports are published snapshots, not live API responses. Check the JSON metadata for the snapshot
@@ -478,7 +478,7 @@ export async function ApiReferencePanel() {
       {document.introBlocks.length > 0 ? (
         <section className="pharos-card-shell px-4 py-5 sm:px-5 sm:py-6">
           <div className="space-y-2">
-            <p className="pharos-kicker">Getting Started</p>
+            <p className="pharos-label">Getting started</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">Before You Call The API</h2>
           </div>
           <div className="mt-4 space-y-4">

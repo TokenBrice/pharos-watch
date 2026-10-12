@@ -41,7 +41,7 @@ export function MethodologyModeToggle({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="pharos-kicker px-1 text-xs">View</span>
+      <span className="pharos-label px-1 text-xs">View</span>
       <button
         type="button"
         aria-pressed={mode === "reader"}

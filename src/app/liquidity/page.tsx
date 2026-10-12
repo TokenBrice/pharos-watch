@@ -1,6 +1,6 @@
 import { LiquidityContentLoadingState } from "@/app/liquidity/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
@@ -14,7 +14,7 @@ const route = createClientFeaturePage({
   metadata: {
     title: "DEX Liquidity: Stablecoin Pool Depth & Volume",
     description: liquidityDescription,
-    ogImage: `${SITE_URL}/og-liquidity.png`,
+    ogImage: buildLiveRouteOgImageUrl("liquidity"),
   },
   loadClient: () => import("./client").then((m) => ({ default: m.LiquidityClient })),
   loading: <LiquidityContentLoadingState />,

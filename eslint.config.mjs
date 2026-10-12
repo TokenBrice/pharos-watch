@@ -100,6 +100,29 @@ const pharosBoundaryPlugin = {
         };
       },
     },
+    "no-arbitrary-text-px": {
+      meta: {
+        type: "suggestion",
+        schema: [],
+        messages: {
+          px: "Arbitrary font size {{value}}: use the type scale (text-3xs 10px, text-2xs 11px, text-xs … text-5xl) or a shared utility (docs/design-tokens.md#type-scale).",
+        },
+      },
+      create(context) {
+        // Class tokens such as `text-[11px]`, `sm:text-[10.5px]` or the
+        // important forms `md:!text-[11px]` / `text-[11px]!` inside any string
+        // or template chunk; text-[clamp(...)]/rem display sizes stay legal.
+        const pattern = /(?:^|[\s:"'`])(!?text-\[[\d.]+px\]!?)/g;
+        function check(node, text) {
+          if (typeof text !== "string") return;
+          for (const match of text.matchAll(pattern)) context.report({ node, messageId: "px", data: { value: match[1] } });
+        }
+        return {
+          Literal: (node) => check(node, node.value),
+          TemplateElement: (node) => check(node, node.value.cooked),
+        };
+      },
+    },
     "require-shared-alias": {
       meta: {
         type: "problem",
@@ -334,6 +357,18 @@ const eslintConfig = defineConfig([
     plugins: { pharos: pharosBoundaryPlugin },
     rules: {
       "pharos/require-shared-alias": "error",
+    },
+  },
+  {
+    // Type-scale guardrail (docs/design-tokens.md#type-scale). Pre-existing
+    // call sites are grandfathered per file in eslint-suppressions.json (ESLint
+    // bulk suppressions, a count ratchet): new violations fail, and once a
+    // sweep removes some, `npx eslint --prune-suppressions` lowers the baseline.
+    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    ignores: ["**/__tests__/**", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: {
+      "pharos/no-arbitrary-text-px": "error",
     },
   },
   {

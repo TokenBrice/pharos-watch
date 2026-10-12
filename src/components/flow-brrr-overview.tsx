@@ -27,8 +27,8 @@ import {
   type PressureShiftState,
 } from "@shared/lib/mint-burn-signals";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
-import { aggregateCoinFlows24h } from "@/lib/mint-burn-coin-helpers";
-import { describeUnpricedEvents, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import { aggregateCoinFlows24h } from "@shared/lib/mint-burn-coin-helpers";
+import { describeUnpricedEvents, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { MethodologyLabel } from "@/components/methodology-hint";
 
 interface FlowBrrrOverviewProps {
@@ -171,7 +171,7 @@ export function FlowBrrrOverview({
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className={cn(
-                  "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                  "inline-flex rounded-full border px-2 py-0.5 text-2xs font-semibold",
                   snapshot.directionUi.badgeClass,
                 )}
               >
@@ -179,20 +179,20 @@ export function FlowBrrrOverview({
               </span>
               <span
                 className={cn(
-                  "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                  "inline-flex rounded-full border px-2 py-0.5 text-2xs font-semibold",
                   snapshot.pressureUi.badgeClass,
                 )}
               >
                 {snapshot.pressureUi.label}
               </span>
               {gauge?.flightToQuality === true && (
-                <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
+                <span className="inline-flex rounded-full border border-amber-600/35 bg-amber-500/15 px-2 py-0.5 text-2xs font-semibold text-amber-700 dark:border-amber-500/40 dark:text-amber-300">
                   FTQ{gauge.flightIntensity != null ? ` ${Math.round(gauge.flightIntensity)}%` : ""}
                 </span>
               )}
               {gauge?.flightToQuality === null && (
                 <span
-                  className="inline-flex rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground"
+                  className="inline-flex rounded-full border border-border/70 bg-muted/40 px-2 py-0.5 text-2xs font-semibold text-muted-foreground"
                   title="Flight-to-quality unavailable: missing valuation could alter the conclusion"
                 >
                   FTQ unavailable

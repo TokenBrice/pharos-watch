@@ -19,7 +19,7 @@ export function RecommendedActionStrip({
     return (
       <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
         <div className="space-y-2">
-          <p className="pharos-kicker">Recommended Now</p>
+          <p className="pharos-label">Recommended now</p>
           <h3 className="text-lg font-semibold tracking-tight text-foreground">No in-dashboard repair recommended; investigate active blockers.</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             An empty action list is not a health verdict. Review active causes and their runbooks before taking external action.
@@ -33,7 +33,7 @@ export function RecommendedActionStrip({
     <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="pharos-kicker">Recommended Now</p>
+          <p className="pharos-label">Recommended now</p>
           <h3 className="text-lg font-semibold tracking-tight text-foreground">Take the shortest path in.</h3>
           <p className="text-sm leading-relaxed text-muted-foreground">
             These actions are derived from the current blockers and unhealthy cron lanes.

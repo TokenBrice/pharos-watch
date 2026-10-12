@@ -28,9 +28,9 @@ export function ApiKeyInventorySummary({ items }: { items: readonly ApiKeySummar
     <div role="group" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="API key inventory summary">
       {items.map((item) => (
         <div key={item.label} className="border-y border-border/60 py-2">
-          <div className="text-xs uppercase text-muted-foreground">{item.label}</div>
+          <div className="pharos-label">{item.label}</div>
           <div className="mt-1 pharos-numeric text-xl font-semibold text-foreground">{item.value}</div>
-          <div className="text-[11px] text-muted-foreground">{item.detail}</div>
+          <div className="text-2xs text-muted-foreground">{item.detail}</div>
         </div>
       ))}
     </div>
@@ -308,7 +308,7 @@ export function ApiKeyTable({
       tableProps={{ "aria-label": "API key inventory" }}
       tableClassName="min-w-[76rem] border-collapse text-left text-xs"
     >
-      <TableHeader className="border-b border-border/70 bg-muted text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+      <TableHeader className="border-b border-border/70 bg-muted pharos-label">
         <TableRow rowIntent="static">
           <TableHead className="px-3 py-2 font-medium">Status</TableHead>
           <TableHead className="px-3 py-2 font-medium">Key</TableHead>
@@ -341,12 +341,12 @@ export function ApiKeyTable({
                 <div className="flex flex-wrap gap-1.5">
                   <StatusPill className={apiKeyStatusBadgeClassName(keyStatus)}>{keyStatus}</StatusPill>
                   {expiringSoon ? (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-medium text-amber-700 dark:text-amber-400">
                       expiring soon
                     </span>
                   ) : null}
                   {key.expiresAt == null ? (
-                    <span className="rounded-full bg-muted/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <span className="rounded-full bg-muted/70 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                       non-expiring exception
                     </span>
                   ) : null}
@@ -354,7 +354,7 @@ export function ApiKeyTable({
               </TableCell>
               <TableCell className="max-w-[15rem] px-3 py-2 align-top">
                 <div className="truncate text-sm font-medium text-foreground">{key.name}</div>
-                <div className="truncate font-mono text-[11px] text-muted-foreground">{key.maskedToken}</div>
+                <div className="truncate font-mono text-2xs text-muted-foreground">{key.maskedToken}</div>
                 {isSelected ? <span className="sr-only">Selected for details</span> : null}
               </TableCell>
               <TableCell className="max-w-[15rem] px-3 py-2 align-top text-muted-foreground">
@@ -370,7 +370,7 @@ export function ApiKeyTable({
               </TableCell>
               <TableCell className="max-w-[14rem] px-3 py-2 align-top text-muted-foreground">
                 <div>{formatStatusTimestamp(key.lastUsedAt, { fallback: "never" })}</div>
-                <div className="truncate font-mono text-[11px]">{key.lastUsedRoute ?? "no route"}</div>
+                <div className="truncate font-mono text-2xs">{key.lastUsedRoute ?? "no route"}</div>
               </TableCell>
               <TableCell
                 className={

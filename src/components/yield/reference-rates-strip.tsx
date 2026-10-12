@@ -128,7 +128,7 @@ export function ReferenceRatesStrip({
       <section aria-labelledby="yield-reference-rates-heading" className="pharos-card-shell overflow-hidden">
         <div className="space-y-4 px-4 py-4 sm:px-5">
           <div className="space-y-1">
-            <p className="pharos-kicker">Reference rates</p>
+            <p className="pharos-label">Reference rates</p>
             <h2 id="yield-reference-rates-heading" className="text-lg font-semibold tracking-tight text-foreground">
               Risk-free benchmark per currency
             </h2>
@@ -151,7 +151,7 @@ export function ReferenceRatesStrip({
               viewportProps={{ compactBottomPadding: false, mobileScrollHint: false }}
             >
               <TableHeader>
-                <TableRow className="border-b border-border/40 text-left text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground/70 hover:bg-transparent">
+                <TableRow className="border-b border-border/40 text-left pharos-label hover:bg-transparent">
                   <TableHead scope="col" colSpan={2} className="py-2 pl-5 pr-3 font-medium">
                     Currency
                   </TableHead>
@@ -183,7 +183,7 @@ export function ReferenceRatesStrip({
                       <TableCell className="py-2 pr-2">
                         <CurrencyFlag currency={row.currency} />
                       </TableCell>
-                      <TableCell className="py-2 pr-3 font-mono text-xs tracking-[0.08em] text-foreground">
+                      <TableCell className="py-2 pr-3 pharos-numeric text-xs text-foreground">
                         <span className="inline-flex items-baseline gap-2">
                           <span>{row.currency}</span>
                           {row.currencySymbol ? (
@@ -237,8 +237,8 @@ export function ReferenceRatesStrip({
         </div>
 
         {hasFreshnessRow ? (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground sm:px-5">
-            <span className="font-medium uppercase tracking-[0.12em] text-muted-foreground/80">Data freshness</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border/60 px-4 py-2 text-2xs text-muted-foreground sm:px-5">
+            <span className="pharos-label">Data freshness</span>
             {poolInputMeta ? (
               <>
                 <span aria-hidden="true" className="text-muted-foreground/40">

@@ -115,7 +115,7 @@ export function OverviewDirectory({
     <div className="space-y-2">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="pharos-kicker">Stablecoin Directory</p>
+          <p className="pharos-label">Stablecoin directory</p>
           <p className="text-xs text-muted-foreground">One row per tracked coin with its assessed regime statuses.</p>
         </div>
         <span className="pharos-numeric text-xs text-muted-foreground">{rows.length.toLocaleString()} coins</span>
@@ -218,7 +218,7 @@ function OverviewStatusButton({
       aria-label={`Show ${regime === "mica" ? "MiCA" : "GENIUS"} ${badge.label} stablecoins; selected from ${coinSymbol}`}
       onClick={() => onClick(regime, status)}
       className={cn(
-        "pharos-focus-ring inline-flex max-w-full items-center justify-center whitespace-normal rounded-full border px-1.5 py-1 text-center text-[10px] font-semibold leading-tight sm:px-3 sm:text-xs",
+        "pharos-focus-ring inline-flex max-w-full items-center justify-center whitespace-normal rounded-full border px-1.5 py-1 text-center text-3xs font-semibold leading-tight sm:px-3 sm:text-xs",
         badge.cls,
       )}
     >

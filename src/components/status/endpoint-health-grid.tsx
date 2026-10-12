@@ -125,7 +125,7 @@ export function EndpointHealthGrid({
                       <div className="min-w-0">
                         <div className="font-mono text-xs">{display}</div>
                         {statusDetail ? (
-                          <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                          <div className="mt-1 text-2xs leading-relaxed text-muted-foreground">
                             {statusDetail}
                           </div>
                         ) : null}

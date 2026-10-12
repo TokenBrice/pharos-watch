@@ -264,7 +264,7 @@ export function TopNav() {
         aria-label="Pharos home"
       >
         <PharosLogo size={28} className="rounded-full shadow-sm" priority />
-        <span className="pharos-display text-[15px] font-bold tracking-tight text-foreground">Pharos</span>
+        <span className="pharos-display text-sm font-bold tracking-tight text-foreground">Pharos</span>
       </Link>
 
       {/* Destinations sit left of the fold; browsing sits on the right, next to
@@ -401,7 +401,7 @@ export function TopNav() {
                         <div className="flex gap-3">
                           {menu.columns.map((column) => (
                             <div key={column.key} className="min-w-[172px]">
-                              <p className="pharos-kicker mb-1 px-2.5 text-muted-foreground/70">{column.label}</p>
+                              <p className="pharos-label mb-1 px-2.5 text-muted-foreground/70">{column.label}</p>
                               <ul>
                                 {column.items.map((item) => (
                                   <NavMenuItem
@@ -498,7 +498,7 @@ export function TopNav() {
         >
           <Search className="size-4 shrink-0" aria-hidden />
           <span className="hidden xl:inline">Coin or page</span>
-          <kbd className="ml-auto hidden rounded border border-border/70 bg-background px-1.5 font-mono text-[10px] text-muted-foreground xl:inline">
+          <kbd className="ml-auto hidden rounded border border-border/70 bg-background px-1.5 font-mono text-3xs text-muted-foreground xl:inline">
             ⌘K
           </kbd>
         </button>

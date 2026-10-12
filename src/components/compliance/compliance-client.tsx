@@ -203,7 +203,7 @@ export function ComplianceClient() {
           <ComplianceViewTabs value={regimeFilter} onChange={setRegimeFilter} />
           <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-1">
-              <p className="pharos-kicker">Compliance Workbench</p>
+              <p className="pharos-label">Compliance workbench</p>
               <p className="pharos-meta">
                 {matchingCount === totalCount ? (
                   <>
@@ -267,7 +267,7 @@ export function ComplianceClient() {
               <div className="space-y-2">
                 <div className="flex flex-wrap items-end justify-between gap-2">
                   <div>
-                    <p className="pharos-kicker">Authorization Table</p>
+                    <p className="pharos-label">Authorization table</p>
                     <p className="text-xs text-muted-foreground">
                       Active, assessed stablecoins only. Frozen and pre-launch assets are excluded from the main table.
                     </p>
@@ -299,7 +299,7 @@ export function ComplianceClient() {
                 <div id="implementation-watch" className="space-y-2">
                   <div className="flex flex-wrap items-end justify-between gap-2">
                     <div>
-                      <p className="pharos-kicker">GENIUS Implementation Watch</p>
+                      <p className="pharos-label">GENIUS implementation watch</p>
                       <p className="text-xs text-muted-foreground">
                         Source-backed signals before the Act is generally effective, plus pre-launch assets even
                         after effectiveness. These rows are not compliance determinations.

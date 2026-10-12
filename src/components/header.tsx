@@ -326,7 +326,7 @@ export function Header() {
                           >
                             <span className="flex items-center gap-2">
                               {category.label}
-                              <span className="rounded-full bg-muted px-1.5 font-mono text-[10px] font-semibold tabular-nums text-muted-foreground/70">
+                              <span className="rounded-full bg-muted px-1.5 font-mono text-3xs font-semibold tabular-nums text-muted-foreground/70">
                                 {category.items.length}
                               </span>
                             </span>

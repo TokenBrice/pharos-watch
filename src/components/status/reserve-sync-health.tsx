@@ -57,7 +57,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle as="h3" className="text-base">Live Reserve Sync</CardTitle>
-          <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusTone}`}>
+          <span className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${statusTone}`}>
             {health.status}
           </span>
         </div>
@@ -72,7 +72,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
               Safety scoring only trusts score-grade reserve evidence. While this lane is degraded or deferred, affected
               report cards can show lower reserve scores until a clean run completes.
             </p>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px]">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-2xs">
               <span>{formatRatioPct(health.freshCoverageRatio)} fresh</span>
               <span>{formatRatioPct(health.authoritativeFreshCoverageRatio)} score-grade</span>
               {health.deferredCoins > 0 ? <span>{health.deferredCoins} deferred</span> : null}

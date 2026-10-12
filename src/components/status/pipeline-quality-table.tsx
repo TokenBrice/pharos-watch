@@ -52,7 +52,7 @@ export function PipelineQualityTable({ model }: { model: PipelineQualityModel })
                 <TableRow key={row.id}>
                   <TableCell className="min-w-48 align-top">
                     <div className="font-medium text-foreground">{row.label}</div>
-                    <code className="mt-0.5 block text-[10px] text-muted-foreground">{row.rawCode}</code>
+                    <code className="mt-0.5 block text-3xs text-muted-foreground">{row.rawCode}</code>
                   </TableCell>
                   <TableCell className="whitespace-nowrap align-top font-mono text-xs tabular-nums">
                     {row.currentValue}
@@ -64,7 +64,7 @@ export function PipelineQualityTable({ model }: { model: PipelineQualityModel })
                   <TableCell className="whitespace-nowrap align-top font-mono text-xs">{row.staleThreshold}</TableCell>
                   <TableCell className="min-w-40 align-top">
                     <StatusPill className={state.className}>{state.label}</StatusPill>
-                    <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{row.stateDetail}</div>
+                    <div className="mt-1 text-2xs leading-relaxed text-muted-foreground">{row.stateDetail}</div>
                   </TableCell>
                   <TableCell className="min-w-48 align-top text-xs text-muted-foreground">{row.trend}</TableCell>
                 </TableRow>
@@ -78,7 +78,7 @@ export function PipelineQualityTable({ model }: { model: PipelineQualityModel })
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <span className="text-sm font-medium text-foreground">Active depegs</span>
-            <code className="ml-2 text-[10px] text-muted-foreground">{model.activeDepegs.rawCode}</code>
+            <code className="ml-2 text-3xs text-muted-foreground">{model.activeDepegs.rawCode}</code>
           </div>
           <span className="font-mono text-sm tabular-nums text-foreground">{model.activeDepegs.currentValue}</span>
         </div>

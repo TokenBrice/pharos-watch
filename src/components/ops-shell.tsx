@@ -19,7 +19,7 @@ function OpsPublicHostGate() {
   return (
     <main id="ops-main-content" className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center px-4 py-12 sm:px-6">
       <div className="w-full border border-border bg-background p-6 sm:p-8">
-        <p className="pharos-kicker">Private surface</p>
+        <p className="pharos-label">Private surface</p>
         <h1 className="mt-2 text-2xl font-semibold text-foreground">Operator tooling is unavailable on this host</h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Admin workspaces only run on the Access-protected ops domain. Public system health remains available on the
@@ -130,7 +130,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <span className="mr-1 inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-800 dark:text-emerald-200">
+            <span className="mr-1 inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-2xs font-medium text-emerald-800 dark:text-emerald-200">
               <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
               <span className="sm:hidden">Prod</span>
               <span className="hidden sm:inline">Production</span>

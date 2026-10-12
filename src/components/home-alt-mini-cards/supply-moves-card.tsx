@@ -100,7 +100,7 @@ export function SupplyMovesCard(): React.JSX.Element {
       label={
         <>
           Biggest Supply Moves{" "}
-          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground/70">
+          <span className="font-mono text-2xs uppercase text-muted-foreground/70">
             {"· >10M MC"}
           </span>
         </>
@@ -114,7 +114,7 @@ export function SupplyMovesCard(): React.JSX.Element {
       }}
       loadingContent={<Skeleton className="h-32 w-full" />}
       emptyContent={
-        <div className="flex flex-1 items-center justify-center text-center font-mono text-xs uppercase tracking-wider text-muted-foreground">
+        <div className="flex flex-1 items-center justify-center text-center pharos-meta">
           No qualifying 7-day supply moves
         </div>
       }
@@ -174,7 +174,7 @@ function MoverList({
 }): React.JSX.Element {
   return (
     <div className="space-y-1.5">
-      <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="pharos-label">{label}</p>
       {rows.length === 0 ? (
         <p className="font-mono text-xs text-muted-foreground">No other qualifying moves</p>
       ) : null}

@@ -120,8 +120,8 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
         <div className="space-y-4 px-4">
           <QueryErrorNotice error={error} hasData onRetry={onRetry} />
           <div className={cn("rounded-xl border px-3 py-2.5", SEVERITY_TONE_CLASS.ok.banner)}>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Chosen Yield Source
+            <p className="pharos-label">
+              Chosen yield source
             </p>
             {totalSources > 1 ? (
               <button
@@ -159,7 +159,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               {selectedSource.sourceTvlUsd !== null && <span>TVL {formatCurrency(selectedSource.sourceTvlUsd)}</span>}
               <span
-                className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-[10px]"
+                className="rounded-full border border-border/60 bg-muted/20 px-1.5 py-0.5 text-3xs"
                 title={YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].description}
               >
                 {YIELD_SOURCE_DEPTH_DEFINITIONS[sourceExplorer.sourceDepthLens].label} depth
@@ -169,7 +169,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
               )}
             </div>
             {calculationMode && evidenceClass && scoreQualification ? (
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground">
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-3xs text-muted-foreground">
                 <span
                   className={cn(
                     "rounded-full border px-1.5 py-0.5 font-medium",
@@ -197,7 +197,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             ) : null}
             {opportunityRisk ? (
               <p
-                className="mt-1.5 text-[10px] text-muted-foreground"
+                className="mt-1.5 text-3xs text-muted-foreground"
                 title="External opportunities are scored at the market level; the underlying stablecoin's report card is one input, not the score"
               >
                 {opportunityRisk.opportunitySafetyScore != null
@@ -209,7 +209,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <dt>Current source key:</dt>
-                <dd className="font-mono text-[11px] text-foreground">{selectedSource.sourceKey}</dd>
+                <dd className="font-mono text-2xs text-foreground">{selectedSource.sourceKey}</dd>
               </div>
               {sourceExplorer.sourceSwitch.previousSourceKey ? (
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -219,7 +219,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                       {sourceExplorer.sourceSwitch.previousSourceDisplayLabel ??
                         sourceExplorer.sourceSwitch.previousSourceKey}
                     </span>
-                    <span className="ml-2 font-mono text-[11px] text-muted-foreground">
+                    <span className="ml-2 font-mono text-2xs text-muted-foreground">
                       {sourceExplorer.sourceSwitch.previousSourceKey}
                     </span>
                   </dd>
@@ -242,7 +242,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
 
           {sourceExplorer.retainedAlternates.length > 0 && (
             <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <p className="pharos-label">
                 Retained alternates
               </p>
               <div className="mt-2 space-y-1.5">
@@ -271,12 +271,12 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                             <span className="truncate text-sm text-foreground">{source.displayLabel}</span>
                             <Badge
                               variant="outline"
-                              className={cn("shrink-0 text-[10px]", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
+                              className={cn("shrink-0 text-3xs", YIELD_TYPE_STYLES[source.yieldType]?.badge ?? "")}
                             >
                               {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
                             </Badge>
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-3xs text-muted-foreground">
                             {confidence ? <span>{confidence}</span> : null}
                             <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
                               {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
@@ -293,7 +293,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                           <span className="font-mono tabular-nums text-foreground">{formatPercent(source.apy30d)}</span>
                           <span
                             className={cn(
-                              "font-mono tabular-nums text-[10px]",
+                              "font-mono tabular-nums text-3xs",
                               delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
                             )}
                           >
@@ -305,11 +305,11 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                           {source.rejectionHint && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className="rounded-full border border-slate-500/20 bg-slate-500/10 px-1.5 py-0.5 text-[10px] text-slate-700 dark:text-slate-300">
+                                <span className="rounded-full border border-slate-500/20 bg-slate-500/10 px-1.5 py-0.5 text-3xs text-slate-700 dark:text-slate-300">
                                   {source.rejectionHint.label}
                                 </span>
                               </TooltipTrigger>
-                              <TooltipContent className="text-[11px]">
+                              <TooltipContent className="text-2xs">
                                 Likely reason {source.rejectionHint.code}: {source.rejectionHint.description}
                               </TooltipContent>
                             </Tooltip>

@@ -47,7 +47,7 @@ function SupporterKeyCard({ coins, gradesAsOf, supporterCount }: SupporterOfferP
   return (
     <section id={API_PAGE_ANCHORS.supporterKey} aria-labelledby="supporter-key-title" className={CARD_CLASS_NAME}>
       <div className="space-y-2">
-        <p className="pharos-kicker">For individual builders</p>
+        <p className="pharos-label">For individual builders</p>
         <h2 id="supporter-key-title" className={CARD_TITLE_CLASS_NAME}>
           Supporter key
         </h2>
@@ -92,7 +92,7 @@ function PartnerKeyCard() {
   return (
     <section id={API_PAGE_ANCHORS.partnerAccess} aria-labelledby="partner-key-title" className={CARD_CLASS_NAME}>
       <div className="space-y-2">
-        <p className="pharos-kicker">For teams in production</p>
+        <p className="pharos-label">For teams in production</p>
         <h2 id="partner-key-title" className={CARD_TITLE_CLASS_NAME}>
           Partner key
         </h2>

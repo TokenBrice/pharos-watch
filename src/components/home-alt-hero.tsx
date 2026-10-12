@@ -9,12 +9,15 @@ import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-he
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import {
   buildLiveHomepageHeroSnapshot,
-  selectHomepageHeroSnapshot,
-} from "@/lib/homepage-hero-snapshot";
+  describeHomepageSupplyCoverage,
+  isHomepageSupplyComplete,
+} from "@shared/lib/homepage-hero-snapshot";
+import { selectHomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 import { formatCurrency, formatLongDate } from "@shared/lib/format";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
+import { HomeMarketStateLine } from "@/components/home-market-state-line";
 
 // OTHERS cohort dot — violet pulled from the shared chart palette.
 const OTHERS_PURPLE = CHART_PALETTE[1];
@@ -64,7 +67,7 @@ export function HomeAltHero({
 
   const visibleSnapshot = selection.snapshot;
   const latest = visibleSnapshot?.cohort ?? null;
-  const supplyComplete = !!visibleSnapshot && visibleSnapshot.supplyObservedCount === visibleSnapshot.supplyExpectedCount;
+  const supplyComplete = !!visibleSnapshot && isHomepageSupplyComplete(visibleSnapshot);
   const cohortTotal = latest?.total ?? null;
   const selectedDate = visibleSnapshot?.asOfISO
     ? formatLongDate(new Date(visibleSnapshot.asOfISO), { utc: true })
@@ -79,9 +82,13 @@ export function HomeAltHero({
         >
           Market Pulse
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Backing, freeze risk, liquidity, and peg stress — all in one place.
-        </p>
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <p className="text-sm text-muted-foreground">
+            Backing, freeze risk, liquidity, and peg stress — all in one place.
+          </p>
+          <span aria-hidden="true" className="hidden text-sm text-muted-foreground sm:inline">·</span>
+          <HomeMarketStateLine />
+        </div>
       </div>
 
       <div
@@ -100,10 +107,10 @@ export function HomeAltHero({
               </p>
               <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
             </div>
-            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
               {visibleSnapshot?.totalUsd != null ? formatCurrency(visibleSnapshot.totalUsd, 1) : "—"}
             </p>
-            <p className="min-h-4 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <p className="pharos-meta min-h-4">
               {selection.source === "fallback" && selectedDate
                 ? `Fallback · as of ${selectedDate}`
                 : selection.source === "live"
@@ -113,8 +120,8 @@ export function HomeAltHero({
                     : "Live market data unavailable"}
             </p>
             {visibleSnapshot && !supplyComplete ? (
-              <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                {`Partial · ${visibleSnapshot.supplyObservedCount}/${visibleSnapshot.supplyExpectedCount} assets observed`}
+              <p className="pharos-meta">
+                {describeHomepageSupplyCoverage(visibleSnapshot)}
               </p>
             ) : null}
             {selection.source === "live" || selection.source === "retained" ? (
@@ -142,7 +149,7 @@ export function HomeAltHero({
         {/* Cohort breakdown — sits directly under the headline so the column
             reads as one continuous story instead of headline-then-gap-then-list. */}
         <div className="space-y-2 p-5 sm:p-6 lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7">
-          <p className="pharos-kicker">Market Cohorts</p>
+          <p className="pharos-label">Market cohorts</p>
           {visibleSnapshot && !supplyComplete ? (
             <p className="text-xs text-muted-foreground">Shares of known market cap subtotal</p>
           ) : null}
@@ -158,7 +165,7 @@ export function HomeAltHero({
                     <span className="inline-flex h-2 w-2 items-center" aria-hidden="true">
                       <span className="w-2 border-t border-dashed" style={{ borderColor: CHART_SLATE_STRONG }} />
                     </span>
-                    <span className="uppercase tracking-tight">Non-USD share</span>
+                    <span className="pharos-label">Non-USD share</span>
                   </span>
                   <span className="flex items-baseline gap-1.5 pharos-numeric text-muted-foreground">
                     {visibleSnapshot?.nonUsdUsd != null ? (
@@ -174,7 +181,7 @@ export function HomeAltHero({
                 </li>
               </>
             ) : (
-              <li className="flex flex-1 items-center font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              <li className="pharos-label flex flex-1 items-center">
                 Market data unavailable
               </li>
             )}
@@ -200,7 +207,7 @@ function CohortRow({
     <li className="flex items-baseline justify-between gap-3 pharos-numeric">
       <span className="flex items-center gap-2 text-muted-foreground">
         <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: color }} aria-hidden="true" />
-        <span className="uppercase tracking-tight">{label}</span>
+        <span className="pharos-label">{label}</span>
       </span>
       <span className="flex items-baseline gap-1.5 pharos-numeric text-muted-foreground">
         {value != null ? (

@@ -88,7 +88,7 @@ function OutcomeLedger({
       className="pharos-card-shell space-y-7 p-6 sm:p-7"
     >
       <div className="space-y-3">
-        <p className="pharos-kicker">The record so far</p>
+        <p className="pharos-label">The record so far</p>
         <p
           id="learn-verdict"
           className="pharos-display max-w-[34rem] text-balance text-[1.6rem] font-extrabold leading-[1.1] tracking-[-0.02em] text-foreground sm:text-[2.4rem]"
@@ -111,7 +111,7 @@ function OutcomeLedger({
             >
               {counts[outcome.key]}
             </dd>
-            <dt className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-foreground">
+            <dt className="text-2xs font-semibold text-foreground">
               {outcome.label}
             </dt>
             <p className="text-xs leading-snug text-muted-foreground">{outcome.note}</p>
@@ -158,7 +158,7 @@ function ModuleHeader({
           href={href}
           className="pharos-focus-ring group inline-flex items-baseline gap-3 rounded-sm"
         >
-          <span className="pharos-numeric text-sm font-semibold tracking-[0.1em] text-muted-foreground">
+          <span className="pharos-numeric text-sm font-semibold text-muted-foreground">
             {index}
           </span>
           <h2
@@ -168,13 +168,13 @@ function ModuleHeader({
             {title}
           </h2>
         </Link>
-        <p className="max-w-xl text-[15px] leading-relaxed text-muted-foreground">
+        <p className="max-w-xl text-base leading-relaxed text-muted-foreground">
           {blurb}
         </p>
       </div>
       <Link
         href={href}
-        className="pharos-focus-ring group inline-flex shrink-0 items-center gap-1.5 rounded-sm font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground"
+        className="pharos-focus-ring group inline-flex shrink-0 items-center gap-1.5 rounded-sm text-2xs text-muted-foreground transition-colors hover:text-foreground"
       >
         {cta}
         <ArrowUpRight
@@ -234,14 +234,14 @@ export default function LearnIndexPage() {
                         <p className="pharos-numeric text-[1.7rem] font-semibold leading-none text-foreground">
                           ${low.toFixed(2)}
                         </p>
-                        <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                        <p className="pharos-label">
                           peg low
                         </p>
                       </>
                     ) : null}
                   </div>
                   <div className="min-w-0 space-y-1.5">
-                    <p className="pharos-kicker">
+                    <p className="pharos-label">
                       {study.eyebrow}
                     </p>
                     <p className="font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
@@ -251,7 +251,7 @@ export default function LearnIndexPage() {
                       {study.subtitle}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground sm:flex-col sm:items-end sm:gap-1.5">
+                  <div className="flex items-center gap-3 pharos-numeric text-2xs text-muted-foreground sm:flex-col sm:items-end sm:gap-1.5">
                     <span>{study.eventDateLabel}</span>
                     <span
                       className={cn(
@@ -293,7 +293,7 @@ export default function LearnIndexPage() {
                   <p className="font-semibold leading-snug text-foreground transition-colors group-hover:text-frost-blue">
                     {getMechanismArchetypeLabel(archetype)}
                   </p>
-                  <p className="shrink-0 pharos-numeric text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <p className="shrink-0 pharos-numeric text-2xs text-muted-foreground">
                     <span className="text-foreground">{mechanismCounts[archetype]}</span> live
                   </p>
                 </div>

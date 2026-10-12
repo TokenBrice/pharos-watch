@@ -119,9 +119,9 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
     <Card className="pharos-card-shell">
       <CardContent className="space-y-5 p-4 sm:p-5">
         <div className="space-y-1.5 border-b border-border/50 pb-5">
-          <p className="pharos-kicker text-muted-foreground">Monthly running cost</p>
+          <p className="pharos-label text-muted-foreground">Monthly running cost</p>
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
               {formatUsdWhole(monthlyTargetUsd)}
             </p>
             <p className="text-sm text-muted-foreground">
@@ -131,7 +131,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
         </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-1.5">
-            <p className="pharos-kicker text-muted-foreground">This month coverage</p>
+            <p className="pharos-label text-muted-foreground">This month coverage</p>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <p className="pharos-numeric text-3xl font-semibold tracking-tight text-foreground">
                 {thisMonth.primary}
@@ -268,7 +268,7 @@ export function FundingKpiRow({ summary, monthlyTargetUsd, monthlyHistory = [] }
 function FundingMiniStat({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
-      <p className="pharos-kicker text-muted-foreground">{label}</p>
+      <p className="pharos-label text-muted-foreground">{label}</p>
       <p className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
@@ -300,13 +300,13 @@ export function CostBreakdown({ items, currentCommunityUsd, lastReviewedAt }: Co
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-1">
-        <p className="pharos-kicker text-muted-foreground">Where it goes</p>
+        <p className="pharos-label text-muted-foreground">Where it goes</p>
         <CardTitle as="h2">Monthly costs</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {groups.map((group) => (
           <div key={group.category} className="space-y-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="pharos-label">
               {CATEGORY_LABELS[group.category] ?? group.category}
             </p>
             <ul className="space-y-0.5 text-sm">
@@ -378,7 +378,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
   return (
     <Card id="supporters" className="pharos-card-shell">
       <CardHeader className="space-y-1">
-        <p className="pharos-kicker text-muted-foreground">Supporters</p>
+        <p className="pharos-label text-muted-foreground">Supporters</p>
         <CardTitle as="h2">Recent supporters</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -430,7 +430,7 @@ export function SupportCtas() {
     <section id="how-to-support">
       <Card className="pharos-card-shell">
         <CardHeader className="space-y-1">
-          <p className="pharos-kicker text-muted-foreground">Get involved</p>
+          <p className="pharos-label text-muted-foreground">Get involved</p>
           <CardTitle as="h2">How to support</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -445,7 +445,7 @@ export function SupportCtas() {
             arrive at the wallet and appear on the wall as a single &ldquo;via Giveth&rdquo; entry.
           </p>
           <div className="space-y-2">
-            <p className="pharos-kicker text-muted-foreground">Other ways to help</p>
+            <p className="pharos-label text-muted-foreground">Other ways to help</p>
             <div className="flex flex-wrap gap-2">
               <SocialButton icon={Star} label="Star on GitHub" href={GITHUB_URL} />
               <SocialButton icon={Wrench} label="Issues / PRs" href={`${GITHUB_URL}/issues`} />
@@ -498,7 +498,7 @@ function PrimaryGivethTile() {
     <div className="flex h-full flex-col gap-3 rounded-lg border border-border/60 bg-background/40 p-5 lg:col-span-2">
       <div className="flex items-center gap-2">
         <Heart className="h-4 w-4 text-foreground" />
-        <p className="pharos-kicker text-muted-foreground">Recommended</p>
+        <p className="pharos-label text-muted-foreground">Recommended</p>
       </div>
       <p className="text-base font-semibold text-foreground">Recurring via Giveth</p>
       <p className="text-sm text-muted-foreground leading-relaxed">
@@ -552,7 +552,7 @@ function WalletTile() {
             return (
               <span
                 key={c}
-                className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px]"
+                className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-3xs"
               >
                 {meta?.logoPath ? <Image src={meta.logoPath} alt="" width={12} height={12} /> : null}
                 {meta?.name ?? c}
@@ -592,7 +592,7 @@ export function YearEndHorizon() {
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-1">
-        <p className="pharos-kicker text-muted-foreground">Where we&apos;re going</p>
+        <p className="pharos-label text-muted-foreground">Where we&apos;re going</p>
         <CardTitle as="h2">Path to sustainability</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
@@ -662,7 +662,7 @@ export function FundingFaq() {
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-1">
-        <p className="pharos-kicker text-muted-foreground">Questions</p>
+        <p className="pharos-label text-muted-foreground">Questions</p>
         <CardTitle as="h2">FAQ</CardTitle>
       </CardHeader>
       <CardContent>

@@ -18,7 +18,7 @@ function formatDuration(seconds: number | null | undefined): string {
 function AccessFact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
+      <dt className="text-3xs font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 break-words text-xs text-foreground">{value}</dd>
     </div>
   );
@@ -47,7 +47,7 @@ export function YieldAccessStructure({
     <section className={cn("border-t border-border/50 pt-3", className)} aria-label="Access and structure">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-xs font-semibold text-foreground">Access and structure</p>
-        <p className="text-[10px] text-muted-foreground">Unknown means the source has not supplied the fact.</p>
+        <p className="text-3xs text-muted-foreground">Unknown means the source has not supplied the fact.</p>
       </div>
       <dl className={cn("mt-2 grid gap-x-3 gap-y-2", compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3")}>
         <AccessFact label="Deployment" value={formatEnum(sourceRisk?.deploymentPlace)} />

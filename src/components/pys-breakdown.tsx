@@ -85,7 +85,7 @@ function ModeConditionalTooltip({
           "aria-label": ariaLabel,
         })}
       </TooltipTrigger>
-      <TooltipContent className={cn(tooltipMaxWidth, "text-[11px]")}>{tooltip}</TooltipContent>
+      <TooltipContent className={cn(tooltipMaxWidth, "text-2xs")}>{tooltip}</TooltipContent>
     </Tooltip>
   );
 }
@@ -170,7 +170,7 @@ function shouldShowBenchmarkFallbackBadge(props: PysBreakdownProps): boolean {
 }
 
 const CLAMP_BADGE_BASE_CLASS =
-  "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium";
+  "inline-flex items-center rounded-full border px-1.5 py-0.5 text-3xs font-medium";
 const CLAMP_BADGE_SLATE_CLASS = cn(
   CLAMP_BADGE_BASE_CLASS,
   "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300",
@@ -284,7 +284,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                     <Info className="h-3 w-3" aria-hidden="true" />
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[260px] text-[11px]">
+                <TooltipContent className="max-w-[260px] text-2xs">
                   {`${(PYS_BENCHMARK_SPREAD_WEIGHT * 100).toFixed(0)}% of ${formatYieldApyDelta(benchmarkSpread)} spread vs ${benchmarkRefLabel}`}
                 </TooltipContent>
               </Tooltip>
@@ -314,7 +314,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                     <Info className="h-3 w-3" aria-hidden="true" />
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[260px] text-[11px]">
+                <TooltipContent className="max-w-[260px] text-2xs">
                   {`USD risk-free rate minus ${benchmarkRefLabel}. Scores excess over the local hurdle on a USD footing instead of crediting the local policy rate as yield.`}
                 </TooltipContent>
               </Tooltip>
@@ -363,17 +363,17 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
           <span aria-hidden="true" className="flex items-baseline gap-1.5">
             <span className="font-mono tabular-nums">{sourceRiskPenalty.toFixed(2)}{"×"}</span>
             {resolvedSourceRiskScore !== null ? (
-              <span className="text-[10px] text-muted-foreground/80">({resolvedSourceRiskScore}/100)</span>
+              <span className="text-3xs text-muted-foreground/80">({resolvedSourceRiskScore}/100)</span>
             ) : null}
             {sourceRiskDelta !== null ? (
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
+              <span className="font-mono text-3xs tabular-nums text-muted-foreground/80">
                 ({formatSignedPysDelta(sourceRiskDelta)})
               </span>
             ) : null}
           </span>
         </div>
         {sourceRiskDrivers.length === 0 ? (
-          <div className="text-[11px] text-muted-foreground" aria-label="Source risk neutral">
+          <div className="text-2xs text-muted-foreground" aria-label="Source risk neutral">
             <span aria-hidden="true">{"✓"} Source risk neutral</span>
           </div>
         ) : (
@@ -387,13 +387,13 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                 <TooltipTrigger asChild>
                   <span
                     role="listitem"
-                    className="inline-flex cursor-help items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300"
+                    className="inline-flex cursor-help items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-3xs text-amber-700 dark:text-amber-300"
                     aria-label={`${driver.label}: ${driver.description}`}
                   >
                     {driver.label}
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[260px] text-[11px]">{driver.description}</TooltipContent>
+                <TooltipContent className="max-w-[260px] text-2xs">{driver.description}</TooltipContent>
               </Tooltip>
             ))}
           </div>
@@ -420,13 +420,13 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
           <span aria-hidden="true" className="flex items-baseline gap-1.5">
             <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}{"×"}</span>
             {safetyDelta !== null ? (
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
+              <span className="font-mono text-3xs tabular-nums text-muted-foreground/80">
                 ({formatSignedPysDelta(safetyDelta)})
               </span>
             ) : null}
           </span>
         </div>
-        <div className="text-[11px] text-muted-foreground">{safetyLabel}</div>
+        <div className="text-2xs text-muted-foreground">{safetyLabel}</div>
       </div>
 
       <div className="space-y-0.5">
@@ -449,13 +449,13 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
           <span aria-hidden="true" className="flex items-baseline gap-1.5">
             <span className="font-mono tabular-nums">{consistencyPct == null ? "Unavailable" : `${consistencyPct}%`}</span>
             {sustainabilityDelta !== null ? (
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground/80">
+              <span className="font-mono text-3xs tabular-nums text-muted-foreground/80">
                 ({formatSignedPysDelta(sustainabilityDelta)})
               </span>
             ) : null}
           </span>
         </div>
-        <div className="text-[11px] text-muted-foreground" aria-hidden="true">30d APY variance</div>
+        <div className="text-2xs text-muted-foreground" aria-hidden="true">30d APY variance</div>
       </div>
 
       <div className="h-px bg-border/60" aria-hidden="true" />
@@ -473,7 +473,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
         </span>
       </div>
 
-      <div className="flex items-baseline justify-between gap-2 text-[11px] text-muted-foreground">
+      <div className="flex items-baseline justify-between gap-2 text-2xs text-muted-foreground">
         <span className="truncate">vs {benchmarkRefLabel}</span>
         <Link
           href={YIELD_METHODOLOGY_CHANGELOG_PATH}
@@ -512,7 +512,7 @@ export function PysBreakdown(props: PysBreakdownProps) {
       <details className="group relative inline-flex min-w-0 flex-col">
         <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md px-1 py-1 text-left [&::-webkit-details-marker]:hidden">
           <span className={cn("font-mono text-2xl tabular-nums", props.toneClass)}>{props.score.toFixed(1)}</span>
-          <span className="flex items-center gap-0.5 text-[11px] font-medium text-muted-foreground underline decoration-dashed underline-offset-2">
+          <span className="flex items-center gap-0.5 text-2xs font-medium text-muted-foreground underline decoration-dashed underline-offset-2">
             <span className="group-open:hidden">Breakdown</span>
             <span className="hidden group-open:inline">Hide</span>
             <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />

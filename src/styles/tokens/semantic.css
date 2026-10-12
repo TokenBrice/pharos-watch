@@ -192,7 +192,9 @@
 /* ── Dark Mode ─────────────────────────────────────────────────── */
 .dark {
   /* ── Surfaces ─────────────────────────────────────────────────── */
-  --surface-base: oklch(0.085 0 0);
+  /* One step above pure black (was 0.085): saturated band colors vibrated
+     against it, and cards (0.2) still separate clearly. */
+  --surface-base: oklch(0.16 0.004 260);
   --surface-raised: oklch(0.215 0.003 260);
   --surface-overlay: oklch(0.2 0.003 260);
 

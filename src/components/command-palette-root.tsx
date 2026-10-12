@@ -327,10 +327,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           {groupedResults.map((group) => (
             <div key={group.section}>
               <div className="flex items-center justify-between px-4 py-1.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <span className="pharos-label">
                   {group.section}
                   {group.section === "Stablecoins" && (
-                    <span className="ml-2 pharos-numeric text-[10px] font-normal normal-case tracking-normal text-muted-foreground/70">
+                    <span className="ml-2 pharos-numeric text-3xs font-normal text-muted-foreground/70">
                       {group.items.length}
                     </span>
                   )}
@@ -407,7 +407,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       <span className="truncate block">
                         {item.label}
                         {item.frozen ? (
-                          <span className="ml-2 rounded border border-zinc-500/30 px-1 text-[9px] uppercase tracking-wide text-zinc-500">
+                          <span className="ml-2 rounded border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500">
                             Frozen
                           </span>
                         ) : null}
@@ -435,7 +435,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       </span>
                     ) : item.stablecoinHealth?.kind === "nav" ? (
                       <span
-                        className="ml-2 shrink-0 rounded border border-sky-500/30 px-1 py-0.5 font-mono text-[10px] leading-none text-sky-500"
+                        className="ml-2 shrink-0 rounded border border-sky-500/30 px-1 py-0.5 font-mono text-3xs leading-none text-sky-500"
                         title={getStablecoinHealthLabel(item.stablecoinHealth)}
                       >
                         NAV<span className="sr-only">-priced token</span>

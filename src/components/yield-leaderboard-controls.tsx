@@ -57,7 +57,7 @@ function ChipButton({
       {count !== undefined ? (
         <span
           className={cn(
-            "pharos-numeric text-[10px]",
+            "pharos-numeric text-3xs",
             active ? "opacity-80" : "opacity-70",
           )}
         >
@@ -81,7 +81,7 @@ function FilterFacet({
 }) {
   return (
     <div className="flex min-w-[160px] flex-col gap-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+      <span className="pharos-label">
         {label}
       </span>
       <div className="flex flex-wrap gap-1.5">
@@ -105,7 +105,7 @@ function FilterFacet({
 function FilterGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2.5">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+      <span className="pharos-label">
         {label}
       </span>
       <div className="flex flex-wrap items-start gap-x-6 gap-y-4">{children}</div>
@@ -258,7 +258,7 @@ export function YieldLeaderboardControls({
       ) : null}
 
       <div className="-mx-1 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 px-1">
-        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/70">
+        <span className="mr-1 pharos-label">
           Views
         </span>
         {showWatching ? (

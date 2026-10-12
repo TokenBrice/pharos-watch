@@ -41,7 +41,7 @@ export function MobileBottomNav() {
               }
             >
               <Icon className="h-5 w-5" aria-hidden="true" />
-              <span className="text-[11px] font-medium leading-none">{item.shortLabel ?? item.label}</span>
+              <span className="text-2xs font-medium leading-none">{item.shortLabel ?? item.label}</span>
             </Link>
           );
         })}
@@ -52,7 +52,7 @@ export function MobileBottomNav() {
           aria-label="Menu"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
-          <span className="text-[11px] font-medium leading-none">Menu</span>
+          <span className="text-2xs font-medium leading-none">Menu</span>
         </button>
       </div>
     </nav>

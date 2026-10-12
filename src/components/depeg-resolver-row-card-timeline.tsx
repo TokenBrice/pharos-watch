@@ -98,7 +98,7 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
             className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center gap-0.5"
             style={{ left: `${stop.x}%` }}
           >
-            <span className="pharos-meta font-medium uppercase tracking-wide">{cell.horizon}</span>
+            <span className="pharos-meta font-medium">{cell.horizon}</span>
             {hasProb ? (
               <span className="pharos-numeric text-xs leading-none text-sky-700 dark:text-sky-400">
                 {Math.round((cell.probability ?? 0) * 100)}%
@@ -187,7 +187,7 @@ export function ForecastTimeline({ row }: { row: DdrV2ResponseRow }) {
       role="img"
       aria-label={ariaLabel}
     >
-      <div className="pharos-kicker grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2">
+      <div className="pharos-label grid grid-cols-[1.05fr_auto_1.85fr] items-center gap-2">
         <span className="truncate">
           {lockAnchored ? "At lock" : "So far"}{" "}
           <span className="font-mono normal-case text-muted-foreground/90">· {ageSec == null ? "—" : ageLabel}</span>

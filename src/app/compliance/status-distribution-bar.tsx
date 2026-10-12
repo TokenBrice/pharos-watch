@@ -51,7 +51,7 @@ function StatusDistributionBar({
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-xs font-semibold text-foreground">{label}</p>
-        <p className="pharos-numeric text-[11px] text-muted-foreground">{total.toLocaleString()} assessed</p>
+        <p className="pharos-numeric text-2xs text-muted-foreground">{total.toLocaleString()} assessed</p>
       </div>
       <div className="flex h-2.5 w-full gap-[2px] overflow-hidden rounded-full bg-transparent">
         {segments.map((segment) => {
@@ -72,7 +72,7 @@ function StatusDistributionBar({
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5">
         {segments.map((segment) => (
-          <span key={segment.key} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <span key={segment.key} className="inline-flex items-center gap-1.5 text-2xs text-muted-foreground">
             <span className={cn("h-2 w-2 shrink-0 rounded-full", segment.colorClassName)} aria-hidden="true" />
             <span>{segment.label}</span>
             <span className="pharos-numeric">{segment.count.toLocaleString()}</span>

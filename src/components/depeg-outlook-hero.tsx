@@ -2,8 +2,10 @@
 
 import type { ReactNode } from "react";
 import { DEWSRadarPanel } from "@/components/dews-summary";
+import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { TIER_META } from "@/components/depeg-resolver-row-card-model";
+import { UniverseChip } from "@/components/universe-chip";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
@@ -36,7 +38,7 @@ interface DepegOutlookHeroProps {
 function StatCell({ label, value, detail }: { label: ReactNode; value: string; detail: string }) {
   return (
     <div>
-      <p className="pharos-kicker">{label}</p>
+      <p className="pharos-label">{label}</p>
       <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
         <span className="pharos-numeric text-lg font-semibold leading-tight text-foreground">{value}</span>
         <span className="text-xs text-muted-foreground">{detail}</span>
@@ -48,7 +50,7 @@ function StatCell({ label, value, detail }: { label: ReactNode; value: string; d
 function RailGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="border-t border-border/60 pt-3">
-      <p className="pharos-kicker">{label}</p>
+      <p className="pharos-label">{label}</p>
       <div className="mt-1.5">{children}</div>
     </div>
   );
@@ -59,9 +61,10 @@ function RailGroup({ label, children }: { label: string; children: ReactNode }) 
  * confirmed incidents, early warning, recovery posture and forecast track record
  * — beside the DEWS radar drawn at hero scale.
  *
- * Scope matters here. The One Beam count, worst-live move and holding-peg split
- * come from the live-peg-status subset; the ALERT+ figure is scoped to the peg
- * catalog; the radar plots every DEWS-covered asset. Each figure names its own
+ * Scope matters here. The headline count is non-NAV confirmed detections across
+ * the peg catalog; worst-live move and holding-peg split come from the
+ * live-peg-status subset; the ALERT+ figure is scoped to the peg catalog; the
+ * radar plots every DEWS-covered asset. Each figure names its own
  * universe, and this hero is the single owner of all of them — no later module
  * on the route restates them.
  */
@@ -93,11 +96,11 @@ export function DepegOutlookHero({
       <div className="grid gap-x-8 gap-y-6 p-5 sm:p-6 lg:grid-cols-3">
         <div className="flex flex-col gap-3 lg:col-span-1">
           <div>
-            <p className="pharos-kicker">
+            <p className="pharos-label">
               <MethodologyLabel topic="activeDepegs">Active depegs</MethodologyLabel>
             </p>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="pharos-numeric text-4xl font-semibold leading-none tracking-tight text-frost-blue">
+              <span className={HERO_KPI_VALUE_CLASS}>
                 {stats ? activeCount : "—"}
               </span>
               <span className="text-sm text-muted-foreground">
@@ -123,6 +126,9 @@ export function DepegOutlookHero({
                 </span>
               ) : null}
             </div>
+            {/* The headline counts the peg catalog minus NAV tokens; the catalog has
+                no published size of its own, so the chip names the set only. */}
+            <UniverseChip universe="pegCatalog" className="mt-2" />
           </div>
 
           <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 border-t border-border/60 pt-3">

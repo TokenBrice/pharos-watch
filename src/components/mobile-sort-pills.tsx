@@ -25,7 +25,7 @@ export function MobileMetricPill({
 export function MobileSortPanel({ kicker, children }: { kicker: string; children: ReactNode }) {
   return (
     <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-3">
-      <p className="pharos-kicker mb-2">{kicker}</p>
+      <p className="pharos-label mb-2">{kicker}</p>
       {children}
     </div>
   );
@@ -71,7 +71,7 @@ export function MobileSortPills<TKey extends string>({
           >
             {option.label}
             {active ? (
-              <span className="ml-1 font-mono text-[10px]" aria-hidden="true">
+              <span className="ml-1 font-mono text-3xs" aria-hidden="true">
                 {sortDirection === "asc" ? "↑" : "↓"}
               </span>
             ) : null}

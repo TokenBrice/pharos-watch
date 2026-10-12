@@ -29,7 +29,7 @@ export function YieldZoneChip({ safetyScore, apy30d, benchmarkRate, className }:
       variant="outline"
       title={YIELD_ZONE_DESCRIPTIONS[zone]}
       aria-label={`${YIELD_ZONE_LABELS[zone]}: ${YIELD_ZONE_DESCRIPTIONS[zone]}`}
-      className={cn("cursor-help text-[10px]", YIELD_ZONE_STYLES[zone].badge, className)}
+      className={cn("cursor-help text-3xs", YIELD_ZONE_STYLES[zone].badge, className)}
     >
       {YIELD_ZONE_LABELS[zone]}
     </Badge>

@@ -189,17 +189,17 @@ function V9Controls({
         </summary>
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
-            <span className="pharos-kicker">Filter by Grade</span>
+            <span className="pharos-label">Filter by grade</span>
             <div className="flex flex-wrap gap-1">{gradeButtons}</div>
           </div>
           <div className="space-y-2">
-            <span className="pharos-kicker">Peg</span>
+            <span className="pharos-label">Peg</span>
             <div className="flex flex-wrap gap-1">
               <PegFilterButtons pegFilter={pegFilter} onChange={onPegFilterChange} />
             </div>
           </div>
           <div className="space-y-2">
-            <span className="pharos-kicker">Sort by</span>
+            <span className="pharos-label">Sort by</span>
             <div className="flex flex-wrap gap-1">
               <SortButtons sortKey={sortKey} onChange={onSortChange} />
             </div>
@@ -209,14 +209,14 @@ function V9Controls({
 
       <div className="hidden md:flex md:flex-wrap md:items-center md:gap-4">
         <div className="flex items-center gap-1">
-          <span className="pharos-kicker mr-2">Filter:</span>
+          <span className="pharos-label mr-2">Filter:</span>
           {gradeButtons}
-          <span className="pharos-kicker ml-3 mr-2">Peg:</span>
+          <span className="pharos-label ml-3 mr-2">Peg:</span>
           <PegFilterButtons pegFilter={pegFilter} onChange={onPegFilterChange} />
         </div>
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-1">
-          <span className="pharos-kicker mr-2">Sort:</span>
+          <span className="pharos-label mr-2">Sort:</span>
           <SortButtons sortKey={sortKey} onChange={onSortChange} />
         </div>
       </div>
@@ -268,6 +268,11 @@ export function ReportCardsV9Client() {
   const gradeCounts = useMemo(() => buildV9GradeCounts(cards), [cards]);
   const totalCards = cards.length;
   const headlineStats = useMemo(() => buildV9HeadlineStats(cards, mcapMap), [cards, mcapMap]);
+  // Same predicate as the ecosystem average in buildV9HeadlineStats.
+  const scoredCount = useMemo(
+    () => cards.filter((card) => card.ratingStatus === "rated" && card.score !== null).length,
+    [cards],
+  );
   const filteredCards = useMemo(
     () => filterAndSortV9Cards(cards, { gradeFilter, pegFilter, pegTypeMap, sortKey, mcapMap }),
     [cards, gradeFilter, mcapMap, pegFilter, pegTypeMap, sortKey],
@@ -327,6 +332,8 @@ export function ReportCardsV9Client() {
         stats={headlineStats}
         gradeCounts={gradeCounts}
         totalCards={totalCards - gradeCounts["pipeline-gap"]}
+        scoredCount={scoredCount}
+        cardCount={totalCards}
       />
 
       <SafetyPillarExplainer />

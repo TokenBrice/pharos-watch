@@ -110,7 +110,7 @@ export function CompareMobileSelectionControls({
     <div className="space-y-3 sm:hidden">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="pharos-kicker">Selection</p>
+          <p className="pharos-label">Selection</p>
           <p className="text-xs text-muted-foreground">
             {selectedIds.length}/{MAX_COMPARE_COINS} selected
           </p>
@@ -221,7 +221,7 @@ function CompareScopeHero({
       }
     >
       <div className="flex h-full flex-col justify-center space-y-3 p-5 sm:p-6 lg:p-7">
-        <p className="pharos-kicker">Comparable coins by peg</p>
+        <p className="pharos-label">Comparable coins by peg</p>
         <div
           className="flex h-2 w-full overflow-hidden rounded-full bg-border/40"
           role="img"
@@ -239,8 +239,8 @@ function CompareScopeHero({
           {segments.map((segment) => (
             <li key={segment.label} className="flex items-center gap-1.5">
               <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ backgroundColor: segment.color }} />
-              <span className="pharos-numeric text-[13px] font-semibold text-foreground">{segment.count}</span>
-              <span className="text-[11px] text-muted-foreground">{segment.label}</span>
+              <span className="pharos-numeric text-xs font-semibold text-foreground">{segment.count}</span>
+              <span className="text-2xs text-muted-foreground">{segment.label}</span>
             </li>
           ))}
         </ul>
@@ -365,7 +365,7 @@ export function CompareClient() {
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <p className="pharos-kicker">Active Comparison</p>
+                <p className="pharos-label">Active comparison</p>
                 <p className="break-words text-sm text-foreground">
                   {activeSelectionLabel}
                 </p>
@@ -377,14 +377,14 @@ export function CompareClient() {
             {selectionInsights ? (
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
                 <div className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3">
-                  <p className="pharos-kicker">How To Read This Set</p>
+                  <p className="pharos-label">How to read this set</p>
                   <p className="mt-1 text-sm text-foreground">{selectionInsights.lens}</p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {selectionInsights.cohort} {selectionInsights.structure}
                   </p>
                 </div>
                 <div className="rounded-xl border border-border/60 bg-background/50 px-3.5 py-3">
-                  <p className="pharos-kicker">Jump To Detail</p>
+                  <p className="pharos-label">Jump to detail</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {selectionInsights.links.map((coin) => (
                       <Link
@@ -598,7 +598,7 @@ function CohortToggle({ cohort, effective, memberCount, onChange }: CohortToggle
         buttonClassName="px-2.5 py-1 text-xs"
       />
       {cohort !== effective ? (
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-3xs text-muted-foreground">
           Falling back to All ({memberCount}); selected cohort too thin.
         </span>
       ) : null}

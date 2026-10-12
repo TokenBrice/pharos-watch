@@ -37,7 +37,7 @@ const SCREENER_SUPPORT_SECTION = (
       <p className="pharos-section-title">How to use this screener</p>
       <div className="mt-3 grid gap-4 text-sm leading-relaxed text-muted-foreground lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
         <div className="space-y-2">
-          <p className="pharos-kicker">Reading the Filters</p>
+          <p className="pharos-label">Reading the filters</p>
           <p>
             Numeric thresholds narrow the candidate set on DEWS stress, the V10 mint component, the three Safety Score
             pillars, and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism
@@ -69,7 +69,7 @@ const SCREENER_SUPPORT_SECTION = (
           </p>
         </div>
         <div>
-          <p className="pharos-kicker">Useful Starting Points</p>
+          <p className="pharos-label">Useful starting points</p>
           <ul className="mt-2 space-y-1.5">
             <li>Which CDP stablecoins still hold an A-grade with Peg Stability &gt; 90?</li>
             <li>What does the active-depeg cohort look like at DEWS &gt; 60?</li>

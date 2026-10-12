@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Bell } from "lucide-react";
+import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -63,22 +64,21 @@ const route = createClientFeaturePage({
       version: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
       changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
     },
-    headerActions: <ShareButton ogPath="/api/og/safety-scores" />,
+    header: "instrument",
+    headerActions: (
+      <>
+        <AlertsHeaderLink
+          href="/pharoswatchbot/#getting-started"
+          description="Get notified when a safety grade changes"
+        />
+        <ShareButton ogPath="/api/og/safety-scores" />
+      </>
+    ),
     preface: (
       <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("scores-latest"))} />
     ),
     leadParagraphs: [
-      "Every tracked stablecoin assessed across three dimensions: Backing, Exit, and Economic Control, distilled into a single comprehensive safety grade.",
-      <>
-        Prefer a single image?{" "}
-        <Link
-          href="/safety-scores/map/"
-          className="text-foreground underline underline-offset-4 hover:text-foreground/80 transition-colors"
-        >
-          Open the Safety Score Map
-        </Link>
-        .
-      </>,
+      "Every active stablecoin graded on Backing, Exit, and Economic Control, distilled into one safety grade.",
     ],
   },
   afterClient: (

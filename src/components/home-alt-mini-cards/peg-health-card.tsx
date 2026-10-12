@@ -58,14 +58,14 @@ export function PegHealthCard(): React.JSX.Element {
               <span className="mx-2 text-2xl text-muted-foreground/50">/</span>
               <span className="text-muted-foreground">{summary.totalTracked}</span>
             </div>
-            <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <p className="pharos-meta pharos-numeric mt-1.5">
               {summary.activeDepegCount} active · {summary.medianDeviationBps.toFixed(0)} bps median
             </p>
           </div>
 
           <div className="mt-4 flex flex-1 flex-col border-t border-border/50 pt-5">
             {total === 0 ? (
-              <div className="flex h-10 items-center justify-center rounded-md border border-border/60 bg-muted/30 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+              <div className="flex h-10 items-center justify-center rounded-md border border-border/60 bg-muted/30 pharos-meta">
                 No coin-level deviation rows
               </div>
             ) : (
@@ -92,7 +92,7 @@ export function PegHealthCard(): React.JSX.Element {
             <ul className="mt-4 grid flex-1 content-between font-mono text-xs">
               {SEGMENTS.map((seg) => (
                 <li key={seg.key} className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 uppercase tracking-tight text-muted-foreground">
+                  <span className="flex items-center gap-2 text-muted-foreground">
                     <span className={`inline-block h-2 w-2 rounded-sm ${seg.colorClass}`} aria-hidden="true" />
                     {seg.legend}
                   </span>

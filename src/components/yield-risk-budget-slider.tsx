@@ -85,7 +85,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
         <div className="flex items-baseline gap-2">
           <label
             htmlFor={inputId}
-            className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+            className="pharos-label"
           >
             Risk tolerance
           </label>
@@ -98,7 +98,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
             <span className="text-xs font-medium text-muted-foreground">Custom</span>
           )}
         </div>
-        <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">Matching rows</p>
+        <p className="pharos-label">Matching rows</p>
       </div>
       <div className="relative px-2.5 pt-3 pb-1">
         {/* Background track — runs through the center of the dot row */}
@@ -165,12 +165,12 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
                     <span className="h-2.5 w-2.5 rounded-full border-2 border-border/60 bg-background" />
                   )}
                 </span>
-                <span className={cn("text-[12px] tracking-tight", isActive ? "font-semibold" : "font-medium")}>
+                <span className={cn("text-xs tracking-tight", isActive ? "font-semibold" : "font-medium")}>
                   {stop.label}
                 </span>
                 <span
                   className={cn(
-                    "font-mono text-[12px] tabular-nums",
+                    "font-mono text-xs tabular-nums",
                     isActive ? cn("font-semibold", style.activeCount) : "font-normal text-muted-foreground/70",
                   )}
                 >

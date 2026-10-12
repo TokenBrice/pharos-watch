@@ -22,7 +22,7 @@ function ComparePreview() {
   return (
     <div className="min-w-0 space-y-3">
       <div>
-        <p className="pharos-kicker">No comparison yet</p>
+        <p className="pharos-label">No comparison yet</p>
         <p className="mt-1 text-sm font-medium text-foreground">Select at least two stablecoins to see</p>
       </div>
       <ul className="divide-y divide-border/50">
@@ -114,7 +114,7 @@ export function CompareEmptyState({ presets, logos, onApplyPreset }: CompareEmpt
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="pharos-kicker">Preset Packs</p>
+            <p className="pharos-label">Preset packs</p>
             <h3 className="mt-1 text-lg font-semibold text-foreground">Jump straight into common comparison angles</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Each pack loads directly into the comparison table without auto-populating on first visit.

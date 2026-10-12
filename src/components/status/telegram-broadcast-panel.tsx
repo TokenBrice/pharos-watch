@@ -143,7 +143,7 @@ export function TelegramBroadcastPanel() {
               onChange={(event) => patch({ messageHtml: event.target.value })}
             />
           </label>
-          <p className="pharos-numeric text-[11px] text-muted-foreground">
+          <p className="pharos-numeric text-2xs text-muted-foreground">
             {state.messageHtml.length.toLocaleString()} / {MESSAGE_HTML_MAX_LENGTH.toLocaleString()} characters
             {messageTooLong ? " — too long" : ""}. Only Telegram-supported tags are accepted; raw {"<"} must be escaped
             as &amp;lt;.
@@ -213,7 +213,7 @@ export function TelegramBroadcastPanel() {
         {dryRunExecution?.status === "succeeded" && dryRunExecution.output ? (
           <div className="space-y-1">
             <h4 className="text-xs font-medium text-muted-foreground">Preview</h4>
-            <pre className={cn("max-h-64 overflow-auto rounded-md p-2 text-[11px]", STATUS_PANEL_SHELL_CLASS)}>
+            <pre className={cn("max-h-64 overflow-auto rounded-md p-2 text-2xs", STATUS_PANEL_SHELL_CLASS)}>
               {dryRunExecution.output}
             </pre>
           </div>
@@ -222,7 +222,7 @@ export function TelegramBroadcastPanel() {
         {liveExecution?.status === "succeeded" && liveExecution.output ? (
           <div className="space-y-1">
             <h4 className="text-xs font-medium text-muted-foreground">Live result</h4>
-            <pre className={cn("max-h-64 overflow-auto rounded-md p-2 text-[11px]", STATUS_PANEL_SHELL_CLASS)}>
+            <pre className={cn("max-h-64 overflow-auto rounded-md p-2 text-2xs", STATUS_PANEL_SHELL_CLASS)}>
               {liveExecution.output}
             </pre>
           </div>

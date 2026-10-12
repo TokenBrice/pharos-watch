@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { YieldContentLoadingState } from "@/app/yield/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION_LABEL,
@@ -68,7 +68,7 @@ const route = createClientFeaturePage({
   metadata: {
     title: "Stablecoin Yield Intelligence",
     description: desc,
-    ogImage: `${SITE_URL}/og-yield.png`,
+    ogImage: buildLiveRouteOgImageUrl("yield"),
   },
   loadClient: () => import("@/components/yield/yield-client").then((m) => ({ default: m.YieldClient })),
   loading: <YieldContentLoadingState />,
@@ -79,11 +79,12 @@ const route = createClientFeaturePage({
       version: YIELD_METHODOLOGY_VERSION_LABEL,
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
     },
+    header: "instrument",
     leadParagraphs: [
       "Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks.",
       "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (C- or above, safety 50+, warnings hidden); widen the Risk tolerance slider to see everything.",
     ],
-    leadFullWidth: true,
+    leadDisclosureLabel: "How to read Safety and PYS",
   },
   afterClient: (
     <>

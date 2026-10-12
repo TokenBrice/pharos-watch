@@ -339,7 +339,7 @@ export function YieldCompareDrawer({
             <TableRow className="hover:bg-transparent">
               <TableHead
                 scope="col"
-                className="h-auto border-b border-border/60 px-0 py-2 pr-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground"
+                className="h-auto border-b border-border/60 px-0 py-2 pr-3 text-left pharos-label"
               >
                 Metric
               </TableHead>

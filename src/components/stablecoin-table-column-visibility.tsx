@@ -47,7 +47,7 @@ export function ColumnVisibilityDropdown({
           <Columns3 className="h-3.5 w-3.5" />
           <span className={compactOnMobile ? "sr-only sm:not-sr-only" : undefined}>Columns</span>
           {hiddenCount > 0 && (
-            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground/10 px-1 font-mono text-[10px] font-semibold tabular-nums text-foreground">
+            <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground/10 px-1 font-mono text-3xs font-semibold tabular-nums text-foreground">
               {hiddenCount}
             </span>
           )}
@@ -58,7 +58,7 @@ export function ColumnVisibilityDropdown({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel className="text-xs uppercase tracking-[0.1em] text-muted-foreground">
+        <DropdownMenuLabel className="pharos-label">
           Toggle columns
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

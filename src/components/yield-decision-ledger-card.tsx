@@ -29,11 +29,11 @@ export function YieldDecisionLedgerCard({
         className,
       )}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Why this source won</p>
+      <p className="pharos-label">Why this source won</p>
       <p className="mt-1 text-xs text-foreground">{display.reasonLabel}</p>
 
       {display.sourceSwitchLabel || display.rejectedCountLabel || display.previousSourceKey ? (
-        <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
+        <div className="mt-2 flex flex-wrap gap-1.5 text-3xs text-muted-foreground">
           {display.sourceSwitchLabel ? (
             <span className={cn("rounded-full border px-2 py-0.5", SEVERITY_TONE_CLASS.sky.pill)}>
               {display.sourceSwitchLabel}
@@ -46,14 +46,14 @@ export function YieldDecisionLedgerCard({
           ) : null}
           {display.previousSourceKey ? (
             <span className="rounded-full border border-border/50 bg-background/45 px-2 py-0.5">
-              Previous <span className="font-mono text-[10px]">{display.previousSourceKey}</span>
+              Previous <span className="font-mono text-3xs">{display.previousSourceKey}</span>
             </span>
           ) : null}
         </div>
       ) : null}
 
       {showAlternatives && display.alternatives.length > 0 ? (
-        <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+        <ul className="mt-2 space-y-1 text-2xs text-muted-foreground">
           {display.alternatives.map((alternative) => (
             <li key={alternative.sourceKey} className="min-w-0">
               <span className="text-foreground">{alternative.yieldSource}</span>

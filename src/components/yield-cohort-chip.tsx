@@ -12,7 +12,7 @@ export function YieldCohortChip({ cohort, className }: YieldCohortChipProps) {
     return (
       <span
         title="Cohort smaller than 8 peers"
-        className={cn("text-[10px] text-muted-foreground tabular-nums", className)}
+        className={cn("text-3xs text-muted-foreground tabular-nums", className)}
       >
         small peer set
       </span>
@@ -21,7 +21,7 @@ export function YieldCohortChip({ cohort, className }: YieldCohortChipProps) {
   return (
     <span
       title={`Percentile ${cohort.value} in ${cohort.cohortSize} peers`}
-      className={cn("text-[10px] text-muted-foreground tabular-nums", className)}
+      className={cn("text-3xs text-muted-foreground tabular-nums", className)}
     >
       p{cohort.value} of {cohort.cohortSize}
     </span>

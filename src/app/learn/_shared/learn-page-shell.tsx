@@ -29,7 +29,7 @@ export function LearnPageShell({
           <p className="pharos-page-lead">{subtitle}</p>
         ) : null}
         {leadParagraphs.length > 0 ? (
-          <div className="space-y-3 text-[15px] leading-relaxed text-muted-foreground">
+          <div className="space-y-3 text-base leading-relaxed text-muted-foreground">
             {leadParagraphs.map((paragraph, index) => (
               <p key={index}>{paragraph}</p>
             ))}

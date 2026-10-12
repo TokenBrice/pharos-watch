@@ -115,15 +115,15 @@ function signedBps(bps: number | null): string {
 /** Expected outcome: a recovery duration band, terminal "no return", or awaiting. */
 function DurationCell({ item }: { item: ForecastItem }) {
   if (item.tier == null) {
-    return <span className="font-mono text-[11px] text-muted-foreground">—</span>;
+    return <span className="font-mono text-2xs text-muted-foreground">—</span>;
   }
   if (item.tier === "recovery_unlikely") {
-    return <span className="font-mono text-[11px] font-semibold text-red-700 dark:text-red-400">no return</span>;
+    return <span className="font-mono text-2xs font-semibold text-red-700 dark:text-red-400">no return</span>;
   }
   if (item.medianSec != null) {
     return (
       <span
-        className="font-mono text-[11px] font-semibold tabular-nums text-muted-foreground"
+        className="font-mono text-2xs font-semibold tabular-nums text-muted-foreground"
         title={`Locked estimate as of ${formatUtcTimestamp(item.remainingAsOf) ?? "unknown"}; median deadline ${formatUtcTimestamp(item.medianResolveAt) ?? "unknown"}${item.degradedReason ? `; ${item.degradedReason}` : ""}`}
       >
         {item.degradedReason === "duration-exceeded" ? "overdue" : item.stale ? "stale" : "locked"} ~{formatDurationSec(item.medianSec)}
@@ -131,9 +131,9 @@ function DurationCell({ item }: { item: ForecastItem }) {
     );
   }
   if (item.tier === "insufficient_signal") {
-    return <span className="font-mono text-[11px] text-muted-foreground/70">awaiting</span>;
+    return <span className="font-mono text-2xs text-muted-foreground/70">awaiting</span>;
   }
-  return <span className="font-mono text-[11px] text-muted-foreground/50">—</span>;
+  return <span className="font-mono text-2xs text-muted-foreground/50">—</span>;
 }
 
 /** Coin logo with a tier-colored ring; falls back to the symbol initial. */
@@ -160,7 +160,7 @@ function CoinLogo({ item, logoSrc }: { item: ForecastItem; logoSrc: string | und
           className="h-full w-full rounded-full object-contain"
         />
       ) : (
-        <span className="font-mono text-[8px] font-bold text-muted-foreground">{fallback}</span>
+        <span className="font-mono text-3xs font-bold text-muted-foreground">{fallback}</span>
       )}
     </span>
   );
@@ -177,13 +177,13 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
     >
       <span className="flex min-w-0 items-center gap-2">
         <CoinLogo item={item} logoSrc={logoSrc} />
-        <span className="truncate font-mono text-[13px] font-semibold text-foreground group-hover:underline">
+        <span className="truncate font-mono text-xs font-semibold text-foreground group-hover:underline">
           {item.symbol}
         </span>
-        <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">{signedBps(item.nowBps)}</span>
+        <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">{signedBps(item.nowBps)}</span>
       </span>
       <span className="flex shrink-0 items-center justify-end gap-2.5">
-        <span className={cn("w-auto text-right sm:w-24 text-[10px] font-semibold uppercase tracking-wide", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
+        <span className={cn("w-auto text-right sm:w-24 text-3xs font-semibold uppercase", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
           {item.tier == null ? item.state.replaceAll("_", " ") : TIER_SHORT[item.tier]}
         </span>
         <span className="w-auto text-right sm:w-28">
@@ -220,7 +220,7 @@ function SectionHeader({ stat }: { stat: { value: number; label: string } }) {
           />
         </div>
       </div>
-      <p className="text-[11px] leading-snug text-muted-foreground sm:text-sm">
+      <p className="text-2xs leading-snug text-muted-foreground sm:text-sm">
         Forecasts how long a depeg lasts &mdash; and whether it returns to peg.
       </p>
     </div>
@@ -257,12 +257,12 @@ function VerdictDistribution({ items }: { items: ForecastItem[] }) {
           <span key={tier} className="flex items-center gap-1.5">
             <span aria-hidden="true" className={cn("h-2 w-2 rounded-[3px]", NOW_DOT_TONE[tier])} />
             <span className={cn("font-mono text-sm font-bold tabular-nums", TIER_META[tier].accent)}>{count}</span>
-            <span className={cn("text-[10px] font-semibold uppercase tracking-wide", TIER_META[tier].accent)}>
+            <span className={cn("text-3xs font-semibold uppercase", TIER_META[tier].accent)}>
               {TIER_SHORT[tier]}
             </span>
           </span>
         ))}
-        <span className="ml-auto font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{total} forecasts</span>
+        <span className="pharos-meta pharos-numeric ml-auto">{total} forecasts</span>
       </div>
     </div>
   );
@@ -314,20 +314,20 @@ function ForecastZone({
 function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] }) {
   return (
     <div className="flex flex-1 flex-col gap-2">
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Accuracy by horizon</p>
+      <p className="pharos-label">Accuracy by horizon</p>
       <div className="flex flex-1 items-stretch gap-2">
         {rates.map((r) => {
           const pct = Math.round(r.hitRate * 100);
           return (
             <div key={r.horizon} className="flex flex-1 flex-col items-center gap-1.5">
-              <span className="pharos-numeric text-[11px] font-bold text-foreground">{pct}%</span>
+              <span className="pharos-numeric text-2xs font-bold text-foreground">{pct}%</span>
               <div className="flex min-h-16 w-full flex-1 items-end overflow-hidden rounded-md bg-muted/50">
                 <div
                   className="w-full rounded-md bg-[var(--chart-primary)]/80"
                   style={{ height: `${Math.max(8, pct)}%` }}
                 />
               </div>
-              <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{r.horizon}</span>
+              <span className="font-mono text-3xs uppercase text-muted-foreground">{r.horizon}</span>
             </div>
           );
         })}
@@ -355,8 +355,8 @@ function TrackRecordZone({
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div>
         <div className="flex items-baseline justify-between gap-2">
-          <h3 className="pharos-kicker">Track record</h3>
-          <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground">DDRR</span>
+          <h3 className="pharos-label">Track record</h3>
+          <span className="font-mono text-3xs text-muted-foreground">DDRR</span>
         </div>
         <div className="mt-2 flex items-end gap-2">
           <span className={cn("font-display text-4xl font-black leading-none tracking-tight sm:text-5xl", accuracyTone)}>

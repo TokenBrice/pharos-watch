@@ -79,7 +79,7 @@ function OverviewHeader({ coveredCount }: { coveredCount: number | null }): Reac
           />
         </div>
       </div>
-      <p className="text-[10px] leading-snug text-muted-foreground sm:text-sm">
+      <p className="text-3xs leading-snug text-muted-foreground sm:text-sm">
         Risk-adjusted stablecoin yield, scored by the Pharos Yield Score.
       </p>
     </div>
@@ -100,7 +100,7 @@ function StatStrip({
   return (
     <div className="grid grid-cols-3 divide-x divide-border/50">
       <div className="flex flex-col gap-1 px-3 py-3 first:pl-0">
-        <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Coverage</span>
+        <span className="pharos-label">Coverage</span>
         <span className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
           {coveredCount === null || trackedCount === null ? (
             <span className="text-muted-foreground">—</span>
@@ -113,22 +113,22 @@ function StatStrip({
         </span>
       </div>
       <div className="flex flex-col gap-1 px-3 py-3">
-        <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Median APY</span>
+        <span className="pharos-label">Median APY</span>
         <span className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
           {medianApy === null ? <span className="text-muted-foreground">—</span> : formatPercent(medianApy)}
         </span>
       </div>
       <div className="flex flex-col gap-1 px-3 py-3">
-        <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">Best risk-adjusted</span>
+        <span className="pharos-label">Best risk-adjusted</span>
         {bestRiskAdjusted ? (
           <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 truncate">
             <span className="truncate font-mono text-lg font-semibold uppercase tracking-tight text-foreground sm:text-xl">
               {bestRiskAdjusted.symbol}
             </span>
-            <span className="pharos-numeric shrink-0 text-lg font-semibold text-frost-blue sm:text-xl">
+            <span className="pharos-numeric shrink-0 text-lg font-semibold text-foreground sm:text-xl">
               {formatPercent(bestRiskAdjusted.apy30d)}
             </span>
-            <span className="pharos-numeric shrink-0 text-[11px] text-muted-foreground">
+            <span className="pharos-numeric shrink-0 text-2xs text-muted-foreground">
               PYS {formatScore(bestRiskAdjusted.pharosYieldScore)}
             </span>
           </span>
@@ -245,7 +245,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
           bestRiskAdjusted={overview.bestRiskAdjusted}
         />
         {overview.highestRawYield ? (
-          <p className="border-t border-border/50 px-1 py-2 text-[11px] text-muted-foreground">
+          <p className="border-t border-border/50 px-1 py-2 text-2xs text-muted-foreground">
             Highest raw APY (unadjusted):{" "}
             <span className="font-mono font-semibold uppercase text-foreground">{overview.highestRawYield.symbol}</span>{" "}
             <span className="pharos-numeric font-semibold text-foreground">
@@ -256,7 +256,7 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
 
         <div className="mt-3 border-t border-border/50 pt-3">
           <div
-            className={`${ROW_GRID} px-1 pb-1.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground`}
+            className={`${ROW_GRID} pharos-label px-1 pb-1.5`}
           >
             <span aria-hidden="true" />
             <span>Top by PYS</span>

@@ -4,7 +4,7 @@ import {
   describeMintBurnVolumeBound,
   formatMintBurnVolume,
   type MintBurnSignedNetView,
-} from "@/lib/mint-burn-valuation-display";
+} from "@shared/lib/mint-burn-valuation-display";
 
 /**
  * Signed mint/burn net with valuation-completeness semantics: an unavailable net

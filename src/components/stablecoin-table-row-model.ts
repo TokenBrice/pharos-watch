@@ -2,7 +2,7 @@ import { getStablecoinTableRowRiskLevel, getSupplyChangePercent } from "@/compon
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-table-row-types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { formatNativePrice } from "@shared/lib/format";

@@ -4,7 +4,7 @@ import {
   resolveCoinNetFlow,
   resolvePressureScore as getPressureScore,
   resolvePressureState as getPressureState,
-} from "@/lib/mint-burn-coin-helpers";
+} from "@shared/lib/mint-burn-coin-helpers";
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { getFlowPressureUi } from "@/lib/flow-signal-ui";

@@ -9,7 +9,7 @@ interface DepegProvenanceBadgesProps {
 }
 
 const BADGE_CLASS =
-  "rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground";
+  "rounded bg-muted px-1.5 py-0.5 text-3xs font-medium text-muted-foreground";
 
 const REASON_LABELS: Record<string, string> = {
   "large-cap": "large cap",
@@ -80,7 +80,7 @@ export function DepegProvenanceBadges({
               {source}
             </span>
           </TooltipTrigger>
-          <TooltipContent className="text-[11px]">{sourceTooltip}</TooltipContent>
+          <TooltipContent className="text-2xs">{sourceTooltip}</TooltipContent>
         </Tooltip>
       ) : null}
       {pendingReason ? (
@@ -94,7 +94,7 @@ export function DepegProvenanceBadges({
               {labelReason(pendingReason)}
             </span>
           </TooltipTrigger>
-          <TooltipContent className="text-[11px]">
+          <TooltipContent className="text-2xs">
             Reason this incident used the pending-confirmation path.
           </TooltipContent>
         </Tooltip>
@@ -110,7 +110,7 @@ export function DepegProvenanceBadges({
               confirmed: {labelConfirmationSources(confirmationSources)}
             </span>
           </TooltipTrigger>
-          <TooltipContent className="text-[11px]">
+          <TooltipContent className="text-2xs">
             Sources that corroborated the pending incident.
           </TooltipContent>
         </Tooltip>
