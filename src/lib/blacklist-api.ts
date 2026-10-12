@@ -4,7 +4,21 @@ import type {
   BlacklistSortDirection,
   BlacklistSortKey,
   BlacklistStablecoin,
+  BlacklistSummaryRefresh,
 } from "@shared/types";
+import type { DataHealthCatchUp } from "@/lib/data-health";
+
+/** Names each config the producer reported behind its safe head for the freshness banner. */
+export function blacklistSummaryCatchUp(refresh: BlacklistSummaryRefresh | undefined): DataHealthCatchUp | null {
+  if (!refresh) return null;
+  return {
+    observedAt: refresh.observedAt,
+    sources: refresh.behindConfigs.map((config) => ({
+      label: `${config.symbol} on ${config.chainName}`,
+      lastSucceededAt: config.lastSucceededAt,
+    })),
+  };
+}
 
 export interface FetchBlacklistEventsParams {
   stablecoin?: BlacklistStablecoin | "all";

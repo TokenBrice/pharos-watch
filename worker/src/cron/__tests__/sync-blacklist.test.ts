@@ -815,6 +815,7 @@ describe("syncBlacklist", () => {
       materializedAt: now,
       freshnessTs: priorSuccess,
       freshnessStatus: previouslySucceeded ? "ok" : "missing",
+      payload: { refresh: { observedAt: now, behindConfigs: [expect.objectContaining({ lastSucceededAt: priorSuccess })] } },
     });
     expect(write!.binds[2]).toBe(now);
   });

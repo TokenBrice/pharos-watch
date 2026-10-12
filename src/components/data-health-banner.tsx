@@ -48,9 +48,18 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
       return Math.max(max, item.ageMs);
     }, null);
 
+  const nonFresh = entries.filter((entry) => entry.state !== "fresh");
+  const catchUps = nonFresh.flatMap((entry) => (entry.catchUp ? [entry.catchUp] : []));
+  const allCatchingUp = merged.state === "degraded" && catchUps.length === nonFresh.length;
+
   let title = "";
   let message = "";
-  if (merged.state === "degraded") {
+  if (allCatchingUp) {
+    const lagging = formatAffectedLabels([...new Set(catchUps.flatMap((catchUp) => catchUp.laggingLabels))]);
+    const observedAtMs = Math.min(...catchUps.map((catchUp) => catchUp.observedAtMs));
+    title = "Some sources are still catching up";
+    message = `${affected} ${plural ? "are" : "is"} current as of ${formatTimestamp(observedAtMs)}. ${lagging} history is still being backfilled, so its latest events may be missing.`;
+  } else if (merged.state === "degraded") {
     if (entries.some((entry) => entry.state === "degraded" && entry.degradationReason === "refresh")) {
       title = "Refresh failed; showing saved data";
       message = `${affected} ${plural ? "remain" : "remains"} available while refresh retries.`;
@@ -75,7 +84,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
 
   const lastSuccessfulText =
     merged.latestUpdatedAt != null
-      ? `Last successful update: ${formatTimestamp(merged.latestUpdatedAt)}`
+      ? `${allCatchingUp ? "Last complete scan of every source" : "Last successful update"}: ${formatTimestamp(merged.latestUpdatedAt)}`
       : null;
 
   return (

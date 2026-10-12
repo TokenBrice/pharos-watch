@@ -193,19 +193,45 @@ describe("EVM blacklist contiguous coverage", () => {
       return { config, chainRpcs: new Map([["gnosis", rpc]]) };
     }
 
-    it("scans 100 contiguous pages but does not certify the unscanned safe head", async () => {
+    it("scans 600 contiguous pages but does not certify the unscanned safe head", async () => {
       const { config, chainRpcs } = setup();
+      const budget = createBlacklistRunBudget({ subrequestLimit: 2_000, runtimeBudgetMs: 600_000 });
       const result = await fetchEvmEventsIncremental(
-        mockD1(), config, null, 1, new Map(), makeBudget(), limiter, undefined, chainRpcs,
+        mockD1(), config, null, 1, new Map(), budget, limiter, undefined, chainRpcs,
       );
-      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(100);
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(600);
       expect(fetchEvmLogsForTopicWithCompleteness).not.toHaveBeenCalled();
-      expect(result).toMatchObject({ scannedToBlock: 900_000, safeHead: 20_000_000,
-        coverageOutcome: "incomplete", providerCalls: 100, coveredTopicCount: 2 });
+      expect(result).toMatchObject({ scannedToBlock: 5_400_000, safeHead: 20_000_000,
+        coverageOutcome: "incomplete", providerCalls: 600, coveredTopicCount: 2 });
       for (const [index, call] of vi.mocked(fetchAlchemyLogs).mock.calls.entries()) {
         expect(call[3]).toBe(index * 9_000 + 1);
-        expect(call[7]?.maxSplitCalls).toBe(100 - index);
+        expect(call[7]?.maxSplitCalls).toBe(600 - index);
       }
+    });
+
+    it.each(["subrequest", "runtime"] as const)("extends past 100 pages only while the %s reserve for queued configs holds", async (reserve) => {
+      const { config, chainRpcs } = setup();
+      const budget = makeBudget();
+      if (reserve === "subrequest") budget.subrequestBudget.count = 550;
+      if (reserve === "runtime") budget.deadlineMs = Date.now() + 200_000;
+      const result = await fetchEvmEventsIncremental(
+        mockD1(), config, null, 1, new Map(), budget, limiter, undefined, chainRpcs,
+      );
+      // The first 100 pages keep their unconditional allowance; extension stops at the reserve.
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(100);
+      expect(result).toMatchObject({ scannedToBlock: 900_000, coverageOutcome: "incomplete" });
+    });
+
+    it("stops an extended catch-up when only the subrequest reserve remains", async () => {
+      const { config, chainRpcs } = setup();
+      const budget = makeBudget();
+      budget.subrequestBudget.count = 300;
+      const result = await fetchEvmEventsIncremental(
+        mockD1(), config, null, 1, new Map(), budget, limiter, undefined, chainRpcs,
+      );
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(300);
+      expect(budget.subrequestBudget.limit - budget.subrequestBudget.count).toBe(300);
+      expect(result).toMatchObject({ scannedToBlock: 2_700_000, coverageOutcome: "incomplete" });
     });
 
     it.each(["subrequest", "deadline", "split-calls"] as const)("stops at the %s budget with only the proven prefix", async (boundary) => {
@@ -215,7 +241,7 @@ describe("EVM blacklist contiguous coverage", () => {
         if (boundary === "subrequest") budget.subrequestBudget.count = budget.subrequestBudget.limit;
         if (boundary === "deadline") budget.deadlineMs = Date.now() - 1;
         return { logs: [], complete: true, scannedToBlock: to,
-          calls: boundary === "split-calls" ? 100 : 1, maxDepth: 0 };
+          calls: boundary === "split-calls" ? 600 : 1, maxDepth: 0 };
       });
       const result = await fetchEvmEventsIncremental(
         mockD1(), config, null, 1, new Map(), budget, limiter, undefined, chainRpcs,

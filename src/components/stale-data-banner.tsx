@@ -1,7 +1,7 @@
 "use client";
 
 import { DataHealthBanner } from "@/components/data-health-banner";
-import { deriveDataHealth } from "@/lib/data-health";
+import { deriveDataHealth, type DataHealthCatchUp } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import type { ApiMeta } from "@/lib/api";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -26,6 +26,8 @@ export interface StaleQuery {
    * treated as in flight.
    */
   isLoading?: boolean;
+  /** Producer catch-up detail, so an aged coverage clock with current totals is not read as a stall. */
+  catchUp?: DataHealthCatchUp | null;
 }
 
 /**
@@ -55,6 +57,7 @@ export function StaleDataBanner({ queries }: { queries: readonly StaleQuery[] })
       hasData: q.hasData ?? q.dataUpdatedAt > 0,
       error: q.error,
       meta: q.meta ?? null,
+      catchUp: q.catchUp,
     }, hydrated ? undefined : q.dataUpdatedAt);
   });
 

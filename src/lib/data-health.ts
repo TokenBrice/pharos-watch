@@ -4,6 +4,13 @@ import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
 
+/** A producer that refreshed its totals while some sources are still backfilling coverage. */
+export interface DataHealthCatchUp {
+  /** Seconds; when the producer last rebuilt the observed totals. */
+  observedAt: number;
+  sources: readonly { label: string; lastSucceededAt: number | null }[];
+}
+
 interface QueryHealthInput {
   label: string;
   dataUpdatedAt: number;
@@ -11,6 +18,7 @@ interface QueryHealthInput {
   error?: unknown | null;
   hasData?: boolean;
   meta?: ApiMeta | null;
+  catchUp?: DataHealthCatchUp | null;
 }
 
 export interface DataHealthInfo {
@@ -21,7 +29,9 @@ export interface DataHealthInfo {
   ageMs: number | null;
   staleTime: number;
   meta: ApiMeta | null;
-  degradationReason?: "age" | "source" | "refresh";
+  degradationReason?: "age" | "source" | "refresh" | "catch-up";
+  /** Set with `catch-up`: totals are current; only these sources hold the coverage clock back. */
+  catchUp?: { observedAtMs: number; laggingLabels: string[] };
 }
 
 interface MergedDataHealth {
@@ -42,17 +52,21 @@ function isUnavailableError(error: unknown): boolean {
   return error instanceof ApiFetchError && error.status === 503;
 }
 
+function getFreshBudgetMs(staleTime: number, meta: ApiMeta | null | undefined): number {
+  const freshBudgetSec = meta && "freshBudgetSec" in meta ? meta.freshBudgetSec : undefined;
+  return typeof freshBudgetSec === "number" && Number.isFinite(freshBudgetSec) && freshBudgetSec >= 0
+    ? freshBudgetSec * 1000
+    : FRESHNESS_RATIOS.FRESH * staleTime;
+}
+
 function pickBaseState(
   ageMs: number | null,
   staleTime: number,
   meta: ApiMeta | null | undefined,
 ): Exclude<DataHealthState, "error"> {
   if (ageMs === null) return "unavailable";
-  const freshBudgetSec = meta && "freshBudgetSec" in meta ? meta.freshBudgetSec : undefined;
   const degradedBudgetSec = meta && "degradedBudgetSec" in meta ? meta.degradedBudgetSec : undefined;
-  const freshBudgetMs = typeof freshBudgetSec === "number" && Number.isFinite(freshBudgetSec) && freshBudgetSec >= 0
-    ? freshBudgetSec * 1000
-    : FRESHNESS_RATIOS.FRESH * staleTime;
+  const freshBudgetMs = getFreshBudgetMs(staleTime, meta);
   const degradedBudgetMs = typeof degradedBudgetSec === "number" && Number.isFinite(degradedBudgetSec) && degradedBudgetSec >= 0
     ? degradedBudgetSec * 1000
     : FRESHNESS_RATIOS.DEGRADED * staleTime;
@@ -115,6 +129,26 @@ export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): D
       : "source";
   }
 
+  // An aged coverage clock is not a stalled producer when the totals were rebuilt within budget
+  // and the producer names the sources still catching up.
+  let catchUp: DataHealthInfo["catchUp"];
+  const ageOnly = classifiedState !== "fresh" && classifiedState !== "unavailable"
+    && (!input.meta?.warning || input.meta.warning.startsWith("110 "))
+    && Object.values(input.meta?.dependencies ?? {}).every((dependency) => dependency.status === "fresh");
+  if (input.catchUp && hasData && !input.error && ageOnly) {
+    const freshBudgetMs = getFreshBudgetMs(input.staleTime, input.meta);
+    const observedAtMs = input.catchUp.observedAt * 1000;
+    const laggingLabels = input.catchUp.sources
+      .filter((source) => source.lastSucceededAt == null || nowMs - source.lastSucceededAt * 1000 > freshBudgetMs)
+      .map((source) => source.label);
+    if (nowMs - observedAtMs <= freshBudgetMs && laggingLabels.length > 0) {
+      state = "degraded";
+      message = "Totals are current; some sources are still catching up.";
+      degradationReason = "catch-up";
+      catchUp = { observedAtMs, laggingLabels };
+    }
+  }
+
   const result: DataHealthInfo = {
     label: input.label,
     state,
@@ -125,6 +159,7 @@ export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): D
     meta: input.meta ?? null,
   };
   if (degradationReason != null) result.degradationReason = degradationReason;
+  if (catchUp) result.catchUp = catchUp;
   return result;
 }
 

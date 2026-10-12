@@ -6,6 +6,7 @@ import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blackli
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent, trackSearch } from "@/lib/analytics";
+import { blacklistSummaryCatchUp } from "@/lib/blacklist-api";
 import { buildBlacklistStatusBuckets, type BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import type {
@@ -169,6 +170,7 @@ export function useFreezeWatchPageController() {
   const error = summaryError ?? pageError ?? supportStablecoinsError ?? supportReportCardsError;
   const dataUpdatedAt = Math.max(summaryUpdatedAt, pageUpdatedAt);
   const freshnessMeta = summaryMeta ?? pageMeta;
+  const freshnessCatchUp = summaryMeta ? blacklistSummaryCatchUp(summary?.refresh) : null;
 
   const updateFilters = useCallback(
     (updates: Partial<FreezeWatchPageFilters>) => {
@@ -309,6 +311,7 @@ export function useFreezeWatchPageController() {
     error,
     dataUpdatedAt,
     freshnessMeta,
+    freshnessCatchUp,
     sourceGenerations: { stablecoins: stablecoinsMeta?.updatedAt, reportCards: reportCardsMeta?.updatedAt },
     stablecoins: stablecoinData?.peggedAssets as StablecoinData[] | undefined,
     stablecoinFxFallbackRates: stablecoinData?.fxFallbackRates,

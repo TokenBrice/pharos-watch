@@ -61,7 +61,18 @@ export const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: n
 };
 
 /** Serial catch-up on admitted Dwellir log endpoints; splits share this call cap. */
-const DWELLIR_CATCH_UP_MAX_CALLS = 100;
+const DWELLIR_CATCH_UP_MAX_CALLS = 600;
+/** Calls admitted unconditionally; calls beyond this must leave the reserves below intact. */
+const DWELLIR_CATCH_UP_BASE_CALLS = 100;
+/** Subrequests and runtime kept for configs still queued behind an extended catch-up. */
+const DWELLIR_CATCH_UP_SUBREQUEST_RESERVE = 300;
+const DWELLIR_CATCH_UP_RUNTIME_RESERVE_MS = 240_000;
+
+function dwellirCatchUpReserveReached(runBudget: BlacklistRunBudget): boolean {
+  const { count, limit } = runBudget.subrequestBudget;
+  return limit - count <= DWELLIR_CATCH_UP_SUBREQUEST_RESERVE
+    || Date.now() + DWELLIR_CATCH_UP_RUNTIME_RESERVE_MS >= runBudget.deadlineMs;
+}
 
 type EvmLogLike = Pick<
   EtherscanLogEntry,
@@ -424,7 +435,7 @@ export async function fetchEvmEventsIncremental(
     // Separate the per-request provider range from this config's catch-up range.
     // Incumbent pacing stays unchanged, including Avalanche's eight serial pages.
     const catchUpCalls = target.endpoint.operator === "dwellir" ? DWELLIR_CATCH_UP_MAX_CALLS : null;
-    const finalBlock = catchUpCalls != null && target.scanWindowBlocks != null
+    let finalBlock = catchUpCalls != null && target.scanWindowBlocks != null
       ? Math.min(targetSafeHead, fromBlock + target.scanWindowBlocks * catchUpCalls - 1)
       : config.chain.chainId === "avalanche" && target.scanWindowBlocks === 2_000
         ? Math.min(targetSafeHead, fromBlock + 16_000 - 1) : scanToBlock;
@@ -448,6 +459,11 @@ export async function fetchEvmEventsIncremental(
       calls += batch.calls;
       if (!batch.complete || blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)
         || (catchUpCalls != null && calls >= catchUpCalls)) break;
+      // A reserve stop is a planned, shorter catch-up target, not a provider gap.
+      if (catchUpCalls != null && calls >= DWELLIR_CATCH_UP_BASE_CALLS && dwellirCatchUpReserveReached(runBudget)) {
+        finalBlock = end;
+        break;
+      }
       start = end + 1;
     } while (start <= finalBlock);
     const last = batches[batches.length - 1]!;
