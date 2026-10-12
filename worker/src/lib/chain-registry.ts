@@ -230,6 +230,10 @@ export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, "primary" | "after
   mantle: "primary",
   sonic: "primary",
   gnosis: "primary",
+  tempo: "primary",
+  // Archive history observed, not vendor-guaranteed. Historical reads rely on a
+  // pruned node erroring so they fall back to public; parity checks near-head only.
+  plasma: "primary",
   base: "after-alchemy",
 };
 
