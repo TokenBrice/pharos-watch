@@ -85,7 +85,7 @@ no RSS feed.
 - **The filename is data.** It must equal `dateRange.to`, and every dated file
   must be registered in the barrel. Both dates must be valid `YYYY-MM-DD` days:
   `scripts/lib/editorial-content.ts` rejects malformed or impossible dates;
-  the barrel sorts lexicographically and page year dividers parse those dates.
+  the barrel sorts lexicographically and the page's month folds parse those dates.
 - **One entry per Monday–Sunday week.** `dateRange.from` is a Monday and
   `dateRange.to` the following Sunday (UTC, inclusive). The editorial-content
   check rejects any other span, and the registry test rejects overlapping
@@ -101,6 +101,11 @@ no RSS feed.
   and the page's `ItemList` JSON-LD publishes that same fragment as every
   week's `url` and `mainEntityOfPage`. Changing the id format breaks the
   structured data, not just inbound links.
+- **Older weeks fold by month.** `src/components/changelog-timeline.tsx` renders
+  the newest `CHANGELOG_OPEN_WEEKS` (2) weeks open and every older week inside a
+  native `<details id="month-YYYY-MM">`. Folded weeks stay in the static HTML;
+  `DisclosureHashReveal` opens the enclosing month for `#<to>` / `#week-<to>`
+  links (on load and on hash change) so anchors keep deep-linking.
 
 ## Publish a changelog week
 

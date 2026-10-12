@@ -38,7 +38,7 @@ vi.mock("@/hooks/api-hooks", () => ({
 vi.mock("@/app/alt-pegs/alt-peg-stablecoin-table", () => ({
   AltPegStablecoinTable: () => (
     <div data-testid="alt-peg-stablecoin-table">
-      <h2>Drill Into Each Alt-Peg Cohort</h2>
+      <h2>Drill into each alt-peg cohort</h2>
     </div>
   ),
 }));
@@ -215,9 +215,9 @@ describe("AltPegsClient", () => {
   it("renders the core current-state sections and history block", () => {
     render(<AltPegsClient />);
 
-    expect(screen.getByRole("heading", { name: "Which Non-USD Pegs Matter Now" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Which non-USD pegs matter now" })).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "How Much Of The Total Stablecoin Market Sits Outside USD?" }),
+      screen.getByRole("heading", { name: "How much of the stablecoin market sits outside USD?" }),
     ).toBeTruthy();
     expect(screen.getByTestId("non-usd-share-chart")).toBeTruthy();
     expect(screen.getByTestId("alt-peg-cohort-chart")).toBeTruthy();
@@ -248,7 +248,7 @@ describe("AltPegsClient", () => {
     expect(mix.textContent).toContain("Unavailable");
     expect(mix.textContent).not.toContain("$0");
     expect(screen.getByTestId("alt-peg-stablecoin-table")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Which Non-USD Pegs Matter Now" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Which non-USD pegs matter now" })).toBeTruthy();
     expect(screen.getByText(/0\/1 assets observed/)).toBeTruthy();
   });
 
@@ -269,9 +269,9 @@ describe("AltPegsClient", () => {
     const { container } = render(<AltPegsClient />);
 
     const pageText = container.textContent ?? "";
-    const shareChartIndex = pageText.indexOf("How Much Of The Total Stablecoin Market Sits Outside USD?");
+    const shareChartIndex = pageText.indexOf("How much of the stablecoin market sits outside USD?");
     const cohortChartIndex = pageText.indexOf("cohort-chart default 1y");
-    const tableIndex = pageText.indexOf("Which Non-USD Pegs Matter Now");
+    const tableIndex = pageText.indexOf("Which non-USD pegs matter now");
     expect(shareChartIndex).toBeGreaterThanOrEqual(0);
     expect(cohortChartIndex).toBeGreaterThanOrEqual(0);
     expect(tableIndex).toBeGreaterThanOrEqual(0);
@@ -285,8 +285,8 @@ describe("AltPegsClient", () => {
     const pageText = container.textContent ?? "";
     const atlasIndex = pageText.indexOf("Peg Diversity Atlas");
     const cohortChartIndex = pageText.indexOf("cohort-chart default 1y");
-    const directoryIndex = pageText.indexOf("Drill Into Each Alt-Peg Cohort");
-    const tableIndex = pageText.indexOf("Which Non-USD Pegs Matter Now");
+    const directoryIndex = pageText.indexOf("Drill into each alt-peg cohort");
+    const tableIndex = pageText.indexOf("Which non-USD pegs matter now");
     expect(atlasIndex).toBeGreaterThanOrEqual(0);
     expect(cohortChartIndex).toBeGreaterThanOrEqual(0);
     expect(directoryIndex).toBeGreaterThanOrEqual(0);

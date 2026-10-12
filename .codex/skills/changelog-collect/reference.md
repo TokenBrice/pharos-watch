@@ -6,7 +6,7 @@ Material moved verbatim from `SKILL.md`: render-context notes, theme/signal cata
 
 - **File**: `src/data/changelogs/<YYYY-MM-DD>.json` (the `to` date); validate metadata and references with `npm run check:editorial-content`.
 - **Barrel**: `src/data/changelogs/index.ts` — generated artifact (`changelog-registry`); regenerate with `node --import tsx scripts/maintenance/generate-changelog-registry.ts` (the `.sort()` handles runtime order).
-- **Rendered at**: `/changelog/` via `ChangelogEntryCard` inside a timeline `<ol>`. Each entry's `id` is `dateRange.to`, used by both the card's hash anchor and `ChangelogWeekNav`.
+- **Rendered at**: `/changelog/` via `ChangelogEntryCard` inside `ChangelogTimeline` (latest two weeks open, older weeks folded by month). Each entry's `id` is `dateRange.to`, used by both the card's hash anchor and `ChangelogWeekNav`.
 - **Displayed fields**: date range, "Latest" badge on the newest entry, `stats.totalCommits`, `headline`, `fieldNotes` editor note, summary list (label + tag + description + optional `href`), and a collapsed disclosure of the newest 20 non-noise commits with an "and N more" tail.
 
 ### Noise filter — rationale

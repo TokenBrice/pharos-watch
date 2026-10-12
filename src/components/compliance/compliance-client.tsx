@@ -261,7 +261,12 @@ export function ComplianceClient() {
 
         <div id="compliance-view-panel" role="tabpanel">
           {regimeFilter === "all" ? (
-            <OverviewDirectory rows={overview.rows} logos={logos} onStatusClick={openOverviewStatus} />
+            <OverviewDirectory
+              rows={overview.rows}
+              logos={logos}
+              onStatusClick={openOverviewStatus}
+              filterKey={`${pegFilter}:${searchInput}`}
+            />
           ) : (
             <div className="space-y-5">
               <div className="space-y-2">

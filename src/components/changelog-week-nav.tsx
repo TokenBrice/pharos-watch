@@ -128,9 +128,9 @@ export function ChangelogWeekNav({ entries }: ChangelogWeekNavProps) {
                   )}
                   aria-hidden
                 />
-                <span className="pharos-numeric">{month.label}</span>
+                <span>{month.label}</span>
                 {isLatest && (
-                  <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-3xs font-sans font-semibold uppercase text-foreground">
+                  <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-2xs font-semibold text-foreground">
                     Latest
                   </span>
                 )}

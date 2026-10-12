@@ -1,8 +1,7 @@
-import { Fragment } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
-import { ChangelogEntryCard } from "@/components/changelog-entry-card";
+import { ChangelogTimeline } from "@/components/changelog-timeline";
 import { ChangelogWeekNav } from "@/components/changelog-week-nav";
 import { EditorialMasthead } from "@/components/editorial-masthead";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -21,10 +20,6 @@ export const metadata: Metadata = buildPageMetadata({
 });
 
 export default function ChangelogPage() {
-  const years = new Set(
-    changelogs.map((e) => new Date(e.dateRange.to + "T00:00:00").getFullYear()),
-  );
-  const multiYear = years.size > 1;
   const latestEntry = changelogs[0];
   const latestYear = latestEntry
     ? new Date(latestEntry.dateRange.to + "T00:00:00").getFullYear()
@@ -91,42 +86,7 @@ export default function ChangelogPage() {
       {changelogs.length >= 4 && (
         <ChangelogWeekNav entries={changelogs.map(({ dateRange }) => ({ dateRange }))} />
       )}
-      <ol className="relative ml-1.5 border-l border-border/50">
-        {changelogs.map((entry, i) => {
-          const year = new Date(entry.dateRange.to + "T00:00:00").getFullYear();
-          const prevYear =
-            i > 0
-              ? new Date(changelogs[i - 1].dateRange.to + "T00:00:00").getFullYear()
-              : year;
-          const showYearDivider = multiYear && (i === 0 || year !== prevYear);
-
-          return (
-            <Fragment key={entry.dateRange.to}>
-              {showYearDivider && (
-                <li className={`relative pl-8 ${i > 0 ? "mt-14" : ""}`}>
-                  <span className="text-sm pharos-numeric font-medium text-muted-foreground/70">
-                    {year}
-                  </span>
-                </li>
-              )}
-              <li
-                id={`week-${entry.dateRange.to}`}
-                className={`relative pl-8 ${showYearDivider ? "mt-4" : i > 0 ? "mt-14" : ""}`}
-              >
-                <div
-                  className={`absolute -left-[5px] top-[7px] size-2.5 rounded-full ${
-                    i === 0
-                      ? "border-2 border-foreground bg-foreground"
-                      : "border-2 border-border bg-background"
-                  }`}
-                  aria-hidden
-                />
-                <ChangelogEntryCard entry={entry} isLatest={i === 0} />
-              </li>
-            </Fragment>
-          );
-        })}
-      </ol>
+      <ChangelogTimeline entries={changelogs} />
     </FeaturePageShell>
   );
 }

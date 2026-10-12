@@ -112,7 +112,7 @@ export function ChangelogEntryCard({
           </a>
           <span className="flex items-center gap-2">
             {isLatest && (
-              <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-3xs font-semibold uppercase text-foreground">
+              <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-2xs font-semibold text-foreground">
                 Latest
               </span>
             )}
@@ -152,7 +152,7 @@ export function ChangelogEntryCard({
                   <span className="text-sm font-semibold text-foreground/90">{item.label}</span>
                 )}
                 {tag && (
-                  <span className="text-xs font-mono text-muted-foreground/70 shrink-0">
+                  <span className="text-xs text-muted-foreground/70 shrink-0">
                     {tag}
                   </span>
                 )}

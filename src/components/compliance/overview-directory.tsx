@@ -1,15 +1,10 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
-import {
-  TableFrame,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/table";
+import { ReferenceTable } from "@/components/reference-table";
+import { TableCell, TableHead, TableRow } from "@/components/table";
+import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { PEG_METADATA } from "@shared/lib/classification";
@@ -25,6 +20,12 @@ type OverviewSortColumn = "mica" | "genius";
 interface OverviewSort {
   column: OverviewSortColumn;
   direction: "asc" | "desc";
+}
+
+/** `?sort=mica-asc` etc.; anything else is the default directory order. */
+export function parseOverviewSort(raw: string): OverviewSort | null {
+  const match = /^(mica|genius)-(asc|desc)$/.exec(raw);
+  return match ? { column: match[1] as OverviewSortColumn, direction: match[2] as "asc" | "desc" } : null;
 }
 
 function OverviewSortHeaderButton({
@@ -63,29 +64,32 @@ export function OverviewDirectory({
   rows,
   logos,
   onStatusClick,
+  filterKey,
 }: {
   rows: ComplianceOverviewRow[];
   logos: Record<string, string> | undefined;
   onStatusClick: (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => void;
+  /** Peg/search signature from the workbench; a change returns the directory to page 1. */
+  filterKey: string;
 }) {
-  const [sort, setSort] = useState<OverviewSort | null>(null);
+  const { getParam, setParam } = useUrlFilters();
+  const sortParam = getParam("sort");
+  const sort = useMemo(() => parseOverviewSort(sortParam), [sortParam]);
 
   const toggleSort = useCallback((column: OverviewSortColumn) => {
-    setSort((previous) => {
-      const next: OverviewSort | null =
-        previous?.column !== column
-          ? { column, direction: "asc" }
-          : previous.direction === "asc"
-            ? { column, direction: "desc" }
-            : null;
-      trackEvent("filter_applied", {
-        page: "compliance",
-        filter_type: "overview_sort",
-        filter_value: next ? `${next.column}:${next.direction}` : "default",
-      });
-      return next;
+    const next: OverviewSort | null =
+      sort?.column !== column
+        ? { column, direction: "asc" }
+        : sort.direction === "asc"
+          ? { column, direction: "desc" }
+          : null;
+    trackEvent("filter_applied", {
+      page: "compliance",
+      filter_type: "overview_sort",
+      filter_value: next ? `${next.column}:${next.direction}` : "default",
     });
-  }, []);
+    setParam("sort", next ? `${next.column}-${next.direction}` : "");
+  }, [setParam, sort]);
 
   const sortedRows = useMemo(() => {
     if (!sort) return rows;
@@ -118,30 +122,22 @@ export function OverviewDirectory({
           <p className="pharos-label">Stablecoin directory</p>
           <p className="text-xs text-muted-foreground">One row per tracked coin with its assessed regime statuses.</p>
         </div>
-        <span className="pharos-numeric text-xs text-muted-foreground">{rows.length.toLocaleString()} coins</span>
       </div>
       {rows.length === 0 ? (
         <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
           No stablecoins match these filters.
         </div>
       ) : (
-        <TableFrame
+        <ReferenceTable
           tableId="compliance-overview"
           testId="compliance-overview-table"
-          chrome="bare"
-          className="pharos-table-shell"
+          rows={sortedRows}
+          getRowKey={(row) => row.id}
+          noun="coins"
+          resetKey={`${filterKey}:${sort ? `${sort.column}-${sort.direction}` : ""}`}
           tableClassName="table-fixed"
           tableProps={{ "aria-label": "Compliance overview directory" }}
-          viewportClassName="relative w-full"
-          viewportProps={{
-            compactBottomPadding: false,
-            horizontal: false,
-            mobileScrollHint: false,
-            overscrollX: false,
-            scrollShadow: false,
-          }}
-        >
-          <TableHeader>
+          head={
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-[38%] px-1.5 sm:px-3">Coin</TableHead>
               <TableHead className="w-[14%] px-1.5 sm:px-3">Peg</TableHead>
@@ -152,45 +148,43 @@ export function OverviewDirectory({
                 <OverviewSortHeaderButton column="genius" label="GENIUS" sort={sort} onToggle={toggleSort} />
               </TableHead>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedRows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="px-1.5 sm:px-3">
-                  <CoinLink row={row} logo={logos?.[row.id]} />
-                </TableCell>
-                <TableCell className="px-1.5 text-xs text-muted-foreground sm:px-3">
-                  {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
-                </TableCell>
-                <TableCell className="px-1.5 text-center sm:px-3">
-                  {row.mica ? (
-                    <OverviewStatusButton
-                      regime="mica"
-                      status={row.mica.status}
-                      coinSymbol={row.symbol}
-                      onClick={onStatusClick}
-                    />
-                  ) : (
-                    <EmptyCell />
-                  )}
-                </TableCell>
-                <TableCell className="px-1.5 text-center sm:px-3">
-                  {row.genius ? (
-                    <OverviewStatusButton
-                      regime="genius"
-                      status={row.genius.status}
-                      coinSymbol={row.symbol}
-                      inWatch={row.genius.inWatch}
-                      onClick={onStatusClick}
-                    />
-                  ) : (
-                    <EmptyCell />
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </TableFrame>
+          }
+          renderRow={(row) => (
+            <TableRow>
+              <TableCell className="px-1.5 sm:px-3">
+                <CoinLink row={row} logo={logos?.[row.id]} />
+              </TableCell>
+              <TableCell className="px-1.5 text-xs text-muted-foreground sm:px-3">
+                {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
+              </TableCell>
+              <TableCell className="px-1.5 text-center sm:px-3">
+                {row.mica ? (
+                  <OverviewStatusButton
+                    regime="mica"
+                    status={row.mica.status}
+                    coinSymbol={row.symbol}
+                    onClick={onStatusClick}
+                  />
+                ) : (
+                  <EmptyCell />
+                )}
+              </TableCell>
+              <TableCell className="px-1.5 text-center sm:px-3">
+                {row.genius ? (
+                  <OverviewStatusButton
+                    regime="genius"
+                    status={row.genius.status}
+                    coinSymbol={row.symbol}
+                    inWatch={row.genius.inWatch}
+                    onClick={onStatusClick}
+                  />
+                ) : (
+                  <EmptyCell />
+                )}
+              </TableCell>
+            </TableRow>
+          )}
+        />
       )}
     </div>
   );

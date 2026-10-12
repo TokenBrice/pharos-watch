@@ -3,6 +3,7 @@
 import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidity } from "@/hooks/api-hooks";
@@ -167,22 +168,33 @@ export function LiquidityClient() {
               assign a Liquidity Score.
             </p>
           </div>
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {unratedRows.map((row) => (
-              <li key={row.meta.id}>
-                <Link
-                  href={buildStablecoinUrl(row.meta.id)}
-                  className="pharos-focus-ring flex items-center gap-2 rounded-xl border border-border/60 bg-background/60 px-3 py-2 transition hover:border-border hover:bg-muted/40"
-                >
-                  <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={28} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{row.meta.symbol}</span>
-                    <span className="block truncate text-xs text-muted-foreground">{row.meta.name}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {/* Folded by default: the tail is long (100+ assets) and secondary to the scored leaderboard. */}
+          <details id="unrated" className="group" open={deferredSearch.trim().length > 0 || undefined}>
+            <summary className="pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 text-sm font-medium text-foreground hover:bg-muted/40 sm:min-h-9 [&::-webkit-details-marker]:hidden">
+              <span>
+                <span className="pharos-numeric">{unratedRows.length.toLocaleString("en-US")}</span> unrated
+              </span>
+              <span className="text-muted-foreground group-open:hidden">· Show</span>
+              <span className="hidden text-muted-foreground group-open:inline">· Hide</span>
+              <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {unratedRows.map((row) => (
+                <li key={row.meta.id}>
+                  <Link
+                    href={buildStablecoinUrl(row.meta.id)}
+                    className="pharos-focus-ring flex items-center gap-2 rounded-xl border border-border/60 bg-background/60 px-3 py-2 transition hover:border-border hover:bg-muted/40"
+                  >
+                    <StablecoinLogo src={logos?.[row.meta.id]} name={row.meta.name} size={28} />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">{row.meta.symbol}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{row.meta.name}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
         </div>
       )}
     </div>
