@@ -198,6 +198,12 @@ describe("intelligence, prompt, and regime contracts", () => {
     expect(editions[3].nextTriggers?.some((trigger) => trigger.id === "trigger:depeg:usdt-tether")).toBe(false);
     expect(buildForwardLookOutcomes(editions[3], editions[2])).toContainEqual(expect.objectContaining({ status: "expired" }));
   });
+  it("renders a sticky trigger's detail from the kept threshold, not today's re-derived one", () => {
+    const armed: DigestInputData = { ...previous, nextTriggers: [{ id: "trigger:depeg:usdt-tether", label: "USDT depeg widening", metric: "depeg-bps", comparator: "abs-gte", thresholdValue: 300, thresholdLabel: "300 bps off peg", symbol: "USDT", rationale: "Wider deviation raises severity.", detail: "If USDT reaches 225 bps off peg, the next digest should treat it as a stronger peg-stress signal." }] };
+    const trigger = buildNextTriggers(current, armed).find((entry) => entry.id === "trigger:depeg:usdt-tether");
+    expect(trigger).toMatchObject({ thresholdValue: 300, thresholdLabel: "300 bps off peg", repeatedCount: 1 });
+    expect(trigger?.detail).toBe("If USDT reaches 300 bps off peg, the next digest should treat it as a stronger peg-stress signal.");
+  });
   const supplyTriggerCases: Array<[string, DigestInputData, string]> = [
     ["weekly fallback", { ...current, supplyVelocity: [], supplyChanges7d: [{ coin: "USDC", change7d: 40_000_000 }] }, "USDC"],
     ["coin-specific velocity", { ...current, biggestSupplyChange: { id: "usdt-tether", symbol: "USDT", name: "Tether", changeUsd: 90_000_000, currentMcap: 100_000_000 } }, "USDC"],
