@@ -209,20 +209,22 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   const producerSnapshotWindowUnavailable =
     Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= runBudget.deadlineMs;
 
+  // Refresh observed totals during catch-up without advancing the full-coverage freshness clock.
   if (
-    status !== "ok" ||
+    runtimeBudgetHit ||
     blacklistRuntimeBudgetReached(runBudget) ||
     subrequestBudgetReached ||
-    oldestSuccessAt == null ||
     producerSnapshotWindowUnavailable
   ) {
     producerSnapshotSkipped = true;
   } else {
     try {
       const snapshotNow = Math.floor(Date.now() / 1000);
-      const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow, undefined, oldestSuccessAt);
+      if (oldestSuccessAt != null) {
+        const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow, undefined, oldestSuccessAt);
+        producerGapMetricSnapshots = gapSnapshot.written;
+      }
       const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt);
-      producerGapMetricSnapshots = gapSnapshot.written;
       producerSummarySnapshot = summarySnapshot.written;
     } catch (err) {
       producerSnapshotError = err instanceof Error ? err.name : "UnknownError";

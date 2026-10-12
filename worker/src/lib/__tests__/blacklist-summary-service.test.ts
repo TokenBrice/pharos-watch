@@ -10,6 +10,28 @@ afterEach(() => {
 });
 
 describe("blacklist summary freeze aggregates", () => {
+  it("serves observed events with missing coverage freshness even when cron history has fresh output", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+      VALUES ('sync-blacklist', ?, 100, 'ok', ?)`)
+      .run(now, JSON.stringify({ outputPublishedAt: now }));
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url)
+      VALUES ('fresh-event', 'USDC', 'ethereum', 'Ethereum', 'blacklist', '0xabc', '0xtx', 1, ?, '', '')`)
+      .run(now);
+
+    await materializeBlacklistSummarySnapshot(db, now, null);
+    const response = await handleBlacklistSummary(db);
+    const summary = await response.json() as BlacklistSummaryResponse;
+
+    expect(summary.totalEvents).toBe(1);
+    expect(response.headers.get("X-Data-Updated-At")).toBe("unknown");
+    expect(response.headers.get("X-Data-Age")).toBe("unavailable");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
   it("sums every canonical gold cohort without including non-gold events", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const now = 2_000_000_000;

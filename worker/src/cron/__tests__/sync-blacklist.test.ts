@@ -773,6 +773,52 @@ describe("syncBlacklist", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(true);
   });
 
+  it.each([
+    { complete: true, previouslySucceeded: true },
+    { complete: false, previouslySucceeded: true },
+    { complete: true, previouslySucceeded: false },
+  ])("refreshes observed summaries during degraded RPC coverage $complete/$previouslySucceeded without renewing freshness", async ({ complete, previouslySucceeded }) => {
+    const now = Math.floor(Date.now() / 1000);
+    const priorSuccess = previouslySucceeded ? now - 2 * 86400 : null;
+    const db = makeDb(CONTRACT_CONFIGS.map((config) => ({
+      config_key: config.configKey,
+      last_block: 0,
+      cursor_value: 0,
+      attempt_generation: 1,
+      last_succeeded_at: priorSuccess,
+    })));
+    vi.mocked(fetchAlchemyLogs).mockResolvedValueOnce({
+      logs: [],
+      complete,
+      scannedToBlock: 19_960_000,
+      calls: 9,
+      maxDepth: 3,
+    });
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      configsSucceeded: CONTRACT_CONFIGS.length - 1,
+      oldestConfigSuccessAt: priorSuccess,
+      producerSnapshotSkipped: false,
+      producerSummarySnapshot: true,
+      producerGapMetricSnapshots: previouslySucceeded ? 2 : 0,
+    });
+    const write = db.getHistory().find((entry) => entry.sql.includes("blacklist-summary-snapshot-write"));
+    expect(write).toBeDefined();
+    expect(JSON.parse(String(write!.binds[1]))).toMatchObject({
+      materializedAt: now,
+      freshnessTs: priorSuccess,
+      freshnessStatus: previouslySucceeded ? "ok" : "missing",
+    });
+    expect(write!.binds[2]).toBe(now);
+  });
+
   it("stops cleanly before the cron wrapper timeout when runtime budget is nearly exhausted", async () => {
     const db = makeDb();
 
@@ -1243,8 +1289,8 @@ describe("syncBlacklist", () => {
       const result = await syncBlacklist(buildTestOpts({ db }));
       const metadata = JSON.parse(result.metadata);
       expect(result.status).toBe("degraded");
-      expect(metadata.producerSnapshotSkipped).toBe(true);
-      expect(metadata.producerSummarySnapshot).toBe(false);
+      expect(metadata.producerSnapshotSkipped).toBe(false);
+      expect(metadata.producerSummarySnapshot).toBe(true);
       expect(metadata.configLag[baseConfig.configKey]).toMatchObject({
         frontier: 1_049_999, safeHead: 20_000_000, lag: 18_950_001,
       });
