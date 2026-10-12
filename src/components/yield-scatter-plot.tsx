@@ -34,7 +34,7 @@ import {
 } from "@/lib/yield-benchmark";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { YIELD_TYPE_LABELS, YIELD_ZONE_LABELS } from "@shared/lib/classification";
+import { YIELD_TYPE_LABELS, YIELD_ZONE_LABELS, YIELD_ZONE_OUTLIER_DOT_CLASS, YIELD_ZONE_STYLES } from "@shared/lib/classification";
 import { YIELD_RISK_BUDGET_MIN_SAFETY } from "@/lib/yield-view-model";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
@@ -455,7 +455,7 @@ export function YieldScatterPlot({
           SEVERITY_TONE_CLASS.watch.banner,
         )}
       >
-        <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+        <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_OUTLIER_DOT_CLASS)} />
         {apyAxis.clippedCount} outlier{apyAxis.clippedCount === 1 ? "" : "s"} pinned above{" "}
         {apyAxis.clipThreshold.toFixed(0)}%
         {usesDefaultBenchmarkFrame ? <span className="hidden md:inline">(USD frame)</span> : null}
@@ -634,7 +634,7 @@ export function YieldScatterPlot({
       {compact ? null : (
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.ok.banner)}>
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_STYLES["sweet-spot"].dot)} />
             <span className="text-foreground font-medium">Sweet spot</span>
             {showBenchmarkReference && usesDefaultBenchmarkFrame ? (
               <span className="hidden md:inline">
@@ -649,7 +649,7 @@ export function YieldScatterPlot({
             )}
           </span>
           <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5", SEVERITY_TONE_CLASS.alert.banner)}>
-            <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+            <span className={cn("h-2.5 w-2.5 rounded-full", YIELD_ZONE_STYLES["danger-zone"].dot)} />
             <span className="text-foreground font-medium">Danger zone</span>
             <span className="hidden md:inline">= high APY on low safety</span>
           </span>

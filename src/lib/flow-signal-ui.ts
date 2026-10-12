@@ -1,3 +1,4 @@
+import { MINT_PRESSURE_TONE_CLASSES } from "@shared/lib/classification";
 import type {
   NetFlowDirection24h,
   PressureShiftState,
@@ -34,16 +35,14 @@ export interface FlowPressureUi extends FlowPressureBase {
 
 const FLOW_DIRECTION_BASE: Record<FlowDirectionKey, FlowDirectionBase> = {
   minting: {
-    badgeClass:
-      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    valueClass: "text-emerald-700 dark:text-emerald-400",
+    badgeClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].badge,
+    valueClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].value,
     accentHex: "#22c55e",
     sceneMode: "printer",
   },
   burning: {
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    valueClass: "text-red-700 dark:text-red-400",
+    badgeClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].badge,
+    valueClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].value,
     accentHex: "#ef4444",
     sceneMode: "shredder",
   },
@@ -111,11 +110,9 @@ const FLOW_DIRECTION_HELPERS: Record<FlowDirectionKey, string> = {
 
 const FLOW_PRESSURE_BASE: Record<PressureShiftState, FlowPressureBase> = {
   improving: {
-    badgeClass:
-      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    valueClass: "text-emerald-700 dark:text-emerald-400",
-    panelClass:
-      "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
+    badgeClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].badge,
+    valueClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].value,
+    panelClass: MINT_PRESSURE_TONE_CLASSES["mint-dominated"].panel,
   },
   stable: {
     badgeClass: "border-border/70 bg-muted/40 text-foreground",
@@ -123,11 +120,9 @@ const FLOW_PRESSURE_BASE: Record<PressureShiftState, FlowPressureBase> = {
     panelClass: "border-border/60 bg-background/55 dark:bg-background/35",
   },
   worsening: {
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    valueClass: "text-red-700 dark:text-red-400",
-    panelClass:
-      "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
+    badgeClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].badge,
+    valueClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].value,
+    panelClass: MINT_PRESSURE_TONE_CLASSES["burn-dominated"].panel,
   },
   nr: {
     badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",

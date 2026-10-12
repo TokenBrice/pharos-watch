@@ -61,6 +61,7 @@ export interface ReservesSectionProps {
 }
 
 const FEED_STATUS_ANCHOR_ID = "reserve-feed-status";
+// raw: amber-600 light shade, no exact state utility
 const AMBER_VALUE_CLASS = "text-amber-600 dark:text-amber-400";
 const CHIP_CLASS = "text-2xs font-medium";
 const SUB_LINE_CLASS = "block font-sans text-2xs font-normal normal-case tracking-normal text-muted-foreground";

@@ -15,6 +15,7 @@ import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/suppl
 import { hasReviewedProtocolInternalFlowSince } from "@shared/lib/reviewed-protocol-internal-flows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinData } from "@shared/types";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 // Coins whose total supply is below this floor are excluded from the
 // movers list: a 200% jump on a $50k stablecoin is meaningless next to
@@ -146,7 +147,7 @@ export function SupplyMovesCard(): React.JSX.Element {
           </span>
           <span
             className={`pharos-numeric text-3xl font-bold tracking-tight ${
-              peak.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-state-danger"
+              peak.pctChange >= 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down
             }`}
           >
             {formatPct(peak.pctChange)}
@@ -194,7 +195,7 @@ function MoverList({
                 <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
                 <span
                   className={`font-semibold pharos-numeric ${
-                    row.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-state-danger"
+                    row.pctChange >= 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down
                   }`}
                 >
                   {formatPct(row.pctChange)}

@@ -28,6 +28,7 @@ export function FlowMachinePrinter({
     return buildPrinterMachineModel(size, reducedMotion ? 0 : intensity, stress);
   }, [intensity, reducedMotion, size, stress]);
 
+  // raw: machine illustration paints fixed metal/paper colours, not a classification scale
   return (
     <div className={model.dims.areaClass}>
       <div

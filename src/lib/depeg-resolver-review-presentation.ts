@@ -1,5 +1,6 @@
 import { actualOutcomeFromSourceEventState } from "@shared/lib/depeg-resolver-review";
 import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format";
+import { DDR_REVIEW_TONE_CLASSES } from "@shared/lib/classification";
 import { DDR_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DDRR_SCORED_VERDICTS } from "@shared/types/depeg-resolver-review";
 import type {
@@ -13,10 +14,10 @@ import type {
 export type DdrrCoverageState = Exclude<DdrrResponseRow["predictionState"], "frozen">;
 
 const MUTED_TONE = "border-border bg-muted text-muted-foreground";
-const EMERALD_TONE = "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
-const AMBER_TONE = "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400";
-const RED_TONE = "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400";
-const SKY_TONE = "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400";
+const EMERALD_TONE = DDR_REVIEW_TONE_CLASSES.positive;
+const AMBER_TONE = DDR_REVIEW_TONE_CLASSES.watch;
+const RED_TONE = DDR_REVIEW_TONE_CLASSES.negative;
+const SKY_TONE = DDR_REVIEW_TONE_CLASSES.pending;
 
 export { AMBER_TONE, EMERALD_TONE, MUTED_TONE, RED_TONE, SKY_TONE };
 
@@ -62,7 +63,7 @@ export const DDR_COVERAGE_TONES: Readonly<Record<DdrrCoverageState, string>> = {
   lock_deferred: AMBER_TONE,
   data_quality_gap: MUTED_TONE,
   orphan_closed: MUTED_TONE,
-  publication_retry_pending: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+  publication_retry_pending: DDR_REVIEW_TONE_CLASSES.retry,
   resolved_before_prediction: "border-border bg-background text-muted-foreground",
   terminal_before_prediction: "border-border bg-background text-muted-foreground",
   missed_lock_recovered: RED_TONE,

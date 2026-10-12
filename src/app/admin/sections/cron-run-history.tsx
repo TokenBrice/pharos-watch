@@ -22,6 +22,7 @@ type RecentRunTone = "success" | "warning" | "skipped" | "failed";
 const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; className: string }>> = {
   success: { label: "Succeeded", className: "bg-state-positive-solid" },
   warning: { label: "Completed with warnings", className: "bg-state-warn-solid" },
+  // raw: neutral grey dot, no state token
   skipped: { label: "Skipped", className: "bg-zinc-500" },
   failed: { label: "Failed", className: "bg-state-danger-solid" },
 };

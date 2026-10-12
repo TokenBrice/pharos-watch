@@ -2,20 +2,20 @@
  * Shared deviation severity color mapping.
  *
  * Hex values match --severity-*-hex CSS custom properties in semantic.css.
- * Tailwind class functions use static strings (required for purge).
- *
- * Thresholds (absolute basis points):
- *   < GREEN  green  (healthy)
- *   GREEN-AMBER  amber  (mild)
- *   AMBER-ORANGE orange (moderate)
- *   >= ORANGE  red    (severe)
+ * Tailwind classes live in `PEG_DEVIATION_TONE_CLASSES`; the cut-offs
+ * (healthy < 50 bps < mild < 200 < moderate < 500 <= severe) and level labels
+ * are `PEG_DEVIATION_LEVEL_MIN_BPS` / `getPegDeviationLevel` in classification.
  */
 
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import type { MintPressureBand } from "@shared/lib/classification";
-
-const THRESHOLDS = { GREEN: 50, AMBER: 200, ORANGE: 500 } as const;
+import {
+  getPegDeviationLevel,
+  MINT_PRESSURE_TONE_CLASSES,
+  PEG_DEVIATION_TONE_CLASSES,
+  QUALITY_TIER_3_CLASSES,
+  type MintPressureBand,
+} from "@shared/lib/classification";
 
 export interface MintPressureStyle {
   badgeClass: string;
@@ -24,82 +24,36 @@ export interface MintPressureStyle {
 }
 
 /** Presentation styles for the canonical mint-pressure bands. */
-export const MINT_PRESSURE_STYLES: Record<MintPressureBand, MintPressureStyle> = {
-  "no-activity": {
-    badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
-    valueClass: "text-muted-foreground",
-    panelClass: "border-border/60 bg-background/35",
-  },
-  "mint-dominated": {
-    badgeClass:
-      "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
-    valueClass: SEVERITY_TONE_CLASS.ok.text,
-    panelClass:
-      "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
-  },
-  "mint-tilt": {
-    badgeClass:
-      "border-lime-600/30 bg-lime-500/10 text-lime-700 dark:border-lime-500/40 dark:bg-lime-500/15 dark:text-lime-300",
-    valueClass: "text-lime-700 dark:text-lime-400",
-    panelClass:
-      "border-lime-600/30 bg-lime-500/10 dark:border-lime-500/35 dark:bg-lime-500/10",
-  },
-  balanced: {
-    badgeClass: "border-border/70 bg-muted/40 text-foreground",
-    valueClass: "text-foreground",
-    panelClass: "border-border/60 bg-background/40",
-  },
-  "burn-tilt": {
-    badgeClass:
-      "border-amber-600/30 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300",
-    valueClass: SEVERITY_TONE_CLASS.watch.text,
-    panelClass:
-      "border-amber-600/30 bg-amber-500/10 dark:border-amber-500/35 dark:bg-amber-500/10",
-  },
-  "burn-dominated": {
-    badgeClass:
-      "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
-    valueClass: SEVERITY_TONE_CLASS.alert.text,
-    panelClass:
-      "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
-  },
-};
+export const MINT_PRESSURE_STYLES: Record<MintPressureBand, MintPressureStyle> = Object.fromEntries(
+  Object.entries(MINT_PRESSURE_TONE_CLASSES).map(([band, tone]) => [
+    band,
+    { badgeClass: tone.badge, valueClass: tone.value, panelClass: tone.panel },
+  ]),
+) as Record<MintPressureBand, MintPressureStyle>;
 
 /** Severity border class with accent opacity — suitable for outlined badges. */
 export function deviationBorderClass(absBps: number): string {
-  if (absBps < THRESHOLDS.GREEN) return "border-green-500/50";
-  if (absBps < THRESHOLDS.AMBER) return "border-amber-500/50";
-  if (absBps < THRESHOLDS.ORANGE) return "border-orange-500/50";
-  return "border-red-500/50";
+  return PEG_DEVIATION_TONE_CLASSES[getPegDeviationLevel(absBps)].border;
 }
 
 export function deviationColorClass(absBps: number): string {
-  if (isQuietDeviationsEnabled()) {
-    if (absBps < THRESHOLDS.GREEN) return "text-muted-foreground";
-    if (absBps < THRESHOLDS.AMBER) return "text-amber-700 dark:text-amber-400";
-    if (absBps < THRESHOLDS.ORANGE) return "text-orange-700 dark:text-orange-400";
-    return "text-red-700 dark:text-red-400";
-  }
-  if (absBps < THRESHOLDS.GREEN) return "text-green-700 dark:text-green-400";
-  if (absBps < THRESHOLDS.AMBER) return "text-amber-700 dark:text-amber-400";
-  if (absBps < THRESHOLDS.ORANGE) return "text-orange-700 dark:text-orange-400";
-  return "text-red-700 dark:text-red-400";
+  const level = getPegDeviationLevel(absBps);
+  if (level === "healthy" && isQuietDeviationsEnabled()) return "text-muted-foreground";
+  return PEG_DEVIATION_TONE_CLASSES[level].text;
 }
 
 export function deviationBgClass(absBps: number): string {
-  if (absBps < THRESHOLDS.GREEN) return "bg-green-500";
-  if (absBps < THRESHOLDS.AMBER) return "bg-amber-500";
-  if (absBps < THRESHOLDS.ORANGE) return "bg-orange-500";
-  return "bg-red-500";
+  return PEG_DEVIATION_TONE_CLASSES[getPegDeviationLevel(absBps)].bar;
 }
 
 /** Severity icon name (Lucide component name) for a given deviation in basis points */
 export type SeverityIcon = "CircleCheck" | "TriangleAlert" | "OctagonAlert" | "CircleX";
 
 export function deviationIconName(absBps: number): SeverityIcon {
-  if (absBps < THRESHOLDS.GREEN) return "CircleCheck";
-  if (absBps < THRESHOLDS.AMBER) return "TriangleAlert";
-  if (absBps < THRESHOLDS.ORANGE) return "OctagonAlert";
+  const level = getPegDeviationLevel(absBps);
+  if (level === "healthy") return "CircleCheck";
+  if (level === "mild") return "TriangleAlert";
+  if (level === "moderate") return "OctagonAlert";
   return "CircleX";
 }
 
@@ -160,15 +114,15 @@ const SCORE_TEXT_THRESHOLDS = [
 ] as const;
 
 const PEG_SCORE_THRESHOLDS = [
-  { min: 90, className: "text-green-700 dark:text-green-400" },
-  { min: 70, className: "text-amber-700 dark:text-amber-400" },
-  { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+  { min: 90, className: QUALITY_TIER_3_CLASSES.good.text },
+  { min: 70, className: QUALITY_TIER_3_CLASSES.watch.text },
+  { min: Number.NEGATIVE_INFINITY, className: QUALITY_TIER_3_CLASSES.bad.text },
 ] as const;
 
 const DURABILITY_TEXT_THRESHOLDS = [
-  { min: 70, className: "text-emerald-700 dark:text-emerald-400" },
-  { min: 40, className: "text-amber-700 dark:text-amber-400" },
-  { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+  { min: 70, className: QUALITY_TIER_3_CLASSES.good.text },
+  { min: 40, className: QUALITY_TIER_3_CLASSES.watch.text },
+  { min: Number.NEGATIVE_INFINITY, className: QUALITY_TIER_3_CLASSES.bad.text },
 ] as const;
 
 /** Map a 0-100 liquidity/durability score to a tier */

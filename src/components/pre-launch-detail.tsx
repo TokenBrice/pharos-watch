@@ -3,7 +3,8 @@ import Image from "next/image";
 import { Suspense } from "react";
 import { ExternalLink, Globe, Calendar, Shield, ArrowLeft, FileText, BookOpen, Play, Bell } from "lucide-react";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, PRE_LAUNCH_ACCENT_CLASSES } from "@shared/lib/classification";
+import { cn } from "@/lib/utils";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { CopyButton } from "@/components/copy-button";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
@@ -154,10 +155,10 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
     : coin.jurisdiction?.country;
 
   const launchAlertCallout = (
-    <section className="rounded-xl border border-sky-500/25 bg-sky-500/[0.05] px-4 py-4 sm:px-6">
+    <section className={cn("rounded-xl border px-4 py-4 sm:px-6", PRE_LAUNCH_ACCENT_CLASSES.launchSection.border, PRE_LAUNCH_ACCENT_CLASSES.launchSection.bg)}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-sky-700 dark:text-sky-300">
+          <div className={cn("flex items-center gap-2 text-sm font-semibold", PRE_LAUNCH_ACCENT_CLASSES.launchSection.text)}>
             <Bell className="h-4 w-4" aria-hidden="true" />
             <span>Launch alert</span>
           </div>
@@ -240,9 +241,9 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
       </header>
 
       {/* ── Pre-Launch Banner ─────────────────────────────────────── */}
-      <div className="rounded-xl border border-indigo-500/25 bg-indigo-500/[0.06] px-4 py-4 sm:px-6">
+      <div className={cn("rounded-xl border px-4 py-4 sm:px-6", PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.border, PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.bg)}>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Pre-launch</span>
+          <span className={cn("text-sm font-semibold", PRE_LAUNCH_ACCENT_CLASSES.preLaunchCard.text)}>Pre-launch</span>
           <span className="text-sm text-muted-foreground">Pharos hasn&apos;t ingested data for this one yet.</span>
           {coin.launchPhase && <LaunchPhaseBadge phase={coin.launchPhase} size="detail" />}
         </div>

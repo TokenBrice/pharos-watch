@@ -18,6 +18,7 @@ describe("pharos/no-raw-palette-colour", () => {
     ["neutral hue", 'export const c = "text-slate-700";', 1],
     ["template chunk", "export const c = `hover:${'x'} bg-emerald-500 px-2`;", 1],
     ["route file", 'export const c = "text-red-700";', 1, "src/app/__state-colour-fixture.tsx"],
+    ["lib class constant", 'export const c = "text-red-700";', 1, "src/lib/__state-colour-fixture.ts"],
   ])("rejects %s", async (_name, source, count, filePath?: string) => {
     expect(await rawPaletteColours(source, filePath)).toHaveLength(count);
   });
@@ -31,7 +32,10 @@ describe("pharos/no-raw-palette-colour", () => {
   });
 
   it.each([
-    "src/lib/__state-colour-fixture.ts",
+    "shared/lib/classification/__fixture.ts",
+    "src/lib/tape-class-style.ts",
+    "src/app/pharoswatchbot/__fixture.tsx",
+    "src/components/flow-machine-scene-fixture.tsx",
     "src/app/cemetery/__fixture.tsx",
     "src/components/digest-fixture.tsx",
     "src/app/depeg/[event]/__fixture.tsx",

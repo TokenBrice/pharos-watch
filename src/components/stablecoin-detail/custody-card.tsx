@@ -16,6 +16,7 @@ import {
   type CustodyShareSegment,
   type CustodyShareSegmentKind,
 } from "@/lib/stablecoin-detail-custody-client";
+import { CUSTODY_STATE_CLASSES } from "@shared/lib/classification";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,7 @@ const PROVIDER_SEGMENT_FILLS = [
 const HATCHED_SEGMENT_FILL =
   "bg-muted-foreground/45 bg-[image:repeating-linear-gradient(135deg,var(--color-card)_0_1.5px,transparent_1.5px_4px)]";
 const SEGMENT_FILL: Record<Exclude<CustodyShareSegmentKind, "provider">, string> = {
-  unidentified: "bg-amber-500/60",
+  unidentified: CUSTODY_STATE_CLASSES.unidentified,
   unsplit: HATCHED_SEGMENT_FILL,
   unattributed: HATCHED_SEGMENT_FILL,
   undisclosed: SEVERITY_TONE_CLASS.watch.bar,
@@ -48,7 +49,7 @@ const SEGMENT_FILL: Record<Exclude<CustodyShareSegmentKind, "provider">, string>
 const RUNG_TRACK_CLASS: Record<CustodyProtectionState, string> = {
   met: SEVERITY_TONE_CLASS.ok.bar,
   partial: "bg-muted",
-  failed: "border border-rose-500/60",
+  failed: CUSTODY_STATE_CLASSES.failed,
   unknown: "border border-dashed border-muted-foreground/50",
 };
 

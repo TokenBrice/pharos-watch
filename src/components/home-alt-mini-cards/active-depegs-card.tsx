@@ -17,6 +17,8 @@ import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { PegSummaryCoin } from "@shared/types";
+import { DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { cn } from "@/lib/utils";
 
 // Rows under the headline; the headline count is never this cap (R7).
 const MAX_ROWS = 3;
@@ -100,7 +102,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
       }
       emptyContent={
         <div className="flex flex-1 items-center justify-center">
-          <span className="pharos-label text-sm text-green-700 dark:text-green-400">
+          <span className={cn("pharos-label text-sm", DIRECTION_TONE_CLASSES.up)}>
             No active incidents
           </span>
         </div>
@@ -153,7 +155,7 @@ function DepegRow({
   const arrow = row.bps != null && row.bps < 0 ? "↓" : "↑";
   const colorClass =
     row.bps == null ? "text-muted-foreground" : row.bps < 0
-      ? "text-red-700 dark:text-red-400" : "text-amber-700 dark:text-amber-400";
+      ? DEPEG_DIRECTION_CLASSES.below.text : DEPEG_DIRECTION_CLASSES.above.text;
   return (
     <li>
       <Link

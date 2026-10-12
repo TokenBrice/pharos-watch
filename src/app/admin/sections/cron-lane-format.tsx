@@ -39,6 +39,7 @@ export function getStateBadgeClass(state: CronWorkbenchState): string {
   if (state === "degraded") return "bg-state-warn-solid/15 text-state-warn-strong";
   if (state === "skipped") return OPERATIONAL_PILL_CLASS.unknown;
   if (state === "running") return "bg-state-info-solid/15 text-state-info-strong";
+  // raw: neutral grey pill, no state token
   if (state === "unknown") return "bg-slate-500/15 text-slate-800 dark:text-slate-300";
   return "bg-state-positive-solid/15 text-state-positive-strong";
 }

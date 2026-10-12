@@ -6,6 +6,7 @@ import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { cn } from "@/lib/utils";
 import type { RedemptionBackstopEntry, SafetyScoreV9CurrentCard } from "@shared/types";
+import { SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
 import {
   REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS,
   type RedemptionCoverageReasonCode,
@@ -77,11 +78,11 @@ const EXIT_COMPONENT_ROUTE_FIELDS: Record<ExitComponentKey, { label: string; fie
  *  have no published names, so each band is labelled by its score range.
  *  Worst → best, left → right. */
 const REDEMPTION_SCORE_BANDS: readonly SpectrumBand[] = [
-  { key: "t0", label: "<35", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
-  { key: "t35", label: "35–49", fillClass: "bg-orange-500/70", textClass: "text-orange-700 dark:text-orange-400" },
-  { key: "t50", label: "50–64", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
-  { key: "t65", label: "65–79", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
-  { key: "t80", label: "80+", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+  { key: "t0", label: "<35", fillClass: SCORE_TIER_5_CLASSES.t0.fill, textClass: SCORE_TIER_5_CLASSES.t0.text },
+  { key: "t35", label: "35–49", fillClass: SCORE_TIER_5_CLASSES.t35.fill, textClass: SCORE_TIER_5_CLASSES.t35.text },
+  { key: "t50", label: "50–64", fillClass: SCORE_TIER_5_CLASSES.t50.fill, textClass: SCORE_TIER_5_CLASSES.t50.text },
+  { key: "t65", label: "65–79", fillClass: SCORE_TIER_5_CLASSES.t65.fill, textClass: SCORE_TIER_5_CLASSES.t65.text },
+  { key: "t80", label: "80+", fillClass: SCORE_TIER_5_CLASSES.t80.fill, textClass: SCORE_TIER_5_CLASSES.t80.text },
 ];
 const REDEMPTION_SCORE_CUTOFFS = [0, 35, 50, 65, 80] as const;
 

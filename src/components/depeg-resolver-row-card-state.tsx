@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { formatDdrDirection, formatDdrReason, getMissingReasons } from "@/components/depeg-resolver-row-card-model";
 import type { DdrPublicPredictionState, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
+import { DDR_REVIEW_TONE_CLASSES } from "@shared/lib/classification";
 
 const STATE_COPY: Record<
   Exclude<DdrPublicPredictionState, "frozen">,
@@ -25,7 +26,7 @@ const STATE_COPY: Record<
     badge: "Publication delayed",
     title: "Forecast publication delayed",
     body: "A sealed outcome exists operationally but has not entered the first-publication manifest. DDR hides the sealed verdict until publication succeeds.",
-    tone: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
+    tone: DDR_REVIEW_TONE_CLASSES.retry,
   },
   no_call: {
     badge: "No-call locked",

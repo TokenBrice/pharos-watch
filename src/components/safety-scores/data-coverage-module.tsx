@@ -2,17 +2,12 @@
 
 import { ChevronDown, PauseCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { COVERAGE_GAP_OWNER_SWATCH_CLASSES } from "@shared/lib/classification";
 import { formatDecimal } from "@shared/lib/format";
 import type { DataCoverageModel } from "@/lib/safety-score-data-coverage";
 
 /** Static swatch per gap owner, in the canonical owner order of the view model. */
-const OWNER_SWATCHES: Record<string, string> = {
-  "issuer-undisclosed": "bg-amber-500",
-  "integration-missing": "bg-frost-blue",
-  "producer-failed": "bg-rose-500",
-  "method-unsupported": "bg-muted-foreground",
-  "published-evidence-expired": "bg-sky-500",
-};
+const OWNER_SWATCHES: Record<string, string> = COVERAGE_GAP_OWNER_SWATCH_CLASSES;
 
 /**
  * Compact labels for the collapsed rail below `lg`, where five full labels no

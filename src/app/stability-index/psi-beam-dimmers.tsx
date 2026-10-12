@@ -12,6 +12,7 @@ import { CHART_AMBER, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE } from "
 import { cn } from "@/lib/utils";
 import { formatScore } from "@shared/lib/format";
 import { type PsiBeamDimmerKey, type PsiBeamDimmerLane, type PsiComponentPoint } from "./view-model";
+import { PSI_LANE_TONE_CLASSES } from "@shared/lib/classification";
 
 const METHODOLOGY_TOPICS = {
   severity: "psiSeverity",
@@ -44,10 +45,10 @@ function laneDomain(lane: PsiBeamDimmerLane): [number, number] {
 }
 
 function laneToneClass(lane: PsiBeamDimmerLane): string {
-  if (lane.role === "support") return "bg-emerald-500";
-  if (lane.key === "stressBreadth") return "bg-amber-500";
-  if (lane.key === "breadth") return "bg-orange-500";
-  return "bg-red-500";
+  if (lane.role === "support") return PSI_LANE_TONE_CLASSES.support.bar;
+  if (lane.key === "stressBreadth") return PSI_LANE_TONE_CLASSES.stressBreadth.bar;
+  if (lane.key === "breadth") return PSI_LANE_TONE_CLASSES.breadth.bar;
+  return PSI_LANE_TONE_CLASSES.pressure.bar;
 }
 
 function valueLabel(lane: PsiBeamDimmerLane): string {
@@ -132,6 +133,7 @@ export function PsiBeamDimmers({
                   <p className={cn(
                     "font-mono font-bold tabular-nums",
                     isCompact ? "text-base" : "text-lg",
+                    // raw: support-lane value, 300 dark shade has no export
                     lane.role === "support" ? "text-emerald-700 dark:text-emerald-300" : "text-foreground",
                   )}>
                     {valueLabel(lane)}

@@ -9,6 +9,7 @@ import { sanitizeReliabilityProbePath } from "@/lib/reliability-workspace-model"
 import { getProbeStatusDetail, getProbeStatusLabel, isProbePassing } from "@/lib/status-dashboard-model";
 import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { cn } from "@/lib/utils";
+import { STATUS_RELIABILITY_ACCENT_CLASSES } from "@shared/lib/classification";
 
 function sampleLabel(timestamp: number | null): string {
   return formatStatusTimestamp(timestamp, { fallback: "Unknown" });
@@ -126,7 +127,7 @@ export function ReliabilityEndpointsPanel({ model }: { model: ReliabilityEndpoin
         <PlaneSummary
           id="worker-plane"
           title="Worker-origin self-check"
-          accentClassName="border-indigo-500 bg-indigo-500/[0.05]"
+          accentClassName={STATUS_RELIABILITY_ACCENT_CLASSES.endpoints}
           description="Runs inside the Worker to validate internal execution, bindings, and critical API behavior independently of this browser session. The status payload reports this plane as a summary and does not identify endpoint rows."
           result={`${model.workerPlane.passCount}/${model.workerPlane.sampleCount} passing · ${model.workerPlane.status}`}
           sampledAt={model.workerPlane.sampledAt}
@@ -135,7 +136,7 @@ export function ReliabilityEndpointsPanel({ model }: { model: ReliabilityEndpoin
         <PlaneSummary
           id="browser-plane"
           title="Browser-origin endpoint probes"
-          accentClassName="border-cyan-500 bg-cyan-500/[0.05]"
+          accentClassName={STATUS_RELIABILITY_ACCENT_CLASSES.sources}
           description="Runs from this authenticated operator session to verify same-origin routing, Access proxy behavior, HTTP transport, and endpoint freshness semantics."
           result={
             model.browserPlane

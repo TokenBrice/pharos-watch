@@ -6,6 +6,7 @@ import { niceTicks } from "@/lib/chart-ticks";
 import { DAY_MS } from "@/lib/constants";
 import { toTimestampMs } from "@/lib/time";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
+import { YIELD_SERIES_FILL_CLASSES } from "@shared/lib/classification";
 import { formatChartDate, formatDecimal } from "@shared/lib/format";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { deriveDataHealth } from "@/lib/data-health";
@@ -141,13 +142,7 @@ export interface YieldHistorySourceDisplay {
 /* Deterministic palette for source-strip lanes. The first up-to-5 sources by
    first-appearance get assigned colors in order. Sources beyond the cap collapse
    into a single muted "other" lane. */
-const SOURCE_STRIP_PALETTE = [
-  "bg-emerald-500/40",
-  "bg-sky-500/40",
-  "bg-amber-500/40",
-  "bg-violet-500/40",
-  "bg-rose-500/40",
-] as const;
+const SOURCE_STRIP_PALETTE = YIELD_SERIES_FILL_CLASSES;
 const SOURCE_STRIP_OTHER_COLOR = "bg-muted-foreground/30";
 const SOURCE_STRIP_DEFAULT_MAX_DISTINCT = 5;
 

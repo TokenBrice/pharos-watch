@@ -14,6 +14,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 /** Label class shared by every hero metric cell — one casing across breakpoints. */
 const HERO_METRIC_LABEL_CLASS = "text-sm font-medium text-muted-foreground";
@@ -132,7 +133,7 @@ export function HeroPriceMetric({
   const referenceClass = !observed || pegReferenceUnavailable || frozenAt
     ? "text-muted-foreground"
     : isNavToken
-      ? "text-green-700 dark:text-green-400"
+      ? DIRECTION_TONE_CLASSES.up
       : deviationBps == null
         ? "text-muted-foreground"
         : deviationColorClass(Math.abs(deviationBps));

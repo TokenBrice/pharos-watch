@@ -1,8 +1,9 @@
+import { CHAIN_VM_BADGE_CLASSES } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 
 const CHAIN_TYPE_STYLES: Record<string, string> = {
-  evm: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
-  tron: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+  evm: CHAIN_VM_BADGE_CLASSES.evm,
+  tron: CHAIN_VM_BADGE_CLASSES.tron,
   other: "bg-muted text-muted-foreground border-border/60",
 };
 

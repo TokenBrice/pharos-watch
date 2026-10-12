@@ -5,7 +5,7 @@ import { BarChart3 } from "lucide-react";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
 import { TableSourceLink } from "@/components/table/client";
-import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
+import { DIRECTION_TONE_CLASSES, YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { cn } from "@/lib/utils";
 import { formatYieldApyDelta } from "@/lib/yield-presentation";
@@ -164,7 +164,7 @@ export function YieldDetailSectionAltSources({
                   <p
                     className={cn(
                       "mt-0.5 font-mono text-2xs tabular-nums",
-                      delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
+                      delta >= 0 ? DIRECTION_TONE_CLASSES.up : "text-muted-foreground",
                     )}
                   >
                     {formatYieldApyDelta(delta)}
@@ -306,7 +306,7 @@ export function YieldDetailSectionAltSources({
                   <span
                     className={cn(
                       "font-mono tabular-nums text-3xs",
-                      delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
+                      delta >= 0 ? DIRECTION_TONE_CLASSES.up : "text-muted-foreground",
                     )}
                   >
                     {formatYieldApyDelta(delta)}

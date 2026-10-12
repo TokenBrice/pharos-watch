@@ -8,6 +8,7 @@ import {
 import type { TableSortState } from "@/hooks/use-sorted-table-rows";
 import type { MintBurnCoinFlow } from "@shared/types";
 import { getFlowPressureUi } from "@/lib/flow-signal-ui";
+import { FLOW_COVERAGE_BADGE_CLASSES } from "@shared/lib/classification";
 
 export type FlowTableSortKey =
   | "net24h"
@@ -33,22 +34,22 @@ export function getCoverageBadge(coin: MintBurnCoinFlow): { label: string; class
     case "partial-history":
       return {
         label: "Partial history",
-        className: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+        className: FLOW_COVERAGE_BADGE_CLASSES["partial-history"],
       };
     case "lagging":
       return {
         label: "Lagging",
-        className: "border-red-500/25 bg-red-500/10 text-red-700 dark:text-red-300",
+        className: FLOW_COVERAGE_BADGE_CLASSES.lagging,
       };
     case "bootstrapping":
       return {
         label: "Bootstrapping",
-        className: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+        className: FLOW_COVERAGE_BADGE_CLASSES.bootstrapping,
       };
     case "unknown":
       return {
         label: "Unknown",
-        className: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+        className: FLOW_COVERAGE_BADGE_CLASSES.unknown,
       };
     case "disabled":
       return {

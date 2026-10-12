@@ -22,6 +22,7 @@ import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/componen
 import { MethodologyHint } from "@/components/methodology-hint";
 import { StateOnlyCard } from "@/components/depeg-resolver-row-card-state";
 import { ForecastTimeline } from "@/components/depeg-resolver-row-card-timeline";
+import { DDR_KILL_SAVE_CLASSES } from "@shared/lib/classification";
 
 export interface DepegResolverRowCardProps {
   row: DdrV2ResponseRow;
@@ -29,8 +30,7 @@ export interface DepegResolverRowCardProps {
 }
 
 function SeverityPips({ kind, weight }: { kind: "kill" | "anchor"; weight: number }) {
-  const filled = kind === "kill" ? "bg-red-500" : "bg-emerald-500";
-  const empty = kind === "kill" ? "bg-red-500/25" : "bg-emerald-500/25";
+  const { filled, empty } = DDR_KILL_SAVE_CLASSES[kind === "kill" ? "kill" : "save"];
   return (
     <span className="mt-1 inline-flex shrink-0 gap-0.5" aria-hidden="true">
       <span className={cn("h-1.5 w-1.5 rounded-full", weight >= 1 ? filled : empty)} />
@@ -41,7 +41,7 @@ function SeverityPips({ kind, weight }: { kind: "kill" | "anchor"; weight: numbe
 
 function FactorList({ kind, factors }: { kind: "kill" | "anchor"; factors: DdrFactor[] }) {
   const heading = kind === "kill" ? "Toward terminal" : "Toward repeg";
-  const headTone = kind === "kill" ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400";
+  const headTone = DDR_KILL_SAVE_CLASSES[kind === "kill" ? "kill" : "save"].head;
 
   return (
     <div className="min-w-0 space-y-1.5">
@@ -75,14 +75,14 @@ function SignalPull({ killWeight, anchorWeight }: { killWeight: number; anchorWe
     <div className="flex items-center gap-1.5" role="img" aria-label={label}>
       <div className="flex flex-1 justify-end">
         <div
-          className="h-2 rounded-full bg-red-500/70"
+          className={cn("h-2 rounded-full", DDR_KILL_SAVE_CLASSES.kill.bar)}
           style={{ width: `${leftPct}%`, minWidth: killWeight > 0 ? "0.5rem" : 0 }}
         />
       </div>
       <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden="true" />
       <div className="flex flex-1 justify-start">
         <div
-          className="h-2 rounded-full bg-emerald-500/70"
+          className={cn("h-2 rounded-full", DDR_KILL_SAVE_CLASSES.save.bar)}
           style={{ width: `${rightPct}%`, minWidth: anchorWeight > 0 ? "0.5rem" : 0 }}
         />
       </div>

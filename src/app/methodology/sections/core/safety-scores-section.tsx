@@ -6,6 +6,7 @@ import { MethodologySectionShell } from "../../methodology-shared";
 import { SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
 import { SafetyScoresOverview } from "./safety-scores-overview";
 import { SafetyScoresTechnicalDetails } from "./safety-scores-technical-details";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 
 export function SafetyScoresMethodologySection() {
   return (
@@ -15,7 +16,7 @@ export function SafetyScoresMethodologySection() {
       versionBadge={{ label: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL.toUpperCase() }}
       changelogPath={SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH}
       versionNote="V10 is the sole active publication and consumer contract. V8.17 remains available only in version history."
-      changelogClassName="hover:text-amber-700 dark:hover:text-amber-400"
+      changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.safetyScores.changelogHover}
     >
       <SafetyScoresOverview />
       <SafetyScoresTechnicalDetails />

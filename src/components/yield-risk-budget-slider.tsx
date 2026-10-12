@@ -1,46 +1,11 @@
 "use client";
 
 import { useId } from "react";
+import { YIELD_RISK_BUDGET_CLASSES } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 import type { YieldRiskBudgetKey, YieldRiskBudgetStop } from "@/lib/yield-view-model";
 
-const RISK_BUDGET_STYLES: Record<
-  YieldRiskBudgetKey,
-  { dot: string; dotBorder: string; ring: string; trackFill: string; text: string; activeCount: string }
-> = {
-  conservative: {
-    dot: "bg-state-positive-solid",
-    dotBorder: "border-state-positive-solid",
-    ring: "ring-state-positive-solid/25",
-    trackFill: "bg-state-positive-solid",
-    text: "text-state-positive-bright",
-    activeCount: "text-emerald-700 dark:text-emerald-200",
-  },
-  balanced: {
-    dot: "bg-green-500",
-    dotBorder: "border-green-500",
-    ring: "ring-green-500/25",
-    trackFill: "bg-green-500",
-    text: "text-green-700 dark:text-green-300",
-    activeCount: "text-green-700 dark:text-green-200",
-  },
-  opportunistic: {
-    dot: "bg-state-warn-solid",
-    dotBorder: "border-state-warn-solid",
-    ring: "ring-state-warn-solid/25",
-    trackFill: "bg-state-warn-solid",
-    text: "text-state-warn-bright",
-    activeCount: "text-amber-700 dark:text-amber-200",
-  },
-  all: {
-    dot: "bg-orange-500",
-    dotBorder: "border-orange-500",
-    ring: "ring-orange-500/30",
-    trackFill: "bg-orange-500",
-    text: "text-orange-700 dark:text-orange-300",
-    activeCount: "text-orange-700 dark:text-orange-200",
-  },
-};
+const RISK_BUDGET_STYLES = YIELD_RISK_BUDGET_CLASSES satisfies Record<YieldRiskBudgetKey, unknown>;
 
 interface YieldRiskBudgetSliderProps {
   stops: readonly YieldRiskBudgetStop[];

@@ -91,8 +91,8 @@ describe("MethodologyPage", () => {
     }
     if (id === "methodology-pricing-confidence-levels") {
       expect(rows.map((row) => row.cells[0].className)).toEqual([
-        expect.stringContaining("text-green-700"), expect.stringContaining("text-yellow-700"),
-        expect.stringContaining("text-orange-700"), expect.stringContaining("text-red-700"),
+        expect.stringContaining("text-emerald-600"), expect.stringContaining("text-amber-600"),
+        expect.stringContaining("text-rose-600"), expect.stringContaining("text-muted-foreground"),
       ]);
     }
   });

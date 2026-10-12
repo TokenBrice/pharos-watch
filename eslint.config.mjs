@@ -461,9 +461,17 @@ const eslintConfig = defineConfig([
     // UI-state colour guardrail (docs/design-tokens.md#ui-state-utilities).
     // Editorial carve-outs keep their bespoke palettes; pre-existing call
     // sites elsewhere are grandfathered in eslint-suppressions.json.
-    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    // Classification scales live in shared/lib/classification (not linted
+    // here); src/lib class-string constants are covered too.
+    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
     ignores: [
       "**/__tests__/**",
+      // Own palettes: the Telegram mini-app sets its own color-scheme, the
+      // tape wire stream and the flow-machine illustrations are editorial art.
+      "src/app/pharoswatchbot/**",
+      "src/lib/tape-class-style.ts",
+      "src/components/flow-machine-scene-*.tsx",
+      "src/components/home-alt-mini-cards/daily-digest-card.tsx",
       "**/*.test.{ts,tsx}",
       "**/*.spec.{ts,tsx}",
       "src/app/cemetery/**",

@@ -1,4 +1,9 @@
-import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import {
+  BACKING_LABELS_SHORT,
+  COVERAGE_BADGE_TONE_CLASSES,
+  GOVERNANCE_LABELS_SHORT,
+  PEG_LABELS_SHORT,
+} from "@shared/lib/classification";
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import { COVERAGE_FEATURE_MODULES as modules } from "@/lib/coverage-feature-modules";
 import { DATA_UNAVAILABLE_KIND } from "@/lib/coverage/shared";
@@ -71,15 +76,7 @@ interface BuildCoverageRowInput {
   dataAvailability?: Partial<Record<CoverageFeatureKey, boolean>>;
 }
 
-export const COVERAGE_BADGE_TONE_CLASS: Record<CoverageTone, string> = {
-  emerald: "border-emerald-500/22 bg-emerald-500/8 text-emerald-800 dark:text-emerald-300",
-  sky: "border-sky-500/24 bg-sky-500/8 text-sky-800 dark:text-sky-300",
-  amber: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-300",
-  violet: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-300",
-  rose: "border-rose-500/35 bg-rose-500/12 text-rose-800 dark:text-rose-300",
-  slate:
-    "border-border/70 bg-muted/70 text-muted-foreground bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.04)_5px_10px)]",
-};
+export const COVERAGE_BADGE_TONE_CLASS: Record<CoverageTone, string> = COVERAGE_BADGE_TONE_CLASSES;
 
 export function buildCoverageFeatureSummary(
   feature: CoverageFeatureDefinition,

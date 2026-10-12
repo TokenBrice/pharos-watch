@@ -50,7 +50,7 @@ describe("severity-colors", () => {
 
   it("maps peg and durability score thresholds", () => {
     expect(pegScoreColor(null)).toBe("text-muted-foreground");
-    expect(pegScoreColor(90)).toBe("text-green-700 dark:text-green-400");
+    expect(pegScoreColor(90)).toBe("text-emerald-700 dark:text-emerald-400");
     expect(pegScoreColor(70)).toBe("text-amber-700 dark:text-amber-400");
     expect(pegScoreColor(69)).toBe("text-red-700 dark:text-red-400");
 

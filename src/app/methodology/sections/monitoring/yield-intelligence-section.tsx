@@ -14,6 +14,7 @@ import {
 } from "../../methodology-shared";
 import { YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 
 const YIELD_OVERVIEW_PARAGRAPH =
   "Pharos tracks native stablecoin yield plus reviewed lending and structured opportunities, then computes a risk-adjusted ranking through the Pharos Yield Score (PYS). Core rankings publish hourly; slower supplemental families refresh every four hours. Source resolution is identity-first and confidence-weighted, preserves valid alternatives, and keeps quarantined or pre-launch coverage visible without admitting it to the live leaderboard. Published external opportunities must pass source-quality, size, measured venue-TVL, benchmark-freshness, and exposure-identity gates. Opportunity-level risk can affect PYS for that market, but it never rewrites the underlying stablecoin's Safety Score. The typed adapter, allowlist, exact-pool, source-risk, and lifecycle registries own the changing venue and asset inventories.";
@@ -65,7 +66,7 @@ export function YieldIntelligenceMethodologySection() {
             versionBadge={{ label: YIELD_METHODOLOGY_VERSION_LABEL }}
             changelogPath={YIELD_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when APY source resolution, source arbitration, history semantics, PYS scoring logic, or eligibility rules for discovered yield sources change."
-            changelogClassName="hover:text-violet-700 dark:hover:text-violet-400"
+            changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.yieldIntelligence.changelogHover}
           >
               <p>{YIELD_OVERVIEW_PARAGRAPH}</p>
               <p>

@@ -27,6 +27,8 @@ import type {
   SafetyScoreHistoryV2TransitionKind,
 } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -110,7 +112,7 @@ function TransitionIndicator({ point }: { point: DisplayHistoryPoint }) {
 
   if (curr < prev) {
     return (
-      <span className="flex items-center gap-1 whitespace-nowrap text-xs text-green-700 dark:text-green-400">
+      <span className={cn("flex items-center gap-1 whitespace-nowrap text-xs", DIRECTION_TONE_CLASSES.up)}>
         <ArrowUp className="h-3 w-3" />
         Upgraded from {point.prevGrade}
       </span>
@@ -119,7 +121,7 @@ function TransitionIndicator({ point }: { point: DisplayHistoryPoint }) {
 
   if (curr > prev) {
     return (
-      <span className="flex items-center gap-1 whitespace-nowrap text-xs text-state-danger">
+      <span className={cn("flex items-center gap-1 whitespace-nowrap text-xs", DIRECTION_TONE_CLASSES.down)}>
         <ArrowDown className="h-3 w-3" />
         Downgraded from {point.prevGrade}
       </span>

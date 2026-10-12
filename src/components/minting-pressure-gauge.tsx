@@ -3,7 +3,7 @@
 import { clamp } from "@shared/lib/math";
 import { getNetPrefix } from "@shared/lib/format";
 import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
-import { getMintPressureBand, MINT_PRESSURE_LABELS } from "@shared/lib/classification";
+import { getMintPressureBand, MINT_GAUGE_ZONE_TEXT_CLASSES, MINT_PRESSURE_LABELS } from "@shared/lib/classification";
 import { MINT_PRESSURE_STYLES } from "@/lib/severity-colors";
 import { cn } from "@/lib/utils";
 
@@ -47,9 +47,9 @@ function arcPath(from: number, to: number): string {
 }
 
 function arcZoneValueClass(pos: number): string {
-  if (pos < 45) return "text-red-600 dark:text-red-400";
+  if (pos < 45) return MINT_GAUGE_ZONE_TEXT_CLASSES.burn;
   if (pos < 65) return "text-foreground";
-  return "text-emerald-700 dark:text-emerald-400";
+  return MINT_GAUGE_ZONE_TEXT_CLASSES.mint;
 }
 
 export function MintingPressureArcGauge({

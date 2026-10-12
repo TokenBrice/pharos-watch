@@ -30,6 +30,7 @@ const SUBHEADING_CLASS = "mb-1.5 text-xs font-semibold text-muted-foreground";
  * card, so light mode takes the darker sky ramp step (≥ 5.5:1) and dark mode
  * keeps the brand frost.
  */
+// raw: link tone, no exact state utility
 const LINK_TONE_CLASS = "text-sky-700 dark:text-frost-blue";
 
 /** Closing marks that may follow a sentence's final stop, as in `(OKX).` or `etc.)`. */

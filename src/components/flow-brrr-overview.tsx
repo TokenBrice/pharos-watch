@@ -101,6 +101,7 @@ function buildSnapshot(
  * worsening (CAUTIOUS) reads as an amber chip, not a red page.
  */
 const GAUGE_ALARM_BANDS: ReadonlySet<string> = new Set(["STRESS", "CRISIS"]);
+// raw: amber-600/35 border has no state utility
 const CAUTION_BADGE_CLASS =
   "border-amber-600/35 bg-state-warn-subtle text-state-warn-bright dark:border-state-warn-solid/40 dark:bg-state-warn-solid/15";
 const NEUTRAL_GAUGE_PANEL_CLASS = "border-border/60 bg-background/55 dark:bg-background/35";

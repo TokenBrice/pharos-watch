@@ -42,9 +42,11 @@ export const FEATURE_IDENTITY_CLASSES = {
   genius: { hue: "purple", changelogHover: "hover:text-purple-700 dark:hover:text-purple-400" },
   dependency: { hue: "frost-blue", changelogHover: "hover:text-sky-700 dark:hover:text-sky-400" },
   mintAuthority: { hue: "lime", changelogHover: "hover:text-lime-700 dark:hover:text-lime-400" },
-  chainHealth: { hue: "teal", changelogHover: "hover:text-teal-700 dark:hover:text-teal-400" },
-  stabilityIndex: { hue: "cyan", changelogHover: "hover:text-cyan-700 dark:hover:text-cyan-400" },
-  pegscoreDews: { hue: "amber", changelogHover: "hover:text-amber-700 dark:hover:text-amber-400" },
+  // Methodology-only identities take hues no coverage feature uses, so no two
+  // /methodology sections share an accent.
+  chainHealth: { hue: "fuchsia", changelogHover: "hover:text-fuchsia-700 dark:hover:text-fuchsia-400" },
+  stabilityIndex: { hue: "pink", changelogHover: "hover:text-pink-700 dark:hover:text-pink-400" },
+  pegscoreDews: { hue: "yellow", changelogHover: "hover:text-yellow-700 dark:hover:text-yellow-400" },
   depegResolver: { hue: "violet", changelogHover: "hover:text-violet-700 dark:hover:text-violet-400" },
 } as const satisfies Record<FeatureIdentityKey, { hue: string; changelogHover: string }>;
 
@@ -100,7 +102,7 @@ export const COVERAGE_FEATURE_ACCENT_CLASSES = {
   },
 } as const satisfies Record<CoverageFeatureKey, { countBar: string; chip: string }>;
 
-export const COVERAGE_GAP_CHIP_CLASS = "border-border/70 bg-muted/60 text-muted-foreground";
+const COVERAGE_GAP_CHIP_CLASS = "border-border/70 bg-muted/60 text-muted-foreground";
 export const COVERAGE_GAP_BAR_CLASS =
   "bg-muted-foreground/35 bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.08)_5px_10px)]";
 
@@ -343,8 +345,8 @@ export const METHODOLOGY_SECTION_ACCENT_CLASSES = {
 export const METHODOLOGY_TABLE_ACCENT_CLASSES = {
   pricingMarket: "border-orange-500/40",
   pricingOverride: "border-blue-500/40",
-  psiConditionBand: "border-cyan-500/40",
-  safetyScoring: "border-amber-500/40",
+  psiConditionBand: "border-pink-500/40",
+  safetyScoring: "border-emerald-500/40",
 } as const;
 
 export const STATUS_RELIABILITY_ACCENT_CLASSES = {

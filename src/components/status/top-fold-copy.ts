@@ -13,6 +13,7 @@ export interface TopFoldCopy {
   emphasis: "steady" | "recovery-hold";
 }
 
+// raw: flare/ruler/kicker are dark-hero atmosphere colours with bespoke alphas, no state token
 const TOP_FOLD_COPY_BY_STATUS: Record<StatusResponse["overallStatus"], TopFoldCopy> = {
   healthy: {
     eyebrow: "Holding line",

@@ -43,6 +43,7 @@ import {
 } from "@/components/dex-liquidity-card-parts";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import { cn } from "@/lib/utils";
+import { SCORE_TIER_4_CLASSES } from "@shared/lib/classification";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -60,10 +61,10 @@ export function hasMeaningfulDexData(liq: DexLiquidityData | undefined): liq is 
 /** `getScoreTier`'s real cutoffs (80/60/40) as an unlabeled score track —
  *  the tiers are color keys, not published vocabulary. Worst → best. */
 const DEX_SCORE_BANDS: readonly SpectrumBand[] = [
-  { key: "t0", label: "", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
-  { key: "t40", label: "", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
-  { key: "t60", label: "", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
-  { key: "t80", label: "", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+  { key: "t0", label: "", fillClass: SCORE_TIER_4_CLASSES.t0.fill, textClass: SCORE_TIER_4_CLASSES.t0.text },
+  { key: "t40", label: "", fillClass: SCORE_TIER_4_CLASSES.t40.fill, textClass: SCORE_TIER_4_CLASSES.t40.text },
+  { key: "t60", label: "", fillClass: SCORE_TIER_4_CLASSES.t60.fill, textClass: SCORE_TIER_4_CLASSES.t60.text },
+  { key: "t80", label: "", fillClass: SCORE_TIER_4_CLASSES.t80.fill, textClass: SCORE_TIER_4_CLASSES.t80.text },
 ];
 const DEX_SCORE_CUTOFFS = Object.values(SCORE_TIER_CUTOFFS);
 

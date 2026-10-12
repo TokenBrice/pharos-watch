@@ -3,6 +3,8 @@
 // surfaces cannot drift (they previously disagreed on `defillama-auto` and
 // `protocol-api`). Badge strings are static Tailwind class strings.
 
+import { YIELD_DATA_SOURCE_BADGE_CLASSES } from "@shared/lib/classification";
+
 export interface YieldDataSourceMeta {
   label: string;
   badge: string;
@@ -11,27 +13,27 @@ export interface YieldDataSourceMeta {
 const YIELD_DATA_SOURCE_META: Record<string, YieldDataSourceMeta> = {
   onchain: {
     label: "On-chain",
-    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+    badge: YIELD_DATA_SOURCE_BADGE_CLASSES.onchain,
   },
   defillama: {
     label: "DeFiLlama",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+    badge: YIELD_DATA_SOURCE_BADGE_CLASSES.defillama,
   },
   "defillama-auto": {
     label: "DeFiLlama auto",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+    badge: YIELD_DATA_SOURCE_BADGE_CLASSES["defillama-auto"],
   },
   "protocol-api": {
     label: "Protocol API",
-    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
+    badge: YIELD_DATA_SOURCE_BADGE_CLASSES["protocol-api"],
   },
   "price-derived": {
     label: "Price-derived",
-    badge: "bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20",
+    badge: YIELD_DATA_SOURCE_BADGE_CLASSES["price-derived"],
   },
   "rate-derived": {
     label: "Rate-derived",
-    badge: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20",
+    badge: YIELD_DATA_SOURCE_BADGE_CLASSES["rate-derived"],
   },
 };
 

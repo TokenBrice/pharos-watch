@@ -30,6 +30,7 @@ import {
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type { DexLiquidityPool, DexLiquidityData } from "@shared/types";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
+import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 export function TrendArrow({ value }: { value: number | null }) {
   if (value == null) return null;
@@ -456,6 +457,6 @@ function OrganicBadge({ fraction, maturityDays }: { fraction: number | undefined
 
 function StressDot({ stress }: { stress: number | undefined }) {
   if (stress == null) return null;
-  const color = stress <= 30 ? "bg-emerald-500" : stress <= 60 ? "bg-amber-500" : "bg-red-500";
+  const color = stress <= 30 ? QUALITY_TIER_3_CLASSES.good.bar : stress <= 60 ? QUALITY_TIER_3_CLASSES.watch.bar : QUALITY_TIER_3_CLASSES.bad.bar;
   return <span className={`inline-block w-2 h-2 rounded-full ${color}`} title={`Stress: ${stress}/100`} />;
 }

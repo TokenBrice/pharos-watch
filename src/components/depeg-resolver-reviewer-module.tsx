@@ -39,6 +39,7 @@ import {
   summarizeAccuracyByMajor,
   type NodeKind,
 } from "@/lib/depeg-resolver-review-presentation";
+import { DDR_OUTCOME_CLASSES, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 interface DepegResolverReviewerModuleProps {
   data: DdrrResponse | undefined;
@@ -60,10 +61,10 @@ const TIMELINE_NODE_LIMIT = 36;
  * track record reads at a glance — a mostly-high run is a mostly-right engine.
  */
 const NODE_TONE: Record<NodeKind, { dot: string; pos: string }> = {
-  correct: { dot: "bg-emerald-500", pos: "top-1" },
-  risk: { dot: "bg-amber-500", pos: "top-3" },
-  pending: { dot: "bg-sky-500/20 ring-1 ring-inset ring-sky-500", pos: "top-1/2 -translate-y-1/2" },
-  miss: { dot: "bg-red-500", pos: "bottom-1" },
+  correct: { dot: DDR_OUTCOME_CLASSES.correct.dot, pos: "top-1" },
+  risk: { dot: DDR_OUTCOME_CLASSES.risk.dot, pos: "top-3" },
+  pending: { dot: DDR_OUTCOME_CLASSES.pending.dot, pos: "top-1/2 -translate-y-1/2" },
+  miss: { dot: DDR_OUTCOME_CLASSES.miss.dot, pos: "bottom-1" },
   muted: { dot: "bg-muted-foreground/30", pos: "top-1/2 -translate-y-1/2" },
 };
 
@@ -144,9 +145,9 @@ function BreakdownStat({
 }) {
   const color =
     tone === "emerald"
-      ? "text-emerald-700 dark:text-emerald-400"
+      ? DDR_OUTCOME_CLASSES.correct.text
       : tone === "red"
-        ? "text-red-700 dark:text-red-400"
+        ? DDR_OUTCOME_CLASSES.miss.text
         : "text-foreground";
   return (
     <div className="flex items-baseline gap-1.5">
@@ -186,7 +187,7 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
             >
               {segment.accuracy != null ? (
                 <div
-                  className="h-full rounded-full bg-emerald-500/80"
+                  className={cn("h-full rounded-full", QUALITY_TIER_3_CLASSES.good.bar80)}
                   style={{ width: `${segment.accuracy * 100}%` }}
                 />
               ) : null}
@@ -398,9 +399,9 @@ function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string
 
 function ReviewLegend() {
   const items: Array<{ tone: string; label: string }> = [
-    { tone: "bg-emerald-500", label: "correct" },
-    { tone: "bg-red-500", label: "miss" },
-    { tone: "bg-sky-500", label: "pending" },
+    { tone: DDR_OUTCOME_CLASSES.correct.legendDot, label: "correct" },
+    { tone: DDR_OUTCOME_CLASSES.miss.legendDot, label: "miss" },
+    { tone: DDR_OUTCOME_CLASSES.pending.legendDot, label: "pending" },
   ];
   return (
     <div className="pharos-meta hidden items-center gap-3 sm:flex">

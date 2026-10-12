@@ -1,3 +1,4 @@
+import { REQUEST_SOURCE_FILL_CLASSES } from "@shared/lib/classification";
 import { formatCompactCount, formatPercent } from "@shared/lib/format";
 import type { ApiRequestAttributionResponse } from "@shared/types";
 import { StatTile } from "@/components/stat-tile";
@@ -27,11 +28,11 @@ function ShareBar({
     <div className={["h-2 overflow-hidden rounded-full bg-muted/70", className].filter(Boolean).join(" ")}>
       <div className="flex h-full">
         <div
-          className="bg-sky-500/70"
+          className={REQUEST_SOURCE_FILL_CLASSES.primary}
           style={{ width: `${siteSharePct}%` }}
         />
         <div
-          className="bg-amber-500/70"
+          className={REQUEST_SOURCE_FILL_CLASSES.secondary}
           style={{ width: `${externalSharePct}%` }}
         />
       </div>

@@ -40,6 +40,7 @@ import {
   type MarkdownBlock,
   type ApiReferenceSection,
 } from "@/lib/api-reference-doc";
+import { HTTP_METHOD_BADGE_CLASSES } from "@shared/lib/classification";
 
 const HERO_LANES = [
   {
@@ -125,16 +126,6 @@ function CodeExampleCard({ example }: { example: (typeof CODE_EXAMPLES)[number] 
 const INLINE_CODE_CLASS = "rounded-sm bg-muted px-1.5 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground [overflow-wrap:anywhere]";
 const METHOD_BADGE_CLASS =
   "inline-flex shrink-0 rounded-full border px-2 py-0.5 font-mono tabular-nums text-2xs font-bold leading-tight";
-const METHOD_BADGE_STYLES = {
-  section: {
-    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-    POST: "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  },
-  directory: {
-    GET: "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-500",
-    POST: "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-500",
-  },
-} as const;
 
 function stripMarkdownHeadingFormatting(text: string) {
   return text.replaceAll("`", "");
@@ -144,14 +135,8 @@ function InlineCode({ children }: ComponentProps<"code">) {
   return <code className={INLINE_CODE_CLASS}>{children}</code>;
 }
 
-function MethodBadge({
-  method,
-  tone,
-}: {
-  method: "GET" | "POST";
-  tone: keyof typeof METHOD_BADGE_STYLES;
-}) {
-  return <span className={cn(METHOD_BADGE_CLASS, METHOD_BADGE_STYLES[tone][method])}>{method}</span>;
+function MethodBadge({ method }: { method: "GET" | "POST" }) {
+  return <span className={cn(METHOD_BADGE_CLASS, HTTP_METHOD_BADGE_CLASSES[method])}>{method}</span>;
 }
 
 const inlineMarkdownComponents = {
@@ -294,7 +279,7 @@ function SectionRenderer({ section }: { section: ApiReferenceSection }) {
               className="rounded-xl border border-border/60 bg-background/45 px-4 py-4"
             >
               <h3 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-                {subsection.method ? <MethodBadge method={subsection.method} tone="section" /> : null}
+                {subsection.method ? <MethodBadge method={subsection.method} /> : null}
                 <code className="font-mono tabular-nums text-[0.92rem]">
                   {stripMarkdownHeadingFormatting(subsection.title).replace(/^(GET|POST)\s+/, "")}
                 </code>
@@ -337,7 +322,7 @@ function EndpointDirectory({ endpoints }: { endpoints: ApiReferenceEndpointSumma
             href={`#${endpoint.id}`}
             className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-xl border border-border/55 bg-background/45 px-3 py-2 text-sm hover:bg-muted/45"
           >
-            {endpoint.method ? <MethodBadge method={endpoint.method} tone="directory" /> : null}
+            {endpoint.method ? <MethodBadge method={endpoint.method} /> : null}
             <code className="truncate font-mono tabular-nums text-[0.82rem] text-foreground">{endpoint.path}</code>
           </a>
         ))}

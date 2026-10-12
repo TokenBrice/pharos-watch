@@ -204,7 +204,7 @@ const SURFACES: SurfaceCase[] = [
       usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
     },
     emptyText: "No coin-level deviation rows",
-    readyText: "Alert",
+    readyText: "Mild",
   },
   {
     Component: PsiBandCard,

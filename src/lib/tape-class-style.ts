@@ -9,6 +9,8 @@ import { eventClassSlug } from "@/lib/tape-collapse";
 // The marquee uses denser cells (`/10`); the timeline uses full-width rows,
 // where the lighter `/8` opacity reads as a hue tag rather than a fill.
 //
+// raw: categorical event-class hues with no classification export; kept here as the single owner.
+//
 // Keys track `TAPE_CLASSES` — one entry per class with a live projector.
 
 const TAPE_CLASS_BG_CHIP: Record<string, string> = {

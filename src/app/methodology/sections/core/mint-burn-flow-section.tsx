@@ -13,6 +13,7 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { MINT_BURN_FLOW_SECTION_CONTENT } from "@/lib/methodology-content";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 
 const BANK_RUN_GAUGE_COLUMNS = [
   { id: "band", header: "Band", cellClassName: "text-foreground" },
@@ -79,7 +80,7 @@ export function MintBurnFlowMethodologySection() {
             versionBadge={{ label: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL }}
             changelogPath={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change."
-            changelogClassName="hover:text-orange-700 dark:hover:text-orange-400"
+            changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.mintBurnFlow.changelogHover}
           >
               <p>
                 Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns

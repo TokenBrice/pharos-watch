@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
@@ -13,7 +14,7 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { STABILITY_INDEX_SECTION_CONTENT } from "@/lib/methodology-content";
-import { PSI_BAND_CLASSES } from "@shared/lib/classification";
+import { PSI_BAND_CLASSES, METHODOLOGY_SECTION_ACCENT_CLASSES, METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
 
 const STABILITY_COMPONENT_COLUMNS = [
   { id: "component", header: "Component", cellClassName: "text-foreground" },
@@ -108,7 +109,7 @@ export function StabilityIndexMethodologySection() {
       versionBadge={{ label: PSI_METHODOLOGY_VERSION_LABEL }}
       changelogPath={PSI_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when PSI formula, caps, bands, component definitions, or other score-affecting input semantics change."
-      changelogClassName="hover:text-cyan-700 dark:hover:text-cyan-400"
+      changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.stabilityIndex.changelogHover}
     >
       <p>
         The Pharos Stability Index (PSI) is a market-level 0&ndash;100 health score for the stablecoin ecosystem. It is
@@ -201,7 +202,7 @@ export function StabilityIndexMethodologySection() {
           ]}
           steps={[
             { title: "Compute PSI", subtitle: "100 − penalties + trend", className: "md:w-80" },
-            { title: "Condition band", subtitle: "BEDROCK through MELTDOWN", className: "md:w-80 border-cyan-500/40" },
+            { title: "Condition band", subtitle: "BEDROCK through MELTDOWN", className: cn("md:w-80", METHODOLOGY_TABLE_ACCENT_CLASSES.psiConditionBand) },
           ]}
         />
         <div className="space-y-2">

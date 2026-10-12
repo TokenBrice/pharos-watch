@@ -13,6 +13,7 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 import { inferHas24hActivity, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
 import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 interface Mover {
   id: string;
@@ -121,8 +122,8 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                         format={formatSignedCompactUsd}
                         className={
                           row.netFlow24hUsd >= 0
-                            ? "text-green-700 dark:text-green-400"
-                            : "text-red-700 dark:text-red-400"
+                            ? DIRECTION_TONE_CLASSES.up
+                            : DIRECTION_TONE_CLASSES.down
                         }
                       />
                     </Link>
