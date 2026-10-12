@@ -36,7 +36,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         run: >-
           node --import tsx worker/scripts/compute-dependency-scenarios.ts
           --mode plan --out-dir "${SCENARIO_OUT_DIR}"
