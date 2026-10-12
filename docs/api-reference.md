@@ -364,6 +364,8 @@ For `GET /api/stablecoin-reserves/{stablecoinId}`, optional `sync.collectionElig
 
 `GET /api/blacklist-summary` publishes `stats.destroyedTotal`, `recentFreezeAmount24hUsd`, `recentFreezeAmount7dUsd`, and values in `perCoinFrozenTotal` / `perCoinDestroyedTotal` as `number | null`. Null means valuation unavailable, not zero. Mixed cohorts publish only the known subtotal: optional `stats.valuationCoverage` qualifies `destroyed`, `recent24h`, `recent7d`, `perCoinFrozen`, and `perCoinDestroyed` with `{ knownCount, unavailableCount }`. A positive unavailable count makes that subtotal partial; absent coverage means unknown completeness. Fully priced cohorts and observed zero remain numeric, including zero for an empty cohort.
 
+Producer-written `blacklist-summary` snapshots also publish optional `refresh: { observedAt, behindConfigs[] }`: when the scheduled producer rebuilt the observed totals, and each config (`configKey`, `symbol`, `chainName`, nullable `lastSucceededAt`) that did not reach its safe head that run. The freshness headers keep the oldest full-coverage clock; `refresh` lets clients say which sources hold it back rather than calling the whole tracker stalled. Absent `refresh` (request-path materialization) means no producer catch-up detail.
+
 ## Supply Provenance
 
 `GET /api/stablecoins` exposes optional per-asset supply provenance on `peggedAssets[]`. The owning schemas are `SupplyGapFillProvenanceSchema` and `SupplyChainGuardProvenanceSchema` in `shared/types/market.ts`; [Supply Snapshot](./supply-snapshot.md#supply-pipeline) owns admission and carry limits.

@@ -1233,6 +1233,18 @@ const BlacklistDataQualitySchema = z.object({
   }),
 });
 
+/** Producer-observed refresh: when totals were rebuilt and which configs have not reached their safe head. */
+const BlacklistSummaryRefreshSchema = z.object({
+  observedAt: z.number(),
+  behindConfigs: z.array(z.object({
+    configKey: z.string(),
+    symbol: z.string(),
+    chainName: z.string(),
+    lastSucceededAt: z.number().nullable(),
+  })),
+});
+export type BlacklistSummaryRefresh = z.infer<typeof BlacklistSummaryRefreshSchema>;
+
 export const BlacklistSummaryResponseSchema = z.object({
   stats: BlacklistSummaryStatsSchema,
   chart: z.array(BlacklistChartPointSchema),
@@ -1240,6 +1252,7 @@ export const BlacklistSummaryResponseSchema = z.object({
   coverage: BlacklistCoverageSchema.optional(),
   freezeLedgerMeta: BlacklistFreezeLedgerMetaSchema.optional(),
   dataQuality: BlacklistDataQualitySchema.optional(),
+  refresh: BlacklistSummaryRefreshSchema.optional(),
   totalEvents: z.number(),
   methodology: MethodologyEnvelopeSchema.optional(),
 });

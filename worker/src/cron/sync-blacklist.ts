@@ -224,7 +224,16 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         const gapSnapshot = await materializeBlacklistGapMetrics(db, snapshotNow, undefined, oldestSuccessAt);
         producerGapMetricSnapshots = gapSnapshot.written;
       }
-      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt);
+      // Configs that did not reach their safe head this run hold the coverage clock back.
+      const behindConfigs = configStates
+        .filter((state) => state.lastSucceededAt == null || state.lastSucceededAt < Math.floor(runStartedAtMs / 1000))
+        .map((state) => ({
+          configKey: state.configKey,
+          symbol: state.config.stablecoin,
+          chainName: state.config.chain.chainName,
+          lastSucceededAt: state.lastSucceededAt,
+        }));
+      const summarySnapshot = await materializeBlacklistSummarySnapshot(db, snapshotNow, oldestSuccessAt, behindConfigs);
       producerSummarySnapshot = summarySnapshot.written;
     } catch (err) {
       producerSnapshotError = err instanceof Error ? err.name : "UnknownError";

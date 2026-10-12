@@ -79,6 +79,7 @@ export default function FreezeWatchClient() {
     error,
     dataUpdatedAt,
     freshnessMeta,
+    freshnessCatchUp,
     sourceGenerations,
     stablecoins,
     stablecoinFxFallbackRates,
@@ -179,7 +180,7 @@ export default function FreezeWatchClient() {
           refetchSupport();
         }}
         queries={[
-          { preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta },
+          { preset: "blacklist", dataUpdatedAt, error, hasData: !!summary || events.length > 0, meta: freshnessMeta, catchUp: freshnessCatchUp },
         ]}
       />
       <SafetyScoreV9StatusNotice response={reportCardsResponse} />

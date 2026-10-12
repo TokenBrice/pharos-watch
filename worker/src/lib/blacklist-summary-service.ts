@@ -23,6 +23,7 @@ import {
 import {
   BLACKLIST_STABLECOINS,
   BlacklistSummaryResponseSchema,
+  type BlacklistSummaryRefresh,
   type BlacklistSummaryResponse,
   type BlacklistEvent,
   type BlacklistQuarterlyEventTypePoint,
@@ -754,6 +755,7 @@ async function buildAndWriteBlacklistSummarySnapshot(
   db: D1Database,
   now: number,
   freshnessTs?: number | null,
+  behindConfigs?: BlacklistSummaryRefresh["behindConfigs"],
 ): Promise<CachedBlacklistSummarySnapshot> {
   const boundedFreshnessTs = freshnessTs == null
     ? freshnessTs
@@ -768,7 +770,9 @@ async function buildAndWriteBlacklistSummarySnapshot(
     materializedAt: now,
     freshnessTs: built.freshness.timestamp,
     freshnessStatus: built.freshness.status,
-    payload: built.payload,
+    payload: behindConfigs === undefined
+      ? built.payload
+      : { ...built.payload, refresh: { observedAt: now, behindConfigs } },
   };
   await writeBlacklistSummarySnapshot(db, snapshot);
   return snapshot;
@@ -778,8 +782,9 @@ export async function materializeBlacklistSummarySnapshot(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
   freshnessTs: number | null = now,
+  behindConfigs?: BlacklistSummaryRefresh["behindConfigs"],
 ): Promise<{ written: boolean }> {
-  await buildAndWriteBlacklistSummarySnapshot(db, now, freshnessTs);
+  await buildAndWriteBlacklistSummarySnapshot(db, now, freshnessTs, behindConfigs);
   return { written: true };
 }
 async function materializeBlacklistSummaryForRequest(

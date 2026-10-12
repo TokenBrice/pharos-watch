@@ -71,6 +71,7 @@ const validSummary: Required<BlacklistSummaryResponse> = {
     freezeLedger: { providerFailedCount: 0, trackedGapCount: 0, scopedRows: 0, legacyRows: 0 },
     coverage: { supportedConfigs: 0, unsupportedDeferredConfigs: 0 },
   },
+  refresh: { observedAt: 0, behindConfigs: [] },
   methodology: { version: "3.1", versionLabel: "v3.1", currentVersion: "3.1", currentVersionLabel: "v3.1",
     changelogPath: "/methodology/blacklist-tracker-changelog/", asOf: 0, isCurrent: true },
 };
