@@ -4479,8 +4479,10 @@
       "observedAt": "2026-10-12"
     },
     "review": {
-      "status": "draft",
-      "note": "Draft for maintainer exact-content review; not approved."
+      "status": "approved",
+      "reviewedBy": "TokenBrice",
+      "reviewedAt": "2026-10-12T17:34:54.764Z",
+      "contentSha256": "ee1e0bc01a2d802bea065bb7ce61b6f1fb3a2e9d8acb6a77b6d14d931ce2a43f"
     }
   }
 }
