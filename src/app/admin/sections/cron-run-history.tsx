@@ -36,7 +36,7 @@ function getRecentRunTone(run: CronRun): RecentRunTone {
 
 export function RecentRunLegend() {
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground">
       <span className="font-medium text-foreground">Recent runs</span>
       {(Object.keys(RECENT_RUN_TONE_COPY) as RecentRunTone[]).map((tone) => (
         <span key={tone} className="inline-flex items-center gap-1.5">
@@ -108,7 +108,7 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
         <CronRunDots runs={recentRuns} />
       </div>
       <div className="overflow-hidden rounded-md border border-border/60">
-        <div className="hidden grid-cols-[minmax(7rem,0.8fr)_minmax(5rem,0.5fr)_minmax(0,1.7fr)] gap-2 border-b border-border/60 bg-muted/35 px-3 py-2 text-[11px] font-medium text-muted-foreground sm:grid">
+        <div className="hidden grid-cols-[minmax(7rem,0.8fr)_minmax(5rem,0.5fr)_minmax(0,1.7fr)] gap-2 border-b border-border/60 bg-muted/35 px-3 py-2 text-2xs font-medium text-muted-foreground sm:grid">
           <span>Outcome</span>
           <span>Runtime</span>
           <span>Reserve queue</span>
@@ -144,13 +144,13 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
               >
                 <span className="min-w-0">
                   <Badge
-                    className={`max-w-full whitespace-normal break-words text-left text-[11px] leading-tight ${getCronStatusColor(
+                    className={`max-w-full whitespace-normal break-words text-left text-2xs leading-tight ${getCronStatusColor(
                       isCronRunNotStarted(run) ? "skipped_neutral" : run.status,
                     )}`}
                   >
                     {formatCronRunStatus(run.status, run.metadata)}
                   </Badge>
-                  <span className="mt-1 block break-all font-mono text-[10px] text-muted-foreground">{run.status}</span>
+                  <span className="mt-1 block break-all font-mono text-3xs text-muted-foreground">{run.status}</span>
                 </span>
                 <span
                   className="font-mono tabular-nums text-muted-foreground"
@@ -158,7 +158,7 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
                 >
                   {formatDurationValue(timing.duration, timing.unavailableLabel ?? "Unknown")}
                   {timing.note ? (
-                    <span className="mt-1 block max-w-48 whitespace-normal font-sans text-[10px] leading-tight">
+                    <span className="mt-1 block max-w-48 whitespace-normal font-sans text-3xs leading-tight">
                       {timing.note}
                     </span>
                   ) : null}

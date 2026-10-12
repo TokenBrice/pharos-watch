@@ -131,7 +131,7 @@ export function YieldRiskBudgetSlider({ stops, onSelect, className }: YieldRiskB
           // WHY: h-11 (44px) meets WCAG 2.5.5 advisory target size while
           // -translate-y-1/2 keeps the hit corridor centered on the dot row;
           // the visual layer renders beneath with pointer-events disabled.
-          className="pharos-focus-ring absolute inset-x-2.5 top-[1.5rem] z-20 h-11 w-[calc(100%-1.25rem)] -translate-y-1/2 cursor-pointer appearance-none bg-transparent opacity-0"
+          className="pharos-focus-ring absolute inset-x-2.5 top-[1.5rem] z-10 h-11 w-[calc(100%-1.25rem)] -translate-y-1/2 cursor-pointer appearance-none bg-transparent opacity-0"
         />
         {/* Visual stops + labels — non-interactive; the input above owns events */}
         <div className="pointer-events-none relative flex justify-between">

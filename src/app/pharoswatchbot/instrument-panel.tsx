@@ -253,7 +253,7 @@ export function InstrumentPanel() {
                           key={coin}
                           className="inline-flex items-center gap-1.5 rounded-md bg-muted/60 px-2 py-1 pharos-numeric text-xs font-semibold text-foreground"
                         >
-                          <span aria-hidden="true" className="text-[10px] font-medium text-muted-foreground">
+                          <span aria-hidden="true" className="text-3xs font-medium text-muted-foreground">
                             {index + 1}
                           </span>
                           {coin}

@@ -143,7 +143,7 @@ function QuietHoursPicker({ state, canMutate, isMutating, pendingOperation, onMu
         </MiniButton>
       </div>
       {sameHours ? (
-        <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+        <p className="mt-2 text-2xs text-amber-700 dark:text-amber-300">
           Start and end must differ. For all-day silence, turn alert toggles off or unsubscribe instead.
         </p>
       ) : null}
@@ -330,7 +330,7 @@ function TimezonePicker({ state, canMutate, isMutating, pendingOperation, onMuta
     <section id="telegram-timezone" className="scroll-mt-4 rounded-2xl border border-border/70 bg-card/90 p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-foreground">Timezone</h2>
-        <span className="shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+        <span className="shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-2xs font-semibold text-muted-foreground">
           {current}
         </span>
       </div>
@@ -547,7 +547,7 @@ export function SettingsPanel({ state, canMutate, canReadPortability, isMutating
               <h3 className="text-sm font-semibold text-foreground">Depeg step</h3>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Applies to all-stablecoin depeg alerts.</p>
             </div>
-            <span className="pharos-numeric shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-[11px] font-semibold text-muted-foreground">
+            <span className="pharos-numeric shrink-0 rounded-md border border-border/60 bg-background/65 px-2 py-1 text-2xs font-semibold text-muted-foreground">
               {currentDepegStep == null ? "Any" : `${currentDepegStep} bps`}
             </span>
           </div>

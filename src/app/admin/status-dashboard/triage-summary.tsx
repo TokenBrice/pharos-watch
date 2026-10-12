@@ -175,7 +175,7 @@ export function TriageSummary({
             </span>
             <span
               className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium",
+                "inline-flex items-center rounded-full border px-2.5 py-1 text-2xs font-medium",
                 getEvidenceBadgeClass(resolvedEvidence.state),
               )}
             >
@@ -185,7 +185,7 @@ export function TriageSummary({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={cn("cursor-help rounded-full border px-2.5 py-1 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
+                    <span className={cn("cursor-help rounded-full border px-2.5 py-1 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
                       recovery hold — raw {data.rawOverallStatus}
                     </span>
                   </TooltipTrigger>
@@ -311,7 +311,7 @@ export function TriageSummary({
           <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Current issues</h3>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 {activeIssues.length > 0
                   ? areIssuesExpanded
                     ? `${activeIssues.length} shown`
@@ -327,14 +327,14 @@ export function TriageSummary({
                     <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          "rounded-full px-2 py-0.5 text-2xs font-medium",
                           getIssueKindBadgeClass(issue.kind),
                         )}
                       >
                         {issue.impactLabel}
                       </span>
-                      <span className="text-[11px] text-muted-foreground">{issue.affectedSurface}</span>
-                      <span className="font-mono tabular-nums text-[11px] text-muted-foreground">{issue.code}</span>
+                      <span className="text-2xs text-muted-foreground">{issue.affectedSurface}</span>
+                      <span className="font-mono tabular-nums text-2xs text-muted-foreground">{issue.code}</span>
                     </div>
                     <div className="mt-1.5 text-sm leading-relaxed text-foreground">{issue.message}</div>
                     {issue.runbookUrl && (
@@ -342,7 +342,7 @@ export function TriageSummary({
                         href={issue.runbookUrl}
                         target="_blank"
                         rel="noreferrer noopener"
-                        className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-primary underline underline-offset-2"
+                        className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-2xs font-medium text-primary underline underline-offset-2"
                       >
                         Runbook →
                       </a>
@@ -383,7 +383,7 @@ export function TriageSummary({
           <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-foreground">Needs attention</h3>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-2xs text-muted-foreground">
                 {attentionSections.length > 0 ? `${attentionSections.length} lanes` : "clear"}
               </span>
             </div>
@@ -455,7 +455,7 @@ export function TriageSummary({
           <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center gap-2 rounded-md text-sm font-medium text-foreground">
             State machine, probe, and discrepancy diagnostics
             {diagnosticsHasNewSignal && !isDiagnosticsOpen ? (
-              <span className={cn("rounded-full border px-2 py-0.5 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
+              <span className={cn("rounded-full border px-2 py-0.5 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
                 New signal
               </span>
             ) : null}

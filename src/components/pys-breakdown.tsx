@@ -518,7 +518,7 @@ export function PysBreakdown(props: PysBreakdownProps) {
             <ChevronDown aria-hidden="true" className="h-3 w-3 transition-transform group-open:rotate-180" />
           </span>
         </summary>
-        <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-50 sm:mb-2 sm:w-max sm:max-w-[280px] sm:-translate-x-1/2 sm:pt-0">
+        <div className="pt-2 sm:absolute sm:bottom-full sm:left-1/2 sm:z-modal sm:mb-2 sm:w-max sm:max-w-[280px] sm:-translate-x-1/2 sm:pt-0">
           <div className="w-[260px] rounded-md border border-border bg-popover px-3 py-2 shadow-md">
             <PysBreakdownBody {...props} />
           </div>

@@ -1,16 +1,10 @@
 {
   "src/app/admin/sections/budget-only-surfaces.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 5
-    },
     "pharos/no-raw-palette-colour": {
       "count": 8
     }
   },
   "src/app/admin/sections/cron-detail-panel.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    },
     "pharos/no-raw-palette-colour": {
       "count": 10
     }
@@ -21,25 +15,16 @@
     }
   },
   "src/app/admin/sections/cron-lane-table.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 7
-    },
     "pharos/no-raw-palette-colour": {
       "count": 4
     }
   },
   "src/app/admin/sections/cron-run-history.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 5
-    },
     "pharos/no-raw-palette-colour": {
       "count": 3
     }
   },
   "src/app/admin/status-dashboard/triage-summary.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 9
-    },
     "pharos/no-raw-palette-colour": {
       "count": 4
     }
@@ -124,16 +109,6 @@
       "count": 2
     }
   },
-  "src/app/pharoswatchbot/alert-families.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 2
-    }
-  },
-  "src/app/pharoswatchbot/app/components/CoinCard.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    }
-  },
   "src/app/pharoswatchbot/app/components/CoinInsightPanel.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
@@ -145,9 +120,6 @@
     }
   },
   "src/app/pharoswatchbot/app/components/MiniAppSessionStatus.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    },
     "pharos/no-raw-palette-colour": {
       "count": 16
     }
@@ -162,43 +134,19 @@
       "count": 4
     }
   },
-  "src/app/pharoswatchbot/app/components/SegmentedControl.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    }
-  },
   "src/app/pharoswatchbot/app/components/SettingsPanel.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 3
-    },
     "pharos/no-raw-palette-colour": {
       "count": 12
     }
   },
   "src/app/pharoswatchbot/app/components/StatusPanel.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    },
     "pharos/no-raw-palette-colour": {
       "count": 12
     }
   },
-  "src/app/pharoswatchbot/app/components/WatchlistPanel.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 2
-    }
-  },
   "src/app/pharoswatchbot/instrument-panel.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    },
     "pharos/no-raw-palette-colour": {
       "count": 10
-    }
-  },
-  "src/app/pharoswatchbot/mini-app-screenshot-carousel.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
     }
   },
   "src/app/safety-scores/presentational.tsx": {
@@ -221,16 +169,6 @@
       "count": 2
     }
   },
-  "src/app/timeline/timeline-feed-sections.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 5
-    }
-  },
-  "src/app/timeline/timeline-feed.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 3
-    }
-  },
   "src/components/api-reference-sidebar.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 8
@@ -244,46 +182,6 @@
   "src/components/bluechip-header-badge.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 8
-    }
-  },
-  "src/components/cemetery/cemetery-causes.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 6
-    }
-  },
-  "src/components/cemetery/cemetery-context.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 2
-    }
-  },
-  "src/components/cemetery/cemetery-dataset.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 2
-    }
-  },
-  "src/components/cemetery/cemetery-key-facts.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    }
-  },
-  "src/components/cemetery/cemetery-register-row.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    }
-  },
-  "src/components/cemetery/cemetery-register-toolbar.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 2
-    }
-  },
-  "src/components/cemetery/deaths-by-year-chart.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 5
-    }
-  },
-  "src/components/cemetery/peak-by-cause-chart.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 5
     }
   },
   "src/components/chain-type-badge.tsx": {
@@ -371,36 +269,6 @@
       "count": 12
     }
   },
-  "src/components/digest-archive-client.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    }
-  },
-  "src/components/digest-colophon.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 2
-    }
-  },
-  "src/components/digest-nameplate.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 4
-    }
-  },
-  "src/components/digest-snapshot.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    }
-  },
-  "src/components/editorial-colophon.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 5
-    }
-  },
-  "src/components/editorial-masthead.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 1
-    }
-  },
   "src/components/exploit-notice-banner.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
@@ -447,9 +315,6 @@
     }
   },
   "src/components/home-alt-mini-cards/daily-digest-card.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 2
-    },
     "pharos/no-raw-palette-colour": {
       "count": 4
     }
@@ -472,11 +337,6 @@
   "src/components/home-alt-mini-cards/supply-moves-card.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4
-    }
-  },
-  "src/components/homepage-tape.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 3
     }
   },
   "src/components/horizon-constellation.tsx": {
@@ -697,16 +557,6 @@
   "src/components/table-toolbar.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 5
-    }
-  },
-  "src/components/tape-for-coin-teaser.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 3
-    }
-  },
-  "src/components/tape/event-card.tsx": {
-    "pharos/no-arbitrary-text-px": {
-      "count": 13
     }
   },
   "src/components/toast-container.tsx": {

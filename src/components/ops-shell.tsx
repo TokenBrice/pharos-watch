@@ -109,11 +109,11 @@ export function OpsShell({ children }: { children: ReactNode }) {
     >
       <a
         href="#ops-main-content"
-        className="pharos-focus-ring fixed left-3 top-3 z-50 -translate-y-24 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-transform focus:translate-y-0 motion-reduce:transition-none"
+        className="pharos-focus-ring fixed left-3 top-3 z-skip -translate-y-24 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition-transform focus:translate-y-0 motion-reduce:transition-none"
       >
         Skip to operator workspace
       </a>
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-chrome border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="mx-auto flex w-full max-w-[96rem] flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/admin/" className="pharos-focus-ring flex shrink-0 items-center gap-2 rounded-md">

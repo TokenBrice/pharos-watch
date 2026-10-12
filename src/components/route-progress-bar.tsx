@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
  * change is sufficient to detect navigation; query-string-only changes (e.g.
  * filter updates) don't ramp the bar.
  *
- * Z-index 59 sits just below the `RegimeBar` (`z-60`) so it never overlaps.
+ * `z-progress` (59) sits just below the `RegimeBar` (`z-regime`) so it never overlaps.
  */
 export function RouteProgressBar() {
   const pathname = usePathname();
@@ -47,7 +47,7 @@ export function RouteProgressBar() {
       aria-valuenow={active ? progress : undefined}
       aria-valuemin={0}
       aria-valuemax={100}
-      className="pointer-events-none fixed left-0 right-0 top-0 z-[59] h-[2px]"
+      className="pointer-events-none fixed left-0 right-0 top-0 z-progress h-[2px]"
     >
       <div
         className="h-full w-full origin-left bg-primary transition-[transform,opacity] duration-300 ease-out will-change-transform motion-reduce:transition-none"

@@ -23,7 +23,7 @@ export function FlowMachineShredder({
   return (
     <div className={model.dims.areaClass}>
       {model.bills.map((bill) => (
-        <div key={bill.key} className={cn("pointer-events-none absolute z-10 rounded-sm border border-red-500/50 bg-red-300/85 text-red-950", styles.billFeed)} style={bill.style}>
+        <div key={bill.key} className={cn("pointer-events-none absolute z-5 rounded-sm border border-red-500/50 bg-red-300/85 text-red-950", styles.billFeed)} style={bill.style}>
           <div className="flex h-full w-full items-center justify-center">
             <Banknote className={cn(model.isMini ? "h-2.5 w-2.5" : "h-3 w-3")} />
           </div>
@@ -31,7 +31,7 @@ export function FlowMachineShredder({
       ))}
 
       <div
-        className={cn("pointer-events-none absolute z-30 -translate-x-1/2", styles.machineVibe)}
+        className={cn("pointer-events-none absolute z-8 -translate-x-1/2", styles.machineVibe)}
         style={{
           left: model.machineCenterX,
           top: `${model.dims.machineTop}px`,
@@ -74,7 +74,7 @@ export function FlowMachineShredder({
           }}
         />
         <div
-          className="absolute z-[2] flex items-center"
+          className="absolute z-2 flex items-center"
           style={{
             top: `${model.dims.indicatorY}px`,
             right: `${model.dims.indicatorRight}px`,
@@ -99,7 +99,7 @@ export function FlowMachineShredder({
       </div>
 
       <div
-        className="pointer-events-none absolute z-[35] -translate-x-1/2 overflow-hidden"
+        className="pointer-events-none absolute z-10 -translate-x-1/2 overflow-hidden"
         style={{
           left: model.stripCenterX,
           top: `${model.stripMaskTop}px`,

@@ -28,7 +28,7 @@ export function SegmentedControl<T>({ value, options, onChange, disabled, ariaLa
             )}
           >
             <span className="block text-sm font-semibold">{option.label}</span>
-            {option.caption ? <span className="block text-[11px] leading-tight">{option.caption}</span> : null}
+            {option.caption ? <span className="block text-2xs leading-tight">{option.caption}</span> : null}
           </button>
         );
       })}

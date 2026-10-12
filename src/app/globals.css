@@ -161,6 +161,7 @@
   --z-index-chrome: 50;
   --z-index-chrome-dock: 55;
   --z-index-chrome-header: 56;
+  --z-index-progress: 59;
   --z-index-regime: 60;
   --z-index-modal: 70;
   --z-index-toast: 100;

@@ -155,7 +155,7 @@ function CronWorkbenchControls({
       </div>
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-5 gap-y-2">
         <RecentRunLegend />
-        <p className="max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
+        <p className="max-w-2xl text-2xs leading-relaxed text-muted-foreground">
           <span className="font-medium text-foreground">State:</span> Unavailable means there is no fresh usable run.
           Run warning means the job completed but reported partial, fallback, or threshold metadata.
         </p>
@@ -234,7 +234,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
               mobileScrollHint: "Scroll within the cron table for more jobs and columns",
             }}
           >
-            <TableHeader className="border-b border-border/70 bg-muted text-[11px] font-medium text-muted-foreground">
+            <TableHeader className="border-b border-border/70 bg-muted text-2xs font-medium text-muted-foreground">
               <TableRow rowIntent="static">
                 <TableHead className="w-12 px-2 py-2">
                   <span className="sr-only">Select</span>
@@ -257,13 +257,13 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-semibold text-foreground">{group.title}</span>
-                          <span className="font-mono text-[10px] text-muted-foreground">{group.badge}</span>
+                          <span className="font-mono text-3xs text-muted-foreground">{group.badge}</span>
                         </div>
-                        <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-muted-foreground">
+                        <p className="mt-1 max-w-3xl text-2xs leading-relaxed text-muted-foreground">
                           {group.description}
                         </p>
                       </div>
-                      <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                      <span className="font-mono text-2xs tabular-nums text-muted-foreground">
                         {group.summary.visible}/{group.summary.total} shown · {group.summary.unhealthy} unavailable ·{" "}
                         {group.summary.degraded} warning{group.summary.degraded === 1 ? "" : "s"} ·{" "}
                         {group.summary.unknown} unknown · {group.summary.skipped} skipped · {group.summary.running} running
@@ -316,13 +316,13 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                         <Badge className={`text-xs ${getStateBadgeClass(row.state)}`}>
                           {CRON_STATE_LABELS[row.state]}
                         </Badge>
-                        <span className="mt-1 block max-w-32 whitespace-normal text-[11px] leading-tight text-muted-foreground">
+                        <span className="mt-1 block max-w-32 whitespace-normal text-2xs leading-tight text-muted-foreground">
                           {row.statusLabel}
                         </span>
                       </TableCell>
                       <TableCell className="max-w-[15rem] px-3 py-2 align-top">
                         <span className="block truncate text-sm font-medium text-foreground">{row.display.label}</span>
-                        <span className="block truncate font-mono text-[11px] text-muted-foreground">{row.job}</span>
+                        <span className="block truncate font-mono text-2xs text-muted-foreground">{row.job}</span>
                       </TableCell>
                       <TableCell className="px-3 py-2 align-top">
                         <span

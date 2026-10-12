@@ -66,7 +66,7 @@ export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
 
   return (
     <div
-      className="fixed bottom-4 right-4 z-[100] flex w-full max-w-sm flex-col gap-2 p-4 sm:bottom-6 sm:right-6"
+      className="fixed bottom-4 right-4 z-toast flex w-full max-w-sm flex-col gap-2 p-4 sm:bottom-6 sm:right-6"
     >
       {toasts.map((toast, index) => (
         <ToastItem

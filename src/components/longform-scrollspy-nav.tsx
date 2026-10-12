@@ -363,7 +363,7 @@ export function LongformScrollspyNav({
       <div
         ref={railRef}
         className={cn(
-          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-30 md:mx-0 lg:top-[calc(env(safe-area-inset-top)+3px)]",
+          "sticky top-[calc(env(safe-area-inset-top)+3.5rem)] z-chrome md:mx-0 lg:top-[calc(env(safe-area-inset-top)+3px)]",
           isPillTabs
             ? "mx-0 bg-transparent px-0 py-0"
             : "-mx-4 rounded-xl border border-border/60 bg-background px-3 py-2 md:px-4 md:py-2.5",

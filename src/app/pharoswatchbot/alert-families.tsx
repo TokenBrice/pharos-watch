@@ -55,7 +55,7 @@ export function AlertFamilies() {
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1 text-sm font-medium">{alert.label}</span>
-                <code className="hidden shrink-0 font-mono text-[11px] text-muted-foreground sm:inline">{alert.key}</code>
+                <code className="hidden shrink-0 font-mono text-2xs text-muted-foreground sm:inline">{alert.key}</code>
               </button>
             );
           })}
@@ -70,7 +70,7 @@ export function AlertFamilies() {
                 <figcaption className="flex items-center gap-2.5 border-b border-border/50 pb-3">
                   <PharosLogo size={28} />
                   <span className="text-sm font-semibold text-foreground">PharosWatchBot</span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase text-muted-foreground">
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-3xs font-medium uppercase text-muted-foreground">
                     bot
                   </span>
                 </figcaption>

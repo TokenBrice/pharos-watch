@@ -218,7 +218,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     <div className={`space-y-6${phosphorActive ? " phosphor-green" : ""}`}>
       <a
         href="#tape-feed"
-        className="pharos-focus-ring sr-only rounded-md bg-background px-3 py-1.5 text-xs font-medium focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50"
+        className="pharos-focus-ring sr-only rounded-md bg-background px-3 py-1.5 text-xs font-medium focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-skip"
       >
         Skip to events
       </a>

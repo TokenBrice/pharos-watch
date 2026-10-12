@@ -88,7 +88,7 @@ export function MobileStickySummary({
     <div
       ref={summaryRef}
       aria-hidden={false}
-      className="sticky top-0 z-40 -mx-4 flex items-center gap-2 border-b border-border/60 bg-background/95 px-4 py-1.5 lg:hidden"
+      className="sticky top-0 z-chrome -mx-4 flex items-center gap-2 border-b border-border/60 bg-background/95 px-4 py-1.5 lg:hidden"
     >
       <StablecoinLogo src={logoSrc} name={coin.name} size={20} />
       <span className="text-sm font-semibold">{coin.symbol}</span>

@@ -324,7 +324,7 @@ export function WatchlistPanel({ state, canMutate, canReadBulk, isMutating, isRe
                   )}
                 >
                   <span className="block">{coin.symbol}</span>
-                  <span className="block text-[10px] font-normal text-muted-foreground">
+                  <span className="block text-3xs font-normal text-muted-foreground">
                     {following ? "Following" : coin.name}
                   </span>
                 </button>
@@ -352,7 +352,7 @@ export function WatchlistPanel({ state, canMutate, canReadBulk, isMutating, isRe
                       <p className="truncate text-xs text-muted-foreground">{coin.name}</p>
                     </div>
                     {following ? (
-                      <span className="shrink-0 rounded-md border border-border/55 bg-muted/30 px-2 py-1 text-[11px] font-semibold text-muted-foreground">Following</span>
+                      <span className="shrink-0 rounded-md border border-border/55 bg-muted/30 px-2 py-1 text-2xs font-semibold text-muted-foreground">Following</span>
                     ) : (
                       <MiniButton
                         ariaLabel={`Follow ${coin.symbol}`}

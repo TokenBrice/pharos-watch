@@ -52,7 +52,7 @@ export function MiniAppScreenshotCarousel({ screenshots }: { screenshots: readon
                   className="mx-auto h-full max-h-[calc(100svh-9rem)] w-auto rounded-lg object-contain lg:max-h-[560px]"
                 />
               </div>
-              <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-[10px] uppercase text-white/65">
+              <figcaption className="flex items-baseline gap-2 border-t border-white/8 px-4 py-2.5 font-mono text-3xs uppercase text-white/65">
                 <span className="pharos-numeric text-white/90">{String(idx + 1).padStart(2, "0")}</span>
                 <span aria-hidden="true" className="text-white/25">
                   ·

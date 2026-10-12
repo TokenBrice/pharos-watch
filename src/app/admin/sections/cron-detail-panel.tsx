@@ -112,7 +112,7 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
         <div className="min-w-0">
           <dt className="text-muted-foreground">Latest outcome</dt>
           <dd className="mt-1 text-foreground">{row.statusLabel}</dd>
-          <dd className="mt-0.5 break-all font-mono text-[10px] text-muted-foreground">
+          <dd className="mt-0.5 break-all font-mono text-3xs text-muted-foreground">
             Raw: {row.rawStatus ?? "none"}
           </dd>
         </div>
