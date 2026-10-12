@@ -1,21 +1,9 @@
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
 import type { CoverageLegendItem } from "@/lib/coverage/shared";
 
-export type CoverageFeatureKey =
-  | "price"
-  | "safety"
-  | "dex"
-  | "reserves"
-  | "redemption"
-  | "yield"
-  | "flows"
-  | "blacklist"
-  | "mica"
-  | "genius"
-  | "dependency"
-  | "mintAuthority";
+import type { CoverageFeatureKey, CoverageTone } from "@shared/lib/classification";
 
-export type CoverageTone = "emerald" | "sky" | "amber" | "violet" | "rose" | "slate";
+export type { CoverageFeatureKey, CoverageTone };
 
 export interface CoverageStatus {
   kind: string;

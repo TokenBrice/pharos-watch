@@ -209,12 +209,15 @@ export const YIELD_ZONE_DESCRIPTIONS: Record<YieldZoneKey, string> = {
   "why-bother": "Safety below 60 and APY at or below its benchmark: risk without pay.",
 };
 
-export const YIELD_ZONE_STYLES: Record<YieldZoneKey, { badge: string }> = {
-  "sweet-spot": { badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20" },
-  "danger-zone": { badge: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30" },
-  "play-it-safe": { badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20" },
-  "why-bother": { badge: "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20" },
+export const YIELD_ZONE_STYLES: Record<YieldZoneKey, { badge: string; dot: string }> = {
+  "sweet-spot": { badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20", dot: "bg-emerald-500" },
+  "danger-zone": { badge: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/30", dot: "bg-red-500" },
+  "play-it-safe": { badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20", dot: "bg-blue-500" },
+  "why-bother": { badge: "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20", dot: "bg-slate-500" },
 };
+
+/** Legend dot for yield points pinned above the scatter plot's APY clip. */
+export const YIELD_ZONE_OUTLIER_DOT_CLASS = "bg-amber-500";
 
 /** Chart hex colors for blacklist stablecoin breakdown.
  *  Intentionally per-stablecoin brand colors — independent of chart-colors.ts tokens. */

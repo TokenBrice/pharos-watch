@@ -206,3 +206,12 @@ export const RATIO_QUALITY_COLORS: Record<"healthy" | "caution" | "critical", st
   caution: "bg-amber-500",
   critical: "bg-red-500",
 };
+
+// ---------------------------------------------------------------------------
+// DEWS card-edge accents and row tints (WARNING / DANGER only)
+// ---------------------------------------------------------------------------
+
+export const THREAT_BAND_ACCENT_CLASSES = {
+  WARNING: { borderL: "border-l-2 border-l-orange-500", rowTint: "bg-orange-500/[0.05]" },
+  DANGER: { borderL: "border-l-2 border-l-red-500", rowTint: "bg-red-500/[0.05]" },
+} as const satisfies Record<Extract<ThreatBand, "WARNING" | "DANGER">, { borderL: string; rowTint: string }>;
