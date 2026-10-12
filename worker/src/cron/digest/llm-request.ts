@@ -12,6 +12,7 @@ import {
   ANTHROPIC_TIMEOUT_MS,
   CIRCUIT_SOURCE,
   DIGEST_EFFORT_LEVELS,
+  DIGEST_HEAVY_MAX_EDITION_OUTPUT_TOKENS,
   DIGEST_MAX_EDITION_OUTPUT_TOKENS,
   DIGEST_MAX_TOKENS,
   type DigestLlmConfig,
@@ -30,13 +31,26 @@ import {
   type AnthropicStreamResult,
 } from "./anthropic-stream";
 import { tryParseJson } from "../../lib/json-parse";
+import type { DigestLlmProfile } from "@shared/types/digest";
 import {
   buildDigestLlmTelemetry,
   type DigestEditorialStyleGateFinding,
   type DigestEditorialStyleGateTelemetry,
   type DigestLlmAttemptTelemetry,
+  type DigestLlmRequestKind,
   type RequestDigestCopyResult,
 } from "./platform";
+import {
+  buildDigestAuditPrompt,
+  buildDigestRevisionPrompt,
+  DIGEST_AUDIT_SYSTEM_PROMPT,
+  digestNeedsRevision,
+  parseDigestAudit,
+  summarizeDigestAudit,
+  type DigestHeavyAuditSummary,
+  type DigestHeavyOutcome,
+  type DigestHeavyTelemetry,
+} from "./heavy-review";
 
 interface RequestDigestCopyOptions {
   db: D1Database;
@@ -48,11 +62,25 @@ interface RequestDigestCopyOptions {
   logPrefix: string;
   parseOptions?: DigestModelResponseParseOptions;
   validationProfile?: DigestValidationProfile;
+  /** `heavy` adds an evidence audit and a revision pass; defaults to `standard`. */
+  llmProfile?: DigestLlmProfile;
   reportAttempt?: (attempts: DigestLlmAttemptTelemetry[]) => Promise<void>;
 }
 
 /** Fraction of ANTHROPIC_TIMEOUT_MS after which the corrective retry is skipped. */
 const CORRECTIVE_RETRY_BUDGET_FRACTION = 0.5;
+
+/**
+ * Heavy-profile time gates, as fractions of ANTHROPIC_TIMEOUT_MS: the audit
+ * starts only before half the budget is spent and the revision before three
+ * quarters. Both stages share one deadline that ends HEAVY_STAGE_RESERVE_MS
+ * before the edition deadline, so a slow heavy stage falls back to the draft
+ * instead of exhausting the edition. The 2026-10-12 replay took 151 s median
+ * (170 s max) for draft, audit, and revision together.
+ */
+const HEAVY_AUDIT_BUDGET_FRACTION = 0.5;
+const HEAVY_REVISION_BUDGET_FRACTION = 0.75;
+const HEAVY_STAGE_RESERVE_MS = 30_000;
 
 /**
  * Time allowed for one digest request to return response headers.
@@ -200,6 +228,7 @@ function attachDigestLlmMeta(
   config: DigestLlmConfig,
   attempts: DigestLlmAttemptTelemetry[],
   editorialStyleGate: DigestEditorialStyleGateTelemetry,
+  copy: Pick<RequestDigestCopyResult, "llmProfile" | "copyServedModel" | "heavy">,
 ): string {
   let parsed: Record<string, unknown> = {};
   if (digestMeta) {
@@ -208,7 +237,8 @@ function attachDigestLlmMeta(
       parsed = decoded as Record<string, unknown>;
     }
   }
-  parsed.llm = buildDigestLlmTelemetry(config, attempts);
+  parsed.llm = buildDigestLlmTelemetry(config, attempts, copy);
+  if (copy.heavy) parsed.heavy = copy.heavy;
   parsed.editorialStyleGate = editorialStyleGate;
   return JSON.stringify(parsed);
 }
@@ -284,11 +314,15 @@ async function requestDigestCopyWithinDeadline(
   editionSignal: AbortSignal,
 ): Promise<RequestDigestCopyResult> {
   const started = Date.now();
+  const llmProfile: DigestLlmProfile = options.llmProfile ?? "standard";
+  const editionOutputBudget = llmProfile === "heavy"
+    ? DIGEST_HEAVY_MAX_EDITION_OUTPUT_TOKENS
+    : DIGEST_MAX_EDITION_OUTPUT_TOKENS;
   const llmAttempts: DigestLlmAttemptTelemetry[] = [];
   let nextAttemptNumber = 1;
 
   const recordAttempt = async (
-    requestKind: "original" | "corrective",
+    requestKind: DigestLlmRequestKind,
     httpAttempt: number,
     attemptStarted: number,
     response: Response | null,
@@ -353,12 +387,23 @@ async function requestDigestCopyWithinDeadline(
    * top of an already-large one and overshoot the cap.
    */
   const canAffordAnotherRequest = (): boolean =>
-    committedOutputTokens + options.llmConfig.maxTokens <= DIGEST_MAX_EDITION_OUTPUT_TOKENS;
+    committedOutputTokens + options.llmConfig.maxTokens <= editionOutputBudget;
 
+  /**
+   * Heavy stages pass `recordCircuit: false`: the edition's writer leg already
+   * recorded the provider outcome, and a heavy stage cut short by its own
+   * deadline is not a provider failure.
+   */
   const requestClaude = async (
     userPrompt: string,
-    requestKind: "original" | "corrective",
-  ): Promise<{ kind: "ok"; rawText: string } | { kind: "refusal"; category: AnthropicRefusalCategory | null }> => {
+    requestKind: DigestLlmRequestKind,
+    requestOptions: { signal?: AbortSignal; systemPrompt?: string; recordCircuit?: boolean } = {},
+  ): Promise<
+    | { kind: "ok"; rawText: string; servedModel: string | null }
+    | { kind: "refusal"; category: AnthropicRefusalCategory | null }
+  > => {
+    const signal = requestOptions.signal ?? editionSignal;
+    const recordCircuit = requestOptions.recordCircuit ?? true;
     let lastErrorText = "no response after retries";
 
     for (let httpAttempt = 1; httpAttempt <= DIGEST_FETCH_MAX_RETRIES + 1; httpAttempt++) {
@@ -382,13 +427,13 @@ async function requestDigestCopyWithinDeadline(
             // Effort is per-job configuration; DAILY_DIGEST_LLM_CONFIG records
             // the measurement behind the level. max_tokens bounds one request.
             output_config: { effort: options.llmConfig.effort },
-            system: options.systemPrompt,
+            system: requestOptions.systemPrompt ?? options.systemPrompt,
             messages: [{ role: "user", content: userPrompt }],
             // Streaming is required on Cloudflare Workers: adaptive thinking
             // can run for minutes before non-streaming response bytes arrive.
             stream: true,
           }),
-          signal: editionSignal,
+          signal,
         },
         0,
         { timeoutMs: DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS, returnFinalResponse: true },
@@ -399,7 +444,7 @@ async function requestDigestCopyWithinDeadline(
         // accounting below: cancel it and substitute a bounded diagnostic so
         // the provider error still reports exactly one attempt and one outcome.
         lastErrorText = response
-          ? await readDigestErrorText(response, editionSignal).catch(async (error: unknown) => {
+          ? await readDigestErrorText(response, signal).catch(async (error: unknown) => {
               await cancelUnsuccessfulResponseBodyQuietly(response);
               return `error body read failed (${error instanceof Error ? error.name : "unknown"})`;
             })
@@ -413,10 +458,10 @@ async function requestDigestCopyWithinDeadline(
           && (!response || isRetryableDigestStatus(response.status))
           && canAffordAnotherRequest()
         ) {
-          await sleepWithSignal(digestRetryDelayMs(response, httpAttempt), editionSignal);
+          await sleepWithSignal(digestRetryDelayMs(response, httpAttempt), signal);
           continue;
         }
-        await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
+        if (recordCircuit) await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
         throw new Error(
           `Claude API error ${response?.status ?? "null"}: ${lastErrorText.slice(0, 500)}`,
         );
@@ -439,10 +484,10 @@ async function requestDigestCopyWithinDeadline(
         ) {
           lastErrorText = failure.message;
           logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] ${failure.message}; retrying the request`);
-          await sleepWithSignal(digestRetryDelayMs(null, httpAttempt), editionSignal);
+          await sleepWithSignal(digestRetryDelayMs(null, httpAttempt), signal);
           continue;
         }
-        await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
+        if (recordCircuit) await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, false);
         throw streamErr;
       }
       await recordAttempt(requestKind, httpAttempt, attemptStarted, response, streamResult);
@@ -452,8 +497,8 @@ async function requestDigestCopyWithinDeadline(
         // had the full request window to route to a recommended model.
         return { kind: "refusal", category: streamResult.refusalCategory };
       }
-      await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, true);
-      return { kind: "ok", rawText: streamResult.text };
+      if (recordCircuit) await recordOutcomeSafe(options.db, CIRCUIT_SOURCE.ANTHROPIC, true);
+      return { kind: "ok", rawText: streamResult.text, servedModel: streamResult.servedModel };
     }
 
     throw new Error(`Claude API error null: ${lastErrorText.slice(0, 500)}`);
@@ -483,6 +528,7 @@ async function requestDigestCopyWithinDeadline(
     };
   }
   let parsed = parseDigestModelResponse(original.rawText, parseOptions);
+  let copyServedModel = original.servedModel;
   const firstPassEditorialFindings = parsed.editorialFindings ?? [];
   const styleGateMode = options.validationProfile?.styleGateMode ?? "shadow";
   const styleWouldBlock = firstPassEditorialFindings.some((finding) => finding.severity === "hard");
@@ -515,7 +561,7 @@ async function requestDigestCopyWithinDeadline(
       // refuse it on expensive ones. A blocked edition is loud and already
       // handled; an unbounded bill is neither.
       logWorkerEventArgs("handler", "warn",
-        `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: edition output budget spent (${committedOutputTokens}/${DIGEST_MAX_EDITION_OUTPUT_TOKENS} tokens committed, next request reserves ${options.llmConfig.maxTokens}). Issues: ${formatDigestValidationIssues(hardIssues)}`,
+        `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: edition output budget spent (${committedOutputTokens}/${editionOutputBudget} tokens committed, next request reserves ${options.llmConfig.maxTokens}). Issues: ${formatDigestValidationIssues(hardIssues)}`,
       );
     } else {
       if (styleGateMode === "enforce" && styleWouldBlock) styleRetryAttempted = true;
@@ -557,6 +603,7 @@ async function requestDigestCopyWithinDeadline(
         };
       }
       parsed = parseDigestModelResponse(corrective.rawText, parseOptions);
+      copyServedModel = corrective.servedModel;
       qualityIssues = options.validationProfile
         ? validateDigestModelOutput(parsed, options.validationProfile)
         : [];
@@ -566,6 +613,25 @@ async function requestDigestCopyWithinDeadline(
           : "resolved";
       }
     }
+  }
+
+  let heavy: DigestHeavyTelemetry | undefined;
+  if (llmProfile === "heavy") {
+    const draftIssues = qualityIssues;
+    const review = await runHeavyReview();
+    heavy = { outcome: review.outcome, audit: review.audit ?? null, draft: null };
+    if (review.outcome === "revised" && review.revised) {
+      heavy.draft = {
+        title: parsed.digestTitle,
+        text: parsed.digestText,
+        extended: parsed.digestExtended,
+        qualityIssueCodes: [...new Set(draftIssues.map((issue) => issue.code))],
+      };
+      parsed = review.revised.parsed;
+      qualityIssues = review.revised.issues;
+      copyServedModel = review.revised.servedModel;
+    }
+    logWorkerEventArgs("handler", "info", `[${options.logPrefix}] Heavy review outcome: ${review.outcome}`);
   }
 
   if (parsed.usedRawTextFallback) {
@@ -599,11 +665,116 @@ async function requestDigestCopyWithinDeadline(
   return {
     kind: "ok",
     ...parsed,
-    digestMeta: attachDigestLlmMeta(parsed.digestMeta, options.llmConfig, llmAttempts, editorialStyleGate),
+    digestMeta: attachDigestLlmMeta(parsed.digestMeta, options.llmConfig, llmAttempts, editorialStyleGate, {
+      llmProfile,
+      copyServedModel,
+      heavy,
+    }),
     qualityIssues,
     hasBlockingQualityIssues: hasBlockingDigestQualityIssues(qualityIssues),
     llmAttempts,
     refusalCategory: null,
     editorialStyleGate,
+    llmProfile,
+    copyServedModel,
+    ...(heavy ? { heavy } : {}),
   };
+
+  /**
+   * Heavy review: an independent evidence audit of the draft, then one
+   * revision when the audit or the validators found something to fix. Every
+   * failure, refusal, budget skip, or unparseable stage keeps the draft, and a
+   * revision with more hard validator issues than the draft is discarded, so
+   * the deterministic gates stay the final authority and the heavy profile can
+   * never publish worse-gated copy than the standard path would have.
+   */
+  async function runHeavyReview(): Promise<{
+    outcome: DigestHeavyOutcome;
+    audit?: DigestHeavyAuditSummary;
+    revised?: { parsed: typeof parsed; issues: typeof qualityIssues; servedModel: string | null };
+  }> {
+    if (parsed.usedRawTextFallback) return { outcome: "skipped-draft-unparseable" };
+    if (Date.now() - started >= ANTHROPIC_TIMEOUT_MS * HEAVY_AUDIT_BUDGET_FRACTION) return { outcome: "skipped-time-budget" };
+    if (!canAffordAnotherRequest()) return { outcome: "skipped-token-budget" };
+
+    const stageTimeoutMs = Math.max(0, ANTHROPIC_TIMEOUT_MS - (Date.now() - started) - HEAVY_STAGE_RESERVE_MS);
+    const stage = createTimeoutSignal({
+      timeoutMs: stageTimeoutMs,
+      timeoutReason: new DOMException(`digest heavy review budget of ${stageTimeoutMs}ms exhausted`, "TimeoutError"),
+      parentSignal: editionSignal,
+    });
+    const stageRequest = async (
+      userPrompt: string,
+      requestKind: "audit" | "revise",
+      systemPrompt: string,
+    ): Promise<Awaited<ReturnType<typeof requestClaude>> | null> => {
+      try {
+        return await requestClaude(userPrompt, requestKind, { signal: stage.signal, systemPrompt, recordCircuit: false });
+      } catch (error) {
+        // Cron cancellation is not a heavy-stage outcome; let it propagate.
+        if (options.signal?.aborted) throw error;
+        logWorkerEventArgs("handler", "warn",
+          `[${options.logPrefix}] Heavy ${requestKind} failed; keeping the draft: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return null;
+      }
+    };
+    try {
+      const draft = {
+        title: parsed.digestTitle,
+        text: parsed.digestText,
+        extended: parsed.digestExtended,
+        meta: decodeMetaObject(parsed.digestMeta),
+      };
+      const auditResponse = await stageRequest(buildDigestAuditPrompt(options.userPrompt, draft), "audit", DIGEST_AUDIT_SYSTEM_PROMPT);
+      if (!auditResponse) return { outcome: "audit-failed" };
+      if (auditResponse.kind === "refusal") return { outcome: "audit-refused" };
+      const audit = parseDigestAudit(auditResponse.rawText);
+      if (!audit) return { outcome: "audit-unparseable" };
+      const auditSummary = summarizeDigestAudit(audit);
+      if (!digestNeedsRevision(audit, qualityIssues)) return { outcome: "audit-clean", audit: auditSummary };
+      if (Date.now() - started >= ANTHROPIC_TIMEOUT_MS * HEAVY_REVISION_BUDGET_FRACTION) {
+        return { outcome: "skipped-time-budget", audit: auditSummary };
+      }
+      if (!canAffordAnotherRequest()) return { outcome: "skipped-token-budget", audit: auditSummary };
+
+      const revisionPrompt = buildDigestRevisionPrompt({
+        userPrompt: options.userPrompt,
+        draft,
+        audit,
+        draftIssues: qualityIssues,
+        recentMeta: options.validationProfile?.recentMeta,
+      });
+      const revision = await stageRequest(revisionPrompt, "revise", options.systemPrompt);
+      if (!revision) return { outcome: "revise-failed", audit: auditSummary };
+      if (revision.kind === "refusal") return { outcome: "revise-refused", audit: auditSummary };
+      const revisedParsed = parseDigestModelResponse(revision.rawText, parseOptions);
+      if (revisedParsed.usedRawTextFallback) return { outcome: "draft-kept-revision-unparseable", audit: auditSummary };
+      const revisedIssues = options.validationProfile
+        ? validateDigestModelOutput(revisedParsed, options.validationProfile)
+        : [];
+      if (countHardIssues(revisedIssues) > countHardIssues(qualityIssues)) {
+        return { outcome: "draft-kept-revision-worse", audit: auditSummary };
+      }
+      return {
+        outcome: "revised",
+        audit: auditSummary,
+        revised: { parsed: revisedParsed, issues: revisedIssues, servedModel: revision.servedModel },
+      };
+    } finally {
+      stage.dispose();
+    }
+  }
+}
+
+function countHardIssues(issues: readonly { severity: string }[]): number {
+  return issues.filter((issue) => issue.severity === "hard").length;
+}
+
+function decodeMetaObject(digestMeta: string | null): Record<string, unknown> | null {
+  if (!digestMeta) return null;
+  const decoded = tryParseJson(digestMeta, { onFailure: () => undefined });
+  return decoded && typeof decoded === "object" && !Array.isArray(decoded)
+    ? decoded as Record<string, unknown>
+    : null;
 }

@@ -21,6 +21,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { handleTriggerDigest } from "../api/admin-actions";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../lib/digest-style-gate";
+import { DIGEST_LLM_PROFILE_CACHE_KEYS } from "../lib/digest-llm-profile";
 
 function makeRequest(body?: string): Request {
   return new Request("https://ops-api.pharos.watch/api/trigger-digest", {
@@ -210,6 +211,55 @@ describe("trigger-digest route", () => {
     } finally {
       sqlite.close();
     }
+  });
+
+  it.each(["daily", "weekly"] as const)("updates only the %s LLM profile without queuing a force-run", async (kind) => {
+    const otherKind = kind === "daily" ? "weekly" : "daily";
+    dbCacheMocks.getCache.mockImplementation(async (_db, key) =>
+      key === DIGEST_LLM_PROFILE_CACHE_KEYS[otherKind] ? { value: "heavy", updatedAt: 1 } : null);
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ llmProfile: { [kind]: "heavy" } })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ llmProfile: { [kind]: "heavy", [otherKind]: "heavy" } });
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+    expect(dbCacheMocks.setCache).toHaveBeenCalledWith(expect.anything(), DIGEST_LLM_PROFILE_CACHE_KEYS[kind], "heavy");
+  });
+
+  it("does not report a guessed profile when the post-write read fails", async () => {
+    dbCacheMocks.getCache.mockRejectedValue(new Error("D1 unavailable after commit"));
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ llmProfile: { daily: "standard" } })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(500);
+    expect(dbCacheMocks.setCache).toHaveBeenCalledWith(expect.anything(), DIGEST_LLM_PROFILE_CACHE_KEYS.daily, "standard");
+  });
+
+  it.each([
+    { llmProfile: "heavy" },
+    { llmProfile: { daily: "heavy", weekly: "heavy" } },
+    { llmProfile: { monthly: "heavy" } },
+    { llmProfile: { daily: "turbo" } },
+    { llmProfile: null },
+    { llmProfile: { daily: "heavy" }, kind: "daily" },
+    { llmProfile: { daily: "heavy" }, styleGateMode: { daily: "enforce" } },
+  ])("rejects an unscoped, malformed, or combined LLM profile payload (%j)", async (body) => {
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify(body)),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(400);
+    expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
   });
 
   it.each([

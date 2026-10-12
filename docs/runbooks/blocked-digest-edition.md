@@ -106,6 +106,22 @@ npx --no-install wrangler d1 execute stablecoin-db --remote --command \
 
 Record edition IDs, schedule/invocation identities, observation bounds, policy version/hash, rendered prompt and generation configuration, and requested/served model and effort from LLM provenance. Review raw copy and findings for omissions and known false positives; a detail truncation flag cannot certify per-rule incidence. Relevant prompt/model changes restart continuity unless the readiness owner records an explicit exception. After each failed readiness window, the owner records an explicit reject/retry decision; there is no automatic cancellation policy.
 
+## Switch the generation profile
+
+`digest:llm-profile:daily` and `digest:llm-profile:weekly` select `standard` (one writer call plus the hard-issue corrective) or `heavy` (adds an evidence audit and a revision; see [digest-pipeline.md](../digest-pipeline.md#llm-call)). Each kind changes independently, without a deploy, and the next scheduled edition of that kind uses it:
+
+```bash
+curl -fsS -X POST "https://ops-api.pharos.watch/api/trigger-digest" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "X-Pharos-Admin: 1" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: digest-profile-daily-standard-$(date -u +%Y%m%dT%H%M%SZ)" \
+  --data '{"llmProfile":{"daily":"standard"}}'
+```
+
+The heavy stages cannot add a hard issue: every heavy failure keeps the draft, and a revision with more hard issues than the draft is discarded. When a heavy edition is blocked, read `digest_meta.heavy.outcome` first; the hard issues belong to whichever copy published (`revised` means the revision, anything else the draft). `digest_meta.heavy.draft` holds the replaced draft and its quality codes when a revision published.
+
 ## Promote or roll back enforcement
 
 Daily and weekly use independent D1-backed controls at `digest:style-gate-mode:daily` and `digest:style-gate-mode:weekly`. A kind reads only its own key; a missing or invalid value fails safe to `shadow`, but a D1 read error propagates and is not evidence of shadow. Daily enforcement is approved conditional on the mode-only control and focused checks; weekly remains shadow until its ratified packet and separate approval pass. For each kind, that one value also controls the U+2012 through U+2015 compatibility repair: shadow enables the post-scan repair, while enforce disables it and activates hard blocking.

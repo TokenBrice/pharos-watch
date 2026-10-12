@@ -46,6 +46,7 @@ import {
 } from "./digest/publish";
 import { WEEKLY_RECAP_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
 import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
+import { resolveDigestLlmProfile } from "../lib/digest-llm-profile";
 
 const TWITTER_SENT_MARKER_PREFIX = "weekly-recap:twitter-sent:";
 
@@ -483,6 +484,7 @@ export async function generateWeeklyRecap(
 
   const userPrompt = buildWeeklyPrompt(weeklyData, recentWeeklyMeta);
   const styleGateMode = await resolveDigestStyleGateMode(db, "weekly", signal);
+  const llmProfile = await resolveDigestLlmProfile(db, "weekly", signal);
   await reportCronProgress(reportProgress, {
     stage: "llm-generation",
     message: "Requesting weekly recap copy from Anthropic",
@@ -508,6 +510,7 @@ export async function generateWeeklyRecap(
     llmConfig: resolvedLlmConfig,
     signal,
     logPrefix: "weekly-recap",
+    llmProfile,
     reportAttempt: (llmAttempts) => reportDigestLlmAttempt(reportProgress, "weekly recap", llmAttempts),
     parseOptions: {
       metaFactory: ({ parsedMeta, usedRawTextFallback: degraded }) => ({

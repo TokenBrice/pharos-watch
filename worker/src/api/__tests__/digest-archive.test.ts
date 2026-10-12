@@ -237,3 +237,11 @@ it("projects the actual final served model without substituting the requested mo
   expect(body.digests[0].llm).toEqual({ servedModel: "claude-sonnet-5" });
   expect(body.digests[1].llm).toBeUndefined();
 });
+
+it("credits the model that produced the copy when a heavy audit attempt ran last", async () => {
+  const db = mockD1([{ match: "daily_digest", rows: [
+    makeDigestRow({ id: 1, digest_meta: JSON.stringify({ llm: { model: "requested", copyServedModel: "claude-opus-5-5", attempts: [{ servedModel: "claude-opus-5-5" }, { servedModel: null }] } }) }),
+  ] }]);
+  const body = await (await handleDigestArchive(db)).json() as { digests: { llm?: { servedModel: string } }[] };
+  expect(body.digests[0].llm).toEqual({ servedModel: "claude-opus-5-5" });
+});

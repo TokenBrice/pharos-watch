@@ -420,6 +420,131 @@ describe("requestDigestCopy refusals", () => {
   });
 });
 
+function textStreamResponse(text: string, outputTokens = 500): Response {
+  return anthropicSseResponse([
+    { event: "message_start", data: { type: "message_start", message: { model: "claude-opus-5-5", usage: { input_tokens: 100 } } } },
+    { event: "content_block_delta", data: { type: "content_block_delta", delta: { type: "text_delta", text } } },
+    { event: "message_delta", data: { type: "message_delta", delta: { stop_reason: "end_turn" }, usage: { output_tokens: outputTokens } } },
+    { event: "message_stop", data: { type: "message_stop" } },
+  ]);
+}
+
+describe("requestDigestCopy heavy profile", () => {
+  const db = {} as D1Database;
+  const draft = JSON.stringify({ title: "Draft title", text: "Draft text", extended: "Draft extended copy.", meta: { lead: "depeg" } });
+  const revised = JSON.stringify({ title: "Revised title", text: "Revised text", extended: "Revised extended copy.", meta: { lead: "depeg" } });
+  const audit = JSON.stringify({
+    claims: [
+      { claim: "USDC burned $455M", verdict: "misleading", evidence: "supply fell; no mint/burn data", fix: "say supply fell" },
+      { claim: "PSI is 91", verdict: "supported", evidence: "PSI 91" },
+    ],
+    editorial: [],
+  });
+
+  beforeEach(() => {
+    vi.mocked(fetchWithRetry).mockReset();
+    vi.mocked(shouldAttemptFetch).mockReset().mockResolvedValue(true);
+    vi.mocked(recordOutcomeSafe).mockReset().mockResolvedValue(null);
+  });
+
+  it("audits the draft, publishes the revision, and keeps the draft for review", async () => {
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(textStreamResponse(draft))
+      .mockResolvedValueOnce(textStreamResponse(`Audit:\n${audit}`))
+      .mockResolvedValueOnce(textStreamResponse(revised));
+
+    const result = await requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "writer system",
+      userPrompt: "evidence packet",
+      llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+      llmProfile: "heavy",
+      logPrefix: "test",
+    });
+
+    expect(result).toMatchObject({ kind: "ok", digestTitle: "Revised title", llmProfile: "heavy", copyServedModel: "claude-opus-5-5" });
+    expect(result.llmAttempts.map((attempt) => attempt.requestKind)).toEqual(["original", "audit", "revise"]);
+    expect(result.heavy).toMatchObject({
+      outcome: "revised",
+      audit: { claimCount: 2, verdicts: { misleading: 1, supported: 1 }, findings: [{ verdict: "misleading", claim: "USDC burned $455M" }] },
+      draft: { title: "Draft title", extended: "Draft extended copy." },
+    });
+    const auditBody = JSON.parse(vi.mocked(fetchWithRetry).mock.calls[1]![1]!.body as string) as { system: string; messages: { content: string }[] };
+    expect(auditBody.system).toContain("fact-check desk");
+    expect(auditBody.messages[0]!.content).toContain("evidence packet");
+    expect(auditBody.messages[0]!.content).toContain("Draft extended copy.");
+    const reviseBody = JSON.parse(vi.mocked(fetchWithRetry).mock.calls[2]![1]!.body as string) as { system: string; messages: { content: string }[] };
+    expect(reviseBody.system).toBe("writer system");
+    expect(reviseBody.messages[0]!.content).toContain("USDC burned $455M");
+    // Only the writer leg reports a provider outcome to the circuit breaker.
+    expect(vi.mocked(recordOutcomeSafe)).toHaveBeenCalledTimes(1);
+    const meta = JSON.parse(result.digestMeta!) as { llm: { profile: string; copyServedModel: string }; heavy: { outcome: string } };
+    expect(meta.llm).toMatchObject({ profile: "heavy", copyServedModel: "claude-opus-5-5" });
+    expect(meta.heavy.outcome).toBe("revised");
+  });
+
+  it("keeps the draft when the audit fails, without tripping the circuit breaker", async () => {
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(textStreamResponse(draft))
+      .mockResolvedValue(new Response("bad request", { status: 400 }));
+
+    const result = await requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "writer system",
+      userPrompt: "evidence packet",
+      llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+      llmProfile: "heavy",
+      logPrefix: "test",
+    });
+
+    expect(result).toMatchObject({ kind: "ok", digestTitle: "Draft title", heavy: { outcome: "audit-failed", draft: null } });
+    expect(vi.mocked(recordOutcomeSafe)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(recordOutcomeSafe)).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.ANTHROPIC, true);
+  });
+
+  it("discards a revision that carries more hard validator issues than the draft", async () => {
+    const overlong = JSON.stringify({ title: "Revised title", text: "x".repeat(300), extended: "Revised extended copy.", meta: {} });
+    vi.mocked(fetchWithRetry)
+      .mockResolvedValueOnce(textStreamResponse(draft))
+      // The draft's hard word-count issue earns one corrective; it returns the same draft.
+      .mockResolvedValueOnce(textStreamResponse(draft))
+      .mockResolvedValueOnce(textStreamResponse(audit))
+      .mockResolvedValueOnce(textStreamResponse(overlong));
+
+    const result = await requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "writer system",
+      userPrompt: "evidence packet",
+      llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+      llmProfile: "heavy",
+      validationProfile: { kind: "weekly" },
+      logPrefix: "test",
+    });
+
+    expect(result.llmAttempts.map((attempt) => attempt.requestKind)).toEqual(["original", "corrective", "audit", "revise"]);
+    expect(result).toMatchObject({ digestTitle: "Draft title", heavy: { outcome: "draft-kept-revision-worse" } });
+    expect(result.qualityIssues.some((issue) => issue.code === "tweet-too-long")).toBe(false);
+  });
+
+  it("makes no heavy requests under the standard profile", async () => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(textStreamResponse(draft));
+    const result = await requestDigestCopy({
+      db,
+      anthropicApiKey: "key",
+      systemPrompt: "writer system",
+      userPrompt: "evidence packet",
+      llmConfig: WEEKLY_RECAP_LLM_CONFIG,
+      logPrefix: "test",
+    });
+    expect(vi.mocked(fetchWithRetry)).toHaveBeenCalledTimes(1);
+    expect(result.heavy).toBeUndefined();
+    expect(JSON.parse(result.digestMeta!)).toMatchObject({ llm: { profile: "standard" } });
+  });
+});
+
 describe("insertDigestRecord", () => {
   function makeOptions(db: D1Database, signal?: AbortSignal) {
     return {

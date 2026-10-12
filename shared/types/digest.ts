@@ -21,6 +21,13 @@ export type { DigestSafetyMapCapture, DigestSafetyMapSummary } from "./digest-sa
 export const DigestKindSchema = z.enum(["daily", "weekly"]);
 export type DigestKind = z.output<typeof DigestKindSchema>;
 
+/**
+ * Digest generation profile. `standard` is the single writer call (plus the
+ * hard-issue corrective); `heavy` adds an evidence audit and a revision pass.
+ */
+export const DigestLlmProfileSchema = z.enum(["standard", "heavy"]);
+export type DigestLlmProfile = z.output<typeof DigestLlmProfileSchema>;
+
 export const DigestSafetyContextSchema = z
   .discriminatedUnion("status", [
     z
