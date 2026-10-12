@@ -6,7 +6,6 @@ import {
   createGitHubClient,
   firstActionableError,
   reportWorkflowFailure,
-  sendOpsAlert,
   type GitHubClient,
   type WorkflowReport,
   type WorkflowIssue,
@@ -36,111 +35,108 @@ function fixture() {
     runUrl: "https://github.com/org/repo/actions/runs/100/attempts/1", runNumber: 10, runAttempt: 1,
     ref: "refs/heads/main", event: "schedule", needs: { "full-static": { result: "failure" } }, jobNames: {}, allowedSkips: [],
   };
-  return { github, report, issues, jobs, alert: vi.fn(async () => {}) };
+  return { github, report, issues, jobs };
 }
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("workflow incident lifecycle", () => {
-  it("opens a stable workflow+job+step incident and alerts once on the first failure", async () => {
+  it("opens a stable workflow+job+step incident without external notifications", async () => {
     const f = fixture();
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 1, alerted: true });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 1 });
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(f.github.createIssue).toHaveBeenCalledOnce();
     expect(f.issues[0].body).toContain("pharos-workflow-incident:v1:nightly-validation.yml:full-static:Typed%20lint");
     expect(f.issues[0].body).toContain("Error: unsupported lint glob");
-    expect(f.alert).toHaveBeenCalledOnce();
   });
 
-  it("comments and updates, rather than creating or alerting, on repeats", async () => {
+  it("comments and updates the existing issue on repeats", async () => {
     const f = fixture();
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     f.report.runNumber++;
     f.report.runUrl = "https://github.com/org/repo/actions/runs/101/attempts/1";
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 0, repeated: 1, alerted: false });
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 0, repeated: 1 });
     expect(f.github.createIssue).toHaveBeenCalledOnce();
     expect(f.github.comment).toHaveBeenLastCalledWith(1, expect.stringContaining(f.report.runUrl));
     expect(f.github.comment).toHaveBeenLastCalledWith(1, expect.stringContaining("unsupported lint glob"));
-    expect(f.alert).toHaveBeenCalledOnce();
   });
 
-  it("does not alert when another job starts failing while the workflow is already red", async () => {
+  it("retains existing incidents when another job starts failing", async () => {
     const f = fixture();
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     f.report.needs = { "full-static": { result: "success" }, tests: { result: "failure" } };
     f.jobs.push({ id: 11, name: "tests (2/2)", conclusion: "failure", steps: [{ name: "Run tests", conclusion: "failure" }] });
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 1, alerted: false });
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 1 });
     expect(f.issues).toHaveLength(2);
-    expect(f.alert).toHaveBeenCalledOnce();
   });
 
   it("closes every workflow incident only after full mandatory recovery", async () => {
     const f = fixture();
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     f.report.needs = { "full-static": { result: "success" }, tests: { result: "cancelled" } };
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).closed).toBe(0);
+    expect((await reportWorkflowFailure(f.report, f.github)).closed).toBe(0);
     f.report.needs.tests.result = "skipped";
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).closed).toBe(0);
+    expect((await reportWorkflowFailure(f.report, f.github)).closed).toBe(0);
     f.report.needs.tests.result = "success";
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).closed).toBe(1);
+    expect((await reportWorkflowFailure(f.report, f.github)).closed).toBe(1);
     expect(f.issues[0].state).toBe("closed");
     expect(f.github.comment).toHaveBeenLastCalledWith(1, expect.stringContaining("Recovered:"));
-    expect(f.alert).toHaveBeenCalledOnce();
   });
 
-  it("reopens the same issue and alerts on a new green-to-red transition", async () => {
+  it("reopens the same issue on a new green-to-red transition", async () => {
     const f = fixture();
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     f.report.needs["full-static"].result = "success";
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     f.report.needs["full-static"].result = "failure";
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 1, alerted: true });
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 1 });
     expect(f.github.createIssue).toHaveBeenCalledOnce();
     expect(f.issues[0].state).toBe("open");
-    expect(f.alert).toHaveBeenCalledTimes(2);
   });
 
   it("accepts only explicitly unselected skips, not cancellation or all-skipped runs", async () => {
     const f = fixture();
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     f.report.needs = { "full-static": { result: "success" }, render: { result: "skipped" } };
     f.report.allowedSkips = ["render"];
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).closed).toBe(1);
+    expect((await reportWorkflowFailure(f.report, f.github)).closed).toBe(1);
     f.report.needs["full-static"].result = "skipped";
     f.report.allowedSkips.push("full-static");
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).closed).toBe(0);
+    expect((await reportWorkflowFailure(f.report, f.github)).closed).toBe(0);
   });
 
   it.each(["pull_request", "pull_request_target", "workflow_call"])("never mutates issues for %s", async (event) => {
     const f = fixture();
-    expect((await reportWorkflowFailure({ ...f.report, event }, f.github, f.alert)).ignored).toBe(true);
+    expect((await reportWorkflowFailure({ ...f.report, event }, f.github)).ignored).toBe(true);
     expect(f.github.listIssues).not.toHaveBeenCalled();
   });
 
   it("ignores non-main dispatch and stale overlapping runs", async () => {
     const f = fixture();
-    expect((await reportWorkflowFailure({ ...f.report, ref: "refs/heads/feature" }, f.github, f.alert)).ignored).toBe(true);
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    expect((await reportWorkflowFailure({ ...f.report, ref: "refs/heads/feature" }, f.github)).ignored).toBe(true);
+    await reportWorkflowFailure(f.report, f.github);
     f.report.runNumber--;
     f.report.needs["full-static"].result = "success";
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).ignored).toBe(true);
+    expect((await reportWorkflowFailure(f.report, f.github)).ignored).toBe(true);
     expect(f.issues[0].state).toBe("open");
   });
 
   it("ignores an older red run after a newer green run completed without any incident history", async () => {
     const f = fixture();
     const green = { ...f.report, runNumber: 11, needs: { "full-static": { result: "success" } } };
-    expect(await reportWorkflowFailure(green, f.github, f.alert)).toMatchObject({ opened: 0, ignored: false });
+    expect(await reportWorkflowFailure(green, f.github)).toMatchObject({ opened: 0, ignored: false });
     expect(f.issues).toEqual([]);
     // GitHub persists the completed workflow independently of incident issues.
     vi.mocked(f.github.latestGreenRun).mockResolvedValue({
       run_number: green.runNumber, run_attempt: green.runAttempt, event: "schedule",
       head_branch: "main", conclusion: "success",
     });
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 0, ignored: true, alerted: false });
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 0, ignored: true });
     expect(f.github.createIssue).not.toHaveBeenCalled();
     expect(f.github.updateIssue).not.toHaveBeenCalled();
     expect(f.github.comment).not.toHaveBeenCalled();
-    expect(f.alert).not.toHaveBeenCalled();
   });
 
   it("ignores an older attempt after a green rerun, but reports failures newer than the last green", async () => {
@@ -149,9 +145,9 @@ describe("workflow incident lifecycle", () => {
       run_number: f.report.runNumber, run_attempt: 2, event: "workflow_dispatch",
       head_branch: "main", conclusion: "success",
     });
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).ignored).toBe(true);
+    expect((await reportWorkflowFailure(f.report, f.github)).ignored).toBe(true);
     f.report.runNumber++;
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 1, alerted: true, ignored: false });
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 1, ignored: false });
   });
 
   it("matches named matrix and reusable workflow leaves and excludes advisory jobs", async () => {
@@ -163,16 +159,14 @@ describe("workflow incident lifecycle", () => {
       { id: 12, name: "pages-release / pages-release", conclusion: "failure", steps: [{ name: "Build export", conclusion: "failure" }] },
       { id: 13, name: "Node 26 advisory typecheck compatibility", conclusion: "failure" },
     );
-    expect((await reportWorkflowFailure(f.report, f.github, f.alert)).opened).toBe(2);
+    expect((await reportWorkflowFailure(f.report, f.github)).opened).toBe(2);
     expect(f.issues.some((issue) => issue.body?.includes("Node 26"))).toBe(false);
-    expect(f.alert).toHaveBeenCalledOnce();
   });
 
-  it("retains a visible issue if logs or alert credentials are unavailable", async () => {
+  it("records an issue successfully when logs are unavailable", async () => {
     const f = fixture();
     vi.mocked(f.github.jobLog).mockRejectedValue(new Error("logs expired"));
-    await expect(reportWorkflowFailure(f.report, f.github, (message) => sendOpsAlert(message, undefined, undefined)))
-      .rejects.toThrow("TELEGRAM_BOT_TOKEN and TELEGRAM_OPERATOR_CHAT_ID");
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 1 });
     expect(f.issues).toHaveLength(1);
     expect(f.issues[0].body).toContain("Job log unavailable");
     expect(f.issues[0].body).toContain('"reason":"job-log-unavailable"');
@@ -183,7 +177,7 @@ describe("workflow incident lifecycle", () => {
     const f = fixture();
     f.jobs[0].steps!.push({ name: "Typecheck", conclusion: "failure" });
     vi.mocked(f.github.jobLog).mockRejectedValue(new Error("logs expired; private provider detail"));
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ opened: 2, alerted: true });
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ opened: 2 });
     for (const issue of f.issues) {
       const evidence = JSON.parse(issue.body!.match(/```json\n([^\n]+)\n```/)![1]);
       expect(evidence).toEqual({ status: "unavailable", reason: "job-log-unavailable" });
@@ -191,10 +185,9 @@ describe("workflow incident lifecycle", () => {
       expect(issue.body).not.toContain("No actionable error line retained");
       expect(issue.body).not.toContain("private provider detail");
     }
-    expect(f.alert).toHaveBeenCalledWith(expect.stringContaining("reason: job-log-unavailable"));
     f.report.runNumber++;
     f.report.runUrl = "https://github.com/org/repo/actions/runs/101/attempts/1";
-    expect(await reportWorkflowFailure(f.report, f.github, f.alert)).toMatchObject({ repeated: 2, alerted: false });
+    expect(await reportWorkflowFailure(f.report, f.github)).toMatchObject({ repeated: 2 });
     for (const [, comment] of vi.mocked(f.github.comment).mock.calls) {
       expect(comment).toContain('"reason":"job-log-unavailable"');
       expect(comment).toContain(f.report.runUrl);
@@ -207,7 +200,7 @@ describe("workflow incident lifecycle", () => {
     async (log) => {
       const f = fixture();
       vi.mocked(f.github.jobLog).mockResolvedValue(log);
-      await reportWorkflowFailure(f.report, f.github, f.alert);
+      await reportWorkflowFailure(f.report, f.github);
       expect(f.issues[0].body).toContain("No actionable error line retained");
       expect(f.issues[0].body).not.toContain("job-log-unavailable");
     },
@@ -216,7 +209,7 @@ describe("workflow incident lifecycle", () => {
   it("records pre-step runner failure without inventing a log excerpt", async () => {
     const f = fixture();
     f.jobs.length = 0;
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     expect(f.issues[0].body).toContain("Job failed before a failed step was available");
   });
 });
@@ -237,7 +230,7 @@ describe("composite action entrypoint", () => {
       },
     });
     expect(run.status, run.stderr).toBe(0);
-    expect(JSON.parse(run.stdout)).toMatchObject({ ignored: true, alerted: false, opened: 0 });
+    expect(JSON.parse(run.stdout)).toMatchObject({ ignored: true, opened: 0 });
   });
 });
 
@@ -264,24 +257,13 @@ describe("incident provider boundaries", () => {
     expect(excerpt).not.toContain("echoed script");
   });
 
-  it("uses the existing private Telegram destination and verifies Bot API acceptance", async () => {
-    const fetchMock = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ ok: true })));
-    vi.stubGlobal("fetch", fetchMock);
-    await sendOpsAlert("run failed", "bot-credential", "private-ops-chat");
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.telegram.org/botbot-credential/sendMessage");
-    const options = vi.mocked(fetch).mock.calls[0][1];
-    expect(JSON.parse(String(options?.body))).toMatchObject({ chat_id: "private-ops-chat", text: "run failed" });
-    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ ok: false })));
-    await expect(sendOpsAlert("fail", "bot-credential", "private-ops-chat")).rejects.toThrow("rejected");
-  });
-
   it.each([404, 410])("keeps unavailable job logs distinct from successful empty logs for HTTP %s", async (status) => {
     const fetchMock = vi.fn<typeof fetch>(async () => new Response("logs unavailable", { status }));
     vi.stubGlobal("fetch", fetchMock);
     const client = createGitHubClient("org/repo", "123", "test-token");
     const f = fixture();
     f.github.jobLog = client.jobLog;
-    await reportWorkflowFailure(f.report, f.github, f.alert);
+    await reportWorkflowFailure(f.report, f.github);
     expect(f.issues[0].body).toContain('"status":"unavailable","reason":"job-log-unavailable"');
     expect(f.issues[0].body).not.toContain("No actionable error line retained");
     expect(fetchMock.mock.calls[0][0]).toBe("https://api.github.com/repos/org/repo/actions/jobs/10/logs");
@@ -344,15 +326,19 @@ describe("workflow reporting wiring", () => {
     const action = report.steps.find((step: { uses?: string }) => step.uses === "$/.github/actions/report-workflow-failure");
     expect(action.with["needs-json"]).toBe("${{ toJSON(needs) }}");
     expect(action.with["workflow-file"]).toBe(file);
-    expect(action.with["telegram-bot-token"]).toBe("${{ secrets.TELEGRAM_BOT_TOKEN }}");
-    expect(action.with["telegram-operator-chat-id"]).toBe("${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}");
+    expect(action.with["telegram-bot-token"]).toBeUndefined();
+    expect(action.with["telegram-operator-chat-id"]).toBeUndefined();
     expect(report.concurrency["cancel-in-progress"]).toBe(false);
     for (const step of report.steps) expect(step.run).toBeUndefined();
   });
 
   it("passes expressions only through action env and keeps setup pinned and dependency-free", () => {
     const action = parseYaml(readFileSync(".github/actions/report-workflow-failure/action.yml", "utf8"));
+    expect(action.inputs["telegram-bot-token"]).toBeUndefined();
+    expect(action.inputs["telegram-operator-chat-id"]).toBeUndefined();
     for (const step of action.runs.steps) {
+      expect(step.env?.TELEGRAM_BOT_TOKEN).toBeUndefined();
+      expect(step.env?.TELEGRAM_OPERATOR_CHAT_ID).toBeUndefined();
       if (step.uses) expect(step.uses).toMatch(/@[0-9a-f]{40}$/);
       if (step.run) {
         expect(step.run).not.toContain("${{");

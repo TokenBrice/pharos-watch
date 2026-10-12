@@ -27,15 +27,9 @@ Do not edit/remove the HTML markers. Manual issue closure is not a substitute fo
 
 The old weekly dependency-coverage incident publisher is replaced by this lifecycle. Any historical “Dependency coverage weekly failure” issue is legacy operator-owned history: close it manually after reviewing its outstanding findings; the new reporter does not adopt an unmarked issue. Curation's “Safety Score curation expiry sweep” issue remains an independent review worklist and is **not** auto-closed by CI recovery. Its sweep job retains an explicitly commented job-level `issues: write` exception; all new incident mutations belong to the reporting jobs. No workflow-wide issue-write grant is added.
 
-## First-failure ops alert and provisioning prerequisite
+## Notification channel
 
-Reuse the existing **private** Worker ops Telegram destination: `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID`. There is deliberately no fallback to public digest `TELEGRAM_CHAT_ID`. See [Telegram bot-wide outage](./telegram-bot-wide-outage.md) for the existing operator-channel boundary.
-
-The reporter sends one plain-text ops message when the workflow changes from no open incident to red. A newly failing step while another incident remains open does not send another message. Repeated failures only update/comment on issues. A fully green run closes the incidents; the next failure may alert again. A workflow with no incident history alerts on its first observed failure.
-
-**Telegram delivery remains blocked by rejected credentials.** A GET-only repository secret-name inventory on 2026-10-12 confirmed both `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID` are provisioned, but the scheduled [Weekly Validation](https://github.com/TokenBrice/pharos-watch/actions/runs/38269077994) and [Dependency Scenarios Refresh](https://github.com/TokenBrice/pharos-watch/actions/runs/38269818862) reporters both received HTTP 401 from Telegram. Secret-name presence does not prove a valid bot token or successful delivery. The maintainer must securely validate/replace the Actions bot token and verify the private operator chat destination. Never copy values into tracked files or use the public digest channel.
-
-Issues are recorded before attempting delivery. Missing credentials or rejected Telegram delivery fail the reporting job with a visible prerequisite/transport error; they are not reported as a successful alert. Subsequent red runs do **not** resend an alert (at-most-once attempt per transition). If delivery failed, provision/fix the channel and notify ops manually for the already-open incident; do not delete markers or force a fake green run to trigger another notification.
+GitHub Actions status, step summaries, and deduplicated incident issues are the workflow reporting channel. The reporter does not send Telegram notifications or require Telegram credentials.
 
 ## Response and verification
 
@@ -49,4 +43,4 @@ Focused contract coverage:
 npx vitest run scripts/__tests__/report-workflow-failure.test.ts
 ```
 
-The mocked-client suite covers creation, repeat comments, recovery closure, recurrence reopening, workflow-level first-failure alert suppression, named/matrix/reusable leaves, advisory exclusion, main/event guards, cancellation/skips, stale recorded state, provider acceptance, pagination, and all eight workflow reporting dependencies. It does not deliver a real Telegram message or mutate GitHub issues. Production issue/alert/recovery behavior requires a maintainer-authorized Actions observation after secrets provisioning.
+The mocked-client suite covers creation, repeat comments, recovery closure, recurrence reopening, named/matrix/reusable leaves, advisory exclusion, main/event guards, cancellation/skips, stale recorded state, GitHub provider boundaries, pagination, and all eight workflow reporting dependencies. It does not mutate GitHub issues. Production issue/recovery behavior requires an Actions observation.
