@@ -49,10 +49,16 @@ typography:
     fontFeature: "tabular-nums slashed-zero"
   label:
     fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 600
+    lineHeight: 1.25
+    letterSpacing: "normal"
+  eyebrow:
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
-    lineHeight: 1.2
-    letterSpacing: "0.12em"
+    lineHeight: 1.25
+    letterSpacing: "0.08em"
 rounded:
   sm: "4px"
   md: "6px"
@@ -75,7 +81,7 @@ components:
     rounded: "{rounded.xl}"
     padding: "20px"
   hero-metric:
-    textColor: "{colors.frost-blue}"
+    textColor: "{colors.text-primary}"
     typography: "{typography.numeric}"
   numeric-cell:
     textColor: "{colors.text-primary}"
@@ -131,7 +137,7 @@ A near-monochrome neutral field with semantic accents that only fire on meaning.
 
 ### Primary
 
-- **Frost Blue** (`#4bc4de`): The lighthouse beam. Reserved for the headline market figure, the primary chart stroke (`chart-primary`), the lit longform scrollspy on methodology surfaces, the mobile-drawer active accent, and the drawn nautical/lighthouse surfaces. It is the only color allowed to draw the eye. `--brand-accent` and `--chart-primary` both resolve to it. The global top-nav does **not** use it — desktop nav active state is a neutral `bg-muted/60` — and the coin-detail pill tabs are elevated-neutral per the Figma coin template.
+- **Frost Blue** (`#4bc4de`): The lighthouse beam. Reserved for the primary chart stroke (`chart-primary`), the lit longform scrollspy on methodology surfaces, the mobile-drawer active accent, and the drawn nautical/lighthouse surfaces. It is the only color allowed to draw the eye. `--brand-accent` and `--chart-primary` both resolve to it. The global top-nav does **not** use it — desktop nav active state is a neutral `bg-muted/60` — and the coin-detail pill tabs are elevated-neutral per the Figma coin template.
 
 ### Secondary (data sequence)
 
@@ -173,11 +179,14 @@ One ratified exception (owner, 2026-07-02): the **Score-tier B band is info-blue
 - **Title** (Geist Sans, 600, 1.125rem): Card and sub-section headings.
 - **Body** (Geist Sans, 400, 0.875rem, line-height 1.5): UI text and prose. Cap prose at 65–75ch; dense tables may run denser.
 - **Numeric** (JetBrains Mono, 500, `tabular-nums slashed-zero`): Every digit-bearing cell — prices, percentages, basis points, market caps, scores (`.pharos-numeric`).
-- **Label / Kicker** (Geist Sans, 600, 0.6875–0.75rem, UPPERCASE, tracking 0.12em, muted): Eyebrows over data groups (`.pharos-kicker`).
+- **Label** (Geist Sans, 600, 0.75rem, sentence case, normal tracking, muted): Section, card and field labels (`.pharos-label`; legacy name `.pharos-kicker`).
+- **Eyebrow** (Geist Sans, 600, 0.6875rem, UPPERCASE, tracking 0.08em, muted): At most one short route/hero eyebrow above a title (`.pharos-eyebrow`).
 
 ### Named Rules
 
 **The Tabular-Figure Rule.** Numbers always use `.pharos-numeric` (JetBrains Mono + `tabular-nums slashed-zero`). Proportional digits in a data column are a bug — columns must align on the decimal and the zero must never read as an O.
+
+**The Three-Register Rule.** Core analytics surfaces use Bricolage display, the system sans and JetBrains Mono figures — nothing else. Mono never sets a label or prose; labels are sentence case. Sizes come from the type scale (`text-3xs` 10px, `text-2xs` 11px, `text-xs` …); arbitrary `text-[Npx]` is lint-banned.
 
 **The Fixed-Scale Rule.** Headings use the fixed rem scale, not fluid `clamp()` (digest/editorial display is the carve-out). A heading that shrinks inside a panel looks worse, not designed. The viewport changes layout, not type size.
 
@@ -238,7 +247,7 @@ The primary interactive control on data surfaces is the pill, not a heavy CTA. F
 
 Pharos draws its metaphors rather than naming them (every shape encodes a data field; inline JSX SVG, semantic vars, reduced-motion-gated keyframes):
 
-- **Market Pulse hero:** split panel — Total Market Cap as the frost-blue `hero-metric` + cohort breakdown + live area chart.
+- **Market Pulse hero:** split panel — Total Market Cap as the neutral-ink `hero-metric` + cohort breakdown + live area chart.
 - **The lighthouse/nautical identity (kept):** Chains "harbor chart" (ships, wakes, depth lines), the `/stability-index/` PSI lighthouse scene, the On-The-Horizon constellation with its brightening beam, the Alt-Peg Atlas starfield, the Cemetery plot map (an isometric walled cemetery under the lighthouse: sections by cause, year blocks, plinth steps for peak market cap), the `/depeg/` DDR forecast timeline.
 
 ### Homepage Composition (signature surface — the locked layout)

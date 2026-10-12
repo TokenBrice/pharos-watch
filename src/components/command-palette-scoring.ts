@@ -131,12 +131,16 @@ export function isBoundedTypoMatch(query: string, target: string): boolean {
   return withinOneEdit(q, target.toLowerCase());
 }
 
+// Match quality is the best single field, not the sum: summing let a name
+// that merely repeats the query as a word ("Spark USDC Vault") outrank a
+// larger coin with the same symbol match, so market-cap prominence (added by
+// the caller) now orders coins within one match tier.
 export function scoreStablecoinSearchMatch(query: string, coin: CommandPaletteStablecoinSearchItem): number {
   const [id, name, symbol] = coin;
-  return (
-    scoreSearchField(query, symbol, { exact: 100, prefix: 45, wordPrefix: 45, contains: 25 })
-    + scoreSearchField(query, name, { exact: 80, prefix: 18, wordPrefix: 16, contains: 10 })
-    + scoreSearchField(query, id, { exact: 70, prefix: 12, wordPrefix: 12, contains: 6 })
+  return Math.max(
+    scoreSearchField(query, symbol, { exact: 100, prefix: 45, wordPrefix: 45, contains: 25 }),
+    scoreSearchField(query, name, { exact: 80, prefix: 18, wordPrefix: 16, contains: 10 }),
+    scoreSearchField(query, id, { exact: 70, prefix: 12, wordPrefix: 12, contains: 6 }),
   );
 }
 
@@ -164,7 +168,8 @@ function liveMarketCapProminenceBonus(marketCapUsd: number): number {
   const log = Math.log10(marketCapUsd);
   const bounded = Math.min(LIVE_MARKET_CAP_LOG_MAX, Math.max(LIVE_MARKET_CAP_LOG_MIN, log));
   const ratio = (bounded - LIVE_MARKET_CAP_LOG_MIN) / (LIVE_MARKET_CAP_LOG_MAX - LIVE_MARKET_CAP_LOG_MIN);
-  return Math.round(LIVE_MARKET_CAP_PROMINENCE_MAX_BONUS * ratio);
+  // Unrounded so a larger cap still wins inside one rounded bonus step.
+  return LIVE_MARKET_CAP_PROMINENCE_MAX_BONUS * ratio;
 }
 
 export function stablecoinProminenceBonus(

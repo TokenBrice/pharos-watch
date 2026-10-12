@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
+import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
 import { HeroPriceMetric } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -20,6 +20,13 @@ vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
   return createNextLinkMock();
 });
+
+const { heroVerdictEnabled } = vi.hoisted(() => ({ heroVerdictEnabled: { value: true } }));
+
+vi.mock("@/lib/feature-flags", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/feature-flags")>()),
+  isHeroVerdictEnabled: () => heroVerdictEnabled.value,
+}));
 
 vi.mock("@/components/bluechip-header-badge", () => ({
   BluechipHeaderBadge: ({ stablecoinId }: { stablecoinId: string }) => <span>Bluechip: B ({stablecoinId})</span>,
@@ -275,8 +282,8 @@ function HeroCardUnderTest({ onOpenFeedback, ...overrides }: HeroBuilderOverride
   // and the card inside it; render both here to keep covering the pair.
   return (
     <>
-      <HeroDesktopIdentityToolbar model={model} onOpenFeedback={onOpenFeedback} />
-      <HeroCard model={model} onOpenFeedback={onOpenFeedback} />
+      <HeroIdentityHeader model={model} onOpenFeedback={onOpenFeedback} />
+      <HeroCard model={model} />
     </>
   );
 }
@@ -384,8 +391,8 @@ describe("HeroCard", () => {
       deviationBps: -50,
     });
 
-    expect(html).toContain("-50 BPS");
-    expect(html).not.toContain("+200 BPS");
+    expect(html).toContain(">-50</span> bps");
+    expect(html).not.toContain("+200");
   });
 
   it.each(["card", "cell"] as const)("withholds the %s peg deviation when its observed price is unusable", (variant) => {
@@ -400,6 +407,16 @@ describe("HeroCard", () => {
       expect(html).not.toMatch(/\+1 BPS/i);
       expect(html).toContain("N/A");
     }
+  });
+
+  it.each(["card", "cell"] as const)("labels a frozen archive's %s price as its last observation, not a live peg reading", (variant) => {
+    const html = renderToStaticMarkup(<HeroPriceMetric
+      coin={{ ...coin, status: "frozen", frozenAt: "2026-06-30" }}
+      coinData={{ ...coinData, price: 0.9997 }}
+      price={{ pegRef: 1, deviationBps: null, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      variant={variant}
+    />);
+    expect(html).toContain("Last observed · 2026-06-30");
   });
 
   it("renders website and social link destinations with accessible names", () => {
@@ -459,7 +476,7 @@ describe("HeroCard", () => {
     expect(html).toContain("NAV token — no fixed peg");
     expect(html).toContain("USD NAV");
     expect(html).not.toContain("+350 bps");
-    expect(html).not.toContain("+350 BPS");
+    expect(html).not.toContain("+350");
     expect(html).not.toContain("peg-gauge:350");
   });
 
@@ -496,7 +513,7 @@ describe("HeroCard", () => {
       reportCard: reportCardWithInheritedBlacklistRisk,
     });
 
-    expect(html).toContain("NO 30D BENCHMARK GAP");
+    expect(html).toContain("No 30d benchmark gap");
   });
 
   it("renders the tracked parent chip for variant detail pages", () => {
@@ -620,4 +637,40 @@ describe("HeroCard", () => {
       for (const label of absent) expect(html).not.toContain(label);
     },
   );
+});
+
+describe("HeroIdentityHeader", () => {
+  function renderHeader(overrides: HeroBuilderOverrides = {}, gradeRead?: "settled" | "pending" | "failed"): string {
+    const model = buildStablecoinDetailHeroViewModel(makeHeroProps(overrides));
+    return renderToStaticMarkup(<HeroIdentityHeader model={model} onOpenFeedback={() => {}} gradeRead={gradeRead} />);
+  }
+
+  it("describes the coin heading by the chip-rail verdict when one is shown", () => {
+    expect(renderHeader()).toMatch(/<h2[^>]*aria-describedby="hero-verdict-[^"]+"/);
+  });
+
+  it("gates the verdict chip and its heading reference behind NEXT_PUBLIC_PHAROS_HERO_VERDICT", () => {
+    const on = renderHero();
+    expect(on).toMatch(/id="hero-verdict-[^"]+"[^>]*data-archetype=/);
+
+    heroVerdictEnabled.value = false;
+    try {
+      const off = renderHero();
+      expect(off).not.toContain('id="hero-verdict-');
+      expect(off).not.toContain("aria-describedby");
+    } finally {
+      heroVerdictEnabled.value = true;
+    }
+  });
+
+  it("omits aria-describedby for an uncategorized verdict", () => {
+    const html = renderHeader({ verdict: { archetype: "uncategorized", label: "Uncategorized" } });
+    expect(html).not.toContain("aria-describedby");
+  });
+
+  it("passes the report-card read to the mobile grade", () => {
+    expect(renderHeader({ reportCard: null }, "failed")).toContain("Grade unavailable");
+    expect(renderHeader({ reportCard: null }, "pending")).toContain('aria-label="Loading Safety Score"');
+    expect(renderHeader({ reportCard: null })).not.toContain("Grade unavailable");
+  });
 });

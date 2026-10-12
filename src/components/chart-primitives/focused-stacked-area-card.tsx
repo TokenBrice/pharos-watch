@@ -9,7 +9,7 @@ import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useChartShell } from "@/hooks/use-chart-shell";
 import { type TimeRangeOption, useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_HEIGHT } from "@/lib/chart-colors";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { ScreenReaderDataTable, type ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 
 export interface StackedAreaSeries {
@@ -45,6 +45,7 @@ interface FocusedStackedAreaCardProps<T extends Record<K, number>, K extends key
   emptyMessage: string;
   series: StackedAreaSeries[];
   tooltip: ReactElement;
+  /** Value-axis domain; only the top is used, since a stacked area always starts at 0. */
   yDomain: (data: T[], range: TimeRangeOption) => [number, number | "auto"];
   yTickFormatter: (value: number) => string;
   tableColumns: ReadonlyArray<ChartDataTableColumn<T>>;
@@ -92,6 +93,25 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
   });
   const chartHeightClass = isFocused ? focusedHeightClassName : CHART_HEIGHT;
   const domain = useMemo(() => yDomain(filteredData, range), [filteredData, range, yDomain]);
+  // An open ("auto") top resolves to the nice tick above the tallest stack.
+  const stackHeights = useMemo(
+    () =>
+      filteredData.map((row) => {
+        const stacks = new Map<string, number>();
+        for (const item of series) {
+          const value = (row as Record<string, unknown>)[item.dataKey];
+          if (typeof value !== "number" || !Number.isFinite(value)) continue;
+          const key = item.stackId;
+          stacks.set(key, (stacks.get(key) ?? 0) + value);
+        }
+        return stacks.size > 0 ? Math.max(...stacks.values()) : null;
+      }),
+    [filteredData, series],
+  );
+  const autoAxis = useNiceValueAxis(stackHeights);
+  // Stacked areas fill from zero and Recharts widens a raised floor back to 0
+  // with no ticks below it, so the floor is pinned at 0 and the baseline labelled.
+  const valueAxis = domain[1] === "auto" && autoAxis.domain ? autoAxis : { domain: [0, domain[1]] as [number, number | "auto"] };
 
   const handleRangeChange = (nextRange: TimeRangeOption) => {
     setRange(nextRange);
@@ -172,7 +192,7 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
                     </defs>
                     <TimeGrid />
                     <TimeXAxis dataKey={String(tsKey)} minTickGap={72} />
-                    <MonoYAxis tickFormatter={yTickFormatter} domain={domain} />
+                    <MonoYAxis tickFormatter={yTickFormatter} {...valueAxis} />
                     <DateTooltip content={tooltip} />
                     {series.map((item) => (
                       <Area

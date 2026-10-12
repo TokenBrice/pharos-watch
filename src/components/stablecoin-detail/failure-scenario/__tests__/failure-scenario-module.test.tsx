@@ -66,7 +66,9 @@ describe("FailureScenarioModule claim-scoped evidence", () => {
       expect(summary.textContent).not.toContain("Verified onchain");
     }
     // A measured pool quote remains on-chain evidence only for that figure.
-    expect(screen.getByText("0.908 USDT").closest("[title]")?.getAttribute("title")).toBe("Verified onchain");
+    // Figure and ticker render as separate mono tokens; match the whole value cell.
+    const figure = screen.getByText((_, element) => element?.textContent === "0.908 USDT" && element.childElementCount === 2);
+    expect(figure.closest("[title]")?.getAttribute("title")).toBe("Verified onchain");
   });
 
   it.each([

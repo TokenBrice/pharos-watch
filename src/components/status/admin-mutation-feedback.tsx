@@ -53,7 +53,7 @@ export function AdminMutationFeedback({
           intent.
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[11px]">
+      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-2xs">
         <span>HTTP {execution.httpStatus ?? "no response"}</span>
         <span>attempt {execution.attempts}</span>
         <span>replay {execution.idempotentReplay == null ? "unknown" : execution.idempotentReplay ? "yes" : "no"}</span>
@@ -101,7 +101,7 @@ export function AdminMutationReceipt({
       className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200"
     >
       <p>{message}</p>
-      <p className="mt-1 font-mono text-[11px]">
+      <p className="mt-1 font-mono text-2xs">
         HTTP {receipt.httpStatus ?? "unknown"} · replay{" "}
         {receipt.idempotentReplay == null ? "unknown" : receipt.idempotentReplay ? "yes" : "no"} · certainty{" "}
         {receipt.executionCertainty ?? "confirmed"} · intent {receipt.idempotencyKey}

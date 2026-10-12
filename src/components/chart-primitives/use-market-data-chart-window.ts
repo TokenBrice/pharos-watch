@@ -62,7 +62,9 @@ export function useMarketDataChartWindow<T extends MarketDataTimePoint>({
     if ((range === "7d" || range === "30d") || visibleData.length === 0) return undefined;
     const first = visibleData[0].ts;
     const last = visibleData[visibleData.length - 1].ts;
-    return buildAdaptiveMonthlyTicks(first, last);
+    // A month start before the first point would sit off the plot edge and
+    // render clipped ("ul '26" for Jul '26).
+    return buildAdaptiveMonthlyTicks(first, last).filter((tick) => tick >= first);
   }, [range, visibleData]);
 
   const xDomain = useMemo<readonly [number, number] | null>(() => {

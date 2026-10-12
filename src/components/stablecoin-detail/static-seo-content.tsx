@@ -14,7 +14,7 @@ import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 import { resolveAiSummaryClaims } from "@shared/lib/ai-summary-claims";
 import { buildAiDisclosureLine, formatAiSummaryDate } from "@/components/ai-disclosure";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import type { FaqItem } from "@/lib/faq";
@@ -44,7 +44,7 @@ const STATIC_PILL_CLASS =
 const ACTION_LINK_CLASS =
   "pharos-focus-ring inline-flex min-h-10 items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:border-foreground/30 hover:bg-accent";
 
-const FACT_LABEL_CLASS = "text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground";
+const FACT_LABEL_CLASS = "pharos-label";
 const FACT_VALUE_CLASS = "mt-1 text-sm leading-relaxed text-foreground";
 const ACTION_ICON_CLASS = "h-3.5 w-3.5 shrink-0 text-muted-foreground";
 const INLINE_LINK_CLASS = "pharos-focus-ring rounded-sm text-frost-blue underline-offset-2 hover:underline";
@@ -146,7 +146,7 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
 
   return (
     <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
-      <p className="pharos-kicker">Variant Relationship</p>
+      <p className="pharos-label">Variant relationship</p>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         {coin.name} ({coin.symbol}) is modeled as a {variantLabel} of{" "}
         <Link
@@ -393,7 +393,7 @@ export function StablecoinDetailSeoContent({
       <ListingStateBanner coin={coin} />
 
       <section aria-labelledby="stablecoin-identity-answer-title" className="pharos-card-shell px-4 py-4 sm:px-5">
-        <p className="pharos-kicker mb-2">Answer First</p>
+        <p className="pharos-label mb-2">Answer first</p>
         <h2 id="stablecoin-identity-answer-title" className="text-lg font-semibold tracking-tight text-foreground">
           {identityAnswer.question}
         </h2>
@@ -425,7 +425,7 @@ export function StablecoinDetailSeoContent({
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]">
           <div className="space-y-3">
             <div>
-              <p className="pharos-kicker mb-2">Static Profile</p>
+              <p className="pharos-label mb-2">Static profile</p>
               <h2 id="stablecoin-static-profile-title" className="text-lg font-semibold tracking-tight">
                 Static stablecoin profile
               </h2>
@@ -471,18 +471,18 @@ export function StablecoinDetailSeoContent({
 
             {summary ? (
               <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                <p className="pharos-label">
                   AI summary{summaryUpdatedAt ? ` / Updated ${summaryUpdatedAt}` : ""}
                 </p>
                 <p className="mt-1 text-sm leading-relaxed text-foreground">{summarizeText(summaryText ?? "", 520)}</p>
                 {(() => {
                   const disclosure = buildAiDisclosureLine(summary);
                   return disclosure ? (
-                    <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{disclosure}</p>
+                    <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">{disclosure}</p>
                   ) : null;
                 })()}
                 {summary.sources?.length ? (
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  <p className="mt-2 text-2xs leading-relaxed text-muted-foreground">
                     Sources: {renderInlineList(summary.sources.map((source) => (
                       <Link key={source.url} href={source.url} className={INLINE_LINK_CLASS}>
                         {source.label}
@@ -524,7 +524,7 @@ export function StablecoinDetailSeoContent({
 
         <div className="mt-4 border-t border-border/50 pt-4">
           <div className="rounded-lg border border-border/50 bg-background/50 px-3 py-3">
-            <p className="pharos-kicker">Next Actions</p>
+            <p className="pharos-label">Next actions</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {isActiveStablecoinMeta(coin) ? (
                 <Link href={compareHref} className={ACTION_LINK_CLASS}>
@@ -550,7 +550,7 @@ export function StablecoinDetailSeoContent({
             {isActiveStablecoinMeta(coin) ? (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 Exact bot target:{" "}
-                <code className="rounded bg-muted/60 px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+                <code className="rounded bg-muted/60 px-1.5 py-0.5 font-mono text-2xs text-foreground">
                   {alertCommand}
                 </code>
               </p>

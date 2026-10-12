@@ -50,6 +50,8 @@ export interface OgStaticRunnerOptions {
 
 export interface OgStaticCliOptions extends Omit<OgStaticRunnerOptions, "check" | "fonts"> {
   repoRoot: string;
+  /** Defaults to the editorial pair (Newsreader + Geist Mono). */
+  fonts?: readonly OgStaticFont[];
 }
 
 interface OgStaticManifestCard {
@@ -210,13 +212,14 @@ export async function runOgStaticBuild(
 
 export async function runOgStaticCli({
   repoRoot,
+  fonts,
   ...options
 }: OgStaticCliOptions): Promise<void> {
   try {
     await runOgStaticBuild({
       ...options,
       check: process.argv.includes("--check"),
-      fonts: [
+      fonts: fonts ?? [
         {
           key: "newsreader",
           family: "Newsreader",

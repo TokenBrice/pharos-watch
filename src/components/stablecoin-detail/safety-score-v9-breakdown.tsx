@@ -8,6 +8,7 @@ import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import type { StablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
+import { FigureLeadText } from "./figure-lead-text";
 
 type BreakdownRow = NonNullable<
   StablecoinSafetyScoreV9Presentation["pillars"][number]["breakdown"]
@@ -58,7 +59,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
 
   const bar = (
     <div className="grid grid-cols-[minmax(5.25rem,6.75rem)_minmax(2.5rem,1fr)_1.75rem_5.25rem] items-center gap-1.5">
-      <span className="break-words font-mono text-[11px] uppercase leading-[1.35] tracking-[0.08em] text-muted-foreground">
+      <span className="pharos-label break-words leading-[1.35]">
         {row.label}
       </span>
       <span
@@ -75,15 +76,15 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       </span>
       <span
         className={cn(
-          "text-right font-mono text-[11px] font-medium tabular-nums",
+          "text-right font-mono text-2xs font-medium tabular-nums",
           ROW_TONE_SCORE_CLASS[row.tone],
         )}
       >
         {displayedScore}
       </span>
-      <span className="text-right font-mono uppercase leading-tight tracking-[0.04em] text-muted-foreground">
-        {weightLabel !== null ? <span className="block text-[10px]">· {weightLabel}</span> : null}
-        {row.status !== null ? <span className="mt-0.5 block break-words text-[9px]">{row.status}</span> : null}
+      <span className="pharos-label text-right leading-tight">
+        {weightLabel !== null ? <span className="block text-3xs">· {weightLabel}</span> : null}
+        {row.status !== null ? <span className="mt-0.5 block break-words text-3xs">{row.status}</span> : null}
       </span>
     </div>
   );
@@ -93,7 +94,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
       <div className={cn(nested && "pl-3")}>
         {bar}
         {row.detail !== null ? (
-          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{row.detail}</p>
+          <p className="mt-0.5 text-3xs leading-snug text-muted-foreground">{row.detail}</p>
         ) : null}
       </div>
     );
@@ -106,7 +107,7 @@ function ComponentScoreBar({ row, nested = false }: { row: BreakdownRow; nested?
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-[10px] leading-snug text-muted-foreground"
+        className="pharos-focus-ring mt-0.5 flex min-h-6 w-full items-center gap-1 rounded-sm text-left text-3xs leading-snug text-muted-foreground"
       >
         {row.detail}
         <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
@@ -132,11 +133,11 @@ function BreakdownGroupSection({
     <div>
       {group.label !== null ? (
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-b border-border/30 pb-1.5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-foreground/85">
+          <span className="pharos-label text-foreground/85">
             {group.label}
           </span>
           {group.score !== null ? (
-            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            <span className="font-mono text-2xs tabular-nums text-muted-foreground">
               {group.score.toFixed(0)} / 100
               {group.weight !== null ? ` · ${(group.weight * 100).toFixed(0)}% pillar weight` : ""}
             </span>
@@ -152,7 +153,7 @@ function BreakdownGroupSection({
             type="button"
             onClick={() => setTailOpen((value) => !value)}
             aria-expanded={tailOpen}
-            className="pharos-focus-ring mt-2 flex min-h-7 w-full items-center justify-between gap-2 rounded-sm text-[11px] font-medium text-muted-foreground"
+            className="pharos-focus-ring mt-2 flex min-h-7 w-full items-center justify-between gap-2 rounded-sm text-2xs font-medium text-muted-foreground"
           >
             <span>{group.tail.label}</span>
             <ChevronDown
@@ -192,21 +193,21 @@ function PillarBreakdownDetails({
       <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
         {breakdown.context.map((item) => (
           <div key={item.key} className="flex min-w-0 items-baseline justify-between gap-3">
-            <dt className="min-w-0 break-words text-[11px] text-muted-foreground">{item.label}</dt>
-            <dd className="min-w-0 break-words text-right font-mono text-[11px] text-foreground">{item.value}</dd>
+            <dt className="min-w-0 break-words text-2xs text-muted-foreground">{item.label}</dt>
+            <dd className="min-w-0 break-words text-right text-2xs text-foreground"><FigureLeadText text={item.value} /></dd>
           </div>
         ))}
         {scoreChanged ? (
           <div className="flex min-w-0 items-baseline justify-between gap-3">
-            <dt className="min-w-0 break-words text-[11px] text-muted-foreground">Evaluator to published</dt>
-            <dd className="shrink-0 text-right font-mono text-[11px] text-foreground">
+            <dt className="min-w-0 break-words text-2xs text-muted-foreground">Evaluator to published</dt>
+            <dd className="shrink-0 text-right font-mono text-2xs text-foreground">
               {breakdown.evaluatedScore!.toFixed(1)} to {breakdown.publishedScore!.toFixed(1)}
             </dd>
           </div>
         ) : null}
       </dl>
       {breakdown.exitHighlight !== null ? (
-        <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
+        <p className="mt-2 text-3xs leading-snug text-muted-foreground">
           Route capacity is specific to the selected executable path. Exchange-wide volume,
           aggregate DEX TVL, and issuer reserves do not prove the same executable amount.
         </p>
@@ -216,11 +217,11 @@ function PillarBreakdownDetails({
   return (
     <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+        <span className="pharos-label">
           {breakdown.sectionLabel}
         </span>
         {breakdown.aggregationWeight !== null ? (
-          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+          <span className="pharos-label">
             {(breakdown.aggregationWeight * 100).toFixed(0)}% aggregation weight
           </span>
         ) : null}
@@ -229,7 +230,7 @@ function PillarBreakdownDetails({
       {contextRowCount > 0 ? (
         collapseContext ? (
           <details className="group/measure mt-2 border-y border-border/30 py-1.5">
-            <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
+            <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-2xs font-medium text-muted-foreground marker:content-none">
               <span>Measurement detail ({contextRowCount})</span>
               <ChevronDown className="h-3.5 w-3.5 transition-transform motion-reduce:transition-none group-open/measure:rotate-180" aria-hidden="true" />
             </summary>
@@ -246,7 +247,7 @@ function PillarBreakdownDetails({
 
       {breakdown.alternatives.length > 0 ? (
         <details className="group/routes mt-3 border-t border-border/30 pt-2">
-          <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-[11px] font-medium text-muted-foreground marker:content-none">
+          <summary className="pharos-focus-ring flex min-h-7 cursor-pointer list-none items-center justify-between rounded-sm text-2xs font-medium text-muted-foreground marker:content-none">
             <span>Other evaluated routes ({breakdown.alternatives.length})</span>
             <ChevronDown
               className="h-3.5 w-3.5 transition-transform motion-reduce:transition-none group-open/routes:rotate-180"
@@ -256,13 +257,13 @@ function PillarBreakdownDetails({
           <ul className="divide-y divide-border/30">
             {breakdown.alternatives.map((route) => (
               <li key={route.key} className="flex min-w-0 items-start justify-between gap-3 py-1.5">
-                <span className="min-w-0 break-words text-[11px] leading-[1.35] text-foreground/85">
+                <span className="min-w-0 break-words text-2xs leading-[1.35] text-foreground/85">
                   <span className="block">{route.label}</span>
                   {route.detail !== null ? (
-                    <span className="mt-0.5 block text-[10px] text-muted-foreground">{route.detail}</span>
+                    <span className="mt-0.5 block text-3xs text-muted-foreground">{route.detail}</span>
                   ) : null}
                 </span>
-                <span className="shrink-0 text-right font-mono text-[10px] text-muted-foreground">
+                <span className="shrink-0 text-right font-mono text-3xs text-muted-foreground">
                   {route.score === null ? "Not scored" : `V10 route ${route.score.toFixed(0)} / 100`}
                   {route.redundancyCredit !== null
                     ? ` · backup +${route.redundancyCredit.toFixed(1)}`
@@ -287,7 +288,7 @@ function PillarInputFallback({
   if (pillar.componentCount === 0) return null;
   return (
     <>
-      <div className="flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.1em]">
+      <div className="pharos-label flex items-center justify-between gap-3">
         <span>Reviewed inputs</span>
         <span className="tabular-nums text-foreground">{pillar.componentCount}</span>
       </div>
@@ -313,7 +314,7 @@ function PillarInputFallback({
               <span className="h-1.5 w-1.5 shrink-0 rounded-[2px] bg-emerald-500" aria-hidden="true" />
               <span className="truncate">{component.label}</span>
             </span>
-            <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+            <span className="pharos-label shrink-0">
               {component.category}
             </span>
           </li>
@@ -355,9 +356,9 @@ export function SafetyScoreV9PillarRow({
         <span className="flex min-w-0 items-center gap-2.5">
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-foreground">{pillar.label}</span>
-            <span className="mt-0.5 block text-[11px] text-muted-foreground">{pillar.evidenceSummary}</span>
+            <span className="mt-0.5 block text-2xs text-muted-foreground">{pillar.evidenceSummary}</span>
             {pillar.breakdown?.exitHighlight ? (
-              <span className="mt-1 block text-[11px] text-foreground/85">
+              <span className="mt-1 block text-2xs text-foreground/85">
                 Best exit: {pillar.breakdown.exitHighlight.venueLabel}
                 {pillar.breakdown.exitHighlight.capacityLine !== null ? ` · ${pillar.breakdown.exitHighlight.capacityLine}` : ""}
                 {pillar.breakdown.exitHighlight.redundancyCredit > 0
@@ -373,7 +374,7 @@ export function SafetyScoreV9PillarRow({
             label={scoreGrade === null ? "Excluded" : scoreGrade}
             toneClass={gradeMetadata.pillClassName}
             title="Pillar score band"
-            className="min-w-9 justify-center text-[10px] font-semibold"
+            className="min-w-9 justify-center text-3xs font-semibold"
           />
           <ChevronDown
             className={cn(
@@ -411,7 +412,7 @@ export function SafetyScoreV9PillarRow({
           <a
             href={`#${pillar.key}-evidence`}
             className={cn(
-              "pharos-focus-ring shrink-0 rounded-sm px-1 py-1 text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground",
+              "pharos-focus-ring shrink-0 rounded-sm px-1 py-1 text-2xs text-muted-foreground underline decoration-dashed underline-offset-2 hover:text-foreground",
               evidenceVisibility === "below-xl" && "xl:hidden",
             )}
             aria-label={`${pillar.label} evidence`}

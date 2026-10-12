@@ -1,4 +1,4 @@
-import type { BridgeRouteRiskTier, CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
+import type { BridgeRouteRiskTier, CollateralQuality, CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
 import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
 import type { ContagionShock } from "../types/contagion";
@@ -20,6 +20,7 @@ export * from "./classification/operational-status";
 export * from "./classification/mint-authority";
 export * from "./classification/redemption";
 export * from "./classification/psi";
+export * from "./classification/chain-health";
 export * from "./classification/cause-of-death";
 export * from "./classification/resolve-mechanism-archetype";
 export * from "./classification/resolve-implementation-launch-date";
@@ -111,6 +112,14 @@ export function getMechanismArchetypeOneLiner(value: MechanismArchetype): string
 export function getMechanismExplainerPath(value: MechanismArchetype): string {
   return `/learn/mechanisms/${value}/`;
 }
+
+export const COLLATERAL_QUALITY_LABELS: Readonly<Record<CollateralQuality, string>> = {
+  native: "Native",
+  rwa: "RWA",
+  "eth-lst": "ETH and LSTs",
+  "alt-lst-bridged-or-mixed": "Alt, bridged or mixed",
+  exotic: "Exotic",
+};
 
 export const CUSTODY_MODEL_LABELS: Readonly<Record<CustodyModel, string>> = {
   onchain: "On-chain",

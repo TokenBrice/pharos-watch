@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Bell } from "lucide-react";
+import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { ShareButton } from "@/components/share-button";
@@ -37,29 +36,6 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
-function TelegramAlertsHeaderAction() {
-  return (
-    <div className="flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
-      <div
-        role="note"
-        className="flex max-w-full items-start gap-2 rounded-lg border border-border/60 bg-card px-3 py-2 text-xs text-muted-foreground sm:text-sm"
-      >
-        <Bell className="mt-0.5 h-4 w-4 shrink-0" />
-        <p className="min-w-0 leading-relaxed lg:whitespace-nowrap">
-          Get instant Telegram alerts for depeg events and DEWS threat level changes.{" "}
-          <Link
-            href="/pharoswatchbot/#bot"
-            className="pharos-focus-ring text-foreground underline underline-offset-4 transition-colors hover:text-foreground/80"
-          >
-            Set up alerts&nbsp;&rarr;
-          </Link>
-        </p>
-      </div>
-      <ShareButton ogPath="/api/og/depeg" />
-    </div>
-  );
-}
-
 const route = createClientFeaturePage({
   path: "/depeg/",
   metadata: {
@@ -76,12 +52,21 @@ const route = createClientFeaturePage({
       version: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
       changelogPath: DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
     },
-    headerActions: <TelegramAlertsHeaderAction />,
+    header: "instrument",
+    headerActions: (
+      <>
+        <AlertsHeaderLink
+          href="/pharoswatchbot/#bot"
+          description="Get instant Telegram alerts for depeg events and DEWS threat level changes"
+        />
+        <ShareButton ogPath="/api/og/depeg" />
+      </>
+    ),
     preface: (
       <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("depeg-history"))} />
     ),
     leadParagraphs: [
-      "A live incident board for stablecoin depegs: confirmed deviations, pending confirmations, and early stress warnings, with forecasts for how each incident should resolve.",
+      "Live stablecoin depegs, pending confirmations, and early stress warnings, with recovery forecasts.",
     ],
   },
   afterClient: (

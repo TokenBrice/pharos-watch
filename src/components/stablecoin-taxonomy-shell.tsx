@@ -107,7 +107,7 @@ export function StablecoinTaxonomyShell({
     >
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <h2 className="pharos-kicker">Stablecoin Directory</h2>
+          <h2 className="pharos-label">Stablecoin directory</h2>
           <p className="text-sm text-muted-foreground">{directoryDescription}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -147,8 +147,8 @@ export function StablecoinTaxonomyShell({
 
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <h2 className="pharos-kicker">
-            How To Use This Directory
+          <h2 className="pharos-label">
+            How to use this directory
           </h2>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Treat the {shortLabel} cohort as a starting filter, then verify the live risk surfaces that move fastest:
@@ -172,8 +172,8 @@ export function StablecoinTaxonomyShell({
       {relatedPages.length > 0 && (
         <section className="space-y-3">
           <div className="space-y-1.5">
-            <h2 className="pharos-kicker">
-              More Stablecoin Hubs
+            <h2 className="pharos-label">
+              More stablecoin hubs
             </h2>
             <p className="text-sm text-muted-foreground">
               Move laterally into related taxonomy pages without going back to the homepage.

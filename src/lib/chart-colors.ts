@@ -54,58 +54,32 @@ export const CHART_TEAL = TOKEN.teal;
 /** Standard responsive chart container height */
 export const CHART_HEIGHT = "h-[250px] sm:h-[350px]";
 
-/** Standard Recharts tooltip styling (spread into <Tooltip> props) */
-export const RECHARTS_TOOLTIP_STYLES = {
-  contentStyle: {
-    backgroundColor: "var(--color-card)",
-    border: "1px solid color-mix(in oklch, var(--color-border) 70%, transparent)",
-    borderRadius: "var(--radius-xl, 0.75rem)",
-    fontFamily: "var(--font-mono)",
-    boxShadow: "var(--elevation-rest)",
-    padding: "0.75rem 0.875rem",
-  },
-  labelStyle: {
-    color: "var(--color-foreground)",
-    fontFamily: "var(--font-sans)",
-    fontWeight: 500,
-    fontSize: "0.75rem",
-    marginBottom: "0.5rem",
-  },
-  itemStyle: { color: "var(--color-muted-foreground)", fontFamily: "var(--font-mono)", fontSize: "0.875rem" },
-} as const;
-
 export { THREAT_BAND_HEX } from "@shared/lib/classification";
 
 // ---------------------------------------------------------------------------
 // Extracted inline chart colors -- previously defined inside components.
 // ---------------------------------------------------------------------------
 
-const RESERVE_MEDIUM_RISK_YELLOW = "#d4c63a";
-
-/** Reserve risk-tier treemap block fills (Figma coin template).
- *  Medium intentionally matches the legend yellow instead of the older brown. */
-export const RISK_COLORS: Record<string, string> = {
-  "very-low": "#01315f",
-  low: "#133929",
-  medium: RESERVE_MEDIUM_RISK_YELLOW,
-  high: "#441f02",
-  "very-high": "#4d0f1c",
-};
-
-/** Bright accents for the treemap legend, in-block percentage labels, and tooltips. */
+/** Reserve risk tiers on the site's ordered severity ramp (green → teal →
+ *  amber → orange → red, the order PSI and DEWS bands use), drawn from the
+ *  chart tokens. Accents carry the hue in legends, outlines and tooltips. */
 export const RISK_ACCENT_COLORS: Record<string, string> = {
-  "very-low": "#3a97f4",
-  low: "#32a870",
-  medium: RESERVE_MEDIUM_RISK_YELLOW,
-  high: "#f47a1f",
-  "very-high": "#e2595b",
+  "very-low": TOKEN.green,
+  low: TOKEN.teal,
+  medium: TOKEN.yellow,
+  high: TOKEN.orange,
+  "very-high": TOKEN.red,
 };
 
-/** Readable in-block label ink for the bright reserve treemap fills. */
-export const RESERVE_TREEMAP_LABEL_COLOR = "#07111f";
+/** Treemap tile fills: the tier hue at ~24% over the card, so one label ink
+ *  (`RESERVE_TREEMAP_LABEL_COLOR`) reads on every tier in both themes. */
+export const RISK_COLORS: Record<string, string> = Object.fromEntries(
+  Object.entries(RISK_ACCENT_COLORS).map(([risk, hex]) => [risk, `${hex}3d`]),
+);
 
-/** In-block label color for the dark reserve treemap fills. */
-export const RESERVE_TREEMAP_INVERSE_LABEL_COLOR = "#fafafa";
+/** In-block label ink for the tinted reserve treemap fills. */
+export const RESERVE_TREEMAP_LABEL_COLOR = "var(--color-foreground)";
+
 
 /** Per-DEWS-signal chart colors (from dews-detail.tsx) */
 export const SIGNAL_CHART_COLORS: Record<string, string> = {

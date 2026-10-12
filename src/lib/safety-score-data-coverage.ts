@@ -109,6 +109,11 @@ const REASON_CODE_LABELS = {
 /** Compile-time guard: every live reason code must carry a label. */
 const _liveReasonCodeLabels: Record<V9ReasonCode, string> = REASON_CODE_LABELS;
 
+/** Reader-facing label for a stored reason code; archived payloads may carry unknown codes. */
+export function formatV9ReasonCodeLabel(code: string): string {
+  return (REASON_CODE_LABELS as Record<string, string>)[code] ?? code.replace(/-/g, " ");
+}
+
 /**
  * Reader-facing owner of a gap. `measured-adverse` is excluded from the module:
  * it records a measured negative finding, not an absence of data.

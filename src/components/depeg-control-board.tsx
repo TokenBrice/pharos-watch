@@ -70,7 +70,7 @@ function desktopHeaderCell(label: string, className?: string, title?: string) {
   return (
     <div
       className={cn(
-        "text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+        "pharos-label",
         title ? "pharos-focus-ring rounded-sm" : "",
         className,
       )}
@@ -99,7 +99,7 @@ function MetricCell({
   return (
     <div className={cn("min-w-0", className)}>
       <div className="mb-1 flex items-baseline justify-between gap-2 lg:hidden">
-        <span className="pharos-kicker">{label}</span>
+        <span className="pharos-label">{label}</span>
         <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
       </div>
       <div className="pharos-numeric hidden text-sm font-semibold text-foreground lg:block">{value}</div>
@@ -258,7 +258,7 @@ export function DepegControlBoard({
     <section id="data" aria-label="Depeg control board" tabIndex={-1} className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="pharos-kicker">Leaderboard controls</p>
+          <p className="pharos-label">Leaderboard controls</p>
           <h2 className="pharos-section-title mt-1">Peg control board</h2>
         </div>
         <p className="pharos-meta">

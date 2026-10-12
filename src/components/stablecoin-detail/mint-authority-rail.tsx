@@ -53,7 +53,7 @@ const GENERIC_ROLE_KEYS: Record<string, true> = { other: true, unknown: true };
 
 function SignerDots({ threshold, signerCount }: { threshold: number; signerCount: number }) {
   if (signerCount > MAX_SIGNER_DOTS) {
-    return <span className="pharos-numeric text-[11px] text-muted-foreground">{threshold}/{signerCount}</span>;
+    return <span className="pharos-numeric text-2xs text-muted-foreground">{threshold}/{signerCount}</span>;
   }
   return (
     <span className="inline-flex items-center gap-[3px]" title={`${threshold} of ${signerCount} signers required`}>
@@ -66,7 +66,7 @@ function SignerDots({ threshold, signerCount }: { threshold: number; signerCount
           )}
         />
       ))}
-      <span className="pharos-numeric ml-0.5 text-[11px] text-muted-foreground">
+      <span className="pharos-numeric ml-0.5 text-2xs text-muted-foreground">
         {threshold}/{signerCount}
       </span>
     </span>
@@ -135,19 +135,19 @@ function ControlChip({ node }: { node: RailControlNode }) {
         />
         <span
           className={cn(
-            "text-[11px] font-medium",
+            "text-2xs font-medium",
             glyph.caution ? "text-amber-700 dark:text-amber-400" : "text-foreground/90",
           )}
         >
           {label}
         </span>
         {names.length > 1 ? (
-          <span className="pharos-numeric text-[11px] text-muted-foreground">×{names.length}</span>
+          <span className="pharos-numeric text-2xs text-muted-foreground">×{names.length}</span>
         ) : null}
       </span>
       {showDots ? <SignerDots threshold={control.threshold!} signerCount={control.signerCount!} /> : null}
       {control.timelockLabel ? (
-        <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-2xs text-muted-foreground">
           <Clock aria-hidden="true" className="h-3 w-3" />
           {control.timelockLabel}
         </span>
@@ -221,7 +221,7 @@ export function MintAuthorityRail({
                 const details = revealAnchorId("mint-primary-controls");
                 details?.scrollIntoView({ block: "nearest" });
               }}
-              className="pharos-focus-ring rounded-sm text-[11px] text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
+              className="pharos-focus-ring rounded-sm text-2xs text-muted-foreground underline decoration-dashed underline-offset-2 transition-colors hover:text-foreground"
             >
               +{hiddenControlCount} more in Primary controls
             </button>
@@ -231,10 +231,10 @@ export function MintAuthorityRail({
       <RailArrow orientation="responsive" />
       <div className="flex min-w-0 flex-col gap-0.5">
         <StationLabel>Supply</StationLabel>
-        <span className="inline-flex w-fit items-center rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground">
+        <span className="inline-flex w-fit items-center rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5 font-mono text-2xs font-semibold uppercase text-foreground">
           {symbol}
         </span>
-        <span className="mt-0.5 inline-flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+        <span className="mt-0.5 inline-flex items-start gap-1.5 text-2xs leading-snug text-muted-foreground">
           <span
             aria-hidden="true"
             className={cn("mt-1 h-1.5 w-1.5 shrink-0 rounded-full", MINT_AUTHORITY_POSTURE_DOT_CLASS[postureTone])}

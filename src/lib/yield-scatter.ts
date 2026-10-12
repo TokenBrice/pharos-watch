@@ -1,5 +1,4 @@
 import type { YieldZoneKey } from "@shared/lib/classification";
-import { clamp } from "@shared/lib/math";
 import { percentileLinear } from "@shared/lib/stats";
 
 export const SAFETY_SCORE_THRESHOLD = 60;
@@ -88,78 +87,67 @@ export function computeSafetyDomain(scores: number[], isMobile: boolean): [numbe
 }
 
 // ---------------------------------------------------------------------------
-// Overlap nudging — push apart scatter points whose logos would fully overlap
+// Marker declutter — logos where they fit, exact-position dots where they don't
 // ---------------------------------------------------------------------------
 
-const LOGO_DIAMETER_DESKTOP = 16;
-const LOGO_DIAMETER_MOBILE = 14;
+export const LOGO_DIAMETER_DESKTOP = 16;
+export const LOGO_DIAMETER_MOBILE = 14;
+/** Clear space kept between two logo markers, in pixels. */
+const LOGO_GAP = 2;
 
-interface NudgeablePoint {
+export type ScatterMarkerKind = "logo" | "dot";
+
+interface DeclutterablePoint {
+  id: string;
   plotX: number;
   plotY: number;
+  tvl: number | null;
 }
 
 /**
- * Detect scatter points whose logo circles overlap and apply small
- * deterministic coordinate offsets to separate them. Original `x` / `y`
- * values stay intact for tooltips; only `plotX` / `plotY` are adjusted.
+ * Choose a marker per point without moving any point: larger markets claim a
+ * logo first (TVL desc, unavailable TVL last, id as the tie-break); a point
+ * whose logo would overlap an already placed logo draws as a small dot at its
+ * true position instead. Output is ordered dots first so logos paint on top.
  */
-export function nudgeOverlaps<T extends NudgeablePoint>(
+export function declutterScatterMarkers<T extends DeclutterablePoint>(
   points: T[],
   xDomain: [number, number],
   yDomain: [number, number],
-  chartWidth: number,
-  chartHeight: number,
+  plotWidth: number,
+  plotHeight: number,
   mobile: boolean,
-): T[] {
-  if (points.length <= 1) return points;
-
-  const result = points.map((p) => ({ ...p }));
-  const logoDiam = mobile ? LOGO_DIAMETER_MOBILE : LOGO_DIAMETER_DESKTOP;
+): Array<T & { marker: ScatterMarkerKind }> {
   const xSpan = xDomain[1] - xDomain[0];
   const ySpan = yDomain[1] - yDomain[0];
-  if (xSpan === 0 || ySpan === 0 || chartWidth === 0 || chartHeight === 0) return result;
-
-  // Collision threshold: one logo diameter in data-space units
-  const xThresh = (logoDiam / chartWidth) * xSpan;
-  const yThresh = (logoDiam / chartHeight) * ySpan;
-
-  // Push distance per pass (each point moves half this amount)
-  const pushX = xThresh * 0.6;
-  const pushY = yThresh * 0.6;
-
-  // Iterative collision resolution (max 3 passes for chained clusters)
-  for (let pass = 0; pass < 3; pass++) {
-    let moved = false;
-    for (let i = 0; i < result.length; i++) {
-      for (let j = i + 1; j < result.length; j++) {
-        const dx = result[j].plotX - result[i].plotX;
-        const dy = result[j].plotY - result[i].plotY;
-        if (Math.abs(dx) >= xThresh || Math.abs(dy) >= yThresh) continue;
-
-        // Deterministic angle — 45° for near-exact overlaps
-        const angle =
-          Math.abs(dx) < xThresh * 0.05 && Math.abs(dy) < yThresh * 0.05
-            ? Math.PI / 4
-            : Math.atan2(dy, dx);
-
-        const cx = pushX * 0.5 * Math.cos(angle);
-        const cy = pushY * 0.5 * Math.sin(angle);
-        result[i].plotX -= cx;
-        result[i].plotY -= cy;
-        result[j].plotX += cx;
-        result[j].plotY += cy;
-        result[i].plotX = clamp(result[i].plotX, xDomain[0], xDomain[1]);
-        result[i].plotY = clamp(result[i].plotY, yDomain[0], yDomain[1]);
-        result[j].plotX = clamp(result[j].plotX, xDomain[0], xDomain[1]);
-        result[j].plotY = clamp(result[j].plotY, yDomain[0], yDomain[1]);
-        moved = true;
-      }
-    }
-    if (!moved) break;
+  if (xSpan <= 0 || ySpan <= 0 || plotWidth <= 0 || plotHeight <= 0) {
+    return points.map((point) => ({ ...point, marker: "logo" as const }));
   }
 
-  return result;
+  const minDistance = (mobile ? LOGO_DIAMETER_MOBILE : LOGO_DIAMETER_DESKTOP) + LOGO_GAP;
+  const toPx = (point: T) => ({
+    x: ((point.plotX - xDomain[0]) / xSpan) * plotWidth,
+    y: ((point.plotY - yDomain[0]) / ySpan) * plotHeight,
+  });
+
+  const byPriority = [...points].sort(
+    (a, b) => (b.tvl ?? -Infinity) - (a.tvl ?? -Infinity) || a.id.localeCompare(b.id),
+  );
+  const placed: Array<{ x: number; y: number }> = [];
+  const markers = new Map<string, ScatterMarkerKind>();
+  for (const point of byPriority) {
+    const px = toPx(point);
+    const collides = placed.some((other) => Math.hypot(other.x - px.x, other.y - px.y) < minDistance);
+    if (collides) {
+      markers.set(point.id, "dot");
+    } else {
+      placed.push(px);
+      markers.set(point.id, "logo");
+    }
+  }
+
+  const withMarkers = points.map((point) => ({ ...point, marker: markers.get(point.id) ?? ("logo" as const) }));
+  return [...withMarkers.filter((point) => point.marker === "dot"), ...withMarkers.filter((point) => point.marker === "logo")];
 }
 
 // ---------------------------------------------------------------------------

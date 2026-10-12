@@ -82,7 +82,7 @@ function TrackRecordTimeline({ rows }: { rows: DdrrResponseRow[] }) {
       <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" aria-hidden="true" />
       {/* now cap */}
       <span className="absolute right-0 top-1/2 h-3 w-px -translate-y-1/2 bg-foreground/40" aria-hidden="true" />
-      <span className="pharos-meta pharos-numeric absolute -top-0.5 right-0 uppercase tracking-wide">
+      <span className="pharos-meta pharos-numeric absolute -top-0.5 right-0">
         now
       </span>
 
@@ -110,7 +110,7 @@ function TrackRecordTimeline({ rows }: { rows: DdrrResponseRow[] }) {
 // --- primitives ------------------------------------------------------------
 
 function Kicker({ children }: { children: ReactNode }) {
-  return <p className="pharos-kicker">{children}</p>;
+  return <p className="pharos-label">{children}</p>;
 }
 
 /** Scored-vs-maturing progress: a filled segment over a muted track plus a count caption. */
@@ -386,7 +386,7 @@ function ReviewRow({ row, logos }: { row: DdrrResponseRow; logos?: Record<string
       >
         {verdictLabel}
       </Badge>
-      <span className="pharos-meta pharos-numeric justify-self-start uppercase tracking-wide sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
+      <span className="pharos-meta pharos-numeric justify-self-start sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
         {getRowContextLabel(row)} · {DDR_OUTCOME_LABELS[actualOutcome]}
       </span>
       <span className="pharos-meta pharos-numeric justify-self-end sm:col-start-4 sm:row-start-1 sm:text-right">
@@ -423,14 +423,14 @@ function ReviewerHeader({ calibrating, data }: { calibrating: boolean; data: Ddr
     <div className="space-y-1.5">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <div className="flex items-center gap-2.5">
-          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-xs font-bold tracking-wide text-background">
+          <span className="rounded-md bg-foreground px-1.5 py-0.5 font-mono text-xs font-bold text-background">
             DDRR
           </span>
           <h2 className="pharos-section-title">Depeg Duration Resolver Reviewer</h2>
           <Badge
             variant="outline"
             className={cn(
-              "px-1.5 py-0 text-xs uppercase tracking-wide",
+              "px-1.5 py-0 text-xs uppercase",
               calibrating
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
                 : "border-border/60 bg-muted/40 text-muted-foreground",
@@ -570,7 +570,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
             </div>
             <div className="pharos-card-shell px-4 py-3 sm:px-5">
               <TrackRecordTimeline rows={trackRecordRows} />
-              <div className="pharos-meta pharos-numeric mt-1 flex justify-between uppercase tracking-wide">
+              <div className="pharos-meta pharos-numeric mt-1 flex justify-between">
                 <span>older calls</span>
                 <span>recent</span>
               </div>

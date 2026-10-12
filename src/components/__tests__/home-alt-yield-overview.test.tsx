@@ -94,6 +94,22 @@ describe("HomeAltYieldOverview", () => {
     expect(screen.getByLabelText("Yield safety B+").textContent).not.toContain("†");
     expect(screen.getByLabelText("Yield safety B+ (default safety)").textContent).not.toContain("†");
   });
+  it("leads with the /yield/ landing-band answer, not the unfiltered top PYS", () => {
+    const data = makeSummaryPayload({ coveredCount: 3, trackedCount: 3 });
+    // DJED has the best PYS overall but sits below the landing band's safety floor.
+    data.rankings = [
+      ...data.rankings,
+      { ...makeSummaryRow("djed-coti", "DJED", 27.24, 90), safetyScore: 30, safetyGrade: "D" as const },
+    ] as typeof data.rankings;
+    useYieldRankingsSummaryMock.mockReturnValue({ data, isLoading: false });
+
+    render(<HomeAltYieldOverview />);
+
+    expect(screen.getByText("Best-paid risk in view", { exact: false }).textContent).toContain("USDC");
+    expect(screen.queryByText("DJED")).toBeNull();
+    expect(screen.getByRole("button", { name: /Universe: Yield rows, 2 in view of 3 · Opportunistic/ })).toBeTruthy();
+  });
+
   it("reads the compact summary payload instead of the detail rankings payload", () => {
     useYieldRankingsSummaryMock.mockReturnValue({
       data: makeSummaryPayload({ coveredCount: 2, trackedCount: 3 }),

@@ -56,7 +56,8 @@ Bucket **counts** come from the reviewed registry and never depend on runtime su
 cap** sums only observed current supply read through `getCirculatingRawOrNull()`: a reviewed active coin
 that is missing from `/api/stablecoins`, or whose peg buckets are absent, empty or wholly invalid, is
 counted in `supplyUnavailableCount` and excluded from every total rather than added as `$0`.
-`computeFreezableSummary()` (shared by the hero, meter and stats band) classifies coverage as
+`computeFreezableSummary()` (`shared/lib/freezewatch/freezable-summary.ts`; shared by the hero, meter,
+stats band and the FreezeWatch share card) classifies coverage as
 `complete`, `partial` or `unavailable`. `unavailable` (no reviewed coin reported supply, including a
 schema-valid empty list) publishes no supply total or share (`—`) while registry counts stay visible.
 `partial` replaces the freezable and unfreezable headline shares with `Partial`; the observed-only share,
@@ -66,6 +67,11 @@ published only for `complete` coverage. A bucket whose every member lacks supply
 and share; an explicit observed zero remains a real `$0`. The FreezeWatch data-quality notice also lists
 `dataQuality.ambiguousOrderCount` events (with the plain-language `ambiguousOrderReason`, currently Tron
 transfers in separate transactions whose order cannot be confirmed) when the count is positive.
+
+The hero's coin denominator is the sum of all four bucket counts (every active coin with a reviewed
+status), named by an `Active · N coins classified` `UniverseChip`; the freezable-coins figure reads
+`freezable / classified`. The four bucket cards share one row grammar so their figures align; `Yes`
+differs only by its wider span.
 
 ### Upstream Exposure And The Safety Score V9 Access Branch
 

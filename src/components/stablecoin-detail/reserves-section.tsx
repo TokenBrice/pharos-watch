@@ -62,8 +62,8 @@ export interface ReservesSectionProps {
 
 const FEED_STATUS_ANCHOR_ID = "reserve-feed-status";
 const AMBER_VALUE_CLASS = "text-amber-600 dark:text-amber-400";
-const CHIP_CLASS = "text-[11px] font-medium";
-const SUB_LINE_CLASS = "block font-sans text-[11px] font-normal normal-case tracking-normal text-muted-foreground";
+const CHIP_CLASS = "text-2xs font-medium";
+const SUB_LINE_CLASS = "block font-sans text-2xs font-normal normal-case tracking-normal text-muted-foreground";
 const SLICE_LINE_CLASS = "text-xs leading-relaxed text-muted-foreground";
 
 /**
@@ -83,7 +83,7 @@ const LADDER_BAR_CLASS: Record<ReserveLiquidityHorizon, string> = {
 function LadderRow({ row }: { row: ReserveQualityLadderClientRow }) {
   return (
     <li className="flex items-center gap-3">
-      <span className="w-20 shrink-0 text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
+      <span className="pharos-label w-20 shrink-0 leading-tight">
         {row.label}
       </span>
       {/* `minWidth` keeps a fractional share (0.1%) visible instead of collapsing to an empty track. */}

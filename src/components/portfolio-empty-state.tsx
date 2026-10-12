@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, Radar, ShieldCheck } from "lucide-react";
+import { Lock, ShieldCheck } from "lucide-react";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import { buildPresetPreview, PresetCard } from "@/components/preset-card";
 
@@ -20,56 +20,49 @@ function PortfolioPreview() {
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <p className="pharos-kicker">What appears after you add holdings</p>
+        <p className="pharos-label">Example of what appears after you add holdings</p>
         <h3 className="text-base font-semibold text-foreground">
-          Weighted grade, radar view, and upstream concentration
+          Weighted safety aggregate and pillar subtotals
         </h3>
       </div>
 
+      {/* Mirrors the loaded result card (src/app/portfolio/client.tsx): an
+          aggregate score that is explicitly not a grade, three pillar
+          subtotals, and a count of modeled upstream routes. Values are
+          illustrative and labelled as such. */}
       <div className="grid gap-4 sm:grid-cols-[0.9fr_1.1fr] sm:gap-0 sm:divide-x sm:divide-border/50">
         <div className="min-w-0 sm:pr-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl border border-[var(--severity-healthy)]/30 bg-[var(--severity-healthy)]/12 text-lg font-semibold text-emerald-700 dark:text-emerald-300">
-              A
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Portfolio grade</p>
-              <p className="text-xs text-muted-foreground">Weighted safety score with concentration drag</p>
-            </div>
-          </div>
-          <div className="mt-4 border-t border-border/50 pt-3">
-            <p className="text-xs text-muted-foreground">Overall score</p>
-            <p className="mt-1 pharos-numeric text-2xl text-foreground">84.6</p>
-          </div>
+          <p className="text-sm font-medium text-foreground">Weighted V10 safety aggregate</p>
+          <p className="mt-1 pharos-numeric text-2xl text-foreground">
+            82<span className="text-sm text-muted-foreground">/100</span>
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Portfolio aggregate only, not an asset safety grade</p>
         </div>
 
         <div className="min-w-0 border-t border-border/50 pt-4 sm:border-t-0 sm:pl-4 sm:pt-0">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-foreground">Upstream exposure</p>
-            <Radar className="h-4 w-4 text-primary/80" />
-          </div>
+          <p className="text-sm font-medium text-foreground">Pillar subtotals</p>
           <div className="mt-4 space-y-3">
             {[
-              ["Major centralized stablecoins", "58%"],
-              ["U.S. Treasury bills", "27%"],
-              ["Crypto collateral", "15%"],
-            ].map(([label, value], index) => (
+              ["Backing", 86],
+              ["Exit", 79],
+              ["Economic control", 74],
+            ].map(([label, value]) => (
               <div key={label} className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{label}</span>
-                  <span className="pharos-numeric text-foreground">{value}</span>
+                  <span className="pharos-numeric text-foreground">{value}/100</span>
                 </div>
                 <div className="h-2 rounded-full bg-muted/30">
-                  <div
-                    className={`h-2 rounded-full ${index === 0 ? "bg-[var(--chart-primary)]/50" : index === 1 ? "bg-[var(--chart-tertiary)]/40" : "bg-[var(--severity-mild)]/40"}`}
-                    style={{ width: value }}
-                  />
+                  <div className="h-2 rounded-full bg-[var(--chart-primary)]/50" style={{ width: `${value}%` }} />
                 </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Illustrative values. Your result also counts the modeled upstream exposure routes across your holdings.
+      </p>
     </div>
   );
 }
@@ -80,19 +73,19 @@ export function PortfolioEmptyState({ presets, logos, onApplyPreset }: Portfolio
       <EmptyStateSurface
         eyebrow="Personal Risk View"
         title="Model your stablecoin stack before you commit real size."
-        description="Add holdings in USD terms, then Pharos rolls them into one weighted safety grade, a radar view of the weak dimensions, and an upstream exposure breakdown that shows where your risk really lives."
+        description="Add holdings in USD terms, then Pharos rolls them into one weighted safety aggregate with Backing, Exit and Economic control subtotals, next to each holding's own grade."
         steps={[
           {
             title: "Add holdings or load a starter mix",
             description: "Build the portfolio manually or start from a reusable template.",
           },
           {
-            title: "See the weighted grade instantly",
+            title: "See the weighted aggregate instantly",
             description: "The score combines the same report-card inputs used across the site.",
           },
           {
-            title: "Check hidden concentration",
-            description: "Grouped upstream exposure shows whether several coins still route to the same backing.",
+            title: "Check upstream exposure",
+            description: "The result counts the modeled upstream exposure routes your holdings share.",
           },
         ]}
         actions={

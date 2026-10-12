@@ -10,6 +10,14 @@ import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 import { formatDigestDateLabel } from "@/lib/digest";
+import { formatV9ReasonCodeLabel } from "@/lib/safety-score-data-coverage";
+import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
+import { formatYieldWarningSignal } from "@/lib/yield-constants";
+
+/** Stored pillar scores are unrounded floats (53.239999999999995); readers get one decimal at most. */
+function formatDigestScore(score: number | null | undefined): string {
+  return score == null ? "—" : formatScore(score, { trimInteger: true });
+}
 
 /* ---------- sub-section wrapper ---------- */
 
@@ -458,13 +466,18 @@ export function DigestSnapshot({ date }: { date: string }) {
               <>
                 {inputData.safetyScores.mentionedCoins.length > 0 && (
                   <ul className="space-y-1">
-                    {inputData.safetyScores.mentionedCoins.map((coin) => (
-                      <li key={coin.symbol} className="text-xs text-foreground/90">
-                        <span className="font-medium">{coin.symbol}</span>:{" "}
+                    {inputData.safetyScores.mentionedCoins.map((coin, index, coins) => (
+                      // Symbols are not unique (several USDA coins), so the row keys by position.
+                      <li key={`${coin.symbol}-${index}`} className="text-xs text-foreground/90">
+                        <span className="font-medium">{coin.symbol}</span>
+                        {coins.filter((other) => other.symbol === coin.symbol).length > 1 && typeof coin.name === "string" ? (
+                          <span className="text-muted-foreground"> ({coin.name})</span>
+                        ) : null}
+                        :{" "}
                         <span className="font-medium">{coin.grade === null ? "Pipeline gap" : coin.grade}</span>{" "}
                         <span className="text-muted-foreground">
-                          ({coin.score ?? "—"}; backing={coin.pillars.backing.score ?? "—"},{" "}
-                          exit={coin.pillars.exit.score ?? "—"}, control={coin.pillars.control.score ?? "—"})
+                          ({formatDigestScore(coin.score)}; backing {formatDigestScore(coin.pillars.backing.score)},{" "}
+                          exit {formatDigestScore(coin.pillars.exit.score)}, control {formatDigestScore(coin.pillars.control.score)})
                         </span>
                         {coin.partialEvidence ? (
                           <span className="block text-muted-foreground">
@@ -474,12 +487,12 @@ export function DigestSnapshot({ date }: { date: string }) {
                         ) : null}
                         {coin.bindingCap && (
                           <span className="block text-muted-foreground">
-                            Cap {coin.bindingCap.kind} at {coin.bindingCap.limit}: {coin.bindingCap.reason}
+                            {humanizeSafetyScoreV9Value(coin.bindingCap.kind)} cap at {coin.bindingCap.limit}: {coin.bindingCap.reason}
                           </span>
                         )}
                         {coin.reasonCodes.length > 0 && (
                           <span className="block text-muted-foreground">
-                            {coin.reasonCodes.join(", ")}
+                            {coin.reasonCodes.map(formatV9ReasonCodeLabel).join(" · ")}
                           </span>
                         )}
                       </li>
@@ -497,14 +510,14 @@ export function DigestSnapshot({ date }: { date: string }) {
               <>
                 {inputData.safetyScores.mentionedCoins.length > 0 && (
                   <ul className="space-y-0.5">
-                    {inputData.safetyScores.mentionedCoins.map((coin) => (
-                      <li key={coin.symbol} className="text-xs text-foreground/90">
+                    {inputData.safetyScores.mentionedCoins.map((coin, index) => (
+                      <li key={`${coin.symbol}-${index}`} className="text-xs text-foreground/90">
                         <span className="font-medium">{coin.symbol}</span>:{" "}
                         <span className="font-medium">{coin.grade ?? "n/a"}</span>{" "}
                         <span className="text-muted-foreground">
-                          ({coin.score ?? "n/a"}
-                          {coin.peg != null && `, peg=${coin.peg}`}
-                          {coin.liq != null && `, liq=${coin.liq}`})
+                          ({formatDigestScore(coin.score)}
+                          {coin.peg != null && `, peg ${formatDigestScore(coin.peg)}`}
+                          {coin.liq != null && `, liquidity ${formatDigestScore(coin.liq)}`})
                         </span>
                       </li>
                     ))}
@@ -523,14 +536,14 @@ export function DigestSnapshot({ date }: { date: string }) {
         {/* 7. Yield Anomalies */}
         {inputData.yieldAnomalies && inputData.yieldAnomalies.length > 0 && (
           <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}>
-            {inputData.yieldAnomalies.map((y) => (
-              <div key={y.symbol} className="flex items-baseline justify-between gap-2 text-sm">
+            {inputData.yieldAnomalies.map((y, index) => (
+              <div key={`${y.symbol}-${index}`} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{y.symbol}</span>
                 <span className="text-muted-foreground">
-                  {y.currentApy}% APY (7d: {y.apy7d}%, 30d: {y.apy30d}%)
+                  {y.currentApy.toFixed(2)}% APY (7d: {y.apy7d.toFixed(2)}%, 30d: {y.apy30d.toFixed(2)}%)
                 </span>
                 <span className="text-xs text-amber-600 dark:text-amber-400">
-                  {y.warnings.join(", ")}
+                  {y.warnings.map(formatYieldWarningSignal).join(" · ")}
                 </span>
               </div>
             ))}
@@ -540,8 +553,8 @@ export function DigestSnapshot({ date }: { date: string }) {
         {/* 8. Liquidity Shifts */}
         {inputData.liquidityShifts && inputData.liquidityShifts.length > 0 && (
           <SnapshotCard title="DEX Liquidity Shifts" icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}>
-            {inputData.liquidityShifts.map((l) => (
-              <div key={l.symbol} className="flex items-baseline justify-between gap-2 text-sm">
+            {inputData.liquidityShifts.map((l, index) => (
+              <div key={`${l.symbol}-${index}`} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{l.symbol}</span>
                 <span className={getNetColor(l.scoreDelta)}>
                   {l.previousScore} → {l.currentScore} ({l.scoreDelta > 0 ? "+" : ""}{l.scoreDelta})
@@ -587,7 +600,7 @@ export function DigestSnapshot({ date }: { date: string }) {
               {inputData.resolvedDepegs.map((r) => (
                 <li key={`${r.symbol}-${r.peakBps}`} className="text-xs text-foreground/90">
                   <span className="font-medium">{r.symbol}</span>{" "}
-                  recovered from {r.peakBps}bps after {r.durationHours}h{" "}
+                  recovered from {r.peakBps.toLocaleString("en-US")} bps after {r.durationHours}h{" "}
                   <span className="text-muted-foreground">
                     ({formatCurrency(r.mcapUsd)} mcap)
                   </span>

@@ -38,7 +38,7 @@ Each attestation entry carries its own `attestedAt` — the date that journal wa
 
 ## Merge path
 
-`main` is a protected branch with `enforce_admins: true` and force-pushes disabled, so the workflow **cannot** push measurements directly. It pushes to `automated/shock-coverage-refresh` and opens (or force-updates) a pull request against `main`, matching the [OG Refresh](../../.github/workflows/og-refresh.yml) pattern.
+`main` is a protected branch with `enforce_admins: true` and force-pushes disabled, so the workflow **cannot** push measurements directly. It pushes to `automated/shock-coverage-refresh` and opens (or force-updates) a pull request against `main`, the same automated-PR pattern the other refresh workflows use.
 
 The workflow **arms squash auto-merge only for newly created PRs** through `open-automated-refresh-pr.ts --auto-merge` (`gh pr merge --squash --auto`). Updating an existing open PR force-updates its branch but does not re-arm auto-merge. Required checks remain the merge gate; a refresh parked on review can cross the 72h policy bound. Journals must replay byte-identically before a PR exists, but replay proves determinism, not RPC truthfulness. Automatic refresh merging is a deliberate freshness-over-review trade, not approval to bypass branch protection.
 

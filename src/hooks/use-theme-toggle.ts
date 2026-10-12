@@ -2,6 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { useCallback, useState, useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 import { trackEvent } from "@/lib/analytics";
 import type { ToastType } from "@/hooks/use-toast";
 
@@ -10,6 +11,24 @@ interface ThemeToggleOptions {
 }
 
 const getMountedServerSnapshot = () => false;
+
+/**
+ * Runs a next-themes `setTheme` call inside a view transition so the whole
+ * viewport cross-fades (globals.css `::view-transition-*(root)`) and charts
+ * swap together with the chrome. flushSync commits the theme class change
+ * inside the snapshot callback. Instant swap without the API or under
+ * reduced motion.
+ */
+export function applyThemeWithTransition(apply: () => void) {
+  if (
+    typeof document.startViewTransition !== "function"
+    || window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    apply();
+    return;
+  }
+  document.startViewTransition(() => flushSync(apply));
+}
 
 export function useThemeToggle(options?: ThemeToggleOptions) {
   const { resolvedTheme, setTheme } = useTheme();
@@ -33,7 +52,7 @@ export function useThemeToggle(options?: ThemeToggleOptions) {
 
   const toggleTheme = useCallback(() => {
     trackEvent("theme_toggled", { theme: nextTheme });
-    setTheme(nextTheme);
+    applyThemeWithTransition(() => setTheme(nextTheme));
     options?.toast?.(`Switched to ${nextTheme} mode`, "info");
   }, [nextTheme, options, setTheme]);
 

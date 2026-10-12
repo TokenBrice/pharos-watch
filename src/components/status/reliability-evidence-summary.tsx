@@ -23,7 +23,7 @@ export function ReliabilityEvidenceSummary({ gaps }: { gaps: ReliabilityEvidence
             <span className="opacity-85">
               ({RELIABILITY_MODES.find((mode) => mode.id === gap.mode)?.label ?? gap.mode}): {gap.message}
             </span>
-            <span className="mt-0.5 block break-all font-mono text-[10px] opacity-70">
+            <span className="mt-0.5 block break-all font-mono text-3xs opacity-70">
               {gap.rawCode} · {gap.code}
             </span>
           </li>

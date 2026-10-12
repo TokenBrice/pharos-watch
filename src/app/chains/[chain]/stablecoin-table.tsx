@@ -35,7 +35,7 @@ export function StablecoinTable({
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="pharos-kicker">All Stablecoins</CardTitle>
+          <CardTitle className="pharos-label">All stablecoins</CardTitle>
         </CardHeader>
         <CardContent className="py-8">
           <div className="flex flex-col items-center justify-center gap-2 text-center">
@@ -58,7 +58,7 @@ export function StablecoinTable({
       className="text-card-foreground"
       topSlot={
         <CardHeader className="px-4 pb-2 pt-4">
-          <CardTitle className="pharos-kicker">
+          <CardTitle className="pharos-label">
             All Stablecoins
             {backingFilter && (
               <span className="ml-2 text-xs font-normal normal-case text-muted-foreground">

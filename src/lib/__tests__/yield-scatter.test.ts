@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, resolveYieldZone } from "@/lib/yield-scatter";
+import { computeApyAxis, computeSafetyDomain, declutterScatterMarkers, resolveYieldZone } from "@/lib/yield-scatter";
 
 describe("resolveYieldZone", () => {
   it("returns null only when no benchmark resolves at all or the row is unscored", () => {
@@ -34,74 +34,58 @@ describe("computeSafetyDomain", () => {
   });
 });
 
-describe("nudgeOverlaps", () => {
+describe("declutterScatterMarkers", () => {
   const xDomain: [number, number] = [35, 90];
   const yDomain: [number, number] = [0, 12];
   const w = 900;
   const h = 300;
 
-  it("returns points unchanged when there are no overlaps", () => {
+  it("never moves a point", () => {
     const points = [
-      { plotX: 40, plotY: 3 },
-      { plotX: 70, plotY: 8 },
+      { id: "a", plotX: 66, plotY: 5.22, tvl: 10 },
+      { id: "b", plotX: 66, plotY: 5.22, tvl: 5 },
+      { id: "c", plotX: 66.1, plotY: 5.3, tvl: null },
     ];
-    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
-    expect(result[0].plotX).toBe(40);
-    expect(result[1].plotX).toBe(70);
-  });
-
-  it("separates two points at the same coordinates", () => {
-    const points = [
-      { plotX: 66, plotY: 5.22, id: "a" },
-      { plotX: 66, plotY: 5.22, id: "b" },
-    ];
-    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
-    const dx = Math.abs(result[0].plotX - result[1].plotX);
-    const dy = Math.abs(result[0].plotY - result[1].plotY);
-    // They should be pushed apart
-    expect(dx).toBeGreaterThan(0.3);
-    expect(dy).toBeGreaterThan(0.1);
-  });
-
-  it("separates a cluster of three overlapping points", () => {
-    const points = [
-      { plotX: 63, plotY: 3.7 },
-      { plotX: 63, plotY: 3.56 },
-      { plotX: 63, plotY: 3.22 },
-    ];
-    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
-    // All three should end up at distinct positions
-    for (let i = 0; i < result.length; i++) {
-      for (let j = i + 1; j < result.length; j++) {
-        const dist = Math.sqrt(
-          ((result[i].plotX - result[j].plotX) / (55 / w)) ** 2 +
-          ((result[i].plotY - result[j].plotY) / (12 / h)) ** 2,
-        );
-        expect(dist).toBeGreaterThan(5);
-      }
+    const result = declutterScatterMarkers(points, xDomain, yDomain, w, h, false);
+    for (const point of points) {
+      const out = result.find((r) => r.id === point.id)!;
+      expect(out.plotX).toBe(point.plotX);
+      expect(out.plotY).toBe(point.plotY);
     }
   });
 
-  it("returns single-point arrays unchanged", () => {
-    const points = [{ plotX: 50, plotY: 5 }];
-    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
-    expect(result).toEqual(points);
+  it("keeps the logo for the larger market and draws colliding points as dots", () => {
+    const points = [
+      { id: "small", plotX: 66, plotY: 5.22, tvl: 5 },
+      { id: "large", plotX: 66, plotY: 5.22, tvl: 500 },
+      { id: "unknown", plotX: 66.2, plotY: 5.25, tvl: null },
+    ];
+    const result = declutterScatterMarkers(points, xDomain, yDomain, w, h, false);
+    const marker = (id: string) => result.find((r) => r.id === id)!.marker;
+    expect(marker("large")).toBe("logo");
+    expect(marker("small")).toBe("dot");
+    expect(marker("unknown")).toBe("dot");
+    // Dots paint first so logos sit on top.
+    expect(result.at(-1)!.id).toBe("large");
   });
 
-  it("keeps nudged points inside the chart domain", () => {
+  it("keeps logos for points that do not collide", () => {
     const points = [
-      { plotX: 58.9, plotY: 0, id: "a" },
-      { plotX: 59.1, plotY: 0, id: "b" },
-      { plotX: 59, plotY: 0.05, id: "c" },
+      { id: "a", plotX: 40, plotY: 3, tvl: 1 },
+      { id: "b", plotX: 70, plotY: 8, tvl: 2 },
     ];
-    const result = nudgeOverlaps(points, xDomain, yDomain, w, h, false);
+    expect(declutterScatterMarkers(points, xDomain, yDomain, w, h, false).every((p) => p.marker === "logo")).toBe(true);
+  });
 
-    for (const point of result) {
-      expect(point.plotX).toBeGreaterThanOrEqual(xDomain[0]);
-      expect(point.plotX).toBeLessThanOrEqual(xDomain[1]);
-      expect(point.plotY).toBeGreaterThanOrEqual(yDomain[0]);
-      expect(point.plotY).toBeLessThanOrEqual(yDomain[1]);
-    }
+  it("is deterministic regardless of input order", () => {
+    const points = [
+      { id: "a", plotX: 60, plotY: 4, tvl: null },
+      { id: "b", plotX: 60, plotY: 4, tvl: null },
+    ];
+    const forward = declutterScatterMarkers(points, xDomain, yDomain, w, h, false);
+    const reversed = declutterScatterMarkers([...points].reverse(), xDomain, yDomain, w, h, false);
+    expect(forward.find((p) => p.id === "a")!.marker).toBe("logo");
+    expect(reversed.find((p) => p.id === "a")!.marker).toBe("logo");
   });
 });
 

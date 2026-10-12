@@ -42,13 +42,13 @@ export function CoverageBadge({ status, compact = false }: CoverageBadgeProps) {
       title={tooltip}
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-full border py-1 text-[11px] font-medium tracking-[0.01em]",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-full border py-1 text-2xs font-medium",
         compact ? "min-w-[4.25rem] px-1.5" : "min-w-[5rem] px-2",
         COVERAGE_BADGE_TONE_CLASS[status.tone],
       )}
     >
       <span aria-hidden="true">
-        <span className="text-[9px] mr-0.5 opacity-70" aria-hidden="true">
+        <span className="text-3xs mr-0.5 opacity-70" aria-hidden="true">
           {TONE_INDICATOR[status.tone]}
         </span>
         {status.label}

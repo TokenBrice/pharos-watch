@@ -10,7 +10,10 @@ import { SafetyScoresCard, type SafetyScoresCardData } from "../lib/og-templates
 import { DepegCard, type DepegCardData } from "../lib/og-templates/depeg-card";
 import { StabilityIndexCard, type StabilityIndexCardData } from "../lib/og-templates/stability-index-card";
 import { CardFrame } from "../lib/og-templates/shared";
-import { ChainCard, type ChainCardData } from "../lib/og-templates/chain-card";
+import { ChainCard, ChainUnavailableCard, type ChainCardData } from "../lib/og-templates/chain-card";
+import { RouteCard } from "../lib/og-templates/route-card";
+import { formatOgStampTime, isOgPageSlug, type OgPageSlug, type OgPageUnavailableReason } from "@shared/lib/og-route-cards";
+import { OG_PAGE_LOADERS, type OgPageLoad } from "./og-page";
 import { isActiveChainAggregateAsset } from "./chains";
 import { aggregateChains } from "@shared/lib/chains/aggregator";
 import { ratioToPercentage } from "@shared/lib/stats";
@@ -23,7 +26,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
-import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
+import { API_CACHE_PROFILES, buildOgImageCacheControl } from "@shared/lib/api-cache-profiles";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../lib/stress-signals-current-rows";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -876,42 +879,117 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   const chain = aggregated.chains.find((entry) => entry.id === chainId);
 
   // Every CHAIN_META chain page bakes this og:image URL, but aggregateChains()
-  // skips chains whose tracked supply is currently zero. Render a degraded
-  // "no tracked supply" card instead of 404 so baked share images never break
-  // when a chain's supply transiently drops out of the aggregate.
+  // skips chains with no current supply observation. Absence from the aggregate
+  // is not an observed zero (ADR-28): render a figure-free card instead of a
+  // "$0" one, and instead of a 404 so baked share images never break.
   const safetyPresentation = safetyScoreOgPresentation(safetySource);
-  const data: ChainCardData = chain
-    ? {
-        name: chain.name,
-        totalUsd: chain.totalUsd,
-        change7dPercent: chain.change7dPct == null ? null : ratioToPercentage(chain.change7dPct),
-        stablecoinCount: chain.stablecoinCount,
-        dominanceShare: chain.dominanceShare,
-        healthScore: chain.healthScore,
-        healthBand: chain.healthBand,
-        topStablecoins: (chain.topStablecoins ?? []).slice(0, 4).map((coin) => ({
-          symbol: coin.symbol,
-          share: coin.share,
-          supplyUsd: coin.supplyUsd,
-        })),
-        safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-        lastUpdated: safetyPresentation.lastUpdated,
-      }
-    : {
-        name: CHAIN_META[chainId].name,
-        totalUsd: 0,
-        change7dPercent: 0,
-        stablecoinCount: 0,
-        dominanceShare: 0,
-        healthScore: null,
-        healthBand: null,
-        topStablecoins: [],
-        safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-        lastUpdated: safetyPresentation.lastUpdated,
-      };
+  if (!chain) {
+    const png = await renderPng(
+      <ChainUnavailableCard
+        name={CHAIN_META[chainId].name}
+        lastUpdated={ogSourceAsOf("Market", stablecoinsResult.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, Math.floor(Date.now() / 1000))}
+      />,
+    );
+    return new Response(png, { headers: { ...safetyPresentation.headers, "X-Og-Status": "degraded", "X-Og-Reason": "chain-not-in-aggregate" } });
+  }
+  const data: ChainCardData = {
+    name: chain.name,
+    totalUsd: chain.totalUsd,
+    change7dPercent: chain.change7dPct == null ? null : ratioToPercentage(chain.change7dPct),
+    stablecoinCount: chain.stablecoinCount,
+    dominanceShare: chain.dominanceShare,
+    healthScore: chain.healthScore,
+    healthBand: chain.healthBand,
+    topStablecoins: (chain.topStablecoins ?? []).slice(0, 4).map((coin) => ({
+      symbol: coin.symbol,
+      share: coin.share,
+      supplyUsd: coin.supplyUsd,
+    })),
+    safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
+    lastUpdated: safetyPresentation.lastUpdated,
+  };
 
   const png = await renderPng(<ChainCard data={data} />);
   return new Response(png, { headers: safetyPresentation.headers });
+}
+
+// ---------------------------------------------------------------------------
+// /api/og/page/:slug — live route share cards
+// ---------------------------------------------------------------------------
+
+// A timeless card is true at any age, but a short cache lets the live card
+// return quickly once its source recovers.
+const TIMELESS_CACHE_CONTROL = API_CACHE_PROFILES.custom;
+
+async function renderOgPageTimeless(slug: OgPageSlug, reason: OgPageUnavailableReason, nowSec: number): Promise<Response> {
+  logWorkerEvent({
+    scope: "api",
+    level: reason === "render-error" || reason === "owner-error" ? "error" : "warn",
+    event: "og.page_timeless",
+    route: "/api/og/page",
+    message: "Live route card unavailable; serving the timeless card",
+    metadata: { slug, reason },
+  });
+  const png = await renderPng(<RouteCard cardKey={slug} variant="timeless" />);
+  return new Response(png, {
+    headers: {
+      "Content-Type": "image/png",
+      "Cache-Control": TIMELESS_CACHE_CONTROL,
+      "X-Og-Status": "timeless",
+      "X-Og-Reason": reason,
+      "X-Og-Assessed-At": String(nowSec),
+    },
+  });
+}
+
+/**
+ * Live route card. The hero is the page's own published figure, read in
+ * process from the owner the public endpoint uses and stamped with its
+ * generation. A missing, stale, held, partial or failed source — and a render
+ * failure — serves the figure-free timeless card (200), never a stale number.
+ */
+async function handleOgPage(db: D1Database, slug: string): Promise<Response> {
+  if (!isOgPageSlug(slug)) return ogErrorResponse("Unknown OG page", 404);
+  const nowSec = Math.floor(Date.now() / 1000);
+  let load: OgPageLoad;
+  try {
+    load = await OG_PAGE_LOADERS[slug](db, nowSec);
+  } catch (err) {
+    logWorkerEventArgs("api", "error", `[og] Page loader error (${slug}):`, err);
+    load = { kind: "unavailable", reason: "owner-error" };
+  }
+  if (load.kind === "unavailable") return renderOgPageTimeless(slug, load.reason, nowSec);
+
+  try {
+    const png = await renderPng(
+      <RouteCard
+        cardKey={slug}
+        variant="live"
+        data={{
+          hero: load.hero,
+          context: load.context,
+          support: load.support,
+          visual: load.visual,
+          stamp: `As of ${formatOgStampTime(load.asOfSec)}${load.stampNote ? ` · ${load.stampNote}` : ""}`,
+        }}
+      />,
+    );
+    return new Response(png, {
+      headers: {
+        "Content-Type": "image/png",
+        // Never cached past the figure's admission budget.
+        "Cache-Control": buildOgImageCacheControl((load.freshUntilSec ?? load.asOfSec + load.budgetSec) - nowSec),
+        "X-Og-Status": "live",
+        "X-Og-Generation": load.generation,
+        "X-Og-As-Of": String(load.asOfSec),
+        "X-Og-Freshness-Budget": String(load.budgetSec),
+        "X-Og-Assessed-At": String(nowSec),
+      },
+    });
+  } catch (err) {
+    logWorkerEventArgs("api", "error", `[og] Page render error (${slug}):`, err);
+    return renderOgPageTimeless(slug, "render-error", nowSec);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -920,6 +998,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
 
 const STABLECOIN_OG_PATTERN = /^\/api\/og\/stablecoin\/(.+)$/;
 const CHAIN_OG_PATTERN = /^\/api\/og\/chain\/([a-z0-9-]+)$/;
+const PAGE_OG_PATTERN = /^\/api\/og\/page\/([a-z-]+)$/;
 
 interface OgRoute {
   pattern: RegExp;
@@ -944,6 +1023,7 @@ const OG_ROUTES: readonly OgRoute[] = [
     pattern: CHAIN_OG_PATTERN,
     render: (db, chainId) => handleChainOg(db, chainId),
   },
+  { pattern: PAGE_OG_PATTERN, render: (db, slug) => handleOgPage(db, slug) },
   { pattern: /^\/api\/og\/safety-scores$/, render: (db) => handleSafetyScoresOg(db) },
   { pattern: /^\/api\/og\/depeg$/, render: (db) => handleDepegOg(db) },
   { pattern: /^\/api\/og\/stability-index$/, render: (db) => handleStabilityIndexOg(db) },

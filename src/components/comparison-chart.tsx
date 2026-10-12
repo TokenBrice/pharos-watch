@@ -9,6 +9,7 @@ import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import { formatChartDate, formatChartPercent } from "@shared/lib/format";
+import { exactTickFormatter } from "@/lib/chart-ticks";
 import type { SupplySeriesEntry } from "@/lib/compare-derive";
 // Raw boolean options keep the normalization toggle free of a per-render
 // descriptor array; labels come from the hoisted formatter below.
@@ -17,10 +18,14 @@ const NORMALIZATION_OPTIONS = [false, true] as const;
 const formatNormalizationLabel = (normalized: boolean): string =>
   normalized ? "Normalized %" : "Absolute";
 
+const formatNormalizedTick = exactTickFormatter(formatChartPercent);
+
 interface ComparisonChartProps {
   title: string;
   series: SupplySeriesEntry[];
   formatValue?: (v: number) => string;
+  /** Absolute-mode axis labels; defaults to `formatValue`. Pass a `chart-ticks` formatter for compact exact ticks. */
+  formatTick?: (v: number) => string;
   range?: TimeRangeOption;
   onRangeChange?: (range: TimeRangeOption) => void;
   normalizable?: boolean;
@@ -30,6 +35,7 @@ export function ComparisonChart({
   title,
   series,
   formatValue,
+  formatTick,
   range,
   onRangeChange,
   normalizable,
@@ -92,12 +98,13 @@ export function ComparisonChart({
   const activeFormatter = normalized
     ? (v: number) => formatChartPercent(v)
     : valueFormatter;
+  const activeTickFormatter = normalized ? formatNormalizedTick : (formatTick ?? valueFormatter);
 
   return (
     <Card className="pharos-card-shell animate-in fade-in duration-300">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
-          <p className="pharos-kicker">Comparison Chart</p>
+          <p className="pharos-label">Comparison chart</p>
           <CardTitle as="h2" className="pharos-section-title">
             {title}
           </CardTitle>
@@ -144,7 +151,7 @@ export function ComparisonChart({
               height="100%"
               margin={{ top: 8, right: 8, bottom: 16, left: 0 }}
               xTickFormatter={formatTimestamp}
-              yTickFormatter={activeFormatter}
+              yTickFormatter={activeTickFormatter}
               valueFormatter={activeFormatter}
               tooltipLabelFormatter={(timestamp) => formatChartDate(timestamp, "short")}
               tableDateFormatter={(timestamp) => formatChartDate(timestamp, "short")}

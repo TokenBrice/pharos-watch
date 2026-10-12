@@ -11,19 +11,30 @@ import {
   USDC_BLUE,
   USDT_GREEN,
 } from "@/lib/chart-colors";
+import {
+  CHART_AXIS_TICK,
+  CHART_GRID_DASH,
+  CHART_GRID_STROKE,
+  CHART_STROKE_WIDTH,
+  CHART_TICK_FONT_SIZE,
+} from "@/lib/chart-theme";
+import { formatCurrencyTick, niceTicks, niceTimeTicks } from "@/lib/chart-ticks";
 import { computeChartYDomain } from "@/lib/chart-utils";
+import { ChartTooltipSurface } from "@/components/pharos-chart-tooltip";
 import type { TotalMcapChartRow } from "@/lib/total-mcap-chart";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 
 const HOME_ALT_CHART_MARGIN = { top: 24, right: 32, bottom: 12, left: 0 } as const;
 const HOME_ALT_Y_AXIS_WIDTH = 68;
 const HOME_ALT_X_AXIS_HEIGHT = 30;
-const HOME_ALT_TICK_FONT_SIZE = 12;
-
 const HOME_ALT_DATE_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
   year: "2-digit",
+  timeZone: "UTC",
 });
+const HOME_ALT_YEAR_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: "UTC" });
+// Narrow charts keep fewer calendar ticks so year labels never collide.
+const HOME_ALT_NARROW_WIDTH = 640;
 
 interface HomeAltHeroChartProps {
   rows: TotalMcapChartRow[];
@@ -95,11 +106,6 @@ const HOVER_SERIES: readonly {
   ...CHART_LAYERS.map(({ key, label, color }) => ({ key, label, color })),
   ...COHORT_LINES.map(({ key, label, color }) => ({ key, label, color })),
 ];
-
-function buildEvenTicks(count: number): number[] {
-  if (count <= 1) return [0];
-  return Array.from({ length: count }, (_, i) => i / (count - 1));
-}
 
 
 function makeScales({
@@ -244,16 +250,23 @@ function HomeAltChartFrame({
     const start = rows[0]!.ts;
     const end = rows[rows.length - 1]!.ts;
     const maxFromRows = rows.reduce((max, row) => row.total === null ? max : Math.max(max, row.total), 0);
-    const resolvedYDomain: [number, number] = [yDomain[0], typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows];
+    // The value domain extends to the nice tick above the data, so the top
+    // gridline caps the envelope.
+    const { domain: resolvedYDomain, ticks: yTicks } = niceTicks(
+      yDomain[0],
+      typeof yDomain[1] === "number" ? yDomain[1] : maxFromRows,
+      { kind: "currency", includeZero: true },
+    );
     // Keep observed points and gap boundaries: thinning can connect across a
     // missing day or reduce the final observed segment to a vertical sliver.
     const visibleRows = rows;
     const scales = makeScales({ rows: visibleRows, bounds, yDomain: resolvedYDomain });
+    const xTicks = niceTimeTicks(start, end, width < HOME_ALT_NARROW_WIDTH ? 4 : 6);
 
-    return { bounds, start, end, resolvedYDomain, visibleRows, scales };
+    return { bounds, resolvedYDomain, visibleRows, scales, yTicks, xTicks };
   }, [height, rows, width, yDomain]);
 
-  const { bounds, start, end, resolvedYDomain, visibleRows, scales } = geometry;
+  const { bounds, visibleRows, scales, yTicks, xTicks } = geometry;
   const { x0, x1, y0, y1 } = bounds;
 
   const handlePointerMove = useCallback(
@@ -295,54 +308,30 @@ function HomeAltChartFrame({
           ))}
         </defs>
         <g aria-hidden="true">
-          {buildEvenTicks(5).map((tick, i) => {
-            const y = y0 + tick * (y1 - y0);
-            const value = resolvedYDomain[1] - tick * (resolvedYDomain[1] - resolvedYDomain[0]);
+          {yTicks.map((value) => {
+            const y = scales.y(value);
             return (
-              <g key={i}>
+              <g key={value}>
                 <line
                   x1={x0}
                   x2={x1}
                   y1={y}
                   y2={y}
-                  stroke="var(--color-border)"
-                  strokeDasharray="2 6"
-                  strokeWidth={1}
-                  style={{ opacity: 0.6 }}
+                  stroke={CHART_GRID_STROKE}
+                  strokeDasharray={CHART_GRID_DASH}
+                  strokeWidth={CHART_STROKE_WIDTH.guide}
                 />
-                <text
-                  x={x0 - 8}
-                  y={y + HOME_ALT_TICK_FONT_SIZE / 2 - 2}
-                  fill="var(--color-muted-foreground)"
-                  fontFamily="var(--font-mono, monospace)"
-                  fontSize={HOME_ALT_TICK_FONT_SIZE}
-                  textAnchor="end"
-                  style={{ opacity: 0.75 }}
-                >
-                  {formatCurrency(value, 0)}
+                <text x={x0 - 8} y={y + CHART_TICK_FONT_SIZE / 2 - 2} textAnchor="end" {...CHART_AXIS_TICK}>
+                  {formatCurrencyTick(value)}
                 </text>
               </g>
             );
           })}
-          {buildEvenTicks(6).map((tick, i) => {
-            const x = x0 + tick * (x1 - x0);
-            const ts = start + tick * (end - start);
-            return (
-              <text
-                key={i}
-                className={i === 1 || i === 3 || i === 4 ? "hidden sm:inline" : undefined}
-                x={x}
-                y={y1 + 10 + HOME_ALT_TICK_FONT_SIZE}
-                fill="var(--color-muted-foreground)"
-                fontFamily="var(--font-mono, monospace)"
-                fontSize={HOME_ALT_TICK_FONT_SIZE}
-                textAnchor="middle"
-                style={{ opacity: 0.75 }}
-              >
-                {HOME_ALT_DATE_TICK_FORMATTER.format(new Date(ts))}
-              </text>
-            );
-          })}
+          {xTicks.ticks.map((ts) => (
+            <text key={ts} x={scales.x(ts)} y={y1 + 10 + CHART_TICK_FONT_SIZE} textAnchor="middle" {...CHART_AXIS_TICK}>
+              {(xTicks.stepMonths >= 12 ? HOME_ALT_YEAR_TICK_FORMATTER : HOME_ALT_DATE_TICK_FORMATTER).format(new Date(ts))}
+            </text>
+          ))}
           {visibleRows.length > 0 ? (
             <g>
               {CHART_LAYERS.map((layer) => (
@@ -435,11 +424,11 @@ function HomeAltHoverReadout({
   const flip = hoverX > chartWidth / 2;
 
   return (
-    <div
+    <ChartTooltipSurface
       // Pointer-only affordance: a live region would announce on every mouse
       // move, and the SVG already carries the chart's accessible name.
       role="tooltip"
-      className="pointer-events-none absolute z-10 min-w-[11.5rem] rounded-xl border border-border/70 bg-card/95 px-3.5 py-3 shadow-[var(--elevation-rest)]"
+      className="pointer-events-none absolute z-10 min-w-[11.5rem]"
       style={
         flip
           ? { right: Math.max(8, chartWidth - hoverX + 12), top }
@@ -467,7 +456,7 @@ function HomeAltHoverReadout({
           );
         })}
       </dl>
-    </div>
+    </ChartTooltipSurface>
   );
 }
 
@@ -487,7 +476,7 @@ export function HomeAltHeroChart({ rows, isLoadingHistory = false }: HomeAltHero
   return (
     <div
       ref={chartContainerRef}
-      className="relative h-[260px] w-full sm:h-[320px] lg:h-auto lg:min-h-[305px]"
+      className="relative h-[260px] w-full sm:h-[320px] lg:h-full"
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >

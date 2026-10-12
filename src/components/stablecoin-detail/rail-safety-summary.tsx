@@ -1,5 +1,6 @@
 "use client";
 
+import { FigureLeadText } from "./figure-lead-text";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
@@ -37,12 +38,19 @@ export function RailSafetySummary({
   items,
   navToken = false,
   frozen = false,
+  gradeRead = "settled",
 }: {
   items: HeroSignalRailItem[];
   /** NAV tokens have no peg stress layer; their DEWS row reads "N/A · NAV". */
   navToken?: boolean;
   /** Frozen archives are no longer scored. */
   frozen?: boolean;
+  /**
+   * The report-card read behind the grade. "Not scored" is a finding, so it
+   * needs a settled read: a first fetch in flight shows a placeholder and a
+   * failed read says the grade is unavailable.
+   */
+  gradeRead?: "settled" | "pending" | "failed";
 }) {
   const [hero, ...rest] = items;
   if (!hero) return null;
@@ -76,6 +84,14 @@ export function RailSafetySummary({
             <span className="font-mono text-base text-muted-foreground">· {hero.secondary}</span>
           ) : null}
         </Link>
+      ) : gradeRead === "pending" && !frozen ? (
+        <div className="mt-2.5" role="status" aria-label="Loading Safety Score" data-safety-state="loading">
+          <span aria-hidden="true" className="block h-12 w-28 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
+        </div>
+      ) : gradeRead === "failed" && !frozen ? (
+        <p className="mt-2.5 text-lg font-semibold leading-tight text-muted-foreground" data-safety-state="unavailable">
+          Grade unavailable
+        </p>
       ) : (
         <p className="mt-2.5 flex items-baseline gap-1.5" data-safety-state={frozen ? "frozen" : "not-scored"}>
           <span className="text-lg font-semibold leading-tight text-foreground">
@@ -93,7 +109,7 @@ export function RailSafetySummary({
               href={item.href}
               className="pharos-focus-ring flex items-baseline justify-between gap-3 rounded-sm py-2 transition-colors hover:text-foreground"
             >
-              <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              <span className="pharos-label">
                 {item.label}
               </span>
               <span className="flex items-baseline gap-1.5">
@@ -101,7 +117,7 @@ export function RailSafetySummary({
                   {display.primary}
                 </span>
                 {display.secondary ? (
-                  <span className="font-mono text-[11px] uppercase text-muted-foreground">· {display.secondary}</span>
+                  <span className="text-xs text-muted-foreground">· <FigureLeadText text={display.secondary} /></span>
                 ) : null}
               </span>
             </Link>

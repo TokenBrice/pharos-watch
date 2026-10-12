@@ -14,7 +14,7 @@ import {
   BLACKLIST_STATUS_BUCKET_LABELS,
   filterStablecoinsByBlacklistStatus,
   type BlacklistStatusBucketKey,
-} from "@/lib/blacklist-status-buckets";
+} from "@shared/lib/blacklist-status-buckets";
 import type { StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import type { StablecoinTableSourceGenerations } from "@/components/stablecoin-table-logic";
@@ -71,7 +71,7 @@ export function BlacklistStatusDrilldown({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
-          <h2 className="pharos-kicker">Status Drilldown</h2>
+          <h2 className="pharos-label">Status drilldown</h2>
           <p className="text-sm text-foreground">
             Stablecoins with Freezable status:{" "}
             <span className="font-medium">{BLACKLIST_STATUS_BUCKET_LABELS[status]}</span>

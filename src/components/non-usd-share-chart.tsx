@@ -12,6 +12,7 @@ import {
 } from "@/components/chart-primitives/focused-stacked-area-card";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
+import { formatPercentTick } from "@/lib/chart-ticks";
 import type { NonUsdSharePoint } from "@shared/types/market";
 
 const COMMODITY_COLOR = CHART_AMBER;
@@ -148,7 +149,7 @@ export function NonUsdShareChart({
       data={chartData}
       tsKey="ts"
       isLoading={isLoading}
-      title="Share Of Total Stablecoin Market Outside USD"
+      title="Share of total stablecoin market outside USD"
       loadingTitle="Non-USD Market Share"
       subtitle={
         latestTotal != null && latestTotal > 0 ? (
@@ -190,7 +191,7 @@ export function NonUsdShareChart({
       series={SHARE_SERIES}
       tooltip={<ShareTooltip />}
       yDomain={getYDomain}
-      yTickFormatter={(value) => formatPercent(value, 1)}
+      yTickFormatter={formatPercentTick}
       tableColumns={SHARE_TABLE_COLUMNS}
       tableCaption={(_rows, truncated, total) =>
         `Share of total stablecoin market outside USD over ${total} points${truncated ? "; showing the latest 90" : ""}.`

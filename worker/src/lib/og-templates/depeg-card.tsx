@@ -58,7 +58,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <MetricLabel>ACTIVE DEPEGS</MetricLabel>
+          <MetricLabel>OPEN DEPEG EVENTS</MetricLabel>
           <span style={{ fontSize: 64, fontWeight: 700, color: depegColor }}>
             {data.activeDepegCount}
           </span>

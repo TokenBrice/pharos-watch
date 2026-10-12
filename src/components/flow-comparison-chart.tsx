@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
+import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { MultiSeriesLineChart, mergeMultiSeriesData } from "@/components/chart-primitives/multi-series-line-chart";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
@@ -38,8 +39,8 @@ export function FlowComparisonChart({
     <Card className="pharos-card-shell">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
-          <CardTitle as="h3" className="pharos-kicker">
-            Net Flow Over Time
+          <CardTitle as="h3" className="pharos-label">
+            Net flow over time
           </CardTitle>
           <ControlPillToggle
             className="flex gap-1"
@@ -74,7 +75,7 @@ export function FlowComparisonChart({
                   timeZone: "UTC",
                 })
               : formatChartDate(timestamp, "short")}
-            yTickFormatter={(value) => formatCurrency(value, 1)}
+            yTickFormatter={formatCurrencyTick}
             valueFormatter={(value) => `${value >= 0 ? "+" : ""}${formatCurrency(value, 1)}`}
             tooltipLabelFormatter={(timestamp) => formatChartDate(timestamp, hours <= 24 ? "with-time" : "short")}
             tableDateFormatter={(timestamp) => formatChartDate(timestamp, hours <= 24 ? "with-time" : "short")}

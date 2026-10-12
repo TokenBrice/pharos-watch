@@ -59,7 +59,7 @@ export function YieldWhyPysStrip({
         >
           <p className="text-xs text-muted-foreground">{cell.title}</p>
           <p className="font-mono tabular-nums text-sm text-foreground">{cell.value}</p>
-          <p className="truncate text-[10px] text-muted-foreground">{cell.sublabel}</p>
+          <p className="truncate text-3xs text-muted-foreground">{cell.sublabel}</p>
         </div>
       ))}
     </div>

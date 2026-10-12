@@ -40,7 +40,7 @@ export function MethodologyLinkBadge({
       )}
     >
       <BookOpen aria-hidden="true" size={10} strokeWidth={1.5} />
-      <span className="font-mono uppercase tracking-wide">{label}</span>
+      <span className="pharos-label">{label}</span>
     </Link>
   );
 }

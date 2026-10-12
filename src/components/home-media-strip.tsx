@@ -20,7 +20,7 @@ export function HomeMediaStrip(): React.JSX.Element {
         prefetch={false}
         className="pharos-card-shell pharos-focus-ring group flex items-center gap-3 px-4 py-3 transition-colors hover:border-frost-blue/40"
       >
-        <span className="pharos-kicker shrink-0">Seen on</span>
+        <span className="pharos-label shrink-0">Seen on</span>
         <span className="flex shrink-0 -space-x-2">
           {MEDIA_APPEARANCES.map((appearance) => (
             <Image

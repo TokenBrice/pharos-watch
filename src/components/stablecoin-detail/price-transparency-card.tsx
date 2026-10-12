@@ -26,6 +26,7 @@ import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-regi
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
 import { formatCurrency, timeAgo } from "@shared/lib/format";
+import { normalizePegType } from "@shared/lib/peg-rates";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
 interface PriceTransparencyCardProps {
@@ -43,6 +44,17 @@ interface SourceInfo {
 
 function formatSourceDepthTargetLabel(sourceCount: number): string {
   return sourceCount >= 3 ? "3+/3" : `${sourceCount}/3`;
+}
+
+/**
+ * Every price on this card (consensus, DEX check, par reference) is USD. A
+ * non-USD peg's hero prints its native price ("EUR 0.9996"), so the USD basis
+ * is spelled out as an ISO prefix here instead of a bare `$` that reads as a
+ * 12% gap beside the hero.
+ */
+function formatUsdPrice(price: number, pegType: string): string {
+  const fixed = price.toFixed(4);
+  return normalizePegType(pegType) === "peggedUSD" ? `$${fixed}` : `USD ${fixed}`;
 }
 
 function formatCompactUpdatedAt(epochSec: number | null | undefined): string | null {
@@ -200,7 +212,7 @@ function SourceChip({
       <span className={cn("min-w-0 truncate", style.label)} title={label}>
         {label}
       </span>
-      <Badge variant="outline" className={cn("shrink-0 text-[11px]", style.badge)}>
+      <Badge variant="outline" className={cn("shrink-0 text-2xs", style.badge)}>
         {style.text}
       </Badge>
     </div>
@@ -250,7 +262,7 @@ function SourcesModal({
           <DialogTitle className="text-sm font-medium text-foreground">Sources</DialogTitle>
           <div className="flex items-center gap-2">
             {updatedAtLabel ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-2xs font-medium text-muted-foreground">
                 <RefreshCw className="h-3 w-3" aria-hidden="true" />
                 {updatedAtLabel}
               </span>
@@ -292,15 +304,15 @@ function SourcesModal({
           </div>
         </div>
         <div className="flex items-center justify-center gap-3 border-t border-border/40 px-5 py-3">
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          <span className="pharos-label flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-[2px] bg-emerald-500" aria-hidden="true" />
             Used
           </span>
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          <span className="pharos-label flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-[2px] bg-sky-400" aria-hidden="true" />
             Available
           </span>
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          <span className="pharos-label flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-[2px] bg-muted-foreground/40" aria-hidden="true" />
             Unused
           </span>
@@ -336,7 +348,7 @@ export function PriceTransparencyCard({
   );
   const nominalReferenceNote = nominalReference ? (
     <p className="text-sm text-muted-foreground">
-      Nominal par reference: ${nominalReference.price.toFixed(4)} ({nominalReference.source}). Not an observed price or a live redemption quote.
+      Nominal par reference: {formatUsdPrice(nominalReference.price, coinData.pegType)} ({nominalReference.source}). Not an observed price or a live redemption quote.
     </p>
   ) : null;
   const isProtocolRedeem = observed && isPricingSourceProtocolOverride(coinData.priceSource);
@@ -388,8 +400,10 @@ export function PriceTransparencyCard({
   // next to the word "Disagrees". `CircleCheck`/`TriangleAlert` is the house
   // severity glyph vocabulary (`src/components/severity-icon.tsx`).
   const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
-  const priceLabel = !hasNoPrice && coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A";
-  const confidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
+  const priceLabel = !hasNoPrice && coinData.price != null ? formatUsdPrice(coinData.price, coinData.pegType) : "N/A";
+  const rawConfidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
+  // Sentence case: multi-word values never render as caps (three-register rule).
+  const confidenceLabel = rawConfidenceLabel.charAt(0).toUpperCase() + rawConfidenceLabel.slice(1);
   const sourceDepthLabel = `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
 
   if (compact) {
@@ -419,8 +433,8 @@ export function PriceTransparencyCard({
           <p className="font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
             {priceLabel}
           </p>
-          <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-            {confidenceLabel.toUpperCase()}
+          <p className="pharos-label mt-2">
+            {confidenceLabel}
             <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
               ·
             </span>
@@ -435,16 +449,16 @@ export function PriceTransparencyCard({
               <p className="text-sm font-medium text-muted-foreground">DEX Check</p>
               <Badge
                 variant="outline"
-                className={cn("h-5 gap-1 rounded-full px-2 text-[11px] font-medium", dexAgreementTone)}
+                className={cn("h-5 gap-1 rounded-full px-2 text-2xs font-medium", dexAgreementTone)}
               >
                 <DexAgreementIcon className="h-3 w-3" aria-hidden="true" />
                 {dexAgreementLabel}
               </Badge>
             </div>
             <p className="mt-3 font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
-              ${dexPriceCheck.dexPrice.toFixed(4)}
+              {formatUsdPrice(dexPriceCheck.dexPrice, coinData.pegType)}
             </p>
-            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="pharos-label mt-2">
               {formatCurrency(dexPriceCheck.sourceTvl)} TVL
               <span className="px-1.5 text-muted-foreground/45" aria-hidden="true">
                 ·
@@ -496,7 +510,7 @@ export function PriceTransparencyCard({
             <Badge
               variant="outline"
               className={cn(
-                "text-[11px] uppercase",
+                "text-2xs",
                 hasNoPrice
                   ? "text-muted-foreground"
                   : (CONFIDENCE_LEVEL_COLORS[coinData.priceConfidence as keyof typeof CONFIDENCE_LEVEL_COLORS] ??
@@ -507,7 +521,7 @@ export function PriceTransparencyCard({
             </Badge>
             <Badge
               variant="outline"
-              className={cn("text-[11px] uppercase tabular-nums", sourceDepthTone)}
+              className={cn("text-2xs tabular-nums", sourceDepthTone)}
               title="Candidate source-depth target"
             >
               {sourceDepthLabel}
@@ -541,17 +555,17 @@ export function PriceTransparencyCard({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground">DEX Check</span>
-                <Badge variant="outline" className={cn("gap-1 text-[11px]", dexAgreementTone)}>
+                <Badge variant="outline" className={cn("gap-1 text-2xs", dexAgreementTone)}>
                   <DexAgreementIcon className="h-3 w-3" aria-hidden="true" />
                   {dexAgreementLabel}
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground">
-                {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"} · ${(dexPriceCheck.sourceTvl / 1e6).toFixed(1)}M TVL
+                {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"} · {formatCurrency(dexPriceCheck.sourceTvl)} TVL
               </span>
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-mono font-medium">${dexPriceCheck.dexPrice.toFixed(4)}</span>
+              <span className="font-mono font-medium">{formatUsdPrice(dexPriceCheck.dexPrice, coinData.pegType)}</span>
               <span className="text-xs text-muted-foreground">
                 {Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps deviation
               </span>

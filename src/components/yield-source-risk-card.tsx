@@ -69,7 +69,7 @@ function RiskMetric({
 }) {
   return (
     <div className="min-w-0 rounded-md bg-muted/40 px-2.5 py-2" title={title}>
-      <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
+      <dt className="text-3xs font-medium text-muted-foreground">{label}</dt>
       <dd className={cn("mt-0.5 truncate font-mono text-xs tabular-nums text-foreground", valueClassName)}>{value}</dd>
     </div>
   );
@@ -121,7 +121,7 @@ export function YieldSourceRiskCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span
-            className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", POSTURE_TONE[posture])}
+            className={cn("rounded-full border px-2 py-0.5 text-3xs font-medium", POSTURE_TONE[posture])}
             title={postureMeta.description}
           >
             {postureLabel}
@@ -144,7 +144,7 @@ export function YieldSourceRiskCard({
         />
       </dl>
 
-      <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
+      <div className="mt-3 flex flex-wrap gap-1.5 text-3xs">
         {confidenceLabel ? (
           <span className="rounded-full border border-border/50 bg-background/45 px-2 py-0.5 text-muted-foreground">
             {confidenceLabel} confidence
@@ -180,7 +180,7 @@ export function YieldSourceRiskCard({
             {sourceRiskDrivers.map((driver) => (
               <span
                 key={driver.key}
-                className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:text-amber-200"
+                className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-3xs font-medium text-amber-800 dark:text-amber-200"
                 title={driver.description}
               >
                 {driver.label}

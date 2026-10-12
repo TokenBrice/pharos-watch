@@ -51,6 +51,18 @@ export function selectVisibleYieldRows(universe: PreparedYieldUniverse, params: 
   return rankYieldRows(universe.rowFacets.filter((facet) => rowMatchesYieldFilters(facet, filters)), filters, universe.cohortIndex);
 }
 
+/**
+ * The /yield/ hero answer for a view: rows with the highest Pharos Yield Score
+ * (best-paid risk, not the highest raw APY). Shared by the Yield page hero and
+ * the homepage Yield card so both lead with the same coin.
+ */
+export function selectTopPysRows(rows: readonly YieldViewModelRow[], count = 3): YieldViewModelRow[] {
+  return rows
+    .filter((row) => row.pharosYieldScore != null)
+    .sort((a, b) => (b.pharosYieldScore ?? 0) - (a.pharosYieldScore ?? 0))
+    .slice(0, count);
+}
+
 export function buildYieldViewModel(
   universe: PreparedYieldUniverse,
   params: YieldViewModelUrlParams,

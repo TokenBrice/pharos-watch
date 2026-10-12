@@ -95,7 +95,7 @@ export function CaseStudyList({
         aria-label="Filter case studies"
       >
         <div className="flex flex-col gap-2">
-          <p className="pharos-kicker">Outcome</p>
+          <p className="pharos-label">Outcome</p>
           <div className="flex flex-wrap gap-2">
             {OUTCOME_FILTERS.map((filter) => (
               <button
@@ -111,7 +111,7 @@ export function CaseStudyList({
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <p className="pharos-kicker">Mechanism</p>
+          <p className="pharos-label">Mechanism</p>
           <div className="flex flex-wrap gap-2">
             {archetypeFilters.map((filter) => (
               <button
@@ -134,7 +134,7 @@ export function CaseStudyList({
         </p>
       ) : (
         <>
-          <p className="pharos-numeric text-[11px] uppercase tracking-[0.12em] text-muted-foreground" aria-live="polite">
+          <p className="pharos-numeric text-2xs text-muted-foreground" aria-live="polite">
             {visible.length} case {visible.length === 1 ? "study" : "studies"}
           </p>
           <ol className="divide-y divide-border/60">
@@ -145,16 +145,16 @@ export function CaseStudyList({
                 className="pharos-focus-ring group grid gap-3 py-8 xl:grid-cols-[minmax(0,1fr)_auto] xl:gap-12 xl:py-10"
               >
                 <div className="flex flex-col gap-3">
-                  <p className="pharos-kicker">
+                  <p className="pharos-label">
                     {study.eyebrow}
                   </p>
                   <h2 className="pharos-display text-2xl font-bold tracking-tight text-foreground transition-colors group-hover:text-frost-blue sm:text-3xl">
                     {study.title}
                   </h2>
-                  <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+                  <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
                     {study.subtitle}
                   </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 pharos-numeric text-2xs text-muted-foreground">
                     <span>{study.eventDateLabel}</span>
                     <span>{archetypeLabels[study.archetype]}</span>
                     <span

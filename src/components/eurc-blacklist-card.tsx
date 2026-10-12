@@ -6,8 +6,8 @@ export function EurcBlacklistCard() {
     <Card className="rounded-xl">
       <CardHeader className="pb-1">
         <div className="flex items-center justify-between">
-          <CardTitle className="pharos-kicker">
-            EURC Blacklisting
+          <CardTitle className="pharos-label">
+            EURC blacklisting
           </CardTitle>
           <Badge variant="secondary" className="text-xs">
             Info

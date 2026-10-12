@@ -71,7 +71,7 @@ export function KeyboardShortcuts({
         <div className="space-y-4 py-2">
           {categories.map((category) => (
             <div key={category}>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <h3 className="pharos-label mb-2">
                 {category}
               </h3>
               <div className="space-y-1.5">

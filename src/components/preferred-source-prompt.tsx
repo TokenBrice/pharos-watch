@@ -28,7 +28,7 @@ export const PREFERRED_SOURCE_URL = `https://www.google.com/preferences/source?q
 export function PreferredSourcePrompt({ className }: { className?: string }) {
   return (
     <section className={className ? `pharos-card-shell space-y-2 px-5 py-5 ${className}` : "pharos-card-shell space-y-2 px-5 py-5"}>
-      <p className="pharos-kicker">Preferred source</p>
+      <p className="pharos-label">Preferred source</p>
       <p className="text-sm leading-6 text-muted-foreground">
         Reading Pharos regularly? Mark it as a preferred source and Google will surface Pharos Watch more often in
         Top Stories, AI Overviews, and AI Mode.

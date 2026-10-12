@@ -22,6 +22,24 @@ describe("mechanism explainer registry", () => {
     }
   });
 
+  it("keeps code formatting and raw routes out of reader-facing copy", () => {
+    // Explainer strings render as plain text, so backticks and route literals
+    // (`/stablecoin/[id]/`) would print verbatim on a Discovery-tier page.
+    const collectStrings = (value: unknown): string[] =>
+      typeof value === "string"
+        ? [value]
+        : Array.isArray(value)
+          ? value.flatMap(collectStrings)
+          : value && typeof value === "object"
+            ? Object.entries(value).flatMap(([key, child]) => (key === "href" ? [] : collectStrings(child)))
+            : [];
+    for (const content of Object.values(ARCHETYPE_CONTENT)) {
+      for (const text of collectStrings(content)) {
+        expect(text, content.archetype).not.toMatch(/`|(?:^|\s)\/[a-z]/);
+      }
+    }
+  });
+
   it("owns one non-empty title for every mechanism archetype", () => {
     expect(Object.keys(MECHANISM_EXPLAINER_TITLES).sort()).toEqual([...MECHANISM_ARCHETYPE_VALUES].sort());
     for (const title of Object.values(MECHANISM_EXPLAINER_TITLES)) {

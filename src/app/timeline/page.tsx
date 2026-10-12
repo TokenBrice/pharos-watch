@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
-import { buildPageMetadata } from "@/lib/page-metadata";
+import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TAPE_CLASSES } from "@/components/tape/tape-classes";
 import { TimelineClient } from "./client";
@@ -15,7 +15,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Timeline: Stablecoin Market Events",
   description: TIMELINE_DESCRIPTION,
   canonical: "/timeline/",
-  ogImage: `${SITE_URL}/og-timeline.png`,
+  ogImage: buildLiveRouteOgImageUrl("timeline"),
   // Kept as a nav tool but out of the index (2026-10-11): the static shell is
   // ~40 words and the homepage tape, coin pages and /depeg/ carry the events.
   robots: { index: false, follow: true },

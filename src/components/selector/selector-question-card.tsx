@@ -138,7 +138,7 @@ function SelectorQuestionCardInner<TValue extends string>(
           tabIndex={-1}
           className="block space-y-1.5 outline-none"
         >
-          <span className="pharos-kicker inline-flex items-center gap-1.5">
+          <span className="pharos-label inline-flex items-center gap-1.5">
             <span aria-hidden="true" className="inline-flex h-3.5 w-3.5 items-center justify-center text-muted-foreground">
               <SelectorEmblem />
             </span>

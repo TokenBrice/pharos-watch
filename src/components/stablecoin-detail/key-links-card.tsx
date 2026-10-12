@@ -58,7 +58,7 @@ export function KeyLinksCard({ meta, anchors = false }: { meta: StablecoinMeta; 
             className={cn("space-y-1.5", anchors ? SECTION_SCROLL_MT : undefined)}
             {...(anchors ? { id: "attestation" } : {})}
           >
-            <p className="pharos-kicker">Proof of Reserves</p>
+            <p className="pharos-label">Proof of Reserves</p>
             <p className="text-xs leading-relaxed text-muted-foreground">
               {POR_BADGE_STYLES[proofOfReserves.type].label}
               {proofOfReserves.provider ? ` by ${proofOfReserves.provider}` : ""}

@@ -97,7 +97,7 @@ export const content: ArchetypeContent = {
     },
   ],
   whatToWatch: [
-    "Safety Score Backing breakdown on /stablecoin/[id]/. Commodity claims are graded on title and allocation, custody continuity, assurance and reconciliation, and physical redemption, not on cash-reserve components.",
+    "Safety Score Backing breakdown on each coin page. Commodity claims are graded on title and allocation, custody continuity, assurance and reconciliation, and physical redemption, not on cash-reserve components.",
     "Proof-of-reserves method, scope, and cadence on the detail page. Look for an examination that reconciles a bar list to token supply, and for how recent the latest report is; an annual inventory schedule is weak evidence of today's allocation.",
     "Redemption Backstop route family. Physical delivery shows up as an off-chain issuer route with a large minimum and a settlement delay; check whether the minimum is reachable for a realistic position before treating it as an exit.",
     "Exit route depth on the Safety Score Exit pillar. For most holders the real exit is secondary-market liquidity, not the vault, and commodity tokens trade in thinner books than major dollar stablecoins.",

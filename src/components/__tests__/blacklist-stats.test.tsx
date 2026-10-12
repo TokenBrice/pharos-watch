@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
-import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
+import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { BlacklistDetailStats } from "@/components/stablecoin-detail/blacklist-detail-stats";
 
 
@@ -116,12 +116,12 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.getByText("Unfreezable Market Share")).toBeTruthy();
+    expect(screen.getByText("Unfreezable market share")).toBeTruthy();
     expect(screen.getByText("12.5%")).toBeTruthy();
     expect(screen.getByText("2 stablecoins · $30.00B of $240.00B total")).toBeTruthy();
-    expect(screen.getByText("Tracked Frozen Total")).toBeTruthy();
+    expect(screen.getByText("Tracked frozen total")).toBeTruthy();
     expect(screen.getByText("last-known freeze snapshots")).toBeTruthy();
-    expect(screen.getByText("Total Wiped Value")).toBeTruthy();
+    expect(screen.getByText("Total wiped value")).toBeTruthy();
     expect(screen.queryByText("Snapshot Basis")).toBeNull();
     expect(screen.queryByText("Freeze Ledger")).toBeNull();
     expect(screen.queryByText("USDT Blacklisted")).toBeNull();
@@ -185,7 +185,7 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.getByText("Data Quality")).toBeTruthy();
+    expect(screen.getByText("Data quality")).toBeTruthy();
     expect(screen.getByText(/3 events have an ambiguous order/)).toBeTruthy();
     expect(screen.getByText(/Tron transfers in separate transactions/)).toBeTruthy();
   });
@@ -242,7 +242,7 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.getByText("Data Quality")).toBeTruthy();
+    expect(screen.getByText("Data quality")).toBeTruthy();
     expect(screen.getByText("Freeze ledger coverage is stale")).toBeTruthy();
     expect(screen.getByText("4 current-balance provider failures")).toBeTruthy();
     expect(screen.getByText("2 tracked ledger gaps")).toBeTruthy();
@@ -281,7 +281,7 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.queryByText("Data Quality")).toBeNull();
+    expect(screen.queryByText("Data quality")).toBeNull();
   });
 
   it("keeps extra precision for sub-0.1% market-share values", () => {

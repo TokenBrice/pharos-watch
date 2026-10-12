@@ -57,7 +57,7 @@ export function ChartScaleToggle({
             disabled={disabled}
             onClick={() => onChange(opt)}
             className={cn(
-              "pharos-focus-ring pharos-control-pill px-2.5 sm:py-1 text-[10px] tracking-wider",
+              "pharos-focus-ring pharos-control-pill px-2.5 sm:py-1 text-3xs",
               isActive ? "pharos-control-pill-active" : "",
               disabled && "cursor-not-allowed",
             )}

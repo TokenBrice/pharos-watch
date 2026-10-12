@@ -4,7 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
-import { baseEventType, describeEventDelta, firstSentence } from "@/lib/tape-derive";
+import {
+  baseEventType,
+  describeEventDelta,
+  firstSentence,
+  formatTapeEventSummary,
+  formatTapeEventTitle,
+} from "@/lib/tape-derive";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { SEVERITY_LABEL, SEVERITY_TEXT_CLASS, type TapeEvent } from "@shared/types/tape-event";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -90,7 +96,8 @@ function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
   const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
   // Coin identity is implicit on the coin's own page; non-coin events (e.g.
   // methodology) carry their descriptive content in `title`, not `summary`.
-  const body = event.summary ? firstSentence(event.summary) : !event.coinId ? event.title : "";
+  const summary = formatTapeEventSummary(event);
+  const body = summary ? firstSentence(summary) : !event.coinId ? formatTapeEventTitle(event) : "";
   const delta = describeEventDelta(event);
   return (
     <Link href={href} className="pharos-focus-ring block rounded-sm py-2.5 transition-colors hover:bg-muted/30">

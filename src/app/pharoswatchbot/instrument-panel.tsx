@@ -1,9 +1,9 @@
 "use client";
 
-import { useId } from "react";
+import { useId, useMemo } from "react";
 import Link from "next/link";
 import { Area, AreaChart } from "recharts";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -11,17 +11,13 @@ import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { formatDecimal } from "@shared/lib/format";
+import { formatChartDate, formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
 
 const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
-});
-const MONTH_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  year: "2-digit",
 });
 const MONTH_ONLY_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -47,7 +43,7 @@ function formatCount(value: number): string {
 
 function formatMonthTick(value: unknown): string {
   const timestamp = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(timestamp) ? MONTH_TICK_FORMATTER.format(new Date(timestamp)) : "";
+  return Number.isFinite(timestamp) ? formatChartDate(timestamp, "compact") : "";
 }
 
 function formatMonthOnlyTick(value: unknown): string {
@@ -95,6 +91,8 @@ function WatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
   const rawGradientId = useId();
   const gradientId = `night-watch-growth-${rawGradientId.replace(/:/g, "")}`;
   const rangeDays = lifecycleRangeDays(data);
+  const watcherCounts = useMemo(() => data.map((point) => point.activeWatchers), [data]);
+  const valueAxis = useNiceValueAxis(watcherCounts, { kind: "count" });
   // Month-boundary ticks when the series spans ~4+ months: explicit monthly
   // positions (no duplicate month labels), month-only text when the whole
   // series sits in one calendar year, year suffix when it crosses years.
@@ -130,6 +128,7 @@ function WatcherGrowthChart({ data }: { data: TelegramWatcherHistoryPoint[] }) {
           <MonoYAxis
             width={42}
             allowDecimals={false}
+            {...valueAxis}
             tickFormatter={(value) => COMPACT_NUMBER_FORMATTER.format(Number(value))}
           />
           <DateTooltip formatter={(value, name) => [formatCount(Number(value)), String(name)]} />

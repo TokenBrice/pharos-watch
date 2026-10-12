@@ -16,7 +16,7 @@ import type {
 } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
 import { readV9CardMintComponent } from "@/lib/safety-score-v9-consumers";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import {
   buildCoverageFeatureSummary,
   buildCoverageRow,

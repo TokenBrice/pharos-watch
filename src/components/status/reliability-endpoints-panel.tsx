@@ -25,7 +25,7 @@ function ProbeRows({ probes }: { probes: EndpointProbeResult[] }) {
           <TableRow key={probe.path}>
             <TableCell className="min-w-56 whitespace-normal align-top">
               <code className="break-all text-xs text-foreground">{sanitizeReliabilityProbePath(probe.path)}</code>
-              {detail ? <div className="mt-1 text-[11px] text-muted-foreground">{detail}</div> : null}
+              {detail ? <div className="mt-1 text-2xs text-muted-foreground">{detail}</div> : null}
             </TableCell>
             <TableCell className="align-top">
               <StatusPill

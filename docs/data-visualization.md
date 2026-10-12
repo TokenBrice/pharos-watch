@@ -20,9 +20,33 @@ Runtime-neutral thresholds, labels, and palettes belong in `shared/lib/` when bo
 
 The Cemetery plot map is the reference split for a metaphor scene. `buildCemeteryPlotMap` in `src/lib/cemetery-plot-map.ts` is the pure, deterministic view model: lanes, shared year blocks, lot packing, peak classes, clamped stone heights, weathering classes, depth order and section-zoom cameras, all seeded by id and dated against the latest recorded death rather than the clock. `src/lib/cemetery-plot-geometry.ts` turns graves into drawn marks, and the components in `src/components/cemetery/` render them and own focus, pointer, zoom and selection. `validatePlotMapCapacity` checks the layout constants against the current data (overlapping lots, lane overflow, empty runs, the plain-stone and zoom legibility floors), so growth that breaks the plan fails a test instead of drawing badly.
 
+The dependency Watershed is the second reference split. `buildWatershedModel` in `src/lib/dependency-watershed/model.ts` (with `ranks.ts`, `order.ts` and `geometry.ts`) is the pure, deterministic view model. The renderers live in `src/components/dependency-watershed/`, and its "Table view" disclosure is the equivalent data surface.
+
 Existing exceptions are documented rather than treated as the standard: `HomeAltHeroChart` still computes sampling, scales, and SVG geometry in the component (`src/components/home-alt-hero-chart.tsx`), and `BlacklistChart` still derives peak quarters and chart series in-component (`src/components/blacklist-chart.tsx`).
 
 Selection shared with sibling panels belongs in the route client, not hidden inside the scene.
+
+## Scene Kit
+
+Isometric metaphor scenes are assembled from the scene kit, extracted from the Cemetery plot map. Its consumers are the Cemetery, Harbor on `/chains/` (`src/components/harbor/`) and the PSI beacon (`src/components/psi-beacon/`), which draws the kit lighthouse. The kit is a library of functions, not a layout engine; scene-specific shapes, packing and cameras stay with the scene.
+
+| Layer | Location | Contents |
+| --- | --- | --- |
+| Geometry (pure, Worker-safe) | `shared/lib/scene/` | `projection.ts` (linear camera `SCENE_DIMETRIC`, `project`, `round1`/`round3`, hull/bbox, `format*`), `seed.ts` (`fnv1a`, `seededStream`), `marks.ts` (`SceneMark` union), `solids.ts` (boxes, cylinders, octagonal prisms, face frames, shadows), `objects/lighthouse.ts` (the one lighthouse), `placement.ts` (hover tag, docked inspector card), `capacity.ts` (`CapacityReport`, footprint overlap, face floor), `atlas.ts` (logo-atlas manifest reader) |
+| Rendering (React) | `src/components/scene/` | `SceneMarks` / `AtlasWindow` (`scene-marks.tsx`), `SceneDefs` / `SceneKitDefs` (`scene-defs.tsx`), `useSceneLayout` (`use-scene-layout.ts`), `scene-tokens.module.css` |
+| Build tooling | `scripts/lib/` | `scene-atlas.ts` (logo atlas WebP, manifest, input signature), `scene-og.ts` (CSS-module document, token closure, Firefox render, document-hash signature) |
+
+The Cemetery is the first consumer: `src/lib/cemetery-plot-geometry.ts`, `src/lib/cemetery-plot-map.ts`, `plot-map-shapes.tsx` and the two cemetery build scripts (`build-cemetery-logo-atlas.ts`, `build-og-cemetery.ts`, now configurations over `scene-atlas.ts` / `scene-og.ts` with unchanged commands and outputs) import the kit and keep their `Plot*` names; `plot-map.module.css` composes the kit's `tokens` and `scene` classes, and the OG document inlines the kit sheet before it. `src/lib/__tests__/cemetery-scene-golden.test.ts` pins the Cemetery's geometry and markup hashes, so a kit change that would alter the drawing fails there.
+
+Kit rules:
+
+- **Geometry is pure.** No DOM, clock or randomness; the only seed is `seededStream(fnv1a(id))`, so the same input in any order draws byte-identical marks.
+- **Rounding is part of the contract.** Screen coordinates round to 0.1 SVG units, face-local data and matrix coefficients to 0.001, and −0 folds to 0.
+- **Geometry never carries colour.** Every mark has `cls`, a list of class tokens; `SceneMarks` requires `classOf`. Colour lives in custom properties behind the class.
+- **Paint servers are hosted once and never hidden.** `SceneDefs` renders a 0×0 host SVG (never `display: none`, which breaks every `url(#…)` reference while a scene is hidden) inside the element that sets the scene's tokens; IDs are `${idPrefix}-…`, one prefix per scene.
+- **Capacity fails tests, not readers.** A scene validates its layout constants against the data and returns a `CapacityReport`; overlap and legibility floors are test failures.
+- **Materials are kit tokens.** `scene-tokens.module.css` owns the material layer (sea, earth, lawn, gravel, rock, the lighthouse, hairlines, shadow, plates) in light ("surveyor's daylight") and dark ("lamplit night"). A scene composes `tokens` into its root and `scene` into each SVG, and adds its own art direction and data colours on top. These tokens encode materials, never data; data colours still come from the shared palettes.
+- **No idle motion; every duration is a kit token.** Transitions and animations in scene stylesheets read `--scene-dur-fast` (120 ms), `--scene-dur-glide` (260 ms) or `--scene-dur-bloom` (520 ms). The kit sets all three to 0 ms under `data-motion="reduced"` and under `prefers-reduced-motion: reduce` unless `data-motion="full"`. In the Cemetery these are the hover-tag fade, the flower bloom and the phone sheet's slide. JavaScript-driven motion (the Cemetery beam and zoom) stays gated by `usePrefersReducedMotion`. `src/components/__tests__/scene-motion-coverage.test.ts` fails on a literal duration in a kit or Cemetery scene stylesheet.
 
 ## Encoding
 
@@ -30,7 +54,7 @@ Prefer position for the primary relationship. Size can show magnitude; hue can s
 
 Safety pillar radars use the absolute numeric domain `[0, 100]`; adding a comparison cohort never rescales an unchanged score.
 
-Stablecoin data often spans several orders of magnitude. Use an appropriate non-linear or piecewise scale for magnitude and give every rendered size an explicit floor and ceiling. The view model must handle null, empty, non-finite, negative, and out-of-range inputs without producing invalid SVG geometry.
+Stablecoin data often spans several orders of magnitude. Use an appropriate non-linear or piecewise scale for magnitude and give every rendered size an explicit floor and ceiling. Documented exception: Watershed ribbon width is linear in mapped USD with a disclosed 1 px floor ("Links under $X draw at the 1px minimum"), because a linear width keeps each coin's stacked ports additive. Exact values are in the tooltip and the table ([Dependency Map: Watershed](./dependency-map.md#watershed)). The view model must handle null, empty, non-finite, negative, and out-of-range inputs without producing invalid SVG geometry.
 
 Derived layout must be deterministic. Seed any jitter or long-tail accent from a stable identifier; do not use `Math.random()` during render.
 
@@ -94,6 +118,41 @@ Data encodings use shared semantic or classification palettes. Follow [design-to
 
 A visualization may own local atmospheric colors when those colors do not encode data. Known brand colors may come from a curated registry; unbounded categories may use a deterministic identifier-based palette.
 
+## Axes, Ticks And Chart Theme
+
+Every numeric axis, Recharts or hand-rolled SVG, takes its ticks from `src/lib/chart-ticks.ts`; no chart divides its domain into even fractions or hard-codes a step list.
+
+- **Steps:** 1, 2, 2.5 or 5 × 10^n (`niceTicks`). The step whose tick count is closest to the target wins, with a penalty for empty range an extension adds. `score`, `bps` and `count` axes use integer steps only (2.5 only from 25 up). An extension never crosses zero for non-negative data, and a `percent` or `score` axis never extends past 100 when its data stays inside it. Non-finite input returns no ticks; `niceTicksForValues` ignores unavailable values rather than reading them as zero.
+- **Domain:** `extend: true` widens the domain to the outer ticks. Use `extend: false` when the domain must stay exact (a padded window, a data-height envelope, a display rail); only the nice ticks inside it are labelled.
+- **Labels:** tick labels state the tick exactly. Precision-taking formatters go through `exactTickFormatter` (`formatCurrencyTick`, `formatPercentTick`), which gives each tick the fewest decimals that keep it exact: a 2.5 step reads "$2.5M", never "$3M", and distinct ticks never share a label. A fixed 0-decimal formatter must not label nice ticks.
+- **Log axes:** `logTicks` labels powers of ten, adds 2× and 5× marks within two decades, and falls back to nice linear values inside a single decade.
+- **Calendar axes:** `niceTimeTicks` places ticks on UTC month starts aligned to a 1, 3, 6, 12, 24, 60 or 120-month step (quarters on Jan/Apr/Jul/Oct, multi-year steps on even years); steps of a year or more are labelled by year. A month tick before the first point is dropped rather than drawn clipped at the plot edge.
+- **Recharts:** a data-driven value axis spreads `useNiceValueAxis(values)` (`src/components/chart-primitives/axes.tsx`) into `MonoYAxis`: the domain extends to the nice tick above the data (stack totals for stacked charts). `MonoYAxis` turns a fixed numeric `domain` into explicit in-domain ticks, because Recharts otherwise appends the raw domain end (0/15/30/50); `tickKind` selects the step rules and `scale="log"` uses `logTicks`. Its fallback for an unresolved auto domain is Recharts' `niceTicks="snap125"`, which uses the same steps but forces its tick count and can nearly double the domain (0–2,150 drawn to 4,000), so new charts do not rely on it. A raw `<YAxis>`/`<XAxis>` passes `ticks` (and `interval={0}`) from the helper.
+- **Plot edges:** Recharts shifts or drops an edge tick label so it stays inside the chart, measuring it in a hidden span that `src/app/globals.css` sets in the mono tick face; without that rule it measures sans and clips the last date label. A stacked area always starts at zero (`FocusedStackedAreaCard` pins the floor, since Recharts would widen a raised floor back to 0 with no ticks below it). Bars on a time axis pad the domain by half a bucket so the first and last bars are drawn whole (`flow-chart.tsx`).
+- **Domain-specific exceptions:** the peg deviation chart keeps its par-centred symmetric axis (`computePegYAxis` in `src/lib/peg-chart-math.ts`), and categorical/quarter axes keep their own label thinning.
+- **Display rails:** a capped axis labels the rail as `>N` (the yield scatter's outlier rail), never as a bare domain-end tick, and the outlier count stays visible beside the chart.
+
+`src/lib/chart-theme.ts` owns the shared chart grammar; components import it instead of restating values:
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `CHART_AXIS_TICK` | 11 px mono figures, muted-foreground fill | Every axis tick, Recharts `tick` prop or SVG `<text>` spread |
+| `CHART_AXIS_LABEL` | 11 px sans, muted-foreground | Axis titles ("APY %", "Safety Score") |
+| `CHART_GRID_STROKE` / `CHART_GRID_DASH` | border ink, `2 6` | Horizontal value gridlines only; no vertical grid on time series |
+| `CHART_AXIS_LINE` | border ink | An axis baseline, when drawn |
+| `CHART_REFERENCE_DASH` | `4 4` | Benchmark, threshold and zero reference lines |
+| `CHART_STROKE_WIDTH` | series 2, secondary 1.5, guide 1 | Line widths |
+| `CHART_BAND_OPACITY` | 0.12 | Background bands (regime, severity, quadrant) stay below the data line |
+| `CHART_TOOLTIP_SURFACE` | card fill, 70 % border, `--radius-xl`, `--elevation-raised` | The one tooltip surface |
+
+Tooltips use one shell. Recharts `content` tooltips render `PharosChartTooltip` (with `TooltipLabel`/`TooltipRow`), hand-positioned SVG readouts render `ChartTooltipSurface` (both in `src/components/pharos-chart-tooltip.tsx`), and default Recharts tooltips spread `RECHARTS_TOOLTIP_STYLES`, which is built from the same surface. The Cemetery plot map and contagion graph keep scene-specific inspection cards.
+
+Background bands and quadrant fills must never out-shout the series: the series draws at full stroke, bands at `CHART_BAND_OPACITY`. A sparkline of a penalty component that is exerting no pressure now draws in neutral slate; its warning hue is reserved for live pressure. Sparklines of bounded components share the component's published range rather than auto-scaling, so a near-zero series reads as near zero.
+
+Dense scatter marks keep their true positions. The yield scatter assigns logo markers by market size (TVL descending, unavailable last, id tie-break) and draws any point whose logo would overlap a larger market's logo as a small safety-tier dot at its exact coordinates; hover shows its logo. Points are never nudged apart (`declutterScatterMarkers` in `src/lib/yield-scatter.ts`).
+
+Reserve composition tiers use the ordered severity ramp from the chart tokens (very low green, low teal, medium amber, high orange, very high red), with tiles filled at ~24 % of the tier hue and labelled in foreground ink, so one label colour reads on every tier in both themes.
+
 ## Labels And Context
 
 Keep labels concise and concrete. Tickers and compact values may use mono; explanatory prose stays in the core sans face. Avoid serif inside analytical scenes: the Cemetery plot map sets its signposts and colossus chips in sans small caps and its figures and footstone glyphs in mono, and keeps Newsreader to the route heading and the HTML record card, never inside the drawn SVG.
@@ -107,7 +166,7 @@ Supply the context needed to avoid misreading:
 - methodology link or label for coined scores
 - a short caveat where correlation, sample scope, or retained stale data could be mistaken for something stronger
 
-The global regime bar uses the `stabilityIndex` data-health preset, producer metadata and PSI generation. Non-fresh/failed-refresh evidence gets neutral color and a visibly/accessibly retained as-of observation, not a current-regime claim. Its 30 cells are completed UTC days ending yesterday relative to that generation; missing days stay empty and older rows are excluded.
+The global regime bar uses the `stabilityIndex` data-health preset, producer metadata and PSI generation. Non-fresh/failed-refresh evidence gets neutral color and a visibly/accessibly retained as-of observation, not a current-regime claim. Its 30 cells are completed UTC days ending yesterday relative to that generation; missing days stay empty and older rows are excluded. The 3px line itself is decorative and never focusable; its details panel opens from the labelled `RegimeBarToggle` ("PSI 72") in the header and closes on Esc or navigation.
 
 The non-USD share chart labels its latest sample date separately from coverage start and HTTP receipt time. Its cohort amounts and shares are non-null producer observations (an observed empty cohort is zero); absent overall history remains unavailable. Server freshness metadata feeds the existing Alt Pegs page stale-data banner even when a stalled snapshot is returned over successful HTTP.
 

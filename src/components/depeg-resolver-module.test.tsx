@@ -277,7 +277,7 @@ describe("DepegResolverModule", () => {
     })} />);
     expect(screen.getByText(/Whole book/).textContent).toContain("1 forecast across 1 incident rows");
     expect(screen.getByText(/live overlay is stale/)).toBeTruthy();
-    expect(screen.getByText("At Risk")).toBeTruthy();
+    expect(screen.getByText("At risk")).toBeTruthy();
   });
 
   it.each(["secondary-overlay-unavailable", "manifest-fallback:missing-cache", "unknown-failure"])(
@@ -291,7 +291,7 @@ describe("DepegResolverModule", () => {
       expect(screen.getByText("Resolver data is temporarily unavailable.")).toBeTruthy();
       expect(screen.queryByText(/Whole book/)).toBeNull();
       expect(screen.queryByText(/showing all|most urgent/)).toBeNull();
-      expect(screen.queryByText("At Risk")).toBeNull();
+      expect(screen.queryByText("At risk")).toBeNull();
     },
   );
 
@@ -345,7 +345,7 @@ describe("DepegResolverModule", () => {
     );
 
     expect(screen.getByText("Prediction lock pending")).toBeTruthy();
-    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByText("At risk")).toBeNull();
     expect(screen.queryByText(/~resolve/)).toBeNull();
 
     rerender(
@@ -357,7 +357,7 @@ describe("DepegResolverModule", () => {
     );
     expect(screen.getByText("Health deferral")).toBeTruthy();
     expect(screen.getByText("Deferral reason: stablecoins cache stale")).toBeTruthy();
-    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByText("At risk")).toBeNull();
 
     rerender(
       <DepegResolverModule
@@ -367,7 +367,7 @@ describe("DepegResolverModule", () => {
       />,
     );
     expect(screen.getByText("Forecast publication delayed")).toBeTruthy();
-    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByText("At risk")).toBeNull();
   });
 
   it("shows frozen prediction lock metadata separately from live status", () => {
@@ -459,13 +459,13 @@ describe("StablecoinDepegResolverRows", () => {
     render(<StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={response({ rows: [row] })} />);
 
     expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
-    expect(screen.getByText("At Risk")).toBeTruthy();
+    expect(screen.getByText("At risk")).toBeTruthy();
   });
 
   it("stays hidden when the DDR snapshot has no row for the current stablecoin", () => {
     render(<StablecoinDepegResolverRows stablecoinId="usdc-circle" data={response({ rows: [row] })} />);
 
-    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByText("At risk")).toBeNull();
     expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
   });
 
@@ -480,7 +480,7 @@ describe("StablecoinDepegResolverRows", () => {
     );
 
     expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
-    expect(screen.getByText("At Risk")).toBeTruthy();
+    expect(screen.getByText("At risk")).toBeTruthy();
   });
 
   it("keeps matching rows visible when the resolver snapshot is stale", () => {
@@ -497,7 +497,7 @@ describe("StablecoinDepegResolverRows", () => {
     expect(
       screen.getByText(/live overlay is stale.*frozen forecasts.*remain unchanged/i),
     ).toBeTruthy();
-    expect(screen.getByText("At Risk")).toBeTruthy();
+    expect(screen.getByText("At risk")).toBeTruthy();
   });
 
   it.each(["resolver list", "stablecoin detail"] as const)(
@@ -541,7 +541,7 @@ describe("StablecoinDepegResolverRows", () => {
     );
 
     expect(screen.queryByLabelText(/Depeg Duration Resolver/)).toBeNull();
-    expect(screen.queryByText("At Risk")).toBeNull();
+    expect(screen.queryByText("At risk")).toBeNull();
     expect(screen.queryByText(/Resolver snapshot is stale/)).toBeNull();
   });
 
@@ -552,5 +552,14 @@ describe("StablecoinDepegResolverRows", () => {
     expect(screen.getAllByLabelText(/Depeg Duration Resolver for /)).toHaveLength(1);
     expect(screen.getByLabelText("Depeg Duration Resolver for LUSD")).toBeTruthy();
     expect(screen.queryByText("USDC")).toBeNull();
+  });
+});
+
+describe("DDR reader copy", () => {
+  it("maps live-overlay reason codes to plain copy instead of printing the code", async () => {
+    const { formatDdrReason } = await import("@/components/depeg-resolver-row-card-model");
+    expect(formatDdrReason("duration-exceeded")).toBe("past its forecast window");
+    expect(formatDdrReason("manifest-fallback:kv-miss")).toBe("served from the publication manifest");
+    expect(formatDdrReason("some-new_code")).toBe("some new code");
   });
 });

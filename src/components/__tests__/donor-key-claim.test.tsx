@@ -162,15 +162,16 @@ describe("DonorKeyClaim wallet handoff", () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("link", { name: "Open in MetaMask" })));
   });
 
-  it("offers wallet-app links to the claim section only when no wallet is injected", async () => {
+  it("offers wallet-app links to the claim section only after a claim attempt finds no wallet", async () => {
     const claimUrl = `${SITE_ORIGIN}/api/#${API_PAGE_ANCHORS.claim}`;
     const view = render(<DonorKeyClaim />);
+    expect(screen.queryByRole("link", { name: "Open in MetaMask" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
     const metamask = await screen.findByRole("link", { name: "Open in MetaMask" });
     expect(metamask.getAttribute("href")).toBe(`https://link.metamask.io/dapp/${new URL(SITE_ORIGIN).host}/api/#claim`);
     const coinbase = screen.getByRole("link", { name: "Open in Coinbase Wallet" });
     expect(new URL(coinbase.getAttribute("href") ?? "").searchParams.get("cb_url")).toBe(claimUrl);
-    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
-    expect(document.activeElement).toBe(metamask);
+    await waitFor(() => expect(document.activeElement).toBe(metamask));
     view.unmount();
 
     vi.stubGlobal("ethereum", { request: vi.fn() });

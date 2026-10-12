@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { CAUSE_HEX, CAUSE_HEX_DARK, CAUSE_META } from "@shared/lib/cause-of-death";
 import type { StablecoinObituary } from "@shared/types";
 
@@ -33,10 +32,10 @@ export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBan
         className="absolute inset-x-0 top-0 h-[3px] bg-[var(--cause-hex)] dark:bg-[var(--cause-hex-dark)]"
         style={causeColorVars}
       />
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-        <span aria-hidden="true">In Memoriam</span>
+      <div className="pharos-label flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span aria-hidden="true">In memoriam</span>
         <span aria-hidden="true" className="text-muted-foreground/50">·</span>
-        <span className={cn("normal-case tracking-wide", cause.textColor)}>{cause.label}</span>
+        <span className={cause.textColor}>{cause.label}</span>
       </div>
       <h2
         id={epitaphId}
@@ -44,13 +43,13 @@ export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBan
       >
         &ldquo;{obituary.epitaph}&rdquo;
       </h2>
-      <p className="mt-2 text-xs tracking-wide text-muted-foreground">
+      <p className="mt-2 text-xs text-muted-foreground">
         {symbol} archived {frozenAt}
       </p>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="pharos-focus-ring mt-5 inline-flex items-center gap-1 text-xs uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
+        className="pharos-label pharos-focus-ring mt-5 inline-flex items-center gap-1 hover:text-foreground"
         aria-expanded={expanded}
       >
         {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}

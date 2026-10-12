@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatChartDate } from "@shared/lib/format";
 import { CHART_AMBER, CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_AXIS_TICK } from "@/lib/chart-theme";
+import { ChartTooltipSurface } from "@/components/pharos-chart-tooltip";
 import { toTimestampMs } from "@/lib/time";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -50,8 +52,7 @@ export function AxisTick({
   y = 0,
   payload,
   value,
-  compact = false,
-}: AxisTickProps & { value: string; compact?: boolean }) {
+}: AxisTickProps & { value: string }) {
   if (!payload) return null;
 
   return (
@@ -60,9 +61,7 @@ export function AxisTick({
       y={Number(y)}
       dy={12}
       textAnchor="middle"
-      className="font-mono"
-      fontSize={compact ? 10 : 11}
-      fill="var(--color-muted-foreground)"
+      {...CHART_AXIS_TICK}
     >
       {value}
     </text>
@@ -73,8 +72,7 @@ export function YAxisTick({
   x = 0,
   y = 0,
   payload,
-  compact = false,
-}: AxisTickProps & { compact?: boolean }) {
+}: AxisTickProps) {
   if (!payload) return null;
 
   return (
@@ -84,9 +82,7 @@ export function YAxisTick({
       dx={-6}
       dy={4}
       textAnchor="end"
-      className="font-mono"
-      fontSize={compact ? 10 : 11}
-      fill="var(--color-muted-foreground)"
+      {...CHART_AXIS_TICK}
     >
       {formatTickPercent(Number(payload.value))}
     </text>
@@ -170,12 +166,7 @@ export function YieldHistoryTooltip({
   const spikeInfo = spikesByDate?.get(point.date) ?? null;
 
   return (
-    <div
-      className={cn(
-        "min-w-[180px] rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-lg",
-        compact ? "text-[11px]" : "text-xs",
-      )}
-    >
+    <ChartTooltipSurface className={cn("min-w-[180px]", compact ? "text-2xs" : "text-xs")}>
       <p className="font-medium text-foreground">{formatTooltipDate(labelTimestamp)}</p>
       <div className="mt-2 space-y-1.5 text-muted-foreground">
         {point.apy !== null && point.yieldSource ? (
@@ -212,16 +203,16 @@ export function YieldHistoryTooltip({
         ) : null}
       </div>
       {point.sourceSwitch ? (
-        <div className={cn("mt-2 rounded-md border px-2.5 py-2 text-[10px]", SEVERITY_TONE_CLASS.sky.pill)}>
-          <span className="block font-medium uppercase tracking-[0.14em]">Source changed</span>
+        <div className={cn("mt-2 rounded-md border px-2.5 py-2 text-3xs", SEVERITY_TONE_CLASS.sky.pill)}>
+          <span className="block font-medium">Source changed</span>
           <span className="mt-1 block normal-case tracking-normal">
             The selected source changed versus the prior published snapshot. This explains provenance churn, not stablecoin safety.
           </span>
         </div>
       ) : null}
       {spikeInfo && point.apy != null ? (
-        <div className="mt-2 rounded-md border border-orange-500/25 bg-orange-500/10 px-2.5 py-2 text-[10px] text-orange-700 dark:text-orange-300">
-          <span className="block font-medium uppercase tracking-[0.14em]">Yield spike</span>
+        <div className="mt-2 rounded-md border border-orange-500/25 bg-orange-500/10 px-2.5 py-2 text-3xs text-orange-700 dark:text-orange-300">
+          <span className="block font-medium">Yield spike</span>
           <span className="mt-1 block normal-case tracking-normal">
             {`Current ${formatChartNumber(point.apy)}% is ${formatChartNumber(spikeInfo.ratio, 1, 1)}× the trailing ${spikeInfo.windowDays}d average of ${formatChartNumber(spikeInfo.trailingAvg)}%.`}
           </span>
@@ -232,7 +223,7 @@ export function YieldHistoryTooltip({
       ) : null}
       {point.warningSignals.length > 0 ? (
         <div className="mt-2 border-t border-border/60 pt-2">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">
+          <p className="text-3xs font-medium text-amber-700 dark:text-amber-400">
             Warning signals
           </p>
           <div className="mt-1 space-y-1">
@@ -245,7 +236,7 @@ export function YieldHistoryTooltip({
           </div>
         </div>
       ) : null}
-    </div>
+    </ChartTooltipSurface>
   );
 }
 
@@ -313,7 +304,7 @@ export function Controls({
 
         {availableSources.length > 0 && !hideSourceSelector && onSourceChange ? (
           <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-xs text-muted-foreground">
-            <span className="uppercase tracking-[0.12em]">History</span>
+            <span>History</span>
             <DropdownMenu>
               <DropdownMenuTrigger
                 aria-label="Select yield history source"
@@ -350,7 +341,7 @@ export function Controls({
           aria-label="Show APY and PYS breakdown detail"
           className={cn(
             "rounded-full border-border/60 bg-background/60 text-muted-foreground data-[state=on]:bg-primary data-[state=on]:text-primary-foreground",
-            compact ? "px-2.5 text-[11px]" : "px-3 text-xs",
+            compact ? "px-2.5 text-2xs" : "px-3 text-xs",
           )}
         >
           {compact ? "Split" : "Show breakdown"}
@@ -435,7 +426,7 @@ export function SourceStrip({
           );
         })}
       </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-3xs text-muted-foreground">
         {[...legendByKey].map(([key, entry]) => {
           const label = key === "other" ? `other (${entry.sources.size})` : entry.label;
           return (

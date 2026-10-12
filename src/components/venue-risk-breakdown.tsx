@@ -49,14 +49,14 @@ export function VenueRiskBreakdown({ scores, tier, weighted, confidence }: Venue
   return (
     <div className="rounded-xl border border-border/60 bg-muted/20 p-3" role="group" aria-label="Venue risk breakdown">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Venue risk</p>
+        <p className="pharos-label">Venue risk</p>
         <div className="flex items-baseline gap-1.5 text-xs">
           {tier ? <span className={cn("font-medium capitalize", TIER_TONE[tier])}>{tier}</span> : null}
           {typeof weighted === "number" && Number.isFinite(weighted) ? (
             <span className="font-mono tabular-nums text-muted-foreground">{weighted.toFixed(1)}/5</span>
           ) : null}
           {confidence && confidence !== "verified" ? (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-300">
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-3xs text-amber-700 dark:text-amber-300">
               {confidence} confidence
             </span>
           ) : null}
@@ -85,7 +85,7 @@ export function VenueRiskBreakdown({ scores, tier, weighted, confidence }: Venue
           );
         })}
       </dl>
-      <p className="mt-2 text-[11px] text-muted-foreground">Yearn-style 5-category rubric · higher = riskier.</p>
+      <p className="mt-2 text-2xs text-muted-foreground">Yearn-style 5-category rubric · higher = riskier.</p>
     </div>
   );
 }

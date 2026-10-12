@@ -270,10 +270,10 @@ Apply `worker/migrations/0264_dependency_scenario_chunks.sql` before activating 
 
 Scheduled artifact PR secret:
 
-- `OG_REFRESH_GITHUB_TOKEN` - bot/PAT used by `.github/workflows/og-refresh.yml` when generated OG assets changed.
+- `OG_REFRESH_GITHUB_TOKEN` - legacy bot/PAT, now only the fallback token for the shock-coverage, curation-expiry and protocol-mechanism refresh PRs (its original OG screenshot workflow was retired on 2026-10-12).
 - `MECHANISM_REFRESH_GITHUB_TOKEN` - optional dedicated bot/PAT for `.github/workflows/protocol-api-mechanism-refresh.yml`; that workflow falls back to the shock-coverage or OG refresh token.
 
-The OG refresh captures the production Pages artifact through `stablecoin-dashboard.pages.dev` so shared GitHub egress does not receive the custom-domain security challenge. The capture script fails before PR creation when the response is unsuccessful, lacks the Pharos application shell, or contains Cloudflare challenge text.
+Route share cards are no longer screenshots: data-bearing routes select the live Worker card `/api/og/page/:slug` and every other route a committed timeless card ([OG Images](./og-images.md#1-route-cards)). After a Worker deploy, `GET` each live slug and decode the PNG; `X-Og-Status: timeless` names its `X-Og-Reason`.
 The [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) and [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) pages document the append-only measurement PR paths and their freshness gates.
 
 Workflow incident reporting needs repository Actions secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID`. They are **not provisioned** for the workflow alert path: incident issues/report summaries remain the available evidence, and first-failure Telegram delivery is an open operational prerequisite, not completed alerting.

@@ -27,7 +27,7 @@ Inside the worker route, the handler is intentionally split into focused modules
 
 ### `FeedbackButton` (`src/components/feedback-button.tsx`)
 
-A fixed-position FAB mounted globally in `src/app/layout.tsx`, shown on `sm+` viewports (`hidden ... sm:flex`), at `bottom-6 right-6 z-50`. It returns `null` on `/` and `/api/`, and opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` returns `null` on `/`; on `/api/` it retains scroll-to-top but omits feedback so API-key requests do not enter public GitHub issues.
+A small, quiet fixed-position ghost button (32px tall, muted text on the background surface, no brand fill) mounted globally in `src/app/layout.tsx`, shown on `sm+` viewports (`hidden ... sm:flex`), at `bottom-4 right-4 z-50`, so it stays discoverable without covering content or out-ranking page data. It returns `null` on `/` and `/api/`, and opens `FeedbackModal` with default type `"bug"`. On mobile, `MobileUtilityDock` returns `null` on `/`; on `/api/` it retains scroll-to-top but omits feedback so API-key requests do not enter public GitHub issues.
 
 ```tsx
 <FeedbackButton />
@@ -38,7 +38,7 @@ A fixed-position FAB mounted globally in `src/app/layout.tsx`, shown on `sm+` vi
 Mounted globally in `src/app/layout.tsx` alongside `FeedbackButton`.
 
 - Mobile only (`sm:hidden`)
-- Shows a compact feedback trigger after modest scroll depth
+- Shows a compact, neutral (card-surface, muted glyph) feedback trigger after modest scroll depth
 - Opens the same `FeedbackModal` component with default type `"bug"`
 
 ### `FeedbackModal` (`src/components/feedback-modal.tsx`)

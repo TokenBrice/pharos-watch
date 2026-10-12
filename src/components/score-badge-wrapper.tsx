@@ -33,7 +33,7 @@ interface ScoreBadgeWrapperProps {
   triggerAriaLabel?: string;
 }
 
-const SUFFIX_CLASS = "ml-1 pharos-numeric text-[10px] text-muted-foreground select-none";
+const SUFFIX_CLASS = "ml-1 pharos-numeric text-3xs text-muted-foreground select-none";
 
 /**
  * Wraps a score badge with a methodology-aware tooltip (W1-C `<Term>` dispatch

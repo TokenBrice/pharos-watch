@@ -31,7 +31,7 @@ function IntegrityTable({ caption, label, rows }: { caption: string; label: stri
               <TableRow key={row.id}>
                 <TableCell className="min-w-52 align-top">
                   <div className="font-medium text-foreground">{row.label}</div>
-                  <code className="mt-0.5 block break-all text-[10px] text-muted-foreground">{row.rawCode}</code>
+                  <code className="mt-0.5 block break-all text-3xs text-muted-foreground">{row.rawCode}</code>
                 </TableCell>
                 <TableCell className="whitespace-nowrap align-top font-mono text-xs tabular-nums">
                   {row.currentValue}

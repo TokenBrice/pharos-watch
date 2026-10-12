@@ -37,7 +37,7 @@ export default function PrivacyPage() {
     >
       <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
         <div className="pharos-card-shell px-5 py-4">
-          <p className="pharos-kicker">Policy Summary</p>
+          <p className="pharos-label">Policy summary</p>
           <p className="mt-2 text-sm text-foreground">
             Pharos does not ask for accounts. The only wallet interaction is the optional supporter API key claim on
             the API page, which stores a wallet address, key prefix, and claim time. Portfolio data and homepage

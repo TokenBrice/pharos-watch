@@ -152,7 +152,7 @@ export function MintingPressureGauge({
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+              "inline-flex rounded-full border px-2 py-0.5 text-2xs font-semibold",
               ui.badgeClass,
             )}
           >

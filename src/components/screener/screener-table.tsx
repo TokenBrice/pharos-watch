@@ -19,6 +19,7 @@ import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
+import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { RowSparkline } from "@/components/row-sparkline";
 import { SafetyScoreTopDriver } from "@/components/safety-score-top-driver";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -320,22 +321,24 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
   return (
     <article className="pharos-card-shell rounded-xl p-4">
       <div className="flex items-start justify-between gap-3">
-        <Link
-          href={buildStablecoinUrl(row.id)}
-          className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md"
-        >
-          <StablecoinIdentity
-            layout="contents"
-            logoSrc={logo}
-            name={row.name}
-            symbol={row.symbol}
-            logoSize={30}
-            symbolClassName="block font-semibold text-foreground"
-            nameClassName="block truncate text-xs text-muted-foreground"
-          />
-        </Link>
+        <StablecoinIdentityTransition id={row.id}>
+          <Link
+            href={buildStablecoinUrl(row.id)}
+            className="pharos-focus-ring flex min-w-0 items-center gap-2 rounded-md"
+          >
+            <StablecoinIdentity
+              layout="contents"
+              logoSrc={logo}
+              name={row.name}
+              symbol={row.symbol}
+              logoSize={30}
+              symbolClassName="block font-semibold text-foreground"
+              nameClassName="block truncate text-xs text-muted-foreground"
+            />
+          </Link>
+        </StablecoinIdentityTransition>
         <div className="shrink-0 text-right">
-          <p className="pharos-kicker">Supply</p>
+          <p className="pharos-label">Supply</p>
           <p className="pharos-numeric text-sm font-semibold text-foreground">
             {row.supplyUsd != null ? formatCompactUsd(row.supplyUsd) : "—"}
           </p>
@@ -409,21 +412,23 @@ function ScreenerTableRow({
       className="hover:!transform-none data-[cursor=true]:bg-muted/40 data-[cursor=true]:shadow-[inset_3px_0_0_0_var(--brand-accent)]"
     >
       <TableCell className="min-w-[160px]">
-        <Link
-          href={buildStablecoinUrl(row.id)}
-          data-screener-open={row.id}
-          className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm"
-        >
-          <StablecoinIdentity
-            layout="contents"
-            logoSrc={logo}
-            name={row.name}
-            symbol={row.symbol}
-            logoSize={24}
-            symbolClassName="block font-semibold text-foreground"
-            nameClassName="block truncate text-xs text-muted-foreground"
-          />
-        </Link>
+        <StablecoinIdentityTransition id={row.id}>
+          <Link
+            href={buildStablecoinUrl(row.id)}
+            data-screener-open={row.id}
+            className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm"
+          >
+            <StablecoinIdentity
+              layout="contents"
+              logoSrc={logo}
+              name={row.name}
+              symbol={row.symbol}
+              logoSize={24}
+              symbolClassName="block font-semibold text-foreground"
+              nameClassName="block truncate text-xs text-muted-foreground"
+            />
+          </Link>
+        </StablecoinIdentityTransition>
       </TableCell>
       <TableCell className="text-right pharos-numeric">
         {row.supplyUsd != null ? formatCompactUsd(row.supplyUsd) : (
@@ -543,10 +548,10 @@ function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boole
         <span className="text-border">/</span>
         <PillarReading label="C" value={row.safetyControlScore} weakest={row.safetyWeakestPillar === "control"} />
       </span>
-      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${evidenceClass}`}>
+      <span className={`rounded-full border px-1.5 py-0.5 text-3xs font-semibold leading-none ${evidenceClass}`}>
         {evidenceLabel}
       </span>
-      {row.partialEvidence !== null ? <span className="text-[10px] text-muted-foreground">
+      {row.partialEvidence !== null ? <span className="text-3xs text-muted-foreground">
         Partial evidence: pipeline gap · {row.partialEvidence.causes.join("/")}
       </span> : null}
     </span>

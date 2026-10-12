@@ -6,13 +6,15 @@ import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-
 import { cn } from "@/lib/utils";
 
 /**
- * The summary grammar every detail-page fold shares: dashed label, trailing
- * chevron, and a 44 px (mobile) / 36 px (desktop) hit area. Exported so
+ * The summary grammar every detail-page fold shares: muted label, trailing
+ * chevron, and a 44 px (mobile) / 36 px (desktop) hit area. The chevron is the
+ * affordance; the label underlines only on hover, because a dashed underline
+ * on every card's "Review notes & sources" read as noise. Exported so
  * controls that fold content they do not own (the footer's score-inputs
  * toggle) read as the same affordance.
  */
 export const MODULE_DISCLOSURE_SUMMARY_CLASS =
-  "pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground [&::-webkit-details-marker]:hidden lg:min-h-9";
+  "pharos-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-md text-sm text-muted-foreground decoration-dashed underline-offset-2 transition-colors hover:text-foreground hover:underline [&::-webkit-details-marker]:hidden lg:min-h-9";
 
 /**
  * The one fold rhythm inside a module body (or any `space-y-*` stack): a run
@@ -88,7 +90,7 @@ export function ModuleDisclosure({
       }
     >
       <summary className={cn(MODULE_DISCLOSURE_SUMMARY_CLASS, summaryClassName)}>
-        <span className="underline decoration-dashed underline-offset-2">{label}</span>
+        <span>{label}</span>
         {count != null ? (
           <>
             {/* Whitespace-only text between flex items is not rendered, but it

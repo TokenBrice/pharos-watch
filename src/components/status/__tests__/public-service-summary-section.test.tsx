@@ -84,8 +84,8 @@ describe("PublicServiceSummarySection", () => {
     // The shared healthy baseline records no hourly rollup (latestHourlyTs: null).
     render(<PublicServiceSummarySection healthData={makeHealthyHealthResponse()} />);
 
-    expect(screen.getByText("Last Successful Sync")).toBeTruthy();
-    expect(screen.queryByText("Latest Hourly Rollup")).toBeNull();
+    expect(screen.getByText("Last successful sync")).toBeTruthy();
+    expect(screen.queryByText("Latest hourly rollup")).toBeNull();
   });
 
   it("does not claim there are no impact flags while health warnings are active", () => {

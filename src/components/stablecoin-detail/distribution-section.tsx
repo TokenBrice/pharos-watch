@@ -91,7 +91,7 @@ function CenterOverlay({ total, subtitle }: { total: number; subtitle: string })
     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-[220ms] motion-reduce:animate-none">
       {/* Semibold, not medium: at 11px with 0.08em tracking the eyebrow reads
           far lighter than its measured contrast against the donut hole. */}
-      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{subtitle}</span>
+      <span className="pharos-label">{subtitle}</span>
       <span className="text-base font-semibold font-mono tabular-nums text-foreground">{formatCurrency(total)}</span>
     </div>
   );
@@ -127,7 +127,7 @@ function SingleCategoryFigure({
 }) {
   return (
     <div className="flex flex-col gap-1.5 py-1" role="figure" aria-label={ariaLabel}>
-      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{subtitle}</span>
+      <span className="pharos-label">{subtitle}</span>
       <span className="font-mono text-2xl font-semibold tabular-nums leading-none text-foreground">
         {formatCurrency(total)}
       </span>

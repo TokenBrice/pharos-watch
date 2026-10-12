@@ -29,7 +29,7 @@ Primary files:
 - `src/components/cemetery/plot-map.module.css`
 - `src/components/cemetery/plot-map-mobile.module.css`
 - `src/lib/cemetery-plot-map.ts`: `buildCemeteryPlotMap`, the plot-map view model, plus camera, tag, chip and card placement
-- `src/lib/cemetery-plot-geometry.ts`: projections and drawn shape geometry
+- `src/lib/cemetery-plot-geometry.ts`: grave and site geometry on the [scene kit](./data-visualization.md#scene-kit)
 - `src/lib/cemetery-plot-map-input.ts`: `toPlotMapInput` and `toPlotLogoAtlas`, what crosses the server/client boundary
 - `src/components/cemetery/cemetery-selection-context.tsx`: `CemeterySelectionProvider`, the only owner of the URL hash
 - `src/lib/cemetery-selection.ts`: section and record anchors, hash parsing, peak buckets and the register URL filters

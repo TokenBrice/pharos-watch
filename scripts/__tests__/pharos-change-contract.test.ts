@@ -284,7 +284,7 @@ describe("classifyChangedFiles", () => {
     ["src/components/contagion-graph-root.tsx", "docs/dependency-map.md"],
     ["src/components/contagion-graph/contagion-graph-shell.tsx", "docs/dependency-map.md"],
     ["src/lib/contagion-layout.ts", "docs/dependency-map.md"],
-    ["src/lib/dependency-hubs-model.ts", "docs/dependency-map.md"],
+    ["shared/lib/dependency-hubs-model.ts", "docs/dependency-map.md"],
     ["shared/lib/dependency-exposure.ts", "docs/dependency-map.md"],
     ["shared/lib/dependency-graph.ts", "docs/dependency-map.md"],
     ["shared/lib/dependency-derivation.ts", "docs/dependency-map.md"],

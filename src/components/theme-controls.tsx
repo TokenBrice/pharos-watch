@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Monitor, Moon, Sun } from "lucide-react";
+import { applyThemeWithTransition } from "@/hooks/use-theme-toggle";
 
 const THEME_OPTIONS = [
   { value: "dark", label: "Dark", icon: Moon },
@@ -10,19 +11,22 @@ const THEME_OPTIONS = [
   { value: "system", label: "System", icon: Monitor },
 ] as const;
 
+// Icon plus a visible label: three bare glyphs (moon/sun/monitor) left
+// "System" to guesswork.
 const THEME_CONTROL_VARIANTS = {
   desktop: {
-    container: "flex items-center gap-1 px-1.5 py-1",
-    activeButton: "inline-flex size-8 items-center justify-center rounded-md transition-colors bg-muted text-foreground",
+    container: "flex items-center gap-1 p-0.5",
+    activeButton:
+      "pharos-focus-ring inline-flex min-w-14 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors bg-muted text-foreground",
     inactiveButton:
-      "inline-flex size-8 items-center justify-center rounded-md transition-colors text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+      "pharos-focus-ring inline-flex min-w-14 flex-col items-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors text-muted-foreground hover:bg-muted/40 hover:text-foreground",
   },
   mobile: {
     container: "flex items-center gap-1",
     activeButton:
-      "pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md transition-colors bg-muted text-foreground",
+      "pharos-focus-ring inline-flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-md px-2 text-xs leading-none transition-colors bg-muted text-foreground",
     inactiveButton:
-      "pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md transition-colors text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+      "pharos-focus-ring inline-flex min-h-11 min-w-14 flex-col items-center justify-center gap-0.5 rounded-md px-2 text-xs leading-none transition-colors text-muted-foreground hover:bg-muted/40 hover:text-foreground",
   },
 } as const;
 
@@ -39,7 +43,7 @@ export function ThemeControls({ density }: { density: keyof typeof THEME_CONTROL
   }, []);
 
   return (
-    <div className={variant.container}>
+    <div role="group" aria-label="Theme" className={variant.container}>
       {THEME_OPTIONS.map((option) => {
         const Icon = option.icon;
         const active = mounted && theme === option.value;
@@ -47,12 +51,13 @@ export function ThemeControls({ density }: { density: keyof typeof THEME_CONTROL
           <button
             key={option.value}
             type="button"
-            onClick={() => setTheme(option.value)}
+            onClick={() => applyThemeWithTransition(() => setTheme(option.value))}
             aria-label={`${option.label} theme`}
             aria-pressed={active}
             className={active ? variant.activeButton : variant.inactiveButton}
           >
             <Icon className="size-4" aria-hidden />
+            <span aria-hidden>{option.label}</span>
           </button>
         );
       })}

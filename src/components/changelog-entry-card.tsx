@@ -86,7 +86,7 @@ export function ChangelogEntryCard({
           "pharos-card-shell -ml-4 -mr-4 px-4 py-5 sm:-ml-5 sm:-mr-5 sm:px-5 sm:py-6",
       )}
     >
-      <p className="pharos-numeric text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+      <p className="pharos-numeric text-3xs text-muted-foreground/70">
         Week #{weekNumber}
       </p>
       <h2
@@ -112,7 +112,7 @@ export function ChangelogEntryCard({
           </a>
           <span className="flex items-center gap-2">
             {isLatest && (
-              <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-foreground">
+              <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2 py-0.5 text-2xs font-semibold text-foreground">
                 Latest
               </span>
             )}
@@ -131,7 +131,7 @@ export function ChangelogEntryCard({
 
       {fieldNotes && (
         <aside className="mt-5 border-l border-border/70 pl-4">
-          <p className="pharos-kicker text-muted-foreground">
+          <p className="pharos-label">
             {formatFieldNotesKicker(dateRange.from)}
           </p>
           <p className="mt-2 max-w-[68ch] text-sm leading-relaxed text-foreground/85">
@@ -152,7 +152,7 @@ export function ChangelogEntryCard({
                   <span className="text-sm font-semibold text-foreground/90">{item.label}</span>
                 )}
                 {tag && (
-                  <span className="text-xs font-mono uppercase tracking-wider text-muted-foreground/70 shrink-0">
+                  <span className="text-xs text-muted-foreground/70 shrink-0">
                     {tag}
                   </span>
                 )}

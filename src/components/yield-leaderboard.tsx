@@ -102,7 +102,7 @@ function LeaderboardHeading({
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
       <div className="space-y-1">
-        <p className="pharos-kicker">Leaderboard</p>
+        <p className="pharos-label">Leaderboard</p>
         <h2 id="leaderboard-heading" className="pharos-section-title">
           Yield Leaderboard
         </h2>
@@ -119,22 +119,22 @@ function LeaderboardHeading({
             </button>
           </TooltipTrigger>
           <TooltipContent className="max-w-[320px] border border-border bg-popover p-3 text-foreground">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="pharos-label">
               Active filters
             </p>
             {summary.activeFilters.length > 0 ? (
-              <ul className="mt-1 space-y-0.5 text-[11px] text-foreground">
+              <ul className="mt-1 space-y-0.5 text-2xs text-foreground">
                 {summary.activeFilters.map((filter) => (
                   <li key={filter.key}>{filter.label}</li>
                 ))}
               </ul>
             ) : (
-              <p className="mt-1 text-[11px] text-muted-foreground">No filters applied.</p>
+              <p className="mt-1 text-2xs text-muted-foreground">No filters applied.</p>
             )}
             <button
               type="button"
               onClick={handleCopy}
-              className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-[11px] font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
+              className="pharos-focus-ring relative mt-2 inline-flex items-center rounded-sm px-1 py-0.5 text-2xs font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
             >
               <span
                 className={`pharos-copy-icon ${copied ? "text-emerald-600 dark:text-emerald-400" : ""}`}
@@ -557,7 +557,7 @@ export function YieldMobileCard({
                 <TooltipTrigger asChild>
                   <span className="cursor-help">PYS —</span>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[220px] text-[11px]">{pysNullReasonText}</TooltipContent>
+                <TooltipContent className="max-w-[220px] text-2xs">{pysNullReasonText}</TooltipContent>
               </Tooltip>
             ) : (
               <span>PYS —</span>
@@ -565,7 +565,7 @@ export function YieldMobileCard({
           </p>
         </div>
       </div>
-      <p className="mt-1.5 truncate text-[11px] text-muted-foreground">{row.yieldSource}</p>
+      <p className="mt-1.5 truncate text-2xs text-muted-foreground">{row.yieldSource}</p>
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         {confidenceStyle && confidenceLabel ? <span className={confidenceStyle.pill}>{confidenceLabel}</span> : null}
@@ -576,7 +576,7 @@ export function YieldMobileCard({
           opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
           compact
         />
-        <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
+        <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
         <YieldZoneChip
@@ -618,7 +618,7 @@ export function YieldMobileCard({
           {depthDisplay.isNativeUnmeasured ? depthDisplay.phrase : `Depth: ${depthDisplay.label}`}
         </p>
         {sourceRiskSummary ? (
-          <p className="mt-1 font-mono text-[11px] tabular-nums text-amber-700 dark:text-amber-300">
+          <p className="mt-1 font-mono text-2xs tabular-nums text-amber-700 dark:text-amber-300">
             {sourceRiskSummary}
           </p>
         ) : null}

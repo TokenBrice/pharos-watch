@@ -26,7 +26,7 @@ The page has three URL-backed views:
 
 `src/lib/compliance-model.ts` is the authority for view projection, band order, default-collapsed statuses, and which GENIUS rows appear in the main table versus Implementation Watch. Default-collapsed bands render as one disclosure row until expanded. Search results and specific status-filter results automatically expose matching rows in those bands.
 
-Regime tables keep the scan surface to Coin, Status, Pathway / Type, Authority, and Issuer Entity. Rows with source, review, or (for GENIUS) reserve-disclosure detail expose a button-controlled full-width fold. The fold owns source links and, for GENIUS, review evidence and reserve-disclosure details. The Overview directory has no row folds and does not require horizontal scrolling.
+Regime tables keep the scan surface to Coin, Status, Pathway / Type, Authority, and Issuer Entity. Rows with source, review, or (for GENIUS) reserve-disclosure detail expose a button-controlled full-width fold. The fold owns source links and, for GENIUS, review evidence and reserve-disclosure details. The Overview directory has no row folds and does not require horizontal scrolling. It renders through the shared `ReferenceTable` (`src/components/reference-table.tsx`): 25 rows per page with a sticky header and a `Showing a–b of N coins · Page x of y` footer; page 1 is in the static export. MiCA/GENIUS sort headers cycle ascending, descending, default.
 
 The unfiltered summary hero also includes linked MiCA and GENIUS status-distribution bars. Each labeled segment opens the corresponding regime/status filter; GENIUS statuses without a positive public authorization signal are combined into the neutral "No public signal" segment.
 
@@ -45,7 +45,7 @@ Do not restate regime eligibility or legal classification logic in this route do
 - `peg=<PegCurrency>`
 - `q=<search>`
 
-Absent `regime` selects Overview unless canonical `status` or `type` values infer MiCA, or a GENIUS-only status infers GENIUS. `COMPLIANCE_URL_SCHEMA` owns `regime`, `status`, `type`, and `peg`; `useUrlSearchSync` owns `q`. Retired `tokenType` and `pegCurrency` aliases are ignored, losing their filters and regime hints without a shim. Changing views clears regime-specific status/type state. Status badges and hero segments write destination regime and status together. Search follows browser Back/Forward; writes preserve unrelated query parameters and the hash.
+Absent `regime` selects Overview unless canonical `status` or `type` values infer MiCA, or a GENIUS-only status infers GENIUS. `COMPLIANCE_URL_SCHEMA` owns `regime`, `status`, `type`, and `peg`; `useUrlSearchSync` owns `q`. The Overview directory owns `sort` (`mica-asc`, `mica-desc`, `genius-asc`, `genius-desc`; anything else is default order) and `page` (1-based, omitted on page 1); a peg, search, or sort change returns it to page 1. Retired `tokenType` and `pegCurrency` aliases are ignored, losing their filters and regime hints without a shim. Changing views clears regime-specific status/type state. Status badges and hero segments write destination regime and status together. Search follows browser Back/Forward; writes preserve unrelated query parameters and the hash.
 
 ## Data Projection
 

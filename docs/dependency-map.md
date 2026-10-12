@@ -1,10 +1,10 @@
 # Dependency Map
 
-> **Agent navigation**: [Data inputs](#data-inputs) · [Dependency semantics](#dependency-semantics) · [Direct exposure and shared books](#direct-exposure-and-shared-books) · [Exposure mode](#exposure-mode) · [Graph workspace](#graph-workspace-and-readability-controls) · [Detail-page snapshot](#detail-page-snapshot).
+> **Agent navigation**: [Data inputs](#data-inputs) · [Dependency semantics](#dependency-semantics) · [Direct exposure and shared books](#direct-exposure-and-shared-books) · [Exposure mode](#exposure-mode) · [Watershed](#watershed) · [Graph workspace](#graph-workspace-and-readability-controls) · [Detail-page snapshot](#detail-page-snapshot).
 
 ## Overview
 
-The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph as an interactive force-directed graph and ranked upstream hubs with direct dependent exposure. Exposure mode adds structural look-through results and separate offline modeled scenarios; the shared failure domains board displays publication groups and existing priced effects. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
+The dependency map route (`/dependency-map`) presents the canonical Safety Score V9 dependency graph as a layered **Watershed** diagram (the default desktop view), an alternate force-directed **Network** view, and ranked upstream hubs with direct dependent exposure. Exposure mode adds structural look-through results and separate offline modeled scenarios; the shared failure domains board displays publication groups and existing priced effects. The same graph component renders a focused, single-asset view inside the Dependency Context section of each stablecoin detail page.
 
 Primary files:
 
@@ -13,9 +13,11 @@ Primary files:
 - `src/lib/dependency-exposure-content.json` — shared visible/Markdown methodology prose; `check:editorial-content` validates both JSON sources and internal links
 - `src/app/dependency-map/client.tsx`
 - `src/app/dependency-map/dependency-hero.tsx` — summary strip plus the full-width graph
-- `src/lib/dependency-hubs-model.ts`
+- `shared/lib/dependency-hubs-model.ts`
 - `src/app/dependency-map/dependency-hubs-board.tsx`
-- `src/components/dependency-map-mobile-summary.tsx`
+- `src/components/dependency-map-basin-list.tsx` — mobile per-hub basin list with hop-grouped drill-down
+- `src/lib/dependency-watershed/` — pure Watershed view model (`model.ts`), ranks/cycle check (`ranks.ts`), tributary ordering (`order.ts`), ribbon geometry (`geometry.ts`) and `view` URL helper (`view-url.ts`)
+- `src/components/dependency-watershed/` — Watershed stage, legend, other-basins strip, table view and CSS module
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout
 - `src/components/contagion-graph-root.tsx` — graph shell and shared interaction state
 - `src/components/contagion-graph-model.ts` — relationship presentation tokens and grade colors
@@ -103,7 +105,7 @@ Report-v6 edges also publish `dependencyType`, nullable serial `wrapperForm`, an
 
 `shared/lib/dependency-exposure.ts` owns direct hub exposures and the hero's gross mapped dependent supply. Both use the full published edge set. The hub board ranks known dependent supply multiplied by mapped share; a serial dependent counts once in the hero even when it has multiple parents. Missing supplies and unknown basket shares are excluded from USD sums and reported separately.
 
-The map client carries each published card's `sharedBookId` into `src/lib/dependency-hubs-model.ts`. Basket contributions from members of one shared book are accumulated once per book and upstream. A supplied measured holding replaces that combined contribution in both the hub and hero totals. Cards from v5 publications with an absent or null `sharedBookId` are not grouped.
+The map client carries each published card's `sharedBookId` into `shared/lib/dependency-hubs-model.ts`. Basket contributions from members of one shared book are accumulated once per book and upstream. A supplied measured holding replaces that combined contribution in both the hub and hero totals. Cards from v5 publications with an absent or null `sharedBookId` are not grouped.
 
 The current report publication identifies shared books but does not publish their measured holdings. The map therefore uses the sum of mapped weight multiplied by each member's market-cap-proxy supply. For Sky, DAI and USDS contribute to one combined USDC book amount, rather than each being assigned the whole holding. This fallback is not an exact LitePSM USDC balance: it reconciles to the measured holding only within the Sky adapter's timing and rounding reconciliation band and the difference between group-debt supply and the map's market-cap-proxy supply basis. The hero and board label the market-cap source clock separately from the V9 publication clock.
 
@@ -149,6 +151,31 @@ Freshness is `current` only for matching accepted/source generations within budg
 
 Absent groups mean not published; `[]` means a published empty census. Published resolved cap kind/limit and deployment before/after/points are displayed. Unresolved references and `pricedEffectsIncomplete` are separate disclosures. Member totals overlap across groups and must not be added; membership is not a loss estimate or a new score penalty.
 
+## Watershed
+
+The Watershed is the default desktop (`md` and up) view. **Network** keeps the force graph for one release cycle; the choice is stored as `view` and preserves every other parameter. Watershed is the default, except that a URL carrying Network-only Explore state (`focus`, `trace`, `type` or `limit`, such as the detail page's `?focus=<coinId>` link) with a non-default value opens Network (the defaults `focus=all`, `type=all`, `limit=200` that the Network writes while it renders during hydration do not); `view` is written only when it differs from that default. Below `md` the map shows the basin list above the Network graph. The detail-page snapshot keeps the force layout.
+
+`buildWatershedModel` (`src/lib/dependency-watershed/model.ts`) is pure and deterministic: the same publication always yields the same layout, whatever the edge order.
+
+- **Inputs:** published nodes and edges only. An edge needs both endpoints published; a malformed share becomes an unknown basket share. USD uses the publication-bound `circulatingUsdAtEvaluation` (the Exposure basis), not the market-cap proxy used by the hero and board.
+- **Cycles fail closed.** An iterative Tarjan check runs first. A non-trivial strongly connected component or self-loop returns `{ ok: false, reason: "cycle", members }`, and the route renders the Network view under the notice **Layered view unavailable: the published graph contains a dependency cycle (A → B → A)**. No edge is broken or dropped to force a layering.
+- **Columns** are longest-path layers: 0 for a coin with no published upstream, otherwise one more than its deepest upstream. Columns are unlabelled; an **← Upstream / Downstream →** cue sits above the stage. Layers are a structural fact about the published graph, not a risk ordering.
+- **Basins:** weakly connected components. The largest basin is drawn; the others render in the **Other basins** strip of hub buttons, so no participant is dropped. Every graph participant appears exactly once: on the canvas, folded under a hub, or in another basin.
+- **Hubs and folded dependents:** a coin with at least one dependent is a hub and is always drawn. A coin with no dependents of its own folds into a grey stub on each upstream hub, labelled **N folded leaves · $X (+N unknown)**, which counts only the folded coins, not the hub's direct dependents (the hub tooltip leads with **Direct $X · N dependents**). A dependent with several upstreams folds under each (gross, as the hub board counts it); the legend states how many.
+- **Expansion:** each committed Exposure root that is a drawn hub expands its 12 largest folded dependents into drawn coins; the rest stay in a **N more folded leaves** stub.
+- **Ordering:** tributary order (grouped under the largest-USD upstream, then hub direct USD, then id), then four weighted barycenter sweeps. The source column (layer 0) stays sorted by direct USD so the largest upstream heads the stage; sweeps move only the downstream columns. Ties keep the previous position, so there is no jitter. Links spanning more than one layer route through waypoints that reserve space in each intermediate column.
+- **Ribbon width** is linear in mapped USD (dependent's supply at evaluation × `edgeShare()`), with the scale fixed from the full graph's largest known link so filters and expansion never rescale it. The 1px floor is disclosed in the legend as **Links under $X draw at the 1px minimum**. Linear width keeps each coin's stacked ports additive, which is why the Watershed waives the [non-linear magnitude guidance](./data-visualization.md#encoding). Exact values are in the tooltip and table.
+- **Ports are independent stacks.** A coin's left side stacks what it maps upstream; its right side stacks its dependents' mapped supply plus the folded stub. The two measure different things and need not match (USDS maps part of its supply to USDC while carrying more of its dependents' supply downstream). Bar height is not supply. A dependent with two serial parents (`susdc-spark`, `susdt-spark`) stacks two full claims, and the legend names it.
+- **Unknown is not zero.** A link with unpublished supply or share draws as a dashed neutral hairline with a `?` cap, counts in **Unknown USD (N links)**, and contributes nothing to USD totals.
+- **Printed figures** come only from the shared exposure module: hub figures from `buildDirectHubExposures` (shared books counted once), previews and the committed beam from `computeDependencyExposure`, the same engine as Exposure mode. Geometry is never summed into a printed total.
+- **Relationship encoding** reuses the map's two relationships: Collateral solid slate, Wrapper dotted violet (texture as well as hue). The Relationship filter dims non-matching links and never changes totals.
+
+Hovering or focusing a hub previews its downstream footprint and shows **Downstream of X: $Y of mapped dependent supply across N coins**, its direct and indirect totals, and its three largest reached coins. Clicking, Enter or Space pins the hub in place: its downstream links light in the beam colour, everything else dims to 15%, and a fixed-height readout above the stage shows the headline, so the page mode, layout and scroll position do not change. Clicking the pinned hub again, **Clear** or Escape unpins. **Trace exposure →** in the readout is the explicit hand-off to the Exposure workspace's `addRoot`, so the URL, analytics, results panel, Reset and multi-root union are shared with Exposure mode; Other-basin hubs, which are not on the stage, trace directly. The readout repeats **Linked coins; not a loss forecast**. A lit link means "reached through published edges", not "affected". The beam reveal staggers by `minHop`; reduced motion shows the final state. Hubs are `role="button"` inside a `role="group"` SVG with a roving tab stop: Up/Down move within a column, Left/Right move to the strongest drawn upstream or downstream hub, Escape clears the preview and the pin. `dependency_map_action` records `view_switch` (Watershed/Network). The folded-leaves stub is informational; tracing its hub's exposure expands it.
+
+The **Table view** disclosure is always in the DOM and is the equivalent data surface: a sortable hub table (layer, direct USD, indirect USD from the same footprint engine, direct dependents, unknowns) and a sortable link table (upstream, dependent, relationship, wrapper form, share, mapped USD). A provenance line names the publication supply basis, methodology version, publication generation and supply clock (or the earliest-to-latest range when node clocks differ), and flags a held publication. A hub's direct USD prints only when at least one of its links has both known supply and a known share (`hubDirectKnown`); otherwise it reads unavailable, and an incomplete total is marked known only (`≥` on the drawn label).
+
+The mobile basin list (`dependency-map-basin-list.tsx`) ranks every hub by direct mapped dependent supply on the market-cap proxy basis (top eight, then **Show all**), with a linear bar and **n/a** for unknown supply. Expanding a hub shows the hub board's wrapper/vault split, then its publication-basis footprint grouped by hop; **Own dependents ›** re-roots the list with a breadcrumb trail, and **Use as exposure root** hands the hub to the Exposure workspace.
+
 ## Graph Construction
 
 Graph construction lives in `src/lib/contagion-layout.ts` and is called through `useContagionGraphModel`:
@@ -168,7 +195,7 @@ The board is titled **Largest mapped direct exposures** and ranks by known direc
 
 The hero reports gross mapped dependent supply, upstream hub count, and unique direct dependent count. Its overlap line identifies the mapped fraction counted in more than one dependency layer; it is not subtracted from the gross figure. Serial dependents count once even with multiple parents. Unknown supply and unknown basket shares are disclosed separately, and excessive basket shares raise an integrity warning rather than silently clamping a published total.
 
-Wrapper and vault-claim splits use only the published edge `wrapperForm`. A serial edge without it (every serial edge on a report v5 publication) stays in direct USD totals but cannot be classified. The hero, board and mobile summary then disclose that exposure's known USD as "split unavailable" and qualify any classified subtotal as covering classified claims only. They never print an unclassified category as $0.00, and own-family figures exclude form-unknown exposure.
+Wrapper and vault-claim splits use only the published edge `wrapperForm`. A serial edge without it (every serial edge on a report v5 publication) stays in direct USD totals but cannot be classified. The hero, board and mobile basin list then disclose that exposure's known USD as "split unavailable" and qualify any classified subtotal as covering classified claims only. They never print an unclassified category as $0.00, and own-family figures exclude form-unknown exposure.
 
 Two clocks are explicit: methodology version and V9 publication time, then market-cap source time (or `unknown`). Graph filters and node limits never change these full-graph exposure totals.
 

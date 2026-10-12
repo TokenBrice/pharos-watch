@@ -24,7 +24,7 @@ const DOT_LINK_CLASS =
   "pharos-focus-ring group block rounded-full transition-transform duration-200 hover:z-10 hover:scale-125 focus-visible:z-20 active:scale-110 motion-reduce:transition-none motion-reduce:hover:scale-100";
 
 const DOT_CLASS =
-  "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-[9px] font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-white/90 dark:text-zinc-700 dark:group-hover:bg-white";
+  "flex items-center justify-center overflow-hidden rounded-full border border-border/50 bg-background/90 text-3xs font-bold text-muted-foreground shadow-[inset_0_1px_0_oklch(1_0_0_/0.05)] transition-colors group-hover:border-border group-hover:bg-background dark:bg-white/90 dark:text-zinc-700 dark:group-hover:bg-white";
 
 function HorizonLogoDot({ coin }: { coin: HorizonPreLaunchCoin }): React.JSX.Element {
   const logoSrc = resolveCompactLogoSrc(getLogoSrc(logosById, coin.id), LOGO_INNER);
@@ -106,7 +106,7 @@ export function HorizonConstellation({
                       href="/upcoming/"
                       aria-label={`${hidden} more ${HORIZON_PHASE_SHORT_LABELS[phase].toLowerCase()} stablecoins`}
                       style={{ left: ringSize / 2, top: ringSize / 2 }}
-                      className="pharos-focus-ring pharos-numeric absolute -translate-x-1/2 -translate-y-1/2 rounded-md border border-border/60 bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+                      className="pharos-focus-ring pharos-numeric absolute -translate-x-1/2 -translate-y-1/2 rounded-md border border-border/60 bg-muted px-1.5 py-0.5 text-2xs font-medium text-muted-foreground transition-colors hover:border-border hover:text-foreground"
                     >
                       +{hidden}
                     </Link>
@@ -115,13 +115,13 @@ export function HorizonConstellation({
               </div>
               <span className="flex w-full items-center gap-1.5">
                 <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-[3px] ${PHASE_DOT[phase]}`} />
-                <span className="font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground">
+                <span className="text-2xs font-semibold text-foreground">
                   {HORIZON_PHASE_SHORT_LABELS[phase]}
                 </span>
-                <span aria-hidden="true" className="text-[9px] leading-none text-muted-foreground/50 sm:text-[11px]">
+                <span aria-hidden="true" className="text-3xs leading-none text-muted-foreground/50 sm:text-2xs">
                   ·
                 </span>
-                <span className="pharos-numeric text-[11px] text-muted-foreground">{count}</span>
+                <span className="pharos-numeric text-2xs text-muted-foreground">{count}</span>
               </span>
             </div>
           );
@@ -140,13 +140,13 @@ export function HorizonConstellation({
                   aria-hidden="true"
                   className={`h-2 w-2 shrink-0 rounded-[3px] ${PHASE_DOT[phase]} ${count === 0 ? "opacity-40" : ""}`}
                 />
-                <span className="font-mono text-[9px] font-semibold uppercase tracking-wide text-foreground sm:text-[11px]">
+                <span className="text-2xs font-semibold text-foreground">
                   {HORIZON_PHASE_SHORT_LABELS[phase]}
                 </span>
-                <span aria-hidden="true" className="text-[9px] leading-none text-muted-foreground/50 sm:text-[11px]">
+                <span aria-hidden="true" className="text-3xs leading-none text-muted-foreground/50 sm:text-2xs">
                   ·
                 </span>
-                <span className="pharos-numeric text-[9px] text-muted-foreground sm:text-[11px]">{count}</span>
+                <span className="pharos-numeric text-3xs text-muted-foreground sm:text-2xs">{count}</span>
               </div>
               <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-0 overflow-hidden border-l border-border/50 pl-2 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:pl-3">
                 <span className="sr-only">

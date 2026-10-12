@@ -105,7 +105,7 @@ export default function RootLayout({
         <RouteChrome>
           <a
             href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-skip focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
           >
             Skip to main content
           </a>
@@ -113,7 +113,7 @@ export default function RootLayout({
         <RouteChrome dataTableOnly>
           <a
             href="#data"
-            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-44 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-44 focus:z-skip focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
           >
             Skip to data table
           </a>

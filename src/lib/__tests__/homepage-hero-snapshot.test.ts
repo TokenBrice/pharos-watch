@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
-import {
-  HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS,
-  buildLiveHomepageHeroSnapshot,
-  selectHomepageHeroSnapshot,
-  type HomepageHeroSnapshot,
-} from "@/lib/homepage-hero-snapshot";
+import { buildLiveHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
+import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS, selectHomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 
 function snapshot(asOfISO: string, totalUsd: number): HomepageHeroSnapshot {

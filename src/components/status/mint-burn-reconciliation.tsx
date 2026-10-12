@@ -111,7 +111,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
               <div key={row.stablecoinId} role="group" aria-label={`${row.symbol} mint/burn integrity`} className={cn("min-w-0 rounded-[1rem] border p-4", statusTileTone(status))}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{row.symbol}</span>
-                  <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]", statusTone(status))}>{status}</span>
+                  <span className={cn("rounded-full px-2 py-0.5 text-3xs font-semibold uppercase", statusTone(status))}>{status}</span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">Audit coverage: {status === "Verified" ? "All configured contracts verified" : "See contract audit status below"}</p>
                 {!records?.length ? <p className="mt-3 text-xs text-muted-foreground">No matched-block audit available.</p> : records.map((record) => {

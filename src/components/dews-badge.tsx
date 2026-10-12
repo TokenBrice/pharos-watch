@@ -34,7 +34,7 @@ export function DEWSBadge({
   const pill = (
     <span
       title={tooltip}
-      className={`inline-flex items-center rounded-sm border px-1 py-0.5 text-[10px] font-semibold leading-none ${colorClasses}`}
+      className={`inline-flex items-center rounded-sm border px-1 py-0.5 text-3xs font-semibold leading-none ${colorClasses}`}
     >
       {compact ? band.slice(0, 1) : THREAT_BAND_LABELS[band]}
     </span>

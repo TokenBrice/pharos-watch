@@ -98,7 +98,7 @@ export function ScoreBandSpectrum({
               style={{ flexGrow: widths[index], flexBasis: 0 }}
               title={shortLabel ? band.label : undefined}
               className={cn(
-                "min-w-0 hyphens-auto break-words text-[11px] font-medium leading-tight sm:text-center",
+                "min-w-0 hyphens-auto break-words text-2xs font-medium leading-tight sm:text-center",
                 active
                   ? cn(
                       "whitespace-nowrap sm:whitespace-normal",

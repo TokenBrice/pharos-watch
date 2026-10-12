@@ -289,11 +289,11 @@ describe("OracleLiquidationSection", () => {
     expect(notesFold.querySelector('a[href="https://example.com/contracts"]')).not.toBeNull();
   });
 
-  it("orders the folds as domain detail, then review notes and sources, all closed", () => {
+  it("orders the folds as visual, domain detail, then review notes and sources, with only the visual open", () => {
     const { container } = render(<OracleLiquidationSection summary={SUMMARY} />);
     const folds = [...container.querySelectorAll("details")];
     expect(folds.map((fold) => fold.id)).toEqual(["oracle-visual", "oracle-feeds", "oracle-review-notes"]);
-    expect(folds.every((fold) => !fold.hasAttribute("open"))).toBe(true);
+    expect(folds.map((fold) => fold.hasAttribute("open"))).toEqual([true, false, false]);
   });
 
   it("sorts branches by debt share with unmeasured branches last, preserving curated order on ties", () => {

@@ -26,7 +26,7 @@ const frontendCommands = [
 
 describe("focused checks", () => {
   it("retains source-reading and CLI script contracts without unrelated generated artifacts", () => {
-    const plan = buildFocusedCheckPlan(["scripts/maintenance/screenshot-og.mjs", "scripts/maintenance/run-focused-checks.ts"]);
+    const plan = buildFocusedCheckPlan(["scripts/maintenance/smoke-api.mjs", "scripts/maintenance/run-focused-checks.ts"]);
     expect(plan.checks).toEqual([{
       command: "npx vitest run scripts/__tests__",
       source: "scripts-tooling",

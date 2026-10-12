@@ -85,7 +85,7 @@ export function StablecoinTableEmptyState({
           />
           {(searchQuery || activeFilters.length > 0) && data && data.length > 0 && (
             <div className="mt-6 border-t border-border/50 pt-5">
-              <p className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="mb-3 pharos-label">
                 Popular stablecoins
               </p>
               <div className="flex flex-wrap justify-center gap-2">

@@ -383,7 +383,7 @@ function TelegramSubscribeCommand({ command }: { command: string }) {
               <Bot className="h-4 w-4" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="pharos-kicker">Telegram follow command</p>
+              <p className="pharos-label">Telegram follow command</p>
               <h2
                 id="selector-telegram-command-heading"
                 className="text-sm font-semibold tracking-tight text-foreground"
@@ -406,7 +406,7 @@ function TelegramSubscribeCommand({ command }: { command: string }) {
           <span aria-hidden="true" className="font-mono text-sm font-semibold text-muted-foreground">
             ▸
           </span>
-          <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-[13px] font-medium text-foreground sm:text-sm">
+          <code className="block min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs font-medium text-foreground sm:text-sm">
             {command}
           </code>
           <CopyButton

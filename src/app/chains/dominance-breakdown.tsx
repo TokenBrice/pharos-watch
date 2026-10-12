@@ -1,14 +1,15 @@
 import Image from "next/image";
-import { CHART_PALETTE, CHART_SLATE, CHART_SLATE_STRONG } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import type { ChainSummary } from "@shared/types/chains";
 
-/** Shared series colors for the dominance breakdown bar — CHART_PALETTE minus
- *  the frost-blue lead slot (idx 0 is reserved for live-data heroes). */
-const DOMINANCE_COLORS = CHART_PALETTE.slice(1);
-const OTHER_CHAINS_COLOR = CHART_SLATE_STRONG;
-const UNATTRIBUTED_COLOR = CHART_SLATE;
+/** Neutral ink ramp, largest chain darkest: the Harbor below owns the page's hues (cargo, health flags, beam), so
+ *  chain identity here comes from the logo and name, never a categorical colour (as on the OG card). */
+const DOMINANCE_INK_PCT = [82, 66, 53, 42, 33, 26];
+const ink = (pct: number) => `color-mix(in oklab, var(--foreground) ${pct}%, var(--card))`;
+const dominanceColor = (idx: number) => ink(DOMINANCE_INK_PCT[Math.min(idx, DOMINANCE_INK_PCT.length - 1)]!);
+const OTHER_CHAINS_COLOR = ink(18);
+const UNATTRIBUTED_COLOR = ink(12);
 
 interface DominanceBreakdownProps {
   /** Top chains by supply (independent of table sort), already sliced to the legend size. */
@@ -71,7 +72,7 @@ export function DominanceBreakdown({
   return (
     <>
       <div
-        className="flex h-2.5 w-full overflow-hidden rounded-full"
+        className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full"
         role="img"
         aria-label={ariaLabel}
       >
@@ -81,7 +82,7 @@ export function DominanceBreakdown({
             className="h-full transition-all duration-500"
             style={{
               width: `${chain.dominanceShare * geometryScale * 100}%`,
-              backgroundColor: DOMINANCE_COLORS[idx],
+              backgroundColor: dominanceColor(idx),
             }}
           />
         ))}
@@ -98,7 +99,7 @@ export function DominanceBreakdown({
               width: `${unattributedShare * geometryScale * 100}%`,
               backgroundColor: UNATTRIBUTED_COLOR,
               backgroundImage:
-                "repeating-linear-gradient(135deg, transparent 0 4px, oklch(0.95 0.01 245 / 0.35) 4px 6px)",
+                "repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in oklab, var(--foreground) 30%, transparent) 4px 6px)",
             }}
           />
         )}
@@ -108,7 +109,7 @@ export function DominanceBreakdown({
           <span key={chain.id} className="inline-flex items-center gap-1.5">
             <span
               className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: DOMINANCE_COLORS[idx] }}
+              style={{ backgroundColor: dominanceColor(idx) }}
             />
             <Image
               src={chain.logoPath}
@@ -139,7 +140,7 @@ export function DominanceBreakdown({
               style={{
                 backgroundColor: UNATTRIBUTED_COLOR,
                 backgroundImage:
-                  "repeating-linear-gradient(135deg, transparent 0 3px, oklch(0.95 0.01 245 / 0.45) 3px 4px)",
+                  "repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in oklab, var(--foreground) 40%, transparent) 3px 4px)",
               }}
             />
             <span>Unattributed</span>

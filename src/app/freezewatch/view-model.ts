@@ -6,7 +6,7 @@ import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blackli
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { trackEvent, trackSearch } from "@/lib/analytics";
-import { buildBlacklistStatusBuckets, type BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
+import { buildBlacklistStatusBuckets, type BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import type {
   BlacklistStablecoin,
@@ -16,7 +16,7 @@ import type {
   StablecoinData,
 } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
-import { type BlacklistStatusBucketKey } from "@/lib/blacklist-status-buckets";
+import { type BlacklistStatusBucketKey } from "@shared/lib/blacklist-status-buckets";
 
 const PAGE_SIZE = 50;
 

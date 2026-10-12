@@ -2,7 +2,6 @@
 
 import { Fragment, useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LazySection } from "@/components/lazy-section";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
@@ -46,19 +45,6 @@ const PEG_OPTIONS: ReadonlyArray<{ key: Exclude<PegFilter, "all">; label: string
   { key: "fiat-non-usd", label: "Fiat non USD" },
   { key: "commodities", label: "Commodities" },
 ];
-
-const lazyCardSkeleton = (
-  <div
-    className="flex h-[250px] flex-col items-center justify-center gap-2 rounded-xl border bg-muted/20 animate-pulse"
-    role="status"
-    aria-busy="true"
-    aria-label="Loading score card"
-  >
-    <div className="h-8 w-8 rounded-full bg-muted/40" />
-    <div className="h-4 w-20 rounded bg-muted/40" />
-    <div className="h-6 w-12 rounded bg-muted/40" />
-  </div>
-);
 
 function GradeFilterButtons({
   gradeFilter,
@@ -189,17 +175,17 @@ function V9Controls({
         </summary>
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
-            <span className="pharos-kicker">Filter by Grade</span>
+            <span className="pharos-label">Filter by grade</span>
             <div className="flex flex-wrap gap-1">{gradeButtons}</div>
           </div>
           <div className="space-y-2">
-            <span className="pharos-kicker">Peg</span>
+            <span className="pharos-label">Peg</span>
             <div className="flex flex-wrap gap-1">
               <PegFilterButtons pegFilter={pegFilter} onChange={onPegFilterChange} />
             </div>
           </div>
           <div className="space-y-2">
-            <span className="pharos-kicker">Sort by</span>
+            <span className="pharos-label">Sort by</span>
             <div className="flex flex-wrap gap-1">
               <SortButtons sortKey={sortKey} onChange={onSortChange} />
             </div>
@@ -209,14 +195,14 @@ function V9Controls({
 
       <div className="hidden md:flex md:flex-wrap md:items-center md:gap-4">
         <div className="flex items-center gap-1">
-          <span className="pharos-kicker mr-2">Filter:</span>
+          <span className="pharos-label mr-2">Filter:</span>
           {gradeButtons}
-          <span className="pharos-kicker ml-3 mr-2">Peg:</span>
+          <span className="pharos-label ml-3 mr-2">Peg:</span>
           <PegFilterButtons pegFilter={pegFilter} onChange={onPegFilterChange} />
         </div>
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-1">
-          <span className="pharos-kicker mr-2">Sort:</span>
+          <span className="pharos-label mr-2">Sort:</span>
           <SortButtons sortKey={sortKey} onChange={onSortChange} />
         </div>
       </div>
@@ -268,6 +254,11 @@ export function ReportCardsV9Client() {
   const gradeCounts = useMemo(() => buildV9GradeCounts(cards), [cards]);
   const totalCards = cards.length;
   const headlineStats = useMemo(() => buildV9HeadlineStats(cards, mcapMap), [cards, mcapMap]);
+  // Same predicate as the ecosystem average in buildV9HeadlineStats.
+  const scoredCount = useMemo(
+    () => cards.filter((card) => card.ratingStatus === "rated" && card.score !== null).length,
+    [cards],
+  );
   const filteredCards = useMemo(
     () => filterAndSortV9Cards(cards, { gradeFilter, pegFilter, pegTypeMap, sortKey, mcapMap }),
     [cards, gradeFilter, mcapMap, pegFilter, pegTypeMap, sortKey],
@@ -282,20 +273,21 @@ export function ReportCardsV9Client() {
   if (reportCardsQuery.isLoading) return <SafetyScoresContentLoadingState />;
 
   const renderCard = (card: V9ConsumerCard, index: number) => (
+    // content-visibility skips off-screen card rendering without a JS mount
+    // gate, so the grid keeps its height (no scroll-time layout shift) and the
+    // card text stays in the static HTML.
     <div
       key={card.id}
-      className="min-w-0 rounded-xl [&>div]:h-full [&>div>div]:h-full"
+      className="min-w-0 rounded-xl [contain-intrinsic-size:auto_274px] [content-visibility:auto] [&>div]:h-full [&>div>div]:h-full"
     >
-      <LazySection rootMargin="100px" placeholder={lazyCardSkeleton}>
-        <div className="pharos-card-enter">
-          <ReportCardMiniV9
-            card={card}
-            identity={reportCardsQuery.data!.safetyScoreIdentity}
-            logo={logos?.[card.id]}
-            animIndex={index % 5}
-          />
-        </div>
-      </LazySection>
+      <div className="pharos-card-enter">
+        <ReportCardMiniV9
+          card={card}
+          identity={reportCardsQuery.data!.safetyScoreIdentity}
+          logo={logos?.[card.id]}
+          animIndex={index % 5}
+        />
+      </div>
     </div>
   );
 
@@ -327,6 +319,8 @@ export function ReportCardsV9Client() {
         stats={headlineStats}
         gradeCounts={gradeCounts}
         totalCards={totalCards - gradeCounts["pipeline-gap"]}
+        scoredCount={scoredCount}
+        cardCount={totalCards}
       />
 
       <SafetyPillarExplainer />

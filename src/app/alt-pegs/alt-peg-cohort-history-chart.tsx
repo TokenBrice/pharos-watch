@@ -9,6 +9,7 @@ import {
 } from "@/components/chart-primitives/focused-stacked-area-card";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { computeChartYDomain } from "@/lib/chart-utils";
+import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { PEG_CHART_COLORS } from "@shared/lib/classification";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
@@ -233,7 +234,7 @@ export function AltPegCohortHistoryChart({
       data={chartData}
       tsKey="ts"
       isLoading={isLoading}
-      title="Alt-Peg Market Cap By Cohort"
+      title="Alt-peg market cap by cohort"
       loadingTitle="Alt-Peg Cohort Growth"
       titleClassName="pharos-section-title"
       subtitle={
@@ -272,7 +273,7 @@ export function AltPegCohortHistoryChart({
       series={series}
       tooltip={<CohortTooltip pegKeys={pegKeys} data={chartData} />}
       yDomain={getYDomain}
-      yTickFormatter={(value) => formatCurrency(value, 0)}
+      yTickFormatter={formatCurrencyTick}
       tableColumns={tableColumns}
       tableCaption={(_rows, truncated, total) =>
         `Alt-peg market cap by cohort over ${total} points${truncated ? "; showing the latest 90" : ""}.`

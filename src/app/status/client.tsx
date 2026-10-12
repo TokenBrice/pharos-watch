@@ -134,7 +134,8 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
 
     content = (
       <div className="space-y-6">
-        <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
+        {/* Verdict and runway first; the operator delivery evidence follows the
+            service summary instead of opening the page. */}
         <PublicStatusHero
           healthData={healthData}
           healthUpdatedAt={healthUpdatedAt ?? 0}
@@ -169,6 +170,8 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
 
         <PublicServiceSummarySection healthData={healthData} />
 
+        <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
+
         <PublicStatusReliabilitySection
           healthData={healthData}
           probes={probes}
@@ -192,7 +195,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
       {content}
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="pharos-card-shell px-4 py-4">
-          <p className="pharos-kicker">Reading Status</p>
+          <p className="pharos-label">Reading status</p>
           <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
             <p>
               The page is a public reliability view, not an operator console. It favors signals that affect readers and

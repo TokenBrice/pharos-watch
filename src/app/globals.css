@@ -68,6 +68,10 @@
   --color-lime-500: oklch(76.8% 0.209 130.85);
   --color-lime-600: oklch(64.8% 0.179 131.684);
   --color-lime-700: oklch(53.2% 0.147 131.589);
+  /* green-400 is used only as `dark:text-green-400` (PSI/score greens on dark
+     surfaces); stock chroma 0.209 vibrated, so it is softened toward the
+     clipped emerald-400 rather than merely gamut-clipped. */
+  --color-green-400: oklch(79.2% 0.165 151.711);
   --color-green-500: oklch(72.3% 0.201 149.579);
   --color-green-600: oklch(62.7% 0.176 149.214);
   --color-green-700: oklch(52.7% 0.145 150.069);
@@ -129,12 +133,49 @@
   --color-rose-800: oklch(45.5% 0.182 13.697);
 }
 
+/* Type scale: the `--p-text-*` primitives are the single source for Tailwind's
+   `text-*` sizes. `text-2xs` (11px) and `text-3xs` (10px) replace the
+   arbitrary `text-[11px]` / `text-[10px]` values; `tracking-eyebrow` is the
+   one positive letter-spacing step (uppercase eyebrows only). */
+@theme {
+  --text-3xs: var(--p-text-3xs);
+  --text-3xs--line-height: 0.875rem;
+  --text-2xs: var(--p-text-2xs);
+  --text-2xs--line-height: 1rem;
+  --text-xs: var(--p-text-xs);
+  --text-sm: var(--p-text-sm);
+  --text-base: var(--p-text-base);
+  --text-lg: var(--p-text-lg);
+  --text-xl: var(--p-text-xl);
+  --text-2xl: var(--p-text-2xl);
+  --text-3xl: var(--p-text-3xl);
+  --text-4xl: var(--p-text-4xl);
+  --text-5xl: var(--p-text-5xl);
+  --tracking-eyebrow: var(--p-tracking-eyebrow);
+}
+
+/* Named stacking layers (`z-chrome`, `z-modal`, …), lowest first. Fixed and
+   sticky chrome sits below the regime line, which sits below every dialog,
+   sheet and floating menu; toasts and skip links stay on top. */
+@theme {
+  --z-index-chrome: 50;
+  --z-index-chrome-dock: 55;
+  --z-index-chrome-header: 56;
+  --z-index-regime: 60;
+  --z-index-modal: 70;
+  --z-index-toast: 100;
+  --z-index-skip: 100;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-serif: Georgia, "Times New Roman", serif;
+  /* Editorial serif: Newsreader wherever an ancestor mounts
+     `digestDisplay.variable`; Georgia elsewhere, so not-found/error
+     boundaries never pull the Newsreader files into every route. */
+  --font-serif: var(--font-newsreader, Georgia, "Times New Roman", serif);
   --font-display: var(--font-pharos-display);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
@@ -176,10 +217,12 @@
   --radius: 0.5rem;
   --mobile-bottom-nav-height: 4rem;
   --mobile-bottom-nav-safe-height: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
+  /* Bottom edge of the sticky site header, where sticky table headers pin:
+     the 3px regime line plus the 57px mobile Header (768–1023px) or the 56px
+     desktop TopNav (lg+, below). The phone breakpoint redefines it. */
+  --table-header-top: 60px;
   /* 2.4.11 Focus Not Obscured (Minimum) — keep focused rows clear of the
-     sticky table header and the mobile utility dock. Defaults to 0 on desktop
-     where `--table-header-top` is unset; the mobile breakpoint below redefines
-     both. */
+     sticky chrome and the mobile utility dock. */
   scroll-padding-top: var(--table-header-top, 0px);
   scroll-padding-bottom: var(--mobile-utility-safe-offset, 0px);
   --frost-blue: var(--brand-accent);
@@ -276,13 +319,16 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-      animation: none;
-    }
+    ::view-transition-old(*),
+    ::view-transition-new(*),
     ::view-transition-group(*) {
       animation: none;
     }
+  }
+
+  /* Never let the transition overlay swallow clicks mid-animation. */
+  ::view-transition {
+    pointer-events: none;
   }
 
   /* Respect reduced motion for scroll behavior */
@@ -587,9 +633,22 @@
     box-shadow: 0 0 0 2px var(--mini-accent-fill);
   }
 
+  /* Label register (two variants, one tracking token). `.pharos-label` is the
+     default: sentence-case sans for section labels, card kickers, stat and
+     field labels. `.pharos-kicker` is its legacy name (same rule; the sweep
+     renames call sites). `.pharos-eyebrow` is the one restrained uppercase
+     variant, for a short route or hero eyebrow above a title only. Mono stays
+     with figures, tickers, addresses and codes (`.pharos-numeric`). */
+  .pharos-label,
   .pharos-kicker {
-    @apply text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground sm:text-[11px];
-    line-height: 1.2;
+    @apply text-xs font-semibold text-muted-foreground;
+    line-height: 1.25;
+    letter-spacing: normal;
+  }
+
+  .pharos-eyebrow {
+    @apply text-2xs font-semibold uppercase tracking-eyebrow text-muted-foreground;
+    line-height: 1.25;
   }
 
   .pharos-focus-ring {
@@ -671,26 +730,38 @@
     @apply min-w-0 text-3xl font-extrabold tracking-tight sm:text-4xl;
     font-family: var(--font-pharos-display);
     line-height: 1.05;
+    text-wrap: balance;
   }
 
   /* Tracked display face for hero and section headings. */
   .pharos-display {
     font-family: var(--font-pharos-display);
     letter-spacing: -0.01em;
+    text-wrap: balance;
   }
 
   .pharos-lead {
     @apply text-sm leading-relaxed text-muted-foreground;
+    text-wrap: pretty;
   }
 
   /* Page-header description under the H1; matches the learn-page subtitle scale. */
   .pharos-page-lead {
     @apply text-lg leading-relaxed text-muted-foreground sm:text-xl;
+    text-wrap: pretty;
+  }
+
+  /* Instrument-header deck: the one-line description under a core route's H1
+     (feature-page shell). Learn/methodology keep the larger `.pharos-page-lead`. */
+  .pharos-page-deck {
+    @apply text-base leading-relaxed text-muted-foreground;
+    text-wrap: pretty;
   }
 
   .pharos-section-title {
     @apply text-lg font-semibold tracking-tight text-foreground;
     line-height: 1.18;
+    text-wrap: balance;
   }
 
   .pharos-meta {
@@ -757,13 +828,13 @@
     background: color-mix(in oklab, var(--control-pill-bg) 82%, var(--interactive-hover));
   }
 
+  /* The single selected-pill style (tokens in semantic.css); toggle and
+     tab pills below share it. */
   .pharos-control-pill-active {
     color: var(--control-pill-active-text);
     background: var(--control-pill-active-bg);
     border-color: transparent;
-    box-shadow:
-      inset 0 1px 0 oklch(1 0 0 / 0.1),
-      0 8px 20px oklch(0 0 0 / 0.18);
+    box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
   }
 
   .pharos-toggle-pill {
@@ -789,9 +860,7 @@
     color: var(--control-pill-active-text);
     background: var(--control-pill-active-bg);
     border-color: transparent;
-    box-shadow:
-      inset 0 1px 0 oklch(1 0 0 / 0.08),
-      0 8px 20px oklch(0 0 0 / 0.22);
+    box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
   }
 
   /* ── Sidebar navigation: "the watch column" ──────────────────────
@@ -964,18 +1033,9 @@
     border-color: var(--control-pill-border);
   }
 
-  .dark .pharos-pill-tabs-group {
-    background: #1e1d1f;
-    border-color: #2a292b;
-  }
-
   .pharos-pill-tabs-rule {
     position: relative;
     background: color-mix(in oklab, var(--control-pill-border) 78%, transparent);
-  }
-
-  .dark .pharos-pill-tabs-rule {
-    background: #2a292b;
   }
 
   .pharos-pill-tabs-rule-left::before,
@@ -1002,32 +1062,45 @@
     color: var(--muted-foreground);
   }
 
-  .dark .pharos-pill-tab {
-    color: #6b6a6c;
-  }
-
   .pharos-pill-tab:hover {
     color: var(--text-primary);
     background-color: var(--interactive-hover);
   }
 
-  .dark .pharos-pill-tab:hover {
-    color: #d6d5d7;
-    background-color: #262527;
-  }
-
   .pharos-pill-tab-active,
   .pharos-pill-tab-active:hover {
-    color: var(--text-primary);
-    background-color: var(--interactive-active);
-    box-shadow: inset 0 0 0 1px var(--control-pill-border);
+    color: var(--control-pill-active-text);
+    background-color: var(--control-pill-active-bg);
+    box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
   }
 
-  .dark .pharos-pill-tab-active,
-  .dark .pharos-pill-tab-active:hover {
-    color: #e4e4e6;
-    background-color: #2f2e30;
-    box-shadow: inset 0 0 0 1px #3a393b;
+  /* Secondary segmented control: a compact mode/view/window switch whose
+     options share one bordered track, so two adjacent groups read as two
+     controls rather than a row of loose pills. Selection comes from ARIA
+     state (aria-pressed / aria-selected) and paints the shared active pill. */
+  .pharos-segmented {
+    @apply inline-flex items-center gap-0.5 rounded-lg border p-0.5;
+    background: var(--control-pill-bg);
+    border-color: var(--control-pill-border);
+  }
+
+  .pharos-segmented-item {
+    @apply inline-flex min-h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-muted-foreground;
+    transition:
+      color var(--motion-duration-fast) var(--motion-ease-standard),
+      background-color var(--motion-duration-fast) var(--motion-ease-standard);
+  }
+
+  .pharos-segmented-item:hover {
+    color: var(--text-primary);
+    background-color: var(--interactive-hover);
+  }
+
+  .pharos-segmented-item[aria-pressed="true"],
+  .pharos-segmented-item[aria-selected="true"] {
+    color: var(--control-pill-active-text);
+    background-color: var(--control-pill-active-bg);
+    box-shadow: inset 0 0 0 1px var(--control-pill-active-ring);
   }
 
   /* Faint frost-tinted ground that distinguishes "your navigation" from
@@ -1046,6 +1119,13 @@
     background: var(--chart-stage-bg);
     border-color: var(--chart-stage-border);
     box-shadow: var(--chart-stage-shadow);
+  }
+
+  /* Recharts sizes tick labels in this hidden span to keep edge ticks inside
+     the chart; every axis tick is mono (CHART_AXIS_TICK), so measure in the
+     same face or the last date label clips. */
+  #recharts_measurement_span {
+    font-family: var(--font-mono, monospace);
   }
 
   .pharos-chart-legend-chip {
@@ -1458,6 +1538,12 @@
     text-underline-offset: 3px;
     text-decoration-thickness: 1px;
     font-style: italic;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --table-header-top: 59px;
   }
 }
 

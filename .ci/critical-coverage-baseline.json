@@ -12,6 +12,8 @@
     "shared/lib/liquidity-score-weights.ts": 100,
     "shared/lib/live-reserve-freshness.ts": 100,
     "shared/lib/peg-score.ts": 100,
+    "shared/lib/psi-beacon-geometry.ts": 40,
+    "shared/lib/psi-beacon.ts": 40,
     "shared/lib/psi-contribution.ts": 100,
     "shared/lib/psi-eligible.ts": 100,
     "shared/lib/psi-historical-assets.ts": 100,

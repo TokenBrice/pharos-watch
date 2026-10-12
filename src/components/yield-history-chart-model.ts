@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useYieldHistory } from "@/hooks/api-hooks";
+import { niceTicks } from "@/lib/chart-ticks";
 import { DAY_MS } from "@/lib/constants";
 import { toTimestampMs } from "@/lib/time";
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
@@ -572,8 +573,12 @@ export function useYieldHistoryChartModel({
     const max = Math.max(...values);
     const span = Math.max(max - min, 1);
     const padding = Math.max(span * 0.08, 0.5);
-    return [min - padding, max + padding] as const;
+    // The padded window widens to its outer 1/2/2.5/5 ticks so the top and
+    // bottom gridlines bound the data.
+    const { domain } = niceTicks(min - padding, max + padding);
+    return domain;
   }, [benchmarkRate, chartData, effectiveShowBreakdown, medianApy, overlayData, spikeDates]);
+  const yTicks = useMemo(() => niceTicks(yDomain[0], yDomain[1], { extend: false }).ticks, [yDomain]);
 
   return {
     days,
@@ -596,6 +601,7 @@ export function useYieldHistoryChartModel({
     effectiveShowBreakdown,
     tickValues,
     yDomain,
+    yTicks,
     spikeAnnotations,
     sourceSegments,
     resolvedBenchmarkLabel: getYieldBenchmarkDisplayLabel({

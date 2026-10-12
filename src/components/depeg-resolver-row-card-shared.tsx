@@ -8,6 +8,8 @@ import { formatBps, formatElapsedSeconds } from "@shared/lib/format";
 import type { DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
   compactLockTiming,
+  DDR_EVENT_STATE_LABELS,
+  formatDdrReason,
   formatDurationSec,
   formatUtcTimestamp,
   getDuration,
@@ -15,7 +17,7 @@ import {
 } from "@/components/depeg-resolver-row-card-model";
 
 export function StageLabel({ children }: { children: ReactNode }) {
-  return <p className="pharos-kicker">{children}</p>;
+  return <p className="pharos-label">{children}</p>;
 }
 
 function MetadataPill({ label, value }: { label: string; value: ReactNode }) {
@@ -81,24 +83,26 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
   const status = live.eventState;
 
   return (
-    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-xs tabular-nums text-muted-foreground">
-      <span className="pharos-kicker font-sans">
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      <span className="pharos-label">
         Live incident
       </span>
       <span>
-        age <span className="text-foreground">{ageSec == null ? "—" : formatElapsedSeconds(ageSec)}</span>
+        Age <span className="pharos-numeric text-foreground">{ageSec == null ? "—" : formatElapsedSeconds(ageSec)}</span>
       </span>
       <span>
-        peak <span className="text-foreground">{peakDeviationBps == null ? "—" : formatBps(peakDeviationBps)}</span>
+        Peak <span className="pharos-numeric text-foreground">{peakDeviationBps == null ? "—" : formatBps(peakDeviationBps)}</span>
       </span>
       {currentDeviationBps != null ? (
         <span>
-          now <span className="text-foreground">{formatBps(currentDeviationBps)}</span>
+          Now <span className="pharos-numeric text-foreground">{formatBps(currentDeviationBps)}</span>
         </span>
       ) : null}
-      {status ? <span className="uppercase tracking-wide text-foreground/70">{status}</span> : null}
+      {status ? <span className="text-foreground/70">{DDR_EVENT_STATE_LABELS[status]}</span> : null}
       {live.degradedReason ? (
-        <span className="w-full text-muted-foreground">Live overlay degraded: {live.degradedReason}.</span>
+        <span className="w-full text-muted-foreground" title={live.degradedReason}>
+          Live overlay: {formatDdrReason(live.degradedReason)}.
+        </span>
       ) : null}
     </div>
   );

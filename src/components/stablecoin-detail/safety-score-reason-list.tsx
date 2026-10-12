@@ -25,7 +25,7 @@ export function SafetyScoreReasonList({
   const folded = groups.slice(SAFETY_SCORE_VISIBLE_REASON_LIMIT);
   const itemClass = "min-w-0 [overflow-wrap:anywhere]";
   return (
-    <div className={cn("text-[11px] leading-snug text-muted-foreground", className)}>
+    <div className={cn("text-2xs leading-snug text-muted-foreground", className)}>
       <ul className="space-y-1">
         {visible.map((group) => <li key={group.key} className={itemClass}>{group.text}</li>)}
       </ul>

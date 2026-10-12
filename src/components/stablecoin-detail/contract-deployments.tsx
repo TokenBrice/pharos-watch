@@ -277,7 +277,7 @@ function ContractDetailRow({
       <div className="flex min-w-0 items-center gap-3">
         <div className="min-w-0 flex-1">
           {label ? (
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+            <p className="pharos-label">{label}</p>
           ) : null}
           <ContractChainIdentity contract={contract} chain={chain} chainName={chainName} variant="detail" />
           <ContractAddress address={contract.address} variant="detail" />
@@ -355,8 +355,8 @@ function ContractChainIdentity({
         <span
           className={
             isCompact
-              ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground"
-              : "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground"
+              ? "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-3xs font-bold text-muted-foreground"
+              : "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-3xs font-bold text-muted-foreground"
           }
         >
           {chainName.charAt(0).toUpperCase()}

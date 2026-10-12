@@ -144,7 +144,7 @@ function HeldBy({ summary }: { summary: CustodyClientSummary }) {
                     {swatch ? <span aria-hidden="true" className={cn("mt-1 h-2 w-2 shrink-0 rounded-sm", swatch)} /> : null}
                     <span className="min-w-0 break-words">{provider.shortName}</span>
                     {provider.sharePct != null ? (
-                      <span className="shrink-0 font-mono text-[11px] font-normal tabular-nums text-muted-foreground">
+                      <span className="shrink-0 font-mono text-2xs font-normal tabular-nums text-muted-foreground">
                         {formatCustodySharePct(provider.sharePct)}
                       </span>
                     ) : null}
@@ -165,7 +165,7 @@ function HeldBy({ summary }: { summary: CustodyClientSummary }) {
             >
               <span aria-hidden="true" className={cn("h-2 w-2 shrink-0 rounded-sm", fill)} />
               {segment.label}
-              <span className="font-mono text-[11px] tabular-nums">{formatCustodySharePct(segment.pct)}</span>
+              <span className="font-mono text-2xs tabular-nums">{formatCustodySharePct(segment.pct)}</span>
             </span>
           ))}
           {sharesUnstated ? <span className="text-xs text-muted-foreground">Shares not disclosed</span> : null}
@@ -188,7 +188,7 @@ function HeldBy({ summary }: { summary: CustodyClientSummary }) {
                 )}
                 <span className="min-w-0 text-pretty">{holder.description}</span>
                 {holder.sharePct != null ? (
-                  <span className="shrink-0 font-mono text-[11px] tabular-nums">{formatCustodySharePct(holder.sharePct)}</span>
+                  <span className="shrink-0 font-mono text-2xs tabular-nums">{formatCustodySharePct(holder.sharePct)}</span>
                 ) : null}
               </li>
             );
@@ -285,7 +285,7 @@ export function CustodyModule({
   const structureUndisclosed = isCustodyStructureUndisclosed(summary);
   const degraded = structureUndisclosed && summary.providers.length === 0 && summary.shareSegments == null;
   const headerChip = (
-    <Badge variant="outline" className={cn("text-[11px] font-medium", summary.postureToneClass)}>
+    <Badge variant="outline" className={cn("text-2xs font-medium", summary.postureToneClass)}>
       {summary.postureLabel}
     </Badge>
   );
@@ -346,7 +346,7 @@ export function CustodyModule({
       }
       verdict={summary.summary}
       chipRow={
-        <Badge variant="outline" className="border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground">
+        <Badge variant="outline" className="border-border/60 bg-muted/30 text-2xs font-medium text-muted-foreground">
           {summary.confidenceVerified ? <CircleCheck aria-hidden="true" /> : <CircleDashed aria-hidden="true" />}
           Confidence: {summary.confidenceLabel}
         </Badge>
@@ -360,17 +360,17 @@ export function CustodyModule({
               <li key={provider.key} className="flex items-baseline justify-between gap-3 py-1.5">
                 <div className="min-w-0">
                   <p className="break-words text-xs text-foreground">{provider.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-2xs text-muted-foreground">
                     {provider.roleLabel}
                     {provider.jurisdiction ? ` · ${provider.jurisdiction}` : ""}
                   </p>
                 </div>
                 {provider.sharePct != null ? (
-                  <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+                  <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">
                     {formatCustodySharePct(provider.sharePct)}
                   </span>
                 ) : (
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                  <span className="shrink-0 text-2xs text-muted-foreground">
                     <span aria-hidden="true">–</span>
                     <span className="sr-only">Share not disclosed</span>
                   </span>

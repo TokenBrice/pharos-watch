@@ -82,10 +82,10 @@ export function RailCard({
 }
 
 const RAIL_STAMP_CLASS =
-  "inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground";
+  "inline-flex h-6 items-center rounded-full bg-muted/70 px-2 text-xs font-medium text-muted-foreground";
 
 /**
- * The header stamp chip — the muted mono pill for a status or icon-prefixed
+ * The header stamp chip — the muted sans pill for a status or icon-prefixed
  * label. Counts belong beside the title through `titleAdornment`.
  */
 export function RailStamp({ className, children }: { className?: string; children: ReactNode }) {
@@ -169,7 +169,7 @@ export function RailMetricCard({
       ariaLabel={title}
       trailing={
         chip ? (
-          <Badge variant="outline" className={cn("shrink-0 text-[11px] font-medium", chip.toneClass)}>
+          <Badge variant="outline" className={cn("shrink-0 text-2xs font-medium", chip.toneClass)}>
             {chip.label}
           </Badge>
         ) : null
@@ -202,7 +202,7 @@ export function RailMetricCard({
                   title={row.hint}
                   className="flex items-baseline justify-between gap-3 py-2 @sm/metric:first:pt-0"
                 >
-                  <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                  <dt className="pharos-label">
                     {row.label}
                     {row.hint ? <span className="sr-only">, {row.hint}</span> : null}
                   </dt>

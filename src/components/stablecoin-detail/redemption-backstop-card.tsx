@@ -125,7 +125,7 @@ function MetadataBadgeList({ items }: { items: readonly { label: string; value: 
         <Badge
           key={`${item.label}:${item.value}`}
           variant="outline"
-          className="border-border/60 bg-background/60 text-[11px] font-normal text-muted-foreground"
+          className="border-border/60 bg-background/60 text-2xs font-normal text-muted-foreground"
         >
           {item.label}: {item.value}
         </Badge>
@@ -723,7 +723,7 @@ function RedemptionBackstopCard({
           <ModuleDisclosure label="Capacity, fees & confidence">
             <div className="mt-2 grid items-start gap-3 xl:grid-cols-2">
               <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                <p className="pharos-label">
                   {viewModel.capacitySummary.title}
                 </p>
                 <p className="mt-1 text-sm font-medium">{viewModel.capacitySummary.headline}</p>
@@ -739,7 +739,7 @@ function RedemptionBackstopCard({
               {/* Fee and confidence stack to balance the capacity column's height. */}
               <div className="grid content-start gap-3">
                 <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-                  <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Redemption Fee</p>
+                  <p className="pharos-label">Redemption fee</p>
                   <p className="mt-1 text-sm font-medium">{viewModel.feeSummary.headline}</p>
                   <p className="mt-1 text-xs text-muted-foreground">{viewModel.feeSummary.detail}</p>
                   {viewModel.costScenarioContext.length > 0 ? (
@@ -749,7 +749,7 @@ function RedemptionBackstopCard({
 
                 {viewModel.confidenceContext.length > 0 ? (
                   <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-                    <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">Confidence Detail</p>
+                    <p className="pharos-label">Confidence detail</p>
                     <MetadataBadgeList items={viewModel.confidenceContext} />
                     {viewModel.confidenceReasons.length > 0 ? (
                       <p className="mt-2 text-xs text-muted-foreground">{viewModel.confidenceReasons.join(". ")}</p>

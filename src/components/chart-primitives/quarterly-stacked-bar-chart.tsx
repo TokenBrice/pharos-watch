@@ -1,10 +1,10 @@
 "use client";
 
-import type { ComponentProps, ReactElement, ReactNode } from "react";
+import { useMemo, type ComponentProps, type ReactElement, type ReactNode } from "react";
 import { Bar, ComposedChart, Tooltip } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { CategoricalXAxis, TimeGrid, MonoYAxis } from "@/components/chart-primitives/axes";
+import { CategoricalXAxis, TimeGrid, MonoYAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 
 export interface QuarterlyStackedBarSeries {
   dataKey: string;
@@ -33,6 +33,18 @@ export function QuarterlyStackedBarChart<T extends object>({
   children,
 }: QuarterlyStackedBarChartProps<T>) {
   const { ref, ready, width, height: measuredHeight } = useChartContainerReady<HTMLDivElement>();
+  // Stack heights, not individual series, set the value axis.
+  const stackTotals = useMemo(
+    () =>
+      data.map((row) =>
+        series.reduce((sum, { dataKey }) => {
+          const value = (row as Record<string, unknown>)[dataKey];
+          return typeof value === "number" && Number.isFinite(value) ? sum + value : sum;
+        }, 0),
+      ),
+    [data, series],
+  );
+  const valueAxis = useNiceValueAxis(stackTotals, { kind: yAxis.tickKind });
 
   return (
     <div ref={ref} className={height} role="figure" aria-label={ariaLabel}>
@@ -43,27 +55,15 @@ export function QuarterlyStackedBarChart<T extends object>({
           data={data}
           margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
         >
-          <TimeGrid strokeDasharray="3 3" />
+          <TimeGrid />
           <CategoricalXAxis
             dataKey="quarter"
-            tick={{
-              fontSize: 11,
-              fontFamily: "var(--font-mono, monospace)",
-              fill: "var(--color-muted-foreground)",
-            }}
             angle={-35}
             textAnchor="end"
             height={52}
             interval={Math.max(0, Math.floor(data.length / 8) - 1)}
           />
-          <MonoYAxis
-            tick={{
-              fontSize: 11,
-              fontFamily: "var(--font-mono, monospace)",
-              fill: "var(--color-muted-foreground)",
-            }}
-            {...yAxis}
-          />
+          <MonoYAxis {...valueAxis} {...yAxis} />
           <Tooltip content={tooltipContent} cursor={{ fill: "currentColor", opacity: 0.05 }} />
           {series.map(({ dataKey, color, fillOpacity, radius }) => (
             <Bar

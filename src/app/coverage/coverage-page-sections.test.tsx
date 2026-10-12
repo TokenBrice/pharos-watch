@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { CoverageMatrixCard, CoverageMobileResults, CoverageSafetyScoreDataCard } from "@/components/coverage/coverage-page-sections";
+import { CoverageMatrixCard, CoverageSafetyScoreDataCard } from "@/components/coverage/coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
 import { logosById } from "@/lib/logos";
 import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
@@ -14,10 +14,6 @@ vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
   return createNextLinkMock();
 });
-
-vi.mock("@/hooks/use-is-mobile", () => ({
-  useIsMobile: () => false,
-}));
 
 function makeCoverageRow(index: number, overrides: Partial<Parameters<typeof buildCoverageRow>[0]> = {}) {
   return buildCoverageRow({
@@ -70,28 +66,6 @@ function makeMatrixModel(overrides: Partial<CoverageMatrixModel> = {}): Coverage
   };
 }
 
-describe("CoverageMobileResults", () => {
-  it("batches mobile coverage cards and can collapse back to the first batch", () => {
-    const rows = Array.from({ length: 30 }, (_value, index) => makeCoverageRow(index + 1));
-
-    render(<CoverageMobileResults rows={rows} logos={logosById} />);
-
-    expect(screen.getByText("Showing 24 of 30 matching coins")).toBeTruthy();
-    expect(screen.getByText("C24")).toBeTruthy();
-    expect(screen.queryByText("C25")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Show next 6 coins" }));
-
-    expect(screen.getByText("Showing 30 of 30 matching coins")).toBeTruthy();
-    expect(screen.getByText("C30")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Collapse" }));
-
-    expect(screen.getByText("Showing 24 of 30 matching coins")).toBeTruthy();
-    expect(screen.queryByText("C30")).toBeNull();
-  });
-});
-
 describe("CoverageMatrixCard", () => {
   it("renders unavailable feed warnings without counting them as ordinary gaps", () => {
     const rows = [makeCoverageRow(1, { dataAvailability: { redemption: false } })];
@@ -135,6 +109,24 @@ describe("CoverageMatrixCard", () => {
     expect(screen.getAllByText("C1").length).toBeGreaterThan(0);
     expect(within(matrixTable).getByRole("rowheader", { name: /Coin 1/ })).toBeTruthy();
     expect(screen.getAllByRole("columnheader", { name: /Backstop/ }).length).toBeGreaterThan(0);
+  });
+
+  it("pages long results 20 at a time with an honest count and a URL page", () => {
+    window.history.replaceState(null, "", "/coverage/");
+    const rows = Array.from({ length: 30 }, (_value, index) => makeCoverageRow(index + 1));
+    const { container } = render(<CoverageMatrixCard {...makeMatrixModel({ rows, filteredRows: rows })} />);
+
+    expect(container.textContent).toContain("Showing 1–20 of 30 coins");
+    expect(screen.getAllByText("C20").length).toBeGreaterThan(0);
+    expect(screen.queryByText("C21")).toBeNull();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Go to next page" })[0]);
+
+    expect(window.location.search).toBe("?page=2");
+    expect(container.textContent).toContain("Showing 21–30 of 30 coins");
+    expect(screen.getAllByText("C30").length).toBeGreaterThan(0);
+    expect(screen.queryByText("C20")).toBeNull();
+    window.history.replaceState(null, "", "/coverage/");
   });
 
   it("renders the impaired redemption legend entry", () => {

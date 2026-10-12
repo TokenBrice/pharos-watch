@@ -50,7 +50,7 @@ function TopCohortStrip({ rows, partial }: { rows: AltPegDistributionRow[]; part
   if (rows.length === 0) return null;
   return (
     <div className="peg-hero__top-cohorts" aria-label={partial ? "Largest known cohort subtotals" : "Top cohorts by market cap"}>
-      <span className="peg-hero__top-label">{partial ? "Known Cohort Subtotals · Partial" : "Largest Cohorts"}</span>
+      <span className="peg-hero__top-label">{partial ? "Known cohort subtotals · partial" : "Largest cohorts"}</span>
       <div className="peg-hero__top-grid">
         {rows.map((row, index) => (
           <Link key={row.peg} href={row.href} className="peg-hero__top-row pharos-focus-ring">

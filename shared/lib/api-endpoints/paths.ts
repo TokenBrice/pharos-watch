@@ -1,4 +1,5 @@
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "../api-query-history";
+import type { OgPageSlug } from "../og-route-cards";
 
 const DEX_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.dexLiquidity.defaultDays;
 const YIELD_HISTORY_DEFAULT_DAYS = STABLECOIN_HISTORY_QUERY_CONTRACTS.yield.defaultDays;
@@ -112,6 +113,7 @@ export const API_PATHS = {
   ogDepeg: () => "/api/og/depeg",
   ogSafetyScores: () => "/api/og/safety-scores",
   ogStabilityIndex: () => "/api/og/stability-index",
+  ogPage: (slug: OgPageSlug) => `/api/og/page/${slug}`,
   publicStatusHistory: (params?: { limit?: number; window?: "24h" | "7d" | "30d" }) =>
     buildQueryPath("/api/public-status-history", {
       limit: params?.limit,

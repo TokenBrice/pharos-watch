@@ -125,13 +125,13 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           <span className="min-w-0">
             <span
               className={cn(
-                "block truncate text-[15px] font-semibold leading-tight tracking-tight",
+                "block truncate text-sm font-semibold leading-tight tracking-tight",
                 accent.title,
               )}
             >
               {summary.feature.label}
             </span>
-            <span className="mt-0.5 block truncate text-[11px] leading-tight text-muted-foreground">
+            <span className="mt-0.5 block truncate text-2xs leading-tight text-muted-foreground">
               {summary.countLabel}
             </span>
           </span>
@@ -163,7 +163,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
                 {showLabel ? (
                   <span
                     className={cn(
-                      "truncate text-[10px] font-semibold leading-none tracking-[0.02em] pharos-numeric",
+                      "truncate text-3xs font-semibold leading-none pharos-numeric",
                       visual?.barText ?? BAR_TEXT_CLASS,
                     )}
                   >
@@ -185,7 +185,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
               {missingPct >= BAR_LABEL_MIN_PCT ? (
                 <span
                   className={cn(
-                    "truncate text-[10px] font-semibold leading-none tracking-[0.02em] pharos-numeric",
+                    "truncate text-3xs font-semibold leading-none pharos-numeric",
                     BAR_TEXT_CLASS,
                   )}
                 >
@@ -203,7 +203,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
             {summary.availableCount}
             <span className="ml-0.5 text-sm font-medium text-muted-foreground">/{summary.totalCount}</span>
           </div>
-          <div className="mt-1.5 pharos-kicker">
+          <div className="mt-1.5 pharos-label">
             <span className="pharos-numeric">
               {summary.coveragePct == null ? "Data n/a" : `${summary.coveragePct.toFixed(0)}%`}
             </span>{" "}
@@ -214,7 +214,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
           <div className="pharos-numeric text-2xl font-semibold leading-none text-foreground">
             {marketCapLabel}
           </div>
-          <div className="mt-1.5 pharos-kicker">
+          <div className="mt-1.5 pharos-label">
             {summary.marketCapComplete ? "of cap" : "of known cap"}
           </div>
         </div>
@@ -235,7 +235,7 @@ export function FeatureSnapshotInsight({ label, title, detail, accent }: Feature
 
   return (
     <div className={cn("rounded-lg border px-3 py-2.5", accentClasses.tile)}>
-      <div className="pharos-kicker">{label}</div>
+      <div className="pharos-label">{label}</div>
       <div className={cn("mt-1 truncate text-sm font-semibold leading-tight", accentClasses.title)}>{title}</div>
       <div className="mt-1 pharos-numeric text-xs text-muted-foreground">{detail}</div>
     </div>

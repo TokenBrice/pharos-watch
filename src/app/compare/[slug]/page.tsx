@@ -75,7 +75,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
     >
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.58fr)]">
         <div className="pharos-card-shell px-4 py-4">
-          <p className="pharos-kicker">Comparison Brief</p>
+          <p className="pharos-label">Comparison brief</p>
           <p className="mt-3 max-w-4xl text-sm leading-relaxed text-muted-foreground">{page.summary}</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <Link
@@ -113,7 +113,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
           className="pharos-card-shell px-4 py-4"
           aria-labelledby="comparison-short-answer-title"
         >
-          <p className="pharos-kicker">Short Answer</p>
+          <p className="pharos-label">Short answer</p>
           <h2 id="comparison-short-answer-title" className="mt-1 text-lg font-semibold tracking-tight text-foreground">
             {snippetAnswer.question}
           </h2>
@@ -152,7 +152,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
       <section className="grid gap-4 lg:grid-cols-2">
         {[page.left, page.right].map((coin) => (
           <article key={coin.id} className="pharos-card-shell px-4 py-4">
-            <p className="pharos-kicker">{coin.symbol}</p>
+            <p className="pharos-label">{coin.symbol}</p>
             <h2 className="mt-1 text-lg font-semibold tracking-tight text-foreground">{coin.name}</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li>{coin.flags.yieldBearing ? "Yield-bearing design" : "Non-yield-bearing design"}</li>
@@ -177,7 +177,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
 
       <section className="space-y-3">
         <div className="space-y-1.5">
-          <h2 className="pharos-kicker">At A Glance</h2>
+          <h2 className="pharos-label">At A glance</h2>
           <p className="text-sm text-muted-foreground">
             Static structural differences between the two stablecoins before you switch to the live comparison tool.
           </p>
@@ -234,7 +234,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="pharos-card-shell space-y-3 px-4 py-4">
-          <h2 className="pharos-kicker">Research Links</h2>
+          <h2 className="pharos-label">Research links</h2>
           <div className="flex flex-col gap-2">
             {researchLinks.map((link) => (
               <Link
@@ -249,7 +249,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
         </div>
 
         <div className="pharos-card-shell space-y-3 px-4 py-4">
-          <h2 className="pharos-kicker">Related Taxonomies</h2>
+          <h2 className="pharos-label">Related taxonomies</h2>
           <div className="flex flex-col gap-2">
             {taxonomyLinks.map((link) => (
               <Link

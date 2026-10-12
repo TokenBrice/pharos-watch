@@ -1,6 +1,6 @@
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { numberValue } from "@shared/lib/type-guards";
-import { buildHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
+import { buildHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
 
 interface TopStablecoinsDatasetRow {
   id?: unknown;
@@ -15,7 +15,7 @@ interface TopStablecoinsDataset {
   rows?: TopStablecoinsDatasetRow[];
 }
 
-export type { HomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
+export type { HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
 
 const TOP_STABLECOINS_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as TopStablecoinsDataset;
 

@@ -273,7 +273,7 @@ export function DeploymentStrip({
                 )}
               >
                 {runIndex === 0 ? (
-                  <span className="whitespace-nowrap text-[11px] leading-[14px] text-muted-foreground">
+                  <span className="whitespace-nowrap text-2xs leading-[14px] text-muted-foreground">
                     {bracket.label}{" "}
                     {bracket.shareLabel ? (
                       <span data-bracket-share="">
@@ -322,7 +322,7 @@ export function DeploymentStrip({
                 key={cell.key}
                 style={{ gridColumn: slot.gridColumn, gridRow: cellRow + 1 }}
                 className={cn(
-                  "flex min-w-0 items-center gap-1 text-[11px] leading-[14px]",
+                  "flex min-w-0 items-center gap-1 text-2xs leading-[14px]",
                   cell.home ? "text-foreground" : "text-muted-foreground",
                   NAME_SLOT_ALIGN_CLASS[slot.align],
                 )}
@@ -333,7 +333,7 @@ export function DeploymentStrip({
             );
           })}
         </div>
-        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px] leading-4 text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-2xs leading-4 text-muted-foreground">
           {[...legend.values()].map((entry) => (
             <span key={entry.swatchClass} data-legend-entry="" className="inline-flex items-center gap-1.5">
               <span className={cn(SWATCH_CLASS, entry.swatchClass)} />
@@ -369,7 +369,7 @@ export function DeploymentStrip({
         </div>
       </div>
       {caveatLine.length > 0 ? (
-        <p data-strip-caveats="" className="text-[11px] leading-snug text-muted-foreground">
+        <p data-strip-caveats="" className="text-2xs leading-snug text-muted-foreground">
           {caveatLine.map((part, index) => (
             <span key={part} data-split-caption={part === SPLIT_CAVEAT ? "" : undefined}>
               {index > 0 ? " · " : null}

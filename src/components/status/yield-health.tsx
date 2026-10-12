@@ -144,13 +144,13 @@ function QueueItems({
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-xs font-medium text-foreground">{item.title}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">{item.detail}</div>
+                  <div className="truncate text-2xs text-muted-foreground">{item.detail}</div>
                 </div>
-                <div className="shrink-0 rounded border border-border/50 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                <div className="shrink-0 rounded border border-border/50 px-1.5 py-0.5 text-3xs text-muted-foreground">
                   {item.actionHint}
                 </div>
               </div>
-              <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+              <div className="mt-1 truncate font-mono text-2xs text-muted-foreground">
                 {queueItemMeta(item)}
               </div>
             </div>
@@ -254,7 +254,7 @@ export function YieldHealthCard({
             ))}
           </div>
           {health.benchmarkRegistry.unusedBenchmarkKeys?.length ? (
-            <div className="mt-2 truncate text-[11px] text-muted-foreground">
+            <div className="mt-2 truncate text-2xs text-muted-foreground">
               Fetched but unused:{" "}
               {health.benchmarkRegistry.unusedBenchmarkKeys
                 .map((entry) => `${entry.key} (${entry.source ?? "no feed"}, observed ${ageLabel(entry.recordAgeSec)})`)
@@ -262,7 +262,7 @@ export function YieldHealthCard({
             </div>
           ) : null}
           {health.benchmarkRegistry.unknownKeys?.length ? (
-            <div className="mt-1 truncate text-[11px] text-destructive">
+            <div className="mt-1 truncate text-2xs text-destructive">
               Unknown published keys: {health.benchmarkRegistry.unknownKeys.join(", ")} (
               {health.benchmarkRegistry.unknownKeyRowCount ?? 0} rows)
             </div>
@@ -324,7 +324,7 @@ export function YieldHealthCard({
             <QueueItems title="Recommendation candidates" items={health.coverageAudit.recommendationCandidates} />
           </div>
           {health.coverageAudit.queueTotals ? (
-            <div className="mt-2 text-[11px] text-muted-foreground">
+            <div className="mt-2 text-2xs text-muted-foreground">
               {health.coverageAudit.queueTotals.totalItemCount ?? "unknown"} total visible ·{" "}
               {health.coverageAudit.queueTotals.publishedItemCount ?? "unknown"} producer-published ·{" "}
               {health.coverageAudit.queueTotals.truncatedItemCount ?? "unknown"} producer-truncated ·{" "}
@@ -338,7 +338,7 @@ export function YieldHealthCard({
               {health.coverageAudit.queueTotals.truncated ? " · producer-truncated" : ""}
             </div>
           ) : null}
-          <div className="mt-2 text-[11px] text-muted-foreground">
+          <div className="mt-2 text-2xs text-muted-foreground">
             Queue state: {health.coverageAudit.queuePersistence}
           </div>
         </div>

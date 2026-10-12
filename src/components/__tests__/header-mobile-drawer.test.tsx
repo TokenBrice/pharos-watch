@@ -26,6 +26,10 @@ vi.mock("@/components/pharos-logo", () => ({
   PharosLogo: () => <span aria-hidden="true">Logo</span>,
 }));
 
+vi.mock("@/components/regime-bar", () => ({
+  RegimeBarToggle: () => null,
+}));
+
 vi.mock("@/components/theme-controls", () => ({
   ThemeControls: () => <div>Theme controls</div>,
 }));
@@ -68,11 +72,12 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: vi.fn(),
 }));
 
-const categories = NAV_GROUPS.flatMap((group) =>
-  group.columns
-    ? group.columns.map((column) => ({ label: column.label, items: column.items }))
-    : [{ label: group.label, items: group.items }],
-);
+// The drawer mirrors the desktop menus one-to-one; columns become subheads.
+const categories = NAV_GROUPS.map((group) => ({
+  label: group.label,
+  columns: group.columns ?? [],
+  items: group.columns ? group.columns.flatMap((column) => column.items) : group.items,
+}));
 
 function categoryButton(label: string, itemCount: number) {
   return screen.getByRole("button", { name: `${label}, ${itemCount} pages` });
@@ -116,6 +121,16 @@ describe("Header mobile drawer", () => {
     expect(screen.queryByRole("button", { name: "Back to menu" })).toBeNull();
     for (const category of categories) {
       expect(categoryButton(category.label, category.items.length)).toBeTruthy();
+    }
+  });
+
+  it("keeps a columned menu's columns as subheads inside its category", () => {
+    render(<Header />);
+    openDrawer();
+    const columned = categories.find((category) => category.columns.length > 0)!;
+    fireEvent.click(categoryButton(columned.label, columned.items.length));
+    for (const column of columned.columns) {
+      expect(screen.getByRole("heading", { name: column.label, level: 3 })).toBeTruthy();
     }
   });
 

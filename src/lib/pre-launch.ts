@@ -86,8 +86,8 @@ export const DRIFT_STATUS_BADGE: Record<DriftStatus, string> = {
 };
 
 export const DRIFT_STATUS_LABEL: Record<DriftStatus, string> = {
-  "on-track": "On Track",
-  "pushed-once": "Pushed Once",
+  "on-track": "On track",
+  "pushed-once": "Pushed once",
   "pushed-multiple": "Delayed",
   overdue: "Overdue",
 };

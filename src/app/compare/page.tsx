@@ -77,7 +77,7 @@ function ComparePairDirectory() {
     <section aria-labelledby="compare-pair-directory-title" className="space-y-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1.5">
-          <p className="pharos-kicker">Comparison guides</p>
+          <p className="pharos-label">Comparison guides</p>
           <h2 id="compare-pair-directory-title" className="text-lg font-semibold tracking-tight text-foreground">
             Popular stablecoin comparisons
           </h2>
@@ -98,7 +98,7 @@ function ComparePairDirectory() {
       {priorityComparisonPages.length > 0 ? (
         <section aria-labelledby="priority-comparison-title" className="space-y-3 border-y border-border/60 py-4">
           <div className="space-y-1.5">
-            <p className="pharos-kicker">Start here</p>
+            <p className="pharos-label">Start here</p>
             <h3 id="priority-comparison-title" className="text-base font-semibold text-foreground">
               Featured comparisons
             </h3>

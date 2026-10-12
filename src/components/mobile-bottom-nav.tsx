@@ -18,7 +18,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-[55] border-t border-border/70 bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-chrome-dock border-t border-border/70 bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
       <div className="grid h-[var(--mobile-bottom-nav-height)] grid-cols-5">
         {MOBILE_ROUTE_ITEMS.map((item) => {
@@ -41,7 +41,7 @@ export function MobileBottomNav() {
               }
             >
               <Icon className="h-5 w-5" aria-hidden="true" />
-              <span className="text-[11px] font-medium leading-none">{item.shortLabel ?? item.label}</span>
+              <span className="text-2xs font-medium leading-none">{item.shortLabel ?? item.label}</span>
             </Link>
           );
         })}
@@ -52,7 +52,7 @@ export function MobileBottomNav() {
           aria-label="Menu"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
-          <span className="text-[11px] font-medium leading-none">Menu</span>
+          <span className="text-2xs font-medium leading-none">Menu</span>
         </button>
       </div>
     </nav>

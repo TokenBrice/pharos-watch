@@ -6,8 +6,8 @@ import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-s
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { cn } from "@/lib/utils";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
-import { computeFreezableSummary } from "@/components/freezewatch/freezable-supply-meter";
+import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
+import { computeFreezableSummary } from "@shared/lib/freezewatch/freezable-summary";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
@@ -121,7 +121,7 @@ export function BlacklistStats({
           role="status"
         >
           <CardHeader className="pb-2">
-            <p className="pharos-kicker">Data Quality</p>
+            <p className="pharos-label">Data quality</p>
             <h3 className="text-sm font-semibold text-foreground">{qualityTitle}</h3>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-muted-foreground">
@@ -156,7 +156,7 @@ export function BlacklistStats({
       ) : null}
       {canDrillIntoUnfreezable && onUnfreezableSelect ? (
         <InteractiveMetricStatCard
-          title="Unfreezable Market Share"
+          title="Unfreezable market share"
           value={unfreezableMarketShareValue}
           subtext={unfreezableMarketShareSubtext}
           className="sm:col-span-2"
@@ -165,7 +165,7 @@ export function BlacklistStats({
         />
       ) : (
         <MetricStatCard
-          title="Unfreezable Market Share"
+          title="Unfreezable market share"
           value={unfreezableMarketShareValue}
           subtext={unfreezableMarketShareSubtext}
           variant="hero"
@@ -173,14 +173,14 @@ export function BlacklistStats({
         />
       )}
       <MetricStatCard
-        title="Tracked Frozen Total"
+        title="Tracked frozen total"
         value={trackedFrozenTotal === null ? "—" : formatCurrency(trackedFrozenTotal)}
         subtext="last-known freeze snapshots"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"
       />
       <MetricStatCard
-        title="Total Wiped Value"
+        title="Total wiped value"
         value={stats ? formatBlacklistValuation(stats.destroyedTotal, stats.valuationCoverage?.destroyed) : "—"}
         subtext="destroyed or confiscated value"
         valueClassName="pharos-numeric text-3xl font-semibold"

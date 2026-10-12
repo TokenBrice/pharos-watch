@@ -6,7 +6,9 @@ import { bluechipObservationLabel } from "@shared/lib/bluechip-freshness";
 import { memo, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
-  GOVERNANCE_LABELS_SHORT,
+  COLLATERAL_QUALITY_LABELS,
+  CUSTODY_MODEL_LABELS,
+  GOVERNANCE_LABELS,
   MECHANISM_ARCHETYPE_SHORT_LABELS,
 } from "@shared/lib/classification";
 import {
@@ -52,7 +54,7 @@ import {
   resolvePressureState,
   resolvePressureUnavailableNote,
   type MintBurnNetWindow,
-} from "@/lib/mint-burn-coin-helpers";
+} from "@shared/lib/mint-burn-coin-helpers";
 
 /** Signed flow net gated by valuation completeness: unavailable renders the placeholder, never $0. */
 function renderFlowNet(coin: ComparisonCoinEntry, window: MintBurnNetWindow): ReactNode {
@@ -72,7 +74,8 @@ function renderFlowPressure(coin: ComparisonCoinEntry): ReactNode {
     );
   }
   const score = resolvePressureScore(coin.flow);
-  return `${humanizeSafetyScoreV9Value(resolvePressureState(coin.flow))}${score != null ? ` · ${formatScore(score, { trimInteger: true })}` : ""}`;
+  const state = resolvePressureState(coin.flow);
+  return `${state === "nr" ? "NR" : humanizeSafetyScoreV9Value(state)}${score != null ? ` · ${formatScore(score, { trimInteger: true })}` : ""}`;
 }
 
 interface ComparisonTableProps {
@@ -318,11 +321,11 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
       metrics: [
         { key: "peg-target", label: "Peg target", render: (coin) => coin.meta.flags.pegCurrency },
         { key: "backing", label: "Backing", render: (coin) => BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing },
-        { key: "governance", label: "Governance", render: (coin) => GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance },
+        { key: "governance", label: "Governance", render: (coin) => GOVERNANCE_LABELS[coin.meta.flags.governance] ?? coin.meta.flags.governance },
         { key: "launch", label: "Launch date", numeric: true, render: (coin) => present(coin.meta.launchDate) },
         { key: "reserves", label: "Largest reserve exposure", render: reserveSummary },
-        { key: "collateral-quality", label: "Collateral quality", render: (coin) => humanize(coin.meta.collateralQuality) },
-        { key: "custody", label: "Custody model", render: (coin) => humanize(coin.meta.custodyModel) },
+        { key: "collateral-quality", label: "Collateral quality", render: (coin) => coin.meta.collateralQuality ? COLLATERAL_QUALITY_LABELS[coin.meta.collateralQuality] : NULL_VALUE },
+        { key: "custody", label: "Custody model", render: (coin) => coin.meta.custodyModel ? CUSTODY_MODEL_LABELS[coin.meta.custodyModel] : NULL_VALUE },
         { key: "mint-authority", label: "Mint authority", render: (coin) => resolveMintAuthorityStatus(coin.meta.mintAuthoritySummary).spokenLabel },
         { key: "blacklist", label: "Freeze capability", render: blacklistLabel },
         { key: "variant", label: "Variant relationship", render: (coin) => coin.meta.variantOf ? `${humanizeSafetyScoreV9Value(coin.meta.variantKind ?? "variant")} of ${coin.meta.variantOf}` : "Base asset" },
@@ -336,7 +339,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
 function FrozenBadge({ frozenAt }: { frozenAt?: string }) {
   return (
     <span
-      className="rounded border border-zinc-500/30 px-1 text-[9px] uppercase tracking-wide text-zinc-500"
+      className="rounded border border-zinc-500/30 px-1 text-3xs uppercase text-zinc-500"
       title={frozenAt ? `Frozen on ${frozenAt}` : "Frozen"}
     >
       Frozen
@@ -356,7 +359,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
       <div className="pharos-subtle-band">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="pharos-kicker">Comparison Matrix</p>
+            <p className="pharos-label">Comparison matrix</p>
             <p className="mt-1 text-sm text-foreground">Exact values across market, risk, exit, activity, and structure.</p>
           </div>
           <p className="pharos-meta">A dash means that source has no comparable value; it is not a zero.</p>
@@ -388,7 +391,7 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
                     {coin.meta.status === "frozen" ? <FrozenBadge frozenAt={coin.meta.frozenAt} /> : null}
                   </span>
                   <span className="max-w-[8.5rem] truncate text-xs font-normal text-muted-foreground">{coin.name}</span>
-                  {detailErrors?.[coin.id] ? <span className="text-[10px] text-destructive">History unavailable</span> : null}
+                  {detailErrors?.[coin.id] ? <span className="text-3xs text-destructive">History unavailable</span> : null}
                 </Link>
               </TableHead>
             ))}

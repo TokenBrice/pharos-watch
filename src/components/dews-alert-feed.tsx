@@ -115,7 +115,7 @@ export function DEWSAlertFeed({ signals, logos, allowedIds, className, embedded 
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate group-hover:underline">{coin.symbol}</div>
                   <div className="text-xs text-muted-foreground truncate">{coin.name}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">
+                  <div className="text-3xs text-muted-foreground truncate">
                     {top.length > 0 ? top.map((item) => item.shortLabel).join(", ") : "no active drivers"}
                     {amplifiers.length > 0 ? ` · ${amplifiers.map((amp) => `${amp.label} ${amp.value.toFixed(2)}x`).join(", ")}` : ""}
                   </div>

@@ -43,7 +43,7 @@ const COMPLIANCE_HERO = (
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-border/50 p-5 sm:p-6">
       <div className="space-y-1.5">
         <p className="text-sm font-medium text-muted-foreground">MiCA-authorized stablecoins</p>
-        <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+        <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
           {COMPLIANCE_SUMMARY.micaAuthorized.toLocaleString()}
         </p>
         <p className="pharos-meta">of {COMPLIANCE_SUMMARY.micaAssessed.toLocaleString()} EU-assessed stablecoins</p>
@@ -88,7 +88,7 @@ const sourceReferences = GENIUS_REGIME_STATE.sourceReferences ?? [
 const COMPLIANCE_STATIC_SECTION = (
   <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
     <div className="pharos-card-shell p-5">
-      <p className="pharos-kicker">How To Read Status</p>
+      <p className="pharos-label">How to read status</p>
       <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
         <p>
           <span className="font-medium text-foreground">MiCA authorized</span> means the issuer holds an in-effect EMI
@@ -103,7 +103,7 @@ const COMPLIANCE_STATIC_SECTION = (
       </div>
     </div>
     <div className="pharos-card-shell p-5">
-      <p className="pharos-kicker">GENIUS Regime State</p>
+      <p className="pharos-label">GENIUS regime state</p>
       <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
         <dt className="text-muted-foreground">Public law</dt>
         <dd className="pharos-numeric text-foreground">{GENIUS_REGIME_STATE.publicLawDate}</dd>

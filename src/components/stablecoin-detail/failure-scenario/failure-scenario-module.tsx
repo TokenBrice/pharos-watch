@@ -46,9 +46,31 @@ import {
 /** Anchor of the module; steps anchor as `failure-scenario-<stageId>`. */
 const FAILURE_SCENARIO_MODULE_ID = "failure-scenario";
 
-const CHIP_CLASS = "text-[11px] font-medium";
+const CHIP_CLASS = "text-2xs font-medium";
 const NEUTRAL_CHIP_CLASS = cn(CHIP_CLASS, SEVERITY_TONE_CLASS.neutral.pill);
 const SUBHEADING_CLASS = "text-sm font-semibold tracking-tight text-foreground";
+
+/** A figure-bearing token (digit or currency sign) or a ticker stays mono; words read in sans. */
+const MONO_TOKEN = /[\d$€£¥]|^[A-Z][A-Z0-9]{1,5}$/;
+
+/**
+ * Key figures mix numbers and words ("48 hours", "7.04bn SKY", "No surplus").
+ * Mono is for the figure token only; the authored casing is kept, never
+ * uppercased.
+ */
+function ScenarioFigureValue({ value }: { value: string }) {
+  const tokens = value.trim().split(/\s+/);
+  return (
+    <>
+      {tokens.map((token, index) => (
+        <span key={index} className={MONO_TOKEN.test(token) ? "pharos-numeric" : undefined}>
+          {index > 0 ? " " : ""}
+          {token}
+        </span>
+      ))}
+    </>
+  );
+}
 
 /**
  * Verdicts on who could stop the path. "Cannot stop it" is the one place the
@@ -121,7 +143,7 @@ function Defenders({
               <span className={cn("whitespace-nowrap pt-px text-xs font-semibold", tone)}>
                 {DEFENDER_VERDICT_LABEL[defender.verdict]}
               </span>
-              <p className="col-span-2 col-start-2 text-[13px] leading-snug text-muted-foreground text-pretty">
+              <p className="col-span-2 col-start-2 text-xs leading-snug text-muted-foreground text-pretty">
                 {defender.why}{" "}
                 <span className="inline-flex translate-y-px items-center gap-1.5 align-baseline">
                   <EvidenceGlyph evidence={defender.evidence} />
@@ -149,8 +171,8 @@ function Falsifiers({ scenario }: { scenario: FailureScenario }) {
           return (
             <li key={falsifier.condition} className="grid grid-cols-[1rem_minmax(0,1fr)] gap-x-2.5 gap-y-0.5 py-2.5">
               <Icon aria-hidden="true" className={cn("mt-0.5 h-4 w-4", tone)} />
-              <p className="text-[13px] leading-snug text-foreground/90 text-pretty">{falsifier.condition}</p>
-              <p className="col-start-2 flex flex-wrap items-baseline gap-x-1.5 text-[11px] text-muted-foreground">
+              <p className="text-xs leading-snug text-foreground/90 text-pretty">{falsifier.condition}</p>
+              <p className="col-start-2 flex flex-wrap items-baseline gap-x-1.5 text-2xs text-muted-foreground">
                 <span className={cn("font-medium", tone)}>{FALSIFIER_STATUS_LABEL[falsifier.status]}</span>
                 {falsifier.checkedAtBlock != null ? (
                   <span>
@@ -177,11 +199,11 @@ function Exposure({ scenario }: { scenario: FailureScenario }) {
             className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-0.5 py-2.5 @2xl/evidence:grid-cols-[11rem_minmax(0,1fr)_auto]"
           >
             <dt className="text-sm font-medium text-foreground">{item.label}</dt>
-            <dd className="col-span-2 row-start-2 text-[13px] leading-snug text-muted-foreground text-pretty @2xl/evidence:col-span-1 @2xl/evidence:col-start-2 @2xl/evidence:row-start-1">
+            <dd className="col-span-2 row-start-2 text-xs leading-snug text-muted-foreground text-pretty @2xl/evidence:col-span-1 @2xl/evidence:col-start-2 @2xl/evidence:row-start-1">
               {item.detail}
             </dd>
             <dd className="col-start-2 row-start-1 @2xl/evidence:col-start-3">
-              <EvidenceMarker evidence={item.evidence} className="text-[11px]" />
+              <EvidenceMarker evidence={item.evidence} className="text-2xs" />
             </dd>
           </div>
         ))}
@@ -370,9 +392,9 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
         items={scenario.keyFigures.map((figure) => ({
           key: `${figure.value}:${figure.label}`,
           label: figure.label,
-          value: figure.value,
-          valueStyle: "figure",
-          valueClassName: "text-foreground text-base",
+          value: <ScenarioFigureValue value={figure.value} />,
+          valueStyle: "text",
+          valueClassName: "text-foreground text-base font-semibold",
           title: EVIDENCE_LABEL[figure.evidence],
         }))}
       />
@@ -389,7 +411,7 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
               ) : null}
             </span>
           </h4>
-          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-2xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
               <MissingDefenseMark size="sm" />
               <span>

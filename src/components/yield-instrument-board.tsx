@@ -153,7 +153,7 @@ function HeaderCell({
   return (
     <div
       className={cn(
-        "flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+        "flex items-center gap-1 pharos-label",
         className,
       )}
       title={title}
@@ -168,7 +168,7 @@ function MetricLabel({ children }: { children: ReactNode }) {
   // The grid header carries column labels at lg+; the md tier hides that header,
   // so each cell self-labels there and the per-row label is suppressed at lg+.
   return (
-    <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground lg:hidden">
+    <span className="block pharos-label lg:hidden">
       {children}
     </span>
   );
@@ -308,7 +308,7 @@ function YieldInstrumentRowBase({
             <span className="hidden max-w-[150px] truncate text-xs text-muted-foreground xl:inline">{row.name}</span>
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <Badge variant="outline" className={`text-[10px] ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
+            <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
               {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
             </Badge>
             <YieldZoneChip safetyScore={safetyScore} apy30d={row.apy30d} benchmarkRate={resolvedBenchmark.rate} />
@@ -330,7 +330,7 @@ function YieldInstrumentRowBase({
           <div className="mt-1.5">
             <ApyBenchmarkBar apy30d={row.apy30d} benchmarkRate={benchmarkRate} />
           </div>
-          <div className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+          <div className="mt-1 truncate font-mono text-3xs text-muted-foreground">
             {excess != null ? (
               <span>
                 {excess >= 0 ? "+" : ""}
@@ -360,7 +360,7 @@ function YieldInstrumentRowBase({
               ariaLabel={`Safety score ${safetyScore !== null ? Math.round(safetyScore) : "unavailable"} of 100`}
             />
           </div>
-          <div className="mt-1 truncate font-mono text-[10px] text-muted-foreground">
+          <div className="mt-1 truncate font-mono text-3xs text-muted-foreground">
             {safetyScore !== null ? `${Math.round(safetyScore)}/100` : "unscored"}
           </div>
         </div>
@@ -389,7 +389,7 @@ function YieldInstrumentRowBase({
               ariaLabel={`Pharos Yield Score ${row.pharosYieldScore ?? "unavailable"} of 100`}
             />
           </div>
-          <div className="mt-1 truncate text-[10px] text-muted-foreground">
+          <div className="mt-1 truncate text-3xs text-muted-foreground">
             <YieldCohortChip cohort={row.cohortPercentile} />
           </div>
         </div>
@@ -463,7 +463,7 @@ function YieldInstrumentRowBase({
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") event.stopPropagation();
             }}
-            className="pharos-focus-ring hidden items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:inline-flex"
+            className="pharos-focus-ring hidden items-center gap-1 rounded-full px-2 py-1 text-2xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground xl:inline-flex"
             aria-label={`${workbenchLink.label} for ${row.symbol}`}
             title={workbenchLink.label}
           >

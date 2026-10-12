@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PharosLogo } from "@/components/pharos-logo";
+import { RegimeBarToggle } from "@/components/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
 import { Sheet, SheetTrigger, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -98,15 +99,14 @@ export function Header() {
   const categoryButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const returnFocusCategoryKeyRef = useRef<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
-  const mobileCategories = NAV_GROUPS.flatMap((group) =>
-    group.columns
-      ? group.columns.map((column) => ({
-          key: `${group.key}:${column.key}`,
-          label: column.label,
-          items: column.items,
-        }))
-      : [{ key: group.key, label: group.label, items: group.items }],
-  );
+  // One taxonomy at every width: the drawer's categories are the desktop
+  // menus, and a columned menu (Resources) keeps its columns as subheads.
+  const mobileCategories = NAV_GROUPS.map((group) => {
+    const sections: Array<{ key: string; label: string | null; items: readonly NavItem[] }> = group.columns
+      ? group.columns.map((column) => ({ key: `${group.key}:${column.key}`, label: column.label, items: column.items }))
+      : [{ key: group.key, label: null, items: group.items }];
+    return { key: group.key, label: group.label, sections, items: sections.flatMap((section) => section.items) };
+  });
   const activeCategory = mobileCategories.find((category) => category.key === activeCategoryKey) ?? null;
   // The quick rail occupies the first animation slot.
   const mobileLeadItemCount = 1;
@@ -162,11 +162,11 @@ export function Header() {
   }, [activeCategoryKey, open]);
 
   // The header renders above the core rail in flow, so it pins directly under
-  // the PSI strip on every route; z-[56] keeps the tape and rail sliding
-  // beneath it while scrolling.
+  // the PSI strip on every route; z-chrome-header keeps the tape and rail
+  // sliding beneath it while scrolling.
   return (
     <header
-      className={`sticky z-[56] border-b border-border/80 bg-background/85 backdrop-blur-md lg:hidden ${topOffsetClass}`}
+      className={`sticky z-chrome-header border-b border-border/80 bg-background/85 backdrop-blur-md lg:hidden ${topOffsetClass}`}
     >
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link
@@ -181,6 +181,7 @@ export function Header() {
         </Link>
 
         <div className="flex items-center gap-1">
+          <RegimeBarToggle />
           {/* Labeled pill, not a bare icon: search is the fastest path to a
               coin profile, and an unlabeled magnifier hides that at 360px.
               shrink-0 keeps the pill intact while the logo text truncates. */}
@@ -204,13 +205,10 @@ export function Header() {
             <SheetContent
               side="left"
               showCloseButton={false}
-              // z-[70] lifts the drawer above the sticky chrome (header z-[56],
-              // rail z-[55], PSI strip z-[60]); the Sheet default z-50 would
-              // leave the drawer's own header row painted beneath them.
               // Motion overrides retime the shadcn slide (500/300ms ease-in-out)
               // to the canon 220ms decelerating curve and drop it entirely for
               // prefers-reduced-motion — kept local so ui/sheet stays stock.
-              className="z-[70] w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card p-0 ease-[var(--motion-ease-standard)] data-[state=open]:duration-[220ms] data-[state=closed]:duration-[220ms] motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
+              className="w-full sm:max-w-full flex flex-col border-r border-border/70 bg-card p-0 ease-[var(--motion-ease-standard)] data-[state=open]:duration-[220ms] data-[state=closed]:duration-[220ms] motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-4 h-14 border-b border-border/70 shrink-0">
@@ -254,17 +252,22 @@ export function Header() {
                     >
                       {activeCategory.label}
                     </h2>
-                    <div>
-                      {activeCategory.items.map((item) => (
-                        <MobileNavLink
-                          key={item.href}
-                          item={item}
-                          active={isNavItemActive(pathname, item)}
-                          group={activeCategory.key}
-                          onNavigate={handleNavigate}
-                        />
-                      ))}
-                    </div>
+                    {activeCategory.sections.map((section) => (
+                      <div key={section.key} className={section.label ? "mt-4 first-of-type:mt-0" : undefined}>
+                        {section.label ? (
+                          <h3 className="mb-1 px-3 text-xs font-medium text-muted-foreground">{section.label}</h3>
+                        ) : null}
+                        {section.items.map((item) => (
+                          <MobileNavLink
+                            key={item.href}
+                            item={item}
+                            active={isNavItemActive(pathname, item)}
+                            group={section.key}
+                            onNavigate={handleNavigate}
+                          />
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div
@@ -273,7 +276,7 @@ export function Header() {
                   >
                     {/* Quick rail: the highest-traffic routes, always visible. */}
                     <div
-                      className="mt-4 grid grid-cols-2 gap-2 pl-[14px] animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
+                      className="grid grid-cols-2 gap-2 pl-[14px] animate-in fade-in slide-in-from-left-2 ease-[var(--motion-ease-standard)] [animation-fill-mode:backwards] motion-reduce:animate-none"
                       style={{ animationDelay: "0ms", animationDuration: "220ms" }}
                     >
                       {QUICK_NAV_ITEMS.map((item) => {
@@ -326,7 +329,7 @@ export function Header() {
                           >
                             <span className="flex items-center gap-2">
                               {category.label}
-                              <span className="rounded-full bg-muted px-1.5 font-mono text-[10px] font-semibold tabular-nums text-muted-foreground/70">
+                              <span className="rounded-full bg-muted px-1.5 font-mono text-3xs font-semibold tabular-nums text-muted-foreground/70">
                                 {category.items.length}
                               </span>
                             </span>

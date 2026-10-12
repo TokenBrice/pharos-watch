@@ -40,7 +40,7 @@ export function YieldFreshnessLabel({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{label}</TooltipTrigger>
-      <TooltipContent className="text-[11px]">{freshness.tooltipText}</TooltipContent>
+      <TooltipContent className="text-2xs">{freshness.tooltipText}</TooltipContent>
     </Tooltip>
   );
 }

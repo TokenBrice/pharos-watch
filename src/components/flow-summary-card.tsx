@@ -25,8 +25,8 @@ import {
   resolvePressureScore,
   resolvePressureState,
   resolvePressureUnavailableNote,
-} from "@/lib/mint-burn-coin-helpers";
-import { describeUnpricedEvents, type MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+} from "@shared/lib/mint-burn-coin-helpers";
+import { describeUnpricedEvents, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
@@ -42,7 +42,7 @@ function SummarySkeleton() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3" className="pharos-kicker">
+        <CardTitle as="h3" className="pharos-label">
           <Skeleton className="h-4 w-28" />
         </CardTitle>
       </CardHeader>
@@ -187,7 +187,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             </p>
             <span
               className={cn(
-                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-semibold",
                 netSignal.badgeClass,
               )}
             >
@@ -244,9 +244,9 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                       : undefined
                   }
                 >
-                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <p className="pharos-label">
                     {cell.label}
-                    {isPartial && <span className="ml-1 normal-case tracking-normal">partial</span>}
+                    {isPartial && <span className="ml-1">partial</span>}
                   </p>
                   <p
                     className={cn(
@@ -278,7 +278,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             </p>
             <span
               className={cn(
-                "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                "inline-flex rounded-full border px-2 py-0.5 text-2xs font-semibold",
                 pressureSignal.badgeClass,
               )}
             >

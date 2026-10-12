@@ -142,7 +142,7 @@ export function StatusSection({
         )}
       >
         <div className="space-y-1">
-          {kicker && <p className="pharos-kicker">{kicker}</p>}
+          {kicker && <p className="pharos-label">{kicker}</p>}
           <Heading id={`${id}-title`} className="text-2xl font-bold leading-tight text-foreground">
             {title}
           </Heading>

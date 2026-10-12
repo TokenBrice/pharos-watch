@@ -6,7 +6,7 @@ const SOCIAL_LINK_CLASS =
 
 // Compact footer chips matching the small square Figma controls.
 const PILL_CLASS =
-  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-[5px] border border-border/65 bg-muted/55 px-2 text-[11px] leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
+  "pharos-focus-ring inline-flex h-8 items-center gap-1 rounded-[5px] border border-border/65 bg-muted/55 px-2 text-2xs leading-none text-muted-foreground transition-colors hover:border-border hover:bg-muted/75 hover:text-foreground";
 
 // Lean footer per the Figma redesign: a disclaimer line, compact hub/reference
 // links, an about/legal row, and the monochrome social cluster. The 2026-06-27
@@ -19,7 +19,8 @@ const PILL_CLASS =
 const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/stablecoins/", label: "Stablecoins" },
   { href: "/chains/", label: "Chains" },
-  { href: "/learn/", label: "Learn" },
+  { href: "/learn/mechanisms/", label: "Mechanisms" },
+  { href: "/learn/case-studies/", label: "Case Studies" },
   { href: "/compare/", label: "Compare" },
   { href: "/depeg/", label: "Depeg" },
   { href: "/digest/", label: "Digest" },
@@ -45,7 +46,7 @@ export function Footer() {
             it claimed ~709 of 768px and crushed the disclaimer to a one-character
             column. Below lg the two rows stack and the chips wrap. */}
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
-          <p className="min-w-0 flex-1 text-[11px] leading-snug text-muted-foreground sm:text-xs">
+          <p className="min-w-0 flex-1 text-2xs leading-snug text-muted-foreground sm:text-xs">
             Pharos tracks stablecoin cap, peg stability, liquidity, and dependency risk. Not financial advice.
           </p>
           <nav

@@ -11,10 +11,14 @@ import {
   BLACKLIST_STATUS_BUCKET_ORDER,
   type BlacklistStatusBucket,
   type BlacklistStatusBucketKey,
-} from "@/lib/blacklist-status-buckets";
+} from "@shared/lib/blacklist-status-buckets";
 import { formatCurrency } from "@shared/lib/format";
-
-const FREEZABLE_BUCKETS = new Set<BlacklistStatusBucketKey>(["yes", "upstream", "possible"]);
+import {
+  FREEZABLE_BLACKLIST_STATUS_BUCKETS as FREEZABLE_BUCKETS,
+  computeFreezableSummary,
+  describeFreezableSupplyCoverage,
+  formatShare,
+} from "@shared/lib/freezewatch/freezable-summary";
 
 interface FreezableSupplyMeterProps {
   buckets: BlacklistStatusBucket[] | null | undefined;
@@ -24,64 +28,6 @@ interface FreezableSupplyMeterProps {
   onRetry?: () => void;
   selectedBucket?: BlacklistStatusBucketKey | null;
   onBucketSelect?: (bucket: BlacklistStatusBucketKey) => void;
-}
-
-export function formatShare(value: number): string {
-  if (!Number.isFinite(value) || value <= 0) return "0%";
-  if (value > 99 && value < 100) return `${value.toFixed(2)}%`;
-  if (value < 0.1) return `${value.toFixed(2)}%`;
-  if (value < 1) return `${value.toFixed(1)}%`;
-  return `${value.toFixed(0)}%`;
-}
-
-/**
- * `complete`: every reviewed asset reported supply. `partial`: some did not; totals and shares
- * cover observed supply only and must be labelled so. `unavailable`: no reviewed asset reported
- * supply, so no supply total or share can be claimed (registry counts remain valid).
- */
-export type FreezableSupplyCoverage = "complete" | "partial" | "unavailable";
-
-export interface FreezableSummary {
-  ordered: BlacklistStatusBucket[];
-  /** Observed supply across every bucket — the known-supply denominator. */
-  totalMarketCap: number;
-  freezableMarketCap: number;
-  /** Registry count of freezable assets; independent of supply availability. */
-  freezableCount: number;
-  /** Freezable percentage of observed supply; `null` when no positive supply is observed. */
-  freezableShare: number | null;
-  /** Reviewed assets whose supply is unavailable and therefore excluded from every total. */
-  supplyUnavailableCount: number;
-  coverage: FreezableSupplyCoverage;
-}
-
-/**
- * Derive the freezable-supply headline figures from the status buckets. Shared
- * by the FreezeWatch hero header (which renders the beam + sub-metrics), the
- * meter body below it and the stats band, so they stay in lockstep.
- */
-export function computeFreezableSummary(buckets: BlacklistStatusBucket[] | null | undefined): FreezableSummary {
-  const ordered = BLACKLIST_STATUS_BUCKET_ORDER.map((key) =>
-    buckets?.find((bucket) => bucket.key === key),
-  ).filter((bucket): bucket is BlacklistStatusBucket => Boolean(bucket));
-  const totalMarketCap = ordered.reduce((sum, bucket) => sum + bucket.marketCap, 0);
-  const freezableBuckets = ordered.filter((bucket) => FREEZABLE_BUCKETS.has(bucket.key));
-  const freezableMarketCap = freezableBuckets.reduce((sum, bucket) => sum + bucket.marketCap, 0);
-  const freezableCount = freezableBuckets.reduce((sum, bucket) => sum + bucket.count, 0);
-  const registryCount = ordered.reduce((sum, bucket) => sum + bucket.count, 0);
-  const supplyUnavailableCount = ordered.reduce((sum, bucket) => sum + bucket.supplyUnavailableCount, 0);
-  const coverage: FreezableSupplyCoverage =
-    registryCount - supplyUnavailableCount <= 0 ? "unavailable" : supplyUnavailableCount > 0 ? "partial" : "complete";
-  const freezableShare =
-    coverage !== "unavailable" && totalMarketCap > 0 ? (freezableMarketCap / totalMarketCap) * 100 : null;
-  return { ordered, totalMarketCap, freezableMarketCap, freezableCount, freezableShare, supplyUnavailableCount, coverage };
-}
-
-/** Qualifier for totals/shares built from a partial observed-supply denominator. */
-export function describeFreezableSupplyCoverage(summary: Pick<FreezableSummary, "coverage" | "supplyUnavailableCount">): string | null {
-  if (summary.coverage !== "partial") return null;
-  const assets = summary.supplyUnavailableCount === 1 ? "asset" : "assets";
-  return `Observed supply only · ${summary.supplyUnavailableCount} ${assets} without supply data excluded`;
 }
 
 export function FreezableSupplyMeter({
@@ -109,7 +55,6 @@ export function FreezableSupplyMeter({
           <Skeleton className="h-32 rounded-xl" />
           <Skeleton className="h-32 rounded-xl" />
           <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
         </div>
       </div>
     );
@@ -126,7 +71,7 @@ export function FreezableSupplyMeter({
     <div className="p-5 animate-in fade-in duration-300 sm:p-6">
       <FreezeLineBar buckets={orderedBuckets} totalMarketCap={totalMarketCap} />
       {coverageNote ? (
-        <p className="mt-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{coverageNote}</p>
+        <p className="pharos-meta mt-2">{coverageNote}</p>
       ) : null}
 
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -181,18 +126,13 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
   const color = BLACKLIST_STATUS_BUCKET_COLORS[bucket.key];
   const isInteractive = typeof onSelect === "function";
 
+  // Every bucket shares one row grammar (label row, value, share · count,
+  // description) so the four columns align; "Yes" differs only by span.
   const spanClass = variant === "hero" ? "lg:col-span-2" : "lg:col-span-1";
-  const padClass = variant === "hero" ? "p-4 sm:p-5" : "p-3 sm:p-3.5";
-  const labelClass =
-    variant === "hero" ? "text-base font-semibold text-foreground" : "text-sm font-semibold text-foreground";
-  const valueClass =
-    variant === "hero"
-      ? "mt-3 pharos-numeric text-2xl font-extrabold text-foreground sm:text-3xl"
-      : "mt-2.5 pharos-numeric text-lg font-bold text-foreground";
-  const descClass =
-    variant === "hero"
-      ? "mt-2.5 line-clamp-3 text-xs leading-relaxed text-muted-foreground"
-      : "mt-1.5 line-clamp-1 text-[11px] leading-snug text-muted-foreground";
+  const padClass = "p-4 sm:p-5";
+  const labelClass = "text-sm font-semibold text-foreground";
+  const valueClass = "mt-2.5 pharos-numeric text-xl font-bold text-foreground";
+  const descClass = "mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground";
 
   const accentStripStyle: CSSProperties = {
     backgroundColor: color,
@@ -211,36 +151,22 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
     <>
       <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={accentStripStyle} />
       <div className="relative">
-        {variant === "hero" ? (
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-              <span className={labelClass}>{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
-            </div>
-            <span className="shrink-0 pharos-numeric text-xs text-muted-foreground">{shareLabel}</span>
-          </div>
-        ) : (
+        <div className="flex min-h-5 items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
             <span className={labelClass}>{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
           </div>
-        )}
-        {variant === "safe" ? (
-          <p className="mt-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">
-            Safe haven
-          </p>
-        ) : null}
+          {variant === "safe" ? (
+            <span className="pharos-label shrink-0 text-emerald-700 dark:text-emerald-400">
+              Safe haven
+            </span>
+          ) : null}
+        </div>
         <p className={valueClass}>{valueUnavailable ? "—" : formatCurrency(bucket.marketCap, 2)}</p>
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          {variant === "hero" ? (
-            `${bucket.count} stablecoins${unavailableNote}`
-          ) : (
-            <>
-              <span className="pharos-numeric text-foreground/85">{shareLabel}</span>
-              <span aria-hidden="true" className="mx-1 text-muted-foreground/60">·</span>
-              {bucket.count} stablecoins{unavailableNote}
-            </>
-          )}
+        <p className="mt-1 text-2xs text-muted-foreground">
+          <span className="pharos-numeric text-foreground/85">{shareLabel}</span>
+          <span aria-hidden="true" className="mx-1 text-muted-foreground/60">·</span>
+          {bucket.count} stablecoins{unavailableNote}
         </p>
         <p className={descClass}>{BLACKLIST_STATUS_BUCKET_DESCRIPTIONS[bucket.key]}</p>
       </div>
@@ -266,7 +192,7 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
 function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBucket[]; totalMarketCap: number }) {
   if (totalMarketCap <= 0) {
     return (
-      <div className="mt-6 flex h-12 items-center justify-center rounded-md border border-border/70 bg-muted/30 text-[11px] text-muted-foreground">
+      <div className="mt-6 flex h-12 items-center justify-center rounded-md border border-border/70 bg-muted/30 text-2xs text-muted-foreground">
         No tracked market-cap data yet.
       </div>
     );
@@ -353,7 +279,7 @@ function FreezeLineBar({ buckets, totalMarketCap }: { buckets: BlacklistStatusBu
         >
           <div className="absolute left-0 h-full w-[2px] -translate-x-1/2 bg-frost-blue" />
           <span
-            className="absolute -top-0.5 whitespace-nowrap rounded-sm border border-frost-blue/60 bg-background/95 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-frost-blue"
+            className="absolute -top-0.5 whitespace-nowrap rounded-sm border border-frost-blue/60 bg-background/95 px-2 py-0.5 text-3xs font-semibold text-frost-blue"
             style={{ left: 0, transform: labelTransform }}
           >
             Freeze line

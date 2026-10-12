@@ -4,10 +4,14 @@ import { useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { RowSparkline } from "@/components/row-sparkline";
+import { UniverseChip } from "@/components/universe-chip";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { useStabilityIndex } from "@/hooks/api-hooks";
+import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
+import { formatScore } from "@shared/lib/format";
 import { buildPsiChartData, getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 
 function StabilityAreaChart({ values, color }: { values: number[]; color: string }): React.JSX.Element | null {
@@ -45,17 +49,26 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
     const chartData = buildPsiChartData(data?.history ?? [], current);
     return chartData.slice(-90).map((p) => p.score);
   }, [current, data?.history]);
-  const avgDelta = useMemo(() => {
-    if (!current || sparkValues.length === 0) return null;
-    const avg = sparkValues.reduce((sum, value) => sum + value, 0) / sparkValues.length;
-    return current.score - avg;
-  }, [current, sparkValues]);
+  // The card leads with the same displayed basis as the market-state line and
+  // the /stability-index/ hero (rolling 24h avg when published, 1 decimal);
+  // the raw instant reading is demoted to the context line.
   const displayedPsi = current ? getDisplayedPsi(current) : null;
   const displayedPsiBasis = current ? getDisplayedPsiBasis(current) : null;
+  const avgDelta = displayedPsi && sparkValues.length > 0
+    ? displayedPsi.score - sparkValues.reduce((sum, value) => sum + value, 0) / sparkValues.length
+    : null;
+  const beacon = usePsiBeaconState({
+    current,
+    meta: query.meta,
+    dataUpdatedAt: query.dataUpdatedAt,
+    error: query.error,
+    isLoading,
+  });
 
-  const band = current?.band as ConditionBand | undefined;
+  const band = displayedPsi?.band as ConditionBand | undefined;
   const sparkColor = CHART_BLUE;
-  const bandClass = band ? (PSI_BAND_CLASSES[band] ?? "text-foreground") : "text-muted-foreground";
+  // A retained (non-fresh) observation keeps its band name but not its hue, like the regime bar (R3).
+  const bandClass = band && beacon.isCurrent ? (PSI_BAND_CLASSES[band] ?? "text-foreground") : "text-muted-foreground";
   const bandLabel = band ? band.charAt(0) + band.slice(1).toLowerCase() : null;
   const avgDeltaClass =
     avgDelta != null && avgDelta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400";
@@ -91,25 +104,30 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
           <div className="min-w-0 shrink-0">
             {state === "loading" ? (
               <Skeleton className="h-9 w-24" />
-            ) : current ? (
-              <span className="block pharos-numeric text-4xl font-bold tracking-tight text-foreground">
-                {current.score.toFixed(2)}
-              </span>
+            ) : displayedPsi ? (
+              <RailHeroFigureTransition rail="psi">
+                <span className="block pharos-numeric text-4xl font-bold tracking-tight text-foreground">
+                  {formatScore(displayedPsi.score)}
+                </span>
+              </RailHeroFigureTransition>
             ) : null}
-            <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              {current ? (
+            <p className="pharos-meta mt-1.5">
+              {current && !beacon.isCurrent && beacon.retainedLabel ? (
+                <span className="block" data-testid="psi-band-card-retained">{beacon.retainedLabel}</span>
+              ) : null}
+              {current && displayedPsiBasis ? (
                 <>
-                  <span>raw instant</span>
-                  {displayedPsi && displayedPsiBasis === "rolling 24h avg" ? (
+                  <span>{displayedPsiBasis === "rolling 24h avg" ? "Rolling 24h avg" : "Raw instant"}</span>
+                  {displayedPsiBasis === "rolling 24h avg" ? (
                     <>
                       {" · "}
-                      {displayedPsiBasis} <span className="pharos-numeric">{displayedPsi.score.toFixed(1)}</span>
+                      raw instant <span className="pharos-numeric">{current.score.toFixed(1)}</span>
                     </>
                   ) : null}
                   {" · "}
                 </>
               ) : null}
-              90D{" "}
+              90d{" "}
               {avgDelta !== null ? (
                 <span className={`pharos-numeric ${avgDeltaClass}`}>
                   {avgDelta >= 0 ? "+" : ""}
@@ -120,6 +138,7 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
               )}{" "}
               vs avg
             </p>
+            {current ? <UniverseChip universe="psi" className="mt-1.5" /> : null}
           </div>
           <div className={`ml-auto flex-1 ${embedded ? "h-14" : "h-20"}`}>
             <StabilityAreaChart values={sparkValues} color={sparkColor} />

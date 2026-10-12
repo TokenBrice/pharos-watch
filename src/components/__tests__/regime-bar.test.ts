@@ -1,13 +1,15 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { buildBandStripCells, RegimeBar } from "@/components/regime-bar";
+import { buildBandStripCells, RegimeBar, RegimeBarToggle } from "@/components/regime-bar";
 import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX } from "@shared/lib/classification";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 
 const useStabilityIndexMock = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/api-hooks", () => ({ useStabilityIndex: useStabilityIndexMock }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
+const usePathnameMock = vi.hoisted(() => vi.fn(() => "/depeg/"));
+vi.mock("next/navigation", () => ({ usePathname: usePathnameMock }));
 
 describe("buildBandStripCells", () => {
   const todayMidnight = Date.UTC(2026, 9, 9) / 1000;
@@ -69,7 +71,7 @@ describe("RegimeBar freshness", () => {
       });
       const html = renderToStaticMarkup(createElement(RegimeBar));
       if (state === "fresh") {
-        expect(html).toContain('aria-label="Market regime: BEDROCK, PSI 5, raw instant"');
+        expect(html).toContain('aria-label="Market regime: Bedrock, PSI 5, raw instant"');
         expect(html).toContain(`background-color:${PSI_HEX_COLORS.BEDROCK}`);
         expect(html).not.toContain("Retained observation");
       } else {
@@ -80,6 +82,38 @@ describe("RegimeBar freshness", () => {
         expect(html).not.toContain('aria-label="Market regime:');
         expect(html).not.toContain(`background-color:${PSI_HEX_COLORS.BEDROCK}`);
       }
+      // The 3px line is decorative: the bar is not a control, and its only
+      // button is the panel's close control (inert while collapsed).
+      expect(html.startsWith("<div")).toBe(true);
+      expect(html.match(/<button/g)).toHaveLength(1);
+      expect(html).toContain('aria-label="Close market regime details"');
+      // The beacon glyph is decorative (the button carries the label) and drops to an outline when retained.
+      expect(html).toMatch(/<svg[^>]*aria-hidden="true"[^>]*data-testid="psi-beacon-micro"[^>]*data-state="(current|retained)"/);
+      expect(html).toContain(`data-state="${state === "fresh" ? "current" : "retained"}"`);
     },
   );
+});
+
+describe("RegimeBarToggle", () => {
+  const now = Date.now();
+  const fresh = () => useStabilityIndexMock.mockReturnValue({
+    data: { current: { score: 72, band: "STEADY", computedAt: Math.floor(now / 1000), components: {} } },
+    dataUpdatedAt: now,
+    error: null,
+    meta: { updatedAt: Math.floor(now / 1000), ageSeconds: 0, status: "fresh" },
+  });
+
+  it("is a labelled disclosure for the regime panel whose name contains its visible text", () => {
+    fresh();
+    const html = renderToStaticMarkup(createElement(RegimeBarToggle));
+    expect(html).toMatch(/^<button type="button" aria-expanded="false" aria-controls="regime-bar-panel"/);
+    expect(html).toContain('aria-label="Market regime: Steady, PSI 72, raw instant. Market regime details"');
+    expect(html).toContain("PSI <span");
+  });
+
+  it("renders nothing on home, where the regime line is hidden", () => {
+    fresh();
+    usePathnameMock.mockReturnValueOnce("/");
+    expect(renderToStaticMarkup(createElement(RegimeBarToggle))).toBe("");
+  });
 });

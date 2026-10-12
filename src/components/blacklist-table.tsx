@@ -258,7 +258,7 @@ function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
       {formatBlacklistAmountOrStatus(evt)}
       <AmountBadges
         event={evt}
-        badgeClassName="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground"
+        badgeClassName="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-3xs uppercase text-muted-foreground"
       />
     </>
   );
@@ -278,7 +278,7 @@ function AmountBadges({ event: evt, badgeClassName }: { event: BlacklistEvent; b
             </span>
           </TooltipTrigger>
           {sourceTooltip ? (
-            <TooltipContent className="max-w-[260px] text-[11px]">{sourceTooltip}</TooltipContent>
+            <TooltipContent className="max-w-[260px] text-2xs">{sourceTooltip}</TooltipContent>
           ) : null}
         </Tooltip>
       ) : null}
@@ -290,7 +290,7 @@ function AmountBadges({ event: evt, badgeClassName }: { event: BlacklistEvent; b
             </span>
           </TooltipTrigger>
           {statusTooltip ? (
-            <TooltipContent className="max-w-[260px] text-[11px]">{statusTooltip}</TooltipContent>
+            <TooltipContent className="max-w-[260px] text-2xs">{statusTooltip}</TooltipContent>
           ) : null}
         </Tooltip>
       ) : null}
@@ -329,7 +329,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="pharos-kicker">Amount</p>
+          <p className="pharos-label">Amount</p>
         <p className="pharos-numeric text-sm font-semibold text-foreground">
           {formatBlacklistAmountOrStatus(evt)}
         </p>
@@ -337,7 +337,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
       </div>
 
       <div className="mt-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2">
-        <p className="pharos-kicker">Address</p>
+        <p className="pharos-label">Address</p>
         <a
           href={evt.explorerAddressUrl}
           target="_blank"
@@ -350,7 +350,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
       </div>
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <div className="flex flex-wrap gap-1 text-3xs uppercase text-muted-foreground">
           <AmountBadges event={evt} badgeClassName="cursor-help rounded border border-border px-1.5 py-1" />
         </div>
         <BlacklistTxLink event={evt} />

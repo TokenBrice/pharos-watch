@@ -116,7 +116,7 @@ export default function CaseStudiesHub() {
               href={`/learn/case-studies/${study.slug}/`}
               className="pharos-card-shell pharos-focus-ring group flex h-full flex-col p-4 transition-colors hover:border-frost-blue/60"
             >
-              <p className="pharos-kicker mb-2">
+              <p className="pharos-label mb-2">
                 {study.eyebrow}
               </p>
               <p className="text-sm font-semibold text-foreground transition-colors group-hover:text-frost-blue">

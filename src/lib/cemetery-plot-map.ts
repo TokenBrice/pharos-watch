@@ -18,6 +18,8 @@
 import { CAUSE_HEX, CAUSE_HEX_DARK, CAUSE_META, CAUSE_ORDER, type CauseOfDeath } from "@shared/lib/cause-of-death";
 import { parseCemeteryDeathDate, sortCemeteryCoins } from "@shared/lib/cemetery";
 import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
+import { faceFloorPx, footprintOverlaps, type CapacityIssue, type CapacityReport } from "@shared/lib/scene/capacity";
+import { boxToFrameRect, placeInspectorCard as placeSceneInspectorCard, placeTag, type SceneRect } from "@shared/lib/scene/placement";
 import {
   PLOT_ARCHETYPE_BY_CAUSE,
   PLOT_POST_HEIGHT,
@@ -1199,17 +1201,10 @@ export function fitSectionCamera(
 
 export type PlotCapacityIssueKind = "overlap" | "lane-overflow" | "block-overflow" | "lot-rows" | "lot-search" | "empty-run" | "face-floor" | "zoom-floor";
 
-export interface PlotCapacityIssue {
-  kind: PlotCapacityIssueKind;
-  message: string;
-}
+export type PlotCapacityIssue = CapacityIssue<PlotCapacityIssueKind>;
 
-export interface PlotCapacityReport {
-  ok: boolean;
-  issues: PlotCapacityIssue[];
-  /** Plain-stone face at the R1 reference viewport (desktop only). */
-  facePx: number | null;
-}
+/** The kit's capacity report; `facePx` is the plain-stone face at the R1 reference viewport (desktop only). */
+export type PlotCapacityReport = CapacityReport<PlotCapacityIssueKind>;
 
 /**
  * Checks the plan constants against the data: no two lots overlap; every 1×1 grave stays inside its own lane
@@ -1223,15 +1218,7 @@ export function validatePlotMapCapacity(map: CemeteryPlotMap): PlotCapacityRepor
   const lane = Object.fromEntries(map.lanes.map((L) => [L.cause, L])) as Record<CauseOfDeath, PlotLane>;
   const block = new Map(map.blocks.filter((b) => !b.empty).map((b) => [b.year, b]));
   const { site } = map;
-  for (let a = 0; a < map.graves.length; a++) {
-    const A = map.graves[a].cell;
-    for (let b = a + 1; b < map.graves.length; b++) {
-      const B = map.graves[b].cell;
-      if (A.i0 < B.i1 - eps && B.i0 < A.i1 - eps && A.j0 < B.j1 - eps && B.j0 < A.j1 - eps) {
-        issues.push({ kind: "overlap", message: `${map.graves[a].id} overlaps ${map.graves[b].id}` });
-      }
-    }
-  }
+  for (const [a, b] of footprintOverlaps(map.graves, (g) => g.cell, eps)) issues.push({ kind: "overlap", message: `${a.id} overlaps ${b.id}` });
   for (const g of map.graves) {
     const L = lane[g.cause];
     const B = block.get(g.year)!;
@@ -1254,7 +1241,7 @@ export function validatePlotMapCapacity(map: CemeteryPlotMap): PlotCapacityRepor
   }
   let facePx: number | null = null;
   if (map.preset === "desktop") {
-    facePx = round1((PLOT_LAYOUT.plainFace * PLOT_UNIT * PLOT_LAYOUT.reference.frameWidth) / map.viewBox[2]);
+    facePx = faceFloorPx(PLOT_LAYOUT.plainFace, PLOT_LAYOUT.reference.frameWidth, map.viewBox[2], PLOT_UNIT);
     if (facePx < PLOT_LAYOUT.faceFloorPx) issues.push({ kind: "face-floor", message: `plain stone ${facePx} px at 1440×800 (< ${PLOT_LAYOUT.faceFloorPx})` });
     for (const c of map.sectionCameras) {
       if (c.facePx < PLOT_LAYOUT.zoomFloorFacePx) issues.push({ kind: "zoom-floor", message: `${CAUSE_META[c.cause].label} zoom reaches ${c.facePx} px (< ${PLOT_LAYOUT.zoomFloorFacePx})` });
@@ -1268,64 +1255,16 @@ export function validatePlotMapCapacity(map: CemeteryPlotMap): PlotCapacityRepor
 // ---------------------------------------------------------------------------
 
 /** Rectangle in CSS px relative to the plan frame (or the viewport, where stated). */
-export interface PlotRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-const rectsHit = (a: PlotRect, b: PlotRect, m: number) => a.left < b.right + m && a.right > b.left - m && a.top < b.bottom + m && a.bottom > b.top - m;
+export type PlotRect = SceneRect;
 
 /** An SVG-unit box as frame px, for a frame showing `viewBox` at `scale` px per unit. */
-export function plotBoxToFrameRect(box: PlotBox, viewBox: readonly number[], scale: number): PlotRect {
-  return { left: (box.x0 - viewBox[0]) * scale, top: (box.y0 - viewBox[1]) * scale, right: (box.x1 - viewBox[0]) * scale, bottom: (box.y1 - viewBox[1]) * scale };
-}
+export const plotBoxToFrameRect = boxToFrameRect;
 
 /**
- * Hover tag (R6): tries above, above-right, above-left, right, left, below the stone and takes the first
- * position clear of every obstacle (signposts, figure, plaque, zoom button, inspector; padded 3 px) inside the
- * frame and below `top` (the sticky chrome's edge in frame px, when the frame is scrolled under it), else the one
- * with the fewest hits. `collisions` is −1 when no candidate fits.
+ * Hover tag (R6): the kit's `placeTag`, whose obstacles here are the signposts, figure, plaque, zoom button and
+ * inspector.
  */
-export function placePlotTag(input: {
-  stone: PlotRect;
-  tag: { width: number; height: number };
-  frame: { width: number; height: number };
-  obstacles: readonly PlotRect[];
-  top?: number;
-}): {
-  x: number;
-  y: number;
-  collisions: number;
-} {
-  const { stone, tag, frame, top = 0 } = input;
-  const tw = tag.width;
-  const th = tag.height;
-  const cx = (stone.left + stone.right) / 2;
-  const midY = (stone.top + stone.bottom) / 2;
-  const cands: PlotPoint[] = [
-    [cx - tw / 2, stone.top - th - 6],
-    [stone.right + 4, stone.top - th + 4],
-    [stone.left - tw - 4, stone.top - th + 4],
-    [stone.right + 6, midY - th / 2],
-    [stone.left - tw - 6, midY - th / 2],
-    [cx - tw / 2, stone.bottom + 6],
-  ];
-  const obstacles = input.obstacles.map((o) => ({ x0: o.left - 3, y0: o.top - 3, x1: o.right + 3, y1: o.bottom + 3 }));
-  let chosen = cands[0];
-  let bestHits = Infinity;
-  for (const [x, y] of cands) {
-    if (x < 0 || y < Math.max(0, top) || x + tw > frame.width || y + th > frame.height) continue;
-    const hits = obstacles.filter((o) => x < o.x1 && x + tw > o.x0 && y < o.y1 && y + th > o.y0).length;
-    if (hits < bestHits) {
-      bestHits = hits;
-      chosen = [x, y];
-      if (!hits) break;
-    }
-  }
-  return { x: chosen[0], y: chosen[1], collisions: bestHits === Infinity ? -1 : bestHits };
-}
+export const placePlotTag = placeTag;
 
 /** Top-most drawn y (SVG units) at or left of `x`: how far the header may overlap the plan's empty sky. */
 export function skyTopLeftOf(map: DesktopPlotMap, x: number): number {
@@ -1337,90 +1276,15 @@ export function skyTopLeftOf(map: DesktopPlotMap, x: number): number {
   return top;
 }
 
-/**
- * Inspector docking (≥ 1280 px, fix I): beside the grave on the side with room, inside the band of the plan frame that
- * is visible below the sticky chrome, clear of the Feedback button, joined to the medallion by a hairline connector.
- * `avoid` lists volumes and text the card must not cover (the colossi when another grave is read, the route head): on
- * either side the card takes the free run of the band nearest the grave (the side with more room wins a tie),
- * shortening (it scrolls) down to 220 px; if no run is tall enough it keeps the plain placement. `soft` lists labels
- * (signpost plates, colossus chips, year stamps): side, run and height stay as found, but within its run (and up to
- * 48 px further from the grave) the card slides to cover as few labels as it can, nearest the grave on a tie; a
- * label never costs the card height (the caller hides whatever the card still covers). With the frame scrolled
- * (nearly) out of view the card stays by its grave inside the frame instead of following the viewport. Viewport px.
- */
-export function placeInspectorCard(input: {
-  stone: PlotRect;
-  frame: PlotRect;
-  medal: PlotPoint;
-  card: { width: number; height: number };
-  viewport: { width: number; height: number };
-  avoid?: readonly PlotRect[];
-  soft?: readonly PlotRect[];
-}): { x: number; y: number; maxHeight: number; connector: { x1: number; y1: number; x2: number; y2: number } } {
-  const { stone, frame, medal, card, viewport, avoid = [], soft = [] } = input;
-  const w = card.width;
-  const minH = Math.min(card.height, 220);
-  const visibleTop = Math.max(PLOT_LAYOUT.chromeTop, frame.top);
-  const visibleBottom = Math.min(viewport.height - 8, frame.bottom);
-  // the plan is (nearly) out of view: dock by the grave inside the frame, not in the viewport band
-  const onScreen = visibleBottom - visibleTop >= minH;
-  const topMin = onScreen ? visibleTop : frame.top;
-  const feedbackTop = viewport.height - 84;
-  const roomR = frame.right - stone.right;
-  const roomL = stone.left - frame.left;
-  const right = stone.right + 28;
-  const left = Math.max(frame.left + 4, stone.left - 28 - w);
-  const sides = roomR >= w + 36 && (roomR >= roomL || roomL < w + 36) ? [right, ...(roomL >= w + 36 ? [left] : [])] : [left, ...(roomR >= w + 36 ? [right] : [])];
-  const mid = (stone.top + stone.bottom) / 2;
-  const bottomOf = (x: number) => (onScreen ? Math.min(x + w > viewport.width - 170 ? feedbackTop : viewport.height - 8, frame.bottom) : frame.bottom);
+/** The fixed Feedback button's bottom-right reserve (viewport px): the inspector stops above it when it reaches it. */
+const FEEDBACK_CORNER = { width: 170, height: 84 } as const;
 
-  // every free run of the band on each side; the one nearest the grave wins (the preferred side on a tie)
-  const gap = ([a, b]: [number, number]) => (mid < a ? a - mid : mid > b ? mid - b : 0);
-  let spot: { x: number; top: number; bottom: number; gap: number } | null = null;
-  for (const x of sides) {
-    let runs: [number, number][] = [[topMin, bottomOf(x)]];
-    for (const r of avoid) {
-      if (r.left >= x + w + 8 || r.right <= x - 8) continue;
-      runs = runs.flatMap(([a, b]): [number, number][] => {
-        const cut0 = r.top - 8;
-        const cut1 = r.bottom + 8;
-        if (cut1 <= a || cut0 >= b) return [[a, b]];
-        return [...(cut0 > a ? [[a, cut0] as [number, number]] : []), ...(cut1 < b ? [[cut1, b] as [number, number]] : [])];
-      });
-    }
-    for (const run of runs) {
-      if (run[1] - run[0] < minH || (spot && gap(run) >= spot.gap)) continue;
-      spot = { x, top: run[0], bottom: run[1], gap: gap(run) };
-    }
-  }
-  const { x: x0, top, bottom } = spot ?? { x: sides[0], top: topMin, bottom: bottomOf(sides[0]) };
-  const h = Math.min(card.height, bottom - top);
-  const centred = Math.min(Math.max(mid - h / 2, top), bottom - h);
-  // labels: slide along the run (and away from the grave) to the spot covering the fewest, nearest the grave on a tie
-  let x = x0;
-  let y = centred;
-  if (soft.length) {
-    const away = x0 >= stone.right ? 1 : -1;
-    let best = { covered: Infinity, cost: Infinity };
-    for (let dx = 0; dx <= 48; dx += 12) {
-      const cx = x0 + away * dx;
-      if (dx && (cx < frame.left + 4 || cx + w > frame.right - 4)) break;
-      const ys = [centred, top, bottom - h, ...soft.flatMap((r) => [r.bottom + 8, r.top - 8 - h])].map((v) => Math.min(Math.max(v, top), bottom - h));
-      for (const cy of ys) {
-        const rect = { left: cx, top: cy, right: cx + w, bottom: cy + h };
-        // the run already keeps the unshifted column clear; a shifted one re-checks the hard obstacles and the band
-        if (dx && (cy + h > bottomOf(cx) || avoid.some((r) => rectsHit(rect, r, 8)))) continue;
-        const covered = soft.filter((r) => rectsHit(rect, r, 0)).length;
-        const cost = Math.abs(cy - centred) + dx;
-        if (covered < best.covered || (covered === best.covered && cost < best.cost)) {
-          best = { covered, cost };
-          x = cx;
-          y = cy;
-        }
-      }
-    }
-  }
-  const ex = x > medal[0] ? x : x + w;
-  const ey = Math.min(Math.max(medal[1], y + 14), y + h - 14);
-  return { x, y, maxHeight: h, connector: { x1: medal[0], y1: medal[1], x2: ex, y2: ey } };
+/**
+ * Inspector docking (≥ 1280 px, fix I): the kit's `placeInspectorCard` below the sticky chrome
+ * (`PLOT_LAYOUT.chromeTop`) and clear of the Feedback button. `avoid` lists volumes and text the card must not cover
+ * (the colossi when another grave is read, the route head); `soft` lists labels (signpost plates, colossus chips,
+ * year stamps) the card covers as few of as it can. Viewport px.
+ */
+export function placeInspectorCard(input: Omit<Parameters<typeof placeSceneInspectorCard>[0], "chromeTop" | "corner">): ReturnType<typeof placeSceneInspectorCard> {
+  return placeSceneInspectorCard({ ...input, chromeTop: PLOT_LAYOUT.chromeTop, corner: FEEDBACK_CORNER });
 }

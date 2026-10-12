@@ -17,9 +17,10 @@ import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { DIGEST_DATES } from "@/lib/digest-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
+import type { OgPageSlug } from "@shared/lib/og-route-cards";
 
 interface BuildPageMetadataInput {
   title: string;
@@ -381,6 +382,11 @@ export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
 
 export function buildApiOgImageUrl(path: string): string {
   return new URL(path, API_ORIGIN).toString();
+}
+
+/** Live route share card (`/api/og/page/:slug`); it falls back to the route's timeless card server-side. */
+export function buildLiveRouteOgImageUrl(slug: OgPageSlug): string {
+  return buildApiOgImageUrl(API_PATHS.ogPage(slug));
 }
 
 const INDEXABLE_ROBOTS: Metadata["robots"] = {

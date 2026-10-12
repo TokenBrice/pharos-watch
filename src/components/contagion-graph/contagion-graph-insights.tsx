@@ -62,7 +62,7 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
       className="rounded-sm border px-2 py-1.5"
       style={{ backgroundColor: "var(--graph-panel-bg)", borderColor: "var(--graph-grid-line)" }}
     >
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className="pharos-label">{label}</p>
       <p className="mt-0.5 font-mono text-xs font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
@@ -111,16 +111,16 @@ export function ContagionGraphInsights({
     >
       <div className="space-y-3 p-3">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Selection</p>
+          <p className="pharos-label">Selection</p>
           <span
-            className="rounded-sm border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground"
+            className="rounded-sm border px-1.5 py-0.5 font-mono text-3xs text-muted-foreground"
             style={{ borderColor: "var(--graph-grid-line)" }}
           >
             {inspectedNode.grade === null ? "Pipeline gap" : `Grade ${inspectedNode.grade}`}
           </span>
         </div>
         {inspectedNode.partialEvidence ? (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             Partial evidence: pipeline gap ({inspectedNode.partialEvidence.causes.join("/")})
           </p>
         ) : null}
@@ -129,7 +129,7 @@ export function ContagionGraphInsights({
           <StablecoinLogo src={logos?.[inspectedNode.id]} name={inspectedNode.symbol} size={28} />
           <div className="min-w-0">
             <p className="break-words text-sm font-semibold text-foreground">{graphNodeLabel(inspectedNode)}</p>
-            <p className="font-mono text-[11px] tabular-nums text-muted-foreground">
+            <p className="font-mono text-2xs tabular-nums text-muted-foreground">
               {inspectedNode.mcap === null ? "mcap n/a" : formatCurrency(inspectedNode.mcap, 1)}
             </p>
           </div>
@@ -141,13 +141,13 @@ export function ContagionGraphInsights({
           <MiniMetric label="Direct dependent exposure" value={`${formatCurrency(exposure?.knownUsd ?? 0, 1)}${exposure && !exposure.complete ? " known" : ""}`} />
         </div>
         {exposure && !exposure.complete && (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             {exposure.excludedSupplyUnknownIds.length} supply unavailable; {exposure.unknownShareEdgeCount} shares unavailable.
             {exposure.integrityFlag && " Published shares need review."}
           </p>
         )}
 
-        <div className="space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+        <div className="space-y-1 text-2xs leading-relaxed text-muted-foreground">
           <p>
             Supports{" "}
             <span className="font-medium text-foreground">
@@ -164,7 +164,7 @@ export function ContagionGraphInsights({
 
         <button
           type="button"
-          className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border font-mono text-[10px] uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-muted/40"
+          className="pharos-focus-ring inline-flex min-h-11 w-full items-center justify-center rounded-sm border text-3xs text-foreground transition-colors hover:bg-muted/40"
           style={{ borderColor: "var(--graph-grid-line)" }}
           onClick={() => onTraceNode(inspectedNode.id)}
         >

@@ -11,7 +11,7 @@ function ReserveDriftRow({ entry }: { entry: ReserveDriftEntry }) {
     <div className="rounded-lg border border-border/60 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm font-medium">{getCoinLabel(entry.coinId)}</div>
-        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-medium text-amber-700 dark:text-amber-400">
           {entry.delta.toFixed(1)}pt drift
         </span>
       </div>

@@ -245,7 +245,7 @@ function ComplianceRowDetails({ row }: { row: ComplianceRow }) {
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {row.references.length > 0 ? (
         <div className="min-w-0 space-y-2">
-          <p className="pharos-kicker">Sources</p>
+          <p className="pharos-label">Sources</p>
           <SourceLinks references={row.references} />
         </div>
       ) : null}
@@ -297,7 +297,7 @@ function GeniusRowDetails({ row }: { row: Extract<ComplianceRow, { regime: "geni
         <>
           {state.evidence.references.length > 0 ? (
             <div className="min-w-0 space-y-2">
-              <p className="pharos-kicker">Sources</p>
+              <p className="pharos-label">Sources</p>
               <SourceLinks references={state.evidence.references} />
             </div>
           ) : null}
@@ -306,7 +306,7 @@ function GeniusRowDetails({ row }: { row: Extract<ComplianceRow, { regime: "geni
       )}
       {row.hasAnyDisclosure ? (
         <div className="min-w-0 space-y-2">
-          <p className="pharos-kicker">Reserve Disclosure</p>
+          <p className="pharos-label">Reserve disclosure</p>
           <GeniusReserveCell row={row} />
         </div>
       ) : null}

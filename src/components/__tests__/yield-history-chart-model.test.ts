@@ -107,11 +107,12 @@ describe("yield history transformations", () => {
     historyBySource.set("a", [point(BASE, 5, { apyBase: 1, apyReward: 2 })]);
     historyBySource.set("b", [point(BASE, 9)]);
     const { result } = renderHook(() => useYieldHistoryChartModel({ ...chartProps, externalSourceKeys: ["a", "b"] }));
-    expect(result.current.yDomain).toEqual([4.5, 9.5]);
+    // Padded 4.5–9.5 window, widened to its outer nice ticks.
+    expect(result.current.yDomain).toEqual([4, 10]);
     act(() => result.current.setShowBreakdown(true));
     expect(result.current.effectiveShowBreakdown).toBe(true);
-    expect(result.current.yDomain[0]).toBeCloseTo(0.36);
-    expect(result.current.yDomain[1]).toBeCloseTo(9.64);
+    // Breakdown values (1–9) pad to 0.36–9.64, widened to nice ticks.
+    expect(result.current.yDomain).toEqual([0, 10]);
   });
 
   it("does not flatten a narrow data range to include a distant benchmark", () => {

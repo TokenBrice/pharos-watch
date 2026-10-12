@@ -366,7 +366,7 @@ export function FreezeSeizureModule({
       stripForm={stripForm}
       methodology={<MethodologyHint topic={METHODOLOGY_TOPIC[summary.status]} />}
       headerRight={
-        <Badge variant="outline" className={cn("text-[11px] font-medium", summary.statusToneClass)}>
+        <Badge variant="outline" className={cn("text-2xs font-medium", summary.statusToneClass)}>
           {summary.statusLabel}
         </Badge>
       }
@@ -379,7 +379,7 @@ export function FreezeSeizureModule({
         <Badge
           variant="outline"
           className={cn(
-            "text-[11px] font-normal text-muted-foreground",
+            "text-2xs font-normal text-muted-foreground",
             summary.sources.length === 0 && "border-dashed",
           )}
         >

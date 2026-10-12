@@ -30,7 +30,7 @@ export function SeeAlsoFooter({ links, className }: SeeAlsoFooterProps) {
         className,
       )}
     >
-      <p className="pharos-kicker text-muted-foreground">See also</p>
+      <p className="pharos-label">See also</p>
       <ul className="mt-3 grid gap-3 sm:grid-cols-2">
         {capped.map((link) => (
           <li key={link.href}>

@@ -167,9 +167,9 @@ export function buildPsiHistoryStats(history: PsiHistoryPoint[], evaluatedAt: nu
   const observedDays = new Set(last30.map((point) => bucketUnixSecondsToUtcDay(point.date))).size;
   const coverage = observedDays < HISTORY_WINDOW_DAYS ? `${observedDays}/30 observed days` : null;
   return [
-    { label: "30d High", value: formatScore(high30), band: high30Band, sub: coverage },
-    { label: "30d Low", value: formatScore(low30), band: low30Band, sub: coverage },
-    { label: "30d Avg", value: formatScore(avg30), band: avg30Band, sub: coverage },
+    { label: "30d high", value: formatScore(high30), band: high30Band, sub: coverage },
+    { label: "30d low", value: formatScore(low30), band: low30Band, sub: coverage },
+    { label: "30d avg", value: formatScore(avg30), band: avg30Band, sub: coverage },
   ];
 }
 

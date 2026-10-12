@@ -91,8 +91,8 @@ describe("stability index view-model", () => {
       { date: 1_699_827_200, score: 71, band: "TREMOR" },
     ], 1_700_000_000);
     expect(stats).toHaveLength(3);
-    expect(stats[0]).toMatchObject({ label: "30d High", value: "84.0", band: "STEADY" });
-    expect(stats[1]).toMatchObject({ label: "30d Low", value: "71.0", band: "TREMOR" });
+    expect(stats[0]).toMatchObject({ label: "30d high", value: "84.0", band: "STEADY" });
+    expect(stats[1]).toMatchObject({ label: "30d low", value: "71.0", band: "TREMOR" });
 
     const contributors = buildPsiContributorRows([
       { id: "usdc-circle", symbol: "USDC", bps: -120, mcapUsd: 60_000_000_000, ageDays: 2, factor: 1 },

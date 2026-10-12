@@ -21,7 +21,7 @@ export function HomeBlogBanner() {
         href={`/blog/${post.slug}/`}
         className="pharos-focus-ring group flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 text-sm transition-colors hover:border-border hover:bg-muted/35"
       >
-        <span className="hidden shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground sm:inline">
+        <span className="pharos-label hidden shrink-0 sm:inline">
           From the blog
         </span>
         <span className="min-w-0 flex-1 truncate font-medium text-foreground">{post.title}</span>

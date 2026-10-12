@@ -3,7 +3,8 @@
 import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { HomeAltHero } from "@/components/home-alt-hero";
-import { buildLiveHomepageHeroSnapshot, HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
+import { buildLiveHomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
+import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS } from "@/lib/homepage-hero-snapshot";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
@@ -12,6 +13,7 @@ import type { ApiMeta } from "@/lib/api";
 const { useStablecoinsMock } = vi.hoisted(() => ({ useStablecoinsMock: vi.fn() }));
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
 vi.mock("@/components/home-alt-hero-chart-gate", () => ({ HomeAltHeroChartGate: () => <div /> }));
+vi.mock("@/components/home-market-state-line", () => ({ HomeMarketStateLine: () => null }));
 vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 const NOW = Date.parse("2026-10-10T12:00:00Z");
@@ -38,7 +40,7 @@ describe("HomeAltHero producer freshness", () => {
       meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
     });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText("Known Market Cap Subtotal")).toBeTruthy();
+    expect(screen.getByText("Known market cap subtotal")).toBeTruthy();
     expect(screen.getByText("Shares of known market cap subtotal")).toBeTruthy();
     expect(screen.getByText("80.0%")).toBeTruthy();
     expect(screen.getAllByText("20.0%")).toHaveLength(2);

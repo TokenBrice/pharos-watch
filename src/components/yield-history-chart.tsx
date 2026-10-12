@@ -16,6 +16,7 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DataHealthBanner } from "@/components/data-health-banner";
 import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart-colors";
+import { CHART_GRID_DASH, CHART_GRID_STROKE } from "@/lib/chart-theme";
 import { toTimestampMs } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import {
@@ -219,7 +220,7 @@ export function YieldHistoryChart({
               data={model.mergedChartData}
               margin={compact ? { top: 8, right: 8, bottom: 8, left: 0 } : { top: 12, right: 18, bottom: 12, left: 0 }}
             >
-              <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" strokeOpacity={0.35} />
+              <CartesianGrid stroke={CHART_GRID_STROKE} strokeDasharray={CHART_GRID_DASH} vertical={false} />
               <XAxis
                 dataKey="date"
                 type="number"
@@ -232,18 +233,19 @@ export function YieldHistoryChart({
                 tick={(props) => (
                   <AxisTick
                     {...props}
-                    compact={compact}
                     value={renderAxisTick(props.payload?.value, model.days)}
                   />
                 )}
               />
               <YAxis
                 domain={model.yDomain}
+                ticks={model.yTicks}
+                interval={0}
                 allowDataOverflow
                 tickLine={false}
                 axisLine={false}
                 width={compact ? 48 : 58}
-                tick={(props) => <YAxisTick {...props} compact={compact} />}
+                tick={(props) => <YAxisTick {...props} />}
               />
               <Tooltip
                 cursor={{ stroke: "var(--color-border)", strokeWidth: 1, strokeDasharray: "3 3" }}
@@ -377,7 +379,7 @@ export function YieldHistoryChart({
           </div>
         ) : null}
       </ChartShell>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-2xs text-muted-foreground">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/55 px-2.5 py-1">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: BRAND_ACCENT }} />
@@ -388,7 +390,7 @@ export function YieldHistoryChart({
               <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
               Benchmark: {benchmarkLabel ?? "Rate"}
               {benchmarkIsFallback ? (
-                <span className="rounded bg-amber-500/15 px-1 py-px text-[9px] font-medium uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400">
+                <span className="rounded bg-amber-500/15 px-1 py-px text-3xs font-medium uppercase text-amber-700 dark:text-amber-400">
                   fallback
                 </span>
               ) : null}
@@ -416,8 +418,8 @@ export function YieldHistoryChart({
             </span>
           ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground/80">
-          <span className="uppercase tracking-[0.12em] text-muted-foreground/70">Markers</span>
+        <div className="flex flex-wrap items-center gap-1.5 text-3xs text-muted-foreground/80">
+          <span className="pharos-label">Markers</span>
           <span className="inline-flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: CHART_AMBER }} />
             warning

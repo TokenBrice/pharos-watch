@@ -21,9 +21,9 @@ export interface FactGridItem {
   title?: string;
 }
 
-const LABEL_CLASS = "text-[11px] font-medium uppercase leading-tight tracking-[0.12em] text-muted-foreground";
+const LABEL_CLASS = "pharos-label leading-tight";
 const VALUE_CLASS: Record<FactValueStyle, string> = {
-  figure: "font-mono text-[11px] font-semibold uppercase leading-snug tracking-wide",
+  figure: "font-mono text-2xs font-semibold uppercase leading-snug",
   text: "text-xs font-medium leading-snug",
 };
 

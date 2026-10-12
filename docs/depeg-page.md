@@ -8,7 +8,7 @@ Route contract for `/depeg/` (nav label "Depeg & Recovery") and its `/depeg/arch
 
 One live incident board answering four questions in order:
 
-1. **What is off peg right now?** — the hero's One Beam count, worst live move, and early-warning radar.
+1. **What is off peg right now?** — the hero's headline count, worst live move, and early-warning radar.
 2. **Will it recover, and when?** — the Depeg Duration Resolver worklist.
 3. **How does the rest of the universe look?** — the peg control board.
 4. **What has happened before?** — the recent-event handoff, the permanent archive, and the Timeline.
@@ -20,9 +20,10 @@ softening rules for discovery surfaces do not apply here.
 
 ## Route Shape
 
-- **Server shell:** `src/app/depeg/page.tsx` via `createClientFeaturePage`, which owns the `h1`, the
-  methodology version link, the Telegram alert header action, the lead paragraph, and the Depeg
-  History Dataset JSON-LD.
+- **Server shell:** `src/app/depeg/page.tsx` via `createClientFeaturePage` with the instrument
+  header (`header: "instrument"` on `FeaturePageShell`), which owns the `h1`, the one-line deck, the
+  meta row (methodology version link plus the compact `AlertsHeaderLink` Telegram action and Share),
+  and the Depeg History Dataset JSON-LD.
 - **Client:** `src/app/depeg/client.tsx` (`DepegClient`).
 - **After the client, as server content:** `DepegEventArchivePreview`, then `FaqSection`.
 - **Archive route:** `src/app/depeg/archive/page.tsx` renders the complete `DepegEventArchive`.
@@ -37,30 +38,31 @@ With the default-on DDR/DDRR feature flags enabled, the order is deliberate:
 1. `QueryFreshnessNotices`
 2. **`DepegOutlookHero`** (`src/components/depeg-outlook-hero.tsx`) — the signature hero
 3. `DepegResolverModule` — bounded recovery-forecast worklist
-4. Forecast-grading disclosure (`#forecast-grading`) wrapping `DepegResolverReviewerModule`
-5. `DepegControlBoard` — the universe workbench
+4. `DepegControlBoard` — the universe workbench
+5. Forecast-grading disclosure (`#forecast-grading`) wrapping `DepegResolverReviewerModule`
 6. `DepegFeed` + Timeline link — recent resolved events
 7. `DepegEventArchivePreview` (server) — latest month of permanent event pages
 8. `FaqSection` (server)
 
-The board deliberately follows the forecast worklist rather than preceding it: a visitor arriving
-during an incident needs the verdict on the live incidents before scanning every tracked asset.
+The route reads answer → table to act on → evidence/audit. The board deliberately follows the
+forecast worklist rather than preceding it: a visitor arriving during an incident needs the verdict
+on the live incidents before scanning every tracked asset.
 
-Grading sits directly under the worklist it grades, not at the end of the route, and renders open —
-a reader who has just seen a forecast should find "how accurate are these?" in the next breath. The
-hero's track-record figure links to `#forecast-grading`, which lands on rendered content rather than
-a closed control. See [Forecast Grading](#forecast-grading) for the collapse behavior.
+Grading is audit evidence, so it follows the board, folded: open, its ~1,300px ledger pushed the
+board ~4,000px down the page. It still precedes the history handoff, and the hero's track-record
+figure links to `#forecast-grading`, which opens the ledger and lands on rendered content rather
+than a closed control. See [Forecast Grading](#forecast-grading) for the collapse behavior.
 
 ---
 
 ## Hero Contract
 
-`DepegOutlookHero` is the route's single signature hero, in the "one full-width hero, one frost-blue
-One Beam metric" shape required by `design-language.md#feature-page-heroes`.
+`DepegOutlookHero` is the route's single signature hero, in the "one full-width hero, one answer
+KPI" shape required by `design-language.md#feature-page-heroes`.
 
-- **Left command rail**, top to bottom, hairline-separated: One Beam =
-  `PegSummaryStats.activeDepegCount` in frost blue, the only frost-blue figure on the route, with the
-  worst live move beside it as the one semantic-coloured element; a four-cell figure grid (pending
+- **Left command rail**, top to bottom, hairline-separated: the headline count =
+  `PegSummaryStats.activeDepegCount` in neutral ink (`HERO_KPI_VALUE_CLASS`), with the worst live
+  move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread); a four-cell figure grid (pending
   confirmations, DEWS ALERT-or-worse, holding peg, median deviation); **Recovery outlook · DDR** — the
   whole-book verdict split and calibration lineage; **Forecast track record · DDRR** — headline
   recovery-call accuracy; then the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail
@@ -74,7 +76,7 @@ One Beam metric" shape required by `design-language.md#feature-page-heroes`.
   Tooltip and keyboard announcements name missing supply; an explicit observed zero remains a
   measured-zero cap, and unavailable caps sort after observations within each severity band.
 - **Footer band:** conditional reliability caveats only, and nothing when the data is healthy.
-- **Calm state:** at zero active depegs the One Beam reads `0 — all pegs holding` and no halos are
+- **Calm state:** at zero active depegs the headline reads `0 — all pegs holding` and no halos are
   drawn, but the radar still plots precursor WATCH/ALERT coins. Zero confirmed incidents is not the
   same claim as zero stress.
 - **Independent availability:** missing peg summary, DEWS snapshot/catalog or first event page yields `—` and a source-specific reason for its headline figures. Successful empty responses retain observed zeroes; a query error never manufactures an empty observation.
@@ -167,11 +169,12 @@ Unrelated query parameters are preserved by the shared hook.
 
 ## Forecast Grading
 
-`DepegResolverReviewerModule` renders **open by default**, directly under the worklist it grades, in
-a `#forecast-grading` section. Its control collapses roughly 1,300px of ledger for a reader heading
-to the board, and the collapsed state unmounts the module rather than hiding it, so the DOM cost
-goes with it. It was previously collapsed by default and placed after the history handoff; readers
-could not find it, which is the failure this placement fixes.
+`DepegResolverReviewerModule` sits in a `#forecast-grading` section directly after the control
+board, **collapsed by default**; the collapsed state unmounts the module rather than hiding it, so
+the DOM cost goes with it. A `#forecast-grading` URL (on load or `hashchange`, including the hero's
+track-record link) opens it and re-aligns the anchor once the ledger mounts. An earlier layout
+placed it, collapsed, after the history handoff, where readers could not find it; an open ledger
+under the worklist then buried the board. Board-adjacent placement plus hash-open avoids both.
 
 Its query is not gated by disclosure state: the hero needs `summary.headline`
 on first paint. DDR and DDRR feature flags gate the query, section, freshness

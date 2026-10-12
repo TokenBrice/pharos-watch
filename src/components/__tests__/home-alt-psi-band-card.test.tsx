@@ -50,7 +50,7 @@ function makePsiResponse(): StabilityIndexResponse {
 }
 
 describe("PsiBandCard", () => {
-  it("renders the Stability Index score and the sparkline from raw samples", () => {
+  it("leads with the displayed 24h basis and keeps the raw instant as context", () => {
     useStabilityIndexMock.mockReturnValue({
       data: makePsiResponse(),
       isLoading: false,
@@ -59,13 +59,51 @@ describe("PsiBandCard", () => {
     const { container, getByText } = render(<PsiBandCard />);
 
     expect(container.textContent).toContain("Stability Index");
-    expect(getByText("40.00")).toBeTruthy();
-    expect(getByText("+15.0")).toBeTruthy();
-    expect(getByText("raw instant")).toBeTruthy();
-    expect(getByText("35.0")).toBeTruthy();
+    // Hero = rolling 24h avg at one decimal, matching the market-state line
+    // and the /stability-index/ hero; the raw instant is demoted to context.
+    expect(getByText("35.0").className).toContain("text-4xl");
+    expect(getByText("Rolling 24h avg")).toBeTruthy();
+    expect(getByText("40.0")).toBeTruthy();
+    expect(getByText("+10.0")).toBeTruthy();
+    expect(getByText("· Steady")).toBeTruthy();
 
     const polyline = container.querySelector("polyline");
     expect(polyline).toBeTruthy();
     expect(polyline?.getAttribute("points")?.trim().split(/\s+/)).toHaveLength(4);
+  });
+
+  it("keeps the band hue and lights the beacon while the sample is fresh", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const data = makePsiResponse();
+    data.current!.computedAt = nowSec;
+    useStabilityIndexMock.mockReturnValue({
+      data,
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+      meta: { updatedAt: nowSec, ageSeconds: 0, status: "fresh" },
+    });
+
+    const { getByText, queryByTestId } = render(<PsiBandCard />);
+
+    expect(getByText("· Steady").className).toContain("text-teal-700");
+    expect(queryByTestId("psi-band-card-retained")).toBeNull();
+  });
+
+  it("drops the band hue and names the retained observation when stale", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const data = makePsiResponse();
+    data.current!.computedAt = nowSec - 8 * 3600;
+    useStabilityIndexMock.mockReturnValue({
+      data,
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+      meta: { updatedAt: nowSec - 8 * 3600, ageSeconds: 8 * 3600, status: "stale" },
+    });
+
+    const { getByText, getByTestId } = render(<PsiBandCard />);
+
+    expect(getByText("· Steady").className).toContain("text-muted-foreground");
+    expect(getByText("· Steady").className).not.toContain("text-teal");
+    expect(getByTestId("psi-band-card-retained").textContent).toMatch(/^Retained observation as of /);
   });
 });

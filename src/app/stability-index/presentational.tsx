@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Compass, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { UniverseChip } from "@/components/universe-chip";
 import {
   TableBody,
   TableCell,
@@ -21,7 +24,8 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCurrency, formatScore } from "@shared/lib/format";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { PsiBeamDimmers } from "./psi-beam-dimmers";
-import { PsiLighthouseScene } from "./psi-lighthouse-scene";
+import { PsiBeacon } from "@/components/psi-beacon/psi-beacon";
+import type { PsiBeaconState } from "@shared/lib/psi-beacon";
 import type {
   HistoryStatItem,
   PsiBeamDimmerLane,
@@ -31,7 +35,7 @@ import type {
 } from "./view-model";
 
 const CONTRIBUTOR_HEAD_CLASS =
-  "h-auto px-0 pb-2 pr-4 text-xs uppercase tracking-wider";
+  "h-auto px-0 pb-2 pr-4 text-xs";
 const CONTRIBUTOR_CELL_CLASS = "px-0 py-2.5 pr-4";
 
 type PsiHistoryStatsLayout = "grid" | "row" | "compact";
@@ -57,12 +61,16 @@ function PsiHistoryStatsGrid({
 
   const resolved: PsiHistoryStatsLayout = layout ?? (compact ? "compact" : "grid");
   const isCompact = resolved === "compact";
+  // The three 30d stats normally share one coverage caption ("29/30 observed
+  // days"); print it once under the row instead of three nowrap copies, which
+  // overflowed the hero card at 1440px.
+  const sharedSub = items.every((item) => item.sub === items[0]?.sub) ? items[0]?.sub ?? null : undefined;
 
   const wrapperClass =
     resolved === "compact"
       ? "grid w-full grid-cols-3 gap-x-3 gap-y-2 border-t border-border/60 pt-3 xl:hidden"
       : resolved === "row"
-        ? "flex items-end gap-8"
+        ? "grid grid-cols-3 items-end gap-x-6 gap-y-1.5"
         : "grid grid-cols-3 gap-3";
 
   return (
@@ -76,7 +84,7 @@ function PsiHistoryStatsGrid({
                 "whitespace-nowrap",
                 isCompact
                   ? "text-xs text-muted-foreground"
-                  : "text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground",
+                  : "pharos-label",
               )}
             >
               {item.label}
@@ -90,12 +98,15 @@ function PsiHistoryStatsGrid({
             >
               {item.value}
             </span>
-            {item.sub ? (
+            {sharedSub === undefined && item.sub ? (
               <span className="whitespace-nowrap text-xs leading-tight text-muted-foreground">{item.sub}</span>
             ) : null}
           </div>
         );
       })}
+      {sharedSub ? (
+        <span className="col-span-full text-center text-xs leading-tight text-muted-foreground">{sharedSub}</span>
+      ) : null}
     </div>
   );
 }
@@ -161,6 +172,7 @@ export function StabilityIndexPanel({
   historyStats,
   lanes,
   componentData,
+  beaconState,
 }: {
   band: string;
   score: number;
@@ -170,46 +182,47 @@ export function StabilityIndexPanel({
   historyStats: HistoryStatItem[];
   lanes: PsiBeamDimmerLane[];
   componentData: PsiComponentPoint[];
+  beaconState: PsiBeaconState;
 }) {
   const conditionBand = band as ConditionBand;
-  const colorClass = PSI_BAND_CLASSES[conditionBand] ?? "text-foreground";
+  // Retained data keeps its number but loses its band hue, matching the beacon and regime bar (R3).
+  const colorClass = beaconState.kind === "current" ? (PSI_BAND_CLASSES[conditionBand] ?? "text-foreground") : "text-foreground";
   const deltaClass = delta != null && delta >= 0
     ? "text-green-700 dark:text-green-400"
     : "text-red-700 dark:text-red-400";
 
   return (
-    <Card className="rounded-xl py-0">
-      <CardContent className="py-6 sm:py-7" aria-live="polite">
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="pharos-kicker">The Beacon</p>
-            <h2 className="pharos-section-title mt-1 flex items-center gap-2">
-              <Compass className="h-4 w-4 text-sky-700 dark:text-sky-300" aria-hidden />
-              Market regime, drift, and 30-day range
-            </h2>
-          </div>
-          <p className="text-xs text-muted-foreground">Updated every 30 min</p>
-        </div>
-
+    <Card variant="shell" className="gap-5 py-6 sm:py-7">
+      <CardHeader
+        kicker="The Beacon"
+        heading="Market regime, drift, and 30-day range"
+        freshness="Updated every 30 min"
+      />
+      <CardContent aria-live="polite">
+        {/* Below xl the readout column dissolves (`contents`) so the KPI can sit
+            above the beacon: the instrument header keeps the answer above the
+            mobile fold. */}
         <div className="flex flex-col gap-5 xl:flex-row xl:items-stretch xl:gap-7">
-          <div className="mx-auto aspect-[376/288] w-full max-w-sm overflow-hidden rounded-lg xl:mx-0 xl:aspect-auto xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
-            <PsiLighthouseScene band={band} score={score} fill />
+          <div className="order-2 mx-auto w-full max-w-xl rounded-lg xl:order-none xl:mx-0 xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
+            <PsiBeacon state={beaconState} />
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-4 xl:pt-1">
-            <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
+          <div className="contents xl:flex xl:min-w-0 xl:flex-1 xl:flex-col xl:gap-4 xl:pt-1">
+            <div className="order-1 flex min-w-0 flex-col gap-4 xl:order-none xl:flex-row xl:items-center xl:justify-between xl:gap-5">
               <div className="flex min-w-0 flex-col items-center gap-1 text-center xl:shrink-0 xl:items-start xl:text-left">
                 <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 xl:justify-start">
                   <span className="text-xs text-muted-foreground">
                     <MethodologyLabel topic="psi">PSI</MethodologyLabel>
                   </span>
-                  <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <span className="pharos-label">
                     {scoreBasis}
                   </span>
-                  <span className={`pharos-numeric text-6xl font-extrabold leading-none xl:text-[4.15rem] ${colorClass}`}>
-                    {formatScore(score)}
-                  </span>
-                  <span className={`text-lg font-bold uppercase tracking-wide ${colorClass}`}>
+                  <RailHeroFigureTransition rail="psi">
+                    <span className={cn(HERO_KPI_VALUE_CLASS, colorClass)}>
+                      {formatScore(score)}
+                    </span>
+                  </RailHeroFigureTransition>
+                  <span className={`text-lg font-bold uppercase ${colorClass}`}>
                     {band}
                   </span>
                 </div>
@@ -222,6 +235,7 @@ export function StabilityIndexPanel({
                   )}
                   <span>{daysInBand} day{daysInBand !== 1 ? "s" : ""} in {band}</span>
                 </div>
+                <UniverseChip universe="psi" />
               </div>
 
               <div className="hidden xl:flex xl:items-center xl:justify-end">
@@ -229,9 +243,9 @@ export function StabilityIndexPanel({
               </div>
             </div>
 
-            <PsiHistoryStatsGrid items={historyStats} layout="compact" />
+            <PsiHistoryStatsGrid items={historyStats} layout="compact" className="order-3 xl:order-none" />
 
-            <div className="border-t border-border/60 pt-4">
+            <div className="order-4 border-t border-border/60 pt-4 xl:order-none">
               <PsiBeamDimmers lanes={lanes} series={componentData} columns={2} density="compact" />
             </div>
           </div>
@@ -245,7 +259,7 @@ export function PsiEventTimelineCard({ rows }: { rows: PsiEventTimelineRow[] }) 
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="pharos-kicker">Notable Events</CardTitle>
+        <CardTitle as="h2" className="pharos-label">Notable events</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="relative ml-3 border-l border-border/50 pl-5 space-y-5">
@@ -303,7 +317,7 @@ export function PsiMethodologyCard({
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="space-y-2 pb-3">
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle as="h2" className="pharos-kicker">Methodology</CardTitle>
+          <CardTitle as="h2" className="pharos-label">Methodology</CardTitle>
           <Badge variant="outline" className="bg-muted/50 text-muted-foreground border-border/60">
             {methodology.versionLabel}
           </Badge>
@@ -354,7 +368,7 @@ export function PsiContributorsTableCard({
   return (
     <Card className="rounded-xl animate-in fade-in duration-300">
       <CardHeader className="pb-2">
-        <CardTitle as="h2" className="pharos-kicker">Top Contributors</CardTitle>
+        <CardTitle as="h2" className="pharos-label">Top contributors</CardTitle>
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
@@ -416,7 +430,7 @@ export function PsiContributorsTableCard({
                   <TableHead scope="col" className={cn(CONTRIBUTOR_HEAD_CLASS, "text-right")}>
                     Total
                   </TableHead>
-                  <TableHead scope="col" className="h-auto px-0 pb-2 text-right text-xs uppercase tracking-wider">
+                  <TableHead scope="col" className="h-auto px-0 pb-2 text-right text-xs">
                     Age
                   </TableHead>
                 </TableRow>
@@ -467,7 +481,8 @@ export function PsiContributorsTableCard({
                         "hidden text-right pharos-numeric sm:table-cell",
                       )}
                     >
-                      {row.severity.toFixed(2)}
+                      {/* Small-coin severities run ~1e-6–1e-3; a bare 0.00 reads as "no severity". */}
+                      {row.severity > 0 && row.severity < 0.005 ? "<0.01" : row.severity.toFixed(2)}
                     </TableCell>
                     <TableCell
                       className={cn(

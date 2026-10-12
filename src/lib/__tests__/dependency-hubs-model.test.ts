@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 
 const cards = [

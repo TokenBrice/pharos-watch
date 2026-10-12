@@ -20,7 +20,7 @@ The no-op blacklist banner control was retired on 2026-09-27 (DEC-15): its flag,
 | -------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_PHAROS_QUIET_DEVIATIONS`        | Idea 19 (quiet calm deviations + magnitude-aware mcap delta)                        |
 | `NEXT_PUBLIC_PHAROS_MOBILE_STICKY_SUMMARY`   | Idea 20b (mobile sticky compact summary)                                            |
-| `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype `VerdictPill`; the `oneLiner` and AI summary are not gated)  |
+| `NEXT_PUBLIC_PHAROS_HERO_VERDICT`            | Idea 1 (hero archetype verdict chip; the `oneLiner` and AI summary are not gated)   |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER`          | DDR module on `/depeg/` and its inputs to the depeg outlook hero; homepage DDR overview; detail DDR card and DDR track-record section; master-gates DDRR (rollback) |
 | `NEXT_PUBLIC_PHAROS_DEPEG_RESOLVER_REVIEWER` | DDRR module below DDR on `/depeg/` and the detail DDR track-record section (emergency rollback) |
 
@@ -55,7 +55,7 @@ has been completed.
 
 ### `NEXT_PUBLIC_PHAROS_HERO_VERDICT`
 
-- [x] Hero verdict surface (`VerdictPill`) lands behind the flag via `shouldShowVerdict()` in `hero-card-identity.tsx`; the hoisted `<AiSummary>` renders unconditionally and is not gated by the flag.
+- [x] Hero verdict surface (the archetype verdict chip in `HeroChipRail`, `hero-card-sections.tsx`, at every width, plus the `HeroIdentityHeader` heading's `aria-describedby` in `hero-card.tsx`) lands behind the flag via `isHeroVerdictEnabled()`; the hoisted `<AiSummary>` renders unconditionally and is not gated by the flag.
 - [x] Default-on W3 launch completed; emergency rollback is `NEXT_PUBLIC_PHAROS_HERO_VERDICT=false`.
 - [ ] Top-60 coins by mcap have both `oneLiner` AND a TL;DR-first AI summary. **Current one-liner coverage is owned by `scripts/__tests__/weekly-curation-digest.test.ts`; `src/lib/__tests__/term-markup.test.ts` owns summary term wiring. TL;DR-first top-60 editorial QA remains in flight.**
 

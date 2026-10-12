@@ -37,8 +37,8 @@ export type UpcomingCoin = Pick<
 export type SortKey = "expected" | "announced" | "alphabetical";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "expected", label: "Expected Launch" },
-  { key: "announced", label: "Announced Date" },
+  { key: "expected", label: "Expected launch" },
+  { key: "announced", label: "Announced date" },
   { key: "alphabetical", label: "Name" },
 ];
 
@@ -181,13 +181,13 @@ export function UpcomingClient({
       <section aria-label="Pre-launch stablecoin readiness" className="pharos-card-shell overflow-hidden">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-border/50 p-5 sm:p-6">
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Tracked Launches</p>
-            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+            <p className="text-sm font-medium text-muted-foreground">Tracked launches</p>
+            <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
               {coins.length}
             </p>
           </div>
           {nearestLaunch?.expectedLaunchDate ? (
-            <div className="flex items-baseline gap-2 font-mono text-xs">
+            <div className="flex items-baseline gap-2 text-xs">
               <span className="text-muted-foreground">Soonest</span>
               <Link
                 href={buildStablecoinUrl(nearestLaunch.id)}
@@ -207,7 +207,7 @@ export function UpcomingClient({
       <div className="pharos-card-shell overflow-hidden">
         <div className="pharos-panel-header flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <p className="pharos-kicker">Filters</p>
+            <p className="pharos-label">Filters</p>
             <p className="pharos-meta">Narrow the tracked pre-launch set by launch phase, peg, backing, and sort order.</p>
           </div>
           {hasActiveFilters ? (
@@ -225,7 +225,7 @@ export function UpcomingClient({
         <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,2.5fr)_minmax(0,0.725fr)] xl:gap-0 xl:divide-x xl:divide-border/50">
           <div className="min-w-0 space-y-4 xl:pr-5">
             <div className="space-y-2">
-              <p className="pharos-kicker">Phase</p>
+              <p className="pharos-label">Phase</p>
               <div className="flex flex-wrap gap-2">
                 {ALL_PHASES.map((phase) => (
                   <button type="button"
@@ -242,7 +242,7 @@ export function UpcomingClient({
 
             {allBackings.length > 1 && (
               <div className="space-y-2">
-                <p className="pharos-kicker">Backing</p>
+                <p className="pharos-label">Backing</p>
                 <div className="flex flex-wrap gap-2">
                   {allBackings.map((backing) => (
                     <button type="button"
@@ -261,7 +261,7 @@ export function UpcomingClient({
 
           {allPegs.length > 1 && (
             <div className="min-w-0 space-y-2 xl:px-5">
-              <p className="pharos-kicker">Peg</p>
+              <p className="pharos-label">Peg</p>
               <div className="flex flex-wrap gap-2">
                 {allPegs.map((peg) => (
                   <button type="button"
@@ -278,7 +278,7 @@ export function UpcomingClient({
           )}
 
           <div className="min-w-0 space-y-2 xl:pl-5">
-            <p className="pharos-kicker">Sort By</p>
+            <p className="pharos-label">Sort by</p>
             <div className="flex flex-wrap gap-2">
               {SORT_OPTIONS.map((opt) => (
                 <button type="button"
@@ -327,7 +327,7 @@ export function UpcomingClient({
                     <p className="truncate text-sm font-semibold text-foreground group-hover:text-foreground/80">
                       {coin.name}
                     </p>
-                    <p className="font-mono text-[11px] text-muted-foreground">{coin.symbol}</p>
+                    <p className="font-mono text-2xs text-muted-foreground">{coin.symbol}</p>
                   </div>
                 </div>
 
@@ -336,13 +336,13 @@ export function UpcomingClient({
                   {coin.launchPhase && (
                     <LaunchPhaseBadge phase={coin.launchPhase} />
                   )}
-                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-[10px] leading-none text-muted-foreground">
+                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-3xs leading-none text-muted-foreground">
                     {PEG_LABELS_SHORT[coin.flags.pegCurrency]}
                   </span>
-                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-[10px] leading-none text-muted-foreground">
+                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-3xs leading-none text-muted-foreground">
                     {BACKING_LABELS_SHORT[coin.flags.backing]}
                   </span>
-                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-[10px] leading-none text-muted-foreground">
+                  <span className="inline-flex rounded-full border border-border/50 bg-muted/40 px-2 py-1 text-3xs leading-none text-muted-foreground">
                     {GOVERNANCE_LABELS_SHORT[coin.flags.governance]}
                   </span>
                 </div>
@@ -357,13 +357,13 @@ export function UpcomingClient({
                 {/* Footer: date + drift + milestones */}
                 <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
                   {coin.expectedLaunchDate && (
-                    <span className="pharos-numeric text-[10px] text-muted-foreground/70">
-                      Expected {formatFuzzyDate(coin.expectedLaunchDate)}
+                    <span className="text-2xs text-muted-foreground">
+                      Expected <span className="pharos-numeric">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
                     </span>
                   )}
                   <ExpectedLaunchDriftBadge dateHistory={coin.dateHistory} expectedLaunchDate={coin.expectedLaunchDate} />
                   {coin.milestones && coin.milestones.length > 0 && (
-                    <span className="text-[10px] text-muted-foreground/70">
+                    <span className="text-3xs text-muted-foreground/70">
                       <span className="pharos-numeric">{coin.milestones.length}</span> milestone{coin.milestones.length !== 1 ? "s" : ""}
                     </span>
                   )}

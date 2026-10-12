@@ -8,7 +8,7 @@ product
 
 ## Users
 
-Crypto-native DeFi participants who actively monitor stablecoin health — peg stability, backing, freeze risk, liquidity — to inform financial decisions. Power-user-leaning: they value density, precision, and speed-to-insight. Discovery surfaces (`/start/`, `/about/`, `/learn/`) deliberately soften the funnel for newcomers; the data surfaces stay practitioner-grade.
+Crypto-native DeFi participants who actively monitor stablecoin health — peg stability, backing, freeze risk, liquidity — to inform financial decisions. Power-user-leaning: they value density, precision, and speed-to-insight. Discovery surfaces (`/start/`, `/about/`, `/learn/mechanisms/`, `/learn/case-studies/`) deliberately soften the funnel for newcomers; the data surfaces stay practitioner-grade.
 
 ## Product Purpose
 

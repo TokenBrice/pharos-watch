@@ -158,17 +158,17 @@ function MarketDataSectionBody({
           {brushDomain && sync ? (
             <div className="border-t border-border/50 px-4 py-2 sm:px-6">
               <div className="mb-1 flex items-center justify-between gap-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Brush</p>
+                <p className="pharos-label /70">Brush</p>
                 {sync.brushedRange ? (
                   <button
                     type="button"
                     onClick={() => sync.setBrushedRange(null)}
-                    className="pharos-focus-ring text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                    className="pharos-label pharos-focus-ring hover:text-foreground"
                   >
                     Clear
                   </button>
                 ) : (
-                  <span className="text-[10px] text-muted-foreground/70">Drag to focus a window</span>
+                  <span className="text-3xs text-muted-foreground/70">Drag to focus a window</span>
                 )}
               </div>
               <ChartBrush domain={brushDomain} value={sync.brushedRange} onChange={sync.setBrushedRange} />

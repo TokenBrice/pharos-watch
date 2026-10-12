@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 import { DateTooltip, TimeXAxis } from "@/components/chart-primitives/axes";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { trackEvent } from "@/lib/analytics";
 import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
-import { CHART_AMBER, CHART_GREEN, CHART_ORANGE, CHART_RED } from "@/lib/chart-colors";
+import { CHART_AMBER, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
 import { formatScore } from "@shared/lib/format";
 import { type PsiBeamDimmerKey, type PsiBeamDimmerLane, type PsiComponentPoint } from "./view-model";
@@ -31,8 +31,16 @@ const LANE_STROKE: Record<PsiBeamDimmerKey, string> = {
 };
 
 function laneStrokeHex(lane: PsiBeamDimmerLane): string {
+  // A component exerting no pressure now (the panel's "0%") draws its history
+  // in neutral ink: the lane hue is a warning, reserved for live pressure.
+  if (lane.role !== "support" && lane.pressurePct !== null && Math.round(lane.pressurePct) === 0) return CHART_SLATE;
   if (lane.key === "trend" && lane.value !== null && lane.value < 0) return CHART_RED;
   return LANE_STROKE[lane.key];
+}
+
+/** Sparklines share the component's published range, so zero sits on the floor and height means pressure. */
+function laneDomain(lane: PsiBeamDimmerLane): [number, number] {
+  return lane.key === "trend" ? [-lane.max, lane.max] : [0, lane.max];
 }
 
 function laneToneClass(lane: PsiBeamDimmerLane): string {
@@ -86,12 +94,12 @@ export function PsiBeamDimmers({
     <section aria-labelledby="psi-beam-dimmers-heading">
       <div className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5", isCompact ? "mb-2.5" : "mb-3")}>
         <div className="min-w-0">
-          <p id="psi-beam-dimmers-heading" className="pharos-kicker">
-            Beam Dimmers · Component pressure &amp; trend
+          <p id="psi-beam-dimmers-heading" className="pharos-label">
+            Beam dimmers · component pressure &amp; trend
           </p>
-          <p className="mt-0.5 max-w-md text-[11px] leading-snug text-muted-foreground">
+          <p className="mt-0.5 max-w-md text-2xs leading-snug text-muted-foreground">
             {hasTrend
-              ? "Each panel scales independently — read the shape, not the height."
+              ? "Each panel spans its component's full published range; height is pressure."
               : "Values from the current PSI sample — not a causal timeline."}
           </p>
         </div>
@@ -118,7 +126,7 @@ export function PsiBeamDimmers({
                   <MethodologyLabel topic={METHODOLOGY_TOPICS[lane.key]}>
                     {lane.label}
                   </MethodologyLabel>
-                  <p className={cn("mt-1 text-muted-foreground", isCompact ? "text-[11px] leading-snug" : "text-xs")}>{lane.detail}</p>
+                  <p className={cn("mt-1 text-muted-foreground", isCompact ? "text-2xs leading-snug" : "text-xs")}>{lane.detail}</p>
                 </div>
                 <div className="text-right">
                   <p className={cn(
@@ -128,7 +136,7 @@ export function PsiBeamDimmers({
                   )}>
                     {valueLabel(lane)}
                   </p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <p className="pharos-label">
                     {lane.role}
                   </p>
                 </div>
@@ -145,11 +153,12 @@ export function PsiBeamDimmers({
                       <AreaChart data={filteredData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
                         <defs>
                           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={stroke} stopOpacity={0.28} />
-                            <stop offset="95%" stopColor={stroke} stopOpacity={0.04} />
+                            <stop offset="5%" stopColor={stroke} stopOpacity={0.16} />
+                            <stop offset="95%" stopColor={stroke} stopOpacity={0.02} />
                           </linearGradient>
                         </defs>
                         <TimeXAxis dataKey="ts" hide />
+                        <YAxis hide domain={laneDomain(lane)} allowDataOverflow />
                         <DateTooltip formatter={(value) => [value == null ? "Unavailable" : formatScore(Number(value)), lane.label]} />
                         <Area
                           type="monotone"
@@ -174,7 +183,7 @@ export function PsiBeamDimmers({
                     />
                   </div>
                 ) : null}
-                <div className={cn("mt-1 flex items-center justify-between gap-3 text-muted-foreground", isCompact ? "text-[11px]" : "text-xs")}>
+                <div className={cn("mt-1 flex items-center justify-between gap-3 text-muted-foreground", isCompact ? "text-2xs" : "text-xs")}>
                   <span>{lane.value === null ? "component not reported" : deltaLabel(lane.delta)}</span>
                   <span className="font-mono tabular-nums">{lane.pressurePct === null ? "—" : `${lane.pressurePct.toFixed(0)}%`}</span>
                 </div>

@@ -8,7 +8,6 @@ import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/reserve-presentation";
 import {
-  RESERVE_TREEMAP_INVERSE_LABEL_COLOR,
   RESERVE_TREEMAP_LABEL_COLOR,
   RISK_ACCENT_COLORS,
   RISK_COLORS,
@@ -88,18 +87,12 @@ function formatReserveSharePct(pct: number): string {
   return pct > 0 && pct < 0.01 ? "<0.01%" : `${formatDecimal(pct, 0, 2)}%`;
 }
 
-/** White on the dark end of the ramp, dark ink on the bright medium tier. The
- *  ramp hue itself (red on maroon) does not clear 4.5:1 against its own fill. */
-function labelInk(risk: ReserveRisk): string {
-  return risk === "medium" ? RESERVE_TREEMAP_LABEL_COLOR : RESERVE_TREEMAP_INVERSE_LABEL_COLOR;
-}
-
 function TreemapCell({ x, y, width, height, label, risk, pct, depth }: TreemapCellProps) {
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
 
   const fill = RISK_COLORS[risk];
-  const labelFill = labelInk(risk);
+  const labelFill = RESERVE_TREEMAP_LABEL_COLOR;
   // 11 px floor: smaller tiles wrap or drop the label (tooltip) rather than shrink it.
   const fontSize = 11;
   const maxChars = Math.floor((width - LABEL_INSET * 2) / (fontSize * CHAR_WIDTH_EM));
@@ -215,7 +208,7 @@ function RiskLegend({ risks }: { risks: readonly ReserveRisk[] }) {
       {risks.map((risk) => (
         <li key={risk} className="flex min-w-0 items-center gap-1.5">
           <ReserveRiskSwatch risk={risk} />
-          <span className="text-[11px] font-medium text-muted-foreground">{formatReserveRiskTier(risk)}</span>
+          <span className="text-2xs font-medium text-muted-foreground">{formatReserveRiskTier(risk)}</span>
         </li>
       ))}
     </ul>
@@ -245,7 +238,7 @@ function DominantSliceBar({ slices }: { slices: readonly ReserveCompositionSlice
             }}
           >
             {index === 0 ? (
-              <span className="min-w-0 text-xs font-semibold leading-snug" style={{ color: labelInk(slice.risk) }}>
+              <span className="min-w-0 text-xs font-semibold leading-snug" style={{ color: RESERVE_TREEMAP_LABEL_COLOR }}>
                 {slice.label}
                 <span className="font-mono tabular-nums"> · {formatReserveSharePct(slice.pct)}</span>
               </span>
@@ -276,7 +269,7 @@ function DominantSliceBar({ slices }: { slices: readonly ReserveCompositionSlice
  * unreviewed, never drawn as filled.
  */
 function SingleSliceBar({ slice }: { slice: ReserveCompositionSlice }) {
-  const ink = labelInk(slice.risk);
+  const ink = RESERVE_TREEMAP_LABEL_COLOR;
   const isWhole = slice.pct >= FULL_COMPOSITION_MIN_PCT;
   return (
     <div className="min-w-0">
@@ -292,7 +285,7 @@ function SingleSliceBar({ slice }: { slice: ReserveCompositionSlice }) {
           <span className="min-w-0 text-xs font-semibold leading-snug" style={{ color: ink }}>
             {slice.label}
           </span>
-          <span className="shrink-0 font-mono text-[11px] font-semibold tabular-nums" style={{ color: ink }}>
+          <span className="shrink-0 font-mono text-2xs font-semibold tabular-nums" style={{ color: ink }}>
             {formatReserveSharePct(slice.pct)}
           </span>
         </div>
@@ -306,7 +299,7 @@ function SingleSliceBar({ slice }: { slice: ReserveCompositionSlice }) {
       <dl className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs">
         <div className="flex items-center">
           <dt className="sr-only">Risk tier</dt>
-          <dd className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+          <dd className="flex items-center gap-1.5 text-2xs font-medium text-muted-foreground">
             <ReserveRiskSwatch risk={slice.risk} />
             {formatReserveRiskTier(slice.risk)}
           </dd>

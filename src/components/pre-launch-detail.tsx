@@ -73,7 +73,7 @@ function formatSummaryUpdatedAt(updatedAt: string): string {
 function InfoGridItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="space-y-1">
-      <dt className="pharos-kicker">{label}</dt>
+      <dt className="pharos-label">{label}</dt>
       <dd className="text-sm font-medium">{value}</dd>
     </div>
   );
@@ -113,7 +113,7 @@ function MilestoneTimeline({ milestones }: { milestones: LaunchMilestone[] }) {
                   href={m.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-foreground"
+                  className="mt-1 inline-flex items-center gap-1 text-2xs text-muted-foreground/70 hover:text-foreground"
                 >
                   <ExternalLink className="h-3 w-3" aria-hidden="true" />
                   Source
@@ -182,7 +182,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
         </div>
 
         <div className="min-w-0 rounded-xl border border-border/60 bg-background/55 p-3">
-          <p className="pharos-kicker">Copy Exact Bot Command</p>
+          <p className="pharos-label">Copy exact bot command</p>
           <div className="mt-2 flex items-center gap-2">
             <code tabIndex={0} className="pharos-focus-ring block min-w-0 flex-1 overflow-x-auto whitespace-nowrap rounded-lg bg-background/80 px-3 py-2 text-xs font-mono tabular-nums text-foreground sm:text-sm">
               {launchAlertCommand}
@@ -334,7 +334,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
           <p className="text-sm leading-relaxed text-muted-foreground">
             <TermText text={summary.text} />
           </p>
-          <p className="text-[11px] text-muted-foreground/70">
+          <p className="text-2xs text-muted-foreground/70">
             Updated <time dateTime={summary.updatedAt}>{summaryDateline}</time>
           </p>
         </section>
@@ -391,7 +391,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
                     {item.description && (
                       <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
                     )}
-                    <div className="mt-auto flex items-center gap-1.5 pt-1 text-[11px] text-muted-foreground/70">
+                    <div className="mt-auto flex items-center gap-1.5 pt-1 text-2xs text-muted-foreground/70">
                       <ContentTypeIcon type={item.type} />
                       <span>{item.source ?? item.type}</span>
                     </div>

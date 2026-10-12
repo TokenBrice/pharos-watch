@@ -26,7 +26,6 @@ import {
   Landmark,
   MonitorCheck,
   BookMarked,
-  Coins,
   Heart,
   TableProperties,
   createLucideIcon,
@@ -70,12 +69,6 @@ export interface NavItem {
    * words people actually type. Space-separated, lowercase. Never rendered.
    */
   keywords?: string;
-  /**
-   * Additional path prefixes that count as "inside" this destination for
-   * active-state purposes, on top of `href` itself. Lets `/stablecoin/<id>/`
-   * light up the directory entry even though the two routes share no prefix.
-   */
-  activePrefixes?: readonly string[];
   external?: boolean;
 }
 
@@ -177,7 +170,7 @@ const MORE_COLUMNS: readonly NavColumn[] = [
     key: "research",
     label: "Research",
     items: [
-      { href: "/learn/", label: "Learn", icon: BookOpen, description: "Mechanisms and case studies", keywords: "learn education explainers" },
+      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story", keywords: "blog posts articles announcements" },
       { href: "/learn/mechanisms/", label: "Mechanisms", icon: Lightbulb, description: "How each design holds its peg", keywords: "mechanism archetype design how it works collateral algorithmic" },
       { href: "/learn/case-studies/", label: "Case Studies", icon: BookMarked, description: "Retrospectives of major depegs", keywords: "case study retrospective post-mortem history terra ust svb" },
     ],
@@ -189,7 +182,6 @@ const MORE_COLUMNS: readonly NavColumn[] = [
       { href: "/digest/", label: "Daily Digest", icon: Newspaper, description: "Daily recap of the stablecoin market", keywords: "digest daily news recap newsletter today" },
       { href: "/timeline/", label: "Timeline", icon: ScrollText, description: "Every depeg, freeze, and grade change", keywords: "timeline tape events history feed" },
       { href: "/changelog/", label: "Changelog", icon: PenLine, description: "Weekly release notes and updates", keywords: "changelog release notes what's new updates" },
-      { href: "/blog/", label: "Blog", icon: BookOpen, description: "Product updates and the Pharos story", keywords: "blog posts articles announcements" },
     ],
   },
   {
@@ -224,15 +216,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     key: "markets",
     label: "Markets",
     items: [
-      {
-        href: "/stablecoins/",
-        label: "Stablecoin Directory",
-        icon: Coins,
-        description: "Browse every tracked stablecoin",
-        keywords: "directory list all coins browse stablecoins tokens",
-        // Coin profiles are the directory's leaves; the routes share no prefix.
-        activePrefixes: ["/stablecoin/"],
-      },
       { href: "/liquidity/", label: "Liquidity", icon: Waves, description: "DEX depth, durability, and peg support", keywords: "liquidity dex depth pool slippage" },
       { href: "/flows/", label: "Flows", icon: ArrowUpDown, description: "Mint and burn pressure by chain", keywords: "flows mint burn issuance redemption supply change" },
       { href: "/chains/", label: "Chains", icon: Layers, description: "Stablecoin share and health by chain", keywords: "chains network ethereum solana tron l2 by chain" },
@@ -285,14 +268,12 @@ export function stickyChromeTopOffsetClass(pathname: string | null | undefined):
 
 /**
  * Active-state test shared by every chrome surface. A destination is active on
- * its own route, on any route beneath it, and on any route beneath one of its
- * `activePrefixes`. The dashboard only matches exactly.
+ * its own route and on any route beneath it. The dashboard only matches exactly.
  */
 export function isNavItemActive(pathname: string | null | undefined, item: NavItem): boolean {
   const path = pathname ?? "/";
   if (item.external) return false;
-  if (isRouteActive(path, item.href)) return true;
-  return item.activePrefixes?.some((prefix) => isRouteActive(path, prefix)) ?? false;
+  return isRouteActive(path, item.href);
 }
 
 /**

@@ -110,7 +110,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
             variant="panel"
           />
         ) : !detailNodePresentation ? (
-          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="text-2xs text-muted-foreground">
             Tap a node to inspect dependencies. Use fullscreen for a larger touch canvas.
           </p>
         ) : null}

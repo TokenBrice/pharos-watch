@@ -88,7 +88,7 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
     >
       <div className="pharos-panel-header flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
-          <p className="pharos-kicker">Sovereignty Lattice</p>
+          <p className="pharos-label">Sovereignty lattice</p>
           <h2 id="sovereignty-lattice-title" className="pharos-section-title">
             Where issuers can freeze you — by stablecoin and chain
           </h2>
@@ -108,22 +108,22 @@ export function SovereigntyLattice({ coverage, stats, chains, isLoading, onCellS
               gridTemplateColumns,
             }}
           >
-            <div className="text-xs font-semibold uppercase text-muted-foreground">Stablecoin</div>
+            <div className="pharos-label">Stablecoin</div>
             {compactVisibleChains.map((chain) => (
               <div
                 key={chain.id}
-                className="truncate text-center text-xs font-semibold uppercase text-muted-foreground"
+                className="pharos-label truncate text-center"
               >
                 {chain.name}
               </div>
             ))}
             {hasMoreChains ? (
-              <div className="text-center text-xs font-semibold uppercase text-muted-foreground">
+              <div className="pharos-label text-center">
                 +{hiddenChains.length}
               </div>
             ) : null}
-            <div className="text-right text-xs font-semibold uppercase text-muted-foreground">Events</div>
-            <div className="text-right text-xs font-semibold uppercase text-muted-foreground">Frozen</div>
+            <div className="pharos-label text-right">Events</div>
+            <div className="pharos-label text-right">Frozen</div>
 
             {rows.map((row) => (
               <LatticeRowCells

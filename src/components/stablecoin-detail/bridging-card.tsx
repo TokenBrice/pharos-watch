@@ -38,7 +38,7 @@ const BRACKET_LIMIT = 4;
 
 const ROLE_ORDER: readonly ControlComponentRole[] = ["limiting", "eligible", "diagnostic", "excluded"];
 
-const CHIP_CLASS = "border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground";
+const CHIP_CLASS = "border-border/60 bg-muted/30 text-2xs font-medium text-muted-foreground";
 
 /** Restrained score-pill tint, as on the Control strip: neutral unless the input is the problem. Never green. */
 const SCORE_PILL_TONE_CLASS: Record<PillarStripTone, string> = {
@@ -575,7 +575,7 @@ function DomainMemberList({ row }: { row: FailureDomainRow }) {
       {row.members.map((member) => {
         const note = `${member.reason ?? ""}${modeledNote(member.exposureShare, member.modeledExposureShare)}`.trim();
         return (
-          <li key={member.key} data-domain-member="" className="space-y-0.5 text-[11px]">
+          <li key={member.key} data-domain-member="" className="space-y-0.5 text-2xs">
             <div className="flex items-baseline justify-between gap-3">
               <span className="min-w-0 text-foreground">
                 {member.label}
@@ -634,14 +634,14 @@ function DomainList({ view }: { view: FailureDomainsView }) {
                   <span className="sr-only">. </span>
                 </span>
               </div>
-              {rowNote ? <p className="text-[11px] leading-snug text-muted-foreground">{rowNote}</p> : null}
+              {rowNote ? <p className="text-2xs leading-snug text-muted-foreground">{rowNote}</p> : null}
               {lone ? null : <DomainMemberList row={row} />}
             </li>
           );
         })}
       </ul>
       {view.totalAdjustmentPoints > 0 ? (
-        <p className="text-[11px] leading-snug text-muted-foreground">
+        <p className="text-2xs leading-snug text-muted-foreground">
           Shared failure domains cost this asset{" "}
           <span className="font-mono font-semibold tabular-nums text-foreground">
             {view.totalAdjustmentPoints.toFixed(1)}
@@ -751,7 +751,7 @@ export function BridgingDeploymentsModule({
         </>
       )
       : (
-        <Badge variant="outline" className={cn("text-[11px] font-medium", SEVERITY_TONE_CLASS.neutral.pill)}>
+        <Badge variant="outline" className={cn("text-2xs font-medium", SEVERITY_TONE_CLASS.neutral.pill)}>
           {header.label}
         </Badge>
       );

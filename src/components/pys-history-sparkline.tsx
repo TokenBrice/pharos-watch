@@ -93,7 +93,7 @@ export function PysHistorySparkline({
   if (series.measured.length < MIN_POINTS_REQUIRED) {
     return (
       <span
-        className={cn("text-[10px] text-muted-foreground", className)}
+        className={cn("text-3xs text-muted-foreground", className)}
         data-testid="pys-sparkline-placeholder"
       >
         PYS history collecting…
@@ -131,7 +131,7 @@ export function PysHistorySparkline({
         ariaLabel={ariaLabel}
         className="block w-full"
       />
-      <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
+      <span className="font-mono text-3xs tabular-nums text-muted-foreground">
         PYS {last.pys.toFixed(0)} ({formatSignedDelta(delta)})
       </span>
     </div>

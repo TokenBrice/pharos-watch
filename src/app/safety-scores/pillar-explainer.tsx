@@ -43,7 +43,7 @@ export function SafetyPillarExplainer() {
       aria-labelledby="safety-pillar-explainer-title"
     >
       <div className="border-b border-border/50 px-4 py-4 sm:px-6">
-        <p className="pharos-kicker">How to read the score</p>
+        <p className="pharos-label">How to read the score</p>
         <h2
           id="safety-pillar-explainer-title"
           className="mt-1.5 text-lg font-semibold tracking-tight text-foreground sm:text-xl"
@@ -78,7 +78,7 @@ export function SafetyPillarExplainer() {
             >
               <div className="min-w-0">
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="pharos-kicker">
+                  <p className="pharos-label">
                     <span className="sr-only">Pillar {index + 1}: </span>
                     {pillar.label}
                   </p>
@@ -86,13 +86,13 @@ export function SafetyPillarExplainer() {
                     {pillar.weight}%
                   </span>
                 </div>
-                <h3 className="mt-2 text-sm font-semibold leading-snug text-foreground sm:text-[15px]">
+                <h3 className="mt-2 text-sm font-semibold leading-snug text-foreground">
                   {pillar.question}
                 </h3>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                   {pillar.description}
                 </p>
-                <p className="pharos-meta mt-3 text-[11px] text-foreground/75">
+                <p className="pharos-meta mt-3 text-2xs text-foreground/75">
                   {pillar.signals}
                 </p>
               </div>

@@ -5,7 +5,11 @@ import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
 import { SafetyGradeDistributionBar } from "@/components/safety-grade-distribution-bar";
+import { UniverseChip } from "@/components/universe-chip";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
+import { cn } from "@/lib/utils";
+import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
+import type { ReportCardGrade } from "@shared/types/report-card-grade";
 import type { GradeFilter, PegFilter } from "./v9-view-model";
 
 const SAFETY_MAP_PATH = "/safety-scores/map/";
@@ -24,7 +28,7 @@ function SafetyMapPreview() {
         {unavailable ? (
           <div className="flex flex-col items-center gap-2 text-center text-slate-300">
             <MapIcon className="h-7 w-7" aria-hidden="true" />
-            <span className="pharos-kicker text-slate-400">Full market map</span>
+            <span className="pharos-label text-slate-400">Full market map</span>
           </div>
         ) : (
           <img
@@ -40,7 +44,7 @@ function SafetyMapPreview() {
       </div>
       <div className="flex items-center justify-between gap-3 border-t border-border/60 px-4 py-3">
         <div className="min-w-0">
-          <p className="pharos-kicker">Safety Score Map</p>
+          <p className="pharos-label">Safety score map</p>
           <p className="mt-1 truncate text-sm font-medium text-foreground">Explore every grade band</p>
         </div>
         <ArrowUpRight
@@ -56,25 +60,28 @@ function HeroMetricRow({
   label,
   value,
   detail,
+  numeric = true,
 }: {
   label: string;
   value: string;
   detail: string;
+  /** Word values (a pillar name) stay in sans; mono is for figures only. */
+  numeric?: boolean;
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-2">
       <span className="min-w-0 truncate text-sm text-muted-foreground">{label}</span>
       <span className="shrink-0 text-right">
-        <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
-        <span className="ml-2 text-[11px] text-muted-foreground">{detail}</span>
+        <span className={cn("text-sm font-semibold text-foreground", numeric && "pharos-numeric")}>{value}</span>
+        <span className="ml-2 text-2xs text-muted-foreground">{detail}</span>
       </span>
     </div>
   );
 }
 
 /**
- * Split hero for Safety Scores. The One Beam lights the ecosystem average score
- * (frost); the sub-slot folds the retired headline-stat tiles (supply in A/B,
+ * Split hero for Safety Scores. The answer KPI is the ecosystem average score in
+ * neutral ink beside its grade-colored chip; the sub-slot folds the retired headline-stat tiles (supply in A/B,
  * weakest dimension) into compact rows; the right slot stages the semantic
  * grade-distribution bar beside a preview of the full Safety Score Map.
  * `stats` is the `buildSafetyHeadlineStats` array:
@@ -84,23 +91,40 @@ export function SafetyScoresHero({
   stats,
   gradeCounts,
   totalCards,
+  scoredCount,
+  cardCount,
 }: {
   stats: Array<{ label: string; value: string; detail: string }>;
   gradeCounts: Record<string, number>;
   totalCards: number;
+  /** Cards with a numeric score: the ecosystem average's denominator. */
+  scoredCount: number;
+  /** Every published card (active coins). */
+  cardCount: number;
 }) {
   const [avg, abSupply, weakest] = stats;
   if (!avg) return null;
+  const gradeClass = REPORT_CARD_GRADE_COLORS[avg.detail as ReportCardGrade];
 
   return (
     <FeatureHeroSplit
       ariaLabel="Ecosystem safety overview"
-      beamLabel={
-        <>
-          {avg.label} <span className="text-foreground/70">&middot; grade {avg.detail}</span>
-        </>
+      beamLabel={avg.label}
+      beamValue={
+        <span className="inline-flex items-baseline gap-3">
+          {avg.value}
+          {/* Grade is a semantic scale, so it alone carries color. */}
+          <span
+            className={cn(
+              "rounded-md border px-2 py-0.5 font-sans text-base font-semibold tracking-normal",
+              gradeClass ?? "border-border text-foreground",
+            )}
+          >
+            Grade {avg.detail}
+          </span>
+        </span>
       }
-      beamValue={avg.value}
+      universe={<UniverseChip universe="scored" value={`${scoredCount} of ${cardCount} active`} />}
       expand={{ href: "#data", label: "Jump to the full grade table" }}
       subKicker="Ecosystem read"
       sub={
@@ -110,7 +134,7 @@ export function SafetyScoresHero({
               <HeroMetricRow label={abSupply.label} value={abSupply.value} detail={abSupply.detail} />
             ) : null}
             {weakest ? (
-              <HeroMetricRow label={weakest.label} value={weakest.value} detail={weakest.detail} />
+              <HeroMetricRow label={weakest.label} value={weakest.value} detail={weakest.detail} numeric={false} />
             ) : null}
           </div>
         ) : null

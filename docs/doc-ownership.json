@@ -40,6 +40,29 @@
       ]
     },
     {
+      "id": "scene-kit",
+      "label": "Isometric scene kit (Cemetery, Harbor, PSI beacon)",
+      "risk": "medium",
+      "sources": [
+        "shared/lib/scene/**",
+        "src/components/scene/**",
+        "scripts/lib/scene-*.ts"
+      ],
+      "docs": [{ "path": "docs/data-visualization.md", "anchor": "scene-kit" }],
+      "background": [
+        { "path": "docs/og-images.md", "anchor": "5-stablecoin-cemetery-card-publicog-cemeterypng" },
+        { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }
+      ],
+      "checks": [
+        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts src/lib/__tests__/cemetery-scene-golden.test.ts scripts/__tests__/scene-atlas.test.ts scripts/__tests__/scene-og.test.ts",
+        "npm run check:generated-artifacts -- --only=cemetery-logo-atlas,og-cemetery"
+      ],
+      "rules": [
+        "The Cemetery must stay byte-identical: never re-pin cemetery-scene-golden hashes to absorb a kit refactor.",
+        "Geometry stays pure and colour-free; every transition or animation reads a --scene-dur-* token."
+      ]
+    },
+    {
       "id": "stablecoin-registry",
       "label": "Stablecoin data and research sidecars",
       "risk": "high",
@@ -164,10 +187,12 @@
         "src/app/dependency-map/**",
         "src/components/contagion-graph*",
         "src/components/contagion-graph/**",
-        "src/components/dependency-map-mobile-summary.tsx",
+        "src/components/dependency-map-basin-list.tsx",
+        "src/components/dependency-watershed/**",
+        "src/lib/dependency-watershed/**",
         "src/hooks/use-contagion-graph-drag.ts",
         "src/lib/contagion-layout.ts",
-        "src/lib/dependency-hubs-model.ts",
+        "shared/lib/dependency-hubs-model.ts",
         "src/lib/shared-failure-domains-model.ts",
         "src/hooks/use-dependency-graph.ts",
         "src/hooks/use-dependency-exposure-mode.ts",
@@ -258,7 +283,7 @@
       "id": "homepage",
       "label": "Homepage contract",
       "risk": "medium",
-      "sources": ["src/app/page.tsx", "src/components/home-*", "src/components/homepage-*", "src/lib/homepage-*", "docs/homepage.md"],
+      "sources": ["src/app/page.tsx", "src/components/home-*", "src/components/homepage-*", "src/lib/homepage-*", "shared/lib/homepage-*", "docs/homepage.md"],
       "docs": [{ "path": "docs/homepage.md", "anchor": "top-fold-contract" }, { "path": "docs/homepage.md", "anchor": "query-and-state-model" }],
       "rules": ["Preserve the homepage cohort, availability, and server-to-live handoff contracts."]
     },
@@ -804,6 +829,7 @@
         "next.config.ts",
         "eslint.config.mjs",
         "eslint.typed.config.mjs",
+        "eslint-suppressions.json",
         "playwright.config.ts",
         "playwright.ops.config.ts",
         "postcss.config.mjs",
@@ -917,6 +943,9 @@
       "sources": [
         "src/**",
         "shared/lib/public-docs.ts",
+        "shared/lib/og-route-cards.ts",
+        "shared/lib/og-route-glyphs.ts",
+        "scripts/maintenance/build-og-route-timeless.ts",
         "next.config.ts",
         "docs/alt-pegs-page.md",
         "docs/api-page.md",

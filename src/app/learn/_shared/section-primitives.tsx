@@ -15,7 +15,7 @@ export function SectionKicker({
   children: ReactNode;
   className?: string;
 }) {
-  return <p className={cn("pharos-kicker", className)}>{children}</p>;
+  return <p className={cn("pharos-label", className)}>{children}</p>;
 }
 
 export function SectionHeading({
@@ -55,10 +55,10 @@ export function NumberedListSection({
             key={typeof item === "string" ? item : i}
             className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[3rem_minmax(0,1fr)] sm:gap-6"
           >
-            <span className="font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+            <span className="pharos-numeric text-xs font-semibold text-muted-foreground">
               {String(i + 1).padStart(2, "0")}
             </span>
-            <p className="text-[15px] leading-relaxed text-foreground">
+            <p className="text-base leading-relaxed text-foreground">
               {item}
             </p>
           </li>
@@ -83,7 +83,7 @@ export function CrossLinksFooter({
           <li key={link.href}>
             <Link
               href={link.href}
-              className="pharos-focus-ring group flex items-start justify-between gap-3 border-b border-border/40 py-3 text-[15px] leading-snug text-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
+              className="pharos-focus-ring group flex items-start justify-between gap-3 border-b border-border/40 py-3 text-sm leading-snug text-foreground transition-colors hover:border-frost-blue/60 hover:text-frost-blue"
             >
               <span>{link.label}</span>
               <ArrowUpRight

@@ -204,7 +204,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             {freshness ? <YieldFreshnessLabel freshness={freshness} /> : null}
           </div>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-            <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium", view.dataSourceMeta.badge)}>
+            <span className={cn("rounded-full border px-2 py-0.5 text-3xs font-medium", view.dataSourceMeta.badge)}>
               {view.dataSourceMeta.label}
             </span>
             {venue ? <span>{YIELD_SOURCE_FACT_LABELS.venue}: {venue}</span> : null}
@@ -235,7 +235,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             {view.warningSignals.map((signal) => (
               <span
                 key={signal}
-                className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}
+                className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}
               >
                 <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                 {formatYieldWarningSignal(signal)}
@@ -265,7 +265,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               <span
                 aria-label={formatYieldBenchmarkSpread(excessYield, benchmarkHurdleLabel, view.benchmarkRate)}
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums",
+                  "rounded-full px-1.5 py-0.5 font-mono text-3xs tabular-nums",
                   excessWithinDisplayPrecision
                     ? "bg-muted text-muted-foreground"
                     : excessYield >= 0
@@ -277,13 +277,13 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
               </span>
             ) : null}
           </div>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
+          <p className="mt-0.5 text-2xs text-muted-foreground">
             30d trailing · Current {formatPercent(view.ranking.currentApy)}
             {view.benchmarkSubtitle ? ` · ${view.benchmarkSubtitle}` : ""}
           </p>
         </StatTile>
         <StatTile label={<MethodologyLabel topic="pys">PYS</MethodologyLabel>} variant="yield">
-          {qualificationLabel ? <span className="rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground">{qualificationLabel}</span> : null}
+          {qualificationLabel ? <span className="rounded-full border px-2 py-0.5 text-3xs text-muted-foreground">{qualificationLabel}</span> : null}
           <PysBreakdown
             mode="inline"
             score={view.ranking.pharosYieldScore}
@@ -305,7 +305,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             scalingFactor={view.pysBreakdown.scalingFactor}
           />
           {view.ranking.provenance?.usedDefaultSafety ? (
-            <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">Default safety inputs</p>
+            <p className="mt-0.5 text-2xs text-amber-700 dark:text-amber-300">Default safety inputs</p>
           ) : null}
         </StatTile>
         <StatTile
@@ -378,7 +378,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         aria-label="More yield analysis"
         className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground"
       >
-        <span className="font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">More on yield</span>
+        <span className="pharos-label">More on yield</span>
         <span aria-hidden="true" className="text-muted-foreground/40">
           ·
         </span>
@@ -447,11 +447,11 @@ export function YieldChangeAttributionCard({ attribution }: { attribution: Yield
   return (
     <div className={cn("rounded-xl border px-4 py-3", tone.wrapper)}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <p className={cn("text-xs font-semibold uppercase tracking-[0.12em]", tone.kicker)}>Why this APY changed</p>
+        <p className={cn("pharos-label", tone.kicker)}>Why this APY changed</p>
         <span aria-hidden="true" className="text-muted-foreground/40">
           ·
         </span>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span className="pharos-label">
           {attribution.confidence} confidence
         </span>
         <MethodologyHint topic="pys" />
@@ -532,7 +532,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
   if (attribution === undefined) {
     return (
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <p className="pharos-label">
           Movement vs last publication
         </p>
         <p className="mt-1.5 text-sm text-muted-foreground">
@@ -544,7 +544,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
   if (allZero) {
     return (
       <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <p className="pharos-label">
           Movement vs last publication
         </p>
         <p className="mt-1.5 text-sm text-muted-foreground">Stable — no movement since last publication.</p>
@@ -573,7 +573,7 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
 
   return (
     <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <p className="pharos-label">
         Movement vs last publication
       </p>
       <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">

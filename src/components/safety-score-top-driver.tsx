@@ -4,7 +4,7 @@ import type { SafetyScoreV9TopDriver } from "@shared/lib/safety-score-v9/public"
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 
 const CHIP_CLASS =
-  "pharos-focus-ring inline-flex max-w-full items-center rounded-full border border-border/60 bg-muted/20 px-2 py-1 text-[10px] leading-none text-muted-foreground hover:border-border hover:text-foreground";
+  "pharos-focus-ring inline-flex max-w-full items-center rounded-full border border-border/60 bg-muted/20 px-2 py-1 text-3xs leading-none text-muted-foreground hover:border-border hover:text-foreground";
 
 const EVIDENCE_AGE_LABELS: Record<SafetyScoreV9TopDriver["evidenceFreshness"], string> = {
   current: "current",

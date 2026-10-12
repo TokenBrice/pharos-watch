@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
 import { SafetyScoreDataCoverage } from "@/components/safety-scores/data-coverage-module";
-import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
+import { ReferenceTable } from "@/components/reference-table";
+import { TableCell, TableHead, TableRow } from "@/components/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import { COVERAGE_FEATURES } from "@/lib/coverage";
 import {
   AUTHORITATIVE_ACCENT,
@@ -25,7 +24,8 @@ import { CoverageMobileCard } from "@/components/coverage/coverage-mobile-card";
 import type { useCoveragePageModel } from "@/hooks/use-coverage-page-model";
 
 type CoveragePageModel = ReturnType<typeof useCoveragePageModel>;
-const MOBILE_COVERAGE_BATCH_SIZE = 24;
+// Mobile cards run ~250px each, so a page stays near one long scroll on phones.
+const COVERAGE_PAGE_SIZE = 20;
 
 export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "error" }) {
   const isError = state === "error";
@@ -33,7 +33,7 @@ export function CoverageMatrixDataStateCard({ state }: { state: "loading" | "err
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-2">
-        <p className="pharos-kicker">Coverage Matrix</p>
+        <p className="pharos-label">Coverage matrix</p>
         <CardTitle as="h2" className="text-xl">
           {isError ? "Coverage snapshot unavailable" : "Loading coverage snapshot"}
         </CardTitle>
@@ -79,39 +79,39 @@ export function CoverageFeatureSnapshotCard({
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-end">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <p className="pharos-kicker">Coverage Overview</p>
+              <p className="pharos-label">Coverage overview</p>
               <CardTitle as="h2" className="pharos-display text-2xl font-bold leading-tight tracking-tight">
                 Feature breadth by surface
               </CardTitle>
             </div>
             <div className="flex flex-wrap items-end gap-x-6 gap-y-3 border-t border-border/40 pt-3">
               <div className="min-w-0">
-                <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+                <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
                   {activeCoinTotal}
                 </p>
-                <p className="mt-1.5 pharos-kicker">
+                <p className="mt-1.5 pharos-label">
                   active coins tracked
                 </p>
               </div>
               <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 pb-0.5">
                 <div className="flex items-baseline gap-1.5">
-                  <dt className="pharos-kicker">
+                  <dt className="pharos-label">
                     Avg. reach
                   </dt>
-                  <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
+                  <dd className="pharos-numeric text-sm font-semibold leading-none text-foreground">
                     {averageCoveragePct == null ? "n/a" : `${averageCoveragePct.toFixed(0)}%`}
                   </dd>
-                  <span className="text-[11px] text-muted-foreground">headline</span>
+                  <span className="text-2xs text-muted-foreground">headline</span>
                 </div>
                 <span aria-hidden="true" className="h-3 w-px bg-border/60" />
                 <div className="flex items-baseline gap-1.5">
-                  <dt className="pharos-kicker">
+                  <dt className="pharos-label">
                     Surfaces
                   </dt>
-                  <dd className="pharos-numeric text-[15px] font-semibold leading-none text-foreground">
+                  <dd className="pharos-numeric text-sm font-semibold leading-none text-foreground">
                     {featureSummaries.length}
                   </dd>
-                  <span className="text-[11px] text-muted-foreground">tracked</span>
+                  <span className="text-2xs text-muted-foreground">tracked</span>
                 </div>
               </dl>
             </div>
@@ -209,7 +209,7 @@ export function CoverageSafetyScoreDataCard({
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-1.5 pb-3">
-        <p className="pharos-kicker">Safety Score Coverage</p>
+        <p className="pharos-label">Safety Score coverage</p>
         <CardTitle as="h2" className="text-xl tracking-tight">
           Score input coverage
         </CardTitle>
@@ -235,7 +235,7 @@ export function CoveragePricingSourcesCard({
   return (
     <Card className="pharos-card-shell">
       <CardHeader className="space-y-2">
-        <p className="pharos-kicker">Pricing Sources</p>
+        <p className="pharos-label">Pricing sources</p>
         <CardTitle as="h2" className="text-xl tracking-tight">
           Where Pharos gets its prices
         </CardTitle>
@@ -253,7 +253,7 @@ export function CoveragePricingSourcesCard({
             >
               <span className="text-sm font-semibold text-foreground">{getPricingSourceLabel(source.name)}</span>
               <span className="pharos-numeric text-2xl font-semibold text-foreground">{source.count}</span>
-              <span className="text-[11px] text-muted-foreground">coins</span>
+              <span className="text-2xs text-muted-foreground">coins</span>
             </div>
           ))}
         </div>
@@ -261,10 +261,10 @@ export function CoveragePricingSourcesCard({
         {authoritativeSources.length > 0 ? (
           <div className={cn("space-y-3 rounded-xl border p-4", AUTHORITATIVE_ACCENT.container)}>
             <div className="flex items-center gap-2">
-              <p className="pharos-kicker">Authoritative Overrides</p>
+              <p className="pharos-label">Authoritative overrides</p>
               <span
                 className={cn(
-                  "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-3xs font-medium",
                   AUTHORITATIVE_ACCENT.badge,
                 )}
               >
@@ -287,7 +287,7 @@ export function CoveragePricingSourcesCard({
                     {getPricingSourceLabel(source.name)}
                   </span>
                   <span className="pharos-numeric text-2xl font-semibold text-foreground">{source.count}</span>
-                  <span className="text-[11px] text-muted-foreground">coins</span>
+                  <span className="text-2xs text-muted-foreground">coins</span>
                 </div>
               ))}
             </div>
@@ -316,7 +316,6 @@ export function CoverageMatrixCard(
     | "dataUpdatedAt"
   >,
 ) {
-  const isMobileLayout = useIsMobile(768);
   const filterGroups = getFilterGroups();
   const unavailableFeatureLabels = model.unavailableFeatures
     .map((key) => COVERAGE_FEATURES.find((feature) => feature.key === key)?.shortLabel ?? key)
@@ -327,7 +326,7 @@ export function CoverageMatrixCard(
       <CardHeader className="space-y-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="pharos-kicker">Coverage Matrix</p>
+            <p className="pharos-label">Coverage matrix</p>
             {model.dataUpdatedAt ? (
               <span className="text-xs text-muted-foreground">
                 Updated {new Date(model.dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -456,7 +455,7 @@ export function CoverageMatrixCard(
           <div className="space-y-5 border-t border-border/60 px-4 py-4">
             {getLegendGroups().map((group) => (
               <div key={group.label}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="pharos-label mb-2">
                   {group.label}
                 </p>
                 <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -504,122 +503,51 @@ export function CoverageMatrixCard(
             ) : null}
           </div>
         ) : (
-          <>
-            {isMobileLayout ? (
-              <CoverageMobileResults
-                key={`${model.filter}:${model.search}:${model.sort}`}
-                rows={model.filteredRows}
-                logos={model.logos}
-              />
-            ) : (
-              <TableFrame
-                tableId="coverage-matrix"
-                testId="coverage-matrix-table"
-                caption={`Per-coin feature availability across ${model.rows.length} active stablecoins.`}
-                captionClassName="sr-only"
-                chrome="bare"
-                density="compact"
-                className="hidden overflow-hidden rounded-xl border border-border/70 bg-background/30 md:block"
-                tableClassName="min-w-[64rem] table-fixed"
-                viewportClassName="overflow-auto"
-                viewportProps={{
-                  compactBottomPadding: false,
-                  horizontal: false,
-                  mobileScrollHint: false,
-                  overscrollX: false,
-                  scrollShadow: false,
-                }}
-              >
-                <TableHeader className="bg-muted/22 [&_tr]:border-border/70">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead
-                      scope="col"
-                      className="sticky left-0 z-20 h-11 w-[200px] bg-muted/22 px-4 text-sm font-medium text-foreground"
-                    >
-                      Stablecoin
-                    </TableHead>
-                    {COVERAGE_FEATURES.map((feature) => (
-                      <TableHead key={feature.key} scope="col" className="h-11 px-1 text-sm font-medium text-foreground">
-                        <span>{feature.shortLabel}</span>
-                        <span className="sr-only">
-                          : {feature.label}. {feature.description}
-                        </span>
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {model.filteredRows.map((row, index) => {
-                    const stripeClass = index % 2 === 0 ? "bg-background/10" : "bg-muted/6";
-
-                    return (
-                      <TableRow key={row.id} className={cn("group", stripeClass)}>
-                        <TableHead
-                          scope="row"
-                          className={cn(
-                            "sticky left-0 z-10 h-auto w-[200px] max-w-[200px] whitespace-normal px-4 py-3 text-left font-normal text-foreground group-hover:bg-muted/30",
-                            stripeClass,
-                          )}
-                        >
-                          <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
-                        </TableHead>
-                        {COVERAGE_FEATURES.map((feature) => (
-                          <TableCell key={feature.key} className="px-1 pb-2 pt-3 align-top">
-                            <CoverageBadge status={row.statuses[feature.key]} compact />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </TableFrame>
+          <ReferenceTable
+            tableId="coverage-matrix"
+            testId="coverage-matrix-table"
+            caption={`Per-coin feature availability across ${model.rows.length} active stablecoins.`}
+            rows={model.filteredRows}
+            totalCount={model.rows.length}
+            getRowKey={(row) => row.id}
+            noun="coins"
+            pageSize={COVERAGE_PAGE_SIZE}
+            resetKey={`${model.filter}:${model.search}:${model.sort}`}
+            tableClassName="table-fixed"
+            head={
+              <TableRow className="hover:bg-transparent">
+                <TableHead scope="col" className="h-11 w-[200px] px-4 text-sm font-medium text-foreground">
+                  Stablecoin
+                </TableHead>
+                {COVERAGE_FEATURES.map((feature) => (
+                  <TableHead key={feature.key} scope="col" className="h-11 px-1 text-sm font-medium text-foreground">
+                    <span>{feature.shortLabel}</span>
+                    <span className="sr-only">
+                      : {feature.label}. {feature.description}
+                    </span>
+                  </TableHead>
+                ))}
+              </TableRow>
+            }
+            renderRow={(row) => (
+              <TableRow className="group">
+                <TableHead
+                  scope="row"
+                  className="h-auto w-[200px] max-w-[200px] whitespace-normal px-4 py-2.5 text-left font-normal text-foreground"
+                >
+                  <CoverageCoinIdentity row={row} logoSrc={model.logos?.[row.id]} logoSize={24} linked />
+                </TableHead>
+                {COVERAGE_FEATURES.map((feature) => (
+                  <TableCell key={feature.key} className="px-1 py-2.5 align-middle">
+                    <CoverageBadge status={row.statuses[feature.key]} compact />
+                  </TableCell>
+                ))}
+              </TableRow>
             )}
-          </>
+            renderCard={(row) => <CoverageMobileCard row={row} logoSrc={model.logos?.[row.id]} />}
+          />
         )}
       </CardContent>
     </Card>
-  );
-}
-
-export function CoverageMobileResults({
-  rows,
-  logos,
-}: {
-  rows: CoveragePageModel["filteredRows"];
-  logos: CoveragePageModel["logos"];
-}) {
-  const [visibleCount, setVisibleCount] = useState(MOBILE_COVERAGE_BATCH_SIZE);
-  const visibleRows = rows.slice(0, visibleCount);
-  const hasMoreRows = visibleCount < rows.length;
-
-  return (
-    <div className="space-y-3 md:hidden">
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
-        <span aria-live="polite">
-          Showing {visibleRows.length} of {rows.length} matching coins
-        </span>
-        {visibleCount > MOBILE_COVERAGE_BATCH_SIZE ? (
-          <button
-            type="button"
-            onClick={() => setVisibleCount(MOBILE_COVERAGE_BATCH_SIZE)}
-            className="pharos-focus-ring inline-flex min-h-11 items-center rounded-full px-3 font-medium text-foreground hover:bg-accent"
-          >
-            Collapse
-          </button>
-        ) : null}
-      </div>
-      {visibleRows.map((row) => (
-        <CoverageMobileCard key={row.id} row={row} logoSrc={logos?.[row.id]} />
-      ))}
-      {hasMoreRows ? (
-        <button
-          type="button"
-          onClick={() => setVisibleCount((count) => Math.min(count + MOBILE_COVERAGE_BATCH_SIZE, rows.length))}
-          className="pharos-focus-ring flex min-h-11 w-full items-center justify-center rounded-xl border border-border/70 bg-background/55 px-4 py-3 text-sm font-medium text-foreground hover:bg-accent"
-        >
-          Show next {Math.min(MOBILE_COVERAGE_BATCH_SIZE, rows.length - visibleCount)} coins
-        </button>
-      ) : null}
-    </div>
   );
 }

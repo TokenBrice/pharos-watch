@@ -7,7 +7,7 @@ import {
   type FlowPressureReceiptRow,
 } from "@/lib/flow-pressure-receipt-model";
 import { formatCurrency, formatSignedCurrency, getNetColor } from "@shared/lib/format";
-import { formatMintBurnVolume } from "@/lib/mint-burn-valuation-display";
+import { formatMintBurnVolume } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import type {
   MintBurnCoinFlow,
@@ -61,11 +61,11 @@ function statusLabel(status: string): string {
 const RECEIPT_ROW_STYLES: Record<"default" | "compact", { container: string; label: string }> = {
   default: {
     container: "rounded-lg border border-border/60 bg-background/50 p-3",
-    label: "text-[11px] font-semibold uppercase tracking-wide text-muted-foreground",
+    label: "pharos-label",
   },
   compact: {
     container: "rounded-lg border border-border/60 bg-background/45 px-3 py-2.5",
-    label: "text-[10px] font-semibold uppercase tracking-wide text-muted-foreground",
+    label: "pharos-label",
   },
 };
 
@@ -127,7 +127,7 @@ export function FlowReceiptBand({
     >
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="pharos-kicker">Flow receipt</p>
+          <p className="pharos-label">Flow receipt</p>
           <h3
             id="flow-receipt-band-heading"
             className="flex items-center gap-2 text-base font-semibold"
@@ -146,7 +146,7 @@ export function FlowReceiptBand({
       <div className="border-t border-border/60 pt-3">
         <div className="flex flex-wrap items-start gap-x-6 gap-y-2 text-sm">
           <div className="min-w-[12rem]">
-            <p className="pharos-kicker">Scope</p>
+            <p className="pharos-label">Scope</p>
             <p className="mt-0.5 text-sm font-medium">{model.scopeLabel}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Observed configured-chain events, not market-wide supply creation or redemption.
@@ -174,7 +174,7 @@ export function FlowReceiptBand({
             {model.coverageRows.map((row) => (
               <span
                 key={row.status}
-                className="rounded-full border border-border/70 bg-muted/25 px-2 py-0.5 text-[11px] capitalize text-muted-foreground"
+                className="rounded-full border border-border/70 bg-muted/25 px-2 py-0.5 text-2xs capitalize text-muted-foreground"
               >
                 {statusLabel(row.status)} {row.count}
               </span>

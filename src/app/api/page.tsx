@@ -104,7 +104,7 @@ export default async function ApiPage() {
               aria-label="Developer resources"
               className="scroll-mt-20 space-y-3 border-t border-border/55 pt-6"
             >
-              <p className="pharos-kicker">Developer resources</p>
+              <p className="pharos-label">Developer resources</p>
               <ul className="flex flex-wrap gap-2">
                 {DEVELOPER_RESOURCES.map((resource) => (
                   <li key={resource.href}>

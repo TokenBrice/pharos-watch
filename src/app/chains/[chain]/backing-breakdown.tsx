@@ -22,7 +22,7 @@ export function BackingBreakdown({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="pharos-kicker">Supply by Backing Type</CardTitle>
+        <CardTitle className="pharos-label">Supply by backing type</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div

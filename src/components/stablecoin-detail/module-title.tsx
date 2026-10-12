@@ -1,28 +1,15 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 
-interface StablecoinDetailIdentity {
-  symbol: string;
-  logoSrc: string | undefined;
-}
-
-const StablecoinDetailIdentityContext = createContext<StablecoinDetailIdentity | null>(null);
-
-export function StablecoinDetailIdentityProvider({
-  children,
-  symbol,
-  logoSrc,
-}: StablecoinDetailIdentity & { children: ReactNode }) {
-  return (
-    <StablecoinDetailIdentityContext.Provider value={{ symbol, logoSrc }}>
-      {children}
-    </StablecoinDetailIdentityContext.Provider>
-  );
-}
-
+/**
+ * A detail-page module title. Module headers carry no coin prefix by default:
+ * the dossier header already names the coin, and repeating "USDT ·" on every
+ * card was noise. A caller that is screenshotted out of context (the Safety
+ * Score card) passes `symbol` explicitly to keep its subject in frame.
+ */
 export function StablecoinModuleTitle({
   children,
   as = "h2",
@@ -38,17 +25,13 @@ export function StablecoinModuleTitle({
   symbol?: string | null;
   logoSrc?: string;
 }) {
-  const contextIdentity = useContext(StablecoinDetailIdentityContext);
-  const resolvedSymbol = symbol ?? contextIdentity?.symbol;
-  const resolvedLogoSrc = logoSrc ?? contextIdentity?.logoSrc;
-
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
-      {resolvedSymbol ? (
+      {symbol ? (
         <>
-          <StablecoinLogo src={resolvedLogoSrc} name={resolvedSymbol} size={26} />
+          <StablecoinLogo src={logoSrc} name={symbol} size={26} />
           <span className="shrink-0 text-sm font-semibold text-foreground">
-            {resolvedSymbol}
+            {symbol}
           </span>
           <span className="text-muted-foreground/50" aria-hidden="true">
             ·

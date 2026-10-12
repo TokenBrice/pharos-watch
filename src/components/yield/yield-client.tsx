@@ -14,6 +14,7 @@ import { YieldLeaderboardControls } from "@/components/yield-leaderboard-control
 import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
+import { UniverseChip } from "@/components/universe-chip";
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
@@ -27,6 +28,7 @@ import {
   prepareYieldUniverse,
   RISK_BUDGET_FILTER_KEYS,
   riskBudgetUrlValue,
+  selectTopPysRows,
   selectVisibleYieldRows,
   YIELD_LANDING_RISK_BUDGET,
   YIELD_PRESET_SPECS,
@@ -36,6 +38,7 @@ import {
   type YieldViewModel,
   type YieldViewModelRow,
 } from "@/lib/yield-view-model";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_ZONE_LABELS } from "@shared/lib/classification";
 import { resolveYieldZone } from "@/lib/yield-scatter";
@@ -86,7 +89,7 @@ function HeroPysPodium({ rows, logos, onSelect }: HeroPysPodiumProps) {
           aria-label={`Best Pharos Yield Score: ${winner.name} (${winner.symbol}), PYS ${winner.pharosYieldScore.toFixed(1)}`}
           title={`${winner.symbol} · PYS ${winner.pharosYieldScore.toFixed(1)}`}
           onClick={() => onSelect(winner.id)}
-          className="pharos-focus-ring flex shrink-0 flex-col items-center gap-1 rounded-md px-1 py-1 text-[9px] font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground sm:hidden"
+          className="pharos-focus-ring flex shrink-0 flex-col items-center gap-1 rounded-md px-1 py-1 text-3xs font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground sm:hidden"
         >
           <StablecoinLogo src={getLogoSrc(logos, winner.id)} name={winner.name} size={44} />
           <span className="max-w-12 truncate">{winner.symbol}</span>
@@ -108,13 +111,13 @@ function HeroPysPodium({ rows, logos, onSelect }: HeroPysPodiumProps) {
               aria-label={`Rank ${place.rank}: ${row.name} (${row.symbol}), PYS ${row.pharosYieldScore.toFixed(1)}`}
               title={`${row.symbol} · PYS ${row.pharosYieldScore.toFixed(1)}`}
               onClick={() => onSelect(row.id)}
-              className={`pharos-focus-ring ${place.orderClass} group/podium flex min-w-11 flex-col items-center gap-1 rounded-md px-0.5 py-1 text-[10px] font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground`}
+              className={`pharos-focus-ring ${place.orderClass} group/podium flex min-w-11 flex-col items-center gap-1 rounded-md px-0.5 py-1 text-3xs font-medium leading-none text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground`}
             >
               <span className="relative">
                 <StablecoinLogo src={getLogoSrc(logos, row.id)} name={row.name} size={place.logoSize} />
                 <span
                   aria-hidden="true"
-                  className="absolute -bottom-1 -right-1 inline-flex size-5 items-center justify-center rounded-full border border-border bg-background font-mono text-[10px] font-bold text-foreground"
+                  className="absolute -bottom-1 -right-1 inline-flex size-5 items-center justify-center rounded-full border border-border bg-background font-mono text-3xs font-bold text-foreground"
                 >
                   {place.rank}
                 </span>
@@ -140,14 +143,14 @@ function HeroHighlightRow({ label, logoSrc, name, symbol, value, unit, context, 
       <span className="flex min-w-0 items-center gap-2">
         <StablecoinLogo src={logoSrc} name={name} size={18} />
         <span className="min-w-0">
-          <span className="block truncate text-[11px] uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
+          <span className="block truncate pharos-label">{label}</span>
           <span className="block truncate text-sm font-semibold text-foreground">{symbol}</span>
-          <span className="block truncate text-[11px] text-muted-foreground">{context}</span>
+          <span className="block truncate text-2xs text-muted-foreground">{context}</span>
         </span>
       </span>
       <span className="shrink-0 text-right">
         <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
-        <span className="ml-1 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{unit}</span>
+        <span className="ml-1 pharos-label">{unit}</span>
       </span>
     </button>
   );
@@ -240,7 +243,7 @@ function YieldEmptyStateNotice({
               className="pharos-focus-ring pharos-control-pill gap-1.5"
             >
               <span>{suggestion.label}</span>
-              <span className="font-mono text-[10px] tabular-nums text-muted-foreground">+{suggestion.gain}</span>
+              <span className="font-mono text-3xs tabular-nums text-muted-foreground">+{suggestion.gain}</span>
             </button>
           ))}
         </div>
@@ -297,15 +300,10 @@ export function YieldClient() {
   const lastZeroResultSignature = useRef<string | null>(null);
   const exposedWarningCodes = useRef(new Set<string>());
 
-  // The hero beam ("One Beam" frost figure) is the headline APY of the best
+  // The hero KPI is the headline APY of the best
   // risk-adjusted opportunity in the current view — the row with the highest
   // Pharos Yield Score, not the highest raw APY.
-  const topPysRows = useMemo<YieldViewModelRow[]>(() => {
-    return visibleRows
-      .filter((row) => row.pharosYieldScore != null)
-      .sort((a, b) => (b.pharosYieldScore ?? 0) - (a.pharosYieldScore ?? 0))
-      .slice(0, 3);
-  }, [visibleRows]);
+  const topPysRows = useMemo<YieldViewModelRow[]>(() => selectTopPysRows(visibleRows), [visibleRows]);
   const topPysRow = topPysRows[0] ?? null;
 
   const handleScrollToRow = useCallback((id: string) => {
@@ -516,7 +514,7 @@ export function YieldClient() {
                   <span className="block">
                     Best-paid risk in view <span className="text-foreground/70">· {topPysRow.symbol}</span>
                   </span>
-                  <span className="block text-[11px] font-normal text-muted-foreground">
+                  <span className="block text-2xs font-normal text-muted-foreground">
                     {formatHeroRiskContext(topPysRow, data.riskFreeRate, heroBenchmarks)}
                   </span>
                 </span>
@@ -527,7 +525,9 @@ export function YieldClient() {
             beamValue={
               topPysRow ? (
                 <span className="flex w-full items-end justify-between gap-2">
-                  <span>{formatPercent(topPysRow.apy30d)}</span>
+                  <RailHeroFigureTransition rail="yield">
+                    <span>{formatPercent(topPysRow.apy30d)}</span>
+                  </RailHeroFigureTransition>
                   <HeroPysPodium rows={topPysRows} logos={logos} onSelect={handleScrollToRow} />
                 </span>
               ) : (
@@ -538,6 +538,12 @@ export function YieldClient() {
               topPysRow && topPysRow.pharosYieldScore != null
                 ? `Best Pharos Yield Score in view: ${topPysRow.pharosYieldScore.toFixed(1)} — highest yield per unit of risk, not the safest coin`
                 : undefined
+            }
+            universe={
+              <UniverseChip
+                universe="yieldRows"
+                value={`${visibleRows.length} in view of ${viewModel.totalRows}`}
+              />
             }
             expand={{ href: "#data", label: "Jump to the full yield leaderboard" }}
             subKicker="This week's leaders"
@@ -581,7 +587,7 @@ export function YieldClient() {
                     />
                   ) : null}
                   {exhibitTiles.unmeasuredTvlCount > 0 ? (
-                    <p className="px-4 py-2 text-[11px] leading-snug text-muted-foreground">
+                    <p className="px-4 py-2 text-2xs leading-snug text-muted-foreground">
                       {exhibitTiles.unmeasuredTvlCount} of {visibleRows.length} rows publish no source TVL and are
                       not eligible for this tile.
                     </p>
@@ -594,7 +600,7 @@ export function YieldClient() {
           >
             {visibleRows.length > 0 ? (
               <div>
-                <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-2 text-2xs text-muted-foreground">
                   <span>X: Safety score · Y: APY · outliers are capped</span>
                   <a
                     href="#data"

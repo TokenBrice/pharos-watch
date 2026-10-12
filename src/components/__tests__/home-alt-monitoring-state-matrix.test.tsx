@@ -213,8 +213,8 @@ const SURFACES: SurfaceCase[] = [
         queryFor<Record<string, unknown>>(state, psiReady, { current: null, history: [] }),
       );
     },
-    emptyText: /90D/,
-    readyText: "40.00",
+    emptyText: /90d/,
+    readyText: "39.0",
   },
   {
     Component: MintBurnCard,
@@ -237,9 +237,10 @@ const SURFACES: SurfaceCase[] = [
     configure(state) {
       useBlacklistEventsPageMock.mockReturnValue(queryFor(state, freezesReady, { events: [] }));
       useBlacklistSummaryMock.mockReturnValue(queryFor(state, freezeSummaryReady, freezeSummaryEmpty));
+      useStablecoinsMock.mockReturnValue(queryFor(state, stablecoinReady, { peggedAssets: [] }));
     },
     emptyText: "$0",
-    emptyExtraText: "0X",
+    emptyExtraText: "0 freezes",
     readyText: "$1K",
   },
   {
@@ -313,6 +314,32 @@ describe.each(SURFACES)(
 );
 
 describe("RecentFreezesCard authoritative totals", () => {
+  it("labels the row order and never rounds a sub-dollar freeze to $0", () => {
+    const nowSec = Math.floor(UPDATED_AT / 1000);
+    useBlacklistEventsPageMock.mockReturnValue(queryFor("ready", {
+      events: [
+        { amountUsdAtEvent: 0.4, eventType: "blacklist", id: "dust", stablecoin: "USDT", stablecoinId: "usdt-tether", timestamp: nowSec - 60 },
+        { amountUsdAtEvent: 3_000_000, eventType: "blacklist", id: "big", stablecoin: "USDT", stablecoinId: "usdt-tether", timestamp: nowSec - 120 },
+      ],
+    }, { events: [] }));
+    useBlacklistSummaryMock.mockReturnValue(queryFor("ready", {
+      stats: {
+        recentFreezeCount24h: 2,
+        recentFreezeCount7d: 2,
+        recentFreezeAmount24hUsd: 3_000_000.4,
+        recentFreezeAmount7dUsd: 3_000_000.4,
+        valuationCoverage: { recent24h: { knownCount: 2, unavailableCount: 0 }, recent7d: { knownCount: 2, unavailableCount: 0 } },
+      },
+    }, freezeSummaryEmpty));
+
+    render(<RecentFreezesCard />);
+
+    expect(screen.getByRole("list", { name: "Latest valued freezes, newest first" })).toBeTruthy();
+    expect(screen.getByText("<$1")).toBeTruthy();
+    expect(screen.queryByText("$0")).toBeNull();
+    expect(screen.getByText("2 freezes")).toBeTruthy();
+  });
+
   it("uses freeze-only summary windows when a release and later freezes saturate the 200-row page", () => {
     const pageEvents = [
       {
@@ -352,12 +379,12 @@ describe("RecentFreezesCard authoritative totals", () => {
     render(<RecentFreezesCard />);
 
     expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(expect.objectContaining({ limit: 200 }));
-    expect(screen.getByText("200X")).toBeTruthy();
+    expect(screen.getByText("200 freezes")).toBeTruthy();
     expect(screen.getByText("$123K")).toBeTruthy();
-    expect(screen.queryByText("199X")).toBeNull();
+    expect(screen.queryByText("199 freezes")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "7d" }));
-    expect(screen.getByText("350X")).toBeTruthy();
+    expect(screen.getByText("350 freezes")).toBeTruthy();
     expect(screen.getByText("$457K")).toBeTruthy();
   });
 });

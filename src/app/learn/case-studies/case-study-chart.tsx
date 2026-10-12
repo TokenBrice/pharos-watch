@@ -40,7 +40,7 @@ export function CaseStudyChart({
           embedded
         />
       )}
-      <figcaption className="border-t border-border/40 px-4 py-3 text-[13px] leading-relaxed text-muted-foreground sm:px-6">
+      <figcaption className="border-t border-border/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground sm:px-6">
         {widget.caption}
       </figcaption>
     </figure>

@@ -1,0 +1,290 @@
+/*
+ * PSI beacon: the beam is a ruler on the sea. The kit (scene-tokens.module.css) owns the
+ * sea and lighthouse materials; tokens here are the beacon's own instrument inks (rings,
+ * fog, ticks). The only data colour is the band hue, passed in as --beam.
+ * Fully static: no idle motion and no transitions, so reduced motion needs no override.
+ */
+.tokens {
+  --halo-0: 0.16;
+  --halo-1: 0.03;
+  --ring: oklch(0.35 0.012 250 / 0.42);
+  --ring-label: oklch(0.42 0.012 250);
+  --zone-label: oklch(0.45 0.01 250);
+  --axis: oklch(0.35 0.012 250 / 0.3);
+  --fog: oklch(0.4 0.015 255);
+  --fog-fill: oklch(0.4 0.015 255 / 0.16);
+  --drag: oklch(0.6 0.008 255);
+  --unknown: oklch(0.45 0.01 255);
+  --tick: oklch(0.25 0.012 250);
+  --plate-ink: oklch(0.25 0.012 250);
+  --plate-muted: oklch(0.45 0.01 250);
+  --cone: color-mix(in oklab, var(--beam, transparent) 22%, transparent);
+  --glass-dark: oklch(0.82 0.008 250);
+}
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  min-height: 0;
+}
+
+:global(.dark) .tokens {
+  --halo-0: 0.28;
+  --halo-1: 0.08;
+  --ring: oklch(0.82 0.01 250 / 0.38);
+  --ring-label: oklch(0.78 0.01 250);
+  --zone-label: oklch(0.72 0.01 250);
+  --axis: oklch(0.85 0.01 250 / 0.25);
+  --fog: oklch(0.78 0.01 255);
+  --fog-fill: oklch(0.78 0.01 255 / 0.14);
+  --drag: oklch(0.6 0.008 255);
+  --unknown: oklch(0.75 0.01 255);
+  --tick: oklch(0.92 0.006 250);
+  --plate-ink: oklch(0.93 0.006 250);
+  --plate-muted: oklch(0.74 0.01 250);
+  --cone: color-mix(in oklab, var(--beam, transparent) 26%, transparent);
+  --glass-dark: oklch(0.4 0.01 250);
+}
+
+.svg {
+  display: block;
+  border-radius: 0.5rem;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--ring);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+[data-state="unavailable"] > svg .ring,
+[data-state="loading"] > svg .ring {
+  stroke-dasharray: 2 3;
+  opacity: 0.6;
+}
+
+.ringLabel,
+.zoneLabel,
+.tickLabel,
+.plateValue {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.ringLabel {
+  fill: var(--ring-label);
+  font-size: 8.5px;
+  text-anchor: middle;
+}
+
+.zoneLabel {
+  fill: var(--zone-label);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.axis {
+  stroke: var(--axis);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Light, not a stroke: a lit cone (gradient fill attribute) cut crisply at the score by the tip edge. The legend
+   swatch uses the flat band hue. */
+.beamSwatch {
+  fill: var(--beam);
+}
+
+.beamStop0 {
+  stop-color: var(--beam);
+  stop-opacity: 1;
+}
+
+.beamStop1 {
+  stop-color: var(--beam);
+  stop-opacity: 0.62;
+}
+
+/* Light sheet from the lantern to the lit ruler: bright at the lamp, thinning toward the sea. */
+.sheet {
+  pointer-events: none;
+}
+
+.sheetStop0 {
+  stop-color: var(--beam);
+  stop-opacity: 0.36;
+}
+
+.sheetStop1 {
+  stop-color: var(--beam);
+  stop-opacity: 0.06;
+}
+
+.haloStop0 {
+  stop-color: var(--beam);
+  stop-opacity: var(--halo-0);
+}
+
+.haloStop1 {
+  stop-color: var(--beam);
+  stop-opacity: var(--halo-1);
+}
+
+.gain {
+  fill: var(--beam);
+  stroke: var(--tick);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.tip {
+  stroke: var(--tick);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+.tipDashed {
+  stroke-dasharray: 2 2;
+}
+
+.fog {
+  stroke: var(--fog);
+  stroke-width: 0.75px;
+  vector-effect: non-scaling-stroke;
+}
+
+.hatch {
+  stroke: var(--fog);
+  stroke-width: 0.9px;
+}
+
+.hatchBg {
+  fill: var(--fog-fill);
+}
+
+.drag {
+  stroke: var(--drag);
+  stroke-width: 0.75px;
+  vector-effect: non-scaling-stroke;
+}
+
+.dragHatch {
+  stroke: var(--drag);
+  stroke-width: 0.8px;
+}
+
+.unknown {
+  fill: none;
+  stroke: var(--unknown);
+  stroke-width: 1px;
+  stroke-dasharray: 1.5 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.unknownLabel {
+  fill: var(--unknown);
+  font-size: 9px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.tick {
+  stroke: var(--tick);
+  stroke-width: 1.25px;
+  vector-effect: non-scaling-stroke;
+}
+
+.tickLabel {
+  fill: var(--tick);
+  font-size: 8.5px;
+  text-anchor: middle;
+}
+
+.lamp {
+  fill: var(--beam);
+}
+
+.lampHalo {
+  fill: var(--cone);
+}
+
+.lampDark {
+  fill: var(--glass-dark);
+}
+
+.plateKicker {
+  fill: var(--plate-muted);
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 500;
+}
+
+.plateValue {
+  fill: var(--plate-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Retained: no hue anywhere. Beam, fog and lamp become outlines in the neutral band ink. */
+[data-paint="outline"] .beam,
+[data-paint="outline"] .beamSwatch,
+[data-paint="outline"] .gain {
+  fill: none;
+  stroke: var(--beam);
+  stroke-width: 1.25px;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+
+[data-paint="outline"] .fog,
+[data-paint="outline"] .drag {
+  fill: none;
+  stroke: var(--beam);
+}
+
+[data-paint="outline"] .lampHalo,
+[data-paint="outline"] .halo,
+[data-paint="outline"] .sheet {
+  fill: none;
+}
+
+/* Legend row: exact values for every mark, always visible. */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  padding: 0 0.5rem;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  color: var(--muted-foreground);
+  list-style: none;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.legendValue {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+.swatch {
+  display: block;
+  flex: none;
+}

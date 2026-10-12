@@ -408,7 +408,7 @@ describe("DexLiquidityCard", () => {
       expect(screen.getByText(/^Liquidity Score is not rated:/)).toBeTruthy();
       expect(screen.queryByText("No observed direct DEX market for this token in the current pipeline.")).toBeNull();
       // Valid components stay visible beside the NR activity bar (header pill + bar).
-      expect(screen.getByText("Score Breakdown")).toBeTruthy();
+      expect(screen.getByText("Score breakdown")).toBeTruthy();
       expect(screen.getAllByText("NR").length).toBeGreaterThanOrEqual(2);
     });
   });

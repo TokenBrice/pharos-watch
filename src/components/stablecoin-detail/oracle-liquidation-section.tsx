@@ -76,7 +76,7 @@ const BRANCH_TABLE_TRACKS_CLASS: Record<"share-ratio" | "share" | "ratio" | "non
   none: "@2xl/branches:grid-cols-[minmax(0,1fr)_auto]",
 };
 
-const SUBLABEL_CLASS = "text-[11px] font-medium uppercase leading-tight tracking-[0.12em] text-muted-foreground";
+const SUBLABEL_CLASS = "pharos-label leading-tight";
 /** `wrap-anywhere`: contract addresses in feed paths break instead of spilling on phones. */
 const DETAIL_LINE_CLASS = "text-xs leading-relaxed text-muted-foreground wrap-anywhere";
 /**
@@ -165,7 +165,7 @@ function renderOracleHeaderStatus(
   }
   if (summary.notApplicable) return null;
   return (
-    <Badge variant="outline" className={cn("text-[11px] font-medium", summary.tierToneClass)}>
+    <Badge variant="outline" className={cn("text-2xs font-medium", summary.tierToneClass)}>
       {summary.tierLabel}
     </Badge>
   );
@@ -263,7 +263,7 @@ function OracleBranchTable({
       <div className={cn("@2xl/branches:grid @2xl/branches:gap-x-6", tracks)}>
         <div
           aria-hidden="true"
-          className="hidden border-b border-border/60 pb-1.5 text-[11px] leading-tight text-muted-foreground @2xl/branches:col-span-full @2xl/branches:grid @2xl/branches:grid-cols-subgrid"
+          className="hidden border-b border-border/60 pb-1.5 text-2xs leading-tight text-muted-foreground @2xl/branches:col-span-full @2xl/branches:grid @2xl/branches:grid-cols-subgrid"
         >
           <span>Branch</span>
           <span>Pricing tier</span>
@@ -288,7 +288,7 @@ function OracleBranchTable({
                 <span className="col-span-2 col-start-1 row-start-2 @2xl/branches:col-auto @2xl/branches:row-auto">
                   <span
                     className={cn(
-                      "inline-flex w-fit items-center whitespace-nowrap rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-tight",
+                      "inline-flex w-fit items-center whitespace-nowrap rounded-md border px-1.5 py-0.5 text-2xs font-medium leading-tight",
                       BRANCH_TIER_TAG_CLASS[branch.tier],
                     )}
                   >
@@ -327,7 +327,7 @@ function OracleBranchTable({
                 ) : null}
                 {ratioLabel ? (
                   <span className="col-start-2 row-start-1 justify-self-end whitespace-nowrap text-right font-mono text-xs tabular-nums text-foreground @2xl/branches:col-auto @2xl/branches:row-auto">
-                    <span className="font-sans text-[11px] text-muted-foreground @2xl/branches:sr-only">{ratioLabel} </span>
+                    <span className="font-sans text-2xs text-muted-foreground @2xl/branches:sr-only">{ratioLabel} </span>
                     {ratio ?? (
                       <>
                         <span aria-hidden="true" className="text-muted-foreground">–</span>
@@ -525,7 +525,7 @@ export function OracleLiquidationSection({
     <div className={cn("space-y-2", READING_WIDTH_CLASS)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h4 className={SUBLABEL_CLASS}>{sharesMeasured ? "Debt by branch" : "Branches"}</h4>
-        <span className="text-[11px] leading-tight text-muted-foreground">
+        <span className="text-2xs leading-tight text-muted-foreground">
           {overflowBranches.length > 0
             ? `${sharesMeasured ? "Largest" : "First"} ${inlineBranches.length} of ${sortedBranches.length}`
             : `${sortedBranches.length} branches`}
@@ -569,7 +569,7 @@ export function OracleLiquidationSection({
         confidence ? (
           <Badge
             variant="outline"
-            className="border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground"
+            className="border-border/60 bg-muted/30 text-2xs font-medium text-muted-foreground"
           >
             {confidence === "Verified" ? <CircleCheck aria-hidden="true" /> : <CircleDashed aria-hidden="true" />}
             Confidence: {confidence}

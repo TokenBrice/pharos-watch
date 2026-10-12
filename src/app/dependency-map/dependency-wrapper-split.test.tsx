@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
-import { buildDependencyHubsModel, type DependencyHubsModel } from "@/lib/dependency-hubs-model";
-import { DependencyMapMobileSummary } from "@/components/dependency-map-mobile-summary";
+import { buildDependencyHubsModel, type DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
+import { DependencyMapBasinList } from "@/components/dependency-map-basin-list";
+import type { DependencyGraphResponse } from "@shared/types/dependency-graph";
 import { DependencyHero } from "./dependency-hero";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
 import { useDependencyExposureWorkspace } from "./dependency-exposure-workspace";
@@ -30,8 +31,13 @@ for (const surface of ["hero", "desktop", "mobile"] as const) {
     const model = buildDependencyHubsModel({ cards, edges, mcapMap: supplies });
     if (surface === "hero") render(<Hero model={model} edges={edges} />);
     else if (surface === "desktop") render(<DependencyHubsBoard model={model} />);
-    else render(<DependencyMapMobileSummary model={model} />);
-    return surface === "hero" ? screen.getByRole("region", { name: "Mapped direct exposure summary" }) : surface === "desktop" ? screen.getByRole("table") : screen.getByText("Largest mapped direct exposures").closest("section") ?? document.body;
+    else {
+      const nodes = cards.map(card => ({ id: card.id, grade: "A", ratingStatus: "rated", partialEvidence: null, score: 80, circulatingUsdAtEvaluation: supplies.get(card.id) ?? null, supplyAsOfSec: null, sharedBookId: null, roles: [], dependencyCoverageCount: null }));
+      const publication = { methodologyVersion: "9.98", publicationGenerationId: "g", asOfSec: 0, publicationStatus: "current", nodes, edges } as unknown as DependencyGraphResponse;
+      render(<DependencyMapBasinList model={model} publication={publication} labelOf={id => id} />);
+      fireEvent.click(screen.getByRole("button", { name: /^usds-sky/ }));
+    }
+    return surface === "hero" ? screen.getByRole("region", { name: "Mapped direct exposure summary" }) : surface === "desktop" ? screen.getByRole("table") : screen.getByRole("region", { name: "Upstream hubs" });
   }
   describe(`${surface} wrapper classification availability`, () => {
     it("keeps a v5 serial exposure visible without presenting missing classification as zero", () => {

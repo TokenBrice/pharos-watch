@@ -293,7 +293,7 @@ export function PegDeviationChart({
               {readout.bps} bps
             </span>
             <span
-              className="rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider"
+              className="rounded px-1.5 py-0.5 text-3xs uppercase"
               style={{
                 color: readout.bandCssColor,
                 backgroundColor: readout.isInBand ? "transparent" : `${readout.bandSvgColor}1a`,

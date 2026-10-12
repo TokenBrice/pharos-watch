@@ -34,7 +34,7 @@ export function ApiReferenceMobileNav({ sections, activeId, onNavigate }: ApiRef
       <Sheet open={open} onOpenChange={setOpen}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Section</p>
+            <p className="pharos-label">Section</p>
             <p className="text-sm font-semibold text-foreground">{getActiveLabel(sections, activeId)}</p>
           </div>
           <SheetTrigger asChild>

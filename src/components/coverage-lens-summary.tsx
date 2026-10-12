@@ -34,7 +34,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
   return (
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-        <p className="pharos-kicker">Current Lens</p>
+        <p className="pharos-label">Current lens</p>
         <p className="mt-1 text-sm text-foreground">{lensSummary}</p>
         <p className="mt-1 text-xs text-muted-foreground">
           Use this matrix to separate broad market coverage from niche or still-bootstrapping surfaces before you click
@@ -42,7 +42,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
         </p>
       </div>
       <div className="rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-        <p className="pharos-kicker">Market Share In View</p>
+        <p className="pharos-label">Market share in view</p>
         <p className="mt-1 text-sm text-foreground">
           <span className="pharos-numeric">{filteredMcapSharePct == null ? "n/a" : `${filteredMcapSharePct.toFixed(0)}%`}</span>{" "}
           of {totalCap.complete ? "active" : "known"} market cap

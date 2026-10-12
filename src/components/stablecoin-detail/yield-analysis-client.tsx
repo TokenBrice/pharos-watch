@@ -152,7 +152,7 @@ function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; curren
     <section className="pharos-card-shell px-4 py-3 sm:px-5" aria-labelledby="yield-peer-rail-title">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Peer rail</p>
+          <p className="pharos-label">Peer rail</p>
           <h2 id="yield-peer-rail-title" className="text-base font-semibold tracking-tight text-foreground">
             Nearby yield context
           </h2>
@@ -185,8 +185,8 @@ function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; curren
                   aria-label={`Compare ${row.symbol} with the current stablecoin on the yield leaderboard`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="pharos-numeric text-[11px] text-muted-foreground">#{item.rank}</span>
-                    <span className="text-[11px] font-medium text-muted-foreground">
+                    <span className="pharos-numeric text-2xs text-muted-foreground">#{item.rank}</span>
+                    <span className="text-2xs font-medium text-muted-foreground">
                       {YIELD_PEER_RELATION_LABELS[item.relation]}
                     </span>
                   </div>
@@ -198,19 +198,19 @@ function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; curren
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     <div>
-                      <span className="block text-[10px] uppercase tracking-[0.1em] text-muted-foreground">PYS</span>
+                      <span className="block pharos-label">PYS</span>
                       <span className="pharos-numeric text-sm font-semibold text-foreground">
                         {row.pharosYieldScore != null ? formatScore(row.pharosYieldScore) : "—"}
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="block text-[10px] uppercase tracking-[0.1em] text-muted-foreground">APY</span>
+                      <span className="block pharos-label">APY</span>
                       <span className="pharos-numeric text-sm font-semibold text-foreground">
                         {formatPercent(row.apy30d)}
                       </span>
                     </div>
                   </div>
-                  <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+                  <span className="mt-2 inline-flex items-center gap-1 text-2xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                     Compare
                     <ArrowLeftRight className="h-3 w-3" aria-hidden="true" />
                   </span>
@@ -260,7 +260,7 @@ function StablecoinYieldDetailHeader({
 
         {ranking && model ? (
           <div className="rounded-xl border border-border/60 bg-background/45 px-4 py-3 sm:min-w-[280px]">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="mb-2 pharos-label">
               Pharos Yield Score
             </p>
             <PysBreakdown

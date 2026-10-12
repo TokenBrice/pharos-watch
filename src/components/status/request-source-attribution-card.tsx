@@ -127,7 +127,7 @@ export function RequestSourceAttributionCard({
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="text-sm text-foreground">{formatLaneLabel(lane.lane)}</div>
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-2xs text-muted-foreground">
                           site {formatPercent(lane.siteSharePct, 1)} · external {formatPercent(lane.externalSharePct, 1)}
                         </div>
                       </div>
@@ -154,11 +154,11 @@ export function RequestSourceAttributionCard({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate font-mono tabular-nums text-xs text-foreground">{route.routePath}</div>
-                        <div className="text-[11px] text-muted-foreground">{route.routeKey}</div>
+                        <div className="text-2xs text-muted-foreground">{route.routeKey}</div>
                       </div>
                       <div className="text-right">
                         <div className="pharos-numeric text-sm text-foreground">{formatCompactCount(route.totalRequests)}</div>
-                        <div className="text-[11px] text-muted-foreground">ext {formatPercent(route.externalSharePct, 1)}</div>
+                        <div className="text-2xs text-muted-foreground">ext {formatPercent(route.externalSharePct, 1)}</div>
                       </div>
                     </div>
                     <ShareBar siteSharePct={route.siteSharePct} externalSharePct={route.externalSharePct} className="mt-2" />
@@ -177,7 +177,7 @@ export function RequestSourceAttributionCard({
               <div className="space-y-2">
                 {buckets.length > 0 ? buckets.slice(-8).map((bucket) => (
                   <div key={bucket.bucketStart} className="space-y-1">
-                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                    <div className="flex items-center justify-between gap-2 text-2xs">
                       <span className="pharos-numeric text-muted-foreground">{formatBucketLabel(bucket.bucketStart)}</span>
                       <span className="pharos-numeric text-foreground">{formatCompactCount(bucket.totalRequests)}</span>
                     </div>

@@ -77,7 +77,7 @@ function DetailBadge({
       id={id}
       title={title}
       variant="outline"
-      className={cn("border-border/60 bg-muted/30 text-[11px] font-medium text-muted-foreground", className)}
+      className={cn("border-border/60 bg-muted/30 text-2xs font-medium text-muted-foreground", className)}
     >
       {children}
     </Badge>
@@ -118,7 +118,7 @@ function ControlMeta({ label, value }: { label: string; value: string | null }) 
 
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+      <span className="pharos-label">{label}</span>
       <span className="text-xs text-foreground">{value}</span>
     </span>
   );
@@ -155,7 +155,7 @@ function MintIssuanceDiagnosticRow({ group }: { group: MintIssuanceDiagnosticGro
         <p className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
           <span
             className={cn(
-              "inline-flex items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-tight",
+              "inline-flex items-center rounded-md border px-1.5 py-0.5 text-2xs font-medium leading-tight",
               DIAGNOSTIC_STATUS_CHIP_CLASS[group.status],
             )}
           >
@@ -170,7 +170,7 @@ function MintIssuanceDiagnosticRow({ group }: { group: MintIssuanceDiagnosticGro
           {group.fields.map((field) => (
             <li
               key={field.label}
-              className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-background/70 px-1.5 py-0.5 text-[11px] text-muted-foreground"
+              className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-background/70 px-1.5 py-0.5 text-2xs text-muted-foreground"
             >
               {field.label}
               {showFieldCounts && field.count > 1 ? (
@@ -239,7 +239,7 @@ function MintIssuanceDiagnostics({
 
 function MintAuthorityControlRow({ control }: { control: MintAuthorityDetailControlViewModel }) {
   const locationClassName =
-    "max-w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 font-mono text-[11px] text-muted-foreground";
+    "max-w-full rounded-md border border-border/60 bg-background/70 px-2 py-1 font-mono text-2xs text-muted-foreground";
   // Setup only earns the meta slot when it adds detail beyond the authority type already shown in the subtitle.
   const setupValue = control.securitySetupLabel === control.authorityTypeLabel ? null : control.securitySetupLabel;
 
@@ -298,7 +298,7 @@ function MintAuthorityIncidentSources({
   if (sources.length === 0) return null;
 
   return (
-    <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 text-[11px]">
+    <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-1 text-2xs">
       {sources.map((source) => (
         <a
           key={`${source.label}:${source.url}`}

@@ -58,12 +58,7 @@ vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AreaChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Area: () => <div />,
-}));
-
-vi.mock("./psi-lighthouse-scene", () => ({
-  PsiLighthouseScene: ({ band, score }: { band: string; score: number }) => (
-    <div>{band} lighthouse scene {Math.round(score)}</div>
-  ),
+  YAxis: () => null,
 }));
 
 vi.mock("@/components/psi-history-chart", () => ({
@@ -157,7 +152,7 @@ describe("StabilityIndexClient", () => {
     expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
     expect(screen.getAllByText("rolling 24h avg").length).toBeGreaterThan(0);
     expect(screen.getAllByText("STEADY").length).toBeGreaterThan(0);
-    expect(screen.getByText("Top Contributors")).toBeTruthy();
+    expect(screen.getByText("Top contributors")).toBeTruthy();
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     const contributorsTable = screen.getByRole("table", {
       name: "Stablecoins currently contributing to PSI score reduction",
@@ -169,6 +164,29 @@ describe("StabilityIndexClient", () => {
     expect(contributorsShell.className).toContain("pharos-density-compact");
     expect(screen.getByText("Methodology")).toBeTruthy();
     expect(screen.getByText("score-chart-3")).toBeTruthy();
+  });
+
+  it("draws the beacon lit when the sample is fresh", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    stabilityState.data!.current!.computedAt = nowSec;
+    stabilityState.meta = { updatedAt: nowSec, ageSeconds: 0, status: "fresh" };
+    render(<StabilityIndexClient />);
+
+    const beacon = screen.getByTestId("psi-beacon");
+    expect(beacon.dataset.state).toBe("current");
+    expect(beacon.dataset.paint).toBe("lit");
+  });
+
+  it("draws a retained beacon without band hue when the sample is stale", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    stabilityState.data!.current!.computedAt = nowSec - 8 * 3600;
+    stabilityState.meta = { updatedAt: nowSec - 8 * 3600, ageSeconds: 8 * 3600, status: "stale" };
+    render(<StabilityIndexClient />);
+
+    const beacon = screen.getByTestId("psi-beacon");
+    expect(beacon.dataset.state).toBe("retained");
+    expect(beacon.dataset.paint).toBe("outline");
+    expect(beacon.querySelector("svg[role='img']")?.getAttribute("aria-label")).toMatch(/^Retained observation as of /);
   });
 
   it("shows the query error notice when the PSI detail query fails without data", () => {

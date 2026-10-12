@@ -31,15 +31,15 @@ export const METHODOLOGY_READING_STEPS = [
     description: "Model purpose and the core signal to scan first.",
   },
   {
-    label: "Quick Facts",
+    label: "Quick facts",
     description: "Cadence, score range, dependencies, and failure behavior.",
   },
   {
-    label: "Worked Examples",
+    label: "Worked examples",
     description: "Real inputs run through the same functions used in production.",
   },
   {
-    label: "Technical Notes",
+    label: "Technical notes",
     description: "Expanded formulas, caveats, and changelog links when you need them.",
   },
 ] as const;
@@ -122,7 +122,7 @@ export function MethodologyFacts({ facts }: { facts: Array<{ label: string; valu
     <div className="grid gap-3 sm:grid-cols-3">
       {facts.map((fact) => (
         <div key={fact.label} className="rounded-xl border border-border/60 bg-background/45 px-4 py-3">
-          <p className="pharos-kicker">{fact.label}</p>
+          <p className="pharos-label">{fact.label}</p>
           <p className={cn("mt-2 text-sm text-foreground", /^\d/.test(fact.value) && "pharos-numeric")}>
             {fact.value}
           </p>

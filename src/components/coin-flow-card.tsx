@@ -5,7 +5,7 @@ import { formatSignedCurrency, getNetPrefix } from "@shared/lib/format";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
 import { buildFlowSummaryNarrative, getFlowDirectionUi, getFlowPressureUi } from "@/lib/flow-signal-ui";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
-import type { MintBurnSignedNetView } from "@/lib/mint-burn-valuation-display";
+import type { MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 
 const PRESSURE_BAR_COLOR: Record<PressureShiftState, string> = {
@@ -70,7 +70,7 @@ export function CoinFlowCard({
         <span className="text-xs text-muted-foreground">vs 30D</span>
         <span
           className={cn(
-            "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+            "inline-flex rounded-full border px-2 py-0.5 text-3xs font-semibold",
             pressureUi.badgeClass,
           )}
           title={pressureUnavailableNote ?? undefined}
@@ -98,7 +98,7 @@ export function CoinFlowCard({
 
       {/* Pressure description */}
       {pressureDisplay != null && (
-        <p className="text-[10px] text-muted-foreground truncate">
+        <p className="text-3xs text-muted-foreground truncate">
           {buildFlowSummaryNarrative(netFlowDirection24h, pressureShiftState)}
         </p>
       )}

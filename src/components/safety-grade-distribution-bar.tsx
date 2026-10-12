@@ -26,7 +26,7 @@ export function SafetyGradeDistributionBar({
     <div className="pharos-chart-stage">
       <div className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
-          <p className="pharos-kicker">Grade distribution</p>
+          <p className="pharos-label">Grade distribution</p>
           <p className="pharos-numeric text-xs text-muted-foreground">
             {totalCards} {totalLabel}
           </p>
@@ -60,7 +60,7 @@ export function SafetyGradeDistributionBar({
                 className={cn("h-2 w-2 rounded-sm", getSafetyGradeMetadata(grade).sectionSwatchClassName)}
               />
               <span className="pharos-numeric text-sm font-bold text-foreground">{count}</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{grade}</span>
+              <span className="text-3xs font-semibold uppercase text-muted-foreground">{grade}</span>
             </li>
           ))}
         </ul>

@@ -24,12 +24,19 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
     import { createElement } from "react";
     import { renderPng } from ${JSON.stringify(resolve(root, "worker/src/api/og.tsx"))};
     import { CardFrame } from ${JSON.stringify(resolve(root, "worker/src/lib/og-templates/shared.tsx"))};
+    import { RouteCard } from ${JSON.stringify(resolve(root, "worker/src/lib/og-templates/route-card.tsx"))};
     export default {
-      async fetch() {
-        const image = await renderPng(createElement(CardFrame, {
-          title: "Pharos", lastUpdated: "Runtime smoke",
-          children: createElement("div", null, "Stablecoin analytics"),
-        }));
+      async fetch(request) {
+        const element = new URL(request.url).pathname === "/route"
+          ? createElement(RouteCard, {
+              cardKey: "flows", variant: "live",
+              data: { hero: "≥ $200.0M", context: "Runtime smoke", support: ["Printed $1", "Shredded $1"], stamp: "As of 12 Oct 2026, 14:05 UTC" },
+            })
+          : createElement(CardFrame, {
+              title: "Pharos", lastUpdated: "Runtime smoke",
+              children: createElement("div", null, "Stablecoin analytics"),
+            });
+        const image = await renderPng(element);
         return new Response(image, { headers: { "Content-Type": "image/png" } });
       },
     };
@@ -38,9 +45,10 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
       config, local: true, persist: false, logLevel: "error", port: 0,
       experimental: { disableExperimentalWarning: true, disableDevRegistry: true },
     });
-    // Two real GETs exercise both cold initialization and isolate reuse.
-    for (let i = 0; i < 2; i++) {
-      const response = await worker.fetch();
+    // Two real GETs exercise both cold initialization and isolate reuse; the
+    // third renders the route-card template through the same pipeline.
+    for (const path of ["/", "/", "/route"]) {
+      const response = await worker.fetch(path);
       expect(response.status).toBe(200);
       expect(response.headers.get("Content-Type")).toBe("image/png");
       const image = sharp(Buffer.from(await response.arrayBuffer()));

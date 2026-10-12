@@ -2,9 +2,9 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
-import type { MintBurnCoinFlow } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnGauge } from "@shared/types";
 import { FlowBrrrOverview } from "@/components/flow-brrr-overview";
-import { MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@/lib/mint-burn-valuation-display";
+import { MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@shared/lib/mint-burn-valuation-display";
 import { formatSignedCurrency } from "@shared/lib/format";
 
 vi.mock("@/components/flow-machine-scene", () => ({
@@ -42,5 +42,22 @@ describe("FlowBrrrOverview", () => {
       .find((node) => node.getAttribute("title") === MINT_BURN_COVERAGE_UNKNOWN_NOTE);
     expect(signedNet?.textContent).toContain(formatSignedCurrency(net));
     expect(signedNet?.textContent).toContain("*");
+  });
+
+  it("keeps a mild worsening calm and reserves the red tint for the STRESS/CRISIS bands", () => {
+    const gauge = (score: number, band: string) =>
+      ({ score, band, intensitySemantics: "signed-v2", flightToQuality: false, flightIntensity: null,
+        trackedCoins: 1, trackedMcapUsd: 1 }) as MintBurnGauge;
+    const mild = render(<FlowBrrrOverview gauge={gauge(-17, "CAUTIOUS")} coins={[legacyCoin(100)]} />);
+    expect(mild.container.querySelector("h3")?.className).toContain("text-foreground");
+    const panel = (root: HTMLElement) =>
+      root.querySelector('[aria-label="Mint and burn pressure gauges"]')?.firstElementChild?.className ?? "";
+    expect(screen.getByText("Pressure worsening").className).toContain("text-amber-700");
+    expect(panel(mild.container)).not.toContain("bg-red-500/10");
+    mild.unmount();
+    const crisis = render(<FlowBrrrOverview gauge={gauge(-80, "CRISIS")} coins={[legacyCoin(-100)]} />);
+    expect(crisis.container.querySelector("h3")?.className).toContain("text-foreground");
+    expect(screen.getByText("Pressure worsening").className).toContain("text-red-700");
+    expect(panel(crisis.container)).toContain("bg-red-500/10");
   });
 });

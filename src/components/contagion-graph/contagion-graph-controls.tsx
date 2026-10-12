@@ -79,7 +79,7 @@ export function ContagionGraphControls({
     <div className="grid gap-2 pt-1">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <div className="flex items-center gap-2">
-          <span className="pharos-kicker shrink-0">Focus</span>
+          <span className="pharos-label shrink-0">Focus</span>
           <div role="group" aria-label="Graph focus mode" className="flex flex-wrap gap-1.5">
             {FOCUS_OPTIONS.map((option) => (
               <ControlPill
@@ -95,7 +95,7 @@ export function ContagionGraphControls({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="pharos-kicker shrink-0">Type</span>
+          <span className="pharos-label shrink-0">Type</span>
           <div role="group" aria-label="Dependency type filter" className="flex flex-wrap gap-1.5">
             {DEPENDENCY_TYPE_FILTERS.map((filter) => (
               <ControlPill
@@ -111,7 +111,7 @@ export function ContagionGraphControls({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="pharos-kicker shrink-0">Limit</span>
+          <span className="pharos-label shrink-0">Limit</span>
           <ControlPillToggle
             className="flex flex-wrap gap-1.5"
             ariaLabel="Maximum nodes shown"
@@ -124,7 +124,7 @@ export function ContagionGraphControls({
         </div>
 
         <label className="flex items-center gap-2">
-          <span className="pharos-kicker shrink-0">Trace coin</span>
+          <span className="pharos-label shrink-0">Trace coin</span>
           <select
             className="pharos-focus-ring h-11 max-w-full rounded-full border border-[color:var(--control-pill-border)] bg-[color:var(--control-pill-bg)] px-3 text-xs font-medium text-foreground md:h-9"
             value={selectedNeighborhoodId ?? ""}
@@ -139,7 +139,7 @@ export function ContagionGraphControls({
         </label>
       </div>
 
-      <p className="text-[10px] leading-relaxed text-muted-foreground">
+      <p className="text-3xs leading-relaxed text-muted-foreground">
         Focus narrows the visible subgraph; type filters which dependency edges are drawn; limit caps how many top-mcap
         coins enter the map. Selecting a trace coin opens its neighborhood; clicking a node selects that target. Dragging pins its position.
       </p>

@@ -116,7 +116,7 @@ export function UptimeBar({
     <div className="pharos-card-shell space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="pharos-kicker">Status runway</div>
+          <div className="pharos-label">Status runway</div>
           <div className="mt-1 text-sm text-muted-foreground">Daily posture over the last {days} days.</div>
         </div>
         <div className="flex flex-wrap gap-2">

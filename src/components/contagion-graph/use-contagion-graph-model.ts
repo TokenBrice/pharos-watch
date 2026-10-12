@@ -29,7 +29,7 @@ import {
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { trackEvent } from "@/lib/analytics";
 import { NODE_LIMIT_OPTIONS } from "@/lib/contagion-layout";
-import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { HubExposure } from "@shared/lib/dependency-exposure";
 import { highlightedExposureEdges, type ExposureOverlay } from "./contagion-graph-exposure";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";

@@ -3,12 +3,12 @@ import { FaqSection } from "@/components/faq-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import content from "./content.json";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
 
 
 const DEPENDENCY_MAP_STATIC_SECTION = (
   <section className="pharos-card-shell px-4 py-4">
-    <p className="pharos-kicker">{content.lens.kicker}</p>
+    <p className="pharos-label">{content.lens.kicker}</p>
     <div className="mt-3 grid gap-3 text-sm leading-relaxed text-muted-foreground lg:grid-cols-3">
       <p>
         {content.lens.graph}
@@ -42,7 +42,7 @@ const route = createClientFeaturePage({
   metadata: {
     title: content.metadataTitle,
     description: content.description,
-    ogImage: `${SITE_URL}/og-dependency-map.png`,
+    ogImage: buildLiveRouteOgImageUrl("dependency-map"),
   },
   loadClient: () => import("./client").then((m) => ({ default: m.DependencyMapClient })),
   loading: <Skeleton className="h-[600px] w-full rounded-lg" />,
@@ -51,13 +51,17 @@ const route = createClientFeaturePage({
     title: content.title,
     leadParagraphs: [content.lead],
     headerSupplement: (
-      <p className="pharos-lead hidden sm:block">
+      <p className="pharos-lead hidden lg:block">
         {content.headerSupplement}
       </p>
     ),
   },
-  beforeClient: DEPENDENCY_MAP_STATIC_SECTION,
-  afterClient: <FaqSection items={content.faq} includeJsonLd />,
+  afterClient: (
+    <>
+      {DEPENDENCY_MAP_STATIC_SECTION}
+      <FaqSection items={content.faq} includeJsonLd />
+    </>
+  ),
 });
 
 export const metadata = route.metadata;

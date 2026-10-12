@@ -6,9 +6,10 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { buildBreakdownEntries, BreakdownBar, BreakdownLegend } from "@/components/liquidity-breakdown";
 import { useDexLiquidityHistory } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { ChartAreaGradient } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { formatCurrency, formatChartDate, getNetColor } from "@shared/lib/format";
-import { RECHARTS_TOOLTIP_STYLES, CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_BLUE } from "@/lib/chart-colors";
+import { CHART_AXIS_TICK, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
 import {
   PROTOCOL_COLORS,
   EXTRA_COLORS,
@@ -103,7 +104,7 @@ function BreakdownSection({
 }) {
   return (
     <div className="space-y-2">
-      <p className="pharos-kicker">{title}</p>
+      <p className="pharos-label">{title}</p>
       <BreakdownBar
         entries={entries}
         total={total}
@@ -172,7 +173,7 @@ export function TopPoolsTable({ pools, totalPoolCount }: { pools: DexLiquidityPo
 
   return (
     <div className="space-y-2">
-      <p className="pharos-kicker">
+      <p className="pharos-label">
         {totalPoolCount != null && totalPoolCount > displayed
           ? `Top ${displayed} of ${totalPoolCount} pools`
           : "Top Pools"}
@@ -331,11 +332,13 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
       liquidityEvidenceClass: p.liquidityEvidenceClass,
     }));
   }, [history]);
+  const tvlValues = useMemo(() => chartData.map((point) => point.tvl), [chartData]);
+  const valueAxis = useNiceValueAxis(tvlValues, { kind: "currency", count: 4 });
 
   if (isLoading) {
     return (
       <div className="space-y-2">
-        <p className="pharos-kicker">TVL History (90d)</p>
+        <p className="pharos-label">TVL history (90d)</p>
         <ChartSkeleton className="h-32" />
       </div>
     );
@@ -344,7 +347,7 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
   if (hasOnlyUnobservedHistory) {
     return (
       <div className="space-y-2">
-        <p className="pharos-kicker">TVL History (90d)</p>
+        <p className="pharos-label">TVL history (90d)</p>
         <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
           <p>Pharos tracked the last 90 days but found no direct-token DEX liquidity evidence for this asset.</p>
           <p className="mt-1">
@@ -361,7 +364,7 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <div className="space-y-2">
-      <p className="pharos-kicker">TVL History (90d)</p>
+      <p className="pharos-label">TVL history (90d)</p>
       <div ref={chartContainerRef} className="h-32" role="figure" aria-label="TVL trend chart">
         {isChartReady ? (
           <AreaChart width={width} height={height} data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
@@ -370,17 +373,19 @@ export function TvlTrendChart({ stablecoinId }: { stablecoinId: string }) {
             </defs>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               minTickGap={24}
             />
             <YAxis
-              tick={{ fontSize: 11, fontFamily: "var(--font-mono, monospace)", fill: "var(--color-muted-foreground)" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v: number) => formatCurrency(v)}
               width={56}
+              {...valueAxis}
+              interval={0}
             />
             <Tooltip
               {...RECHARTS_TOOLTIP_STYLES}
@@ -410,7 +415,7 @@ export function ScoreBreakdown({ components }: { components: DexLiquidityData["s
   }));
   return (
     <div className="space-y-2">
-      <p className="pharos-kicker">Score Breakdown</p>
+      <p className="pharos-label">Score breakdown</p>
       {bars.map(({ label, value, weight, tooltip }) => (
         <div key={label} className="flex items-center gap-2 text-xs">
           <span className="w-28 sm:w-36 text-muted-foreground shrink-0 cursor-help" title={tooltip}>

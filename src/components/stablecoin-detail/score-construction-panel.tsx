@@ -21,7 +21,7 @@ function WaterfallStep({ step }: { step: ScoreWaterfallStep }) {
         </p>
         <div className="flex shrink-0 items-baseline gap-2">
           {step.operator ? (
-            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{step.operator}</span>
+            <span className="font-mono text-2xs tabular-nums text-muted-foreground">{step.operator}</span>
           ) : null}
           <span
             className={cn(
@@ -34,7 +34,7 @@ function WaterfallStep({ step }: { step: ScoreWaterfallStep }) {
         </div>
       </div>
       {step.detail ? (
-        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{step.detail}</p>
+        <p className="mt-0.5 text-2xs leading-snug text-muted-foreground">{step.detail}</p>
       ) : null}
     </li>
   );
@@ -66,7 +66,7 @@ export function ScoreConstructionPanel({ card }: { card: ConstructionCard }) {
         </div>
         {adverseMessages.length > 0 ? (
           <div className="mt-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+            <p className="pharos-label">
               Measured and adverse
             </p>
             <SafetyScoreReasonList messages={adverseMessages} className="mt-1" />
@@ -74,7 +74,7 @@ export function ScoreConstructionPanel({ card }: { card: ConstructionCard }) {
         ) : null}
         {boundedGroups.map((group) => (
           <div key={group.key} className="mt-2.5">
-            <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{group.label}</p>
+            <p className="pharos-label">{group.label}</p>
             <SafetyScoreReasonList messages={group.messages} className="mt-1" />
           </div>
         ))}

@@ -42,4 +42,29 @@ describe("useThemeToggle", () => {
     act(() => result.current.toggleTheme());
     expect(setTheme).toHaveBeenLastCalledWith("light");
   });
+
+  it("cross-fades the theme swap through a view transition unless motion is reduced", () => {
+    themeState.resolvedTheme = "light";
+    let reduced = false;
+    const startViewTransition = vi.fn((update: () => void) => {
+      update();
+      return {};
+    });
+    Object.defineProperty(document, "startViewTransition", { configurable: true, value: startViewTransition });
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: reduced, media: query }) as MediaQueryList);
+    try {
+      const { result } = renderHook(() => useThemeToggle());
+      act(() => result.current.toggleTheme());
+      expect(startViewTransition).toHaveBeenCalledTimes(1);
+      expect(setTheme).toHaveBeenLastCalledWith("dark");
+
+      reduced = true;
+      act(() => result.current.toggleTheme());
+      expect(startViewTransition).toHaveBeenCalledTimes(1);
+      expect(setTheme).toHaveBeenCalledTimes(2);
+    } finally {
+      Reflect.deleteProperty(document, "startViewTransition");
+      vi.unstubAllGlobals();
+    }
+  });
 });

@@ -81,7 +81,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
 
   return (
     <div className="space-y-2">
-      <p className="sm:hidden font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+      <p className="pharos-meta sm:hidden">
         Swipe table for volume, pool, chain, and protocol fields.
       </p>
       <DataTableShell
@@ -144,7 +144,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                   badge={
                     <Badge
                       variant="outline"
-                      className={`text-[10px] ${coverageBadge.className} ${coverageBadge.label === "Mixed" || coverageBadge.label === "Primary" ? "hidden sm:inline-flex" : ""}`}
+                      className={`text-3xs ${coverageBadge.className} ${coverageBadge.label === "Mixed" || coverageBadge.label === "Primary" ? "hidden sm:inline-flex" : ""}`}
                       title={liq.unavailableReason ?? formatLiquiditySourceMix(liq.sourceMix)}
                     >
                       {coverageBadge.label}

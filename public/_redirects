@@ -22,6 +22,11 @@
 /learn/glossary/ /methodology/#definitions 301
 /learn/glossary /methodology/#definitions 301
 
+# The /learn/ overview hub duplicated the Mechanisms and Case Studies indexes
+# and was removed (design review, 2026-10-12).
+/learn/ /learn/case-studies/ 301
+/learn /learn/case-studies/ 301
+
 # The API access page, API reference page and API reference doc merged into
 # one /api/ page with Access | Reference tabs (site simplification, 2026-10-11).
 /about/api/ /api/#reference 301

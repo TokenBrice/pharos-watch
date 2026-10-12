@@ -26,8 +26,9 @@ describe("useMarketDataChartWindow", () => {
     );
 
     // P1-31 FRONTEND-26: monthly chart ticks follow the UTC data contract.
+    // May 1 precedes the first point (May 12), so it would render clipped
+    // at the plot edge and is dropped.
     expect(result.current.xTicks).toEqual([
-      Date.UTC(2026, 4, 1),
       Date.UTC(2026, 5, 1),
       Date.UTC(2026, 6, 1),
       Date.UTC(2026, 7, 1),

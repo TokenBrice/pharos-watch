@@ -56,6 +56,18 @@ describe("command palette model", () => {
     expect(results.filter((row) => corpusCases.some((entry) => entry.kind === row.kind))).toEqual([]);
   });
 
+  it("orders coins in the same match tier by live market cap, not by extra name hits", () => {
+    const stablecoinLiveMetadata = new Map([
+      ["syrupusdc-maple", { marketCapUsd: 1_060_000_000 }],
+      ["sirloinusdc-steakhouse", { marketCapUsd: 460_800_000 }],
+      ["sparkusdc-spark", { marketCapUsd: 424_800_000 }],
+    ]);
+    const ids = buildCommandPaletteResultDescriptors({ query: "usdc", history: [], isDark: false, stablecoinLiveMetadata })
+      .filter((row) => row.id === "coin-syrupusdc-maple" || row.id === "coin-sirloinusdc-steakhouse" || row.id === "coin-sparkusdc-spark")
+      .map((row) => row.id);
+    expect(ids).toEqual(["coin-syrupusdc-maple", "coin-sirloinusdc-steakhouse", "coin-sparkusdc-spark"]);
+  });
+
   it("matches direct substrings and word prefixes", () => {
     expect(fuzzyMatch("usd", "USD Coin")).toBe(true);
     expect(fuzzyMatch("co", "USD Coin")).toBe(true);

@@ -114,7 +114,7 @@ function PipelineSources() {
     <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
       {DATA_SOURCE_GROUPS.map((group) => (
         <div key={group.label} className="min-w-0 space-y-1">
-          <dt className="pharos-kicker">{group.label}</dt>
+          <dt className="pharos-label">{group.label}</dt>
           {"summary" in group ? (
             <dd className="space-y-1 text-sm leading-relaxed text-muted-foreground">
               <p>{group.summary}</p>
@@ -200,7 +200,7 @@ function FeaturedAppearance({ appearance }: { appearance: MediaAppearance }) {
         <HostLogo appearance={appearance} size={56} />
         <div className="space-y-3">
           <div className="space-y-1">
-            <p className="pharos-kicker">Featured</p>
+            <p className="pharos-label">Featured</p>
             <p className="text-base font-medium text-foreground">{appearance.title}</p>
             <p className="text-xs text-muted-foreground">
               {appearance.host} &middot;{" "}
@@ -267,7 +267,7 @@ function AboutSection({
     <Card id={id} className="scroll-mt-24 rounded-xl">
       <CardHeader className="space-y-2">
         <div className="flex items-center gap-3">
-          <p className="pharos-kicker">{eyebrow}</p>
+          <p className="pharos-label">{eyebrow}</p>
           <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
         </div>
         <CardTitle as="h2">{title}</CardTitle>
@@ -351,8 +351,8 @@ export function AboutPageContent() {
         <section aria-labelledby="about-lede" className="space-y-6 pb-2">
           <div className="space-y-4">
             <div className="space-y-1">
-              <p className="pharos-kicker">Stablecoins tracked</p>
-              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-frost-blue sm:text-[2.45rem]">
+              <p className="pharos-label">Stablecoins tracked</p>
+              <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
                 {TRACKED_STABLECOIN_COUNT}
               </p>
             </div>
@@ -370,7 +370,7 @@ export function AboutPageContent() {
               <p className="font-mono text-xs text-muted-foreground/80">
                 Edited by TokenBrice &middot; Engineered with Claude &amp; Codex &middot; MIT
               </p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">
+              <p className="pharos-label">
                 Watching the peg.
               </p>
             </div>
@@ -378,7 +378,7 @@ export function AboutPageContent() {
           <dl className="flex flex-wrap gap-x-10 gap-y-4 border-t border-border/60 pt-5">
             {heroStats.map((stat) => (
               <div key={stat.label} className="space-y-1">
-                <dt className="pharos-kicker">{stat.label}</dt>
+                <dt className="pharos-label">{stat.label}</dt>
                 <dd className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">{stat.value}</dd>
               </div>
             ))}
@@ -488,7 +488,7 @@ export function AboutPageContent() {
                     className="h-14 w-14 rounded-lg sm:h-16 sm:w-16"
                   />
                 </div>
-                <figcaption className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                <figcaption className="pharos-label">
                   {member.role}
                 </figcaption>
               </figure>
@@ -631,7 +631,7 @@ export function AboutPageContent() {
             <ol className="divide-y divide-border/60 border-y border-border/60">
               {BLUECHIP_GATES.map((gate, index) => (
                 <li key={gate.id} className="grid gap-1 py-3 sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:gap-6">
-                  <span className="font-mono text-xs uppercase tracking-[0.08em]">
+                  <span className="text-xs">
                     Gate {String(index + 1).padStart(2, "0")}
                   </span>
                   <p>

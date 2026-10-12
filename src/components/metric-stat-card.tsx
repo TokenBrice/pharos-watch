@@ -50,11 +50,11 @@ function MetricStatCardContent({
       <CardHeader className="pb-1">
         {headerRight ? (
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className={cn("pharos-kicker", variant === "compact" && "flex min-h-6 items-center")}>{title}</CardTitle>
+            <CardTitle className={cn("pharos-label", variant === "compact" && "flex min-h-6 items-center")}>{title}</CardTitle>
             {headerRight}
           </div>
         ) : (
-          <CardTitle className={cn("pharos-kicker", variant === "compact" && "flex min-h-6 items-center")}>{title}</CardTitle>
+          <CardTitle className={cn("pharos-label", variant === "compact" && "flex min-h-6 items-center")}>{title}</CardTitle>
         )}
       </CardHeader>
       <CardContent className={CONTENT_CLASS_BY_VARIANT[variant]}>

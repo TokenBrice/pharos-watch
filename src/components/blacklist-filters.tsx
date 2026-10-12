@@ -67,7 +67,7 @@ export function BlacklistFilters({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-6">
       <div className="space-y-1.5">
-        <span className="pharos-kicker">Stablecoin</span>
+        <span className="pharos-label">Stablecoin</span>
         <ControlPillToggle
           className="flex w-full flex-wrap justify-start gap-1.5"
           ariaLabel="Filter by stablecoin"
@@ -109,7 +109,7 @@ export function BlacklistFilters({
         ) : null}
       </div>
       <div className="space-y-1.5">
-        <span className="pharos-kicker">Chain</span>
+        <span className="pharos-label">Chain</span>
         <ControlPillToggle
           className="flex w-full flex-wrap justify-start gap-1.5"
           ariaLabel="Filter by chain"
@@ -120,7 +120,7 @@ export function BlacklistFilters({
         />
       </div>
       <div className="space-y-1.5">
-        <span className="pharos-kicker">Event Type</span>
+        <span className="pharos-label">Event type</span>
         <ControlPillToggle
           className="flex w-full flex-wrap justify-start gap-1.5"
           ariaLabel="Filter by event type"

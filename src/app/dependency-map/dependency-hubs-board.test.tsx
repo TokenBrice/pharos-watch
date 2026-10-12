@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
-import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import { trackEvent } from "@/lib/analytics";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 

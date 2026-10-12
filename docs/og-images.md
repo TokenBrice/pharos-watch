@@ -2,50 +2,71 @@
 
 Pharos serves eight classes of Open Graph / Twitter preview images. They have different generation pipelines and different renewal cadences.
 
-## 1. Static page screenshots (`public/og-*.png`)
+## 1. Route cards
 
-Captured by `scripts/maintenance/screenshot-og.mjs` via Playwright Chromium against a deployed site origin. Each capture is 1200×628. The script injects CSS to hide chrome (header, aside, footer, overlays) and force the `#main-content` region to fill the frame.
+Route share cards replaced the weekly page screenshots on 2026-10-12. A screenshot carried a figure with no generation, and several carried live-state claims ("LIVE · AS OF …", "1 open incident", a flow verdict) that went false within hours. A route card either states one figure stamped with the generation that produced it, or states no figure at all.
 
-This table is the screenshot capture roster, not proof that a route selects the captured filename in runtime metadata. Route metadata in `src/app/**/page.tsx` and the helpers in `src/lib/page-metadata.ts` are authoritative for social selection.
+`shared/lib/og-route-cards.ts` is the single authority for the route keys, kicker, two-line promise, `public/` filename and layout shared by both variants. `OG_LIVE_PAGE_SLUGS` lists the routes that select the live card.
 
-| Image | Page |
-| --- | --- |
-| `og-card.png` | `/` (also the default fallback in `src/lib/page-metadata.ts`) |
-| `og-alt-pegs.png` | `/alt-pegs` |
-| `og-chains.png` | `/chains` |
-| `og-changelog.png` | `/changelog` |
-| `og-compare.png` | `/compare` |
-| `og-coverage.png` | `/coverage` |
-| `og-flows.png` | `/flows` |
-| `og-funding.png` | `/funding` |
-| `og-liquidity.png` | `/liquidity` |
-| `og-stablecoins.png` | `/stablecoins` |
-| `og-timeline.png` | `/timeline` |
-| `og-upcoming.png` | `/upcoming` |
-| `og-yield.png` | `/yield` |
-| `og-blacklist.png` | `/freezewatch` |
-| `og-dependency-map.png` | `/dependency-map` |
-| `og-portfolio.png` | `/portfolio?p=...` (pre-loaded so the capture is not empty state) |
-| `og-pharoswatchbot.png` | `/pharoswatchbot/` |
-| `og-default.png` | `/screener` |
+### Live cards (`/api/og/page/:slug`)
 
-`screenshot-og.mjs` first tries `waitUntil: "networkidle"` with a 20 s timeout, then falls back to `waitUntil: "load"` for pages with persistent polling (e.g. `/digest`). Before writing each PNG, it requires a successful document response and the `#main-content` application shell, and rejects Cloudflare security-challenge text. The first invalid capture stops the run with a non-zero exit instead of opening a PR with an error page.
+The live routes' metadata selects `buildLiveRouteOgImageUrl(slug)` (`src/lib/page-metadata.ts`). The Worker reads each hero in process from the owner the public endpoint uses (no self-fetch, no connection-budget cost) and reduces it with the same shared helper the page uses. See [§8](#8-dynamic-worker-cards-apiog) for the rendering pipeline.
 
-The screenshot roster contains only assets selected by route metadata. The eight unselected capture outputs were retired on 2026-09-03 after the inbound-link audit; their routes select editorial or dynamic cards instead.
+| Slug | Route | Hero (owner → reducer) | Support (each dropped independently on failure) | Budget |
+| --- | --- | --- | --- | --- |
+| `home` | `/` | Total stablecoin market cap: stablecoins cache → `buildLiveHomepageHeroSnapshot` | Displayed PSI band and score; active depegs | `stablecoins` |
+| `chains` | `/chains/` | `globalTotalUsd` and chain count: `handleChains` body, with the homepage completeness verdict over the same stablecoins generation | Top three chains by dominance (only with no unavailable chain observation) | `chains` |
+| `dependency-map` | `/dependency-map/` | Mapped direct exposure: `projectDependencyGraph` + market caps → `buildDependencyHubsModel` | Upstream hubs; direct dependents | `stablecoins` and `reportCards`; stamped with the older read |
+| `timeline` | `/timeline/` | Open depeg incidents: `selectActiveDepegCoins` (`shared/lib/active-depegs.ts`) over `/api/peg-summary`, the homepage census | — | `pegSummary` |
+| `flows` | `/flows/` | 24h signed net mint/burn: mint-burn-flows body → `aggregateCoinFlows24h`; a partial window shows its known gross subtotal (`≥ $X`) instead | Printed; shredded | `mintBurnFlows` |
+| `freezewatch` | `/freezewatch/` | Freezable share: stablecoins cache → `buildBlacklistStatusBuckets` → `computeFreezableSummary` | Freezable market cap; freezable coin count | `stablecoins` |
+| `liquidity` | `/liquidity/` | Total DEX TVL: `handleDexLiquidity` global row | — | `dexLiquidity` |
+| `yield` | `/yield/` | Ranked yields: summary projection → `dedupeYieldRankings` | Median 30D APY of A/B-graded rows (never the top APY) | `yieldRankings` |
+
+The timeline card counts the full open set the homepage reads, not the feed's windowed event page, so an incident opened before the feed window still counts (ADR-34). The `/api/og/depeg` summary card counts open `depeg_events` rows instead and labels that figure **OPEN DEPEG EVENTS**.
+
+The Budget column names the source; its admission budget is `OG_SOURCE_BUDGET_SEC` (`worker/src/api/og-page/types.ts`): two intervals of the producing cron job, never stricter than the endpoint's own `API_FRESHNESS_MAX_AGE_SEC` budget, so a card does not flap to timeless between producer runs.
+
+Fail-closed contract:
+
+- The hero source must be present, inside its admission budget, not a held publication, and published by its page. Otherwise the Worker serves the route's timeless card with `200`, `X-Og-Status: timeless` and a closed-vocabulary `X-Og-Reason` (`cache-missing`, `stale-cache`, `held-publication`, `incomplete-coverage`, `figure-null`, `owner-error`, `render-error`). A card mirrors its page: where the page publishes a partial total as a labelled known subtotal (home, chains, dependency map), the card shows the same figure and names the gap in its stamp (`Partial · 266/267 assets observed`, `excl. 3 coins without supply data`); it goes timeless only where the page itself withholds the number (for example a partial FreezeWatch share).
+- The stamp names the hero's generation time (`As of 12 Oct 2026, 14:05 UTC`), never the render clock. A cached copy on a social platform is therefore self-dating. Live responses carry `X-Og-Status: live`, `X-Og-Generation`, `X-Og-As-Of`, `X-Og-Freshness-Budget` and `X-Og-Assessed-At`, cached for the 15-minute `ogImage` lifetime or until the figure leaves its admission budget, whichever is sooner (`buildOgImageCacheControl`, floored at one minute). Timeless responses use the 5-minute `custom` profile so the live card returns soon after its source recovers.
+- There are no colored verdicts. The flows card states the signed net, not "minting, but softer…". The top rule is neutral ink on every card; the only data hue is the PSI band swatch on the home card, drawn only when that render read a fresh PSI. Each card shows its route's navigation glyph (`shared/lib/og-route-glyphs.ts`, drift-tested against `src/lib/nav-config.ts`). An optional neutral share bar or pair of bars re-draws figures the card already prints, and a share bar is omitted when chain shares over-attribute (sum above 1).
+- Sublabels name the figure's basis: the chains hero is the same core-aggregate market cap as the homepage (chain rows only split it), dependency exposure is gross, and flows cover tracked issuance chains.
+- A share card is presentation that inherits its page's methodology. It must show the page's exact published figure and needs no methodology-changelog entry of its own.
+
+### Timeless cards (`public/og-*.png`)
+
+Generated by `scripts/maintenance/build-og-route-timeless.ts` through the shared static runner, with the Geist faces the Worker uses. Each card has the route kicker, its two-line promise and `Live figures at pharos.watch/<route>`. It has no figure, date or state claim. The filenames are the retired screenshot roster's, so inbound links keep resolving.
+
+| Image | Route | Selected by |
+| --- | --- | --- |
+| `og-card.png` | `/` | Live-card fallback; default image in `src/lib/page-metadata.ts` and `src/app/layout.tsx`; `/compliance/`; docs JSON-LD |
+| `og-chains.png`, `og-dependency-map.png`, `og-timeline.png`, `og-flows.png`, `og-blacklist.png`, `og-liquidity.png`, `og-yield.png` | live routes | Worker fail-closed twin; legacy inbound links |
+| `og-alt-pegs.png` | `/alt-pegs/` | route metadata |
+| `og-coverage.png` | `/coverage/` | route metadata |
+| `og-stablecoins.png` | `/stablecoins/`, peg and taxonomy pages | route metadata; quarantined/delisted dossier fallback |
+| `og-upcoming.png` | `/upcoming/` | route metadata; pre-launch dossier fallback |
+| `og-compare.png` | `/compare/`, `/compare/[slug]/` | route metadata |
+| `og-default.png` | `/screener/` | route metadata |
+| `og-funding.png` | `/funding/` | route metadata |
+| `og-pharoswatchbot.png` | `/pharoswatchbot/` | route metadata |
+| `og-changelog.png` | `/changelog/` | route metadata |
+| `og-portfolio.png` | `/portfolio/` | route metadata |
+
+Registry-derived counts (coverage, upcoming, stablecoins), funding and bot figures and the portfolio fixture stay timeless by decision: a count that changes per deploy or a demo portfolio adds nothing a shared card needs. `/alt-pegs/` stays timeless until `buildAltPegSnapshot` moves to `shared/lib/` so the Worker can publish the page's exact figure.
 
 ### How to renew
 
 ```bash
-npm run og:capture                                   # captures the live pharos.watch
-OG_BASE_URL=https://stablecoin-dashboard.pages.dev npm run og:capture # captures the production Pages artifact
-OG_BASE_URL=http://127.0.0.1:3000 npm run og:capture # captures local dev
+npm run build:og-route-timeless
+npm run check:generated-artifacts -- --only=og-route-timeless
 ```
 
 ### When to renew
 
-- After a meaningful UI change on any covered page.
-- After a methodology version bump that changes a page's headline or layout.
-- Automatically: a weekly GitHub Action (`.github/workflows/og-refresh.yml`) captures the production artifact through `stablecoin-dashboard.pages.dev`, avoiding custom-domain security challenges for shared GitHub egress, and opens a PR with the diff. The workflow requires the `OG_REFRESH_GITHUB_TOKEN` repository secret, using a bot or PAT token that can push `automated/og-refresh` and open PRs so normal `pull_request` checks run.
+- After changing a route's copy or the layout in `shared/lib/og-route-cards.ts`.
+- After changing the brand mark (`public/pharos-mark-on-light.svg`) or the Geist font files.
 
 ## 2. Editorial content cards (`public/og-editorial-*.png`)
 
@@ -58,7 +79,7 @@ Write mode renders each PNG into ignored staging first and replaces the checked-
 | `og-editorial-about.png` | `/about/` |
 | `og-editorial-depeg.png` | Depeg briefings |
 | `og-editorial-digest.png` | Daily/weekly digest pages |
-| `og-editorial-learn.png` | `/learn/`, `/learn/mechanisms/`, `/learn/case-studies/` |
+| `og-editorial-learn.png` | `/learn/mechanisms/`, `/learn/case-studies/` |
 | `og-editorial-methodology.png` | Methodology pages |
 | `og-editorial-profile.png` | Generated profile-category card, currently reserved for future stablecoin-profile editorial surfaces |
 
@@ -123,11 +144,11 @@ npm run check:generated-artifacts -- --only=og-case-studies
 
 Generated by `scripts/maintenance/build-og-cemetery.ts` for `/cemetery/`. The 1200×630 card is the real hero at rest in the light theme: the desktop plot map (`buildCemeteryPlotMap` desktop preset, `desktopPlotLayout`, `PlotMapScene`) rendered to static markup with `react-dom/server`, under the route head ("Stablecoin Cemetery" in Newsreader and the `{first}–{latest} · each with cause, date, obituary and source` sub-line) and the frost recorded-deaths figure. The crop keeps the colossi, the lighthouse and the figure in view.
 
-The generator renders without a bundler. A Node load hook imports `plot-map.module.css` as an identity class map parsed with PostCSS, and the stylesheet is the same module with its `:global(…)` wrappers removed. The global tokens the module reads are resolved from the light `:root` blocks of `src/styles/tokens/*.css` and `src/app/globals.css`. Only those tokens and their `var()` closure are included. Fonts (Newsreader, Geist, JetBrains Mono) and the committed logo atlas are inlined as data URIs, so the page is one self-contained document. Playwright Firefox captures it at 1440 CSS px and 2× device pixels, and sharp downscales the capture to 1200×630 and encodes a dithered 256-colour palette PNG (`OG_CEMETERY_PNG_OPTIONS`, about 140 KB instead of 530 KB lossless).
+The generator is a configuration over the scene kit's `scripts/lib/scene-og.ts` ([Data Visualization: Scene Kit](./data-visualization.md#scene-kit)), which owns the CSS-module hook, token closure, Firefox render and document-hash signature. It renders without a bundler. A Node load hook imports each CSS module as an identity class map parsed with PostCSS (a `composes:` class maps to itself plus the composed names), and the stylesheet is `src/components/scene/scene-tokens.module.css` followed by `plot-map.module.css`, the order the app imports them, with `:global(…)` wrappers and `composes:` removed. The global tokens the module reads are resolved from the light `:root` blocks of `src/styles/tokens/*.css` and `src/app/globals.css`. Only those tokens and their `var()` closure are included. Fonts (Newsreader, Geist, JetBrains Mono) and the committed logo atlas are inlined as data URIs, so the page is one self-contained document. Playwright Firefox captures it at 1440 CSS px and 2× device pixels, and sharp downscales the capture to 1200×630 and encodes a dithered 256-colour palette PNG (`OG_CEMETERY_PNG_OPTIONS`, about 140 KB instead of 530 KB lossless).
 
 Freshness is an input signature, not a pixel comparison. `scripts/maintenance/state/og-cemetery-signature.json` records the SHA-256 of the rendered document and the hash of the PNG written from it. `--check` rebuilds the document (no browser) and verifies both hashes and the PNG dimensions. It gives the same result on every platform. Write mode is a no-op while the check passes; `--force` re-renders anyway.
 
-It is the registered `og-cemetery` generated artifact. It is auto-staged by the pre-commit hook and depends on `cemetery-logo-atlas`, so adding a death or changing a cemetery logo regenerates it. Its sources are the dead-coin data and frozen catalog, the cemetery modules, the plot-map model, geometry, scene, shapes and CSS module, the atlas, the design tokens and the fonts.
+It is the registered `og-cemetery` generated artifact. It is auto-staged by the pre-commit hook and depends on `cemetery-logo-atlas`, so adding a death or changing a cemetery logo regenerates it. Its sources are the dead-coin data and frozen catalog, the cemetery modules, the plot-map model, geometry, scene, shapes and CSS module, the scene kit (`shared/lib/scene/`, `src/components/scene/`, `scripts/lib/scene-og.ts`), the atlas, the design tokens and the fonts.
 
 ### How to renew
 
@@ -178,10 +199,15 @@ Stablecoin cards preserve unavailable price, DEWS, liquidity, market cap, metada
 | `/api/og/depeg` | depeg summary card |
 | `/api/og/stability-index` | stability index summary card |
 | `/api/og/chain/:id` | per-chain card (referenced from `src/app/chains/[chain]/page.tsx` via `API_PATHS.ogChain`) |
+| `/api/og/page/:slug` | live route cards ([§1](#1-route-cards)); unknown slug → `404` |
+
+A chain absent from the current aggregate renders a figure-free "No current supply observation" card with `X-Og-Status: degraded` and `X-Og-Reason: chain-not-in-aggregate`, never `$0`: absence from the aggregate is not an observed zero (ADR-28).
+
+Summary cards keep missing DEWS counts, safety coverage and window averages unavailable. Fewer than two PSI history observations yield no sparkline, and PSI 24h change uses a sample within one hour before source-minus-24h, else it is unavailable. PSI and safety freshness headers name the assessment clock, budget and generation where available.
 
 These are the OG images that automatically reflect current data. If their template needs to change, edit `worker/src/lib/og-templates/*` and run worker tests.
 
-The Worker pins Satori to `0.32.0`. Satori `0.33.x` introduces HarfBuzz initialization that reads `self.location.href`, which is unavailable in workerd and makes every dynamic card fail with `503`. Upgrade only after the real Worker render check passes: `npx vitest run scripts/__tests__/og-worker-runtime.test.ts worker/src/api/__tests__/og.test.tsx`. The runtime check executes the production Satori/Yoga/resvg pipeline in local workerd and decodes cold and warm 1200×628 PNG responses; the existing Node SVG tests cover the individual card templates. After deployment, verify actual `GET` responses for all five dynamic card families return decodable `image/png` data. `HEAD` and mocked handler tests do not prove rendering health.
+The Worker pins Satori to `0.32.0`. Satori `0.33.x` introduces HarfBuzz initialization that reads `self.location.href`, which is unavailable in workerd and makes every dynamic card fail with `503`. Upgrade only after the real Worker render check passes: `npx vitest run scripts/__tests__/og-worker-runtime.test.ts worker/src/api/__tests__/og.test.tsx`. The runtime check executes the production Satori/Yoga/resvg pipeline in local workerd and decodes cold and warm 1200×628 PNG responses; the existing Node SVG tests cover the individual card templates. After deployment, verify actual `GET` responses for all six dynamic card families (every `/api/og/page/:slug`) return decodable `image/png` data. `HEAD` and mocked handler tests do not prove rendering health.
 
 The shared frame inlines the Pharos brand mark as SVG paths (`worker/src/lib/og-templates/shared.tsx`) because satori cannot fetch a same-origin asset. It is the **on-light** variant — the same art as `public/pharos-mark-on-light.svg` — because the card background is light. Keep the two in sync by hand when the mark changes; a mark swap needs a **Worker deploy** and invalidates the 15-minute OG cache.
 

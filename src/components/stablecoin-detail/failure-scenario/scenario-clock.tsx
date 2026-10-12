@@ -46,7 +46,7 @@ export function ScenarioClock({
                   {row.keys ? (
                     <KeysPill>{row.keys}</KeysPill>
                   ) : (
-                    <span className="text-[11px] leading-tight text-muted-foreground">{sharedLabel}</span>
+                    <span className="text-2xs leading-tight text-muted-foreground">{sharedLabel}</span>
                   )}
                 </div>
               ))}
@@ -120,7 +120,7 @@ export function ScenarioClock({
                   <span
                     key={tick.hours}
                     className={cn(
-                      "pharos-numeric absolute top-0 whitespace-nowrap text-[10.5px] leading-4",
+                      "pharos-numeric absolute top-0 whitespace-nowrap text-3xs leading-4",
                       first || last ? "text-foreground/80" : "text-muted-foreground",
                       first ? "" : last ? "-translate-x-full" : "-translate-x-1/2",
                       !phoneLabel && "hidden sm:inline",
@@ -157,7 +157,7 @@ export function ScenarioClock({
       {scenario.window && clock.window ? (
         <figcaption
           className={cn(
-            "text-[13px] leading-relaxed text-muted-foreground text-pretty",
+            "text-xs leading-relaxed text-muted-foreground text-pretty",
             hasLanes && "sm:pl-[calc(5rem+0.75rem)]",
           )}
         >

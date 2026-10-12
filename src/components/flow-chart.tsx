@@ -11,18 +11,19 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
-import { TimeXAxis, MonoYAxis, TimeGrid } from "@/components/chart-primitives/axes";
+import { TimeXAxis, MonoYAxis, TimeGrid, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { ChartLegendChip } from "@/components/chart-primitives/legend";
 import { ChartFigure } from "@/components/chart-primitives/figure";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { formatCurrency, formatChartDate } from "@shared/lib/format";
+import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { CHART_GREEN, CHART_RED, CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
 import type { MintBurnHourlyBucket, MintBurnValuationCompleteness } from "@shared/types";
 import {
   combineMintBurnValuationCompleteness,
   resolveMintBurnValuationCompleteness,
 } from "@shared/lib/mint-burn-valuation";
-import { formatMintBurnVolume, MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@/lib/mint-burn-valuation-display";
+import { formatMintBurnVolume, MINT_BURN_COVERAGE_UNKNOWN_NOTE } from "@shared/lib/mint-burn-valuation-display";
 import { DAY_HOURS, HOUR_SECONDS } from "@/lib/constants";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
@@ -249,6 +250,18 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
       bandY2: rMax,
     };
   }, [chartData]);
+  const axisValues = useMemo(
+    () => [...chartData.flatMap((d) => [d.positiveDelta, d.negativeDelta, d.cumulative]), bandY1, bandY2],
+    [bandY1, bandY2, chartData],
+  );
+  const valueAxis = useNiceValueAxis(axisValues, { kind: "currency" });
+  // Bars are centred on their bucket timestamp: pad the time domain by half a
+  // bucket so the first and last bars are drawn whole instead of half-cut.
+  const xDomain = useMemo<[number, number] | ["dataMin", "dataMax"]>(() => {
+    if (chartData.length === 0) return ["dataMin", "dataMax"];
+    const halfBucketMs = (bucketSeconds * 1000) / 2;
+    return [chartData[0].ts - halfBucketMs, chartData[chartData.length - 1].ts + halfBucketMs];
+  }, [bucketSeconds, chartData]);
 
   const formatXAxisTick = useCallback(
     (ts: number) => {
@@ -284,7 +297,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
         <ChartLegendChip markerClassName="inline-block h-2.5 w-2.5 rounded-sm" markerStyle={{ backgroundColor: CHART_SLATE, opacity: 0.35 }}>
           7{useDailyBuckets ? "d" : "h"} rolling-net band
         </ChartLegendChip>
-        <span className="ml-auto text-[11px] text-muted-foreground/70 uppercase tracking-wide">
+        <span className="ml-auto text-2xs text-muted-foreground/70">
           {useDailyBuckets ? "Daily" : "Hourly"}
         </span>
       </div>
@@ -310,8 +323,8 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
             margin={{ top: 5, right: 20, bottom: 20, left: 5 }}
           >
             <TimeGrid />
-            <TimeXAxis dataKey="ts" minTickGap={72} tickFormatter={formatXAxisTick} />
-            <MonoYAxis tickFormatter={(val: number) => formatCurrency(val, 0)} />
+            <TimeXAxis dataKey="ts" domain={xDomain} minTickGap={72} tickFormatter={formatXAxisTick} />
+            <MonoYAxis tickFormatter={formatCurrencyTick} {...valueAxis} />
             <Tooltip content={<FlowTooltip useDailyBuckets={useDailyBuckets} />} cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }} />
             {bandX2 > bandX1 && bandY2 > bandY1 && (
               <ReferenceArea

@@ -52,7 +52,6 @@ describe("nav-config", () => {
 
   it("splits market structure, failure modes, and interactive tools", () => {
     expect(NAV_GROUPS.find((group) => group.key === "markets")?.items.map((item) => item.href)).toEqual([
-      "/stablecoins/",
       "/liquidity/",
       "/flows/",
       "/chains/",
@@ -82,8 +81,8 @@ describe("nav-config", () => {
     expect(more?.columns?.map((column) => column.key)).toEqual(["research", "watch", "methods", "pharos"]);
     expect(more?.columns?.map((column) => column.label)).toEqual(["Research", "Updates", "Transparency", "About Pharos"]);
     expect(more?.columns?.map((column) => column.items.map((item) => item.label))).toEqual([
-      ["Learn", "Mechanisms", "Case Studies"],
-      ["Daily Digest", "Timeline", "Changelog", "Blog"],
+      ["Blog", "Mechanisms", "Case Studies"],
+      ["Daily Digest", "Timeline", "Changelog"],
       ["Methodology", "Coverage", "Status"],
       ["About", "Funding", "PharosVille"],
     ]);
@@ -176,15 +175,11 @@ describe("nav-config", () => {
     }
   });
 
-  it("matches detail routes through activePrefixes while the dashboard stays exact", () => {
-    const directory = NAV_GROUPS.find((group) => group.key === "markets")?.items.find(
-      (item) => item.href === "/stablecoins/",
-    );
+  it("matches detail routes beneath a destination while the dashboard stays exact", () => {
+    const chains = NAV_ITEMS.find((item) => item.href === "/chains/");
     const dashboard = NAV_ITEMS.find((item) => item.href === "/");
 
-    // Coin profiles share no route prefix with the directory; only the
-    // explicit activePrefixes bridge them.
-    expect(isNavItemActive("/stablecoin/usdc-circle/", directory!)).toBe(true);
+    expect(isNavItemActive("/chains/ethereum/", chains!)).toBe(true);
     expect(isNavItemActive("/stablecoins/", dashboard!)).toBe(false);
   });
 });

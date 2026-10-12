@@ -1,7 +1,7 @@
 import type { NativeSupplyCheckpoints } from "@shared/types/stablecoin-live-summary";
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/lib/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
-import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
@@ -15,6 +15,7 @@ import {
   buildPegScoreAccent,
   buildPegScoreDisplay,
   buildPerformanceVsUsdDisplay,
+  formatPoolCount,
   HERO_MUTED_CLASS,
   HERO_NEGATIVE_TREND_CLASS,
   HERO_POSITIVE_TREND_CLASS,
@@ -231,7 +232,7 @@ function buildSignalRailItems(
       key: "liquidity",
       label: "Liquidity",
       primary: liquidityData?.liquidityScore != null ? String(Math.round(liquidityData.liquidityScore)) : "—",
-      secondary: liquidityData?.poolCount != null ? `${liquidityData.poolCount} pools` : null,
+      secondary: liquidityData?.poolCount != null ? formatPoolCount(liquidityData.poolCount) : null,
       href: "#liquidity",
       colorClass: liquidityData?.liquidityScore != null ? getScoreColor(liquidityData.liquidityScore) : HERO_MUTED_CLASS,
     },

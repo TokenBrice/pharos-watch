@@ -18,7 +18,8 @@ function formatAffectedLabels(labels: string[]): string {
   if (labels.length === 0) return "datasets";
   if (labels.length === 1) return labels[0];
   if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
-  return `${labels[0]}, ${labels[1]}, and ${labels.length - 2} more datasets`;
+  const more = labels.length - 2;
+  return `${labels[0]}, ${labels[1]}, and ${more} more ${more === 1 ? "dataset" : "datasets"}`;
 }
 
 export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHealthBannerProps) {
@@ -38,6 +39,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
   }
 
   const affected = formatAffectedLabels(merged.affectedLabels);
+  const plural = merged.affectedLabels.length !== 1;
   const worstAge = entries
     .filter((e) => e.state !== "fresh" && e.ageMs != null)
     .reduce<number | null>((max, item) => {
@@ -51,10 +53,10 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
   if (merged.state === "degraded") {
     if (entries.some((entry) => entry.state === "degraded" && entry.degradationReason === "refresh")) {
       title = "Refresh failed; showing saved data";
-      message = `${affected} remains available while refresh retries.`;
+      message = `${affected} ${plural ? "remain" : "remains"} available while refresh retries.`;
     } else if (entries.some((entry) => entry.state === "degraded" && entry.degradationReason === "source")) {
       title = "Data quality warning";
-      message = `${affected} is available, but a source or quality check needs attention.`;
+      message = `${affected} ${plural ? "are" : "is"} available, but a source or quality check needs attention.`;
     } else {
       title = "Live refresh is running behind";
       message = `${affected} refreshed later than expected.`;
@@ -65,7 +67,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     message = `${affected} last refreshed over ${age} ago.`;
   } else if (merged.state === "unavailable") {
     title = "Waiting for initial data";
-    message = `${affected} has not populated yet.`;
+    message = `${affected} ${plural ? "have" : "has"} not populated yet.`;
   } else {
     title = "Refresh failed";
     message = `Could not refresh ${affected}.`;

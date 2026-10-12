@@ -151,7 +151,7 @@ function ActionCatalogRow({
               {readinessLabel(action, readinessChecks)}
             </StatusPill>
           </div>
-          <p className="break-all font-mono text-[11px] text-muted-foreground">{action.path}</p>
+          <p className="break-all font-mono text-2xs text-muted-foreground">{action.path}</p>
         </div>
         <ActionCommands action={action} readinessChecks={readinessChecks} onFinished={onFinished} />
       </div>
@@ -245,7 +245,7 @@ function RecentActivity({ activity, nowSeconds }: { activity: ActionActivity; no
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-foreground">{activity.actionLabel}</span>
           <StatusPill className={ACTIVITY_CLASS[activity.status]}>{activity.status}</StatusPill>
-          <span className="text-[11px] text-muted-foreground">{activity.source}</span>
+          <span className="text-2xs text-muted-foreground">{activity.source}</span>
         </div>
         <p className="mt-1 truncate text-xs text-muted-foreground">
           {activity.target ?? "No target recorded"}

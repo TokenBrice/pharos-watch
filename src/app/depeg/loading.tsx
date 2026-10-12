@@ -1,24 +1,13 @@
-import {
-  PageLoadingChartBlock,
-  PageLoadingRowList,
-  PageLoadingStatGrid,
-} from "@/components/page-loading-skeleton";
+import { PageLoadingRowList, PageLoadingSplitHero } from "@/components/page-loading-skeleton";
 import { createPageLoadingRoute } from "@/app/page-loading-route";
 
-// Analytics tier: KPI strip, heatmap placeholder, then recent depeg rows.
+// Analytics tier: split outlook hero (command rail + DEWS radar), then recent depeg rows.
 const DEPEG_SKELETON_ROW_COUNT = 8;
 
 export function DepegContentLoadingState() {
   return (
     <>
-      <PageLoadingStatGrid
-        count={4}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
-        labelWidth="w-20"
-        valueWidth="w-24"
-        valueHeight="h-7"
-      />
-      <PageLoadingChartBlock className="h-[280px]" shimmer />
+      <PageLoadingSplitHero visualClassName="h-80 lg:h-[36rem]" />
       <PageLoadingRowList
         rowCount={DEPEG_SKELETON_ROW_COUNT}
         titleWidth="w-36"

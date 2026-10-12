@@ -15,7 +15,7 @@ export function TaxonomyNextCheckCta({ shortLabel, topCoinIds, bucketNoun }: Tax
     <section className="pharos-subtle-band">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <p className="pharos-kicker">Next Check</p>
+          <p className="pharos-label">Next check</p>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Compare the leading {shortLabel} stablecoins, then use alerts for peg stress and safety-grade changes
             before you depend on one {bucketNoun}.

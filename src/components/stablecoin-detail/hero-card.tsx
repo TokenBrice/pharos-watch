@@ -6,23 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ShareButton } from "@/components/share-button";
+import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
+import { isHeroVerdictEnabled } from "@/lib/feature-flags";
+import { cn } from "@/lib/utils";
 import { THREAT_BAND_STYLES } from "@shared/lib/classification";
 import type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-view-model";
 import type { HeroDewsDisplay } from "@/lib/stablecoin-detail-hero-metrics";
 import {
   HeroCardDesktopSection,
-  HeroCardHeader,
   HeroCardMobileSection,
+  HeroChipRail,
   type HeroSectionBaseProps,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
+import { HeroVariantChip, SafetyGradeHero, SafetyPartialEvidenceNote } from "./hero-card-identity";
 import { HeroPassportStrip } from "./hero-passport-strip";
 
 interface HeroCardProps {
   model: HeroCardViewModel;
-  onOpenFeedback: () => void;
 }
 
 function isDewsDisplay(display: HeroTertiaryMetricViewModel["display"]): display is HeroDewsDisplay {
@@ -85,37 +89,69 @@ function linkIconFor(label: string) {
   return ExternalLink;
 }
 
-export function HeroDesktopIdentityToolbar({
+/**
+ * The dossier's one identity header, at every width: logo, ticker and name
+ * (plus the variant chip), the one-line description, then the action cluster
+ * [Bluechip] · [resource links] · [compare/flag/share]. Below `lg` the Safety
+ * Score card is far down the scroll, so the grade sits beside the name; at
+ * `lg+` the summary rail owns it. Rendered by the detail page above the
+ * content/rail grid (not inside HeroCard) so the rail top-aligns with the card.
+ */
+export function HeroIdentityHeader({
   model,
   onOpenFeedback,
+  gradeRead = "settled",
 }: {
   model: HeroCardViewModel;
   onOpenFeedback: () => void;
+  /** The report-card read behind the mobile grade: placeholder while pending, "Grade unavailable" on failure. */
+  gradeRead?: "settled" | "pending" | "failed";
 }) {
-  const { coin, logoSrc, header } = model;
+  const { coin, logoSrc, header, reportCard, verdict, variantParent, variantChipClass } = model;
   const links = (coin.links ?? []).slice(0, 3);
+  const verdictId = isHeroVerdictEnabled() && verdict.archetype !== "uncategorized" ? `hero-verdict-${coin.id}` : null;
+  // 44px tap targets below lg, the compact 32px cluster at lg+.
   const actionClass =
-    "pharos-focus-ring inline-flex size-8 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground";
+    "pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:size-8";
 
-  // Figma coin template: avatar + mono ticker eyebrow above the H1, and the
-  // action cluster grouped as [resource links] · divider · [compare/flag/share].
-  // Rendered by the detail page above the content/rail grid (not inside
-  // HeroCard) so the summary rail top-aligns with the hero card.
   return (
-    <div className="hidden items-start justify-between gap-5 lg:flex">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-5">
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-3">
-          <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
-          <span className="shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {coin.symbol}
-          </span>
-          <h2 className="pharos-page-title min-w-0 truncate text-2xl leading-none tracking-normal">{coin.name}</h2>
+          {/* Content-sized (no flex-grow) so the morph from a linking row
+              lands on the identity itself, not on the full header width. */}
+          <StablecoinIdentityTransition id={coin.id}>
+            <div className="flex min-w-0 items-center gap-3">
+              <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
+              <div className="flex min-w-0 flex-col gap-1 lg:flex-row lg:items-center lg:gap-3">
+                <span className="pharos-label shrink-0">
+                  {coin.symbol}
+                </span>
+                <h2
+                  className="pharos-page-title min-w-0 break-words text-xl leading-tight tracking-normal sm:text-2xl lg:truncate lg:leading-none"
+                  {...(verdictId ? { "aria-describedby": verdictId } : {})}
+                >
+                  {coin.name}
+                </h2>
+              </div>
+            </div>
+          </StablecoinIdentityTransition>
+          <HeroVariantChip variantParent={variantParent} variantChipClass={variantChipClass} />
+          <div className="ml-auto shrink-0 self-stretch lg:hidden">
+            <SafetyGradeHero reportCard={reportCard} read={gradeRead} mobile />
+          </div>
+        </div>
+        <div className="lg:hidden">
+          <SafetyPartialEvidenceNote reportCard={reportCard} />
         </div>
         {coin.oneLiner ? (
-          <p className="mt-2 max-w-none text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
+          <p className="mt-2 max-w-none text-pretty text-sm leading-relaxed text-muted-foreground">{coin.oneLiner}</p>
         ) : null}
       </div>
-      <div className="flex shrink-0 items-center gap-1.5 pt-1">
+      <div className="flex flex-wrap items-center gap-1.5 lg:shrink-0 lg:flex-nowrap lg:pt-1">
+        <BluechipHeaderBadge stablecoinId={coin.id} />
+        {/* Hidden when the Bluechip badge renders nothing and it leads the row. */}
+        <span aria-hidden="true" className="mx-1 h-4 w-px bg-border/60 first:hidden" />
         {links.map((link) => {
           const Icon = linkIconFor(link.label);
           return (
@@ -124,7 +160,9 @@ export function HeroDesktopIdentityToolbar({
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={actionClass}
+              // Below sm the in-flow Key Links card carries these, so the
+              // action row stays on one line.
+              className={cn(actionClass, "hidden sm:inline-flex")}
               aria-label={link.label}
               title={link.label}
             >
@@ -132,7 +170,7 @@ export function HeroDesktopIdentityToolbar({
             </a>
           );
         })}
-        {links.length > 0 ? <span aria-hidden="true" className="mx-1 h-4 w-px bg-border/60" /> : null}
+        {links.length > 0 ? <span aria-hidden="true" className="mx-1 hidden h-4 w-px bg-border/60 sm:block" /> : null}
         <Link
           href={header.compareHref}
           className={actionClass}
@@ -150,7 +188,13 @@ export function HeroDesktopIdentityToolbar({
         >
           <Flag className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
-        <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
+        {/* Labelled with a full-size target below lg; the compact icon at lg+. */}
+        <span className="lg:hidden">
+          <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" />
+        </span>
+        <span className="hidden lg:flex">
+          <ShareButton ogPath={`/api/og/stablecoin/${header.coinId}`} label="Share" iconOnly />
+        </span>
       </div>
     </div>
   );
@@ -165,14 +209,14 @@ function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewMo
     >
       <span className="flex min-w-0 items-center gap-2.5">
         <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <span className="pharos-kicker shrink-0">Case study</span>
+        <span className="pharos-label shrink-0">Case study</span>
         <span aria-hidden="true" className="hidden h-3 w-px shrink-0 bg-border sm:block" />
         <span className="min-w-0 text-sm font-medium leading-snug text-foreground sm:truncate">{callout.title}</span>
       </span>
       <span className="flex shrink-0 items-center gap-2 pl-6 sm:pl-0">
         <Badge
           variant="outline"
-          className={`px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide ${callout.outcomeChipClass}`}
+          className={`px-1.5 py-0 text-3xs font-semibold uppercase ${callout.outcomeChipClass}`}
         >
           {callout.outcomeLabel}
         </Badge>
@@ -185,7 +229,7 @@ function HeroCaseStudyCallout({ callout }: { callout: NonNullable<HeroCardViewMo
   );
 }
 
-export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
+export function HeroCard({ model }: HeroCardProps) {
   const {
     coin,
     coinData,
@@ -195,7 +239,6 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
     variantParent,
     variantChipClass,
     infrastructures,
-    header,
     price,
     market,
     peg,
@@ -219,14 +262,7 @@ export function HeroCard({ model, onOpenFeedback }: HeroCardProps) {
 
   return (
     <Card className="pharos-card-shell gap-0 py-0">
-      <div className="lg:hidden">
-        <HeroCardHeader
-          coinId={header.coinId}
-          compareHref={header.compareHref}
-          benchmarkSymbol={header.benchmarkSymbol}
-          onOpenFeedback={onOpenFeedback}
-        />
-      </div>
+      <HeroChipRail coin={coin} verdict={verdict} />
       <HeroCardMobileSection {...sectionBaseProps} tertiaryMetrics={tertiaryMetrics} />
       <HeroCardDesktopSection
         {...sectionBaseProps}

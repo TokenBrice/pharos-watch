@@ -110,7 +110,7 @@ export function PresetCard({
           {chips.map((chip) => (
             <span
               key={chip.key}
-              className="rounded-full border border-border/60 bg-background/65 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground"
+              className="rounded-full border border-border/60 bg-background/65 px-2.5 py-1 text-2xs font-medium uppercase text-muted-foreground"
             >
               {chip.label}
             </span>

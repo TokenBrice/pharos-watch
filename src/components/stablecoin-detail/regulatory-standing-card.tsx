@@ -37,7 +37,7 @@ const DISCLOSURE_STATE_TONE: Record<IssuerDisclosureState, string> = {
 
 function StatusBadge({ label, toneClass, title }: { label: string; toneClass: string; title?: string }) {
   return (
-    <Badge variant="outline" title={title} className={cn("max-w-full shrink-0 text-[11px] font-medium", toneClass)}>
+    <Badge variant="outline" title={title} className={cn("max-w-full shrink-0 text-2xs font-medium", toneClass)}>
       {label}
     </Badge>
   );
@@ -61,7 +61,7 @@ function RegimeList({ regimes }: { regimes: readonly RegulatoryRegimeView[] }) {
             <span aria-hidden="true" className="block text-xs font-semibold leading-5 text-foreground">
               {regime.shortLabel}
             </span>
-            <span aria-hidden="true" className="block font-mono text-[11px] leading-tight text-muted-foreground">
+            <span aria-hidden="true" className="block font-mono text-2xs leading-tight text-muted-foreground">
               {regime.jurisdiction}
             </span>
             <span className="sr-only">{regime.regimeLabel}</span>
@@ -143,7 +143,7 @@ function IssuerDisclosures({ rows }: { rows: readonly IssuerDisclosureRow[] }) {
       <dl className="mt-2 grid grid-cols-3 gap-x-3">
         {rows.map((row) => (
           <div key={row.key} className="min-w-0">
-            <dt title={row.label} className="truncate text-[11px] leading-4 text-muted-foreground">
+            <dt title={row.label} className="truncate text-2xs leading-4 text-muted-foreground">
               <span aria-hidden="true">{row.shortLabel}</span>
               <span className="sr-only">{row.label}</span>
             </dt>

@@ -20,11 +20,30 @@ export interface StaleQuery {
   hasData?: boolean;
   error?: unknown | null;
   meta?: ApiMeta | null;
+  /**
+   * First fetch in flight (TanStack `isLoading`). When omitted, a query with
+   * no data, no error and `dataUpdatedAt === 0` has never settled, so it is
+   * treated as in flight.
+   */
+  isLoading?: boolean;
+}
+
+/**
+ * A first fetch still in flight is not a health finding: the section it feeds
+ * shows its own loading state, and "has not populated yet" would read as a
+ * failure. Only once the read settles (data, error, or an empty successful
+ * read) does the entry join the banner, so a failed or genuinely unpopulated
+ * source is still named. Callers that pass `isLoading: false` keep an
+ * unsettled empty query in the banner.
+ */
+function isFirstFetchInFlight(query: StaleQuery): boolean {
+  if (query.error || (query.hasData ?? query.dataUpdatedAt > 0)) return false;
+  return query.isLoading ?? query.dataUpdatedAt === 0;
 }
 
 export function StaleDataBanner({ queries }: { queries: readonly StaleQuery[] }) {
   const hydrated = useHydrated();
-  const health = queries.map((q) => {
+  const health = queries.filter((q) => !isFirstFetchInFlight(q)).map((q) => {
     const preset = q.preset ? DATA_HEALTH_PRESETS[q.preset] : null;
     const label = q.label ?? preset?.label ?? "Data";
     const staleTime = q.staleTime ?? preset?.staleTime ?? 15 * 60_000;

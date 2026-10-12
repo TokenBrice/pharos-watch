@@ -18,7 +18,7 @@ export function ContagionGraphLegend({ deferHelp = false }: { deferHelp?: boolea
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
       {GRADE_LEGEND_ITEMS.map(({ label, color }) => (
-        <span key={label} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        <span key={label} className="flex items-center gap-1.5 text-3xs text-muted-foreground">
           <span className="inline-block h-3 w-3 rounded-full border-2" style={{ borderColor: color, backgroundColor: "var(--color-card, #f8f9fa)" }} />
           {label}
         </span>
@@ -29,7 +29,7 @@ export function ContagionGraphLegend({ deferHelp = false }: { deferHelp?: boolea
         // the plain-English meaning on hover, on both the map and detail pages.
         <span
           key={type}
-          className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+          className="flex items-center gap-1.5 text-3xs text-muted-foreground"
           title={DEPENDENCY_TYPE_PRESENTATION[type].description}
         >
           <svg width="16" height="6" className="shrink-0">
@@ -39,8 +39,8 @@ export function ContagionGraphLegend({ deferHelp = false }: { deferHelp?: boolea
         </span>
       ))}
       {!deferHelp ? <>
-        <span className="w-full text-[10px] text-muted-foreground">Arrows point to the asset a coin depends on</span>
-        <span className="w-full text-[10px] text-muted-foreground">Exposure halo: linked coin. Hatched halo: unknown supply.</span>
+        <span className="w-full text-3xs text-muted-foreground">Arrows point to the asset a coin depends on</span>
+        <span className="w-full text-3xs text-muted-foreground">Exposure halo: linked coin. Hatched halo: unknown supply.</span>
       </> : null}
     </div>
   );

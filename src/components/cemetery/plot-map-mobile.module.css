@@ -51,14 +51,15 @@
   box-shadow: 0 -8px 24px oklch(0 0 0 / 0.12);
   transform: translateY(calc(100% + var(--sheet-bottom)));
   visibility: hidden;
+  /* the kit's glide token: 0 ms under reduced motion */
   transition:
-    transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    visibility 0s linear 260ms;
+    transform var(--scene-dur-glide) cubic-bezier(0.2, 0.7, 0.2, 1),
+    visibility 0s linear var(--scene-dur-glide);
 }
 .sheet[data-open="true"] {
   transform: none;
   visibility: visible;
-  transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform var(--scene-dur-glide) cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 /* the sheet is the card's surface: no second frame inside it (it cost 34 px of every line on a 320 px phone) */
 .sheet [data-plot-card] {
@@ -100,14 +101,6 @@
 .sheet:focus-visible {
   outline: 2px solid color-mix(in oklab, var(--foreground) 55%, transparent);
   outline-offset: -3px;
-}
-:global(:root[data-motion="reduced"]) .sheet {
-  transition: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  :global(:root:not([data-motion="full"])) .sheet {
-    transition: none;
-  }
 }
 @media (min-width: 761px) {
   .sheet {

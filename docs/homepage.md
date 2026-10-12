@@ -16,8 +16,8 @@ Route contract for `/`, the main Pharos dashboard.
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
 1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
-2. conditional `HomeBlogBanner` based on build-time post freshness
-3. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
+2. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
+3. conditional `HomeBlogBanner` based on build-time post freshness, placed below the hero so it never takes the slot above the `h1`
 4. `HomeAltClient`
 5. `HomeMediaStrip`, the static `Seen on` media strip linking to `/about/#media`
 
@@ -32,7 +32,7 @@ Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the s
 The visible top fold is split across three independently composed surfaces:
 
 - `CoreTopRail`, rendered directly under the global header chrome, contains the recent-events tape while the grouped top nav owns wayfinding. On desktop the tape renders on every standard page in normal flow: it sits below the sticky top nav and scrolls away with the page, so only the nav stays pinned. On mobile it renders only on the homepage so interior pages keep their first viewport focused on local content.
-- `HomeAltHero`, which owns the page `h1`; its text/summary shell is server-rendered from a maximum-72-hour static public dataset fallback, then reconciles from the homepage's existing live stablecoins query after hydration, while the live historical chart mounts through a viewport gate
+- `HomeAltHero`, which owns the page `h1` and, on the deck line itself (wrapping under it on narrow screens), the `HomeMarketStateLine` answer to "is anything wrong right now?" (displayed PSI band and score linking to `/stability-index/`, and the active-depeg census linking to `/depeg/`); its text/summary shell is server-rendered from a maximum-72-hour static public dataset fallback, then reconciles from the homepage's existing live stablecoins query after hydration, while the live historical chart mounts through a viewport gate
 - `HomeAltMiniCardGrid`, mounted through a viewport gate so mobile first paint does not pay for signal-card queries before the grid enters view
 
 `HomeAltHero` owns the visible `h1` and keeps one raw heading across breakpoints because `npm run seo:check` requires exactly one `<h1>` on every indexable page.
@@ -85,23 +85,38 @@ Saved shortcuts are also browser-local:
 
 ### `HomeAltHero`
 
-`HomeAltHero` receives the server fallback from `getHomepageHeroSnapshot()` in `src/app/page.tsx`, preserves that exact selection through hydration, and then reconciles the headline and cohort rows from `useStablecoins()`. It renders the `Market Pulse` page heading, the total market-cap summary, cohort rows, and the viewport-gated live chart.
+`HomeAltHero` receives the server fallback from `getHomepageHeroSnapshot()` in `src/app/page.tsx`, preserves that exact selection through hydration, and then reconciles the headline and cohort rows from `useStablecoins()`. It renders the `Market Pulse` page heading, the market-state line, the total market-cap summary (neutral ink, not frost-blue), cohort rows, and the viewport-gated live chart.
 
-The current supply snapshot records observed versus expected core-aggregate IDs, plus separate present-but-unavailable and omitted-row counts. No observed supply means a nullable headline, not a live $0; the selector then uses a dated, eligible fallback or renders unavailable. Explicit observed zeros remain zero. Mixed coverage stays visible as a **Known Market Cap Subtotal** with an observed/expected census; the present-row `supplyUnavailableCount` keeps its original meaning. A subgroup with no observations is unavailable and named cohorts require all their members. Others sums observed assets outside the named cohorts. Cohort and non-USD percentages use the positive observed subtotal even with incomplete coverage, explicitly labeled **Shares of known market cap subtotal**; missing supply is excluded from both numerator and denominator.
+`HomeMarketStateLine` (`src/components/home-market-state-line.tsx`) adds no data source: it reads the `useStabilityIndex()` query the global regime bar already holds and the `usePegSummary()` response the Active depegs card reads, and states the same confirmed-depeg count as the `/depeg/` hero (`summary.activeDepegCount`, which excludes NAV-priced tokens). Each item says `unavailable` when its source has no data and appends the shared data-health state when it is not fresh; it never renders a missing census as zero. DEWS counts are deliberately absent because the homepage does not load stress signals.
+
+The current supply snapshot records observed versus expected core-aggregate IDs, plus separate present-but-unavailable and omitted-row counts. No observed supply means a nullable headline, not a live $0; the selector then uses a dated, eligible fallback or renders unavailable. Explicit observed zeros remain zero. Mixed coverage stays visible as a **Known market cap subtotal** with an observed/expected census; the present-row `supplyUnavailableCount` keeps its original meaning. A subgroup with no observations is unavailable and named cohorts require all their members. Others sums observed assets outside the named cohorts. Cohort and non-USD percentages use the positive observed subtotal even with incomplete coverage, explicitly labeled **Shares of known market cap subtotal**; missing supply is excluded from both numerator and denominator.
 
 Only successful data with a producer `updatedAt` classified fresh by `deriveDataHealth` is **Live**. Without producer time, retained figures say **Freshness unavailable · generation unavailable** and carry the shared unavailable-freshness notice; query `dataUpdatedAt` is receipt time and supplies neither freshness authority nor a displayed as-of date. Stale, degraded, or failed-refresh figures keep their available producer dates and shared notices. A minute clock rechecks producer age and the fallback's 72-hour expiry.
 
 ### Market Pulse cards
 
-`PulseCard` receives each contributing query's producer metadata, canonical freshness preset, and error/availability state. Successful stale/degraded responses (including empty results and non-fresh dependencies) carry shared data-health warnings; useful retained values remain visible. The active-depeg headline counts the complete peg-summary incident flags in `ACTIVE_STABLECOIN_ID_SET`, independently of event pagination or current-deviation availability. Only the top four rows are displayed; missing observations and unloaded incident ages are explicitly unavailable, and zero incidents does not claim every price is on peg.
+`PulseCard` receives each contributing query's producer metadata, canonical freshness preset, and error/availability state. Successful stale/degraded responses (including empty results and non-fresh dependencies) carry shared data-health warnings; useful retained values remain visible.
+
+**Instrument cluster.** Every homepage card that links to a rail instrument leads with exactly that page's hero figure, basis, format and universe chip, read through the rail page's own selector (no second derivation):
+
+| Card | Lead figure (same as the rail hero) | Selector | Universe chip |
+| --- | --- | --- | --- |
+| Stability Index | Displayed PSI (rolling 24h avg when published, else raw instant), `formatScore`, displayed band; the raw instant is context | `getDisplayedPsi()` / `getDisplayedPsiBasis()` | `psi` |
+| FreezeWatch | Freezable share of tracked (or observed, when partial) supply | `buildBlacklistStatusBuckets()` → `computeFreezableSummary()` / `formatShare()` | `active`, `N coins classified` (`registryCount`) |
+| Active depegs | Confirmed active depegs right now | peg summary `summary.activeDepegCount` | `pegCatalog`, `coins.length` |
+| Yield Intelligence | Best-paid risk in view: APY of the top Pharos Yield Score row in the `/yield/` landing risk band | `prepareYieldUniverse()` → `selectVisibleYieldRows(universe, {})` → `selectTopPysRows()` | `yieldRows`, `N in view of M · <landing band>` |
+
+The home has no Safety Scores card, so the Safety hero has no card counterpart. Each lead figure is wrapped in `RailHeroFigureTransition` (`src/components/view-transitions.tsx`, name `rail-hero-<psi|freezewatch|depeg|yield>`, `share="auto"`, `default="none"`) and the rail hero wraps its figure with the same name, so the App Router navigation morphs card figure into rail hero figure; reduced motion follows the shared `::view-transition-*` rules in `globals.css`. Secondary context stays below the lead: the FreezeWatch card's 24h/7d toggle switches the frozen-value line and its latest valued freezes (newest first; a sub-dollar freeze reads `<$1`, never `$0`).
+
+The Active depegs rows come from peg-summary incident flags in `ACTIVE_STABLECOIN_ID_SET`, independently of event pagination or current-deviation availability. Only the top three rows are displayed, with a visible `Top 3 of N by deviation` bound; missing observations and unloaded incident ages are explicitly unavailable, and zero incidents does not claim every price is on peg.
 
 Supply movers partition positive/negative observed changes before ranking, promote the peak once, and never fill an empty side with opposite-sign rows. Mint/burn inactivity uses the canonical activity signal: offsetting mints and burns show balanced activity, while unvalued active nets remain unavailable.
 
 ### `HomepageTape`
 
-The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it under the global header chrome and above each page's local content. On desktop the tape renders on every standard page below the sticky `TopNav` and scrolls away with the page; on mobile it renders only on the homepage and scrolls away beneath the site header. Interior mobile routes do not mount the tape component, so its event query does not run behind CSS-hidden chrome; logos come from the static `logosById` map. The server snapshot reserves the desktop rail height until the media query hydrates to avoid shifting desktop content. The in-flow tape shell sets no z-index, so `TopNav` menus (inside the nav's `z-50` stacking context) open over it. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
+The live tape reads `useLatestEvents({ limit: 100, severityFloor: "notice" })`, which resolves to `GET /api/events?limit=100&severityFloor=notice` and is delivered to browsers through same-origin `/_site-data/events?...` on production Pages hosts. Before rendering, it excludes score-class events and runs `collapseForHomepageStrip(...)` so noisy repeat events collapse into one cell with a count badge. `CoreTopRail` mounts it under the global header chrome and above each page's local content. On desktop the tape renders on every standard page below the sticky `TopNav` and scrolls away with the page; on mobile it renders only on the homepage and scrolls away beneath the site header. Interior mobile routes do not mount the tape component, so its event query does not run behind CSS-hidden chrome; logos come from the static `logosById` map. The server snapshot reserves the desktop rail height until the media query hydrates to avoid shifting desktop content. The in-flow tape shell sets no z-index, so `TopNav` menus (inside the nav's `z-chrome` stacking context) open over it. The tape component renders nothing on endpoint errors or a valid empty/collapsed event array, so release smoke checks the underlying site-data contract directly instead of relying on visible ticker text.
 
-Each item carries the class styling from the homepage tape component. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
+Each item carries the class styling from the homepage tape component: 12px secondary ink so the strip does not compete with the nav, an edge fade (mask) on the scrolling viewport instead of hard clipping, pause on hover and focus, and no animation under `prefers-reduced-motion` (the viewport becomes horizontally scrollable instead). Titles render through `formatTapeEventTitle()` in `src/lib/tape-derive.ts`, which rebuilds yield-warning titles from `payload.newSignals` with the shared warning labels and replaces bare mint/burn chain ids with `CHAIN_META` names, so stored machine vocabulary never reaches the strip. The desktop strip leads with the Core / Variants / Pegs / Chains registry counts, each with a hover definition; phones show the ticker line only. The marquee track terminates with a single non-duplicated `View all events →` cell that links to `/timeline/`, the longer-form route covering the same event feed.
 
 ---
 
@@ -132,11 +147,12 @@ Above the fold (`src/app/layout.tsx` + `src/app/page.tsx`):
 1. `TopNav`
 2. `CoreTopRail` directly below the global header chrome
 3. `HomeAltHero`
+4. `HomeBlogBanner` while the latest post is fresh
 
 Under the fold (`HomeAltClient`):
 
 1. `HomeAltMiniCardGrid`
-2. `ShortcutsSection`
+2. `ShortcutsSection` (a quiet "Explore" band: small heading, neutral glyphs, no per-destination hues)
 3. `HomeAltRankingsSection` (`StablecoinTable` + `PegBrowseStrip`)
 4. `HomeAltUpcomingHorizonConstellation`
 5. `HomeAltDdrOverview`
@@ -149,7 +165,7 @@ The directory table is the product's workbench, so it sits directly after shortc
 
 The Biggest Supply Moves signal card (`src/components/home-alt-mini-cards/supply-moves-card.tsx`) ranks active coins with at least $10M in either current or previous-week supply against `circulatingPrevWeek`. Both sides are read through the absence-aware `getCirculatingRawOrNull` / `getPrevWeekRawOrNull` helpers: a coin whose current or previous-week supply is unavailable (for example `circulating: {}` on a supply-chain-dropout quarantine past its carry ceiling) is skipped rather than ranked against a zero. An observed current zero can rank as a contraction, but a non-positive previous-week value is skipped because percentage change has no positive baseline. A coin with a reviewed protocol-internal mint or burn (`shared/lib/reviewed-protocol-internal-flows.ts`) stays out of the ranking while the event is inside the comparison. The window reaches back eight days because the previous-week value is a daily point. The measured supply change itself is not netted or rewritten, so tables and detail pages still show it. The daily digest's biggest supply mover ranks by absolute USD change and does not apply this exclusion.
 
-`HomeAltYieldOverview` leads with the best Pharos Yield Score row's APY/PYS; raw APY is a muted `Highest raw APY (unadjusted)` note. Retained figures keep shared producer-generation freshness notices, failed-refresh retry, and the workbench's API quality warnings.
+`HomeAltYieldOverview` leads with the `/yield/` hero answer for the page's landing risk band (see the instrument-cluster table above), then Coverage, Median APY and the page's `Highest APY` in the same view; the `Top by PYS in view` leaderboard ranks the same landing view. Retained figures keep shared producer-generation freshness notices, failed-refresh retry, and the workbench's API quality warnings.
 
 ### Stablecoin Overview
 
@@ -191,6 +207,8 @@ section heading, summary, and leading stablecoin profile links alongside the sha
 `DailyDigestCard` is imported statically inside the dynamically loaded `HomeAltMiniCardGrid`; it is not a separate dynamic import.
 
 Each dynamic module uses a shape-matched skeleton rather than blocking the full page render.
+
+Each below-fold `LazySection` reserves the section's measured rendered height as a static responsive class (`min-h-[<390px height>] lg:min-h-[<1440px height>]` in `home-alt-client.tsx`) and keeps it until the section scrolls off screen, so mounting never shifts the footer. When a section's layout changes height, re-measure and update its reserve: under-reserving causes layout shift, over-reserving only leaves whitespace while in view.
 
 ---
 

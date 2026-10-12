@@ -18,7 +18,7 @@ export function SourceLaneRow({ group }: { group: YieldSourceBoardGroup }) {
   return (
     <li className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-4 sm:px-5">
       <div className="flex shrink-0 items-center gap-2">
-        <Badge variant="outline" className={cn("text-[11px]", YIELD_TYPE_STYLES[group.yieldType]?.badge ?? "")}>
+        <Badge variant="outline" className={cn("text-2xs", YIELD_TYPE_STYLES[group.yieldType]?.badge ?? "")}>
           {group.yieldTypeLabel}
         </Badge>
         {tier ? (

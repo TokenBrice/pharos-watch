@@ -41,7 +41,7 @@ function ArchiveMonthGroups({
     <div className="space-y-4">
       {groups.map((group) => (
         <div key={group.label} className="space-y-1.5">
-          <h3 className="pharos-kicker">{group.label}</h3>
+          <h3 className="pharos-label">{group.label}</h3>
           <ul className="pharos-card-shell divide-y divide-border/60">
             {group.events.map((event) => {
               const peakBps = getPeakDeviationMagnitudeBps(event);

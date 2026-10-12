@@ -1,7 +1,9 @@
 /*
- * Stablecoin Cemetery plot map (hero "Isometric Plot Map"): scene tokens, scene faces, hero layout, legend and the
- * portrait plan. Port of the approved prototype v2 (`agents/2026-09-30-cemetery-redesign/concepts/c-isometric-v2/`
- * `src/prototype.css`, art-direction.md §2–4).
+ * Stablecoin Cemetery plot map (hero "Isometric Plot Map"): the cemetery's art direction (cause, stone, plinth,
+ * weathering and planting tokens, graves, beam), hero layout, legend and the portrait plan, over the scene kit
+ * (`src/components/scene/scene-tokens.module.css`: shared materials, lighthouse, hairlines, motion tokens), which
+ * `.tokens` and `.map` compose. Port of the approved prototype v2
+ * (`agents/2026-09-30-cemetery-redesign/concepts/c-isometric-v2/` `src/prototype.css`, art-direction.md §2–4).
  *
  * Every colour is a custom property on `.tokens`; the theme switch is the `.dark` ancestor (next-themes class
  * strategy) and nothing reads the theme in JS. Cause colours arrive as `--c-*-l` / `--c-*-d` custom properties set
@@ -11,6 +13,9 @@
 
 /* ------------------------------------------------------------------ tokens: surveyor's daylight */
 .tokens {
+  composes: tokens from "../scene/scene-tokens.module.css";
+  /* the lantern deck (kit `lh-c`) shares the stone column gradient */
+  --scene-col: url(#cem-g-col);
   --c-ab: var(--c-ab-l);
   --c-cp: var(--c-cp-l);
   --c-lq: var(--c-lq-l);
@@ -18,15 +23,7 @@
   --c-rg: var(--c-rg-l);
   --sky-0: oklch(0.985 0 0);
   --sky-1: oklch(0.972 0.006 85);
-  --sea: oklch(0.885 0.012 165);
-  --swell: oklch(0.52 0.02 165 / 0.28);
-  --earth-e: oklch(0.86 0.028 75);
-  --earth-s: oklch(0.8 0.03 70);
-  --strata: oklch(0.45 0.03 70 / 0.22);
-  --lawn: oklch(0.955 0.014 118);
   --bed: oklch(0.925 0.026 126);
-  --gravel: oklch(0.955 0.012 85);
-  --gravel-strip: oklch(0.935 0.012 85);
   --wall-e: oklch(0.975 0.006 85);
   --wall-t: oklch(0.935 0.01 85);
   --wall-s: oklch(0.86 0.014 80);
@@ -39,9 +36,6 @@
   --plinth-t: oklch(0.925 0.01 88);
   --plinth-s: oklch(0.8 0.014 80);
   --grime: oklch(0.52 0.02 75);
-  --edge: oklch(0.32 0.012 75 / 0.62);
-  --edge-soft: oklch(0.32 0.012 75 / 0.3);
-  --shadow: oklch(0.35 0.02 90 / 0.13);
   --mound: oklch(0.905 0.03 124);
   --soil: oklch(0.7 0.05 60);
   --bronze: oklch(0.66 0.09 70);
@@ -57,19 +51,8 @@
   --lamp-post: oklch(0.42 0.01 80);
   --lamp-glass: oklch(0.86 0.02 85);
   --pool-0: transparent;
-  --lh-e: oklch(0.98 0.006 85);
-  --lh-m: oklch(0.93 0.008 85);
-  --lh-s: oklch(0.85 0.012 80);
-  --lh-t: oklch(0.95 0.008 85);
-  --lh-win: oklch(0.42 0.012 80);
-  --lh-glass: oklch(0.93 0.01 90);
-  --rock: oklch(0.72 0.012 80);
-  --rock-s: oklch(0.6 0.012 80);
   --door: oklch(0.36 0.01 80);
   --inscr: oklch(0.36 0.012 75 / 0.85);
-  --hatch: oklch(0.35 0.012 75 / 0.55);
-  --ring: oklch(0.2 0 0 / 0.55);
-  --ring-fill: oklch(0.2 0 0 / 0.06);
   --tint: 12%;
   --bed-tint: 12%;
   --curb-tint: 42%;
@@ -79,18 +62,13 @@
   --beam-2: color-mix(in oklab, var(--frost-blue) 5%, transparent);
   --beam-end: color-mix(in oklab, var(--frost-blue) 16%, transparent);
   --beam-blend: multiply;
-  --plate: color-mix(in oklab, var(--card) 92%, transparent);
-  --plate-border: oklch(0.2 0 0 / 0.14);
   --logo-rest: 1;
   --flower-stem: oklch(0.55 0.07 135);
   --flower-0: oklch(0.57 0.16 5);
   --flower-1: oklch(0.92 0.02 90);
   --flower-2: oklch(0.74 0.13 75);
   --flower-3: oklch(0.57 0.12 305);
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --plot-mono: var(--font-geist-mono), ui-monospace, monospace;
-  /* main padding (route-chrome MainContent: px-4 / lg:px-5 / xl:px-9): the sky runs full-bleed through it */
-  --page-pad: 16px;
 }
 
 /* ------------------------------------------------------------------ tokens: lamplit night */
@@ -102,15 +80,7 @@
   --c-rg: var(--c-rg-d);
   --sky-0: oklch(0.085 0 0);
   --sky-1: oklch(0.13 0.008 250);
-  --sea: oklch(0.17 0.012 220);
-  --swell: oklch(0.7 0.02 220 / 0.14);
-  --earth-e: oklch(0.24 0.012 60);
-  --earth-s: oklch(0.19 0.01 60);
-  --strata: oklch(0.8 0.02 60 / 0.1);
-  --lawn: oklch(0.2 0.02 145);
   --bed: oklch(0.235 0.028 145);
-  --gravel: oklch(0.255 0.008 80);
-  --gravel-strip: oklch(0.22 0.008 80);
   --wall-e: oklch(0.52 0.008 250);
   --wall-t: oklch(0.42 0.008 250);
   --wall-s: oklch(0.26 0.006 250);
@@ -122,9 +92,6 @@
   --plinth-t: oklch(0.47 0.01 240);
   --plinth-s: oklch(0.25 0.008 240);
   --grime: oklch(0.12 0.01 90);
-  --edge: oklch(1 0 0 / 0.16);
-  --edge-soft: oklch(1 0 0 / 0.08);
-  --shadow: oklch(0 0 0 / 0.35);
   --mound: oklch(0.25 0.03 145);
   --soil: oklch(0.36 0.04 55);
   --bronze: oklch(0.52 0.06 70);
@@ -140,19 +107,8 @@
   --lamp-post: oklch(0.34 0.01 80);
   --lamp-glass: oklch(0.86 0.12 80);
   --pool-0: oklch(0.8 0.13 75 / 0.26);
-  --lh-e: oklch(0.6 0.01 250);
-  --lh-m: oklch(0.47 0.01 250);
-  --lh-s: oklch(0.3 0.008 250);
-  --lh-t: oklch(0.52 0.01 250);
-  --lh-win: oklch(0.8 0.13 75);
-  --lh-glass: oklch(0.93 0.06 90);
-  --rock: oklch(0.3 0.008 250);
-  --rock-s: oklch(0.22 0.006 250);
   --door: oklch(0.14 0.005 250);
   --inscr: oklch(0.15 0.01 250 / 0.8);
-  --hatch: oklch(1 0 0 / 0.3);
-  --ring: oklch(1 0 0 / 0.6);
-  --ring-fill: oklch(1 0 0 / 0.07);
   --tint: 16%;
   --bed-tint: 16%;
   --curb-tint: 55%;
@@ -161,20 +117,9 @@
   --beam-2: color-mix(in oklab, var(--frost-blue) 4%, transparent);
   --beam-end: color-mix(in oklab, var(--frost-blue) 22%, transparent);
   --beam-blend: screen;
-  --plate-border: oklch(1 0 0 / 0.14);
   --logo-rest: 0.92;
 }
 
-@media (min-width: 1024px) {
-  .tokens {
-    --page-pad: 20px;
-  }
-}
-@media (min-width: 1280px) {
-  .tokens {
-    --page-pad: 36px;
-  }
-}
 
 /* ------------------------------------------------------------------ hero layout */
 .hero {
@@ -514,7 +459,7 @@
   pointer-events: none;
   opacity: 0;
   color: var(--foreground);
-  transition: opacity 120ms;
+  transition: opacity var(--scene-dur-fast);
 }
 .tag[data-on="true"] {
   opacity: 1;
@@ -822,58 +767,9 @@
   outline-offset: 2px;
 }
 
-/* ------------------------------------------------------------------ scene faces */
-.map .e {
-  stroke: var(--edge);
-  stroke-width: 0.6px;
-  vector-effect: non-scaling-stroke;
-  stroke-linejoin: round;
-}
-.map .eo {
-  stroke: var(--edge);
-  stroke-width: 0.8px;
-  stroke-dasharray: 2 1.6;
-  vector-effect: non-scaling-stroke;
-}
-.map .es {
-  stroke: var(--edge-soft);
-  stroke-width: 0.5px;
-  vector-effect: non-scaling-stroke;
-}
-.map .sea {
-  fill: var(--sea);
-}
-.map .sea.far {
-  opacity: 0.42;
-}
-.map .swell {
-  stroke: var(--swell);
-  stroke-width: 0.6px;
-  vector-effect: non-scaling-stroke;
-  fill: none;
-  stroke-dasharray: 14 9;
-}
-.map .earth-e {
-  fill: var(--earth-e);
-}
-.map .earth-s {
-  fill: var(--earth-s);
-}
-.map .strata {
-  stroke: var(--strata);
-  stroke-width: 0.6px;
-  vector-effect: non-scaling-stroke;
-  fill: none;
-  stroke-dasharray: 3 3;
-}
-.map .lawn {
-  fill: var(--lawn);
-}
-.map .gravel {
-  fill: var(--gravel);
-}
-.map .gravel.strip {
-  fill: var(--gravel-strip);
+/* ------------------------------------------------------------------ scene faces (kit faces: scene-tokens.module.css) */
+.map {
+  composes: scene from "../scene/scene-tokens.module.css";
 }
 .map .bed {
   fill: color-mix(in oklab, var(--bed), var(--cause) var(--bed-tint));
@@ -895,9 +791,6 @@
   stroke-width: 0.5px;
   vector-effect: non-scaling-stroke;
   fill: none;
-}
-.map .shadow {
-  fill: var(--shadow);
 }
 .map .mound {
   fill: var(--mound);
@@ -942,33 +835,6 @@
 }
 .map .lamp-glass {
   fill: var(--lamp-glass);
-}
-.map .lh-e {
-  fill: var(--lh-e);
-}
-.map .lh-m {
-  fill: var(--lh-m);
-}
-.map .lh-s {
-  fill: var(--lh-s);
-}
-.map .lh-t {
-  fill: var(--lh-t);
-}
-.map .lh-c {
-  fill: url(#cem-g-col);
-}
-.map .lh-win {
-  fill: var(--lh-win);
-}
-.map .lh-glass {
-  fill: var(--lh-glass);
-}
-.map .rock {
-  fill: var(--rock);
-}
-.map .rock-s {
-  fill: var(--rock-s);
 }
 /* Footstone glyphs (€ ¥ ∿ ◇). No font in the mono stack draws the VAR peg's "∿", so every browser falls back to a
    system font for it; on macOS that platform fallback search took ~12 ms of the first layout (~48 ms at 4× CPU) and
@@ -1053,10 +919,6 @@
 .grave .hatch {
   fill: url(#cem-hatch);
   pointer-events: none;
-}
-.hatchLine {
-  stroke: var(--hatch);
-  stroke-width: 0.55;
 }
 .grave .crack {
   stroke: var(--mouth);
@@ -1171,7 +1033,7 @@
   vector-effect: non-scaling-stroke;
   transform-box: fill-box;
   transform-origin: center;
-  animation: plotBloom 520ms var(--ease) both;
+  animation: plotBloom var(--scene-dur-bloom) var(--ease) both;
 }
 .flower0 {
   --flower: var(--flower-0);
@@ -1365,29 +1227,15 @@
 .gsp0 {
   stop-color: var(--beam-end);
 }
-.stopClear {
-  stop-color: transparent;
-}
-.defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
 
-/* reduced motion: stones do not lift and flowers appear without a bloom (the island adds no beam or zoom transition) */
+/* reduced motion: stones do not lift; flowers appear without a bloom and the tag without a fade because the kit's
+   `--scene-dur-*` tokens are 0 ms (the island adds no beam or zoom transition) */
 :root[data-motion="reduced"] .grave .stone {
   translate: none;
-}
-:root[data-motion="reduced"] .flowerHead {
-  animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion="full"]) .grave .stone {
     translate: none;
-  }
-  :root:not([data-motion="full"]) .flowerHead {
-    animation: none;
   }
 }
 

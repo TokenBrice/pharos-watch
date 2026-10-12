@@ -26,13 +26,13 @@ function permanentEventHrefs(html: string): string[] {
 }
 
 describe("DepegPage", () => {
-  it("renders the Telegram setup CTA once in the header action area", () => {
+  it("renders the Telegram alerts CTA once as a compact header action", () => {
     const html = renderToStaticMarkup(<DepegPage />);
 
     const matches = html.match(/Get instant Telegram alerts/g) ?? [];
     expect(matches).toHaveLength(1);
     expect(html).toContain('href="/pharoswatchbot/#bot"');
-    expect(html).toContain("Set up alerts");
+    expect(html).toContain("<span>Alerts</span>");
   });
 
   it("renders only the latest calendar month as a server-side archive preview", () => {

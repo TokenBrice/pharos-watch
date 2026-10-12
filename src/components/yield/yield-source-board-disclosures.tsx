@@ -18,7 +18,7 @@ function DisclosureRowFrame({ detail, children }: { detail: YieldSourceBoardRowD
   return (
     <li className="flex flex-col gap-1 py-2 sm:flex-row sm:items-baseline sm:gap-3">
       <div className="flex shrink-0 items-center gap-2 sm:w-56">
-        <Badge variant="outline" className={cn("text-[11px]", YIELD_TYPE_STYLES[detail.yieldType]?.badge ?? "")}>
+        <Badge variant="outline" className={cn("text-2xs", YIELD_TYPE_STYLES[detail.yieldType]?.badge ?? "")}>
           {detail.yieldTypeLabel}
         </Badge>
         <Link

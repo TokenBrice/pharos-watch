@@ -1,8 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import type { FaqItem } from "@/lib/faq";
-import { buildPageMetadata } from "@/lib/page-metadata";
-import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildLiveRouteOgImageUrl, buildPageMetadata } from "@/lib/page-metadata";
 import FlowsClient from "./client";
 import { FlowsLoadingState } from "./loading";
 
@@ -13,7 +12,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Mint/Burn Flows & Bank Run Gauge",
   description: FLOWS_DESCRIPTION,
   canonical: "/flows/",
-  ogImage: `${SITE_URL}/og-flows.png`,
+  ogImage: buildLiveRouteOgImageUrl("flows"),
 });
 
 const FLOW_FAQ_ITEMS = [

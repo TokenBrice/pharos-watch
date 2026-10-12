@@ -140,11 +140,9 @@
 .sky-region-tag {
   position: absolute;
   transform: translate(-50%, -50%) scale(var(--peg-coin-scale, 1));
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: oklch(0.85 0.02 250 / 0.58);
-  font-weight: 700;
+  font-size: 11px;
+  color: oklch(0.85 0.02 250 / 0.72);
+  font-weight: 600;
   padding: 3px 8px;
   background: oklch(0 0 0 / 0.45);
   border-radius: 10px;
@@ -450,10 +448,8 @@
 }
 .coin-emblem__hover-card-label {
   color: oklch(0.78 0.03 250 / 0.86);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
 }
 .coin-emblem__hover-card-value {
   margin-top: 2px;
@@ -471,10 +467,8 @@
   border-top: 1px solid oklch(1 0 0 / 0.1);
   padding-top: 6px;
   color: oklch(0.86 0.12 245);
-  font-size: 10px;
-  font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .fiat-region-section {
@@ -523,10 +517,8 @@
 
 .peg-hero__top-label {
   color: oklch(0.76 0.03 250 / 0.9);
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .peg-hero__scale-item {
@@ -639,10 +631,8 @@
 
 .peg-hero__top-share {
   color: oklch(0.72 0.04 250 / 0.88);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 @media (max-width: 1279px) {

@@ -41,7 +41,7 @@ export function EmptyStateSurface({
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)] lg:items-start">
         <div className="min-w-0 space-y-5">
           <div className="space-y-3">
-            <p className="pharos-kicker text-primary/80">{eyebrow}</p>
+            <p className="pharos-label text-primary/80">{eyebrow}</p>
             <div className="space-y-2">
               <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem] sm:leading-[1.05]">
                 {title}
@@ -54,7 +54,7 @@ export function EmptyStateSurface({
             <ol className="grid divide-y divide-border/50 border-y border-border/50 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               {steps.map((step, index) => (
                 <li key={step.title} className="py-3 sm:px-4 sm:first:pl-0 sm:last:pr-0">
-                  <p className="pharos-kicker text-primary/80">0{index + 1}</p>
+                  <p className="pharos-label text-primary/80">0{index + 1}</p>
                   <p className="mt-2 text-sm font-semibold text-foreground">{step.title}</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{step.description}</p>
                 </li>

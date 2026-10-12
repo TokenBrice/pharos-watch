@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, Search, SunMoon } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
+import { RegimeBarToggle } from "@/components/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
 import {
   DropdownMenu,
@@ -249,11 +250,29 @@ export function TopNav() {
     setOpenMenu(null);
   };
 
+  // A hover-opened panel must be dismissible without moving the pointer
+  // (WCAG 1.4.13). The wrapper's onKeyDown only hears Esc while focus is
+  // inside the menu, so listen on the document when focus is elsewhere.
+  useEffect(() => {
+    if (!openMenu || openMenu === APPEARANCE_MENU_KEY) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const region = sectionNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${openMenu}"]`);
+      if (region?.contains(document.activeElement)) return;
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      if (openTimer.current) clearTimeout(openTimer.current);
+      hoverOpenRef.current = false;
+      setOpenMenu(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [openMenu]);
+
   return (
     <header
       aria-label="Primary"
       className={cn(
-        "sticky z-50 hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex xl:px-6",
+        "sticky z-chrome hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex xl:px-6",
         topOffsetClass,
       )}
     >
@@ -264,7 +283,7 @@ export function TopNav() {
         aria-label="Pharos home"
       >
         <PharosLogo size={28} className="rounded-full shadow-sm" priority />
-        <span className="pharos-display text-[15px] font-bold tracking-tight text-foreground">Pharos</span>
+        <span className="pharos-display text-sm font-bold tracking-tight text-foreground">Pharos</span>
       </Link>
 
       {/* Destinations sit left of the fold; browsing sits on the right, next to
@@ -401,7 +420,7 @@ export function TopNav() {
                         <div className="flex gap-3">
                           {menu.columns.map((column) => (
                             <div key={column.key} className="min-w-[172px]">
-                              <p className="pharos-kicker mb-1 px-2.5 text-muted-foreground/70">{column.label}</p>
+                              <p className="pharos-label mb-1 px-2.5 text-muted-foreground/70">{column.label}</p>
                               <ul>
                                 {column.items.map((item) => (
                                   <NavMenuItem
@@ -448,6 +467,7 @@ export function TopNav() {
             );
           })}
         </nav>
+        <RegimeBarToggle />
         <DropdownMenu
           modal={false}
           open={openMenu === APPEARANCE_MENU_KEY}
@@ -498,7 +518,7 @@ export function TopNav() {
         >
           <Search className="size-4 shrink-0" aria-hidden />
           <span className="hidden xl:inline">Coin or page</span>
-          <kbd className="ml-auto hidden rounded border border-border/70 bg-background px-1.5 font-mono text-[10px] text-muted-foreground xl:inline">
+          <kbd className="ml-auto hidden rounded border border-border/70 bg-background px-1.5 font-mono text-3xs text-muted-foreground xl:inline">
             ⌘K
           </kbd>
         </button>

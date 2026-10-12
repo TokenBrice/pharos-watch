@@ -11,6 +11,7 @@ import satori from "satori";
 // tests can inspect the element it would render.
 import satoriStandalone, { init as initSatoriStandalone } from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { CHAIN_HEALTH_HEX } from "@shared/lib/classification";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
@@ -35,7 +36,7 @@ import {
   type SafetyScoresCardData,
 } from "../../lib/og-templates/safety-scores-card";
 import { DepegCard, type DepegCardData } from "../../lib/og-templates/depeg-card";
-import { ChainCard, type ChainCardData } from "../../lib/og-templates/chain-card";
+import { ChainCard, ChainUnavailableCard, type ChainCardData } from "../../lib/og-templates/chain-card";
 
 afterEach(() => {
   resetOgWasmInitializationForTests();
@@ -619,10 +620,11 @@ describe("chain OG route", () => {
     ]);
   }
 
-  it("renders a degraded card when a known chain has no tracked supply", async () => {
+  it("renders a figure-free degraded card when a known chain is absent from the aggregate", async () => {
     // Asset with no chain attribution → aggregateChains() emits no chains, so
     // "ethereum" (a CHAIN_META id whose page bakes this og:image URL) is
-    // absent from the aggregate and must still resolve to a 200 PNG.
+    // absent from the aggregate and must still resolve to a 200 PNG. Absence
+    // is not an observed zero, so the card must not print "$0".
     const db = makeChainOgDb([makeAsset({ chainCirculating: {}, chains: [] })]);
     const satoriMock = vi.mocked(satoriStandalone);
     satoriMock.mockClear();
@@ -630,20 +632,15 @@ describe("chain OG route", () => {
     const res = await handleOg(db, "/api/og/chain/ethereum");
     expect(res?.status).toBe(200);
     expect(res?.headers.get("Content-Type")).toBe("image/png");
+    expect(res?.headers.get("X-Og-Status")).toBe("degraded");
+    expect(res?.headers.get("X-Og-Reason")).toBe("chain-not-in-aggregate");
 
-    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
-      data: ChainCardData;
-    }>;
-    expect(element.type).toBe(ChainCard);
-    expect(element.props.data).toMatchObject({
-      name: "Ethereum",
-      totalUsd: 0,
-      stablecoinCount: 0,
-      healthScore: null,
-      healthBand: null,
-      topStablecoins: [],
-    });
-    expect(renderToStaticMarkup(element)).toContain("No tracked stablecoin supply");
+    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement;
+    expect(element.type).toBe(ChainUnavailableCard);
+    const markup = renderToStaticMarkup(element);
+    expect(markup).toContain("Ethereum Stablecoins");
+    expect(markup).toContain("No current supply observation");
+    expect(markup).not.toContain("$0");
   });
 
   it("converts the chain 7d ratio to a percentage before rendering", async () => {
@@ -1170,6 +1167,14 @@ describe("og cards render through satori", () => {
       />,
     );
     expect(svg).toContain("<svg");
+  });
+
+  it("colours the chain health band from the shared Chain Health authority", () => {
+    const markup = renderToStaticMarkup(<ChainCard data={{
+      name: "Ethereum", totalUsd: 100, change7dPercent: null, stablecoinCount: 1,
+      dominanceShare: 1, healthScore: 91, healthBand: "robust", topStablecoins: [],
+    }} />);
+    expect(markup).toContain(`color:${CHAIN_HEALTH_HEX.robust}`);
   });
 
   it("renders unavailable chain history without inventing zero growth", () => {

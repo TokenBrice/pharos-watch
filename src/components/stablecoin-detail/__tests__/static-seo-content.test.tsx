@@ -220,7 +220,7 @@ describe("StablecoinDetailSeoContent", () => {
 
     const { container } = render(<StablecoinDetailSeoContent coin={variantCoin} />);
 
-    expect(screen.getByText("Variant Relationship")).toBeTruthy();
+    expect(screen.getByText("Variant relationship")).toBeTruthy();
     expect(container.textContent).toContain("modeled as a savings variant of");
     expect(container.textContent).toContain(
       "Pharos treats parent stress, redemption, mint authority, and dependency context as relevant",

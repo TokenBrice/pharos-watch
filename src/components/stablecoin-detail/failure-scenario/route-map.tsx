@@ -94,7 +94,7 @@ function RouteNodeLink({
       {children ?? (
         <>
           <StepNumber number={step.number} hypothetical={hypothetical} terminal={terminal} />
-          <span className="min-w-0 text-[12.5px] font-medium leading-snug text-foreground text-pretty group-hover/node:underline group-hover/node:decoration-foreground/30 group-hover/node:underline-offset-2">
+          <span className="min-w-0 text-xs font-medium leading-snug text-foreground text-pretty group-hover/node:underline group-hover/node:decoration-foreground/30 group-hover/node:underline-offset-2">
             {step.stage.title}
           </span>
         </>
@@ -433,7 +433,7 @@ function VerticalRouteMap({ route, anchorPrefix, onOpenStep, sharedLabel }: Rout
                 return (
                   <Fragment key={lane.branch.id}>
                     {laneIndex > 0 ? (
-                      <p className="py-1 pl-[2.125rem] text-[11px] font-medium text-muted-foreground">or</p>
+                      <p className="py-1 pl-[2.125rem] text-2xs font-medium text-muted-foreground">or</p>
                     ) : null}
                     <div role="group" aria-label={`${lane.branch.label}, ${lane.branch.keys}`} className="min-w-0">
                       <div className={VERTICAL_GRID_CLASS}>
@@ -475,7 +475,7 @@ function VerticalRouteMap({ route, anchorPrefix, onOpenStep, sharedLabel }: Rout
                   </Fragment>
                 );
               })}
-              <p className="pb-1 pl-[2.125rem] pt-0.5 text-[11px] text-muted-foreground">{sharedLabel} rejoin</p>
+              <p className="pb-1 pl-[2.125rem] pt-0.5 text-2xs text-muted-foreground">{sharedLabel} rejoin</p>
             </div>
           </div>
           <VerticalRun
