@@ -1,6 +1,6 @@
 # Pricing Pipeline — Historical and Implementation Appendix
 
-> **Agent navigation** — Grep the heading you need: Active Price Coverage Health · Primary Consensus · Provider-Specific Normalization · Authoritative Overrides · Fallback Enrichment · Current Operator Limitations · Data Integrity Guardrails · Gold & Silver Spot Prices. Start routine changes with the [current contract](../pricing-pipeline.md); this appendix is not a second methodology or publication authority.
+> **Agent navigation** — Grep the heading you need: Active Price Coverage Health · Primary Consensus · Provider-Specific Normalization · Authoritative Overrides · Fallback Enrichment · Current Operator Limitations · Data Integrity Guardrails · Gold & Silver Spot Prices · SOFID v6.48 release. Start routine changes with the [current contract](../pricing-pipeline.md); this appendix is not a second methodology or publication authority.
 ## Active Price Coverage Health
 
 Price coverage is evaluated independently from active-row publication. `evaluateStablecoinActivePriceCoverage()` compares the final payload to the current active registry and counts a row as observed/priced only when `isObservedPrice()` admits its finite positive price. A valid published `nominalPriceReference` without an observed price is a separate reviewed category, not a missing gap: `nominalReferenceCount`, `nominalReferenceIds`, and `nominalReferenceMarketCapUsd` expose it with `nominalReferenceReason: "reviewed-nominal-reference"`. The nominal market-cap total is null if any constituent supply is unreadable. A trusted observed market quote takes precedence over its nominal sidecar for coverage. Rows with neither remain missing even though their supply and lifecycle data remain publishable. Nominal-only assets do not accumulate missing streaks, enter missing-price alerts or duration bands, or inflate observed-price counts. Status evidence records an informational `active_price_coverage_nominal_reference` cause.
@@ -528,3 +528,8 @@ For fiat FX, Frankfurter remains the preferred ECB-backed source for the busines
 
 The live `/price/` endpoints require no API key. A successful 30-day baseline with one gold/silver request pair every 30 minutes is 2,880 requests; retries and failed-bucket reattempts can exceed that estimate. Backfills use CoinGecko commodity history, not a separate gold-api.com historical endpoint.
 
+
+
+## SOFID v6.48 release
+
+The 2026-10-11 `v6.48` release retires SOFID's nominal protocol-par override. Its existing exact-identity CoinGecko/Kraken market consensus now survives ordinary normalization and can show an observed discount or premium. Kraken retains `local_fetch` timing and `confirm_required` depeg trust; missing quotes and carried nominal references remain unavailable. No source, consensus weight, liquidity threshold or freshness budget is added. Supplemental Idle CDO NAV reachability and failure diagnostics restore existing supply-admission behavior rather than adding another methodology change.

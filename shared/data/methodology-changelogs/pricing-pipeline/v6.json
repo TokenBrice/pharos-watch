@@ -3,12 +3,12 @@
     "version": "6.49",
     "title": "Reviewed NXUSD and Hermetica USDh low-volume price recovery",
     "date": "2026-10-12",
-    "effectiveAt": 1791763200,
+    "effectiveAt": 1791849600,
     "summary": "NXUSD and Hermetica USDh join the existing scoped CoinGecko low-volume fallback after a production audit found real upstream quotes inside the seven-day budget but outside primary consensus freshness.",
     "impact": [
       "Only missing NXUSD and Hermetica USDh prices can use their reviewed nxusd and hermetica-usdh CoinGecko identities after earlier fallback passes fail. Admitted quotes retain fallback confidence and the original upstream observation clock; Hubble USDH and Native Markets USDH are distinct identities.",
       "The seven-day age limit, 120-second future-skew limit, peg validation, primary consensus and admitted supply remain unchanged. Expired or invalid observations remain unavailable.",
-      "The effective date is aligned with the 2026-10-12 release. Recovery requires a fresh production publication; local source evidence and tests do not establish production recovery."
+      "Historical version lookup activates at the next UTC midnight (2026-10-13), preserving earlier publications. Recovery requires a fresh production publication; local source evidence and tests do not establish production recovery."
     ],
     "commits": [],
     "reconstructed": false
