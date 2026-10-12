@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbCacheMocks = vi.hoisted(() => ({
   setCache: vi.fn<(_db: D1Database, key: string, value: string) => Promise<void>>(async () => {}),
@@ -40,6 +40,8 @@ describe("trigger-digest route", () => {
     dbCacheMocks.setCache.mockReset().mockResolvedValue(undefined);
   });
 
+  afterEach(() => vi.useRealTimers());
+
   it("writes the force-run cache key and returns 202 without long-running waitUntil", async () => {
     const request = makeRequest();
     // Idempotency-Key is optional; absent header makes the handler run
@@ -68,6 +70,7 @@ describe("trigger-digest route", () => {
     const setCacheArgs = dbCacheMocks.setCache.mock.calls[0] as unknown[];
     expect(setCacheArgs[1]).toBe("digest:force-run-request");
     const persistedValue = JSON.parse(setCacheArgs[2] as string) as {
+      kind: string;
       requestId: string;
       requestedAt: number;
       attempts: number;
@@ -75,6 +78,7 @@ describe("trigger-digest route", () => {
       state: string;
       lastError: string | null;
     };
+    expect(persistedValue.kind).toBe("daily");
     expect(persistedValue.requestId).toBe(body.requestId);
     expect(typeof persistedValue.requestedAt).toBe("number");
     expect(persistedValue.attempts).toBe(0);
@@ -84,6 +88,41 @@ describe("trigger-digest route", () => {
 
     // waitUntil is not used for digest execution anymore.
     expect(ctx.waitUntil).not.toHaveBeenCalled();
+  });
+
+  it.each(["daily", "weekly"] as const)("queues an explicit %s kind on Monday", async (kind) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-12T11:00:00Z"));
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ kind })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ kind, accepted: true });
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(dbCacheMocks.setCache.mock.calls[0]![2])).toMatchObject({
+      kind,
+      requestedAt: Date.now() / 1_000,
+      attempts: 0,
+      state: "pending",
+    });
+  });
+
+  it("rejects a weekly trigger outside Monday UTC without queueing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-13T00:00:00Z"));
+    const response = await handleTriggerDigest({
+      request: makeRequest('{"kind":"weekly"}'),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(400);
+    expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
   });
 
   it.each(["daily", "weekly"] as const)("updates only %s mode without queuing a force-run", async (kind) => {
@@ -195,6 +234,10 @@ describe("trigger-digest route", () => {
     ["invalid JSON", "{", 400],
     ["non-object JSON", "[]", 400],
     ["unknown field", '{"unexpected":true}', 400],
+    ["unknown kind", '{"kind":"monthly"}', 400],
+    ["null kind", '{"kind":null}', 400],
+    ["combined actions", '{"kind":"weekly","styleGateMode":{"weekly":"enforce"}}', 400],
+    ["backfill date", '{"kind":"weekly","date":"2026-10-05"}', 400],
     ["oversized body", " ".repeat(1_025), 413],
   ] as const)("rejects %s without changing settings or queueing", async (_name, body, status) => {
     const response = await handleTriggerDigest({

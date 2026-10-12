@@ -18,6 +18,9 @@ import {
 } from "./safety-score-publication";
 export type { DigestSafetyMapCapture, DigestSafetyMapSummary } from "./digest-safety-map-contract";
 
+export const DigestKindSchema = z.enum(["daily", "weekly"]);
+export type DigestKind = z.output<typeof DigestKindSchema>;
+
 export const DigestSafetyContextSchema = z
   .discriminatedUnion("status", [
     z
@@ -670,7 +673,7 @@ export const DigestArchiveEntrySchema = z.object({
   nextTriggers: z.array(DigestNextTriggerSchema).nullable().optional(),
   forwardLookOutcomes: z.array(DigestForwardLookOutcomeSchema).nullable().optional(),
   riskTape: z.array(DigestRiskTapeItemSchema).nullable().optional(),
-  digestType: z.enum(["daily", "weekly"]).optional(),
+  digestType: DigestKindSchema.optional(),
   editionNumber: z.number().optional(),
   /**
    * Editorial style policy that produced the edition. Absent on editions
