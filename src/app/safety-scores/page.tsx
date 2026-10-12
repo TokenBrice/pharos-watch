@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, Map as MapIcon } from "lucide-react";
 import { AlertsHeaderLink } from "@/components/alerts-header-link";
+import { Button } from "@/components/ui/button";
 import { CalloutBanner } from "@/components/callout-banner";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -67,6 +68,13 @@ const route = createClientFeaturePage({
     header: "instrument",
     headerActions: (
       <>
+        {/* Server-rendered so the map stays crawlable from the homepage. */}
+        <Button asChild variant="outline" size="sm" className="min-h-11 rounded-full px-4 lg:min-h-9 lg:rounded-md">
+          <Link href="/safety-scores/map/" aria-label="Map: every grade band as a single image">
+            <MapIcon aria-hidden="true" />
+            <span>Map</span>
+          </Link>
+        </Button>
         <AlertsHeaderLink
           href="/pharoswatchbot/#getting-started"
           description="Get notified when a safety grade changes"
