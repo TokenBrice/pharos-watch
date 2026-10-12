@@ -69,7 +69,14 @@ const DIGEST_FETCH_PER_ATTEMPT_TIMEOUT_MS = 11 * 60_000;
 const DIGEST_FETCH_MAX_RETRIES = 2;
 const DIGEST_ERROR_BODY_TIMEOUT_MS = 15_000;
 const DIGEST_ERROR_BODY_MAX_BYTES = 2_000;
-const SUPPORTED_DIGEST_MODELS = ["claude-opus-5-5", "claude-opus-5", "claude-sonnet-5", "claude-fable-5"] as const;
+const SUPPORTED_DIGEST_MODELS = [
+  "claude-opus-5-5",
+  "claude-opus-5",
+  "claude-sonnet-5-5",
+  "claude-sonnet-5",
+  "claude-fable-5-1",
+  "claude-fable-5",
+] as const;
 
 interface DigestLlmConfigOverrides {
   model?: unknown;
@@ -114,8 +121,13 @@ function getModelTokenPrices(model: string): ModelTokenPrices | null {
   if (model.startsWith("claude-opus-5") || model.startsWith("claude-opus-4-8")) {
     return { input: 5, cacheWrite: 6.25, cacheRead: 0.5, output: 25 };
   }
+  // Sonnet 5 and Sonnet 5.5 share $2/$10 pricing.
   if (model.startsWith("claude-sonnet-5")) {
-    return { input: 3, cacheWrite: 3.75, cacheRead: 0.3, output: 15 };
+    return { input: 2, cacheWrite: 2.5, cacheRead: 0.2, output: 10 };
+  }
+  // Before the Fable 5 prefix: Fable 5.1 bills cache reads at $0.25.
+  if (model.startsWith("claude-fable-5-1")) {
+    return { input: 10, cacheWrite: 12.5, cacheRead: 0.25, output: 50 };
   }
   if (model.startsWith("claude-fable-5")) {
     return { input: 10, cacheWrite: 12.5, cacheRead: 1, output: 50 };
