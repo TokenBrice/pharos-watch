@@ -13,13 +13,23 @@ const options = { chain: "gnosis", contract: "0x00000000000000000000000000000000
 
 describe("reserve log span bounds", () => {
   beforeEach(() => vi.mocked(fetchEvmRpcBatchDetailed).mockReset());
-  it("preserves incumbent Alchemy caller windows without admitted Dwellir logs", async () => {
+  it("preserves caller windows within the admitted Alchemy span", async () => {
     vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValue({ results: [[]], errors: [] });
     const chainRpcs = buildChainRpcs("test-alchemy");
-    expect(await fetchOnchainLogs({ ...options, chain: "base", toBlock: 500_000, ctx: { chainRpcs } }))
+    expect(await fetchOnchainLogs({ ...options, chain: "arbitrum", toBlock: 500_000, ctx: { chainRpcs } }))
       .toMatchObject({ complete: true, calls: 1 });
     expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls[0][1][0].params[0])
       .toMatchObject({ fromBlock: "0x1", toBlock: "0x7a120" });
+  });
+  it("covers the M0 window in contiguous Alchemy pages without Dwellir", async () => {
+    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValue({ results: [[]], errors: [] });
+    const chainRpcs = buildChainRpcs("test-alchemy");
+    expect(await fetchOnchainLogs({ ...options, chain: "ethereum", toBlock: 18_001, ctx: { chainRpcs } }))
+      .toMatchObject({ complete: true, calls: 2 });
+    expect(vi.mocked(fetchEvmRpcBatchDetailed).mock.calls.map((call) => call[1][0].params[0])).toEqual([
+      { address: options.contract, topics: [], fromBlock: "0x1", toBlock: "0x2710" },
+      { address: options.contract, topics: [], fromBlock: "0x2711", toBlock: "0x4651" },
+    ]);
   });
   it("clamps initial ranges to admitted endpoint spans", async () => {
     vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValue({ results: [[]], errors: [] });
@@ -38,10 +48,15 @@ describe("reserve log span bounds", () => {
       .mockResolvedValue({ results: [[]], errors: [] });
     expect(await fetchOnchainLogs({ ...options, toBlock: 2000 })).toMatchObject({ complete: true, calls: 3 });
   });
-  it("withholds all logs when clamped pages exhaust the call budget", async () => {
-    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValue({ results: [[]], errors: [] });
-    const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: "test" });
-    expect(await fetchOnchainLogs({ ...options, maxCalls: 1, ctx: { chainRpcs } }))
+  it.each(["alchemy", "dwellir"] as const)("withholds all logs when %s pages exhaust the call budget", async (provider) => {
+    vi.mocked(fetchEvmRpcBatchDetailed).mockResolvedValue({ results: [[{
+      address: options.contract, topics: [`0x${"a".repeat(64)}`], data: "0x", blockNumber: "0x1",
+    }]], errors: [] });
+    const chainRpcs = provider === "alchemy"
+      ? buildChainRpcs("test-alchemy")
+      : buildChainRpcs(undefined, undefined, { dwellirApiKey: "test" });
+    expect(await fetchOnchainLogs({ ...options, chain: provider === "alchemy" ? "ethereum" : options.chain,
+      maxCalls: 1, ctx: { chainRpcs } }))
       .toMatchObject({ complete: false, logs: [], calls: 1 });
   });
 });

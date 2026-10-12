@@ -838,24 +838,22 @@ describe("measured execution generation prune", () => {
     sqlite.prepare(`INSERT INTO cron_leases VALUES ('sync-dex-liquidity', 'unrelated-owner', ?, ?, ?)`).run(nowSec + 900, nowSec, nowSec);
     sqlite.prepare(`INSERT INTO surface_publication_generations
       (surface, generation_id, started_at, state, expected_rows, producer_schedule_key, producer_job, producer_path, producer_kind, invocation_id)
-      VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 37,
+      VALUES ('dex-measured-execution-targets', ?, ?, 'candidate', 2037,
         'halfHourlyChartsOffset', 'sync-dex-liquidity', 'halfHourlyChartsOffset', 'scheduled-job', 'invocation')`)
       .run(generationId, nowSec - 14_401);
     const targetInsert = sqlite.prepare(`INSERT INTO dex_measured_execution_targets
       (generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain, pool_id, captured_at, target_json)
       VALUES (?, ?, 'usdc-circle', 'uniswap-v3-quoter-v2', 'uniswap-v3', 'ethereum', ?, ?, '{}')`);
-    for (let index = 0; index < 37; index++) targetInsert.run(generationId, `target-${index}`, `pool-${index}`, nowSec - 14_401);
+    for (let index = 0; index < 2_037; index++) targetInsert.run(generationId, `target-${index}`, `pool-${index}`, nowSec - 14_401);
     const count = () => Number(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets WHERE generation_id = ?").get(generationId)!.count);
     const ledgerQuery = sqlite.prepare("SELECT state FROM surface_publication_generations WHERE generation_id = ?");
     expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({
-      deletedTargetRows: 16, deletedGenerationRows: 0, error: null,
+      deletedTargetRows: 2_000, deletedGenerationRows: 0, error: null,
     });
-    expect(count()).toBe(21);
+    expect(count()).toBe(37);
     expect(ledgerQuery.get(generationId)).toMatchObject({ state: "candidate" });
-    expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({ deletedTargetRows: 16, error: null });
-    expect(count()).toBe(5);
     expect(await pruneDexMeasuredExecutionGenerations(db, nowSec)).toMatchObject({
-      deletedTargetRows: 5, deletedGenerationRows: 1, error: null,
+      deletedTargetRows: 37, deletedGenerationRows: 1, error: null,
     });
     expect(count()).toBe(0);
     expect(ledgerQuery.get(generationId)).toBeUndefined();
@@ -934,15 +932,38 @@ describe("measured execution generation prune", () => {
   it("bounds a dense terminal generation delete to physical rows rather than generation count", async () => {
     const { db, sqlite } = databases.open();
     const target = fixtureTarget("ethereum");
-    const rows = Array.from({ length: 37 }, (_, index) => ({
+    const rows = Array.from({ length: 2_037 }, (_, index) => ({
       target: { ...target, targetId: `dense-${index}` }, status: "failed" as const, failureReason: "pool-revert",
     }));
     seedGeneration(sqlite, { generationId: "dense-quotes", targetGenerationId: "dense-targets",
       publishedAt: 10_000, state: "failed", rows });
     const result = await pruneDexMeasuredExecutionGenerations(db, 100_000);
-    expect(result).toMatchObject({ deletedQuoteRows: 16, deletedTargetRows: 0, deletedGenerationRows: 0, error: null });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()!.count).toBe(21);
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()!.count).toBe(37);
+    expect(result).toMatchObject({ deletedQuoteRows: 2_000, deletedTargetRows: 0, deletedGenerationRows: 0, error: null });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()!.count).toBe(37);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()!.count).toBe(2_037);
+    expect(await pruneDexMeasuredExecutionGenerations(db, 100_000)).toMatchObject({
+      deletedQuoteRows: 37, deletedTargetRows: 2_000, deletedGenerationRows: 1, error: null,
+    });
+    expect(await pruneDexMeasuredExecutionGenerations(db, 100_000)).toMatchObject({
+      deletedQuoteRows: 0, deletedTargetRows: 37, deletedGenerationRows: 1, error: null,
+    });
+  });
+
+  it("keeps up with recurring 600-target cohorts without accumulating expired rows", async () => {
+    const { db, sqlite } = databases.open();
+    const target = fixtureTarget("ethereum");
+    const rows = Array.from({ length: 600 }, (_, index) => ({
+      target: { ...target, targetId: `recurring-${index}` }, status: "failed" as const, failureReason: "pool-revert",
+    }));
+    for (let cycle = 0; cycle < 4; cycle++) {
+      seedGeneration(sqlite, { generationId: `quotes-${cycle}`, targetGenerationId: `targets-${cycle}`,
+        publishedAt: 10_000 + cycle * 900, state: "superseded", rows });
+      expect(await pruneDexMeasuredExecutionGenerations(db, 100_000 + cycle * 900)).toMatchObject({
+        deletedQuoteRows: 600, deletedTargetRows: 600, deletedGenerationRows: 2, error: null,
+      });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes").get()!.count).toBe(0);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_targets").get()!.count).toBe(0);
+    }
   });
 
   it("reports cleanup errors without throwing after publication", async () => {

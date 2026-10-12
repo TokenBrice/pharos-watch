@@ -10,6 +10,23 @@ import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
 describe("adaptEthenaCollateral", () => {
+  it("keeps reviewed equity basis collateral separate from crypto and cash", () => {
+    const payload: EthenaCollateralResponse = {
+      totalBackingAssetsInUsd: 100,
+      collateral: [
+        { asset: "Liquid Cash", exchange: "Binance", timestamp: 1, usdAmount: 80 },
+        { asset: "Equity RWA", exchange: "Binance", timestamp: 1, usdAmount: 15 },
+        { asset: "UNKNOWN", exchange: "Binance", timestamp: 1, usdAmount: 5 },
+      ],
+    };
+    const result = adaptEthenaCollateral(payload);
+    expect(result.slices).toContainEqual({
+      sourceKey: "ethena:equity", name: "Equity RWA basis collateral", pct: 15, risk: "high",
+    });
+    expect(result.metadata?.unknownExposurePct).toBe(5);
+    expect(listUnexpectedEthenaAssets(payload)).toEqual(["UNKNOWN"]);
+  });
+
   it("rejects drift removing totalBackingAssetsInUsd", () => {
     const payload: EthenaCollateralResponse = {
       totalBackingAssetsInUsd: 100,

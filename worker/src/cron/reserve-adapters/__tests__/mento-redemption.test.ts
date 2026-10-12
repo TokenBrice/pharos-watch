@@ -1,4 +1,4 @@
-import { encodeAbiParameters } from "viem/utils";
+import { encodeAbiParameters, toFunctionSelector } from "viem/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import source from "@shared/data/stablecoins/coins/cusd-celo.json";
 import gbpmSource from "@shared/data/stablecoins/coins/gbpm-mento.json";
@@ -300,6 +300,15 @@ describe("Mento Broker anchored inventory", () => {
   it("does not equate an unreadable matching pool with observed zero", async () => {
     setupBroker(null);
     await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+  });
+
+  it("reads the deployed Celo Broker reserve getter and withholds an unreadable reserve", async () => {
+    setupBroker(100n * 10n ** 18n, { reserve: null });
+    await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined))
+      .rejects.toThrow("observation failed: reserve");
+    const reserveCall = vi.mocked(fetchOnchainMulticall3).mock.calls[0][0].calls.find(({ label }) => label === "reserve");
+    expect(reserveCall?.data).toBe(toFunctionSelector("reserve()"));
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
   });
 
   it("retains measured breaker closure despite positive virtual buckets", async () => {

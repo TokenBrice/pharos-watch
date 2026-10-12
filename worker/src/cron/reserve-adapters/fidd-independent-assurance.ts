@@ -18,7 +18,7 @@ const FIDD_INDEX_USER_AGENT = "Pharos/1.0 (+https://pharos.watch)";
 
 export function fiddReportDate(href: string, text: string): string | null {
   const match = decodeURIComponent(`${href} ${text}`).match(
-    /---(january|february|march|april|may|june|july|august|september|october|november|december)((?:19|20)?\d{2})(?:\.pdf)?(?:[?#\s]|$)/i,
+    /---(january|february|march|april|may|june|july|august|september|october|november|december)-?((?:19|20)?\d{2})(?:\.pdf)?(?:[?#\s]|$)/i,
   );
   if (!match) return null;
   const month = monthNumberFromLabel(match[1])!;

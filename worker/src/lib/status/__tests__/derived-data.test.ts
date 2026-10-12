@@ -58,7 +58,7 @@ async function reconcile(options: {
   const result = await getMintBurnReconciliation(db, NOW);
   expect(db.getHistory().some((entry) => entry.sql.includes("mint-burn-24h") || entry.sql.includes("key = ?"))).toBe(false);
   expect(result.conservationVersion).toBe(1);
-  expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.map((config) => config.stablecoinId)).size);
+  expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)).map((config) => config.stablecoinId)).size);
   return { ...result, rows: result.rows.filter((row) => row.stablecoinId === id) };
 }
 
@@ -77,6 +77,15 @@ describe("conservation compatibility schema", () => {
 });
 
 describe("getMintBurnReconciliation verified conservation", () => {
+  it.each(["busd0-usual", "tbill-openeden"])("excludes inactive %s just like the producer", async (id) => {
+    expect(MINT_BURN_CONFIGS.some((config) => config.stablecoinId === id)).toBe(true);
+    expect(ACTIVE_IDS.has(id)).toBe(false);
+    const result = await reconcile({ id });
+    expect(result.rows).toEqual([]);
+    const readConfigs = vi.mocked(conservationModule.readMintBurnConservationRecords).mock.calls[0][1];
+    expect(readConfigs?.some((config) => config.stablecoinId === id)).toBe(false);
+  });
+
   it("uses native evidence without reading circulating supply or USD-flow comparisons", async () => {
     const result = await reconcile();
     expect(result.rows[0]).toMatchObject({ status: "ok" });

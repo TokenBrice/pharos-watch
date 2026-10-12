@@ -26,6 +26,9 @@ export type { LoadedDexMeasuredQuoteEvidence } from "./evidence-reader";
 const GENERATION_RETENTION_SEC = 4 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
 const GENERATION_PRUNE_MAX_PER_RUN = 16;
+// Physical-row throughput must exceed the hundreds of quotes published each cycle.
+const GENERATION_ROW_PRUNE_BATCH_LIMIT = 1_000;
+const GENERATION_ROW_PRUNE_RUN_LIMIT = 2_000;
 
 // Attribution must be captured while the exact leased child still owns its
 // execution fence, including candidates interrupted before publication.
@@ -685,11 +688,11 @@ export async function pruneDexMeasuredExecutionGenerations(
           DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           cutoff,
           nowSec,
-          limit,
+          GENERATION_PRUNE_MAX_PER_RUN,
           limit,
         ],
-        batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
-        runLimit: GENERATION_PRUNE_MAX_PER_RUN,
+        batchLimit: GENERATION_ROW_PRUNE_BATCH_LIMIT,
+        runLimit: GENERATION_ROW_PRUNE_RUN_LIMIT,
       },
       targets: {
         sql: `DELETE FROM dex_measured_execution_targets
@@ -706,11 +709,11 @@ export async function pruneDexMeasuredExecutionGenerations(
           DEX_SHADOW_MEASURED_TARGET_SURFACE,
           cutoff,
           nowSec,
-          limit,
+          GENERATION_PRUNE_MAX_PER_RUN,
           limit,
         ],
-        batchLimit: GENERATION_PRUNE_MAX_PER_RUN,
-        runLimit: GENERATION_PRUNE_MAX_PER_RUN,
+        batchLimit: GENERATION_ROW_PRUNE_BATCH_LIMIT,
+        runLimit: GENERATION_ROW_PRUNE_RUN_LIMIT,
       },
       generations: {
         sql: `DELETE FROM surface_publication_generations

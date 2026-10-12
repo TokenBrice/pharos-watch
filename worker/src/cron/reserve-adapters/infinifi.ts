@@ -127,11 +127,13 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "spark-sUSDC-refcode":     { risk: "low", ...wrapperAssetMeta("usdc") },
   "fluid-fUSDC":             { risk: "low", ...wrapperAssetMeta("usdc") },
   "aavev3":                  { risk: "low", ...wrapperAssetMeta("usdc") },
+  "monad-aavev3":            { risk: "medium", ...wrapperAssetMeta("usdc") },
   "aavev3-horizon-usdc":     { risk: "low", ...wrapperAssetMeta("usdc") },
   "aavev3-rlusd-farm":       { risk: "low", ...wrapperAssetMeta("usdc") },
   "aave-v4-usdg":            { risk: "low" },
   "euler-sentora-usdc":      { risk: "low", ...wrapperAssetMeta("usdc") },
   "morpho-steakUSDCinfinifi": { risk: "medium", ...wrapperAssetMeta("usdc") },
+  "morpho-v2-august-usdc":    { risk: "medium", ...wrapperAssetMeta("usdc") },
   "base-morpho-steakhouse-prime": { risk: "medium", ...wrapperAssetMeta("usdc") },
   "capfarm":                 { risk: "medium", coinId: "stcusd-cap", depType: "collateral" },
   SwapFarm:                  { risk: "low" },
@@ -144,6 +146,7 @@ const FARM_RISK_MAP: Record<string, FarmRiskConfig> = {
   "cowswap-fxSave":          { risk: "medium", coinId: "fxsave-f-x-protocol", depType: "collateral" },
   "pendle-v3-PT-apxUSD-18JUN2026": { risk: "high", coinId: "apxusd-apyx", depType: "collateral" },
   "pendle-v3-PT-apyUSD-18JUN2026": { risk: "high", coinId: "apyusd-apyx", depType: "collateral" },
+  "pendle-v3-PT-reUSD-10DEC2026": { risk: "high", coinId: "reusd-re-protocol", depType: "collateral" },
   "new-silver-junior":       { risk: "high", ...cefiPositionMeta() },
   // Senior tranche of the same New Silver private residential-credit facility
   // as new-silver-junior; less loss-absorbing but the same off-chain lender.

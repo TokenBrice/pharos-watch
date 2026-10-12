@@ -487,6 +487,50 @@ describe("fetchGoldTokens", () => {
     expect(fetchMock.mock.calls.every(([url]) => !String(url).includes("/protocol/"))).toBe(true);
   });
 
+  it("fills empty historical buckets from exact daily observations without replacing observed zero", async () => {
+    const snapshotDate = (daysAgo: number) => {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() - daysAgo);
+      date.setUTCHours(0, 0, 0, 0);
+      return Math.floor(date.getTime() / 1000);
+    };
+    const db = mockD1([{
+      match: "SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history",
+      rows: [
+        { stablecoin_id: "empty", snapshot_date: snapshotDate(1), circulating_usd: 99 },
+        { stablecoin_id: "empty", snapshot_date: snapshotDate(7), circulating_usd: 98 },
+        { stablecoin_id: "empty", snapshot_date: snapshotDate(30), circulating_usd: 97 },
+        { stablecoin_id: "observed-zero", snapshot_date: snapshotDate(1), circulating_usd: 99 },
+        { stablecoin_id: "observed-zero", snapshot_date: snapshotDate(7), circulating_usd: 98 },
+        { stablecoin_id: "observed-zero", snapshot_date: snapshotDate(30), circulating_usd: 97 },
+        { stablecoin_id: "out-of-bound", snapshot_date: snapshotDate(7), circulating_usd: 50 },
+      ],
+    }]);
+    const assets = ["empty", "observed-zero", "out-of-bound", "no-history"].map((id) => ({
+      id,
+      name: id,
+      symbol: id,
+      circulating: { peggedUSD: 100 },
+      circulatingPrevDay: id === "observed-zero" ? { peggedUSD: 0 } : {},
+      circulatingPrevWeek: id === "observed-zero" ? { peggedUSD: 0 } : {},
+      circulatingPrevMonth: id === "observed-zero" ? { peggedUSD: 0 } : {},
+    })) as Parameters<typeof fillMissingSupplyHistory>[1];
+
+    await expect(fillMissingSupplyHistory(db, assets)).resolves.toBe(3);
+    expect(assets[0]).toMatchObject({
+      circulatingPrevDay: { peggedUSD: 99 },
+      circulatingPrevWeek: { peggedUSD: 98 },
+      circulatingPrevMonth: { peggedUSD: 97 },
+    });
+    expect(assets[1]).toMatchObject({
+      circulatingPrevDay: { peggedUSD: 0 },
+      circulatingPrevWeek: { peggedUSD: 0 },
+      circulatingPrevMonth: { peggedUSD: 0 },
+    });
+    expect(assets[2].circulatingPrevWeek).toEqual({});
+    expect(assets[3].circulatingPrevWeek).toEqual({});
+  });
+
   it("does not mis-attribute total history to a multi-bucket asset", async () => {
     const now = new Date();
     const snapshotDate = (daysAgo: number) => {

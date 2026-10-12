@@ -24,7 +24,7 @@ export function brokerGuardFixture(exchangeId: string, self: string, output: str
   put(manager, "broker()", address(BROKER));
   put(manager, "sortedOracles()", address(BROKER_ORACLE));
   put(manager, "breakerBox()", address(BROKER_BREAKER));
-  put(BROKER, "exchangeReserve(address)", address(BROKER_RESERVE));
+  put(BROKER, "reserve()", address(BROKER_RESERVE));
   put(BROKER, "isExchangeProvider(address)", bool(true));
   put(self, "broker()", address(BROKER));
   put(self, "decimals()", uint(18n));
