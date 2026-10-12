@@ -7,7 +7,7 @@ export function SafetyScoresDimensionDetails() {
   return (
     <>
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Resilience Scoring</h3>
+        <h3 className="text-foreground font-medium">Resilience scoring</h3>
         <p>
           Average of two equally-weighted sub-factors (50% each): Collateral Quality and Custody Model. Chain
           infrastructure is scored exclusively in the Decentralization dimension. Blacklist capability is reported
@@ -132,7 +132,7 @@ export function SafetyScoresDimensionDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Dependency Risk Scoring</h3>
+        <h3 className="text-foreground font-medium">Dependency risk scoring</h3>
         <p>
           Dependency scoring runs after upstream report cards are available and uses a topological order across the
           active dependency graph, so transitive stablecoin exposure is scored from upstreams before downstream coins
@@ -187,14 +187,14 @@ export function SafetyScoresDimensionDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Grade Thresholds</h3>
+        <h3 className="text-foreground font-medium">Grade thresholds</h3>
         <ContentTable
           tableId="methodology-safety-grade-thresholds"
           testId="methodology-safety-grade-thresholds-table"
           tableClassName="w-auto"
           columns={[
             { id: "grade", header: "Grade", headerClassName: "pr-8", cellClassName: "py-1.5 pr-8 text-foreground" },
-            { id: "range", header: "Score Range", cellClassName: "py-1.5" },
+            { id: "range", header: "Score range", cellClassName: "py-1.5" },
           ]}
           rows={[
             ["A+", "87–100"], ["A", "83–86"], ["A−", "80–82"],
@@ -206,7 +206,7 @@ export function SafetyScoresDimensionDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Key Design Decisions</h3>
+        <h3 className="text-foreground font-medium">Key design decisions</h3>
         <ul className="list-disc list-inside space-y-1">
           <li>
             <span className="text-foreground font-medium">NR (Not Rated)</span> is used when fewer than 2 base
@@ -229,7 +229,7 @@ export function SafetyScoresDimensionDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Dependency Ceilings</h3>
+        <h3 className="text-foreground font-medium">Dependency ceilings</h3>
         <p>
           When a stablecoin depends on another (wrapper, mechanism, or collateral relationship), its dependency risk
           score is capped relative to its upstream:

@@ -9,7 +9,7 @@ interface DepegProvenanceBadgesProps {
 }
 
 const BADGE_CLASS =
-  "rounded bg-muted px-1.5 py-0.5 text-3xs font-medium text-muted-foreground";
+  "rounded-sm bg-muted px-1.5 py-0.5 text-3xs font-medium text-muted-foreground";
 
 const REASON_LABELS: Record<string, string> = {
   "large-cap": "large cap",

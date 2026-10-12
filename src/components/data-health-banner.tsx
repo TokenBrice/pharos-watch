@@ -82,7 +82,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     <div
       role="status"
       aria-live="polite"
-      className={`rounded-lg border px-4 py-3 text-sm leading-relaxed shadow-sm ${DATA_HEALTH_COLORS[merged.state]}`}
+      className={`rounded-xl border px-4 py-3 text-sm leading-relaxed shadow-sm ${DATA_HEALTH_COLORS[merged.state]}`}
     >
       <p className="font-medium">{title}</p>
       <p className="mt-1">{message}</p>

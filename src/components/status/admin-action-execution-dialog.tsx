@@ -138,7 +138,7 @@ function StructuredExecutionResult({ execution }: { execution: AdminActionExecut
               execution.status === "failed"
                 ? "bg-state-danger-subtle text-state-danger"
                 : execution.status === "unknown"
-                  ? "bg-state-warn-subtle text-amber-900 dark:text-amber-100"
+                  ? "bg-state-warn-subtle text-state-warn-ink"
                   : "bg-muted"
             }`}
           >
@@ -445,7 +445,7 @@ export function AdminActionExecutionDialog({
         )}
 
         {readiness.blocked && (
-          <div className={cn("rounded-md border px-3 py-2 text-sm text-red-900 dark:text-red-100", SEVERITY_TONE_CLASS.alert.banner)}>
+          <div className={cn("rounded-md border px-3 py-2 text-sm text-state-danger-ink", SEVERITY_TONE_CLASS.alert.banner)}>
             <div className="font-medium">Live execution blocked</div>
             <ul className="mt-1 list-disc space-y-1 pl-4 text-xs">
               {readiness.reasons.map((reason) => (
@@ -461,8 +461,8 @@ export function AdminActionExecutionDialog({
             htmlFor={acknowledgementInputId}
             className={`flex min-h-11 items-start gap-2 rounded-md border px-3 py-2 text-sm ${
               action.risk === "high"
-                ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-900 dark:text-red-100")
-                : cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-900 dark:text-amber-100")
+                ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-state-danger-ink")
+                : cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink")
             }`}
           >
             <input
@@ -495,7 +495,7 @@ export function AdminActionExecutionDialog({
           </div>
         )}
         {execution?.status === "unknown" && (
-          <div className={cn("rounded-md border px-3 py-2 text-sm text-amber-900 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}>
+          <div className={cn("rounded-md border px-3 py-2 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}>
             The action may have started. Retry the same execution to reconcile this idempotency key, or explicitly
             create a new execution after checking downstream state.
           </div>

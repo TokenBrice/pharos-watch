@@ -55,7 +55,7 @@ describe("PublicServiceSummarySection", () => {
         }}
       />,
     );
-    expect(screen.getByText("Alert Queue")).toBeTruthy();
+    expect(screen.getByText("Alert queue")).toBeTruthy();
     expect(screen.getByText("2 alerts pending delivery")).toBeTruthy();
   });
 
@@ -75,9 +75,9 @@ describe("PublicServiceSummarySection", () => {
       />,
     );
 
-    expect(screen.getByText("Blacklist Gaps")).toBeTruthy();
+    expect(screen.getByText("Blacklist gaps")).toBeTruthy();
     expect(screen.getByText("Blacklist risk context")).toBeTruthy();
-    expect(screen.getAllByText("Missing Amounts").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Missing amounts").length).toBeGreaterThan(0);
   });
 
   it("omits the hourly mint/burn rollup when no rollup has been recorded", () => {
@@ -132,6 +132,6 @@ describe("PublicServiceSummarySection", () => {
     expect(
       screen.getByText("1 acknowledged price gap under review; next review expires 2026-10-23 (UTC). Prices remain unavailable and gaps re-alert when their reviews expire."),
     ).toBeTruthy();
-    expect(screen.queryByText("Impacted Surfaces")).toBeNull();
+    expect(screen.queryByText("Impacted surfaces")).toBeNull();
   });
 });

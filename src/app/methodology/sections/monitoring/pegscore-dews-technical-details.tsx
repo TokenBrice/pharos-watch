@@ -137,7 +137,7 @@ function PegScoreTechnicalDetails() {
         inputGridClassName="md:max-w-md"
         inputs={[
           { title: "Time-at-Peg", subtitle: "50%" },
-          { title: "Event Severity", subtitle: "50%" },
+          { title: "Event severity", subtitle: "50%" },
         ]}
         steps={[
           { title: <>&minus; Penalties</>, subtitle: "active depeg + spread", className: "md:w-64" },
@@ -182,7 +182,7 @@ function PegScoreTechnicalDetails() {
               </TableCell>
             </TableRow>
             <TableRow className="align-top">
-              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Event Severity</TableCell>
+              <TableCell className="whitespace-normal px-4 py-2 text-foreground">Event severity</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">50%</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">0&ndash;100</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">
@@ -266,7 +266,7 @@ function DewsTechnicalDetails() {
       <ResponsiveMethodologyPipeline {...DEWS_PIPELINE} />
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Score Formula</h3>
+        <h3 className="text-foreground font-medium">Score formula</h3>
         <p className="pharos-numeric text-xs border border-border/60 bg-muted/50 rounded-lg px-4 py-3">
           base = sum(W_i &times; S_i) / sum(W_i); psiAmp = PSI &lt; 75 ? 1 + ((75 - PSI) / 75) &times; 0.3 : 1; contagionAmp = same-peg first-pass bump, clamped to 1.2; preliminaryScore = round(clamp(0, 100, base &times; psiAmp &times; contagionAmp))
         </p>
@@ -315,7 +315,7 @@ function DewsTechnicalDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Edge Cases</h3>
+        <h3 className="text-foreground font-medium">Edge cases</h3>
         <ul className="list-disc list-inside space-y-1">
           <li>
             <Link

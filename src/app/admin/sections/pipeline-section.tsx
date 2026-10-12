@@ -109,7 +109,7 @@ export function PipelineSection({ data }: PipelineSectionProps) {
     >
       <div className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
-          <p className="pharos-kicker">Data Pipeline</p>
+          <p className="pharos-kicker">Data pipeline</p>
           <h1 id="pipeline-title" className="text-2xl font-bold leading-tight text-foreground">
             Pipeline Health
           </h1>

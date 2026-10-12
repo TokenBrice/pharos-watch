@@ -143,7 +143,7 @@ export function ReliabilitySection({
     >
       <div className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-1">
-          <p className="pharos-kicker">Service Health</p>
+          <p className="pharos-kicker">Service health</p>
           <h1 id="reliability-title" className="text-2xl font-bold leading-tight text-foreground">
             Reliability Workbench
           </h1>

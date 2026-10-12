@@ -21,7 +21,7 @@ Raw values with no semantic meaning. Do not reference directly in components unl
 - **Color scales** — 9 hue families (neutral, blue, green, teal, amber, orange, red, purple, pink) plus the dedicated `--p-frost-blue` brand accent (`#4BC4DE`, sampled from Figma); scale stops run 50–900 in OKLch (red extends to 950; neutral runs 50–975 with additional 850/925/950/975 stops)
 - **Spacing** — 4px-based scale from `--p-space-0` to `--p-space-20`, with `--p-space-0-5` (2px) and `--p-space-1-5` (6px) half steps for tight UI alignment
 - **Typography** — Font sizes (`--p-text-3xs` to `--p-text-5xl`), line heights, tracking (see [Type scale](#type-scale))
-- **Radius** — `--p-radius-none` to `--p-radius-full`
+- **Radius** — `--p-radius-none` to `--p-radius-full`. Usage rule: chips, pills, avatars and dots `rounded-full`; buttons, inputs, selects and other controls `rounded-md`; top-level cards, panels, shells and dialogs `rounded-xl`; surfaces nested inside a card or panel (callouts, inner tiles, notices, stat boxes) `rounded-lg`, one step below their parent; inline tags, badges, `kbd` and inline code `rounded-sm`; table, image and chart wrappers inherit their container.
 
 Naming: `--p-{category}-{value}` (e.g., `--p-blue-500`, `--p-space-4`)
 

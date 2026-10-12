@@ -68,7 +68,7 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
     <aside
       id={CRON_DETAIL_ID}
       aria-label={`Details for ${row.display.label}`}
-      className="min-w-0 rounded-lg border border-border/60 bg-background/45 p-4 xl:sticky xl:top-[calc(var(--ops-sticky-offset)+0.75rem)] xl:max-h-[calc(100vh-var(--ops-sticky-offset)-1.5rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain"
+      className="min-w-0 rounded-xl border border-border/60 bg-background/45 p-4 xl:sticky xl:top-[calc(var(--ops-sticky-offset)+0.75rem)] xl:max-h-[calc(100vh-var(--ops-sticky-offset)-1.5rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain"
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -138,8 +138,8 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
           className={cn(
             "mt-4 rounded-md border p-3 text-xs",
             row.cron.inFlight.stale
-              ? "border-state-danger-solid/25 bg-state-danger-solid/5 text-red-800 dark:text-red-300"
-              : "border-state-info-solid/25 bg-state-info-solid/5 text-sky-800 dark:text-sky-300",
+              ? "border-state-danger-solid/25 bg-state-danger-solid/5 text-state-danger-strong"
+              : "border-state-info-solid/25 bg-state-info-solid/5 text-state-info-strong",
           )}
           aria-label={row.cron.inFlight.stale ? "Stale running progress" : "Current running progress"}
         >
@@ -148,8 +148,8 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
               className={cn(
                 "text-xs",
                 row.cron.inFlight.stale
-                  ? "bg-state-danger-solid/15 text-red-800 dark:text-red-300"
-                  : "bg-state-info-solid/15 text-sky-800 dark:text-sky-300",
+                  ? "bg-state-danger-solid/15 text-state-danger-strong"
+                  : "bg-state-info-solid/15 text-state-info-strong",
               )}
             >
               {row.cron.inFlight.stale ? "Stale heartbeat" : "Running now"}
@@ -199,7 +199,7 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
 
       {lastRun?.error ? (
         <details className="mt-4 text-xs">
-          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-red-800 dark:text-red-300">
+          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-state-danger-strong">
             Latest run error
           </summary>
           <pre className="mt-2 max-h-40 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted p-2 text-xs">

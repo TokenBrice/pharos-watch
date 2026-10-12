@@ -58,7 +58,7 @@ function DepegHistoryShell({ children }: { children: ReactNode }) {
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Depeg History</StablecoinModuleTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Depeg history</StablecoinModuleTitle>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         <p className="text-sm text-muted-foreground">{DEPEG_HISTORY_DESCRIPTION}</p>
@@ -194,7 +194,7 @@ export function DepegHistory({
         ) : null}
         {worstDeviationBps != null && (
           <div>
-            <span className="text-muted-foreground">Worst Depeg </span>
+            <span className="text-muted-foreground">Worst depeg </span>
             <span className={`font-mono font-semibold ${deviationColorClass(Math.abs(worstDeviationBps))}`}>
               {formatBps(worstDeviationBps)}
             </span>
@@ -202,7 +202,7 @@ export function DepegHistory({
         )}
         {metrics ? (
           <div>
-            <span className="text-muted-foreground">Current Streak </span>
+            <span className="text-muted-foreground">Current streak </span>
             {metrics.depeggedNow ? (
               <span className="inline-flex items-center gap-1.5 font-semibold text-state-danger">
                 <span className="relative flex h-2 w-2">

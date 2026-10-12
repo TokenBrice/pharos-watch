@@ -390,7 +390,7 @@ export function YieldHistoryChart({
               <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
               Benchmark: {benchmarkLabel ?? "Rate"}
               {benchmarkIsFallback ? (
-                <span className="rounded bg-state-warn-solid/15 px-1 py-px text-3xs font-medium uppercase text-state-warn">
+                <span className="rounded-sm bg-state-warn-solid/15 px-1 py-px text-3xs font-medium uppercase text-state-warn">
                   fallback
                 </span>
               ) : null}

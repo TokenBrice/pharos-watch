@@ -329,7 +329,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                           className={cn(
                             "text-xs font-medium",
                             row.impactClass === "public-critical"
-                              ? "text-red-800 dark:text-red-300"
+                              ? "text-state-danger-strong"
                               : "text-muted-foreground",
                           )}
                         >
@@ -355,7 +355,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, nowSeconds }: CronLa
                       <TableCell className="px-3 py-2 align-top text-muted-foreground">
                         {row.runningState === "running" ? <div>running now</div> : null}
                         {row.runningState === "stale" ? (
-                          <div className="text-red-800 dark:text-red-300">stale heartbeat</div>
+                          <div className="text-state-danger-strong">stale heartbeat</div>
                         ) : null}
                         {errorStreak > 0 ? <div>errors {errorStreak}</div> : null}
                         {skippedStreak > 0 ? <div>lease skips {skippedStreak}</div> : null}

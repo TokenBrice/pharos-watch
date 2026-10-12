@@ -543,7 +543,7 @@ export function AboutPageContent() {
         <AboutSection
           id="media"
           eyebrow="In the wild"
-          title="Pharos in the Media"
+          title="Pharos in the media"
           contentClassName="space-y-4 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
@@ -562,14 +562,14 @@ export function AboutPageContent() {
 
         <AboutFeatureSection
           eyebrow="Coverage"
-          title="What Pharos Tracks"
+          title="What Pharos tracks"
           intro="The raw monitoring layer: live supply, peg behavior, blacklist activity, liquidity depth, and chain-level flow data pulled from 50+ sources into one operating picture."
           items={trackedFeatures}
         />
 
         <AboutFeatureSection
           eyebrow="Signals"
-          title="What Pharos Computes"
+          title="What Pharos computes"
           intro="The analysis layer: models and forecasts Pharos computes from its own pipeline, including a VIX for stablecoins, dependency-capped safety grades, and forward-looking depeg pressure."
           items={COMPUTED_FEATURES}
           footer={
@@ -589,7 +589,7 @@ export function AboutPageContent() {
 
         <AboutFeatureSection
           eyebrow="Immersive data visualization"
-          title="Companion Experiences"
+          title="Companion experiences"
           intro="Sibling surfaces hosted at separate origins. They consume the same Pharos data through the public API but run on their own, so they can experiment with presentation without crowding the dashboard."
           items={COMPANION_FEATURES}
         />
@@ -675,7 +675,7 @@ export function AboutPageContent() {
 
         <AboutSection
           eyebrow="Source flow"
-          title="Data Pipeline"
+          title="Data pipeline"
           contentClassName="space-y-5 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
@@ -740,7 +740,7 @@ export function AboutPageContent() {
 
         <AboutSection
           eyebrow="Reach out"
-          title="Get in Touch"
+          title="Get in touch"
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>

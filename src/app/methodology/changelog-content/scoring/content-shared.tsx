@@ -38,7 +38,7 @@ function ChangelogRichText({ text }: { text: MethodologyChangelogRichText }) {
         if (typeof segment === "string") return segment;
         if ("code" in segment) {
           return (
-            <code key={index} className="text-xs bg-muted px-1 py-0.5 rounded">
+            <code key={index} className="text-xs bg-muted px-1 py-0.5 rounded-sm">
               {segment.code}
             </code>
           );

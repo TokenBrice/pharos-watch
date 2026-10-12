@@ -19,7 +19,7 @@ const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
 export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBreakerTableProps) {
   if (!circuits || Object.keys(circuits).length === 0) {
     return (
-      <PublicSignalCard title="Circuit Breakers" contentClassName="mt-3">
+      <PublicSignalCard title="Circuit breakers" contentClassName="mt-3">
         <p className="text-sm text-muted-foreground">{circuits == null
           ? `Circuit breaker evidence unavailable${unavailableReason ? ` (${unavailableReason})` : ""}.`
           : "No circuit breakers registered"}</p>
@@ -56,7 +56,7 @@ export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBrea
   );
 
   return (
-    <PublicSignalCard title="Circuit Breakers" contentClassName="mt-0">
+    <PublicSignalCard title="Circuit breakers" contentClassName="mt-0">
       <p className="text-sm text-muted-foreground leading-relaxed mb-4">
         Circuit breakers protect data quality by temporarily disabling a data source after repeated failures.{" "}
         <strong className="text-foreground">Closed</strong> means the source is healthy.{" "}

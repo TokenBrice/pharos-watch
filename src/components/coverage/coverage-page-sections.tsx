@@ -355,7 +355,7 @@ export function CoverageMatrixCard(
                 value={model.search}
                 onChange={(event) => model.setSearch(event.target.value)}
                 placeholder="Search stablecoin or ticker"
-                className="h-11 rounded-lg border-border/65 bg-background/45 pl-10 sm:h-10"
+                className="h-11 rounded-md border-border/65 bg-background/45 pl-10 sm:h-10"
                 aria-label="Search stablecoin coverage table"
               />
             </div>

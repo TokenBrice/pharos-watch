@@ -16,7 +16,7 @@ import { MINT_BURN_FLOW_SECTION_CONTENT } from "@/lib/methodology-content";
 
 const BANK_RUN_GAUGE_COLUMNS = [
   { id: "band", header: "Band", cellClassName: "text-foreground" },
-  { id: "scoreRange", header: "Score Range" },
+  { id: "scoreRange", header: "Score range" },
   { id: "meaning", header: "Meaning", cellClassName: "whitespace-normal" },
 ];
 
@@ -40,7 +40,7 @@ const MINT_BURN_CARD_CLASSES = {
 
 const MINT_BURN_CARDS = {
   inputs: [{ title: "Mints", subtitle: "Transfer from 0x0" }, { title: "Burns", subtitle: "Transfer to 0x0" }],
-  buckets: [{ title: "Hourly Buckets", subtitle: "Trailing 30 closed daily issuance-chain buckets" }],
+  buckets: [{ title: "Hourly buckets", subtitle: "Trailing 30 closed daily issuance-chain buckets" }],
   signals: [{ title: "Net Flow 24h", subtitle: "Current mint minus burn direction" }, { title: "Pressure Shift vs 30D", subtitle: "-100 worsening · 0 baseline · +100 improving" }],
   desktopOutputs: [{ title: "Bank Run Gauge", subtitle: "market-cap weighted" }, { title: "Flight-to-Quality", subtitle: "dual threshold detection" }],
   mobileOutputs: [{ title: "Bank Run Gauge", subtitle: "market-cap weighted" }, { title: "Flight-to-Quality", subtitle: "dual threshold" }],

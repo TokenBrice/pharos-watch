@@ -62,7 +62,7 @@ describe("ApiKeysPanel editor and audit history", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Edit Ops Key/ }));
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("region", { name: "Ops Key" })));
-    fireEvent.change(screen.getByLabelText("Expires At"), { target: { value: "2023-12-14T22:13" } });
+    fireEvent.change(screen.getByLabelText("Expires at"), { target: { value: "2023-12-14T22:13" } });
     fireEvent.click(screen.getByRole("button", { name: /^Save changes to Ops Key/ }));
 
     expect(await screen.findByText("Updated Ops Key.")).toBeTruthy();

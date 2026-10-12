@@ -48,7 +48,7 @@ const LIQUIDITY_COLUMNS: readonly DataTableColumn<LiquiditySortKey>[] = [
   { id: "vtRatio", label: "Vol/TVL", sortKey: "vtRatio", className: "hidden sm:table-cell text-right" },
   { id: "pools", label: "Pools", sortKey: "pools", className: "hidden sm:table-cell text-right" },
   { id: "chains", label: "Chains", sortKey: "chains", className: "hidden sm:table-cell text-right" },
-  { id: "topProtocol", label: "Top Protocol", className: "hidden md:table-cell min-w-[10rem] text-left" },
+  { id: "topProtocol", label: "Top protocol", className: "hidden md:table-cell min-w-[10rem] text-left" },
   { id: "balance", label: "Balance", sortKey: "balance", className: "hidden xl:table-cell w-[7.5rem] text-right" },
   { id: "organic", label: "Organic", sortKey: "organic", className: "hidden xl:table-cell text-right" },
   { id: "durability", label: "Durability", sortKey: "durability", className: "hidden xl:table-cell text-right" },

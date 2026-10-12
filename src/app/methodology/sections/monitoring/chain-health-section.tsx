@@ -145,7 +145,7 @@ export function ChainHealthMethodologySection() {
         </TableFrame>
       </MethodologyDetails>
 
-      <MethodologyDetails summary="Chain Environment Sources">
+      <MethodologyDetails summary="Chain environment sources">
         <p>
           The same stablecoin can have different security properties on different chains. A fully on-chain,
           censorship-resistant stablecoin on Ethereum mainnet may lose those guarantees on an L2 with a centralized
@@ -251,7 +251,7 @@ export function ChainHealthMethodologySection() {
         </TableFrame>
       </MethodologyDetails>
 
-      <MethodologyDetails summary="Health Bands">
+      <MethodologyDetails summary="Health bands">
         <TableFrame
           chrome="content"
           density="compact"

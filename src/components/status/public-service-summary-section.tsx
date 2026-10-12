@@ -32,14 +32,14 @@ export function PublicServiceSummarySection({
   return (
     <StatusSection
       id="overview"
-      kicker="Service Health"
+      kicker="Service health"
       title="Public service summary"
       summary={
         <>
           <StatusSummaryBadge label="Status" status={healthData.status} />
           {blacklistStatus !== "healthy" && (
             <StatusSummaryBadge
-              label="Blacklist Gaps"
+              label="Blacklist gaps"
               value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
               status={blacklistStatus}
             />
@@ -53,14 +53,14 @@ export function PublicServiceSummarySection({
           )}
           {telegramSummary && (telegramSummary.pendingDeliveries ?? 0) > 0 && (
             <StatusSummaryBadge
-              label="Alert Queue"
+              label="Alert queue"
               value={String(telegramSummary.pendingDeliveries)}
               status="degraded"
             />
           )}
           {telegramSummary?.safetyAlertsSuppressed && (
             <StatusSummaryBadge
-              label="Safety Alerts"
+              label="Safety alerts"
               value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
               status="degraded"
             />
@@ -79,7 +79,7 @@ export function PublicServiceSummarySection({
                 )}
                 {healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && (
                   <StatusSummaryBadge
-                    label="Major Stale"
+                    label="Major stale"
                     value={String(healthData.mintBurn.majorStaleCount)}
                     status="degraded"
                   />
@@ -118,12 +118,12 @@ export function PublicServiceSummarySection({
         </PublicSignalCard>
 
         <PublicSignalCard
-          title="Blacklist Ingestion"
+          title="Blacklist ingestion"
           badges={
             blacklistStatus !== "healthy" ? (
               <div className="flex flex-wrap gap-2">
                 <StatusSummaryBadge
-                  label="Missing Amounts"
+                  label="Missing amounts"
                   value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
                   status={blacklistStatus}
                 />
@@ -160,7 +160,7 @@ export function PublicServiceSummarySection({
 
       {telegramSummary && (
         <PublicSignalCard
-          title="Telegram Bot Health"
+          title="Telegram bot health"
           badges={
             (telegramSummary.pendingDeliveries ?? 0) > 0
             || telegramSummary.safetyAlertsSuppressed
@@ -175,14 +175,14 @@ export function PublicServiceSummarySection({
                 )}
                 {telegramSummary.safetyAlertsSuppressed && (
                   <StatusSummaryBadge
-                    label="Safety Alerts"
+                    label="Safety alerts"
                     value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
                     status="degraded"
                   />
                 )}
                 {telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok" && (
                   <StatusSummaryBadge
-                    label="Last Dispatch"
+                    label="Last dispatch"
                     value={telegramSummary.lastDispatchStatus}
                     status="stale"
                   />
@@ -230,7 +230,7 @@ export function PublicServiceSummarySection({
         badges={
           impactedPublicSurfaces.length > 0 ? (
             <StatusSummaryBadge
-              label="Impacted Surfaces"
+              label="Impacted surfaces"
               value={String(impactedPublicSurfaces.length)}
               status="degraded"
             />

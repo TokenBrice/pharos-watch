@@ -19,7 +19,7 @@ export type PipelineSeverity = WorkspaceSeverity;
 
 export const PIPELINE_STATE_META: Record<PipelineSeverity, { label: string; className: string }> = {
   healthy: { label: "Healthy", className: "bg-state-positive-solid/15 text-state-positive-bright" },
-  watch: { label: "Watch", className: "bg-state-warn-solid/15 text-amber-800 dark:text-amber-300" },
+  watch: { label: "Watch", className: "bg-state-warn-solid/15 text-state-warn-strong" },
   critical: { label: "Critical", className: "bg-state-danger-solid/15 text-state-danger-bright" },
   unknown: { label: "Unknown", className: "bg-muted text-muted-foreground" },
 };

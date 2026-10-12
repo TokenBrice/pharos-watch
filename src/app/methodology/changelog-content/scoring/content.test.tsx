@@ -19,7 +19,7 @@ describe("ScoringChangelogContent", () => {
     expect(html).toContain("v6.92");
     expect(html).toContain('id="scoring-v6-8"');
     expect(html).toContain("v6.8");
-    expect(html).toContain("Quick Reference");
+    expect(html).toContain("Quick reference");
     expect(html).toContain("Weight evolution");
     expect(html).toContain("Grade threshold evolution");
     for (const [id, label] of [

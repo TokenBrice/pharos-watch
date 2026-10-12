@@ -81,7 +81,7 @@ export function StablecoinTable({
           <TableHead className="w-10">#</TableHead>
           <TableHead>Stablecoin</TableHead>
           <TableHead className="text-right">Supply on Chain</TableHead>
-          <TableHead className="text-right">Chain Share</TableHead>
+          <TableHead className="text-right">Chain share</TableHead>
           <TableHead className="text-right">7d</TableHead>
           <TableHead className="text-right">30d</TableHead>
         </TableRow>

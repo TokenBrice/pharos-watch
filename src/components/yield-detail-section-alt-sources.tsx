@@ -82,7 +82,7 @@ export function YieldDetailSectionAltSources({
           type="button"
           onClick={() => toggleSort("apy")}
           className={cn(
-            "pharos-focus-ring inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-border/60 bg-background/55 px-3 text-xs font-medium text-muted-foreground",
+            "pharos-focus-ring inline-flex min-h-11 flex-1 items-center justify-center rounded-md border border-border/60 bg-background/55 px-3 text-xs font-medium text-muted-foreground",
             sortField === "apy" && "text-foreground",
           )}
         >
@@ -92,7 +92,7 @@ export function YieldDetailSectionAltSources({
           type="button"
           onClick={() => toggleSort("tvl")}
           className={cn(
-            "pharos-focus-ring inline-flex min-h-11 flex-1 items-center justify-center rounded-lg border border-border/60 bg-background/55 px-3 text-xs font-medium text-muted-foreground",
+            "pharos-focus-ring inline-flex min-h-11 flex-1 items-center justify-center rounded-md border border-border/60 bg-background/55 px-3 text-xs font-medium text-muted-foreground",
             sortField === "tvl" && "text-foreground",
           )}
         >
@@ -175,7 +175,7 @@ export function YieldDetailSectionAltSources({
                 type="button"
                 onClick={() => onSelectSource(source.sourceKey)}
                 className={cn(
-                  "pharos-focus-ring mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-border/60 text-xs transition-colors",
+                  "pharos-focus-ring mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-border/60 text-xs transition-colors",
                   isSelected
                     ? "bg-primary/10 text-primary hover:bg-primary/20"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -343,7 +343,7 @@ export function YieldDetailSectionAltSources({
         <button
           type="button"
           onClick={onShowAll}
-          className="mt-3 w-full rounded-lg border border-border/60 bg-background/55 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+          className="mt-3 w-full rounded-md border border-border/60 bg-background/55 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
         >
           Show {hiddenCount} more source{hiddenCount !== 1 ? "s" : ""}
         </button>

@@ -189,7 +189,7 @@ export function Header() {
             type="button"
             onClick={openCommandPalette}
             aria-label="Search stablecoins and pages"
-            className="pharos-focus-ring flex h-9 shrink-0 items-center gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            className="pharos-focus-ring flex h-9 shrink-0 items-center gap-2 rounded-md border border-border/70 bg-muted/20 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
           >
             <Search className="h-4 w-4" aria-hidden="true" />
             Search
@@ -240,7 +240,7 @@ export function Header() {
                     <button
                       type="button"
                       onClick={returnToRoot}
-                      className="pharos-focus-ring mb-4 flex min-h-11 w-full items-center gap-2 rounded-lg border-b border-border/70 px-3 text-sm font-medium text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:bg-muted/45 hover:text-foreground motion-reduce:transition-none"
+                      className="pharos-focus-ring mb-4 flex min-h-11 w-full items-center gap-2 rounded-md border-b border-border/70 px-3 text-sm font-medium text-muted-foreground transition-colors duration-[220ms] ease-[var(--motion-ease-standard)] hover:bg-muted/45 hover:text-foreground motion-reduce:transition-none"
                     >
                       <ChevronLeft className="h-4 w-4" aria-hidden="true" />
                       Back to menu
@@ -325,7 +325,7 @@ export function Header() {
                             type="button"
                             onClick={() => openCategory(category.key)}
                             aria-label={`${category.label}, ${category.items.length} pages`}
-                            className="pharos-focus-ring flex min-h-11 w-full items-center justify-between rounded-lg border border-transparent px-3 text-sm font-medium text-foreground transition-[background-color,border-color,color,box-shadow] duration-[220ms] ease-[var(--motion-ease-standard)] hover:border-border/55 hover:bg-muted/45 motion-reduce:transition-none"
+                            className="pharos-focus-ring flex min-h-11 w-full items-center justify-between rounded-md border border-transparent px-3 text-sm font-medium text-foreground transition-[background-color,border-color,color,box-shadow] duration-[220ms] ease-[var(--motion-ease-standard)] hover:border-border/55 hover:bg-muted/45 motion-reduce:transition-none"
                           >
                             <span className="flex items-center gap-2">
                               {category.label}

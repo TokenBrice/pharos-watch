@@ -31,10 +31,10 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
               className={cn(
                 "text-2xs",
                 surface.telemetryStatus === "fresh"
-                  ? "bg-state-positive-solid/15 text-emerald-800 dark:text-emerald-300"
+                  ? "bg-state-positive-solid/15 text-state-positive-strong"
                   : surface.telemetryStatus === "stale"
-                    ? "bg-state-warn-solid/15 text-amber-800 dark:text-amber-300"
-                    : "bg-state-danger-solid/15 text-red-800 dark:text-red-300",
+                    ? "bg-state-warn-solid/15 text-state-warn-strong"
+                    : "bg-state-danger-solid/15 text-state-danger-strong",
               )}
             >
               {row.telemetryLabel} telemetry
@@ -89,7 +89,7 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
         <p className="mt-3 break-words text-xs text-muted-foreground">Skipped: {surface.skippedReason}</p>
       ) : null}
       {surface.error ? (
-        <p className="mt-3 break-words font-mono text-xs text-red-800 dark:text-red-300">{surface.error}</p>
+        <p className="mt-3 break-words font-mono text-xs text-state-danger-strong">{surface.error}</p>
       ) : null}
       {surface.metadata && Object.keys(surface.metadata).length > 0 ? (
         <details className="mt-3 text-xs">

@@ -36,9 +36,9 @@ const ADMIN_ACTIONS = getStatusPageActions();
 
 const ACTIVITY_CLASS: Record<ActionActivity["status"], string> = {
   ready: "bg-muted text-muted-foreground",
-  running: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  accepted: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  queued: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
+  running: "bg-state-info-subtle text-state-info-bright",
+  accepted: "bg-state-info-subtle text-state-info-bright",
+  queued: "bg-state-info-subtle text-state-info-bright",
   succeeded: "bg-state-positive-subtle text-state-positive-bright",
   failed: "bg-state-danger-subtle text-state-danger-bright",
   error: "bg-state-danger-subtle text-state-danger-bright",

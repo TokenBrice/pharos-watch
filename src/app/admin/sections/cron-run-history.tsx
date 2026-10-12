@@ -182,7 +182,7 @@ export function StaleArtifactEvidence({ artifacts }: { artifacts: CronStaleArtif
         <h4 id="cron-stale-artifacts-heading" className="text-xs font-semibold text-foreground">
           Stale lease and progress evidence
         </h4>
-        <Badge className="bg-state-danger-solid/15 text-red-800 dark:text-red-300">{artifacts.length}</Badge>
+        <Badge className="bg-state-danger-solid/15 text-state-danger-strong">{artifacts.length}</Badge>
       </div>
       <ul className="mt-2 divide-y divide-border/55 border-y border-border/55 text-xs">
         {artifacts.map((artifact, index) => (

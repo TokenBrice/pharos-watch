@@ -326,7 +326,7 @@ export function ScreenerToolbar({
 
       <div className="grid gap-3 lg:grid-cols-2">
         <FilterPillGroup
-          kicker="Mint Authority Route"
+          kicker="Mint authority route"
           options={MINT_AUTHORITY_OPTIONS}
           selected={filters.mintAuthority}
           justEntered={justEnteredMintAuthority}

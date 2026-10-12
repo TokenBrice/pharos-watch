@@ -218,7 +218,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
             <div className="col-span-2 min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
               <p className="text-xs font-medium text-muted-foreground">
-                <MethodologyLabel topic="effectiveTvl">Effective Liquidity</MethodologyLabel>
+                <MethodologyLabel topic="effectiveTvl">Effective liquidity</MethodologyLabel>
               </p>
               <p className="text-xl font-extrabold font-mono tabular-nums sm:text-2xl">
                 {formatCurrency(liq.effectiveTvlUsd)}

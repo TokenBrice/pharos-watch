@@ -6,17 +6,17 @@ const STYLES: Record<CoinNoticeType["type"], { banner: string; icon: string; tit
   danger: {
     banner: SEVERITY_TONE_CLASS.alert.banner,
     icon: "text-state-danger",
-    title: "text-red-600 dark:text-red-400",
+    title: "text-state-danger",
   },
   warning: {
     banner: SEVERITY_TONE_CLASS.watch.banner,
     icon: "text-state-warn",
-    title: "text-amber-600 dark:text-amber-400",
+    title: "text-state-warn",
   },
   info: {
     banner: SEVERITY_TONE_CLASS.info.banner,
-    icon: "text-blue-700 dark:text-blue-400",
-    title: "text-blue-600 dark:text-blue-400",
+    icon: "text-state-info",
+    title: "text-state-info",
   },
 };
 

@@ -99,7 +99,7 @@ export function DependencyExposureWorkspace({ workspace, options, children }: {
           document.getElementById(`exposure-tab-${next}`)?.focus();
         }}>{value === "setup" ? "Setup" : value === "results" ? "Results" : "Graph"}</button>)}
       </div>
-      <button type="button" className="pharos-focus-ring min-h-11 rounded px-3 text-sm" onClick={workspace.close}>Close exposure</button>
+      <button type="button" className="pharos-focus-ring min-h-11 rounded-md px-3 text-sm" onClick={workspace.close}>Close exposure</button>
     </div>}
     <div className={state.mode === "exposure" ? "grid gap-4 md:grid-cols-[minmax(0,1fr)_19rem]" : "grid gap-4"}>
       <div id="exposure-panel-graph" role={state.mode === "exposure" ? "tabpanel" : undefined} aria-labelledby={state.mode === "exposure" ? "exposure-tab-graph" : undefined} className={state.mode === "exposure" && tab !== "graph" ? "hidden min-w-0 md:block" : "min-w-0 md:col-span-1"}>{children}</div>

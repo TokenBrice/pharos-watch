@@ -42,8 +42,8 @@ export function ActionsSection({
       summary={
         <>
           <SummaryBadge label="Suggested" value={String(recommendedActions.length)} />
-          <SummaryBadge label="Cron Errors" value={data.summary.cronErrors == null ? "Unavailable" : String(data.summary.cronErrors)} />
-          <SummaryBadge label="Impacting Crons" value={data.summary.availabilityImpactingUnhealthyCrons == null ? "Unavailable" : String(data.summary.availabilityImpactingUnhealthyCrons)} />
+          <SummaryBadge label="Cron errors" value={data.summary.cronErrors == null ? "Unavailable" : String(data.summary.cronErrors)} />
+          <SummaryBadge label="Impacting crons" value={data.summary.availabilityImpactingUnhealthyCrons == null ? "Unavailable" : String(data.summary.availabilityImpactingUnhealthyCrons)} />
         </>
       }
     >

@@ -183,7 +183,7 @@ function HoldRow({ hold }: { hold: NonNullable<DataCoverageModel["hold"]> }) {
         className="mt-0.5 h-4 w-4 shrink-0 text-state-warn"
         aria-hidden="true"
       />
-      <p className="min-w-0 text-xs leading-relaxed text-amber-800 dark:text-amber-300">
+      <p className="min-w-0 text-xs leading-relaxed text-state-warn-strong">
         Ratings are held at the last verified snapshot
         {hold.heldSinceSec !== null ? (
           <>

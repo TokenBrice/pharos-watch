@@ -508,7 +508,7 @@ export function CompareClient() {
             ) : (
               supplySeries.length >= 2 && (
                 <ComparisonChart
-                  title="Market Cap History Comparison"
+                  title="Market cap history comparison"
                   series={supplySeries}
                   formatValue={formatCurrency}
                   formatTick={formatCurrencyTick}
@@ -522,7 +522,7 @@ export function CompareClient() {
             {radarCards.length >= 2 && (
               <Card className="pharos-card-shell h-full flex flex-col">
                 <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <CardTitle className="pharos-section-title">Safety Score Comparison</CardTitle>
+                  <CardTitle className="pharos-section-title">Safety Score comparison</CardTitle>
                   <CohortToggle
                     cohort={radarCohort}
                     onChange={setRadarCohort}

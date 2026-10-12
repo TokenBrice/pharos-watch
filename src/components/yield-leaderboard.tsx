@@ -317,7 +317,7 @@ export function YieldLeaderboard({
         />
       ) : null}
       <div className="space-y-3 md:hidden">
-        <MobileSortPanel kicker="Sort Leaderboard">
+        <MobileSortPanel kicker="Sort leaderboard">
           <MobileSortPills
             options={MOBILE_SORT_OPTIONS}
             sortKey={sortKey}

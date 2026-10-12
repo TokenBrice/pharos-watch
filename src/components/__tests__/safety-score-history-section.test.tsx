@@ -119,9 +119,9 @@ describe("SafetyScoreHistorySection", () => {
     const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
 
     // Summary stats strip
-    expect(html).toContain("Best Grade");
-    expect(html).toContain("Lowest Grade");
-    expect(html).toContain("Current Streak");
+    expect(html).toContain("Best grade");
+    expect(html).toContain("Lowest grade");
+    expect(html).toContain("Current streak");
 
     // Upgrade indicator (B -> B+ is an upgrade)
     expect(html).toContain("Upgraded from B");
@@ -224,7 +224,7 @@ describe("SafetyScoreHistorySection", () => {
 
     expect(html).toContain("Methodology baseline");
     expect(html).toContain('aria-label="Safety grade D, score 49"');
-    expect(html).toContain("Current Streak");
+    expect(html).toContain("Current streak");
     expect(html).not.toContain("Show 1 more");
     expect(html).toContain(">16m</span>");
   });

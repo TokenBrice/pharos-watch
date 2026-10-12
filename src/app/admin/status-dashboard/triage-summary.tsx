@@ -136,9 +136,9 @@ export function TriageSummary({
   });
   const reserveForecastTone =
     reserveForecast.state === "blocked"
-      ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-900 dark:text-red-200")
+      ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-state-danger-strong")
       : reserveForecast.state === "clear"
-        ? "border-state-positive bg-state-positive-subtle text-emerald-900 dark:text-emerald-200"
+        ? "border-state-positive bg-state-positive-subtle text-state-positive-strong"
         : cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink");
 
   return (
@@ -244,12 +244,12 @@ export function TriageSummary({
             }
           />
           <SummaryBadge
-            label="Public Health"
+            label="Public health"
             value={healthData?.status ?? "unknown"}
             className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
           />
           <span className="mx-1 hidden self-center border-l border-border/40 py-2 sm:block" />
-          <SummaryBadge label="Reserve Drift" value={data.sectionErrors.reserveDrift || !data.reserveDrift ? "Unknown" : String(data.reserveDrift.length)} />
+          <SummaryBadge label="Reserve drift" value={data.sectionErrors.reserveDrift || !data.reserveDrift ? "Unknown" : String(data.reserveDrift.length)} />
         </div>
 
         {reserveScoreInputHold ? (
@@ -368,7 +368,7 @@ export function TriageSummary({
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2 border-t border-border/60 pt-3">
-              <SummaryBadge label="Last Transition" value={formatTransitionLabel(latestTransition)} />
+              <SummaryBadge label="Last transition" value={formatTransitionLabel(latestTransition)} />
               <SummaryBadge
                 label="Changed"
                 value={
@@ -463,11 +463,11 @@ export function TriageSummary({
           {isDiagnosticsOpen ? (
             <div className="mt-3 space-y-4 pb-3">
               <div className="flex flex-wrap gap-2">
-                <SummaryBadge label="State Eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
-                <SummaryBadge label="Status Payload" value={formatTimestampSeconds(data.timestamp)} />
-                <SummaryBadge label="Status Fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
-                <SummaryBadge label="Health Fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
-                <SummaryBadge label="Probe Fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
+                <SummaryBadge label="State eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
+                <SummaryBadge label="Status payload" value={formatTimestampSeconds(data.timestamp)} />
+                <SummaryBadge label="Status fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
+                <SummaryBadge label="Health fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
+                <SummaryBadge label="Probe fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
                 <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
                 <FreshnessIndicator
                   updatedAtMs={freshnessFloorMs ?? 0}

@@ -36,7 +36,7 @@ function KeyCombo({ keys, join = "+" }: { keys: string[]; join?: KeyJoin }) {
     <span className="flex items-center gap-0.5">
       {keys.map((key, i) => (
         <span key={i} className="flex items-center">
-          <kbd className="rounded border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs font-mono tabular-nums">
+          <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1.5 py-0.5 text-xs font-mono tabular-nums">
             {key}
           </kbd>
           {i < keys.length - 1 && <span className="mx-0.5 text-muted-foreground">{separator}</span>}
@@ -91,10 +91,10 @@ export function KeyboardShortcuts({
         <label className="flex items-center justify-between gap-3 border-t border-border/60 px-2 pt-3 text-sm">
           <span>
             Enable single-key shortcuts (
-            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">?</kbd>,{" "}
-            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>,{" "}
-            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">T</kbd>,{" "}
-            <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">/</kbd>)
+            <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">?</kbd>,{" "}
+            <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>,{" "}
+            <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">T</kbd>,{" "}
+            <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">/</kbd>)
           </span>
           <input
             type="checkbox"
@@ -104,7 +104,7 @@ export function KeyboardShortcuts({
           />
         </label>
         <p className="border-t border-border/60 pt-3 text-xs text-muted-foreground">
-          Press <kbd className="rounded border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">Esc</kbd> to close
+          Press <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">Esc</kbd> to close
         </p>
       </DialogContent>
     </Dialog>

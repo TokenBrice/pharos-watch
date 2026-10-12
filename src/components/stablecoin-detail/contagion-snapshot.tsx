@@ -137,7 +137,7 @@ export function ContagionSnapshot({
   return (
     <section className={DETAIL_MODULE_SHELL_CLASS}>
       <div className={DETAIL_MODULE_HEADER_CLASS}>
-        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency Context</StablecoinModuleTitle>
+        <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Dependency context</StablecoinModuleTitle>
         <Link
           href={`/dependency-map/?focus=${encodeURIComponent(stablecoinId)}`}
           className="pharos-focus-ring inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground"

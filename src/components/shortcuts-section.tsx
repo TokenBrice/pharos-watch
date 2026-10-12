@@ -215,7 +215,7 @@ export function ShortcutsSection(): JSX.Element {
                     onClick={() => add(item.href)}
                     aria-label={`Add ${item.label} shortcut`}
                     className={cn(
-                      "pharos-focus-ring inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card/60 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors",
+                      "pharos-focus-ring inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-card/60 px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors",
                       "hover:border-border hover:bg-muted/50",
                     )}
                   >

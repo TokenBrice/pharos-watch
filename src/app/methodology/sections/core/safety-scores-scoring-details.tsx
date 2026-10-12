@@ -28,7 +28,7 @@ export function SafetyScoresScoringDetails() {
             subtitle: <>0.9&times; if no DEX or redemption signal</>,
             className: "md:w-64 border-amber-500/40",
           },
-          { title: "Final Grade", subtitle: "A+ through F", className: "md:w-64" },
+          { title: "Final grade", subtitle: "A+ through F", className: "md:w-64" },
         ]}
       />
 
@@ -58,7 +58,7 @@ export function SafetyScoresScoringDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Redemption Backstop and Effective Exit</h3>
+        <h3 className="text-foreground font-medium">Redemption backstop and effective exit</h3>
         <p>
           The standalone Liquidity Score remains a pure DEX market-depth metric. Safety Scores use an
           <span className="text-foreground font-medium"> effective exit score</span> for the Liquidity dimension, built
@@ -135,7 +135,7 @@ export function SafetyScoresScoringDetails() {
       </div>
 
       <div className="space-y-2">
-        <h3 className="text-foreground font-medium">Peg Stability Multiplier</h3>
+        <h3 className="text-foreground font-medium">Peg stability multiplier</h3>
         <p>
           After computing the base score, peg stability is applied as a power-curve multiplier:
           final&nbsp;=&nbsp;base&nbsp;&times;&nbsp;(pegScore&nbsp;/&nbsp;100)<sup>0.40</sup>. Coins with strong pegs

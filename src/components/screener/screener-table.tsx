@@ -97,7 +97,7 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
   { id: "peg", label: "Peg", className: "text-left" },
   {
     id: "peg30d",
-    label: "Peg Range",
+    label: "Peg range",
     className: "text-right w-[112px] hidden xl:table-cell",
     title: "Peg range: worst / current deviation (±bps around the peg)",
   },
@@ -178,7 +178,7 @@ export function ScreenerTable({
   if (isMobileLayout) {
     return (
       <div className="space-y-3">
-        <MobileSortPanel kicker="Sort Results">
+        <MobileSortPanel kicker="Sort results">
           <MobileSortPills
             options={MOBILE_SORT_OPTIONS}
             sortKey={sort.sortKey}
@@ -253,7 +253,7 @@ export function ScreenerTable({
 function ScreenerLayoutPending() {
   return (
     <div data-testid="stablecoin-screener-layout-pending" className="space-y-3">
-      <MobileSortPanel kicker="Sort Results">
+      <MobileSortPanel kicker="Sort results">
         <div className="flex flex-wrap gap-2" aria-hidden="true">
           {MOBILE_SORT_OPTIONS.map((option) => (
             <span key={option.key} className="h-8 w-16 animate-pulse rounded-full bg-muted/40" />

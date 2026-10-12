@@ -46,7 +46,7 @@ function BasinDrillDown({ hub, publication, labelOf, hubIds, onExposure }: {
       {trail.length > 1 && (
         <nav aria-label="Basin trail" className="flex flex-wrap items-center gap-1 text-xs">
           {trail.map((id, index) => index < trail.length - 1
-            ? <span key={id} className="flex items-center gap-1"><button type="button" className="pharos-focus-ring min-h-11 rounded px-1 underline" onClick={() => setTrail(trail.slice(0, index + 1))}>{labelOf(id)}</button><span aria-hidden="true">›</span></span>
+            ? <span key={id} className="flex items-center gap-1"><button type="button" className="pharos-focus-ring min-h-11 rounded-md px-1 underline" onClick={() => setTrail(trail.slice(0, index + 1))}>{labelOf(id)}</button><span aria-hidden="true">›</span></span>
             : <span key={id} aria-current="location" className="font-semibold">{labelOf(id)}</span>)}
         </nav>
       )}
@@ -69,18 +69,18 @@ function BasinDrillDown({ hub, publication, labelOf, hubIds, onExposure }: {
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="pharos-numeric text-xs text-muted-foreground">{row.share === null ? "share unknown" : `${(row.share * 100).toFixed(1)}%`}</span>
                   <span className="pharos-numeric text-xs">{row.exposureUsd === null ? "n/a" : formatCurrency(row.exposureUsd, 2)}</span>
-                  {hubIds.has(row.id) && <button type="button" className="pharos-focus-ring min-h-11 rounded px-2 text-xs underline" aria-label={`Show what depends on ${labelOf(row.id)}`} onClick={() => setTrail([...trail, row.id])}>Own dependents ›</button>}
+                  {hubIds.has(row.id) && <button type="button" className="pharos-focus-ring min-h-11 rounded-md px-2 text-xs underline" aria-label={`Show what depends on ${labelOf(row.id)}`} onClick={() => setTrail([...trail, row.id])}>Own dependents ›</button>}
                 </span>
               </li>
             ))}
           </ul>
-          {rows.length > HOP_ROWS && <button type="button" className="pharos-focus-ring min-h-11 rounded px-1 text-xs underline" onClick={() => { const next = new Set(allHops); if (next.has(hop)) next.delete(hop); else next.add(hop); setAllHops(next); }}>{allHops.has(hop) ? `Show top ${HOP_ROWS}` : `Show all ${rows.length} at hop ${hop}`}</button>}
+          {rows.length > HOP_ROWS && <button type="button" className="pharos-focus-ring min-h-11 rounded-md px-1 text-xs underline" onClick={() => { const next = new Set(allHops); if (next.has(hop)) next.delete(hop); else next.add(hop); setAllHops(next); }}>{allHops.has(hop) ? `Show top ${HOP_ROWS}` : `Show all ${rows.length} at hop ${hop}`}</button>}
         </div>
         );
       })}
       <div className="flex flex-wrap gap-3">
-        {onExposure && <button type="button" className="pharos-focus-ring min-h-11 rounded border border-border px-3 text-sm" aria-label={`Use ${labelOf(rootId)} as exposure root`} onClick={() => onExposure(rootId)}>Use as exposure root</button>}
-        <Link href={buildStablecoinUrl(rootId)} aria-label={`Open coin ${labelOf(rootId)}`} className="pharos-focus-ring inline-flex min-h-11 items-center rounded px-2 text-sm text-frost-blue" onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: rootId })}>Open coin</Link>
+        {onExposure && <button type="button" className="pharos-focus-ring min-h-11 rounded-md border border-border px-3 text-sm" aria-label={`Use ${labelOf(rootId)} as exposure root`} onClick={() => onExposure(rootId)}>Use as exposure root</button>}
+        <Link href={buildStablecoinUrl(rootId)} aria-label={`Open coin ${labelOf(rootId)}`} className="pharos-focus-ring inline-flex min-h-11 items-center rounded-md px-2 text-sm text-frost-blue" onClick={() => trackEvent("dependency_map_action", { action: "hub_open_coin", value: rootId })}>Open coin</Link>
       </div>
     </div>
   );
@@ -116,7 +116,7 @@ export function DependencyMapBasinList({ model, publication, logos, labelOf, onE
                 type="button"
                 aria-expanded={open}
                 aria-controls={`basin-${hub.id}`}
-                className="pharos-focus-ring flex min-h-11 w-full items-center gap-3 rounded py-2 text-left"
+                className="pharos-focus-ring flex min-h-11 w-full items-center gap-3 rounded-md py-2 text-left"
                 onClick={() => setOpenId(open ? null : hub.id)}
               >
                 <span aria-hidden="true" className="shrink-0"><StablecoinLogo src={logos?.[hub.id]} name={hub.label} size={24} /></span>
@@ -137,7 +137,7 @@ export function DependencyMapBasinList({ model, publication, logos, labelOf, onE
         })}
       </ul>
       {model.hubs.length > INITIAL_HUBS && (
-        <button type="button" className="pharos-focus-ring min-h-11 rounded px-2 text-sm underline" onClick={() => setShowAll(!showAll)}>
+        <button type="button" className="pharos-focus-ring min-h-11 rounded-md px-2 text-sm underline" onClick={() => setShowAll(!showAll)}>
           {showAll ? `Show top ${INITIAL_HUBS}` : `Show all ${model.hubs.length} hubs`}
         </button>
       )}

@@ -35,12 +35,12 @@ export function getCronStatusColor(status: string | undefined): string {
 }
 
 export function getStateBadgeClass(state: CronWorkbenchState): string {
-  if (state === "unhealthy") return "bg-state-danger-solid/15 text-red-800 dark:text-red-300";
-  if (state === "degraded") return "bg-state-warn-solid/15 text-amber-800 dark:text-amber-300";
+  if (state === "unhealthy") return "bg-state-danger-solid/15 text-state-danger-strong";
+  if (state === "degraded") return "bg-state-warn-solid/15 text-state-warn-strong";
   if (state === "skipped") return OPERATIONAL_PILL_CLASS.unknown;
-  if (state === "running") return "bg-state-info-solid/15 text-sky-800 dark:text-sky-300";
+  if (state === "running") return "bg-state-info-solid/15 text-state-info-strong";
   if (state === "unknown") return "bg-slate-500/15 text-slate-800 dark:text-slate-300";
-  return "bg-state-positive-solid/15 text-emerald-800 dark:text-emerald-300";
+  return "bg-state-positive-solid/15 text-state-positive-strong";
 }
 
 export function getRowTone(state: CronWorkbenchState): string {

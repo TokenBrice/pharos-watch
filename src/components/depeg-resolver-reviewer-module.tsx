@@ -557,7 +557,7 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
           <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
 
           {data._meta.degraded ? (
-            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-state-warn-strong">
               Reviewer snapshot is degraded: {data._meta.degradedReason ?? "unknown"}.
             </p>
           ) : null}

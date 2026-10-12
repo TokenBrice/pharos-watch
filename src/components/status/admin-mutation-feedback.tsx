@@ -42,7 +42,7 @@ export function AdminMutationFeedback({
       role={unknown ? "status" : "alert"}
       className={`space-y-2 rounded-md border px-3 py-2 text-xs ${
         unknown
-          ? cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-900 dark:text-amber-100")
+          ? cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink")
           : cn(SEVERITY_TONE_CLASS.alert.banner, "text-state-danger-strong")
       }`}
     >

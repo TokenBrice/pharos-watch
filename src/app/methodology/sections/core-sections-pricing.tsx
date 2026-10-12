@@ -335,7 +335,7 @@ export function PricingPipelineMethodologySection() {
           />
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Source Weights</h3>
+            <h3 className="text-foreground font-medium">Source weights</h3>
             <ContentTable
               tableId="methodology-pricing-source-weights"
               testId="methodology-pricing-source-weights-table"
@@ -365,7 +365,7 @@ export function PricingPipelineMethodologySection() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Consensus Algorithm</h3>
+            <h3 className="text-foreground font-medium">Consensus algorithm</h3>
             <p>The consensus engine clusters all available source prices for an asset and picks the most reliable result:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Collect all source prices with non-failed circuit breakers</li>
@@ -383,7 +383,7 @@ export function PricingPipelineMethodologySection() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Authoritative Price Overrides</h3>
+            <h3 className="text-foreground font-medium">Authoritative price overrides</h3>
             <p>For wrapper-style assets whose executable value is set by direct protocol redemption, or by an instantly redeemable tracked base asset, rather than by secondary-market liquidity, the pipeline switches to an authoritative redemption-based mark:</p>
             <ul className="list-disc list-inside space-y-1">
               <li><span className="text-foreground font-medium">cUSD (Cap):</span> <code className="text-xs">getBurnAmount()</code> &mdash; cUSD &rarr; USDC redemption rate</li>
@@ -423,7 +423,7 @@ export function PricingPipelineMethodologySection() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Confidence Levels</h3>
+            <h3 className="text-foreground font-medium">Confidence levels</h3>
             <ContentTable
               tableId="methodology-pricing-confidence-levels"
               testId="methodology-pricing-confidence-levels-table"
@@ -454,7 +454,7 @@ export function PricingPipelineMethodologySection() {
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Price Validation</h3>
+            <h3 className="text-foreground font-medium">Price validation</h3>
             <p>Every price is validated before entering the replay cache. Validation is context-aware with four modes:</p>
             <ul className="list-disc list-inside space-y-1">
               <li><span className="text-foreground font-medium">Authoritative primary:</span> can admit deep downside for fixed pegs, but publication still requires corroboration unless the mark is protocol redemption or a pool-challenge replacement</li>

@@ -60,7 +60,7 @@ const FLOW_TABLE_COLUMNS: readonly DataTableColumn<FlowTableSortKey>[] = [
   { id: "net7d", label: "Net 7d", sortKey: "net7d", className: "hidden w-[112px] text-right md:table-cell" },
   { id: "net30d", label: "Net 30d", sortKey: "net30d", className: "hidden w-[112px] text-right lg:table-cell" },
   { id: "net90d", label: "Net 90d", sortKey: "net90d", className: "hidden w-[112px] text-right xl:table-cell" },
-  { id: "largest", label: "Largest Event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
+  { id: "largest", label: "Largest event", sortKey: "largest", className: "hidden w-[124px] text-right xl:table-cell" },
 ] as const;
 
 function FlowNetCell({

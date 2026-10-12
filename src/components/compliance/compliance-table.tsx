@@ -75,7 +75,7 @@ export function ComplianceTable({
           <TableHead className="w-[210px]">Status</TableHead>
           <TableHead className="w-[190px]">Pathway / Type</TableHead>
           <TableHead className="w-[230px]">Authority</TableHead>
-          <TableHead>Issuer Entity</TableHead>
+          <TableHead>Issuer entity</TableHead>
           <TableHead className="w-12"><span className="sr-only">Details</span></TableHead>
         </TableRow>
       </TableHeader>

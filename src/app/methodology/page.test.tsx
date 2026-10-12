@@ -64,7 +64,7 @@ describe("MethodologyPage", () => {
     { element: <SafetyScoresDimensionDetails />, id: "methodology-safety-resilience-scoring",
       headers: ["Sub-factor", "What it measures", "Scoring"], labels: ["Collateral Quality", "Custody Model"] },
     { element: <SafetyScoresDimensionDetails />, id: "methodology-safety-grade-thresholds",
-      headers: ["Grade", "Score Range"], labels: ["A+", "A", "A−", "B+", "B", "B−", "C+", "C", "C−", "D", "F", "NR"] },
+      headers: ["Grade", "Score range"], labels: ["A+", "A", "A−", "B+", "B", "B−", "C+", "C", "C−", "D", "F", "NR"] },
   ])("preserves $id content, ids, and compact table semantics", ({ element, id, headers, labels }) => {
     const root = renderSection(element);
     const shell = root.querySelector(`[data-table-id="${id}"]`)!;
@@ -157,7 +157,7 @@ describe("MethodologyPage", () => {
 
   it("distinguishes preliminary and final DEWS and both evidence overrides", () => {
     const root = renderSection(<PegScoreDewsTechnicalDetails />);
-    const formula = Array.from(root.querySelectorAll("h3")).find((node) => node.textContent === "Score Formula")!.parentElement!;
+    const formula = Array.from(root.querySelectorAll("h3")).find((node) => node.textContent === "Score formula")!.parentElement!;
     const text = formula.textContent!.replace(/\s+/g, " ");
     expect(text).toMatch(/preliminaryScore\s*=\s*round/);
     const cap = Number(text.match(/finalScore\s*=\s*min\(preliminaryScore,\s*(\d+)\)/)![1]);

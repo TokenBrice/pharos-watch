@@ -10,11 +10,11 @@ export function CollateralQualityMethodologyCopy() {
       a reserve view being configured and a score-grade live reserve actually being used. For report-card
       scoring, the live snapshot must carry scoring-eligible freshness evidence: either a verified timestamp
       path or an explicit on-chain latest-state{" "}
-      <code className="text-xs bg-muted px-1 py-0.5 rounded">not-applicable</code> freshness mode.
+      <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">not-applicable</code> freshness mode.
       Direct one-bucket on-chain reserve proofs such as Liquity v1 can qualify when the adapter is
       classified as independent, but weak probe families do not qualify just because they are on-chain.
-      Detail-only <code className="text-xs bg-muted px-1 py-0.5 rounded">static-validated</code> and{" "}
-      <code className="text-xs bg-muted px-1 py-0.5 rounded">weak-live-probe</code> feeds remain visible
+      Detail-only <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">static-validated</code> and{" "}
+      <code className="text-xs bg-muted px-1 py-0.5 rounded-sm">weak-live-probe</code> feeds remain visible
       on reserve surfaces, but they never override curated collateral scoring.
       A score-grade adapter can identify a source-owned reserve category with a stable source key. Reviewed metadata
       joins only to a unique matching key and fails closed on key mismatches or duplicates; historical unkeyed rows

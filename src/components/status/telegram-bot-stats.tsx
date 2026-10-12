@@ -312,7 +312,7 @@ function BacklogTelemetry({ model }: { model: CommsWorkbenchModel }) {
         <MetricRow label="Expired" value={formatCount(delivery.backlog.expired)} />
         <MetricRow label="Near TTL" value={formatCount(delivery.backlog.nearTtl)} />
         <MetricRow label="Sending" value={formatCount(delivery.backlog.sending)} />
-        <MetricRow label="Execution Unknown" value={formatCount(delivery.backlog.executionUnknown)} />
+        <MetricRow label="Execution unknown" value={formatCount(delivery.backlog.executionUnknown)} />
         <MetricRow label="Pending execution Unknown" value={formatCount(delivery.backlog.pendingExecutionUnknown)} />
         <MetricRow label="Fresh execution Unknown" value={formatCount(delivery.backlog.freshExecutionUnknown)} />
         <MetricRow

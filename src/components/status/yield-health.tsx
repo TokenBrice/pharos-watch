@@ -146,7 +146,7 @@ function QueueItems({
                   <div className="truncate text-xs font-medium text-foreground">{item.title}</div>
                   <div className="truncate text-2xs text-muted-foreground">{item.detail}</div>
                 </div>
-                <div className="shrink-0 rounded border border-border/50 px-1.5 py-0.5 text-3xs text-muted-foreground">
+                <div className="shrink-0 rounded-sm border border-border/50 px-1.5 py-0.5 text-3xs text-muted-foreground">
                   {item.actionHint}
                 </div>
               </div>
@@ -172,7 +172,7 @@ export function YieldHealthCard({
 }) {
   if (!health) {
     return (
-      <StatusCardEmptyState title="Yield Health">
+      <StatusCardEmptyState title="Yield health">
         {error ? `Yield health loader failed: ${error.message}` : "No yield health data available yet."}
       </StatusCardEmptyState>
     );
@@ -182,7 +182,7 @@ export function YieldHealthCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle as="h3" className="text-base">Yield Health</CardTitle>
+          <CardTitle as="h3" className="text-base">Yield health</CardTitle>
           <a
             href={health.runbookUrl}
             target="_blank"
@@ -201,7 +201,7 @@ export function YieldHealthCard({
             subtext={rankingSubtext(health)}
           />
           <StatTile
-            label="Safety Coverage"
+            label="Safety coverage"
             value={
               <span className={statusClassName(health.safetyCoverage.status)}>
                 {formatPercentFromRatio(health.safetyCoverage.coverageRatio, 1)}
@@ -228,7 +228,7 @@ export function YieldHealthCard({
             subtext={benchmarkRegistrySubtext(health.benchmarkRegistry)}
           />
           <StatTile
-            label="Source Risk"
+            label="Source risk"
             value={
               <span className={statusClassName(health.sourceRiskCoverage.status)}>
                 {health.sourceRiskCoverage.status}

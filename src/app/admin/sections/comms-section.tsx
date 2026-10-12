@@ -31,7 +31,7 @@ export function CommsSection({ data }: CommsSectionProps) {
         <>
           <SummaryBadge label="Delivery" value={healthLabel} />
           <SummaryBadge
-            label="Oldest Backlog"
+            label="Oldest backlog"
             value={
               model.delivery.oldestBacklogAgeSec == null
                 ? "Unknown"
@@ -39,11 +39,11 @@ export function CommsSection({ data }: CommsSectionProps) {
             }
           />
           <SummaryBadge
-            label="Permanent Failures"
+            label="Permanent failures"
             value={model.delivery.permanentFailures.total?.toLocaleString() ?? "Unknown"}
           />
           <SummaryBadge
-            label="Latest Dispatch"
+            label="Latest dispatch"
             value={model.delivery.latestDispatch.status?.replaceAll("_", " ") ?? "Unknown"}
           />
         </>

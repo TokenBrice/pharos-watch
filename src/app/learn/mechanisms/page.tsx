@@ -158,7 +158,7 @@ export default function MechanismExplainersHub() {
       <MechanismJsonLd />
       <section aria-labelledby="mechanism-start-here-title" className="space-y-4 border-y border-border/60 py-5">
         <div className="space-y-2">
-          <SectionKicker>Start Here</SectionKicker>
+          <SectionKicker>Start here</SectionKicker>
           <SectionHeading id="mechanism-start-here-title">
             Collateral paths to read first
           </SectionHeading>

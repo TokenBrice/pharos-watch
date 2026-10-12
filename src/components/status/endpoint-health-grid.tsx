@@ -12,7 +12,7 @@ import { PublicSignalCard } from "./public-signal-card";
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
   { key: "public", label: "Public" },
   { key: "admin", label: "Admin" },
-  { key: "manual", label: "Manual Actions" },
+  { key: "manual", label: "Manual actions" },
 ];
 
 interface EndpointHealthGridProps {
@@ -32,7 +32,7 @@ export function EndpointHealthGrid({
 }: EndpointHealthGridProps) {
   if (isLoading && !probes) {
     return (
-      <PublicSignalCard title="Browser Endpoint Probes" contentClassName="mt-3">
+      <PublicSignalCard title="Browser endpoint probes" contentClassName="mt-3">
         <p className="text-sm text-muted-foreground">Probing endpoints...</p>
       </PublicSignalCard>
     );
@@ -64,7 +64,7 @@ export function EndpointHealthGrid({
       : "Shows public canary coverage only. Admin and manual action routes are intentionally excluded.");
 
   return (
-    <PublicSignalCard title="Browser Endpoint Probes">
+    <PublicSignalCard title="Browser endpoint probes">
         <p className="text-xs text-muted-foreground">
           {description ??
             (isAdminView

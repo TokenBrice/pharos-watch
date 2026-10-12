@@ -70,7 +70,7 @@ export function AlertFamilies() {
                 <figcaption className="flex items-center gap-2.5 border-b border-border/50 pb-3">
                   <PharosLogo size={28} />
                   <span className="text-sm font-semibold text-foreground">PharosWatchBot</span>
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-3xs font-medium uppercase text-muted-foreground">
+                  <span className="rounded-sm bg-muted px-1.5 py-0.5 text-3xs font-medium uppercase text-muted-foreground">
                     bot
                   </span>
                 </figcaption>

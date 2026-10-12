@@ -137,7 +137,7 @@ export function BlacklistTable({
   return (
     <TooltipProvider delayDuration={220}>
       <div className="space-y-3 md:hidden">
-        <MobileSortPanel kicker="Event Cards">
+        <MobileSortPanel kicker="Event cards">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">Sorted by {sortKey} {sortDirection === "asc" ? "ascending" : "descending"}.</p>
             <Button
@@ -258,7 +258,7 @@ function BlacklistAmount({ event: evt }: { event: BlacklistEvent }) {
       {formatBlacklistAmountOrStatus(evt)}
       <AmountBadges
         event={evt}
-        badgeClassName="ml-1 inline-flex cursor-help items-center rounded border border-border px-1 py-0.5 text-3xs uppercase text-muted-foreground"
+        badgeClassName="ml-1 inline-flex cursor-help items-center rounded-sm border border-border px-1 py-0.5 text-3xs uppercase text-muted-foreground"
       />
     </>
   );
@@ -351,7 +351,7 @@ function BlacklistEventCard({ event: evt, rank }: { event: BlacklistEvent; rank:
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1 text-3xs uppercase text-muted-foreground">
-          <AmountBadges event={evt} badgeClassName="cursor-help rounded border border-border px-1.5 py-1" />
+          <AmountBadges event={evt} badgeClassName="cursor-help rounded-sm border border-border px-1.5 py-1" />
         </div>
         <BlacklistTxLink event={evt} />
       </div>

@@ -122,7 +122,7 @@ describe("public probe evidence", () => {
   ] as const)("never labels %s browser probe evidence Healthy", (_label, data, isLoading, error, expected) => {
     useProbesMock.mockReturnValue({ data, isLoading, error, refetch: vi.fn(), dataUpdatedAt: 0 });
     render(<StatusClient faqItems={[]} />);
-    const tile = within(screen.getByText("Browser Probes").parentElement!);
+    const tile = within(screen.getByText("Browser probes").parentElement!);
     expect(tile.getByText(expected)).toBeTruthy();
     expect(tile.queryByText("Healthy")).toBeNull();
     expect(tile.getByText("—")).toBeTruthy();

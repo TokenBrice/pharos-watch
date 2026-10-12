@@ -229,7 +229,7 @@ export function HistorySection({
   return (
     <StatusSection
       id="history"
-      kicker="Incident Log"
+      kicker="Incident log"
       title="Incident History"
       headingLevel="h1"
       variant="workspace"

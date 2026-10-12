@@ -76,7 +76,7 @@ export function PegBrowseStrip({
   return (
     <div className="pharos-peg-browse-shell">
       <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border/70 px-3 py-2">
-        <h3 className="text-sm font-medium text-muted-foreground">Browse By Peg</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">Browse by peg</h3>
         {hasFiatOverflow && (
           <button
             type="button"

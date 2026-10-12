@@ -266,7 +266,7 @@ export function RegimeBarToggle({ className }: { className?: string }) {
       aria-label={`${regimeLabel(model)}. Market regime details`}
       title="Market regime: Pharos Stability Index"
       className={cn(
-        "pharos-focus-ring inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground",
+        "pharos-focus-ring inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground",
         expanded && "bg-muted/40 text-foreground",
         className,
       )}

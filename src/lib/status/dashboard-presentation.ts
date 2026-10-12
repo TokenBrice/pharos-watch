@@ -72,7 +72,7 @@ export function getSeverityBadgeClass(severity: StatusCause["severity"]): string
 export function getIssueKindBadgeClass(kind: DashboardIssueKind): string {
   if (kind === "impacting") return OPERATIONAL_PILL_CLASS.error;
   if (kind === "warning") return OPERATIONAL_PILL_CLASS.warning;
-  if (kind === "maintenance") return `bg-blue-500/15 ${SEVERITY_TONE_CLASS.info.text}`;
+  if (kind === "maintenance") return `bg-state-info-solid/15 ${SEVERITY_TONE_CLASS.info.text}`;
   return OPERATIONAL_PILL_CLASS.unknown;
 }
 

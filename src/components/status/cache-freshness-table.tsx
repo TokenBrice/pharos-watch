@@ -159,7 +159,7 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
   };
 
   return (
-    <PublicSignalCard title="Cache Freshness">
+    <PublicSignalCard title="Cache freshness">
       <div>
         <div className="mb-3 text-xs text-muted-foreground">
           Availability uses ratio thresholds of {">"}

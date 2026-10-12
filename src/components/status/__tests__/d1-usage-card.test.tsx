@@ -45,8 +45,8 @@ describe("D1UsageCard", () => {
   it("labels every capacity and traffic metric it reports", () => {
     render(<D1UsageCard summary={makeSummary()} nowSeconds={1_712_600_120} />);
 
-    expect(screen.getByText("Database Size")).toBeTruthy();
-    expect(screen.getByText("Capacity Forecast")).toBeTruthy();
+    expect(screen.getByText("Database size")).toBeTruthy();
+    expect(screen.getByText("Capacity forecast")).toBeTruthy();
     expect(screen.getByText("40 days")).toBeTruthy();
     expect(screen.getByText("60% used · watch")).toBeTruthy();
     expect(screen.getByText("Rows Read (24h)")).toBeTruthy();

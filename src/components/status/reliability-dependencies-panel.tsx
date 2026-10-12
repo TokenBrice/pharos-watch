@@ -6,7 +6,7 @@ import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dash
 
 function stateClass(state: string): string {
   if (state === "stale" || state === "open" || state === "error") return "bg-state-danger-solid/15 text-state-danger-bright";
-  if (state === "degraded" || state === "half-open") return "bg-state-warn-solid/15 text-amber-800 dark:text-amber-300";
+  if (state === "degraded" || state === "half-open") return "bg-state-warn-solid/15 text-state-warn-strong";
   if (state === "healthy" || state === "closed" || state === "ok")
     return "bg-state-positive-solid/15 text-state-positive-bright";
   return OPERATIONAL_PILL_CLASS.unknown;

@@ -166,17 +166,17 @@ export function PublicStatusHero({
         {/* ── 4-metric strip ── */}
         <div className="grid gap-x-6 gap-y-3 border-t border-border/60 pt-4 sm:grid-cols-2 lg:grid-cols-4">
           <SignalTile
-            label="Cache Pressure"
+            label="Cache pressure"
             value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : worstCacheStatus === "healthy" ? "—" : "missing"}
             tone={worstCacheStatus}
           />
           <SignalTile
-            label="Browser Probes"
+            label="Browser probes"
             value={probeValue}
             tone={probeSummary?.status ?? (probesLoading && !probesFailed ? "loading" : "unknown")}
           />
           <SignalTile
-            label="Circuit Breakers"
+            label="Circuit breakers"
             value={circuitValue}
             tone={openCircuits == null || halfOpenCircuits == null ? "unknown" : openCircuits > 0 ? "stale" : halfOpenCircuits > 0 ? "degraded" : "healthy"}
           />

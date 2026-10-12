@@ -45,7 +45,7 @@ export function IssuedTokenPanel({
 }: IssuedTokenPanelProps) {
   return (
     <div className="mt-5 space-y-4">
-      <div className="rounded-xl border border-state-positive-solid/40 bg-state-positive-solid/12 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300">
+      <div className="rounded-xl border border-state-positive-solid/40 bg-state-positive-solid/12 px-4 py-3 text-sm text-state-positive-strong">
         <p className="text-base font-semibold">Copy this token now.</p>
         <p className="mt-1 text-xs leading-relaxed opacity-90">{onceCopy}</p>
         <p className="mt-2 text-xs opacity-90">
@@ -59,7 +59,7 @@ export function IssuedTokenPanel({
       </div>
 
       {copyError ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-state-warn bg-state-warn-subtle px-3 py-2 text-sm text-state-warn-strong">
           <span>{copyError}</span>
           <Button type="button" size="xs" variant="outline" onClick={selectTokenText}>Select token</Button>
         </div>

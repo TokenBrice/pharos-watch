@@ -383,8 +383,8 @@ describe("StablecoinDetailClient", () => {
 
     const overviewSections = container.querySelectorAll("#overview");
     expect(overviewSections).toHaveLength(1);
-    expect(screen.getByText("Underlying Asset")).toBeTruthy();
-    expect(overviewSections[0]?.contains(screen.getByText("Underlying Asset"))).toBe(false);
+    expect(screen.getByText("Underlying asset")).toBeTruthy();
+    expect(overviewSections[0]?.contains(screen.getByText("Underlying asset"))).toBe(false);
     expect(screen.getAllByText("Sky Dollar").length).toBeGreaterThan(0);
   });
 

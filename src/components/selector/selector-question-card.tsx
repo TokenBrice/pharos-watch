@@ -203,21 +203,21 @@ function SelectorQuestionCardInner<TValue extends string>(
           <div
             role="status"
             key={softConfirmation.message}
-            className="space-y-2 rounded-lg border border-state-warn bg-state-warn-solid/[0.06] px-3 py-2.5 text-sm text-amber-900 dark:text-amber-100"
+            className="space-y-2 rounded-lg border border-state-warn bg-state-warn-solid/[0.06] px-3 py-2.5 text-sm text-state-warn-ink"
           >
             <p>{softConfirmation.message}</p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={softConfirmation.onContinue}
-                className="pharos-focus-ring rounded-full border border-amber-700/35 bg-amber-100/55 px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100/85 dark:bg-state-warn-solid/15 dark:text-amber-100"
+                className="pharos-focus-ring rounded-full border border-amber-700/35 bg-amber-100/55 px-3 py-1 text-xs font-medium text-state-warn-ink hover:bg-amber-100/85 dark:bg-state-warn-solid/15"
               >
                 Continue
               </button>
               <button
                 type="button"
                 onClick={softConfirmation.onChangeProfile}
-                className="pharos-focus-ring rounded-full border border-amber-700/25 px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100/35 dark:text-amber-100"
+                className="pharos-focus-ring rounded-full border border-amber-700/25 px-3 py-1 text-xs font-medium text-state-warn-ink hover:bg-amber-100/35"
               >
                 Change profile
               </button>

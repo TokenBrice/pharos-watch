@@ -17,7 +17,7 @@ interface FaqSectionProps {
 
 export function FaqSection({
   items,
-  title = "Frequently Asked Questions",
+  title = "Frequently asked questions",
   includeJsonLd = false,
   collapsed = false,
 }: FaqSectionProps) {

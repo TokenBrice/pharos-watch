@@ -41,15 +41,15 @@ export function ApiKeyLoadTable({
       description={
         <>
           Authenticated API-key requests on the public{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+          <code className="rounded-sm bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
             api.pharos.watch
           </code>{" "}
           lane. Excludes{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+          <code className="rounded-sm bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
             /_site-data/*
           </code>
           , the{" "}
-          <code className="rounded bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
+          <code className="rounded-sm bg-background/60 px-1 py-0.5 font-mono tabular-nums text-[0.92em] text-foreground">
             site-api
           </code>{" "}
           lane, and admin/telegram-webhook routes.
@@ -79,9 +79,9 @@ export function ApiKeyLoadTable({
       ) : (
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
-            <StatTile variant="tile" label="Keyed Requests" value={formatCompactCount(summary.keyedRequests)} />
-            <StatTile variant="tile" label="Unkeyed Public API" value={formatCompactCount(summary.unkeyedRequests)} />
-            <StatTile variant="tile" label="Keys In Window" value={formatCompactCount(summary.totalKeys)} />
+            <StatTile variant="tile" label="Keyed requests" value={formatCompactCount(summary.keyedRequests)} />
+            <StatTile variant="tile" label="Unkeyed public API" value={formatCompactCount(summary.unkeyedRequests)} />
+            <StatTile variant="tile" label="Keys in window" value={formatCompactCount(summary.totalKeys)} />
           </div>
 
           {summary.truncated ? (

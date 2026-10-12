@@ -223,7 +223,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
         {/* Summary stats strip */}
         {stats && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <StatBox label="Best Grade">
+            <StatBox label="Best grade">
               <SafetyGradeBadge
                 grade={stats.best.grade}
                 score={stats.best.score}
@@ -232,7 +232,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
                 versionVariant="tooltip-only"
               />
             </StatBox>
-            <StatBox label="Lowest Grade">
+            <StatBox label="Lowest grade">
               <SafetyGradeBadge
                 grade={stats.worst.grade}
                 score={stats.worst.score}
@@ -241,7 +241,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
                 versionVariant="tooltip-only"
               />
             </StatBox>
-            <StatBox label="Current Streak">
+            <StatBox label="Current streak">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold tabular-nums">{formatTrackingSpanDays(stats.streakDays)}</span>
                 <span className="text-xs text-muted-foreground">at</span>

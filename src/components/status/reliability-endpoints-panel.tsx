@@ -33,7 +33,7 @@ function ProbeRows({ probes }: { probes: EndpointProbeResult[] }) {
                   healthy
                     ? "bg-state-positive-solid/15 text-state-positive-bright"
                     : degraded
-                      ? "bg-state-warn-solid/15 text-amber-800 dark:text-amber-300"
+                      ? "bg-state-warn-solid/15 text-state-warn-strong"
                       : "bg-state-danger-solid/15 text-state-danger-bright"
                 }
               >

@@ -47,7 +47,7 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
         />
       </label>
       <label className="space-y-1">
-        <span className="text-xs font-medium text-muted-foreground">Owner Email</span>
+        <span className="text-xs font-medium text-muted-foreground">Owner email</span>
         <input
           className={FIELD_CLASS_NAME}
           value={state.ownerEmail}
@@ -96,7 +96,7 @@ function ApiKeyEditableFields<TState extends CreateKeyState | EditableKeyState>(
       </label>
       {state.expiryMode === "custom" ? (
         <label className="space-y-1">
-          <span className="text-xs font-medium text-muted-foreground">Expires At</span>
+          <span className="text-xs font-medium text-muted-foreground">Expires at</span>
           <input
             type="datetime-local"
             step={60}

@@ -76,7 +76,7 @@ export function ReliabilityImpactPanel({
                   <code className="mt-1 block break-all text-3xs text-muted-foreground">{issue.rawCode}</code>
                 </div>
                 <span
-                  className={cn("shrink-0 rounded border px-2 py-1 text-2xs font-medium", KIND_CLASS[issue.kind])}
+                  className={cn("shrink-0 rounded-sm border px-2 py-1 text-2xs font-medium", KIND_CLASS[issue.kind])}
                 >
                   {issue.kind}
                 </span>

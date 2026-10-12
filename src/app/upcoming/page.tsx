@@ -90,12 +90,12 @@ export default function UpcomingPage() {
       <CalloutBanner icon={<Bell className="h-4 w-4" />}>
         Want a launch alert instead of checking back manually? Send{" "}
         <span className="inline-flex items-center gap-1 align-middle">
-          <code className="rounded bg-background/70 px-1.5 py-0.5 text-xs font-mono tabular-nums text-foreground">
+          <code className="rounded-sm bg-background/70 px-1.5 py-0.5 text-xs font-mono tabular-nums text-foreground">
             {GLOBAL_LAUNCH_ALERT_COMMAND}
           </code>
           <CopyButton
             text={GLOBAL_LAUNCH_ALERT_COMMAND}
-            className="rounded border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
+            className="rounded-md border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
           />
         </span>{" "}
         to{" "}

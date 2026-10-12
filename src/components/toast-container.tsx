@@ -17,7 +17,7 @@ const toastIcons: Record<ToastType, typeof Info> = {
 };
 
 const toastStyles: Record<ToastType, string> = {
-  success: "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400",
+  success: "border-state-positive bg-state-positive-subtle text-state-positive",
   info: "border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/10 text-foreground",
   warning: "border-state-warn bg-state-warn-subtle text-state-warn",
   error: "border-state-danger bg-state-danger-subtle text-state-danger",

@@ -42,7 +42,7 @@ export function ColumnVisibilityDropdown({
         <Button
           variant="outline"
           size="sm"
-          className={cn("min-h-11 w-full rounded-lg border-border/70 sm:min-h-8 sm:w-auto", triggerClassName)}
+          className={cn("min-h-11 w-full rounded-md border-border/70 sm:min-h-8 sm:w-auto", triggerClassName)}
         >
           <Columns3 className="h-3.5 w-3.5" />
           <span className={compactOnMobile ? "sr-only sm:not-sr-only" : undefined}>Columns</span>

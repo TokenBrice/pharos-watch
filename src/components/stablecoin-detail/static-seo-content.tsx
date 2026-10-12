@@ -500,7 +500,7 @@ export function StablecoinDetailSeoContent({
               <dd className={FACT_VALUE_CLASS}>{coin.collateral ?? "Not specified in the static profile."}</dd>
             </div>
             <div>
-              <dt className={FACT_LABEL_CLASS}>Peg Mechanism</dt>
+              <dt className={FACT_LABEL_CLASS}>Peg mechanism</dt>
               <dd className={FACT_VALUE_CLASS}>{coin.pegMechanism ?? "Not specified in the static profile."}</dd>
             </div>
             <div>
@@ -508,7 +508,7 @@ export function StablecoinDetailSeoContent({
               <dd className={FACT_VALUE_CLASS}>{formatJurisdiction(coin)}</dd>
             </div>
             <div>
-              <dt className={FACT_LABEL_CLASS}>Proof Of Reserves</dt>
+              <dt className={FACT_LABEL_CLASS}>Proof of reserves</dt>
               <dd className={FACT_VALUE_CLASS}>
                 <ProofOfReservesValue coin={coin} />
               </dd>

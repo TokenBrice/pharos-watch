@@ -185,7 +185,7 @@ export function StabilityIndexMethodologySection() {
         summary="Technical details: formula, component math, depeg handling, and condition bands"
       >
         <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Scoring Formula</h3>
+          <h3 className="text-foreground font-medium">Scoring formula</h3>
           <code className="block rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-xs pharos-numeric">
             Score = 100 &minus; severity &minus; breadth &minus; stressBreadth + trend
           </code>
@@ -201,7 +201,7 @@ export function StabilityIndexMethodologySection() {
           ]}
           steps={[
             { title: "Compute PSI", subtitle: "100 − penalties + trend", className: "md:w-80" },
-            { title: "Condition Band", subtitle: "BEDROCK through MELTDOWN", className: "md:w-80 border-cyan-500/40" },
+            { title: "Condition band", subtitle: "BEDROCK through MELTDOWN", className: "md:w-80 border-cyan-500/40" },
           ]}
         />
         <div className="space-y-2">
@@ -214,7 +214,7 @@ export function StabilityIndexMethodologySection() {
           />
         </div>
         <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Depeg Handling Rules</h3>
+          <h3 className="text-foreground font-medium">Depeg handling rules</h3>
           <ul className="list-disc list-inside space-y-1">
             <li>
               <span className="text-foreground font-medium">Core-universe boundary:</span> tracked variants and
@@ -258,7 +258,7 @@ export function StabilityIndexMethodologySection() {
           </code>
         </div>
         <div className="space-y-2">
-          <h3 className="text-foreground font-medium">Condition Bands</h3>
+          <h3 className="text-foreground font-medium">Condition bands</h3>
           <ContentTable
             tableId="methodology-stability-index-condition-bands"
             testId="methodology-stability-index-condition-bands-table"

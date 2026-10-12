@@ -159,7 +159,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-semibold text-sky-700 dark:text-sky-300">
             <Bell className="h-4 w-4" aria-hidden="true" />
-            <span>Launch Alert</span>
+            <span>Launch alert</span>
           </div>
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">
@@ -189,7 +189,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
             </code>
             <CopyButton
               text={launchAlertCommand}
-              className="shrink-0 rounded-lg border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
+              className="shrink-0 rounded-md border border-border/60 bg-background/70 text-muted-foreground hover:bg-background hover:text-foreground"
             />
           </div>
         </div>
@@ -267,7 +267,7 @@ export function PreLaunchDetail({ coin, logoSrc, summary }: PreLaunchDetailProps
           <InfoGridItem label="Backing" value={BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing} />
           <InfoGridItem label="Governance" value={GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance} />
           <InfoGridItem
-            label="Peg Currency"
+            label="Peg currency"
             value={PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency}
           />
           {jurisdictionDisplay && <InfoGridItem label="Jurisdiction" value={jurisdictionDisplay} />}
