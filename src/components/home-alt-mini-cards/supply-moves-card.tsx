@@ -31,6 +31,7 @@ const REVIEWED_INTERNAL_FLOW_LOOKBACK_SEC = 8 * DAY_SECONDS;
 interface Mover {
   id: string;
   symbol: string;
+  name: string;
   pctChange: number;
 }
 
@@ -50,7 +51,7 @@ function computeSupplyMovers(coins: readonly StablecoinData[], nowSec: number): 
     if (prev <= 0) continue;
     const pctChange = ((current - prev) / prev) * 100;
     if (!Number.isFinite(pctChange) || pctChange === 0) continue;
-    movers.push({ id: c.id, symbol: c.symbol, pctChange });
+    movers.push({ id: c.id, symbol: c.symbol, name: c.name, pctChange });
   }
   const ups = movers.filter((mover) => mover.pctChange > 0).sort((a, b) => b.pctChange - a.pctChange).slice(0, 4);
   const downs = movers.filter((mover) => mover.pctChange < 0).sort((a, b) => a.pctChange - b.pctChange).slice(0, 4);
@@ -99,9 +100,9 @@ export function SupplyMovesCard(): React.JSX.Element {
       expandLabel="Open Screener"
       label={
         <>
-          Biggest Supply Moves{" "}
-          <span className="font-mono text-2xs uppercase text-muted-foreground/70">
-            {"· >10M MC"}
+          Biggest supply moves{" "}
+          <span className="text-2xs font-normal text-muted-foreground/70">
+            {"· 7d · over $10M market cap"}
           </span>
         </>
       }
@@ -124,7 +125,7 @@ export function SupplyMovesCard(): React.JSX.Element {
         <Link
           prefetch={false}
           href={buildStablecoinUrl(peak.id)}
-          className="pharos-focus-ring -mx-1 flex items-center justify-between gap-3 rounded-sm px-1 py-0.5 pharos-numeric transition-colors hover:bg-muted/50"
+          className="pharos-focus-ring -mx-1 flex items-center justify-between gap-3 rounded-sm px-1 py-0.5 transition-colors hover:bg-muted/50"
           aria-label={`${peak.symbol} — peak 7-day supply mover: ${formatPct(peak.pctChange)}`}
         >
           <span className="flex min-w-0 items-center gap-2.5">
@@ -138,8 +139,9 @@ export function SupplyMovesCard(): React.JSX.Element {
                 aria-hidden
               />
             )}
-            <span className="truncate font-mono text-3xl font-bold uppercase tracking-tight text-foreground">
-              {peak.symbol}
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate pharos-numeric text-base font-semibold text-foreground">{peak.symbol}</span>
+              <span className="truncate text-xs text-muted-foreground">{peak.name}</span>
             </span>
           </span>
           <span

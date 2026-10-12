@@ -40,7 +40,7 @@ describe("HomeAltHero producer freshness", () => {
       meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
     });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText("Known Market Cap Subtotal")).toBeTruthy();
+    expect(screen.getByText("Known market cap subtotal")).toBeTruthy();
     expect(screen.getByText("Shares of known market cap subtotal")).toBeTruthy();
     expect(screen.getByText("80.0%")).toBeTruthy();
     expect(screen.getAllByText("20.0%")).toHaveLength(2);

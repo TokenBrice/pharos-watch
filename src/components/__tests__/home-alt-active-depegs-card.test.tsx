@@ -10,15 +10,26 @@ const { useActiveDepegEventsMock, usePegSummaryMock } = vi.hoisted(() => ({
   usePegSummaryMock: vi.fn(),
 }));
 
+// The headline reads the worker's `summary.activeDepegCount` (the /depeg/ hero
+// authority). Fixtures that only list coins get that count the way the worker
+// derives it here: flagged coins (none of these fixtures are NAV tokens).
 vi.mock("@/hooks/api-hooks", () => ({
-  usePegSummary: usePegSummaryMock,
+  usePegSummary: (...args: unknown[]) => {
+    const result = usePegSummaryMock(...args);
+    const data = result?.data;
+    if (!data?.coins || data.summary) return result;
+    const activeIds = new Set(["usdc-circle", "eur-stasis", ...Array.from({ length: 119 }, (_, i) => `fixture-coin-${String(i + 3).padStart(2, "0")}`)]);
+    const activeDepegCount = data.coins.filter((coin: { id: string; activeDepeg?: boolean }) => coin.activeDepeg === true && activeIds.has(coin.id)).length;
+    return { ...result, data: { ...data, summary: { activeDepegCount } } };
+  },
 }));
 
 vi.mock("@/hooks/use-depeg-events", () => ({
   useActiveDepegEvents: useActiveDepegEventsMock,
 }));
 
-vi.mock("@/lib/stablecoin-static-data", () => ({
+vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/stablecoin-static-data")>()),
   ACTIVE_STABLECOIN_ID_SET: new Set([
     "usdc-circle",
     "eur-stasis",
@@ -101,7 +112,7 @@ describe("ActiveDepegsCard", () => {
     });
     render(<ActiveDepegsCard />);
 
-    expect(screen.getByText("Total Active Depegs")).toBeTruthy();
+    expect(screen.getByText("Active depegs")).toBeTruthy();
     expect(screen.getByText("USDC")).toBeTruthy();
     expect(screen.getByText("EURS")).toBeTruthy();
     expect(screen.getByText(/120/)).toBeTruthy();
@@ -117,13 +128,13 @@ describe("ActiveDepegsCard", () => {
 
     expect(screen.getByText("19")).toBeTruthy();
     expect(screen.queryByText("4")).toBeNull();
-    expect(screen.getByText("active")).toBeTruthy();
-    const list = screen.getByRole("list", { name: "Top 4 of 19 active depegs by deviation" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+    expect(screen.getByText("confirmed depegs right now")).toBeTruthy();
+    const list = screen.getByRole("list", { name: "Top 3 of 19 active depegs by deviation" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByText("C19")).toBeTruthy();
     expect(screen.getByText("C18")).toBeTruthy();
     expect(screen.getByText("C17")).toBeTruthy();
-    expect(screen.getByText("C16")).toBeTruthy();
+    expect(screen.queryByText("C16")).toBeNull();
     expect(screen.queryByText("C15")).toBeNull();
   });
 
@@ -161,10 +172,10 @@ describe("ActiveDepegsCard", () => {
     render(<ActiveDepegsCard />);
 
     expect(screen.getByText("120")).toBeTruthy();
-    const list = screen.getByRole("list", { name: "Top 4 of 120 active depegs by deviation" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+    const list = screen.getByRole("list", { name: "Top 3 of 120 active depegs by deviation" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByText("C120")).toBeTruthy();
-    expect(within(list).getAllByText("Age unavailable")).toHaveLength(4);
+    expect(within(list).getAllByText("Age unavailable")).toHaveLength(3);
   });
 
   it("keeps the incident count when event detail retrieval fails", () => {

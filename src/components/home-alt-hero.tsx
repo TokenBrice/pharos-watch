@@ -103,7 +103,7 @@ export function HomeAltHero({
                 className="text-sm font-medium text-muted-foreground"
                 title="Excludes 2 off-catalog PSI historical assets"
               >
-                {visibleSnapshot && !supplyComplete ? "Known Market Cap Subtotal" : "Total Market Cap"}
+                {visibleSnapshot && !supplyComplete ? "Known market cap subtotal" : "Total market cap"}
               </p>
               <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
             </div>
@@ -142,7 +142,9 @@ export function HomeAltHero({
           </div>
         </div>
 
-        <div className="border-b border-border/50 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-b-0">
+        {/* The chart fills the whole right column at lg: the cell sizes from the
+            headline + cohort column and the chart is pinned inside it. */}
+        <div className="border-b border-border/50 lg:relative lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-[305px] lg:border-b-0">
           <HomeAltHeroChartGate />
         </div>
 
@@ -160,7 +162,7 @@ export function HomeAltHero({
                 <CohortRow color={USDC_BLUE} label="USDC" value={latest.usdc} total={cohortTotal} />
                 <CohortRow color={CHART_ORANGE} label="USDS + DAI" value={latest.sky} total={cohortTotal} />
                 <CohortRow color={OTHERS_PURPLE} label="Others" value={latest.others} total={cohortTotal} />
-                <li className="flex items-baseline justify-between gap-3 pharos-numeric">
+                <li className="flex items-baseline justify-between gap-3">
                   <span className="flex items-center gap-2 text-muted-foreground">
                     <span className="inline-flex h-2 w-2 items-center" aria-hidden="true">
                       <span className="w-2 border-t border-dashed" style={{ borderColor: CHART_SLATE_STRONG }} />
@@ -204,7 +206,7 @@ function CohortRow({
 }): React.JSX.Element {
   const share = value != null && total != null && total > 0 ? (value / total) * 100 : null;
   return (
-    <li className="flex items-baseline justify-between gap-3 pharos-numeric">
+    <li className="flex items-baseline justify-between gap-3">
       <span className="flex items-center gap-2 text-muted-foreground">
         <span className="inline-block h-2 w-2 rounded-sm" style={{ backgroundColor: color }} aria-hidden="true" />
         <span className="pharos-label">{label}</span>

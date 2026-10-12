@@ -9,51 +9,73 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { YieldApiWarnings } from "@/components/yield/yield-data-health";
 import { YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
+import { UniverseChip } from "@/components/universe-chip";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { useYieldRankingsSummary } from "@/hooks/api-hooks";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
+import { dedupeYieldRankings } from "@shared/lib/yield-rankings";
+import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
+import {
+  YIELD_LANDING_RISK_BUDGET,
+  YIELD_RISK_BUDGET_SPECS,
+  prepareYieldUniverse,
+  selectTopPysRows,
+  selectVisibleYieldRows,
+  type YieldViewModelRow,
+} from "@/lib/yield-view-model";
 import type { YieldRankingSummary } from "@shared/types/yield-summary";
+
+// The /yield/ page opens on this risk band; the home card answers for the same view.
+const LANDING_BAND_LABEL =
+  YIELD_RISK_BUDGET_SPECS.find((spec) => spec.key === YIELD_LANDING_RISK_BUDGET)?.label ?? YIELD_LANDING_RISK_BUDGET;
 
 const LEADERBOARD_SIZE = 5;
 
 // Shared 5-column grid so the (separate) header row and each leaderboard row
-// align: rank · coin · APY · PYS · grade. Fixed metric widths keep the columns
-// flush across the independent grid containers.
-const ROW_GRID = "grid grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] items-center sm:grid-cols-[1.5rem_7rem_minmax(0,1fr)_4.5rem_3.5rem_2.75rem] gap-x-2";
+// align: rank · coin · (PYS bar) · PYS · APY · grade. The PYS figure sits at the
+// end of the bar it labels so the bar is never read against APY. Fixed metric
+// widths keep the columns flush across the independent grid containers.
+const ROW_GRID = "grid grid-cols-[1.5rem_minmax(0,1fr)_3.5rem_4.5rem_2.75rem] items-center sm:grid-cols-[1.5rem_7rem_minmax(0,1fr)_3.5rem_4.5rem_2.75rem] gap-x-2";
 
 interface OverviewData {
   /** `null` when the payload carries no safety-snapshot coverage: "unknown", never "N/N". */
   coveredCount: number | null;
   trackedCount: number | null;
   medianApy: number | null;
-  highestRawYield: { symbol: string; apy: number } | null;
-  bestRiskAdjusted: YieldRankingSummary | null;
-  leaders: YieldRankingSummary[];
+  /** Rows in the /yield/ landing view (its default risk band) and in the whole universe. */
+  inViewCount: number;
+  totalRowCount: number;
+  /** The page's "Highest APY" in the same landing view. */
+  highestApy: YieldViewModelRow | null;
+  /** The page hero: best-paid risk in view, by Pharos Yield Score. */
+  bestPaid: YieldViewModelRow | null;
+  leaders: YieldViewModelRow[];
 }
 
+/**
+ * Same derivation as the /yield/ hero with no URL filters: dedupe, prepare the
+ * universe, select the landing band's visible rows, then rank by PYS.
+ */
 function buildOverview(
-  rankings: readonly YieldRankingSummary[],
+  rankings: YieldRankingSummary[],
   snapshot: { coveredCount: number; trackedCount: number } | null,
 ): Omit<OverviewData, "medianApy"> {
-  const highestRawYield = rankings.reduce<{ symbol: string; apy: number } | null>((best, row) => {
-    if (!Number.isFinite(row.apy30d)) return best;
-    return best === null || row.apy30d > best.apy ? { symbol: row.symbol, apy: row.apy30d } : best;
-  }, null);
-
-  const leaders = rankings
-    .filter((row) => row.pharosYieldScore !== null)
-    .sort((a, b) => (b.pharosYieldScore ?? 0) - (a.pharosYieldScore ?? 0))
-    .slice(0, LEADERBOARD_SIZE);
+  const universe = prepareYieldUniverse(dedupeYieldRankings(rankings), null);
+  const visibleRows = selectVisibleYieldRows(universe, {});
+  const leaders = selectTopPysRows(visibleRows, LEADERBOARD_SIZE);
 
   return {
     // A degraded payload has no safety snapshot at all; falling back to
     // `rankings.length` reported "157/157 covered" exactly when nothing was.
     coveredCount: snapshot?.coveredCount ?? null,
     trackedCount: snapshot?.trackedCount ?? null,
-    highestRawYield,
-    bestRiskAdjusted: leaders[0] ?? null,
+    inViewCount: visibleRows.length,
+    totalRowCount: universe.rowFacets.length,
+    highestApy: buildYieldStoryCallouts(visibleRows)?.topYield ?? null,
+    bestPaid: leaders[0] ?? null,
     leaders,
   };
 }
@@ -86,19 +108,53 @@ function OverviewHeader({ coveredCount }: { coveredCount: number | null }): Reac
   );
 }
 
+function LeadFigure({
+  bestPaid,
+  inViewCount,
+  totalRowCount,
+}: {
+  bestPaid: YieldViewModelRow | null;
+  inViewCount: number;
+  totalRowCount: number;
+}): React.JSX.Element {
+  return (
+    <div className="space-y-2 pb-3">
+      <p className="text-sm font-medium text-muted-foreground">
+        Best-paid risk in view
+        {bestPaid ? <span className="text-foreground/70"> · {bestPaid.symbol}</span> : null}
+      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <RailHeroFigureTransition rail="yield">
+          <span className="pharos-numeric text-4xl font-bold tracking-tight text-foreground">
+            {bestPaid ? formatPercent(bestPaid.apy30d) : "—"}
+          </span>
+        </RailHeroFigureTransition>
+        {bestPaid ? (
+          <span className="pharos-numeric text-xs text-muted-foreground">PYS {formatScore(bestPaid.pharosYieldScore)}</span>
+        ) : null}
+        <UniverseChip
+          universe="yieldRows"
+          value={`${inViewCount} in view of ${totalRowCount} · ${LANDING_BAND_LABEL}`}
+          className="sm:ml-auto"
+        />
+      </div>
+    </div>
+  );
+}
+
 function StatStrip({
   coveredCount,
   trackedCount,
   medianApy,
-  bestRiskAdjusted,
+  highestApy,
 }: {
   coveredCount: number | null;
   trackedCount: number | null;
   medianApy: number | null;
-  bestRiskAdjusted: YieldRankingSummary | null;
+  highestApy: YieldViewModelRow | null;
 }): React.JSX.Element {
   return (
-    <div className="grid grid-cols-3 divide-x divide-border/50">
+    <div className="grid grid-cols-3 divide-x divide-border/50 border-t border-border/50">
       <div className="flex flex-col gap-1 px-3 py-3 first:pl-0">
         <span className="pharos-label">Coverage</span>
         <span className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
@@ -119,17 +175,14 @@ function StatStrip({
         </span>
       </div>
       <div className="flex flex-col gap-1 px-3 py-3">
-        <span className="pharos-label">Best risk-adjusted</span>
-        {bestRiskAdjusted ? (
+        <span className="pharos-label">Highest APY in view</span>
+        {highestApy ? (
           <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 truncate">
-            <span className="truncate font-mono text-lg font-semibold uppercase tracking-tight text-foreground sm:text-xl">
-              {bestRiskAdjusted.symbol}
+            <span className="truncate pharos-numeric text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+              {highestApy.symbol}
             </span>
             <span className="pharos-numeric shrink-0 text-lg font-semibold text-foreground sm:text-xl">
-              {formatPercent(bestRiskAdjusted.apy30d)}
-            </span>
-            <span className="pharos-numeric shrink-0 text-2xs text-muted-foreground">
-              PYS {formatScore(bestRiskAdjusted.pharosYieldScore)}
+              {formatPercent(highestApy.apy30d)}
             </span>
           </span>
         ) : (
@@ -145,7 +198,7 @@ function LeaderRow({
   rank,
   logoSrc,
 }: {
-  row: YieldRankingSummary;
+  row: YieldViewModelRow;
   rank: number;
   logoSrc: string | undefined;
 }): React.JSX.Element {
@@ -169,11 +222,11 @@ function LeaderRow({
             />
           )}
         </span>
-        <span className="pharos-numeric justify-self-end text-xs font-semibold text-foreground">
-          {formatPercent(row.apy30d)}
-        </span>
         <span className="pharos-numeric justify-self-end text-xs text-muted-foreground">
           {formatScore(row.pharosYieldScore)}
+        </span>
+        <span className="pharos-numeric justify-self-end text-xs font-semibold text-foreground">
+          {formatPercent(row.apy30d)}
         </span>
         <span className="justify-self-end">
           <YieldSafetyBadge
@@ -238,31 +291,27 @@ export function HomeAltYieldOverview(): React.JSX.Element | null {
       {healthNotices}
 
       <div className="pharos-card-shell overflow-hidden p-4">
+        <LeadFigure
+          bestPaid={overview.bestPaid}
+          inViewCount={overview.inViewCount}
+          totalRowCount={overview.totalRowCount}
+        />
         <StatStrip
           coveredCount={overview.coveredCount}
           trackedCount={overview.trackedCount}
           medianApy={overview.medianApy}
-          bestRiskAdjusted={overview.bestRiskAdjusted}
+          highestApy={overview.highestApy}
         />
-        {overview.highestRawYield ? (
-          <p className="border-t border-border/50 px-1 py-2 text-2xs text-muted-foreground">
-            Highest raw APY (unadjusted):{" "}
-            <span className="font-mono font-semibold uppercase text-foreground">{overview.highestRawYield.symbol}</span>{" "}
-            <span className="pharos-numeric font-semibold text-foreground">
-              {formatPercent(overview.highestRawYield.apy)}
-            </span>
-          </p>
-        ) : null}
 
         <div className="mt-3 border-t border-border/50 pt-3">
           <div
             className={`${ROW_GRID} pharos-label px-1 pb-1.5`}
           >
             <span aria-hidden="true" />
-            <span>Top by PYS</span>
+            <span>Top by PYS in view</span>
             <span aria-hidden="true" className="hidden sm:block" />
-            <span className="justify-self-end">APY</span>
             <span className="justify-self-end">PYS</span>
+            <span className="justify-self-end">APY</span>
             <span className="justify-self-end">Grade</span>
           </div>
           <ul className="flex flex-col">

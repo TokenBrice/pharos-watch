@@ -33,6 +33,8 @@ export interface FreezableSummary {
   freezableMarketCap: number;
   /** Registry count of freezable assets; independent of supply availability. */
   freezableCount: number;
+  /** Every active coin with a freeze-control bucket: the hero's "N coins classified" denominator. */
+  registryCount: number;
   /** Freezable percentage of observed supply; `null` when no positive supply is observed. */
   freezableShare: number | null;
   /** Reviewed assets whose supply is unavailable and therefore excluded from every total. */
@@ -60,7 +62,7 @@ export function computeFreezableSummary(buckets: BlacklistStatusBucket[] | null 
     registryCount - supplyUnavailableCount <= 0 ? "unavailable" : supplyUnavailableCount > 0 ? "partial" : "complete";
   const freezableShare =
     coverage !== "unavailable" && totalMarketCap > 0 ? (freezableMarketCap / totalMarketCap) * 100 : null;
-  return { ordered, totalMarketCap, freezableMarketCap, freezableCount, freezableShare, supplyUnavailableCount, coverage };
+  return { ordered, totalMarketCap, freezableMarketCap, freezableCount, registryCount, freezableShare, supplyUnavailableCount, coverage };
 }
 
 /** Qualifier for totals/shares built from a partial observed-supply denominator. */

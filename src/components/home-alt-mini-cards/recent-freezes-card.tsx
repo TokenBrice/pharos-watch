@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UniverseChip } from "@/components/universe-chip";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import { useStablecoins } from "@/hooks/use-stablecoins";
+import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
+import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { formatCurrency } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
@@ -13,7 +18,7 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
 
 // How many recent freeze rows to surface beneath the headline.
-const MAX_RECENT = 4;
+const MAX_RECENT = 3;
 
 type WindowKey = "24h" | "7d";
 
@@ -82,6 +87,11 @@ function symbolToId(symbol: string, logoMap: Record<string, string>): string {
   return lower;
 }
 
+// Rows only carry positive valuations; a sub-dollar freeze must not round to "$0".
+function formatFreezeRowUsd(value: number): string {
+  return value < 1 ? "<$1" : formatCurrency(value, 0);
+}
+
 export function RecentFreezesCard(): React.JSX.Element {
   const eventsQuery = useBlacklistEventsPage({
     eventType: "all",
@@ -91,6 +101,13 @@ export function RecentFreezesCard(): React.JSX.Element {
     offset: 0,
   });
   const summaryQuery = useBlacklistSummary();
+  // The FreezeWatch hero figure, from the same stablecoins list and summary
+  // helper the /freezewatch/ hero reads (shared cache, no extra request).
+  const stablecoinsQuery = useStablecoins();
+  const freezable = useMemo(
+    () => computeFreezableSummary(stablecoinsQuery.data ? buildBlacklistStatusBuckets(stablecoinsQuery.data.peggedAssets) : null),
+    [stablecoinsQuery.data],
+  );
   const logos = logosById;
   const logoMap = useMemo(() => logos ?? {}, [logos]);
   const [windowKey, setWindowKey] = useState<WindowKey>("24h");
@@ -130,15 +147,14 @@ export function RecentFreezesCard(): React.JSX.Element {
       className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4"
       href="/freezewatch/"
       expandLabel="Open FreezeWatch"
-      label="Recent Freezes"
+      label="FreezeWatch"
       aside={
-        <div role="group" aria-label="Freeze window" className="inline-flex items-center gap-1">
+        <div role="group" aria-label="Freeze window" className="pharos-segmented">
           <button
             type="button"
             onClick={() => setWindowKey("24h")}
             aria-pressed={windowKey === "24h"}
-            data-state={windowKey === "24h" ? "on" : "off"}
-            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-2xs leading-none"
+            className="pharos-focus-ring pharos-segmented-item px-2 font-mono text-2xs leading-none"
           >
             24h
           </button>
@@ -146,8 +162,7 @@ export function RecentFreezesCard(): React.JSX.Element {
             type="button"
             onClick={() => setWindowKey("7d")}
             aria-pressed={windowKey === "7d"}
-            data-state={windowKey === "7d" ? "on" : "off"}
-            className="pharos-toggle-pill pharos-focus-ring h-9 justify-center px-2 py-1 font-mono text-2xs leading-none"
+            className="pharos-focus-ring pharos-segmented-item px-2 font-mono text-2xs leading-none"
           >
             7d
           </button>
@@ -160,8 +175,9 @@ export function RecentFreezesCard(): React.JSX.Element {
         queries: [
           { preset: "blacklist", label: "Freeze totals", dataUpdatedAt: summaryQuery.dataUpdatedAt, meta: summaryQuery.meta, error: summaryQuery.error, hasData: summaryQuery.data !== undefined },
           { preset: "blacklist", label: "Freeze events", dataUpdatedAt: eventsQuery.dataUpdatedAt, meta: eventsQuery.meta, error: eventsQuery.error, hasData: eventsQuery.data !== undefined },
+          { preset: "stablecoins", label: "Freezable share", dataUpdatedAt: stablecoinsQuery.dataUpdatedAt, meta: stablecoinsQuery.meta, error: stablecoinsQuery.error, hasData: stablecoinsQuery.data !== undefined },
         ],
-        onRetry: () => void Promise.all([summaryQuery.refetch(), eventsQuery.refetch()]),
+        onRetry: () => void Promise.all([summaryQuery.refetch(), eventsQuery.refetch(), stablecoinsQuery.refetch()]),
       }}
       loadingContent={
         <>
@@ -172,23 +188,32 @@ export function RecentFreezesCard(): React.JSX.Element {
       hasRenderableData={summaryQuery.data !== undefined && eventsQuery.data !== undefined}
       unavailableWhen={!summaryQuery.data || !eventsQuery.data}
     >
-      <div className="flex items-baseline gap-2">
-        <span
-          className={`pharos-numeric text-4xl font-bold tracking-tight ${
-            count > 0 ? "text-red-700 dark:text-red-400" : "text-foreground"
-          }`}
-        >
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <RailHeroFigureTransition rail="freezewatch">
+          <span className="pharos-numeric text-4xl font-bold tracking-tight text-foreground">
+            {freezable.freezableShare === null || freezable.coverage === "unavailable"
+              ? "—"
+              : formatShare(freezable.freezableShare)}
+          </span>
+        </RailHeroFigureTransition>
+        {stablecoinsQuery.data ? (
+          <UniverseChip universe="active" value={`${freezable.registryCount} coins classified`} className="sm:ml-auto" />
+        ) : null}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Freezable share of {freezable.coverage === "partial" ? "observed" : "tracked"} supply · frozen in {windowKey}:{" "}
+        <span className="pharos-numeric text-foreground">
           {formatBlacklistValuation(amount, valuationCoverage, (value) => formatCurrency(value, 0))}
         </span>
-        <span aria-hidden="true" className="font-mono text-sm text-muted-foreground/40">
-          ·
-        </span>
-        <span className="pharos-numeric text-2xs uppercase text-muted-foreground/70">
-          {count.toLocaleString("en-US")}X
-        </span>
-      </div>
+        {" · "}
+        <span>{`${count.toLocaleString("en-US")} ${count === 1 ? "freeze" : "freezes"}`}</span>
+        {recent.length > 0 ? " · latest first" : ""}
+      </p>
       {recent.length > 0 && (
-        <ul className="flex flex-col border-t border-border/50 pt-2.5 font-mono text-xs">
+        <ul
+          aria-label="Latest valued freezes, newest first"
+          className="flex flex-col border-t border-border/50 pt-2.5 font-mono text-xs"
+        >
           {recent.map((ev) => {
             const logoSrc = getLogoSrc(logoMap, ev.stablecoinId);
             return (
@@ -200,7 +225,7 @@ export function RecentFreezesCard(): React.JSX.Element {
                 <span className="truncate uppercase tracking-tight text-foreground">{ev.symbol}</span>
                 <span className="flex items-baseline gap-1.5">
                   <span className="font-semibold pharos-numeric text-red-700 dark:text-red-400">
-                    {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatCurrency(ev.amountUsdAtEvent, 0) : "—"}
+                    {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatFreezeRowUsd(ev.amountUsdAtEvent) : "—"}
                   </span>
                   <span aria-hidden="true" className="text-muted-foreground/40">
                     ·

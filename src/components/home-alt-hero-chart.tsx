@@ -476,7 +476,7 @@ export function HomeAltHeroChart({ rows, isLoadingHistory = false }: HomeAltHero
   return (
     <div
       ref={chartContainerRef}
-      className="relative h-[260px] w-full sm:h-[320px] lg:h-auto lg:min-h-[305px]"
+      className="relative h-[260px] w-full sm:h-[320px] lg:h-full"
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >

@@ -30,7 +30,7 @@ function freshMeta() {
 }
 
 describe("HomeMarketStateLine", () => {
-  it("states the PSI band and the active-catalog depeg census with rail links", () => {
+  it("states the PSI band and the /depeg/ hero's confirmed-depeg count with rail links", () => {
     useStabilityIndexMock.mockReturnValue({
       data: { current: { score: 91.2, band: "BEDROCK", avg24h: 91.9, avg24hBand: "BEDROCK", computedAt: Math.floor(Date.now() / 1000) } },
       dataUpdatedAt: Date.now(),
@@ -45,6 +45,8 @@ describe("HomeMarketStateLine", () => {
           { id: "pmusd-piedmont", activeDepeg: true },
           { id: "retired-coin", activeDepeg: true },
         ],
+        // The peg summary's own (non-NAV) count is the authority, as on /depeg/.
+        summary: { activeDepegCount: 1 },
       },
       dataUpdatedAt: Date.now(),
       meta: freshMeta(),

@@ -25,3 +25,23 @@ export function StablecoinIdentityTransition({ id, children }: { id: string; chi
     </ViewTransition>
   );
 }
+
+/** Rail instruments whose homepage card figure morphs into the rail hero figure. */
+export type RailHeroFigure = "psi" | "yield" | "depeg" | "freezewatch";
+
+/**
+ * Shared-element morph for a rail instrument's hero figure: the homepage card
+ * that links to the rail page wraps its lead figure, and the rail page's hero
+ * wraps the same figure with the same name, so navigating card → rail morphs
+ * one number into the other. Both sides must show the identical value, basis
+ * and format (the card reads the rail page's own selector), otherwise the
+ * morph would animate between two different answers.
+ */
+export function RailHeroFigureTransition({ rail, children }: { rail: RailHeroFigure; children: ReactNode }) {
+  if (!ViewTransition) return children;
+  return (
+    <ViewTransition name={`rail-hero-${rail}`} share="auto" default="none">
+      {children}
+    </ViewTransition>
+  );
+}

@@ -1,13 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
 import { usePegSummary, useStabilityIndex } from "@/hooks/api-hooks";
 import { deriveDataHealth } from "@/lib/data-health";
 import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
-import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
-import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { PSI_BAND_CLASSES, isConditionBand } from "@shared/lib/classification";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 
@@ -41,15 +38,12 @@ export function HomeMarketStateLine(): React.JSX.Element {
   });
   const psiStateLabel = psiBeacon.isCurrent ? null : (psiBeacon.health?.state ?? "unavailable");
 
-  const pegCoins = pegQuery.data?.coins;
-  const activeDepegCount = useMemo(
-    () => (pegCoins ? selectActiveDepegCoins(pegCoins, ACTIVE_STABLECOIN_ID_SET).length : null),
-    [pegCoins],
-  );
+  // The /depeg/ hero's authority: the peg summary's confirmed (non-NAV) count.
+  const activeDepegCount = pegQuery.data?.summary?.activeDepegCount ?? null;
   const pegHealth = deriveDataHealth({
     ...DATA_HEALTH_PRESETS.pegSummary,
     dataUpdatedAt: pegQuery.dataUpdatedAt,
-    hasData: pegCoins !== undefined,
+    hasData: pegQuery.data !== undefined,
     error: pegQuery.error,
     meta: pegQuery.meta,
   });

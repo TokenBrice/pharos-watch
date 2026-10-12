@@ -27,5 +27,5 @@ export function HomeAltHeroChartGate(): React.JSX.Element {
     return scheduleIdle(() => setActive(true), 2_500);
   }, [active, hydrated, near]);
 
-  return <div ref={ref}>{active ? <HomeAltHeroLiveChart /> : <HomeAltHeroChartFallback />}</div>;
+  return <div ref={ref} className="lg:absolute lg:inset-0">{active ? <HomeAltHeroLiveChart /> : <HomeAltHeroChartFallback />}</div>;
 }

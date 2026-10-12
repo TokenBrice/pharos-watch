@@ -232,22 +232,25 @@ function useHashTargetForceMount() {
   return forced;
 }
 
+// Reserves are the measured rendered heights (390 base / 1440 `lg:`), as static
+// Tailwind classes: an under-reserved section shifts the footer on mount (CLS),
+// an over-reserved one only leaves whitespace while it is in view.
 function BelowFold({
   forced,
-  minHeight,
+  reserveClassName,
   rootMargin,
   placeholder,
   children,
 }: {
   forced: boolean;
-  minHeight: number;
+  reserveClassName: string;
   rootMargin?: string;
   placeholder?: React.ReactNode;
   children: React.ReactNode;
 }) {
   if (forced) return <>{children}</>;
   return (
-    <LazySection minHeight={minHeight} rootMargin={rootMargin} placeholder={placeholder}>
+    <LazySection className={reserveClassName} rootMargin={rootMargin} placeholder={placeholder}>
       {children}
     </LazySection>
   );
@@ -259,7 +262,7 @@ export function HomeAltClient() {
   return (
     <div id="data" tabIndex={-1}>
       <div className="space-y-3">
-        <BelowFold forced={hashTargetForcesMount} minHeight={520} rootMargin="0px">
+        <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[1396px] lg:min-h-[594px]" rootMargin="0px">
           <HomeAltMiniCardGrid />
         </BelowFold>
       </div>
@@ -279,7 +282,7 @@ export function HomeAltClient() {
       >
         <BelowFold
           forced={hashTargetForcesMount}
-          minHeight={620}
+          reserveClassName="min-h-[1230px] lg:min-h-[1015px]"
           rootMargin="0px"
           placeholder={<RankingsSectionFallback />}
         >
@@ -287,13 +290,13 @@ export function HomeAltClient() {
         </BelowFold>
       </section>
 
-      <BelowFold forced={hashTargetForcesMount} minHeight={520}>
+      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[212px] lg:min-h-[335px]">
         <div className="mt-8 sm:mt-10">
           <HomeAltUpcomingHorizonConstellation />
         </div>
       </BelowFold>
 
-      <BelowFold forced={hashTargetForcesMount} minHeight={360}>
+      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[1340px] lg:min-h-[626px]">
         <div className="mt-8 sm:mt-10">
           <SectionErrorBoundary name="depeg forecasting overview">
             <HomeAltDdrOverview />
@@ -301,7 +304,7 @@ export function HomeAltClient() {
         </div>
       </BelowFold>
 
-      <BelowFold forced={hashTargetForcesMount} minHeight={420}>
+      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[564px] lg:min-h-[489px]">
         <div className="mt-8 sm:mt-10">
           <SectionErrorBoundary name="yield intelligence overview">
             <HomeAltYieldOverview />
@@ -309,7 +312,7 @@ export function HomeAltClient() {
         </div>
       </BelowFold>
 
-      <BelowFold forced={hashTargetForcesMount} minHeight={120}>
+      <BelowFold forced={hashTargetForcesMount} reserveClassName="min-h-[83px] lg:min-h-[53px]">
         <div className="mt-8 sm:mt-10">
           <SectionErrorBoundary name="status and telegram overview">
             <HomeAltStatusTelegram />

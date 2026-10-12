@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
+import { UniverseChip } from "@/components/universe-chip";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
@@ -15,6 +17,9 @@ import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { PegSummaryCoin } from "@shared/types";
+
+// Rows under the headline; the headline count is never this cap (R7).
+const MAX_ROWS = 3;
 
 interface ActiveRow {
   id: string;
@@ -52,7 +57,10 @@ export function ActiveDepegsCard(): React.JSX.Element {
       (b.bps == null ? -1 : Math.abs(b.bps)) - (a.bps == null ? -1 : Math.abs(a.bps)));
   }, [activeCoins, data?.events, pegSummaryQuery.dataUpdatedAt]);
 
-  const activeCount = activeCoins.length;
+  // Same figure and denominator as the /depeg/ hero: the peg summary's confirmed
+  // (non-NAV) active-depeg count over the peg catalog it was read from.
+  const activeCount = pegSummaryData?.summary?.activeDepegCount ?? null;
+  const catalogCount = pegSummaryData?.coins.length ?? null;
   const flashClass = useFlashOnChange(activeCount);
   const state = resolveQueryViewState({
     hasData: pegSummaryData !== undefined,
@@ -72,7 +80,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
       className="pharos-card-shell flex h-full flex-col gap-3 overflow-hidden p-4"
       href="/depeg/"
       expandLabel="Open Depeg monitor"
-      label="Total Active Depegs"
+      label="Active depegs"
       state={state}
       notice={{
         label: "Active depeg monitoring",
@@ -99,24 +107,33 @@ export function ActiveDepegsCard(): React.JSX.Element {
       }
       hasRenderableData={pegSummaryData !== undefined}
     >
-      <div className="flex items-baseline gap-2 pharos-numeric font-bold tracking-tight">
-        <span className={`rounded-md text-4xl text-frost-blue ${flashClass}`}>{activeCount}</span>
-        <span className="pharos-label">active</span>
-        {activeRows.length > 4 ? (
-          <span className="ml-auto hidden pharos-meta sm:inline">
-            Top 4 by deviation
-          </span>
-        ) : null}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <RailHeroFigureTransition rail="depeg">
+          <span className={`rounded-md pharos-numeric text-4xl font-bold tracking-tight text-foreground ${flashClass}`}>{activeCount ?? "—"}</span>
+        </RailHeroFigureTransition>
+        <span className="text-xs text-muted-foreground">
+          {activeCount === null
+            ? "peg summary unavailable"
+            : `confirmed ${activeCount === 1 ? "depeg" : "depegs"} right now`}
+        </span>
+        <UniverseChip
+          universe="pegCatalog"
+          value={catalogCount == null ? undefined : `${catalogCount.toLocaleString()} coins`}
+          className="sm:ml-auto"
+        />
       </div>
+      {activeRows.length > MAX_ROWS ? (
+        <p className="-mb-2 hidden pharos-meta sm:block">Top {MAX_ROWS} of {activeRows.length} by deviation</p>
+      ) : null}
       <ul
         aria-label={
-          activeRows.length > 4
-            ? `Top 4 of ${activeRows.length} active depegs by deviation`
+          activeRows.length > MAX_ROWS
+            ? `Top ${MAX_ROWS} of ${activeRows.length} active depegs by deviation`
             : "Active depegs by deviation"
         }
         className="hidden flex-col border-t border-border/50 pt-2.5 font-mono text-xs sm:flex"
       >
-        {activeRows.slice(0, 4).map((row, index) => (
+        {activeRows.slice(0, MAX_ROWS).map((row, index) => (
           <DepegRow key={row.id} row={row} logoSrc={getLogoSrc(logoMap, row.id)} isLead={index === 0} />
         ))}
       </ul>

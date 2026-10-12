@@ -10,10 +10,10 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 // Segment colors follow the shared severity ramp (see deviationBgClass in
 // src/lib/severity-colors.ts): healthy green → mild amber → moderate orange → severe red.
 const SEGMENTS = [
-  { key: "tight", label: "≤25", legend: "Good", colorClass: "bg-green-500" },
-  { key: "loose", label: "25–100", legend: "Alert", colorClass: "bg-amber-500" },
-  { key: "stressed", label: "100–250", legend: "Warning", colorClass: "bg-orange-500" },
-  { key: "severe", label: ">250", legend: "Danger", colorClass: "bg-red-500" },
+  { key: "tight", label: "≤25 bps", legend: "Good", colorClass: "bg-green-500" },
+  { key: "loose", label: "25–100 bps", legend: "Alert", colorClass: "bg-amber-500" },
+  { key: "stressed", label: "100–250 bps", legend: "Warning", colorClass: "bg-orange-500" },
+  { key: "severe", label: ">250 bps", legend: "Danger", colorClass: "bg-red-500" },
 ] as const;
 
 export function PegHealthCard(): React.JSX.Element {
@@ -34,7 +34,7 @@ export function PegHealthCard(): React.JSX.Element {
       className="pharos-card-shell flex h-full flex-col gap-4 p-4"
       href="/screener/"
       expandLabel="Open Screener"
-      label="Peg Health"
+      label="Peg health"
       state={state}
       notice={{
         label: "Peg health data",
@@ -58,12 +58,15 @@ export function PegHealthCard(): React.JSX.Element {
               <span className="mx-2 text-2xl text-muted-foreground/50">/</span>
               <span className="text-muted-foreground">{summary.totalTracked}</span>
             </div>
-            <p className="pharos-meta pharos-numeric mt-1.5">
-              {summary.activeDepegCount} active · {summary.medianDeviationBps.toFixed(0)} bps median
+            {/* The active-depeg count already answers on the market-state line and
+                its own card; this card speaks in deviation bands. */}
+            <p className="pharos-meta mt-1.5">
+              At peg (per-coin threshold) · <span className="pharos-numeric">{summary.medianDeviationBps.toFixed(0)}</span> bps median
             </p>
           </div>
 
-          <div className="mt-4 flex flex-1 flex-col border-t border-border/50 pt-5">
+          <div className="mt-4 flex flex-1 flex-col border-t border-border/50 pt-4">
+            <p className="pharos-label mb-2">Current deviation bands</p>
             {total === 0 ? (
               <div className="flex h-10 items-center justify-center rounded-md border border-border/60 bg-muted/30 pharos-meta">
                 No coin-level deviation rows
@@ -83,18 +86,19 @@ export function PegHealthCard(): React.JSX.Element {
                       key={seg.key}
                       className={`${seg.colorClass} ${index === 0 ? "rounded-l-md" : ""} ${index === SEGMENTS.length - 1 ? "rounded-r-md" : ""}`}
                       style={{ width: `${share * 100}%` }}
-                      title={`${seg.legend}: ${count}`}
+                      title={`${seg.legend} (${seg.label}): ${count}`}
                     />
                   );
                 })}
               </div>
             )}
-            <ul className="mt-4 grid flex-1 content-between font-mono text-xs">
+            <ul className="mt-3 grid flex-1 content-between gap-y-1.5 text-xs">
               {SEGMENTS.map((seg) => (
                 <li key={seg.key} className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-2 text-muted-foreground">
                     <span className={`inline-block h-2 w-2 rounded-sm ${seg.colorClass}`} aria-hidden="true" />
                     {seg.legend}
+                    <span className="pharos-numeric text-muted-foreground/70">{seg.label}</span>
                   </span>
                   <span className="pharos-numeric text-foreground">{buckets[seg.key]}</span>
                 </li>

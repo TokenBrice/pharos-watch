@@ -31,26 +31,16 @@ import {
   TIER_META,
 } from "@/components/depeg-resolver-row-card-model";
 
-// Accuracy reads as strong only once enough calls are scored and the rate clears
-// this bar; otherwise the big number stays neutral while the model calibrates.
-const STRONG_ACCURACY_RATIO = 0.7;
-const CALIBRATION_THRESHOLD = 5;
-
 // Above this many open depegs the board splits into two balanced columns so all
 // forecasts stay visible without an over-tall single list.
 const TWO_COLUMN_THRESHOLD = 6;
 
-const ACCURACY_TONE: Record<"strong" | "muted", string> = {
-  strong: "text-emerald-600 dark:text-emerald-400",
-  muted: "text-frost-blue",
-};
-
 // Short tier labels for the distribution legend + per-row terminality.
 const TIER_SHORT: Record<DdrResolutionTier, string> = {
   recovery_likely: "Likely",
-  at_risk: "At Risk",
+  at_risk: "At risk",
   recovery_unlikely: "Unlikely",
-  insufficient_signal: "No Signal",
+  insufficient_signal: "No signal",
 };
 
 // Tier-colored ring around each coin logo — keeps terminality readable at the
@@ -183,7 +173,7 @@ function ForecastRow({ item, logoSrc }: { item: ForecastItem; logoSrc: string | 
         <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground">{signedBps(item.nowBps)}</span>
       </span>
       <span className="flex shrink-0 items-center justify-end gap-2.5">
-        <span className={cn("w-auto text-right sm:w-24 text-3xs font-semibold uppercase", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
+        <span className={cn("w-auto text-right sm:w-24 text-2xs font-semibold", item.tier == null ? "text-muted-foreground" : TIER_META[item.tier].accent)}>
           {item.tier == null ? item.state.replaceAll("_", " ") : TIER_SHORT[item.tier]}
         </span>
         <span className="w-auto text-right sm:w-28">
@@ -200,14 +190,9 @@ function SectionHeader({ stat }: { stat: { value: number; label: string } }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex shrink-0 items-center rounded-md bg-frost-blue/15 px-2 py-1 font-display text-sm font-black tracking-tight text-frost-blue ring-1 ring-inset ring-frost-blue/30 sm:text-base">
-            DDR
-          </span>
-          <p className="font-display text-2xl font-bold leading-tight text-foreground sm:text-3xl">
-            Depeg Duration Resolver
-          </p>
-        </div>
+        <p className="font-display text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+          Depeg Duration Resolver
+        </p>
         <div className="flex shrink-0 items-center gap-3 pt-1">
           <span className="hidden text-sm text-muted-foreground sm:inline">
             <span className="pharos-numeric font-semibold text-foreground">{stat.value}</span> {stat.label}
@@ -257,7 +242,7 @@ function VerdictDistribution({ items }: { items: ForecastItem[] }) {
           <span key={tier} className="flex items-center gap-1.5">
             <span aria-hidden="true" className={cn("h-2 w-2 rounded-[3px]", NOW_DOT_TONE[tier])} />
             <span className={cn("font-mono text-sm font-bold tabular-nums", TIER_META[tier].accent)}>{count}</span>
-            <span className={cn("text-3xs font-semibold uppercase", TIER_META[tier].accent)}>
+            <span className={cn("text-2xs font-semibold", TIER_META[tier].accent)}>
               {TIER_SHORT[tier]}
             </span>
           </span>
@@ -327,7 +312,7 @@ function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] 
                   style={{ height: `${Math.max(8, pct)}%` }}
                 />
               </div>
-              <span className="font-mono text-3xs uppercase text-muted-foreground">{r.horizon}</span>
+              <span className="font-mono text-3xs text-muted-foreground">{r.horizon}</span>
             </div>
           );
         })}
@@ -338,14 +323,12 @@ function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] 
 
 function TrackRecordZone({
   accuracyValue,
-  accuracyTone,
   scored,
   lockedCount,
   durationScored,
   rates,
 }: {
   accuracyValue: string;
-  accuracyTone: string;
   scored: number;
   lockedCount: number;
   durationScored: number;
@@ -359,7 +342,7 @@ function TrackRecordZone({
           <span className="font-mono text-3xs text-muted-foreground">DDRR</span>
         </div>
         <div className="mt-2 flex items-end gap-2">
-          <span className={cn("font-display text-4xl font-black leading-none tracking-tight sm:text-5xl", accuracyTone)}>
+          <span className="pharos-numeric text-4xl font-bold leading-none tracking-tight text-foreground">
             {accuracyValue}
           </span>
         </div>
@@ -469,8 +452,6 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
   const scored = headline?.recoveryLikelihoodScoredCount ?? 0;
   const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
   const accuracyValue = scored === 0 || accuracyPct == null ? "—" : formatPercentFromRatio(accuracyPct, 1);
-  const accuracyStrong = accuracyPct != null && scored >= CALIBRATION_THRESHOLD && accuracyPct >= STRONG_ACCURACY_RATIO;
-  const accuracyTone = ACCURACY_TONE[accuracyStrong ? "strong" : "muted"];
   const rates = (headline?.horizonHitRates ?? [])
     .filter((h) => h.scored > 0 && h.hitRate != null)
     .map((h) => ({ horizon: h.horizon, hitRate: h.hitRate as number }));
@@ -509,7 +490,6 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
                 onRetry={() => { void resolverReview.refetch(); }} />
               {ddrrUsable && headline ? <TrackRecordZone
                 accuracyValue={accuracyValue}
-                accuracyTone={accuracyTone}
                 scored={scored}
                 lockedCount={headline.lockedPredictionCount}
                 durationScored={headline.durationScoredCount}

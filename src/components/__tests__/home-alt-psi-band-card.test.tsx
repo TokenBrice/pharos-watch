@@ -50,7 +50,7 @@ function makePsiResponse(): StabilityIndexResponse {
 }
 
 describe("PsiBandCard", () => {
-  it("renders the Stability Index score and the sparkline from raw samples", () => {
+  it("leads with the displayed 24h basis and keeps the raw instant as context", () => {
     useStabilityIndexMock.mockReturnValue({
       data: makePsiResponse(),
       isLoading: false,
@@ -59,10 +59,13 @@ describe("PsiBandCard", () => {
     const { container, getByText } = render(<PsiBandCard />);
 
     expect(container.textContent).toContain("Stability Index");
-    expect(getByText("40.00")).toBeTruthy();
-    expect(getByText("+15.0")).toBeTruthy();
-    expect(getByText("raw instant")).toBeTruthy();
-    expect(getByText("35.0")).toBeTruthy();
+    // Hero = rolling 24h avg at one decimal, matching the market-state line
+    // and the /stability-index/ hero; the raw instant is demoted to context.
+    expect(getByText("35.0").className).toContain("text-4xl");
+    expect(getByText("Rolling 24h avg")).toBeTruthy();
+    expect(getByText("40.0")).toBeTruthy();
+    expect(getByText("+10.0")).toBeTruthy();
+    expect(getByText("· Steady")).toBeTruthy();
 
     const polyline = container.querySelector("polyline");
     expect(polyline).toBeTruthy();
@@ -82,7 +85,7 @@ describe("PsiBandCard", () => {
 
     const { getByText, queryByTestId } = render(<PsiBandCard />);
 
-    expect(getByText("· Bedrock").className).toContain("text-green-700");
+    expect(getByText("· Steady").className).toContain("text-teal-700");
     expect(queryByTestId("psi-band-card-retained")).toBeNull();
   });
 
@@ -99,8 +102,8 @@ describe("PsiBandCard", () => {
 
     const { getByText, getByTestId } = render(<PsiBandCard />);
 
-    expect(getByText("· Bedrock").className).toContain("text-muted-foreground");
-    expect(getByText("· Bedrock").className).not.toContain("text-green");
+    expect(getByText("· Steady").className).toContain("text-muted-foreground");
+    expect(getByText("· Steady").className).not.toContain("text-teal");
     expect(getByTestId("psi-band-card-retained").textContent).toMatch(/^Retained observation as of /);
   });
 });
