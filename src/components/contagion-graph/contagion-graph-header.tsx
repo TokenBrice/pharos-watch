@@ -20,7 +20,7 @@ export function ContagionGraphHeader({ graph }: ContagionGraphHeaderProps) {
     <>
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="space-y-1">
-          <p className="pharos-kicker">
+          <p className="pharos-label">
             Stablecoin Dependency Map
           </p>
           <p className="text-sm text-muted-foreground">
@@ -41,19 +41,19 @@ export function ContagionGraphHeader({ graph }: ContagionGraphHeaderProps) {
           )}
           <div className="grid grid-cols-3 divide-x divide-border/60 sm:w-auto">
             <div className="px-3 py-2 first:pl-0">
-              <p className="pharos-kicker">Visible</p>
+              <p className="pharos-label">Visible</p>
               <p className="pharos-numeric text-sm font-semibold text-foreground">
                 {graph.visibleNodeIds.size}/{graph.nodes.length}
               </p>
             </div>
             <div className="px-3 py-2">
-              <p className="pharos-kicker">Edges</p>
+              <p className="pharos-label">Edges</p>
               <p className="pharos-numeric text-sm font-semibold text-foreground">
                 {graph.visibleLinks.length}
               </p>
             </div>
             <div className="px-3 py-2 last:pr-0">
-              <p className="pharos-kicker">Hubs</p>
+              <p className="pharos-label">Hubs</p>
               <p className="pharos-numeric text-sm font-semibold text-foreground">{hubCount}</p>
             </div>
           </div>

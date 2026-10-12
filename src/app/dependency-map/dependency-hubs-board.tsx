@@ -8,7 +8,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCurrency } from "@shared/lib/format";
 import { formatEventTimestamp } from "@/lib/depeg-event-display";
 import { trackEvent } from "@/lib/analytics";
-import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
+import type { DependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 
 export function DependencyHubsBoard({ model, logos, onExposure }: { model: DependencyHubsModel; logos?: Record<string, string>; onExposure?: (id: string) => void }) {
   const hubs = model.hubs.slice(0, 6);

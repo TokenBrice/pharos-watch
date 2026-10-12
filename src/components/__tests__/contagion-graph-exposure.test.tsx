@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ContagionGraph } from "@/components/contagion-graph-root";
 import { useContagionGraphModel } from "@/components/contagion-graph/use-contagion-graph-model";
 import { footprintViewBox, upstreamArrowPoint, type ExposureOverlay } from "@/components/contagion-graph/contagion-graph-exposure";
-import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
+import { buildDependencyHubsModel } from "@shared/lib/dependency-hubs-model";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type * as ContagionLayout from "@/lib/contagion-layout";

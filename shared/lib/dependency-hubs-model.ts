@@ -1,6 +1,6 @@
-import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
-import { buildDirectHubExposures, mappedDependentSupply, type ExposureTotals, type HubExposure, type SupplyOf, type WrapperClaimForm } from "@shared/lib/dependency-exposure";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import type { ReportCardsV9DependencyEdge } from "../types/report-cards-v9";
+import { buildDirectHubExposures, mappedDependentSupply, type ExposureTotals, type HubExposure, type SupplyOf, type WrapperClaimForm } from "./dependency-exposure";
+import { CLIENT_TRACKED_META_BY_ID } from "./stablecoins/client-registry";
 
 export interface DependencyHubCard {
   id: string;

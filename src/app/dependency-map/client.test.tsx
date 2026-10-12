@@ -15,8 +15,8 @@ vi.mock("@/hooks/use-stablecoins", () => ({
   useStablecoins: vi.fn(),
 }));
 
-vi.mock("@/components/dependency-map-mobile-summary", () => ({
-  DependencyMapMobileSummary: ({ model }: { model: { hubs: readonly unknown[] } }) => (
+vi.mock("@/components/dependency-map-basin-list", () => ({
+  DependencyMapBasinList: ({ model }: { model: { hubs: readonly unknown[] } }) => (
     <div data-testid="mobile-summary">summary:{model.hubs.length}</div>
   ),
 }));
