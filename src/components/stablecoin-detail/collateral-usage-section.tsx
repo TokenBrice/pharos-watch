@@ -86,7 +86,7 @@ export function CollateralUsageSection({ entries }: { entries: readonly Publishe
         <div className="space-y-2">
           {visibleGroups.map(([label, groupEntries]) => (
             <div key={label} className="space-y-0.5">
-              <p className="px-2.5 text-[10px] font-medium uppercase tracking-[0.06em] text-muted-foreground">{label}</p>
+              <p className="pharos-label px-2.5">{label}</p>
               <div className={usage.length <= 3
                 ? "flex flex-col gap-0.5 sm:flex-row sm:flex-wrap sm:gap-4"
                 : "grid grid-cols-1 gap-0.5 @lg:grid-cols-2 @3xl:grid-cols-3"}>

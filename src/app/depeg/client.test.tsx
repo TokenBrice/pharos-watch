@@ -282,22 +282,59 @@ describe("DepegClient", () => {
     expect(screen.getByText(/3 malformed DEWS rows/)).toBeTruthy();
   });
 
-  it("renders the resolver and grading surfaces, and collapses grading on demand", () => {
+  it("renders the resolver, folds grading after the board, and opens it on demand", () => {
     mountDepegRoute();
 
     expect(screen.getByTestId("depeg-resolver")).toBeTruthy();
-    expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
+    // Folded by default; the query stays on the freshness list.
+    expect(screen.queryByTestId("depeg-resolver-reviewer")).toBeNull();
     expect(screen.getByTestId("freshness-notices").textContent).toContain("Depeg Resolver");
     expect(screen.getByTestId("freshness-notices").textContent).toContain("DDR Reviewer");
 
-    fireEvent.click(screen.getByRole("button", { name: "Hide forecast grading · DDRR" }));
+    const toggle = screen.getByRole("button", { name: "Show forecast grading · DDRR" });
+    // Audit evidence follows the board a reader acts on.
+    const board = screen.getByTestId("depeg-control-board");
+    expect(board.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-    expect(screen.queryByTestId("depeg-resolver-reviewer")).toBeNull();
-    // Collapsing hides the ledger only; the query stays on the freshness list.
-    expect(screen.getByTestId("freshness-notices").textContent).toContain("DDR Reviewer");
-
-    fireEvent.click(screen.getByRole("button", { name: "Show forecast grading · DDRR" }));
+    fireEvent.click(toggle);
     expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide forecast grading · DDRR" }));
+    expect(screen.queryByTestId("depeg-resolver-reviewer")).toBeNull();
+  });
+
+  it("reopens collapsed grading when an in-page #forecast-grading link is clicked again", () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    try {
+      mountDepegRoute();
+      const link = document.createElement("a");
+      link.href = "#forecast-grading";
+      document.body.appendChild(link);
+      // The hash may already be set, so no hashchange fires; the click alone opens it.
+      act(() => {
+        link.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      });
+      expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
+      link.remove();
+    } finally {
+      window.history.replaceState(null, "", window.location.pathname);
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
+  it("opens forecast grading when the URL targets #forecast-grading", () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    window.history.replaceState(null, "", "#forecast-grading");
+    try {
+      mountDepegRoute();
+      expect(screen.getByTestId("depeg-resolver-reviewer")).toBeTruthy();
+      // Aligned once the ledger has mounted, after the browser's own jump.
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    } finally {
+      window.history.replaceState(null, "", window.location.pathname);
+      delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
   });
 
   it("excludes disabled DDR surfaces from rendering, freshness, and retry", async () => {

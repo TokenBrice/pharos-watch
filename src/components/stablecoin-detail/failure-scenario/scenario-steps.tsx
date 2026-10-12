@@ -53,7 +53,7 @@ function withBreakPoints(text: string): ReactNode {
 function CallPath({ action }: { action: string }) {
   const hops = action.split("→").map((hop) => hop.trim()).filter((hop) => hop.length > 0);
   return (
-    <code className="block rounded-md bg-muted/60 px-2 py-1.5 font-mono text-[12px] leading-relaxed text-foreground [overflow-wrap:anywhere]">
+    <code className="block rounded-md bg-muted/60 px-2 py-1.5 font-mono text-xs leading-relaxed text-foreground [overflow-wrap:anywhere]">
       {hops.map((hop, index) => (
         <Fragment key={`${index}:${hop}`}>
           {index > 0 ? <span className="text-muted-foreground"> → </span> : null}
@@ -72,7 +72,7 @@ function StageTargets({ stage }: { stage: FailureScenarioStage }) {
         const body = (
           <>
             <span className="text-foreground/90">{target.label}</span>{" "}
-            <span className="pharos-numeric text-[11px] text-muted-foreground">{formatAddress(target.address, 6, 4)}</span>
+            <span className="pharos-numeric text-2xs text-muted-foreground">{formatAddress(target.address, 6, 4)}</span>
           </>
         );
         return (
@@ -83,13 +83,13 @@ function StageTargets({ stage }: { stage: FailureScenarioStage }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 title={target.address}
-                className="pharos-focus-ring group inline-flex min-h-6 flex-wrap items-center gap-x-1.5 rounded-sm text-[13px] hover:underline hover:underline-offset-2"
+                className="pharos-focus-ring group inline-flex min-h-6 flex-wrap items-center gap-x-1.5 rounded-sm text-xs hover:underline hover:underline-offset-2"
               >
                 {body}
                 <ExternalLink aria-hidden="true" className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-foreground" />
               </a>
             ) : (
-              <span title={target.address} className="inline-flex min-h-6 items-center gap-1.5 text-[13px]">
+              <span title={target.address} className="inline-flex min-h-6 items-center gap-1.5 text-xs">
                 {body}
               </span>
             )}
@@ -140,7 +140,7 @@ function StepRow({
               {stage.title}
               {hypothetical ? <span className="sr-only">, hypothetical step</span> : null}
             </span>
-            <span className="order-2 inline-flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground @lg/steps:order-4">
+            <span className="order-2 inline-flex shrink-0 items-center gap-1.5 text-2xs text-muted-foreground @lg/steps:order-4">
               <EvidenceGlyph evidence={stage.evidence} />
               <span className="sr-only">{EVIDENCE_LABEL[stage.evidence]}, </span>
               <span className="pharos-numeric text-pretty">{stage.elapsed}</span>
@@ -172,7 +172,7 @@ function StepRow({
               <CitationLinks sources={resolveCitations(stage.sourceIds, numberedSources)} />
             </div>
           </div>
-          <dl className="grid min-w-0 grid-cols-[4.25rem_minmax(0,1fr)] content-start gap-x-3 gap-y-1.5 text-[13px] leading-relaxed">
+          <dl className="grid min-w-0 grid-cols-[4.25rem_minmax(0,1fr)] content-start gap-x-3 gap-y-1.5 text-xs leading-relaxed">
             <dt className={FACT_LABEL_CLASS}>Actor</dt>
             <dd className="min-w-0 text-foreground/90">{stage.actor}</dd>
             <dt className={cn(FACT_LABEL_CLASS, stage.actionIsCode && "pt-1.5")}>{stage.actionIsCode ? "Call" : "Action"}</dt>
@@ -273,7 +273,7 @@ export function ScenarioSteps({
           </button>
         </div>
       </div>
-      <ul aria-label="Legend" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
+      <ul aria-label="Legend" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-2xs text-muted-foreground">
         {EVIDENCE_ORDER.map((evidence) => (
           <li key={evidence} className="inline-flex items-center gap-1.5">
             <EvidenceGlyph evidence={evidence} />

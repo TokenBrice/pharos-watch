@@ -77,7 +77,7 @@ export function CitationLinks({ sources, bare = false }: { sources: readonly Num
           rel="noopener noreferrer"
           title={source.label}
           aria-label={`Source ${source.number}: ${source.label}`}
-          className="pharos-focus-ring pharos-numeric inline-flex h-6 min-w-6 items-center justify-center rounded-sm border border-border/70 px-1 text-[11px] text-foreground/80 transition-colors hover:border-foreground/40 hover:text-foreground"
+          className="pharos-focus-ring pharos-numeric inline-flex h-6 min-w-6 items-center justify-center rounded-sm border border-border/70 px-1 text-2xs text-foreground/80 transition-colors hover:border-foreground/40 hover:text-foreground"
         >
           {source.number}
         </a>
@@ -112,7 +112,7 @@ export function KeysPill({ children, className }: { children: string; className?
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full border border-border/80 bg-card px-1.5 py-px text-[11px] font-semibold tabular-nums text-foreground",
+        "inline-flex shrink-0 items-center gap-1 rounded-full border border-border/80 bg-card px-1.5 py-px text-2xs font-semibold tabular-nums text-foreground",
         className,
       )}
     >
@@ -148,7 +148,7 @@ export function StepNumber({
     <span
       style={style}
       className={cn(
-        "pharos-numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border px-1 text-[11px] font-semibold leading-none",
+        "pharos-numeric inline-flex h-5 min-w-5 shrink-0 items-center justify-center whitespace-nowrap rounded-[5px] border px-1 text-2xs font-semibold leading-none",
         terminal
           ? "border-foreground bg-foreground text-background"
           : hypothetical

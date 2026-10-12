@@ -149,6 +149,7 @@ function staleQueryFrom<T>(
     hasData: hasData(query.data),
     meta: query.meta,
     enabled: query.enabled,
+    isLoading: query.isLoading,
   };
 }
 
@@ -184,6 +185,7 @@ export function buildDetailStaleQueries(
       error: queries.supplyHistory.error,
       hasData: queries.supplyHistory.dataUpdatedAt > 0 || (queries.supplyHistory.data?.length ?? 0) > 0,
       meta: queries.supplyHistory.meta,
+      isLoading: queries.supplyHistory.isLoading,
     },
   ];
   if (queries.annualPriceHistory?.enabled) {
@@ -194,6 +196,7 @@ export function buildDetailStaleQueries(
       error: queries.annualPriceHistory.error,
       hasData: (queries.annualPriceHistory.data?.length ?? 0) > 0,
       meta: queries.annualPriceHistory.meta,
+      isLoading: queries.annualPriceHistory.isLoading,
     });
   }
   if (supplemental.flows.enabled) {
@@ -203,6 +206,7 @@ export function buildDetailStaleQueries(
       error: supplemental.flows.error,
       hasData: supplemental.flows.data !== undefined,
       meta: supplemental.flows.meta,
+      isLoading: supplemental.flows.isLoading,
     });
   }
   if (supplemental.blacklist.enabled) {
@@ -212,6 +216,7 @@ export function buildDetailStaleQueries(
       error: supplemental.blacklist.error,
       hasData: supplemental.blacklist.summary !== undefined,
       meta: supplemental.blacklist.meta,
+      isLoading: supplemental.blacklist.isLoading,
     });
   }
   if (supplemental.reserves.enabled) {
@@ -221,6 +226,7 @@ export function buildDetailStaleQueries(
       dataUpdatedAt: supplemental.reserves.dataUpdatedAt,
       error: supplemental.reserves.error,
       hasData: supplemental.reserves.live != null,
+      isLoading: supplemental.reserves.isLoading,
       meta: null,
     });
   }
@@ -347,4 +353,22 @@ export function buildDetailFeatureSnapshot(
       ),
     },
   };
+}
+
+export type DetailGradeRead = "settled" | "pending" | "failed";
+
+/**
+ * Whether the report-card read behind the grade has settled. Without a card,
+ * "Not scored" is only a finding once the response arrived; a first fetch in
+ * flight is pending and a failed read is unavailable (never "Not scored").
+ */
+export function resolveDetailGradeRead(
+  reportCard: unknown,
+  staleQueries: readonly StablecoinDetailStaleQuery[],
+): DetailGradeRead {
+  if (reportCard) return "settled";
+  const query = staleQueries.find((entry) => entry.preset === "reportCards");
+  if (!query || query.hasData) return "settled";
+  if (query.error) return "failed";
+  return query.isLoading ? "pending" : "settled";
 }

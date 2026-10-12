@@ -40,12 +40,12 @@ function DeploymentEvidence({ deployment }: { deployment: TransferReviewDeployme
         </p>
         <Badge
           variant="outline"
-          className="h-5 shrink-0 rounded-full border-border/60 bg-muted/40 px-2 text-[10px] font-medium text-muted-foreground"
+          className="h-5 shrink-0 rounded-full border-border/60 bg-muted/40 px-2 text-3xs font-medium text-muted-foreground"
         >
           {deployment.postureLabel}
         </Badge>
       </div>
-      <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{deployment.evidence}</p>
+      <p className="mt-1 text-2xs leading-snug text-muted-foreground">{deployment.evidence}</p>
     </li>
   );
 }
@@ -76,7 +76,7 @@ function VerificationDisclosure({ review, children }: { review: TransferReviewVi
     <ModuleDisclosure label={`How this was verified · ${count} ${count === 1 ? "deployment" : "deployments"}`}>
       <div className="mt-1 border-t border-border/50 pt-3">
         {review.mixedPosture ? (
-          <p className="mb-2 text-[11px] leading-snug text-muted-foreground">{MIXED_POSTURE_NOTE}</p>
+          <p className="mb-2 text-2xs leading-snug text-muted-foreground">{MIXED_POSTURE_NOTE}</p>
         ) : null}
         <ul className="space-y-3">
           {review.deployments.map((deployment) => (
@@ -107,7 +107,7 @@ function DiagnosticsDisclosure({ rows }: { rows: readonly StablecoinSafetyScoreV
         ))}
       </dl>
       {hasAuthorities ? (
-        <p className="pb-1 text-[11px] leading-snug text-muted-foreground">{ACCESS_LOOKTHROUGH_NOT_ADDITIVE_NOTE}</p>
+        <p className="pb-1 text-2xs leading-snug text-muted-foreground">{ACCESS_LOOKTHROUGH_NOT_ADDITIVE_NOTE}</p>
       ) : null}
     </ModuleDisclosure>
   );
@@ -165,7 +165,7 @@ export function AccessPosturePanel({
             {(scored.length > 0 ? scored : rows).map((row) => (
               <div key={row.key} className="flex items-baseline justify-between gap-3 text-xs">
                 <dt className="text-muted-foreground">{row.label}</dt>
-                <dd className="text-right font-mono text-foreground">{row.value}</dd>
+                <dd className="text-right font-medium text-foreground">{row.value}</dd>
               </div>
             ))}
           </dl>

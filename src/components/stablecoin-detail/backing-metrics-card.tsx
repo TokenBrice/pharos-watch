@@ -709,7 +709,7 @@ const GAP_STATE_CLASSES: Record<MechanismBackingNote["state"], string> = {
 
 const HEADLINE_FIGURE_CLASS = "font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground";
 const HEADLINE_TEXT_CLASS = "text-sm font-medium text-foreground";
-const SUB_METRIC_LABEL_CLASS = "font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground";
+const SUB_METRIC_LABEL_CLASS = "pharos-label";
 const SUB_METRIC_VALUE_CLASS = "pharos-numeric text-sm font-semibold text-foreground";
 
 function BackingSplitBar({ exogenousPct, reflexivePct }: { exogenousPct: number; reflexivePct: number }) {
@@ -745,7 +745,7 @@ function BackingSplitBar({ exogenousPct, reflexivePct }: { exogenousPct: number;
           />
         ) : null}
       </div>
-      <div aria-hidden="true" className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+      <div aria-hidden="true" className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-sm bg-foreground/65" />
           Exogenous
@@ -795,7 +795,7 @@ function BackingVisual({ view }: { view: BackingMetricsView }) {
         <ul aria-label="Loan book duration" className="flex flex-wrap gap-1.5">
           {[visual.maturity, visual.cadence].map((item) => (
             <li key={item}>
-              <Badge variant="outline" className="h-6 rounded-full px-2.5 text-[11px] font-medium text-foreground">
+              <Badge variant="outline" className="h-6 rounded-full px-2.5 text-2xs font-medium text-foreground">
                 {item}
               </Badge>
             </li>
@@ -813,7 +813,7 @@ function BackingVisual({ view }: { view: BackingMetricsView }) {
 
 function CoverageChip({ coverage }: { coverage: NonNullable<BackingMetricsView["coverage"]> }) {
   return (
-    <Badge variant="outline" className={cn("shrink-0 text-[11px] font-medium", COLLATERAL_COVERAGE_PILL_CLASSES[coverage.tone])}>
+    <Badge variant="outline" className={cn("shrink-0 text-2xs font-medium", COLLATERAL_COVERAGE_PILL_CLASSES[coverage.tone])}>
       {coverage.label}
     </Badge>
   );
@@ -839,7 +839,7 @@ function BackingDetails({ view, withSources }: { view: BackingMetricsView; withS
             <div key={row.key} className="flex items-baseline justify-between gap-3">
               <dt className="min-w-0">
                 {row.label}
-                {row.note ? <span className="block text-[11px] text-muted-foreground">{row.note}</span> : null}
+                {row.note ? <span className="block text-2xs text-muted-foreground">{row.note}</span> : null}
               </dt>
               <dd className="pharos-numeric shrink-0 font-semibold text-foreground">{row.value}</dd>
             </div>
@@ -856,13 +856,13 @@ function BackingDetails({ view, withSources }: { view: BackingMetricsView; withS
                   <span className="min-w-0 font-medium text-foreground">{gap.label}</span>
                   <Badge
                     variant="outline"
-                    className={cn("h-5 shrink-0 gap-1 rounded-full px-2 text-[11px] font-medium", GAP_STATE_CLASSES[gap.state])}
+                    className={cn("h-5 shrink-0 gap-1 rounded-full px-2 text-2xs font-medium", GAP_STATE_CLASSES[gap.state])}
                   >
                     {gap.state === "unavailable" ? <CircleDashed className="h-3 w-3" aria-hidden="true" /> : null}
                     {GAP_STATE_LABELS[gap.state]}
                   </Badge>
                 </div>
-                <p className="mt-0.5 text-[11px] leading-snug">
+                <p className="mt-0.5 text-2xs leading-snug">
                   {gap.rationale}
                   {gap.sourceUrl ? (
                     <a
@@ -894,7 +894,7 @@ function LiveStamp({ freshness }: { freshness: BackingMetricsView["freshness"] }
   return (
     <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
       {freshness.stale ? (
-        <Badge variant="outline" className={cn("h-5 rounded-full px-2 text-[11px] font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
+        <Badge variant="outline" className={cn("h-5 rounded-full px-2 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
           Stale feed
         </Badge>
       ) : null}

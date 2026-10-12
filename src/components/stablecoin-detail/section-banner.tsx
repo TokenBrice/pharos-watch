@@ -38,7 +38,7 @@ export function SectionBanner({
         aria-hidden
         className="h-px w-full max-w-[180px] flex-1 bg-[var(--section-rule)]"
       />
-      <h2 id={id} className="pharos-kicker scroll-mt-32 sm:text-[12px]">
+      <h2 id={id} className="pharos-label scroll-mt-32 sm:text-xs">
         <a
           href={`#${id}`}
           onClick={handleCopy}

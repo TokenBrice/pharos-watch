@@ -63,7 +63,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
     <>
       <ModuleDisclosure label="Latest events" count={data.events.length}>
       {sharedSourceLabel ? (
-        <p className="mt-2 text-[10px] uppercase tracking-wide text-muted-foreground">Amount source: {sharedSourceLabel}</p>
+        <p className="pharos-label mt-2">Amount source: {sharedSourceLabel}</p>
       ) : null}
       <div className="mt-2">
       <DataTableShell
@@ -103,7 +103,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
                   {amount}
                 </span>
                 {sharedSourceLabel ? null : (
-                  <span className="block text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span className="pharos-label block">
                     {getBlacklistAmountSourceLabel(evt)}
                   </span>
                 )}

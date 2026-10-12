@@ -119,6 +119,8 @@ export interface StablecoinDetailStaleQuery {
   hasData: boolean;
   meta: ApiMeta | null;
   enabled?: boolean;
+  /** First fetch in flight: the freshness banner waits instead of reporting "not populated". */
+  isLoading?: boolean;
 }
 
 export type StablecoinDetailFeatureStatus = GatedQueryViewState;

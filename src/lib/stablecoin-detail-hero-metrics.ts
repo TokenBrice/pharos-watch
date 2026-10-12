@@ -72,18 +72,23 @@ export function buildPegScoreDisplay(
   return { value: "—", color: HERO_MUTED_CLASS };
 }
 
+/** "2,671 pools": grouped digits; a missing count still renders as before. */
+export function formatPoolCount(poolCount: number | undefined): string {
+  return `${typeof poolCount === "number" ? poolCount.toLocaleString("en-US") : poolCount} pools`;
+}
+
 export function buildLiquidityDisplay(liquidityData: DexLiquidityData | undefined): HeroDisplayValue {
   if (!liquidityData) return { value: "—", color: HERO_MUTED_CLASS };
   const liquidityScore = liquidityData.liquidityScore;
   return liquidityScore === null
     ? {
         value: "—",
-        sub: `${liquidityData.poolCount} pools`,
+        sub: formatPoolCount(liquidityData.poolCount),
         color: HERO_MUTED_CLASS,
       }
     : {
         value: String(Math.round(liquidityScore)),
-        sub: `${liquidityData.poolCount} pools`,
+        sub: formatPoolCount(liquidityData.poolCount),
         color: getScoreColor(liquidityScore),
       };
 }

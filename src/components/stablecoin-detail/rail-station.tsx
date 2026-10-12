@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 /** The ≤ 3-word kicker above a station ("Issuer", "Access", "Sources"). */
 export function StationLabel({ children }: { children: string }) {
   return (
-    <span className="text-[11px] font-medium uppercase leading-tight tracking-[0.12em] text-muted-foreground">
+    <span className="pharos-label leading-tight">
       {children}
     </span>
   );
@@ -89,8 +89,8 @@ export function RailArrow({
   const labelNode = label ? (
     <span
       className={cn(
-        "whitespace-nowrap text-[11px] text-muted-foreground",
-        isMonoArrowLabel(label) ? "font-mono uppercase tracking-[0.08em]" : "font-medium",
+        "whitespace-nowrap text-2xs text-muted-foreground",
+        isMonoArrowLabel(label) ? "font-mono uppercase" : "font-medium",
       )}
     >
       {label}
@@ -226,7 +226,7 @@ export function RailStation({
         ))}
       </span>
       {caption != null ? (
-        <span className="text-[11px] leading-snug text-muted-foreground">{caption}</span>
+        <span className="text-2xs leading-snug text-muted-foreground">{caption}</span>
       ) : null}
     </div>
   );

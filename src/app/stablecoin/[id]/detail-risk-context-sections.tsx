@@ -113,7 +113,7 @@ function PillarBoard({
     >
       <h2
         id={`${id}-heading`}
-        className="pharos-kicker flex items-center gap-3 pt-2 after:h-px after:flex-1 after:bg-border/50"
+        className="pharos-label flex items-center gap-3 pt-2 after:h-px after:flex-1 after:bg-border/50"
       >
         {title}
       </h2>

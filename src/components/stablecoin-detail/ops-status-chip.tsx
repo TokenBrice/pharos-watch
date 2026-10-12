@@ -33,7 +33,7 @@ export function OpsStatusChip({
           type="button"
           data-reason-codes={[...new Set(reasonCodes)].join(" ")}
           className={cn(
-            "pharos-focus-ring inline-flex min-h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300",
+            "pharos-focus-ring inline-flex min-h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-2xs font-medium text-amber-800 dark:text-amber-300",
             className,
           )}
         >

@@ -5,13 +5,13 @@ import { cn } from "@/lib/utils";
  * Label size: `sm` under rail-card prose (`text-xs`), `md` under the wider
  * in-flow prose (`text-sm`) — the toggle tracks the paragraph it folds.
  */
-const INLINE_TOGGLE_TEXT_CLASS = { sm: "text-[11px]", md: "text-xs" } as const;
+const INLINE_TOGGLE_TEXT_CLASS = { sm: "text-2xs", md: "text-xs" } as const;
 
 export type InlineDisclosureToggleSize = keyof typeof INLINE_TOGGLE_TEXT_CLASS;
 
 /**
  * The in-module fold control for prose that folds in place ("Read the full
- * note"): the `ModuleDisclosure` summary grammar — muted dashed label with a
+ * note"): the `ModuleDisclosure` summary grammar — muted label (dashed underline on hover) with a
  * trailing chevron — on a button, because the text it folds is a paragraph the
  * module owns rather than a named section.
  *
@@ -42,12 +42,12 @@ export function InlineDisclosureToggle({
       onClick={onToggle}
       aria-expanded={open}
       className={cn(
-        "pharos-focus-ring inline-flex min-h-8 items-center gap-1.5 rounded-md text-muted-foreground",
+        "pharos-focus-ring inline-flex min-h-8 items-center gap-1.5 rounded-md text-muted-foreground decoration-dashed underline-offset-2 transition-colors hover:text-foreground hover:underline",
         INLINE_TOGGLE_TEXT_CLASS[size],
         className,
       )}
     >
-      <span className="underline decoration-dashed underline-offset-2">{open ? expandedLabel : collapsedLabel}</span>
+      <span>{open ? expandedLabel : collapsedLabel}</span>
       <ChevronDown className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")} aria-hidden="true" />
     </button>
   );

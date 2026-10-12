@@ -25,19 +25,19 @@ import { cn } from "@/lib/utils";
 function IncidentRow({ incident }: { incident: DdrTrackRecordIncidentRow }) {
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border/50 bg-background/40 px-3 py-2.5">
-      <span className="font-mono text-[11px] tabular-nums text-foreground">{incident.dateLabel}</span>
-      <Badge variant="outline" className={cn("text-[11px]", incident.outcomeToneClass)}>
+      <span className="font-mono text-2xs tabular-nums text-foreground">{incident.dateLabel}</span>
+      <Badge variant="outline" className={cn("text-2xs", incident.outcomeToneClass)}>
         {incident.outcomeLabel}
       </Badge>
-      <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+      <span className="pharos-label">
         {incident.actualOutcomeLabel}
       </span>
       {incident.erratumLabel ? (
-        <span className="font-mono text-[10px] uppercase tracking-wide text-amber-700 dark:text-amber-400">
+        <span className="pharos-label text-amber-700 dark:text-amber-400">
           {incident.erratumLabel}
         </span>
       ) : null}
-      <span className="ml-auto font-mono text-[11px] tabular-nums text-muted-foreground">
+      <span className="ml-auto font-mono text-2xs tabular-nums text-muted-foreground">
         {incident.durationLabel}
       </span>
     </li>
@@ -111,7 +111,7 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
     <Card className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>DDR track record</StablecoinModuleTitle>
-        <Badge variant="outline" className={cn("text-[11px] font-medium", limitedPopulation ? "text-muted-foreground" : record.chipToneClass)}>
+        <Badge variant="outline" className={cn("text-2xs font-medium", limitedPopulation ? "text-muted-foreground" : record.chipToneClass)}>
           {limitedPopulation ? "Partial coverage" : record.chipLabel}
         </Badge>
       </CardHeader>
@@ -142,7 +142,7 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
           ))}
         </ul>
         {record.hiddenIncidentCount > 0 ? (
-          <p className="px-1 font-mono text-[11px] text-muted-foreground">
+          <p className="px-1 font-mono text-2xs text-muted-foreground">
             +{record.hiddenIncidentCount} more reviewed incidents
           </p>
         ) : null}

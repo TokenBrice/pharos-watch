@@ -37,7 +37,7 @@ export function UnderlyingAssetCard({ parent, kind, siblings }: UnderlyingAssetC
             Modeled as a {getVariantAccessibleLabel(kind).toLowerCase()} of {parent.symbol}.
           </p>
         </div>
-        <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${display.chipClass}`}>
+        <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-2xs font-semibold ${display.chipClass}`}>
           {display.shortLabel}
         </span>
       </Link>

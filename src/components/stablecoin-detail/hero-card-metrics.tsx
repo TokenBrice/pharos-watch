@@ -1,5 +1,6 @@
 "use client";
 
+import { FigureLeadText } from "./figure-lead-text";
 import {
   formatBps,
   formatCurrency,
@@ -93,7 +94,7 @@ function CompactMetricCell({
     <div className="min-h-[8.25rem] border-b border-border/40 px-5 py-5 last:border-b-0 sm:px-6 lg:border-b-0 lg:border-r lg:last:border-r-0">
       <p className={HERO_METRIC_LABEL_CLASS}>{label}</p>
       <div className="mt-3">{children}</div>
-      {subline ? <div className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">{subline}</div> : null}
+      {subline ? <div className="pharos-label mt-2">{subline}</div> : null}
     </div>
   );
 }
@@ -136,7 +137,7 @@ export function HeroPriceMetric({
     return (
       <CompactMetricCell
         label={`Price${coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}`}
-        subline={<span className={referenceClass}>{referenceLine.toUpperCase()}</span>}
+        subline={<span className={referenceClass}><FigureLeadText text={referenceLine} /></span>}
       >
         <p
           className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)}`}
@@ -144,7 +145,7 @@ export function HeroPriceMetric({
           {price}
         </p>
         {limitedDepegCoverageNote ? (
-          <p className="mt-2 max-w-[24ch] text-[11px] leading-snug text-amber-700 dark:text-amber-400">
+          <p className="mt-2 max-w-[24ch] text-2xs leading-snug text-amber-700 dark:text-amber-400">
             {limitedDepegCoverageNote}
           </p>
         ) : null}
@@ -162,7 +163,7 @@ export function HeroPriceMetric({
       </p>
       <p className={`pharos-numeric mt-1 text-xs ${referenceClass}`}>{referenceLine}</p>
       {limitedDepegCoverageNote ? (
-        <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>
+        <p className="mt-1 text-2xs text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>
       ) : null}
     </div>
   );
@@ -197,9 +198,9 @@ function HeroMarketCapMetric({
       >
         <p className="pharos-numeric text-[2rem] font-semibold leading-none tracking-tight">{mcap != null ? formatCurrency(mcap) : "—"}</p>
         {coin.flags.pegCurrency !== "USD" ? (
-          <p className="mt-2 text-[11px] text-muted-foreground">USD-normalized</p>
+          <p className="mt-2 text-2xs text-muted-foreground">USD-normalized</p>
         ) : null}
-        <SupplyRestoredNotice coinData={coinData} className="mt-2 text-[11px] text-amber-700 dark:text-amber-400" />
+        <SupplyRestoredNotice coinData={coinData} className="mt-2 text-2xs text-amber-700 dark:text-amber-400" />
       </CompactMetricCell>
     );
   }
@@ -208,8 +209,8 @@ function HeroMarketCapMetric({
     <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>Market Cap</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
-      {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>}
-      <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400" />
+      {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-2xs text-muted-foreground">USD-normalized</p>}
+      <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-2xs text-amber-700 dark:text-amber-400" />
       <p className={`mt-1 text-xs pharos-numeric ${prevDayTrendClass}`}>
         {formatTrendPercent(mcap, safePrevDay)} <span className="text-muted-foreground">24h</span>
       </p>
@@ -280,7 +281,7 @@ function HeroCompactTertiaryCell({ metric }: { metric: HeroTertiaryMetricConfig 
   return (
     <CompactMetricCell
       label={metric.label}
-      subline={metric.subValue ? <span>{metric.subValue.toUpperCase()}</span> : null}
+      subline={metric.subValue ? <span><FigureLeadText text={metric.subValue} /></span> : null}
     >
       <p
         className={`pharos-numeric text-[2rem] font-semibold leading-none tracking-tight ${metric.colorClass ?? "text-foreground"}`}
@@ -367,7 +368,7 @@ function MetricChip({
       className={`rounded-lg border border-border/60 bg-background/45 flex w-full min-w-0 flex-wrap items-center justify-start gap-1.5 px-2.5 py-1.5 ${accentClass ?? ""}`}
     >
       {label ? (
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="pharos-label">{label}</span>
       ) : null}
       <span
         className={`text-lg font-bold pharos-numeric ${colorClass}`}
@@ -377,7 +378,7 @@ function MetricChip({
       </span>
       {isEmpty && <span className="sr-only">data unavailable</span>}
       {subValue && !mobileHideSub && (
-        <span className="shrink-0 whitespace-nowrap text-[11px] text-muted-foreground">{subValue}</span>
+        <span className="shrink-0 whitespace-nowrap text-2xs text-muted-foreground">{subValue}</span>
       )}
     </div>
   );

@@ -14,7 +14,7 @@ import { ContractDeployments } from "@/components/stablecoin-detail/contract-dep
 import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { FrozenStateBanner } from "@/components/stablecoin-detail/frozen-state-banner";
-import { HeroCard, HeroDesktopIdentityToolbar } from "@/components/stablecoin-detail/hero-card";
+import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
 import { MobileStickySummary } from "@/components/stablecoin-detail/mobile-sticky-summary";
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 import { ParentVariantsCard } from "@/components/stablecoin-detail/parent-variants-card";
@@ -39,6 +39,7 @@ import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-vi
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
+import { resolveDetailGradeRead } from "@/lib/stablecoin-detail-query-view-model";
 import { cn } from "@/lib/utils";
 import { GOVERNANCE_LABELS } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
@@ -92,6 +93,10 @@ interface DetailContentProps {
   viewModel: ReadyDetailViewModel;
 }
 
+function resolveGradeRead(viewModel: ReadyDetailViewModel) {
+  return resolveDetailGradeRead(viewModel.reportCard, viewModel.staleQueries);
+}
+
 function DetailIdentity({
   heroModel,
   heroRef,
@@ -116,7 +121,11 @@ function DetailIdentity({
         onRetry={viewModel.handleRetryAll}
         queries={viewModel.staleQueries}
       />
-      <HeroDesktopIdentityToolbar model={heroModel} onOpenFeedback={onOpenFeedback} />
+      <HeroIdentityHeader
+        model={heroModel}
+        onOpenFeedback={onOpenFeedback}
+        gradeRead={resolveGradeRead(viewModel)}
+      />
       <MobileStickySummary
         coin={viewModel.coin}
         coinData={viewModel.coinData}
@@ -214,7 +223,7 @@ function RailEvidenceIndex({ groups }: { groups: readonly EvidenceIndexGroup[] }
       <div className="space-y-3 px-4 pb-4">
         {groups.map((group) => (
           <div key={group.pillar}>
-            <p className="pharos-kicker pb-1">{group.label}</p>
+            <p className="pharos-label pb-1">{group.label}</p>
             <ul className="divide-y divide-border/40">
               {group.rows.map((row) => (
                 <RailEvidenceIndexRow key={row.key} row={row} />
@@ -254,7 +263,7 @@ function RailEvidenceIndexRow({ row }: { row: EvidenceIndexRow }) {
         <span className="text-foreground/90 underline-offset-2 group-hover:underline">{row.title}</span>
         <span className="ml-auto flex shrink-0 items-center gap-2">
           {row.chip ? (
-            <Badge variant="outline" className={cn("text-[11px] font-medium", row.chip.toneClass)}>
+            <Badge variant="outline" className={cn("text-2xs font-medium", row.chip.toneClass)}>
               {row.chip.label}
             </Badge>
           ) : null}
@@ -264,7 +273,7 @@ function RailEvidenceIndexRow({ row }: { row: EvidenceIndexRow }) {
                 {row.score > 0 && row.score < 1 ? "<1" : row.score.toFixed(0)}
               </span>
               {row.scoreNote ? (
-                <span className="text-[11px] text-muted-foreground">· {row.scoreNote}</span>
+                <span className="text-2xs text-muted-foreground">· {row.scoreNote}</span>
               ) : null}
             </span>
           ) : null}
@@ -288,21 +297,26 @@ function DetailSummaryRail({
   viewModel: ReadyDetailViewModel;
 }) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.coinData.nominalPriceReference) || Boolean(viewModel.dexPriceCheck);
-  // A compact companion in normal flow, never sticky (decision S1): pillar
-  // metrics first (Safety → Backing KPI → Access posture → Evidence index),
-  // then the reference cards. The metric cards are anchor twins of their
+  // A compact companion that reads in normal flow from the top: pillar metrics
+  // first (Safety → Backing KPI → Access posture), then the reference cards,
+  // then the Evidence index. The rail is bottom-anchored sticky (it sits at
+  // the end of its grid cell and `bottom` pulls it up into view): it scrolls
+  // with the page until its last card reaches the viewport bottom, then rides
+  // there, so the Evidence index stays a jump list with verdicts for the whole
+  // dossier instead of leaving an empty column. Never `top`-sticky, never a
+  // nested scroll container. The metric cards are anchor twins of their
   // in-flow `xl:hidden` copies; evidence modules live once, in their board.
   return (
-    <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
-      <div className="space-y-4 pb-4">
+    <aside aria-label="Coin summary rail" className="hidden min-w-0 xl:sticky xl:bottom-4 xl:block xl:self-end">
+      <div className="space-y-4">
         <RailSafetySummary
           items={heroModel.signalRailItems}
           navToken={viewModel.isNavToken}
           frozen={viewModel.coin.status === "frozen"}
+          gradeRead={resolveGradeRead(viewModel)}
         />
         {sharedModules.backingMetrics ? <BackingMetricsCard view={sharedModules.backingMetrics} anchorTwin /> : null}
         <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />
-        <RailEvidenceIndex groups={sharedModules.evidenceIndex} />
         {sharedModules.regulatoryStanding ? (
           <RegulatoryStandingCard view={sharedModules.regulatoryStanding} anchorTwin />
         ) : sharedModules.regulatoryNotReviewed ? (
@@ -324,6 +338,7 @@ function DetailSummaryRail({
           <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
         ) : null}
         <TapeForCoinTeaser coinId={viewModel.id} />
+        <RailEvidenceIndex groups={sharedModules.evidenceIndex} />
       </div>
     </aside>
   );
@@ -414,7 +429,7 @@ export function DetailContent({
       <div className="mt-4 xl:grid xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
         <div className="min-w-0">
           <div ref={heroRef} className="space-y-4">
-            <HeroCard model={heroModel} onOpenFeedback={() => onFeedbackOpenChange(true)} />
+            <HeroCard model={heroModel} />
             <ExploitNoticeBanner notices={viewModel.coin.notices} />
             <ListingStateBanner coin={viewModel.coin} />
             {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (

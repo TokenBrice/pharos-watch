@@ -118,7 +118,7 @@ describe("PriceTransparencyCard", () => {
       />,
     );
     expect(screen.getByText("$0.9500")).toBeTruthy();
-    expect(screen.getByText("high")).toBeTruthy();
+    expect(screen.getByText("High")).toBeTruthy();
     expect(screen.getByText(/Nominal par reference:.*1\.0000/)).toBeTruthy();
   });
 
@@ -166,7 +166,7 @@ describe("PriceTransparencyCard", () => {
     expect(screen.getAllByText("$1.0000").length).toBeGreaterThanOrEqual(1);
 
     // Check confidence badge (appears in summary and DEX check)
-    expect(screen.getAllByText("high").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("High").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Sources 1/3")).toBeTruthy();
   });
 
@@ -189,7 +189,7 @@ describe("PriceTransparencyCard", () => {
 
     expect(screen.getByRole("heading", { name: "Price Transparency" })).toBeTruthy();
     expect(screen.getByText("$1.0000")).toBeTruthy();
-    expect(screen.getByText(/HIGH/)).toBeTruthy();
+    expect(screen.getByText(/High/)).toBeTruthy();
     expect(screen.getByText(/Sources 3\+\/3/)).toBeTruthy();
     expect(screen.getByText("DEX Check")).toBeTruthy();
     expect(screen.getByText("Agrees")).toBeTruthy();

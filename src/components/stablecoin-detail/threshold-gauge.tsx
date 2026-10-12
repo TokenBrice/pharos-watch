@@ -409,7 +409,7 @@ export function ThresholdGauge({
             <span
               key={labelKey}
               data-gauge-label={labelKey}
-              className={cn("absolute whitespace-nowrap text-[11px] leading-[14px]", label.anchorClass)}
+              className={cn("absolute whitespace-nowrap text-2xs leading-[14px]", label.anchorClass)}
               style={{ left: `${label.left}%`, top: `${label.lane * LANE_HEIGHT_PX}px` }}
             >
               {label.kind === "value" && value != null && tone != null ? (
@@ -482,7 +482,7 @@ export function ShareMeter({
         className={cn("flex min-w-0 items-center gap-2", className)}
       >
         <div className="h-1.5 min-w-0 flex-1 rounded-full border border-dashed border-muted-foreground/50" />
-        <span aria-hidden="true" className="shrink-0 text-[11px] text-muted-foreground">{unavailableLabel}</span>
+        <span aria-hidden="true" className="shrink-0 text-2xs text-muted-foreground">{unavailableLabel}</span>
       </div>
     );
   }

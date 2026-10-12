@@ -148,7 +148,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
           className="pharos-focus-ring group flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/50 px-4 py-3 transition-colors hover:border-foreground/30 hover:bg-accent"
         >
           <span className="min-w-0">
-            <span className="pharos-kicker block text-frost-blue">Case study</span>
+            <span className="pharos-label block text-frost-blue">Case study</span>
             <span className="mt-0.5 block text-sm font-medium text-foreground">{caseStudy.title}</span>
           </span>
           <ArrowRight
@@ -161,7 +161,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
       {hasPeers ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <p className="pharos-kicker">Peers</p>
+            <p className="pharos-label">Peers</p>
             {pegSlug ? (
               <Link
                 href={`/stablecoins/${pegSlug}/`}
@@ -238,7 +238,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
 
       <div className="grid gap-x-8 gap-y-5 border-t border-border/40 pt-5 sm:grid-cols-2 xl:grid-cols-3">
         <div className="space-y-2">
-          <p className="pharos-kicker">Taxonomy</p>
+          <p className="pharos-label">Taxonomy</p>
           <div className="-my-1 flex flex-col">
             {taxonomyLinks.map((link) => (
               <CompactLink key={link.href} href={link.href} label={link.label} />
@@ -247,7 +247,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
         </div>
 
         <div className="space-y-2">
-          <p className="pharos-kicker">Trackers</p>
+          <p className="pharos-label">Trackers</p>
           <div className="-my-1 flex flex-col">
             {trackerLinks.map((link) => (
               <CompactLink key={link.href} href={link.href} label={link.label} />
@@ -256,7 +256,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
         </div>
 
         <div className="space-y-2">
-          <p className="pharos-kicker">Actions</p>
+          <p className="pharos-label">Actions</p>
           <div className="-my-1 flex flex-col">
             {actionLinks.map((link) => (
               <CompactLink key={link.href} href={link.href} label={link.label} />

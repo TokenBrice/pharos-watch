@@ -2,8 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeftRight, BadgeCheck, Flag, Rocket } from "lucide-react";
-import { ShareButton } from "@/components/share-button";
+import { BadgeCheck, Rocket } from "lucide-react";
 import type { Infrastructure, StablecoinData, StablecoinMeta } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import {
@@ -15,13 +14,13 @@ import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
-import { HeroMobileIdentityDetails, HeroMobileIdentity, HeroVerdict, SafetyGradeHero, SafetyPartialEvidenceNote } from "./hero-card-identity";
 import {
   HERO_CHIP_BACKING_LABELS,
   HERO_CHIP_GOVERNANCE_LABELS,
   HERO_CHIP_PEG_LABELS,
   getHeroPegLabel,
 } from "@shared/lib/classification";
+import { InfrastructureBadge } from "./hero-card-identity";
 import { HeroMarketMetricGrid, HeroTertiaryMetrics } from "./hero-card-metrics";
 import type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 export type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
@@ -49,7 +48,7 @@ function HeroCompactChip({ href, children }: { href?: string | null; children: R
   );
 }
 
-function HeroDesktopChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict: StablecoinVerdict }) {
+export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict: StablecoinVerdict }) {
   const showVerdict = isHeroVerdictEnabled() && verdict.archetype !== "uncategorized";
   const launchDate = formatChipLaunchDate(coin.launchDate);
   const pegLabel = coin.flags.navToken
@@ -62,7 +61,7 @@ function HeroDesktopChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
   const governanceLabel = HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance];
 
   return (
-    <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/40 px-5 py-2">
+    <div className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/40 px-4 py-2 sm:px-5">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
         {showVerdict ? (
           <span
@@ -77,48 +76,16 @@ function HeroDesktopChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
         <HeroCompactChip href={buildPegLandingUrl(coin.flags.pegCurrency)}>{pegLabel}</HeroCompactChip>
         <HeroCompactChip href={buildBackingTaxonomyUrl(coin.flags.backing)}>{backingLabel}</HeroCompactChip>
         <HeroCompactChip href={buildGovernanceTaxonomyUrl(coin.flags.governance)}>{governanceLabel}</HeroCompactChip>
+        {(coin.infrastructures ?? []).map((value) => (
+          <InfrastructureBadge key={value} value={value} />
+        ))}
       </div>
       {launchDate ? (
-        <span className="-my-2 -mr-5 inline-flex h-10 items-center gap-1.5 border-l border-border/40 px-4 text-xs font-medium text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground lg:-my-2 lg:-mr-5 lg:h-10 lg:border-l lg:border-border/40 lg:px-4">
           <Rocket aria-hidden="true" className="h-3.5 w-3.5" />
           {launchDate}
         </span>
       ) : null}
-    </div>
-  );
-}
-
-export function HeroCardHeader({
-  coinId,
-  compareHref,
-  benchmarkSymbol,
-  onOpenFeedback,
-}: {
-  coinId: string;
-  compareHref: string;
-  benchmarkSymbol: string | null;
-  onOpenFeedback: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/30 px-4 pb-2.5 pt-3 sm:px-5">
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={onOpenFeedback}
-          className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
-        >
-          <Flag className="h-3 w-3" />
-          <span className="hidden sm:inline">Report issue</span>
-        </button>
-        <Link
-          href={compareHref}
-          className="pharos-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground lg:min-h-9 lg:rounded-md lg:px-2 lg:py-1"
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5" />
-          {benchmarkSymbol ? `Compare vs ${benchmarkSymbol}` : "Compare"}
-        </Link>
-        <ShareButton ogPath={`/api/og/stablecoin/${coinId}`} label="Share" />
-      </div>
     </div>
   );
 }
@@ -137,15 +104,13 @@ export interface HeroSectionBaseProps {
   peg: HeroCardViewModel["peg"];
 }
 
+// The identity, actions and mobile grade live in `HeroIdentityHeader` above
+// the card at every width; the card opens with the shared chip rail, then the
+// metrics in their mobile (stacked cards + signal chips) or desktop (cell grid)
+// form.
 export function HeroCardMobileSection({
   coin,
   coinData,
-  logoSrc,
-  verdict,
-  reportCard,
-  variantParent,
-  variantChipClass,
-  infrastructures,
   price,
   market,
   peg,
@@ -155,25 +120,6 @@ export function HeroCardMobileSection({
 }) {
   return (
     <div className="px-4 py-4 sm:px-5 lg:hidden">
-      <div className="flex items-start gap-3">
-        <HeroMobileIdentity
-          coin={coin}
-          logoSrc={logoSrc}
-          variantParent={variantParent}
-          variantChipClass={variantChipClass}
-          infrastructures={infrastructures}
-          verdict={verdict}
-          condensed
-        />
-        <div className="self-stretch">
-          <SafetyGradeHero reportCard={reportCard} mobile />
-        </div>
-      </div>
-      <SafetyPartialEvidenceNote reportCard={reportCard} />
-      <HeroMobileIdentityDetails coin={coin} infrastructures={infrastructures} />
-
-      <HeroVerdict coinId={coin.id} verdict={verdict} />
-
       <HeroMarketMetricGrid variant="card" coin={coin} coinData={coinData} price={price} market={market} />
 
       <HeroTertiaryMetrics metrics={tertiaryMetrics} activeDepeg={peg.activeDepeg} />
@@ -184,7 +130,6 @@ export function HeroCardMobileSection({
 export function HeroCardDesktopSection({
   coin,
   coinData,
-  verdict,
   price,
   market,
   tertiaryMetrics,
@@ -199,7 +144,6 @@ export function HeroCardDesktopSection({
 
   return (
     <div className="hidden lg:block">
-      <HeroDesktopChipRail coin={coin} verdict={verdict} />
       <HeroMarketMetricGrid
         variant="cell"
         coin={coin}

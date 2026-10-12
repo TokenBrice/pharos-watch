@@ -91,8 +91,9 @@ export interface EvidenceModuleProps {
   /** The required visual summary: spectrum, rail, bar, matrix or strip. */
   visual?: ReactNode;
   /**
-   * Moves `visual` out of the summary layer into the first fold, under this
-   * label, so the module reads as header · verdict · chips · folds. Used by
+   * Moves `visual` out of the summary layer into the first fold (open by
+   * default), under this label, so the module reads as header · verdict ·
+   * chips · folds. Used by
    * the Control board, whose sub-modules stack four visuals in a row.
    */
   visualFold?: string;
@@ -313,7 +314,9 @@ export function EvidenceModule({
 
   const { summary, domainFolds, provenance } = partitionBodyChildren(children);
   const visualFoldNode = visualFold && visual != null && visual !== false ? (
-    <ModuleDisclosure id={id ? `${id}-visual` : undefined} label={visualFold}>
+    // The visual is the module's recap, so its fold starts open; readers can
+    // still collapse it.
+    <ModuleDisclosure id={id ? `${id}-visual` : undefined} label={visualFold} defaultOpen>
       <div className="pt-2">{visual}</div>
     </ModuleDisclosure>
   ) : null;

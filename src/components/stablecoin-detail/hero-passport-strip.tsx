@@ -7,6 +7,7 @@ import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { HeroPassportItemViewModel } from "@/lib/stablecoin-detail-passport";
 import { alignAnchorAfterHydration, revealAnchorId } from "@/lib/anchor-reveal";
+import { FigureLeadText } from "./figure-lead-text";
 
 function alignSection(sectionId: string) {
   // scrollIntoView honors the targets' CSS scroll-margin-top (sticky-chrome
@@ -22,10 +23,10 @@ function PassportItemValue({ item, valueClassName }: { item: HeroPassportItemVie
     <span
       className={`inline-flex w-fit items-center rounded-full border border-border/60 bg-muted/40 px-2 py-px ${valueClassName} ${toneClass}`}
     >
-      {item.value}
+      <FigureLeadText text={item.value} />
     </span>
   ) : (
-    <span className={`${valueClassName} underline-offset-2 group-hover:underline ${toneClass}`}>{item.value}</span>
+    <span className={`${valueClassName} underline-offset-2 group-hover:underline ${toneClass}`}><FigureLeadText text={item.value} /></span>
   );
   if (!item.tooltipLines) return valueNode;
   return (
@@ -144,12 +145,12 @@ export function HeroPassportStrip({
                 }
                 className="pharos-focus-ring group flex min-h-11 shrink-0 snap-start flex-col justify-center rounded-sm lg:min-h-0"
               >
-                <span className="text-[11px] font-medium uppercase tracking-wider leading-tight text-muted-foreground">
+                <span className="pharos-label leading-tight">
                   {item.category}
                 </span>
                 <PassportItemValue
                   item={item}
-                  valueClassName="whitespace-nowrap font-mono text-xs font-semibold uppercase leading-snug tracking-wide"
+                  valueClassName="whitespace-nowrap text-xs font-semibold leading-snug"
                 />
               </Link>,
             );
@@ -175,13 +176,13 @@ export function HeroPassportStrip({
                   }
                   className={`pharos-focus-ring group flex min-h-14 min-w-0 flex-col justify-center border-r border-border/40 py-3 last:border-r-0 ${desktopCellPaddingClass}`}
                 >
-                  <span className="text-[11px] font-medium uppercase leading-tight tracking-[0.1em] text-muted-foreground">
+                  <span className="pharos-label leading-tight">
                     {item.category}
                   </span>
                   <span className="mt-0.5 flex">
                     <PassportItemValue
                       item={item}
-                      valueClassName="whitespace-nowrap font-mono text-[11px] font-semibold uppercase leading-snug tracking-wide"
+                      valueClassName="whitespace-nowrap text-xs font-semibold leading-snug"
                     />
                   </span>
                 </Link>,

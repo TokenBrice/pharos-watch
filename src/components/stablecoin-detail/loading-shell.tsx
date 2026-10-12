@@ -1,6 +1,7 @@
 "use client";
 
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
@@ -25,7 +26,14 @@ export function StablecoinDetailLoadingShell({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 space-y-3">
             <div className="flex items-start gap-3">
-              <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
+              {/* The loading shell is what a row → dossier navigation commits
+                  first, so it carries the identity morph's dossier end until
+                  the hydrated header takes over. */}
+              <StablecoinIdentityTransition id={coin.id}>
+                <div className="flex shrink-0 items-center gap-3">
+                  <StablecoinLogo src={logoSrc} name={coin.name} size={STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE} />
+                </div>
+              </StablecoinIdentityTransition>
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-2xl font-extrabold tracking-tighter text-foreground">{coin.name}</h2>
@@ -50,7 +58,7 @@ export function StablecoinDetailLoadingShell({
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {["Price", "Market Cap", "Supply", "Liquidity"].map((label) => (
             <div key={label} className="rounded-xl border border-border/60 bg-background/45 px-3.5 py-3">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+              <p className="pharos-label mb-1">{label}</p>
               <Skeleton className="h-7 w-24" />
               <Skeleton className="mt-2 h-4 w-28" />
             </div>
@@ -60,8 +68,8 @@ export function StablecoinDetailLoadingShell({
 
       <div className="pharos-card-shell px-4 py-3">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <p className="pharos-kicker">Jump to Section</p>
-          <span className="text-[11px] text-muted-foreground">{statusLabel}</span>
+          <p className="pharos-label">Jump to Section</p>
+          <span className="text-2xs text-muted-foreground">{statusLabel}</span>
         </div>
         <div className="flex gap-2 overflow-x-auto pb-1">
           {["Risk", "Context", "Liquidity", "Activity", "History", "Explore"].map((label) => (

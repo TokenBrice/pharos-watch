@@ -66,6 +66,28 @@ describe("RailSafetySummary", () => {
     expect(dewsRow().textContent).toContain("N/A");
   });
 
+  it("shows a loading placeholder, not 'Not scored', while the report-card read is in flight", () => {
+    const { container } = render(<RailSafetySummary items={signals({ grade: "—", dews: "—" })} gradeRead="pending" />);
+
+    expect(container.querySelector('[data-safety-state="loading"]')).not.toBeNull();
+    expect(container.textContent).not.toContain("Not scored");
+  });
+
+  it("says the grade is unavailable after a failed read, never 'Not scored'", () => {
+    const { container } = render(<RailSafetySummary items={signals({ grade: "—", dews: "—" })} gradeRead="failed" />);
+
+    expect(container.querySelector('[data-safety-state="unavailable"]')?.textContent).toBe("Grade unavailable");
+    expect(container.textContent).not.toContain("Not scored");
+  });
+
+  it("keeps a frozen archive's not-scored finding even when the read failed", () => {
+    const { container } = render(
+      <RailSafetySummary items={signals({ grade: "—", dews: "—" })} frozen gradeRead="failed" />,
+    );
+
+    expect(container.querySelector('[data-safety-state="frozen"]')).not.toBeNull();
+  });
+
   it("says a live coin without a published grade is not scored", () => {
     const { container } = render(<RailSafetySummary items={signals({ grade: "—", dews: "40" })} />);
 

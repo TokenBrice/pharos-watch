@@ -35,7 +35,7 @@ function ScoreInputsDisclosure() {
       aria-expanded={enabled}
       className={cn(MODULE_DISCLOSURE_SUMMARY_CLASS, "-my-2 min-h-11 text-xs lg:min-h-8")}
     >
-      <span className="underline decoration-dashed underline-offset-2">Score inputs</span>
+      <span>Score inputs</span>
       <ChevronDown
         aria-hidden="true"
         className={cn("h-3 w-3 shrink-0 transition-transform motion-reduce:transition-none", enabled && "rotate-180")}

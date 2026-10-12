@@ -9,6 +9,7 @@ import { DeviationIcon } from "@/components/severity-icon";
 import { MintAuthorityScoreBadge } from "@/components/mint-authority-score-badge";
 import { RowSparkline } from "@/components/row-sparkline";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
+import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import type { StablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
 import type { StablecoinTableRowCellProps } from "@/components/stablecoin-table-row-types";
 import { confidenceClass } from "@/lib/confidence";
@@ -92,35 +93,35 @@ function MobileRiskSummary({ model }: { model: StablecoinTableRowModel }) {
     >
       {model.reportCard ? (
         <span
-          className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-[10px] font-semibold leading-none ${getSafetyGradeBadgeClassName(model.reportCard.grade)}`}
+          className={`inline-flex h-5 min-w-5 items-center justify-center rounded border px-1 pharos-numeric text-3xs font-semibold leading-none ${getSafetyGradeBadgeClassName(model.reportCard.grade)}`}
           title={`${model.reportCard.grade === null ? "Pipeline gap" : `Safety grade ${model.reportCard.grade}`}${model.reportCard.partialEvidence ? " · Partial evidence: pipeline gap" : ""}`}
         >
           {model.reportCard.grade ?? "Pipeline gap"}
         </span>
       ) : (
-        <span className="inline-flex h-5 items-center rounded border border-border/60 px-1 text-[10px] text-muted-foreground">
+        <span className="inline-flex h-5 items-center rounded border border-border/60 px-1 text-3xs text-muted-foreground">
           —
         </span>
       )}
       {model.reportCard?.partialEvidence ? (
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-3xs text-muted-foreground">
           Partial evidence: pipeline gap ({model.reportCard.partialEvidence.causes.join("/")})
         </span>
       ) : null}
-      <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground">
+      <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground">
         Peg{" "}
         <span className={`ml-1 pharos-numeric ${model.pegScore !== null ? pegScoreColor(model.pegScore) : "text-muted-foreground"}`}>
           {model.pegScore !== null ? model.pegScore : "—"}
         </span>
       </span>
-      <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground">
+      <span className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground">
         Liq{" "}
         <span className={`ml-1 pharos-numeric ${model.liquidityScore !== null ? getScoreColor(model.liquidityScore) : "text-muted-foreground"}`}>
           {model.liquidityScore !== null ? model.liquidityScore : "—"}
         </span>
       </span>
       <span
-        className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-[10px] text-muted-foreground"
+        className="inline-flex h-5 items-center rounded border border-border/60 bg-background/60 px-1.5 text-3xs text-muted-foreground"
         title={model.mintAuthorityScore.detail}
       >
         Mint{" "}
@@ -141,34 +142,36 @@ function IdentityCells({ row, model }: RowCellsProps) {
       {row.isVisible("name") ? (
         <TableCell>
           <div className="flex items-center">
-            <Link
-              href={buildStablecoinUrl(row.coin.id)}
-              className={`pharos-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-md font-medium ${model.isOverview ? "px-0 py-0" : "px-1 py-1 hover:bg-muted/35"}`}
-              onClick={(event) => event.stopPropagation()}
-              onKeyDown={(event) => event.stopPropagation()}
-              onMouseEnter={() => row.onPrefetch(row.coin.id)}
-              aria-label={`View ${row.coin.name} (${row.coin.symbol}) details${model.variantContext ? `, ${model.variantContext}` : ""}`}
-              data-stablecoin-detail-link="true"
-            >
-              <StablecoinLogo src={row.logos?.[row.coin.id]} name={row.coin.name} size={row.densityConfig.iconSize} />
-              <span className="min-w-0">
-                <span className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
-                  <span>{row.coin.symbol}</span>
-                  {model.variantDisplay ? (
-                    <span
-                      className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${model.variantDisplay.badgeClass}${model.isCompactDensity ? "" : " leading-none"}`}
-                      aria-label={model.variantContext ?? undefined}
-                    >
-                      {model.variantDisplay.shortLabel}
-                    </span>
-                  ) : null}
+            <StablecoinIdentityTransition id={row.coin.id}>
+              <Link
+                href={buildStablecoinUrl(row.coin.id)}
+                className={`pharos-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-md font-medium ${model.isOverview ? "px-0 py-0" : "px-1 py-1 hover:bg-muted/35"}`}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                onMouseEnter={() => row.onPrefetch(row.coin.id)}
+                aria-label={`View ${row.coin.name} (${row.coin.symbol}) details${model.variantContext ? `, ${model.variantContext}` : ""}`}
+                data-stablecoin-detail-link="true"
+              >
+                <StablecoinLogo src={row.logos?.[row.coin.id]} name={row.coin.name} size={row.densityConfig.iconSize} />
+                <span className="min-w-0">
+                  <span className="flex flex-wrap items-center gap-1.5 font-medium text-foreground">
+                    <span>{row.coin.symbol}</span>
+                    {model.variantDisplay ? (
+                      <span
+                        className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-3xs font-semibold ${model.variantDisplay.badgeClass}${model.isCompactDensity ? "" : " leading-none"}`}
+                        aria-label={model.variantContext ?? undefined}
+                      >
+                        {model.variantDisplay.shortLabel}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className={`max-w-[140px] truncate text-xs text-muted-foreground ${model.isOverview ? "block" : "hidden lg:block"}`}>
+                    {row.coin.name}
+                  </span>
+                  <MobileRiskSummary model={model} />
                 </span>
-                <span className={`max-w-[140px] truncate text-xs text-muted-foreground ${model.isOverview ? "block" : "hidden lg:block"}`}>
-                  {row.coin.name}
-                </span>
-                <MobileRiskSummary model={model} />
-              </span>
-            </Link>
+              </Link>
+            </StablecoinIdentityTransition>
           </div>
         </TableCell>
       ) : null}
@@ -261,7 +264,7 @@ function RiskCells({ row, model }: RowCellsProps) {
               {model.reportCard.grade ?? "Pipeline gap"}
             </Badge>
             {model.reportCard?.partialEvidence ? (
-              <span className="block text-[10px] text-muted-foreground">
+              <span className="block text-3xs text-muted-foreground">
                 Partial evidence: pipeline gap ({model.reportCard.partialEvidence.causes.join("/")})
               </span>
             ) : null}
@@ -310,7 +313,7 @@ function RiskCells({ row, model }: RowCellsProps) {
           {model.meta ? (
             <Badge
               variant="outline"
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${GOVERNANCE_BADGE_STYLES[model.meta.flags.governance]?.cls ?? ""}`}
+              className={`rounded-full px-2 py-0.5 text-2xs font-semibold ${GOVERNANCE_BADGE_STYLES[model.meta.flags.governance]?.cls ?? ""}`}
             >
               {GOVERNANCE_LABELS_SHORT[model.meta.flags.governance]}
             </Badge>

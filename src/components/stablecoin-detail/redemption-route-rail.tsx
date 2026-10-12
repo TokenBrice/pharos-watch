@@ -39,7 +39,7 @@ function AccessGate({ accessModel, accessLabel }: { accessModel: RedemptionAcces
       </span>
       <span
         className={cn(
-          "font-mono text-[11px] font-semibold uppercase tracking-wide",
+          "pharos-label",
           open ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
         )}
       >

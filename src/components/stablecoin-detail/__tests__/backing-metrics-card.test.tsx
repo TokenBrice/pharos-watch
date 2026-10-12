@@ -12,7 +12,6 @@ import {
   type BackingMetricsInput,
   type BackingMetricsOracleInput,
 } from "../backing-metrics-card";
-import { StablecoinDetailIdentityProvider } from "../module-title";
 import { RAIL_METRIC_MAX_SUB_METRICS } from "../rail-card";
 import { buildMechanismBackingView, type MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
@@ -348,26 +347,13 @@ describe("BackingMetricsCard", () => {
     expect(screen.queryByRole("img", { name: /^Loss absorption/ })).toBeNull();
   });
 
-  it("uses the module header in flow: coin, title and status chip, with an ISO review date", () => {
+  it("uses the module header in flow: title and status chip, with an ISO review date", () => {
     const view = build({ collateralization: reviewed })!;
-    render(
-      <StablecoinDetailIdentityProvider symbol="BOLD" logoSrc={undefined}>
-        <BackingMetricsCard view={view} id="collateralization" />
-      </StablecoinDetailIdentityProvider>,
-    );
+    render(<BackingMetricsCard view={view} id="collateralization" />);
     const section = document.getElementById("collateralization") as HTMLElement;
     expect(within(section).getByRole("heading", { name: view.title })).toBeTruthy();
-    expect(within(section).getByText("BOLD")).toBeTruthy();
     expect(within(section).getByText(view.coverage!.label)).toBeTruthy();
     expect(section.textContent).toMatch(/Reviewed \d{4}-\d{2}-\d{2}/);
-    cleanup();
-
-    render(
-      <StablecoinDetailIdentityProvider symbol="BOLD" logoSrc={undefined}>
-        <BackingMetricsCard view={view} anchorTwin />
-      </StablecoinDetailIdentityProvider>,
-    );
-    expect(screen.queryByText("BOLD")).toBeNull();
   });
 
   it("draws the coverage tone on the gauge for an undercollateralized ratio", () => {

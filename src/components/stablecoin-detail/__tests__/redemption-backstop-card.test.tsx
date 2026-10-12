@@ -418,7 +418,7 @@ describe("RedemptionBackstopCard", () => {
       />,
     );
 
-    expect(html).toContain("Redemption Fee");
+    expect(html).toContain("Redemption fee");
     expect(html).toContain("5 bps (0.05%)");
   });
 
@@ -436,7 +436,7 @@ describe("RedemptionBackstopCard", () => {
       />,
     );
 
-    expect(html).toContain("Redemption Fee");
+    expect(html).toContain("Redemption fee");
     expect(html).toContain("Minimum 50 bps + baseRate");
     expect(html).toContain("publish a fee formula");
   });
@@ -444,7 +444,7 @@ describe("RedemptionBackstopCard", () => {
   it("renders an explicit unknown-fee fallback when no fixed fee is modeled", () => {
     const html = renderToStaticMarkup(<RedemptionBackstopCard entry={BASE_ENTRY} />);
 
-    expect(html).toContain("Redemption Fee");
+    expect(html).toContain("Redemption fee");
     expect(html).toContain("Reviewed, but not published");
     expect(html).toContain("do not publish a bounded numeric redemption fee");
   });
@@ -532,7 +532,7 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toContain("Retail cost: 40/100");
     expect(html).toContain("Active-user cost: 80/100");
     expect(html).toContain("Institutional cost: 100/100");
-    expect(html).toContain("Confidence Detail");
+    expect(html).toContain("Confidence detail");
     expect(html).toContain("Capacity evidence: 90/100");
     expect(html).toContain("Fee evidence: 70/100");
     expect(html).toContain("Route freshness: 80/100");

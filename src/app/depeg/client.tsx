@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useState } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
@@ -64,7 +64,7 @@ function reliabilityNotes(reliability: DepegCoverageMetrics): string[] {
 function DepegReliabilityNote({ notes }: { notes: string[] }) {
   return (
     <p className="pharos-subtle-band pharos-meta" role="status">
-      <span className="font-semibold uppercase tracking-wide">Coverage caveats</span> · {notes.join(" · ")}
+      <span className="font-semibold">Coverage caveats</span> · {notes.join(" · ")}
     </p>
   );
 }
@@ -77,10 +77,34 @@ export function DepegClient() {
     const timer = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 60_000);
     return () => clearInterval(timer);
   }, []);
-  // The grading ledger renders open: it is the accountability half of the
-  // forecast story and readers went looking for it. The control stays so a
-  // reader scanning to the board can collapse ~1,300px of ledger out of the way.
-  const [gradingOpen, setGradingOpen] = useState(true);
+  // The grading ledger is audit evidence: it follows the board, folded, so its
+  // ~1,300px never stands between the forecasts and the table a reader acts
+  // on. A `#forecast-grading` link (the hero's track-record figure) opens it,
+  // so that link still lands on rendered content.
+  const [gradingOpen, setGradingOpen] = useState(false);
+  const gradingScrollPending = useRef(false);
+  useEffect(() => {
+    const openOnHash = () => {
+      if (window.location.hash !== "#forecast-grading") return;
+      setGradingOpen(true);
+      gradingScrollPending.current = true;
+    };
+    // Re-clicking the link while the hash is already set fires no hashchange,
+    // so a collapsed ledger would stay shut; open on the click itself too.
+    const openOnLinkClick = (event: MouseEvent) => {
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!link || !link.getAttribute("href")?.endsWith("#forecast-grading")) return;
+      setGradingOpen(true);
+      gradingScrollPending.current = true;
+    };
+    openOnHash();
+    window.addEventListener("hashchange", openOnHash);
+    document.addEventListener("click", openOnLinkClick);
+    return () => {
+      window.removeEventListener("hashchange", openOnHash);
+      document.removeEventListener("click", openOnLinkClick);
+    };
+  }, []);
   const {
     data: pegData,
     isLoading: isPegLoading,
@@ -262,6 +286,14 @@ export function DepegClient() {
     });
   }
 
+  // A hash-opened ledger mounts after the browser's own anchor jump (and, on a
+  // cold load, after the loading state), so align once it is in the DOM.
+  useEffect(() => {
+    if (!gradingScrollPending.current || !gradingOpen || isPegLoading) return;
+    gradingScrollPending.current = false;
+    document.getElementById("forecast-grading")?.scrollIntoView();
+  }, [gradingOpen, isPegLoading]);
+
   // Loading state
   if (isPegLoading) {
     return <DepegContentLoadingState />;
@@ -305,12 +337,30 @@ export function DepegClient() {
         </SectionErrorBoundary>
       ) : null}
 
-      {/* Model accountability, kept beside the forecasts it grades. The ledger
-          is heavy DOM, so it opens on demand; the hero's track-record figure
-          links here. */}
+      {/* The universe workbench: filters, sorts, exact per-coin values. */}
+      <SectionErrorBoundary name="depeg-table">
+        <DepegControlBoard
+          rows={tableRows}
+          logos={logos}
+          pegFilter={pegFilter}
+          typeFilter={typeFilter}
+          searchQuery={searchQuery}
+          onPegFilterChange={setPegFilter}
+          onTypeFilterChange={setTypeFilter}
+          onSearchChange={setSearchQuery}
+          onClearFilters={clearBoardFilters}
+          onRowClick={handleRowClick}
+          nowSeconds={nowSeconds}
+          eventFloorCount={eventFloorCount}
+        />
+      </SectionErrorBoundary>
+
+      {/* Model accountability: audit evidence, after the board it used to push
+          ~1,300px down. The ledger is heavy DOM, so it mounts on demand; the
+          hero's track-record figure links here and opens it. */}
       {resolverReviewerEnabled ? (
         <SectionErrorBoundary name="depeg-resolver-reviewer">
-          <section id="forecast-grading" aria-label="Forecast grading" className="space-y-3">
+          <section id="forecast-grading" aria-label="Forecast grading" className="scroll-mt-24 space-y-3">
             <button
               type="button"
               onClick={() => setGradingOpen((open) => !open)}
@@ -329,24 +379,6 @@ export function DepegClient() {
           </section>
         </SectionErrorBoundary>
       ) : null}
-
-      {/* The universe workbench: filters, sorts, exact per-coin values. */}
-      <SectionErrorBoundary name="depeg-table">
-        <DepegControlBoard
-          rows={tableRows}
-          logos={logos}
-          pegFilter={pegFilter}
-          typeFilter={typeFilter}
-          searchQuery={searchQuery}
-          onPegFilterChange={setPegFilter}
-          onTypeFilterChange={setTypeFilter}
-          onSearchChange={setSearchQuery}
-          onClearFilters={clearBoardFilters}
-          onRowClick={handleRowClick}
-          nowSeconds={nowSeconds}
-          eventFloorCount={eventFloorCount}
-        />
-      </SectionErrorBoundary>
 
       {/* History handoff. The permanent archive preview and FAQ follow as server
           content from page.tsx. */}

@@ -79,7 +79,7 @@ export function ControlRoleTag({
       data-control-role={role}
       title={label}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-[11px] leading-tight",
+        "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-2xs leading-tight",
         size === "compact" ? "px-1 py-px" : "px-1.5 py-0.5",
         role === "limiting"
           ? "border-[1.5px] border-foreground/80 font-medium text-foreground"
