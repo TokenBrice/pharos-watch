@@ -31,15 +31,15 @@ export const METHODOLOGY_READING_STEPS = [
     description: "Model purpose and the core signal to scan first.",
   },
   {
-    label: "Quick Facts",
+    label: "Quick facts",
     description: "Cadence, score range, dependencies, and failure behavior.",
   },
   {
-    label: "Worked Examples",
+    label: "Worked examples",
     description: "Real inputs run through the same functions used in production.",
   },
   {
-    label: "Technical Notes",
+    label: "Technical notes",
     description: "Expanded formulas, caveats, and changelog links when you need them.",
   },
 ] as const;

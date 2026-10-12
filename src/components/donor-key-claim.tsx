@@ -365,7 +365,9 @@ export function DonorKeyClaim() {
         {busy ? busyLabel : "Claim supporter key"}
       </Button>
 
-      {providerMissing ? (
+      {/* The wallet hand-off answers a claim attempt; shown on load it read
+          as an error before the reader had done anything. */}
+      {providerMissing && walletFocusRequest > 0 ? (
         <div className="space-y-2.5 rounded-md border border-border/60 bg-muted/40 px-3 py-3 text-sm text-muted-foreground">
           <p>{NO_PROVIDER_COPY}</p>
           <div className="flex flex-wrap gap-2">

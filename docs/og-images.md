@@ -79,7 +79,7 @@ Write mode renders each PNG into ignored staging first and replaces the checked-
 | `og-editorial-about.png` | `/about/` |
 | `og-editorial-depeg.png` | Depeg briefings |
 | `og-editorial-digest.png` | Daily/weekly digest pages |
-| `og-editorial-learn.png` | `/learn/`, `/learn/mechanisms/`, `/learn/case-studies/` |
+| `og-editorial-learn.png` | `/learn/mechanisms/`, `/learn/case-studies/` |
 | `og-editorial-methodology.png` | Methodology pages |
 | `og-editorial-profile.png` | Generated profile-category card, currently reserved for future stablecoin-profile editorial surfaces |
 

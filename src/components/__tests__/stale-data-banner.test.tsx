@@ -52,4 +52,41 @@ describe("StaleDataBanner first-fetch handling", () => {
     expect(html).toContain("Peg Summary has not populated yet");
     expect(html).not.toContain("Report Cards");
   });
+
+  it("infers an in-flight first fetch when the caller omits isLoading", () => {
+    const html = renderToStaticMarkup(
+      <StaleDataBanner
+        queries={[
+          { label: "Mint/Burn Flows", dataUpdatedAt: 0, staleTime: STALE_TIME, hasData: false },
+          { label: "Peg Summary", dataUpdatedAt: 0, staleTime: STALE_TIME },
+        ]}
+      />,
+    );
+
+    expect(html).toBe("");
+  });
+
+  it("still names an empty read that settled when isLoading is omitted", () => {
+    const html = renderToStaticMarkup(
+      <StaleDataBanner queries={[{ label: "Report Cards", dataUpdatedAt: Date.now(), staleTime: STALE_TIME, hasData: false }]} />,
+    );
+
+    expect(html).toContain("Report Cards has not populated yet");
+  });
+
+  it("agrees the verb with several affected sources", () => {
+    const html = renderToStaticMarkup(
+      <StaleDataBanner
+        queries={["Flows", "Chart", "Peg Summary"].map((label) => ({
+          label,
+          dataUpdatedAt: 0,
+          staleTime: STALE_TIME,
+          hasData: false,
+          isLoading: false,
+        }))}
+      />,
+    );
+
+    expect(html).toContain("Flows, Chart, and 1 more dataset have not populated yet");
+  });
 });

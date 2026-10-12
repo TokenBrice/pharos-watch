@@ -153,7 +153,7 @@ export default function MethodologyPage() {
 
       <Card className="pharos-card-shell hidden md:block">
         <CardHeader className="space-y-3 pb-2">
-          <CardTitle as="h2">How to Read This Page</CardTitle>
+          <CardTitle as="h2">How to read this page</CardTitle>
           <p className="text-sm text-muted-foreground">
             Each section follows the same rhythm so you can skim first, then expand only the parts that need a deeper
             read.
@@ -228,11 +228,13 @@ export default function MethodologyPage() {
 
       <LongformScrollspyNav
         sections={METHODOLOGY_SECTIONS}
-        railLabel="Jump to Section"
+        railLabel="Jump to section"
         navAriaLabel="Methodology section controls"
         edgeFade
         rightSlot={
-          <div className="hidden items-center gap-3 md:flex">
+          // A hairline separates the mode controls from the scrolling pills so a
+          // clipped last pill fades out instead of butting into "Show inputs".
+          <div className="hidden items-center gap-3 border-l border-border/60 pl-3 md:flex">
             <ShowYourWorkToggle className="pharos-toggle-pill pharos-focus-ring min-h-9" />
             <MethodologyModeToggle />
           </div>

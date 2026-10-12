@@ -11,17 +11,13 @@ import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { formatDecimal } from "@shared/lib/format";
+import { formatChartDate, formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramWatcherHistoryPoint } from "@shared/types/status";
 
 const COMPACT_NUMBER_FORMATTER = new Intl.NumberFormat("en-US", {
   notation: "compact",
   maximumFractionDigits: 1,
-});
-const MONTH_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  year: "2-digit",
 });
 const MONTH_ONLY_TICK_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -47,7 +43,7 @@ function formatCount(value: number): string {
 
 function formatMonthTick(value: unknown): string {
   const timestamp = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(timestamp) ? MONTH_TICK_FORMATTER.format(new Date(timestamp)) : "";
+  return Number.isFinite(timestamp) ? formatChartDate(timestamp, "compact") : "";
 }
 
 function formatMonthOnlyTick(value: unknown): string {

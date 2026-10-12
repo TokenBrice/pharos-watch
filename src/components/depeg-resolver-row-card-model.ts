@@ -41,30 +41,56 @@ const EMPTY_CONTEXT: DdrRelatedContext = {
 
 export const TIER_META: Record<DdrResolutionTier, { label: string; blurb: string; band: string; accent: string }> = {
   recovery_likely: {
-    label: "Recovery Likely",
+    label: "Recovery likely",
     blurb: "Structure and live signals favor a return to peg.",
     band: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     accent: "text-emerald-700 dark:text-emerald-400",
   },
   at_risk: {
-    label: "At Risk",
+    label: "At risk",
     blurb: "Recovery is plausible but not assured — the kill signals are live.",
     band: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
     accent: "text-amber-700 dark:text-amber-400",
   },
   recovery_unlikely: {
-    label: "Recovery Unlikely",
+    label: "Recovery unlikely",
     blurb: "Comparable structural failures did not return to peg.",
     band: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
     accent: "text-red-700 dark:text-red-400",
   },
   insufficient_signal: {
-    label: "Insufficient Signal",
+    label: "Insufficient signal",
     blurb: "Not enough live signal for a verdict yet.",
     band: "border-border/70 bg-muted/50 text-foreground",
     accent: "text-foreground",
   },
 };
+
+/** Reader copy for live-overlay and lock-deferral reason codes; unknown codes are de-kebabed. */
+const DDR_REASON_LABELS: Record<string, string> = {
+  "duration-exceeded": "past its forecast window",
+  "secondary-overlay-unavailable": "secondary live data unavailable",
+  "lock-deferred": "lock deferred",
+  "lock-deferral-overlay": "lock deferral overlay unavailable",
+  "closed-pending-review": "closed, pending review",
+  "stale-cache": "showing the last cached build",
+};
+
+export function formatDdrReason(code: string): string {
+  if (code.startsWith("manifest-fallback:")) return "served from the publication manifest";
+  return DDR_REASON_LABELS[code] ?? code.replace(/[-_:]+/g, " ");
+}
+
+export const DDR_EVENT_STATE_LABELS: Record<DdrV2ResponseRow["live"]["eventState"], string> = {
+  active: "Active",
+  closed_pending_review: "Closed, pending review",
+  source_event_missing: "Source event missing",
+  event_invalidated: "Event invalidated",
+};
+
+export function formatDdrDirection(row: Pick<DdrV2ResponseRow, "direction" | "pegCurrency">): string {
+  return `${row.direction === "below" ? "▼ Below" : "▲ Above"} ${row.pegCurrency}`;
+}
 
 export const NOW_DOT_TONE: Record<DdrResolutionTier, string> = {
   recovery_likely: "bg-emerald-500",

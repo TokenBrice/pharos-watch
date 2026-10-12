@@ -6,7 +6,9 @@ import { bluechipObservationLabel } from "@shared/lib/bluechip-freshness";
 import { memo, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
-  GOVERNANCE_LABELS_SHORT,
+  COLLATERAL_QUALITY_LABELS,
+  CUSTODY_MODEL_LABELS,
+  GOVERNANCE_LABELS,
   MECHANISM_ARCHETYPE_SHORT_LABELS,
 } from "@shared/lib/classification";
 import {
@@ -72,7 +74,8 @@ function renderFlowPressure(coin: ComparisonCoinEntry): ReactNode {
     );
   }
   const score = resolvePressureScore(coin.flow);
-  return `${humanizeSafetyScoreV9Value(resolvePressureState(coin.flow))}${score != null ? ` · ${formatScore(score, { trimInteger: true })}` : ""}`;
+  const state = resolvePressureState(coin.flow);
+  return `${state === "nr" ? "NR" : humanizeSafetyScoreV9Value(state)}${score != null ? ` · ${formatScore(score, { trimInteger: true })}` : ""}`;
 }
 
 interface ComparisonTableProps {
@@ -318,11 +321,11 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
       metrics: [
         { key: "peg-target", label: "Peg target", render: (coin) => coin.meta.flags.pegCurrency },
         { key: "backing", label: "Backing", render: (coin) => BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing },
-        { key: "governance", label: "Governance", render: (coin) => GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance },
+        { key: "governance", label: "Governance", render: (coin) => GOVERNANCE_LABELS[coin.meta.flags.governance] ?? coin.meta.flags.governance },
         { key: "launch", label: "Launch date", numeric: true, render: (coin) => present(coin.meta.launchDate) },
         { key: "reserves", label: "Largest reserve exposure", render: reserveSummary },
-        { key: "collateral-quality", label: "Collateral quality", render: (coin) => humanize(coin.meta.collateralQuality) },
-        { key: "custody", label: "Custody model", render: (coin) => humanize(coin.meta.custodyModel) },
+        { key: "collateral-quality", label: "Collateral quality", render: (coin) => coin.meta.collateralQuality ? COLLATERAL_QUALITY_LABELS[coin.meta.collateralQuality] : NULL_VALUE },
+        { key: "custody", label: "Custody model", render: (coin) => coin.meta.custodyModel ? CUSTODY_MODEL_LABELS[coin.meta.custodyModel] : NULL_VALUE },
         { key: "mint-authority", label: "Mint authority", render: (coin) => resolveMintAuthorityStatus(coin.meta.mintAuthoritySummary).spokenLabel },
         { key: "blacklist", label: "Freeze capability", render: blacklistLabel },
         { key: "variant", label: "Variant relationship", render: (coin) => coin.meta.variantOf ? `${humanizeSafetyScoreV9Value(coin.meta.variantKind ?? "variant")} of ${coin.meta.variantOf}` : "Base asset" },

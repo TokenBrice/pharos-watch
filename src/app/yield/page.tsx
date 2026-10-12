@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
+import { ShareButton } from "@/components/share-button";
 import { YieldContentLoadingState } from "@/app/yield/loading";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
@@ -8,6 +9,7 @@ import {
   YIELD_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import type { FaqItem } from "@/lib/faq";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 
 const desc =
   "Compare stablecoin yields by APY, safety grade, source risk, and benchmark spread. The Pharos Yield Score asks one question: is this APY paying enough for the risk you take?";
@@ -80,6 +82,7 @@ const route = createClientFeaturePage({
       changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
     },
     header: "instrument",
+    headerActions: <ShareButton ogPath={API_PATHS.ogPage("yield")} />,
     leadParagraphs: [
       "Stablecoin yield rankings that weigh every APY against safety and real-world benchmarks.",
       "Two readings per row: Safety says how likely you are to lose money; PYS says how well the yield pays you for that chance. A high PYS on a D-grade coin is well-paid risk, not a safe pick. The page opens on the Opportunistic band (C- or above, safety 50+, warnings hidden); widen the Risk tolerance slider to see everything.",

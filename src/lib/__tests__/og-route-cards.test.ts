@@ -2,11 +2,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { OG_LIVE_PAGE_SLUGS, OG_ROUTE_CARDS, formatOgStampTime, ogRouteCardHost } from "@shared/lib/og-route-cards";
+import { Coins, type LucideIcon } from "lucide-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { OG_ROUTE_GLYPHS, type OgRouteGlyphElement } from "@shared/lib/og-route-glyphs";
 import { NAV_ITEMS } from "@/lib/nav-config";
 import { buildLiveRouteOgImageUrl } from "@/lib/page-metadata";
+
+/** Routes reachable from the footer and search but not the menus keep their former menu icon. */
+const OFF_NAV_ROUTE_ICONS: Partial<Record<keyof typeof OG_ROUTE_CARDS, LucideIcon>> = { stablecoins: Coins };
 
 /** Geometry of an svg's shape elements, ignoring keys and presentation attributes. */
 function glyphGeometry(markup: string): string[] {
@@ -39,9 +43,9 @@ describe("route share cards", () => {
 
   it("draws each route glyph exactly as the route's navigation icon", () => {
     for (const key of Object.keys(OG_ROUTE_CARDS) as Array<keyof typeof OG_ROUTE_CARDS>) {
-      const nav = NAV_ITEMS.find((item) => item.href === OG_ROUTE_CARDS[key].path);
-      expect(nav, key).toBeDefined();
-      const navGeometry = glyphGeometry(renderToStaticMarkup(createElement(nav!.icon)));
+      const icon = NAV_ITEMS.find((item) => item.href === OG_ROUTE_CARDS[key].path)?.icon ?? OFF_NAV_ROUTE_ICONS[key];
+      expect(icon, key).toBeDefined();
+      const navGeometry = glyphGeometry(renderToStaticMarkup(createElement(icon!)));
       expect(navGeometry.length, key).toBeGreaterThan(0);
       expect(glyphGeometry(glyphMarkup(OG_ROUTE_GLYPHS[key])), key).toEqual(navGeometry);
     }

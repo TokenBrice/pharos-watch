@@ -89,8 +89,8 @@ export function AltPegStablecoinTable({
   return (
     <section id="alt-peg-table" aria-label="Alt-peg stablecoin browser" className="scroll-mt-24 space-y-4">
       <HomepageSectionBand
-        eyebrow="Cohort Details"
-        title="Drill Into Each Alt-Peg Cohort"
+        eyebrow="Cohort details"
+        title="Drill into each alt-peg cohort"
         description="Browse every tracked non-USD stablecoin. Use the chips to narrow to a specific peg."
       />
 

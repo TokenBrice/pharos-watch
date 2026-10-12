@@ -156,7 +156,7 @@ export function BlacklistStats({
       ) : null}
       {canDrillIntoUnfreezable && onUnfreezableSelect ? (
         <InteractiveMetricStatCard
-          title="Unfreezable Market Share"
+          title="Unfreezable market share"
           value={unfreezableMarketShareValue}
           subtext={unfreezableMarketShareSubtext}
           className="sm:col-span-2"
@@ -165,7 +165,7 @@ export function BlacklistStats({
         />
       ) : (
         <MetricStatCard
-          title="Unfreezable Market Share"
+          title="Unfreezable market share"
           value={unfreezableMarketShareValue}
           subtext={unfreezableMarketShareSubtext}
           variant="hero"
@@ -173,14 +173,14 @@ export function BlacklistStats({
         />
       )}
       <MetricStatCard
-        title="Tracked Frozen Total"
+        title="Tracked frozen total"
         value={trackedFrozenTotal === null ? "—" : formatCurrency(trackedFrozenTotal)}
         subtext="last-known freeze snapshots"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"
       />
       <MetricStatCard
-        title="Total Wiped Value"
+        title="Total wiped value"
         value={stats ? formatBlacklistValuation(stats.destroyedTotal, stats.valuationCoverage?.destroyed) : "—"}
         subtext="destroyed or confiscated value"
         valueClassName="pharos-numeric text-3xl font-semibold"

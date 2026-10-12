@@ -255,6 +255,13 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
     [bandY1, bandY2, chartData],
   );
   const valueAxis = useNiceValueAxis(axisValues, { kind: "currency" });
+  // Bars are centred on their bucket timestamp: pad the time domain by half a
+  // bucket so the first and last bars are drawn whole instead of half-cut.
+  const xDomain = useMemo<[number, number] | ["dataMin", "dataMax"]>(() => {
+    if (chartData.length === 0) return ["dataMin", "dataMax"];
+    const halfBucketMs = (bucketSeconds * 1000) / 2;
+    return [chartData[0].ts - halfBucketMs, chartData[chartData.length - 1].ts + halfBucketMs];
+  }, [bucketSeconds, chartData]);
 
   const formatXAxisTick = useCallback(
     (ts: number) => {
@@ -316,7 +323,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
             margin={{ top: 5, right: 20, bottom: 20, left: 5 }}
           >
             <TimeGrid />
-            <TimeXAxis dataKey="ts" minTickGap={72} tickFormatter={formatXAxisTick} />
+            <TimeXAxis dataKey="ts" domain={xDomain} minTickGap={72} tickFormatter={formatXAxisTick} />
             <MonoYAxis tickFormatter={formatCurrencyTick} {...valueAxis} />
             <Tooltip content={<FlowTooltip useDailyBuckets={useDailyBuckets} />} cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }} />
             {bandX2 > bandX1 && bandY2 > bandY1 && (

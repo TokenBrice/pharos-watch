@@ -117,7 +117,7 @@ beforeEach(() => {
   useNearViewportMock.mockImplementation((rootMargin?: string) => {
     const queue = rootMargin === "600px" ? nearViewportValues : lazyViewportValues;
     const near = useRef(queue.shift() ?? true).current;
-    return { ref: { current: null }, near };
+    return { ref: () => {}, near };
   });
 });
 

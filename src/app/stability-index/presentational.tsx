@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { ChartSkeleton } from "@/components/chart-skeleton";
+import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { UniverseChip } from "@/components/universe-chip";
@@ -197,13 +199,16 @@ export function StabilityIndexPanel({
         freshness="Updated every 30 min"
       />
       <CardContent aria-live="polite">
+        {/* Below xl the readout column dissolves (`contents`) so the KPI can sit
+            above the beacon: the instrument header keeps the answer above the
+            mobile fold. */}
         <div className="flex flex-col gap-5 xl:flex-row xl:items-stretch xl:gap-7">
-          <div className="mx-auto w-full max-w-xl rounded-lg xl:mx-0 xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
+          <div className="order-2 mx-auto w-full max-w-xl rounded-lg xl:order-none xl:mx-0 xl:w-[min(37vw,31rem)] xl:max-w-none xl:shrink-0">
             <PsiBeacon state={beaconState} />
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-4 xl:pt-1">
-            <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between xl:gap-5">
+          <div className="contents xl:flex xl:min-w-0 xl:flex-1 xl:flex-col xl:gap-4 xl:pt-1">
+            <div className="order-1 flex min-w-0 flex-col gap-4 xl:order-none xl:flex-row xl:items-center xl:justify-between xl:gap-5">
               <div className="flex min-w-0 flex-col items-center gap-1 text-center xl:shrink-0 xl:items-start xl:text-left">
                 <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 xl:justify-start">
                   <span className="text-xs text-muted-foreground">
@@ -212,9 +217,11 @@ export function StabilityIndexPanel({
                   <span className="pharos-label">
                     {scoreBasis}
                   </span>
-                  <span className={`pharos-numeric text-6xl font-extrabold leading-none xl:text-[4.15rem] ${colorClass}`}>
-                    {formatScore(score)}
-                  </span>
+                  <RailHeroFigureTransition rail="psi">
+                    <span className={cn(HERO_KPI_VALUE_CLASS, colorClass)}>
+                      {formatScore(score)}
+                    </span>
+                  </RailHeroFigureTransition>
                   <span className={`text-lg font-bold uppercase ${colorClass}`}>
                     {band}
                   </span>
@@ -236,9 +243,9 @@ export function StabilityIndexPanel({
               </div>
             </div>
 
-            <PsiHistoryStatsGrid items={historyStats} layout="compact" />
+            <PsiHistoryStatsGrid items={historyStats} layout="compact" className="order-3 xl:order-none" />
 
-            <div className="border-t border-border/60 pt-4">
+            <div className="order-4 border-t border-border/60 pt-4 xl:order-none">
               <PsiBeamDimmers lanes={lanes} series={componentData} columns={2} density="compact" />
             </div>
           </div>

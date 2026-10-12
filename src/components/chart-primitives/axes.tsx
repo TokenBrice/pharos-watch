@@ -4,6 +4,7 @@ import { useId, useMemo, type ComponentProps } from "react";
 import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { logTicks, niceTicks, niceTicksForValues, type NiceTicksOptions, type TickKind } from "@/lib/chart-ticks";
 import { CHART_AXIS_TICK, CHART_GRID_DASH, CHART_GRID_STROKE, RECHARTS_TOOLTIP_STYLES } from "@/lib/chart-theme";
+import { formatChartDate } from "@shared/lib/format";
 
 export const MONO_Y_AXIS_WIDTH = 68;
 
@@ -45,20 +46,20 @@ function formatDateLabel(value: unknown, locale: string, options: Intl.DateTimeF
   return new Date(timestamp).toLocaleDateString(locale, { timeZone: "UTC", ...options });
 }
 
-type TimeXAxisProps = ComponentProps<typeof XAxis> & {
-  locale?: string;
-  dateFormat?: Intl.DateTimeFormatOptions;
-};
+type TimeXAxisProps = ComponentProps<typeof XAxis>;
+
+/** "Oct '26": the apostrophe keeps a two-digit year from reading as a day. */
+function formatMonthYearTick(value: unknown): string {
+  if (value == null) return "";
+  const timestamp = typeof value === "number" ? value : Number(value);
+  return Number.isNaN(timestamp) ? String(value) : formatChartDate(timestamp, "compact");
+}
 
 export function TimeXAxis({
   dataKey = "date",
-  locale = "en-US",
-  dateFormat = { month: "short", year: "2-digit" },
-  tickFormatter,
+  tickFormatter = formatMonthYearTick,
   ...props
 }: TimeXAxisProps) {
-  const resolvedTickFormatter = tickFormatter ?? ((value: unknown) => formatDateLabel(value, locale, dateFormat));
-
   return (
     <XAxis
       dataKey={dataKey}
@@ -69,7 +70,7 @@ export function TimeXAxis({
       tickLine={false}
       axisLine={false}
       tickMargin={10}
-      tickFormatter={resolvedTickFormatter}
+      tickFormatter={tickFormatter}
       {...props}
     />
   );

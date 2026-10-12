@@ -15,9 +15,12 @@ import { BlacklistFilters } from "@/components/blacklist-filters";
 import { BlacklistTable } from "@/components/blacklist-table";
 import { TablePagination } from "@/components/table-pagination";
 import { CoinCrossTrackerHatnote } from "@/components/coin-cross-tracker-hatnote";
+import { AlertsHeaderLink } from "@/components/alerts-header-link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
+import { ShareButton } from "@/components/share-button";
 import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
 import { UniverseChip } from "@/components/universe-chip";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { FreezableSupplyMeter } from "@/components/freezewatch/freezable-supply-meter";
 import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
 import { InterventionSeismograph } from "@/components/freezewatch/intervention-seismograph";
@@ -25,6 +28,7 @@ import { SovereigntyLattice } from "@/components/freezewatch/sovereignty-lattice
 import { coinIdBySymbol } from "@/lib/coin-id-by-symbol";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatCurrency } from "@shared/lib/format";
+import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
@@ -134,7 +138,7 @@ export default function FreezeWatchClient() {
   const { freezableMarketCap, freezableCount, freezableShare } = freezableSummary;
   const supplyAvailable = freezableSummary.coverage !== "unavailable";
   // Every active coin with a freeze-control bucket: the hero's coin denominator.
-  const classifiedCount = freezableSummary.ordered.reduce((sum, bucket) => sum + bucket.count, 0);
+  const classifiedCount = freezableSummary.registryCount;
 
   return (
     <FeaturePageShell
@@ -146,8 +150,17 @@ export default function FreezeWatchClient() {
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
       }}
       header="instrument"
+      headerActions={
+        <>
+          <AlertsHeaderLink
+            href="/pharoswatchbot/#getting-started"
+            description="Get Telegram alerts when an issuer freezes, releases, or wipes a tracked stablecoin"
+          />
+          <ShareButton ogPath={API_PATHS.ogPage("freezewatch")} />
+        </>
+      }
       leadParagraphs={[
-        "Live issuer freeze, release, and wipe events, with affected addresses, frozen value, and direct vs. upstream exposure per asset.",
+        "Live issuer freezes, releases, and wipes, with frozen value and direct vs. upstream exposure per asset.",
       ]}
     >
       {focusedCoinId ? (
@@ -181,11 +194,13 @@ export default function FreezeWatchClient() {
             {heroLoading && !heroUnavailable ? (
               <Skeleton className="h-10 w-32" />
             ) : (
-              <p className={HERO_KPI_VALUE_CLASS}>
-                {heroUnavailable || freezableShare === null || freezableSummary.coverage === "unavailable"
-                  ? "—"
-                  : formatShare(freezableShare)}
-              </p>
+              <RailHeroFigureTransition rail="freezewatch">
+                <p className={HERO_KPI_VALUE_CLASS}>
+                  {heroUnavailable || freezableShare === null || freezableSummary.coverage === "unavailable"
+                    ? "—"
+                    : formatShare(freezableShare)}
+                </p>
+              </RailHeroFigureTransition>
             )}
             <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
               of {freezableSummary.coverage === "partial" ? "observed" : "tracked"} stablecoin market cap sits under direct, upstream, or possible issuer freeze control.

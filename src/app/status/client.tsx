@@ -134,7 +134,8 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
 
     content = (
       <div className="space-y-6">
-        <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
+        {/* Verdict and runway first; the operator delivery evidence follows the
+            service summary instead of opening the page. */}
         <PublicStatusHero
           healthData={healthData}
           healthUpdatedAt={healthUpdatedAt ?? 0}
@@ -168,6 +169,8 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
         )}
 
         <PublicServiceSummarySection healthData={healthData} />
+
+        <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
 
         <PublicStatusReliabilitySection
           healthData={healthData}

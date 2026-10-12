@@ -18,7 +18,6 @@ interface FlowDirectionBase {
 interface FlowPressureBase {
   badgeClass: string;
   valueClass: string;
-  headlineClass: string;
   panelClass: string;
 }
 
@@ -115,28 +114,24 @@ const FLOW_PRESSURE_BASE: Record<PressureShiftState, FlowPressureBase> = {
     badgeClass:
       "border-emerald-600/30 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300",
     valueClass: "text-emerald-700 dark:text-emerald-400",
-    headlineClass: "text-emerald-700 dark:text-emerald-300",
     panelClass:
       "border-emerald-600/30 bg-emerald-500/10 dark:border-emerald-500/35 dark:bg-emerald-500/10",
   },
   stable: {
     badgeClass: "border-border/70 bg-muted/40 text-foreground",
     valueClass: "text-foreground",
-    headlineClass: "text-foreground",
     panelClass: "border-border/60 bg-background/55 dark:bg-background/35",
   },
   worsening: {
     badgeClass:
       "border-red-600/30 bg-red-500/10 text-red-700 dark:border-red-500/40 dark:bg-red-500/15 dark:text-red-300",
     valueClass: "text-red-700 dark:text-red-400",
-    headlineClass: "text-red-700 dark:text-red-300",
     panelClass:
       "border-red-600/30 bg-red-500/10 dark:border-red-500/35 dark:bg-red-500/10",
   },
   nr: {
     badgeClass: "border-border/70 bg-muted/40 text-muted-foreground",
     valueClass: "text-muted-foreground",
-    headlineClass: "text-muted-foreground",
     panelClass: "border-border/60 bg-background/35",
   },
 };

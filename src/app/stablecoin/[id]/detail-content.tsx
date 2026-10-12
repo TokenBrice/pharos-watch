@@ -430,8 +430,8 @@ export function DetailContent({
         <div className="min-w-0">
           <div ref={heroRef} className="space-y-4">
             <HeroCard model={heroModel} />
-            <ExploitNoticeBanner notices={viewModel.coin.notices} />
-            <ListingStateBanner coin={viewModel.coin} />
+            {/* A frozen coin leads with its obituary; its past danger notice
+                follows as a muted record so the story is not told in red first. */}
             {viewModel.coin.status === "frozen" && viewModel.coin.obituary && viewModel.coin.frozenAt ? (
               <FrozenStateBanner
                 symbol={viewModel.coin.symbol}
@@ -439,6 +439,11 @@ export function DetailContent({
                 obituary={viewModel.coin.obituary}
               />
             ) : null}
+            <ExploitNoticeBanner
+              notices={viewModel.coin.notices}
+              tone={viewModel.coin.status === "frozen" ? "archive" : "alert"}
+            />
+            <ListingStateBanner coin={viewModel.coin} />
           </div>
           {viewModel.summary ? (
             <div className="mt-4">

@@ -82,6 +82,20 @@ describe("PriceTransparencyCard", () => {
     }
   });
 
+  it.each([false, true])("names the USD basis for a non-USD peg in compact=%s", (compact) => {
+    render(
+      <PriceTransparencyCard
+        coinData={{ ...makeCoinData("coingecko"), pegType: "peggedEUR", price: 1.1187 }}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+        compact={compact}
+      />,
+    );
+    expect(screen.getAllByText(/USD 1\.1187/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\$1\.1187/)).toBeNull();
+  });
+
   it.each([false, true])("separates nominal par from observations in compact=%s", (compact) => {
     render(
       <PriceTransparencyCard

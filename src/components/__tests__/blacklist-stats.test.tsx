@@ -116,12 +116,12 @@ describe("BlacklistStats", () => {
       />,
     );
 
-    expect(screen.getByText("Unfreezable Market Share")).toBeTruthy();
+    expect(screen.getByText("Unfreezable market share")).toBeTruthy();
     expect(screen.getByText("12.5%")).toBeTruthy();
     expect(screen.getByText("2 stablecoins · $30.00B of $240.00B total")).toBeTruthy();
-    expect(screen.getByText("Tracked Frozen Total")).toBeTruthy();
+    expect(screen.getByText("Tracked frozen total")).toBeTruthy();
     expect(screen.getByText("last-known freeze snapshots")).toBeTruthy();
-    expect(screen.getByText("Total Wiped Value")).toBeTruthy();
+    expect(screen.getByText("Total wiped value")).toBeTruthy();
     expect(screen.queryByText("Snapshot Basis")).toBeNull();
     expect(screen.queryByText("Freeze Ledger")).toBeNull();
     expect(screen.queryByText("USDT Blacklisted")).toBeNull();

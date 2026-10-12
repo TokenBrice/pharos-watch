@@ -46,6 +46,38 @@ describe("DigestSnapshot", () => {
     expect(screen.getByText(`${majorLabel} distribution: A 1, B 2`)).toBeTruthy();
   });
 
+  it("prints rounded scores, labelled reason codes and duplicate symbols without debug syntax", () => {
+    const { safetyScoreIdentity } = makeReportCardsV9Response();
+    const coin = {
+      symbol: "USDA",
+      grade: "C",
+      score: 47.81,
+      pillars: { backing: { score: 53.239999999999995 }, exit: { score: 42.54 }, control: { score: 60 } },
+      reasonCodes: ["missing-reserve-composition"],
+      caps: [],
+      bindingCap: null,
+    };
+    mockSnapshot({
+      totalMcapUsd: 250_000_000_000,
+      safetyScores: {
+        model: "v9",
+        mentionedCoins: [coin, { ...coin, score: 30 }],
+        gradeDistribution: { C: 2 },
+        provenance: { ...safetyScoreIdentity, methodologyVersion: "10.0", publishedAt: 1_756_684_800 },
+      },
+      yieldAnomalies: [{ symbol: "USDA", currentApy: 12.345678, apy7d: 10, apy30d: 8.5, warnings: ["negative-trend"], mcapUsd: 1 }],
+    });
+
+    const { container } = render(<DigestSnapshot date="2026-09-01" />);
+    const text = container.textContent ?? "";
+
+    expect(text).toContain("backing 53.2, exit 42.5, control 60");
+    expect(text).toContain("Reserve composition not published");
+    expect(text).toContain("12.35% APY");
+    expect(text).toContain("Negative trend");
+    expect(text).not.toMatch(/=|missing-reserve-composition|negative-trend/);
+  });
+
   it("keeps the edition's captured depeg count when the day-overlap query returns other episodes", () => {
     mockSnapshot(
       {

@@ -506,8 +506,6 @@ export function DetailRiskContextSections({
                 publicationHealth={reportCardsResponse.publicationHealth}
                 updatedAtMs={viewModel.reportCardUpdatedAt}
                 stablecoinName={viewModel.coin.name}
-                stablecoinSymbol={viewModel.coin.symbol}
-                logoSrc={viewModel.logoSrc}
                 evidenceAnchors={evidenceAnchors}
               />
             ) : null}
@@ -582,7 +580,7 @@ export function DetailRiskContextSections({
         {viewModel.hasFlows ? (
           <>
             {frozenNote}
-            <LazySection minHeight={320}>
+            <LazySection minHeight={440}>
               <FlowsSection stablecoinId={viewModel.id} hasFlows={viewModel.hasFlows} />
             </LazySection>
           </>

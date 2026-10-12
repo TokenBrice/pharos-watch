@@ -41,7 +41,7 @@ export function DetailHistoryExploreSections({
         <section id="coin-timeline" aria-label="Coin event timeline" className="xl:hidden">
           <TapeForCoinTeaser coinId={viewModel.id} />
         </section>
-        <LazySection minHeight={360}>
+        <LazySection minHeight={390}>
           <HistoryTabs
             stablecoinId={viewModel.id}
             isNavToken={viewModel.isNavToken}
@@ -54,7 +54,7 @@ export function DetailHistoryExploreSections({
           />
         </LazySection>
         {viewModel.hasFlows ? (
-          <LazySection minHeight={320}>
+          <LazySection minHeight={340}>
             <FlowHistorySection stablecoinId={viewModel.id} />
           </LazySection>
         ) : null}

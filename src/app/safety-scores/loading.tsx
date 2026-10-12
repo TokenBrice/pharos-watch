@@ -1,19 +1,14 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageLoadingStatGrid } from "@/components/page-loading-skeleton";
+import { PageLoadingSplitHero } from "@/components/page-loading-skeleton";
 import { createPageLoadingRoute } from "@/app/page-loading-route";
 
-// Analytics tier: headline stats strip, distribution band, then ~12 graded rows.
+// Analytics tier: split instrument hero, filter band, then ~12 graded rows.
 const SAFETY_SKELETON_ROW_COUNT = 12;
 
 export function SafetyScoresContentLoadingState() {
   return (
     <>
-      <PageLoadingStatGrid
-        count={4}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
-        labelWidth="w-24"
-        valueWidth="w-20"
-      />
+      <PageLoadingSplitHero visualClassName="h-48 lg:h-auto" />
 
       <div className="pharos-card-shell space-y-3 p-4">
         <Skeleton className="h-3.5 w-32 rounded-sm" />

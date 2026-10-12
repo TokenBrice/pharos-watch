@@ -69,7 +69,7 @@ The active frontend operator mode is now:
   - a compact `Credentials` lifecycle summary (`src/components/status/credential-summary-card.tsx`): active, expiring-soon, expired, and non-expiring counts plus a 7-day rotate/deactivate audit-anomaly count, served by the counts-only `/api/api-keys/lifecycle-summary` endpoint with the same predicates as the API Management summary. It renders counts only — no rows, editors, or mutations — and links lifecycle work to `/admin-api/`. Missing evidence renders as `Unknown`, never zero.
 - `/admin/` disables indexing (`robots: { index: false, follow: false }`)
 - `/status/` stays read-only, uses only public read endpoints, and is public/indexable through its route metadata and sitemap entry
-- The public `/status/` top fold uses `PublicStatusHero`: a headline row with health/probe fetch-freshness indicators and refresh control, conditional warning paragraph, four-metric strip, and compact metadata footer.
+- The public `/status/` top fold uses `PublicStatusHero`: a headline row with health/probe fetch-freshness indicators and refresh control, conditional warning paragraph, four-metric strip, and compact metadata footer. The verdict hero and uptime runway lead; the shared `Scheduled delivery` card follows the public service summary, with the same locale timestamps as the rest of the page (ISO instant in the tooltip).
 - The public `/status/` top fold also keeps the `Status runway` explicitly fixed to the last 30 days; the `24h` / `7d` / `30d` pills now belong only to the transition log below so filter changes do not silently reframe the hero summary
 - `src/components/status/public-status-hero.tsx`
   - Renders the public-monitor hero with:

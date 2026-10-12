@@ -61,6 +61,33 @@ export function PageLoadingStatGrid({
   );
 }
 
+/**
+ * Placeholder shaped like the rail-page split hero (`FeatureHeroSplit`,
+ * `DepegOutlookHero`): answer KPI + universe chip and sub rows on the left,
+ * the drawn visual on the right, so a cold load does not jump layouts.
+ */
+export function PageLoadingSplitHero({ visualClassName }: { visualClassName: string }) {
+  return (
+    <div className="pharos-card-shell grid grid-cols-1 overflow-hidden lg:grid-cols-3">
+      <div className="space-y-5 border-b border-border/50 p-5 sm:p-6 lg:border-b-0 lg:border-r lg:p-7">
+        <div className="space-y-2.5">
+          <Skeleton className="h-3.5 w-28 rounded-sm" />
+          <Skeleton className="h-10 w-32 rounded-md" />
+          <Skeleton className="h-6 w-40 rounded-full" />
+        </div>
+        <div className="space-y-2 border-t border-border/50 pt-4">
+          <Skeleton className="h-3 w-24 rounded-sm" />
+          <Skeleton className="h-4 w-full rounded-sm" />
+          <Skeleton className="h-4 w-4/5 rounded-sm" />
+        </div>
+      </div>
+      <div className={cn("p-5 sm:p-6 lg:col-span-2 lg:p-7", visualClassName)}>
+        <Skeleton className="h-full w-full rounded-md" variant="shimmer" />
+      </div>
+    </div>
+  );
+}
+
 export function PageLoadingChartBlock({
   className,
   shimmer = false,

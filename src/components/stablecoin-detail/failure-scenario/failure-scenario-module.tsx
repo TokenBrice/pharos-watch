@@ -50,6 +50,28 @@ const CHIP_CLASS = "text-2xs font-medium";
 const NEUTRAL_CHIP_CLASS = cn(CHIP_CLASS, SEVERITY_TONE_CLASS.neutral.pill);
 const SUBHEADING_CLASS = "text-sm font-semibold tracking-tight text-foreground";
 
+/** A figure-bearing token (digit or currency sign) or a ticker stays mono; words read in sans. */
+const MONO_TOKEN = /[\d$€£¥]|^[A-Z][A-Z0-9]{1,5}$/;
+
+/**
+ * Key figures mix numbers and words ("48 hours", "7.04bn SKY", "No surplus").
+ * Mono is for the figure token only; the authored casing is kept, never
+ * uppercased.
+ */
+function ScenarioFigureValue({ value }: { value: string }) {
+  const tokens = value.trim().split(/\s+/);
+  return (
+    <>
+      {tokens.map((token, index) => (
+        <span key={index} className={MONO_TOKEN.test(token) ? "pharos-numeric" : undefined}>
+          {index > 0 ? " " : ""}
+          {token}
+        </span>
+      ))}
+    </>
+  );
+}
+
 /**
  * Verdicts on who could stop the path. "Cannot stop it" is the one place the
  * scenario takes the error tone (owner ruling): it is the module's finding,
@@ -370,9 +392,9 @@ export function FailureScenarioModule({ selection }: { selection: FailureScenari
         items={scenario.keyFigures.map((figure) => ({
           key: `${figure.value}:${figure.label}`,
           label: figure.label,
-          value: figure.value,
-          valueStyle: "figure",
-          valueClassName: "text-foreground text-base",
+          value: <ScenarioFigureValue value={figure.value} />,
+          valueStyle: "text",
+          valueClassName: "text-foreground text-base font-semibold",
           title: EVIDENCE_LABEL[figure.evidence],
         }))}
       />

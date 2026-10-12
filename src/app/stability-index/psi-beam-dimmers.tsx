@@ -95,7 +95,7 @@ export function PsiBeamDimmers({
       <div className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5", isCompact ? "mb-2.5" : "mb-3")}>
         <div className="min-w-0">
           <p id="psi-beam-dimmers-heading" className="pharos-label">
-            Beam Dimmers · Component pressure &amp; trend
+            Beam dimmers · component pressure &amp; trend
           </p>
           <p className="mt-0.5 max-w-md text-2xs leading-snug text-muted-foreground">
             {hasTrend

@@ -5,6 +5,7 @@ import { LockKeyhole } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DdrFactor, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import {
+  formatDdrDirection,
   formatDurationSec,
   getDuration,
   getLiveCurrentDeviationBps,
@@ -121,7 +122,6 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
   const insufficient = tier === "insufficient_signal";
   const showTension = factors.length > 0 && !insufficient;
   const chronic = duration.ageStatus === "chronic_tail";
-  const dirGlyph = row.direction === "below" ? "▼" : "▲";
   const currentDeviationBps = getLiveCurrentDeviationBps(row);
   const pegRatioLabel =
     currentDeviationBps != null
@@ -137,8 +137,8 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
             the direction chip never wraps differently between sibling cards. */}
         <div className="flex items-center justify-between gap-x-3">
           <CoinLockup row={row} logos={logos} logoSize={52} />
-          <span className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase text-muted-foreground">
-            {dirGlyph} {row.direction} {row.pegCurrency}
+          <span className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground">
+            {formatDdrDirection(row)}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -147,7 +147,7 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           ) : null}
           <span className="inline-flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1">
             <span className={cn("h-2 w-2 shrink-0 rounded-full", NOW_DOT_TONE[tier])} aria-hidden="true" />
-            <span className={cn("text-sm font-bold uppercase leading-none", meta.accent)}>{meta.label}</span>
+            <span className={cn("text-sm font-bold leading-none", meta.accent)}>{meta.label}</span>
             {frozen ? (
               /* The chip itself opens the contextual-methodology popover —
                  "frozen" reads as "stale/broken" without an explainer. */
@@ -169,11 +169,11 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
 
         {/* Prediction facts (band + comparison stratum) — quiet caption under the hero */}
         {showBand ? (
-          <p className="pharos-meta pharos-numeric flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <p className="pharos-meta flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             {duration.iqrSec ? (
               <span>
-                band{" "}
-                <span className="text-foreground/80">
+                Typical range{" "}
+                <span className="pharos-numeric text-foreground/80">
                   {formatDurationSec(duration.iqrSec[0])}–{formatDurationSec(duration.iqrSec[1])}
                 </span>
               </span>
@@ -238,8 +238,9 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
               <span className="pharos-label group-hover:text-foreground">
                 Will it recover?
               </span>
-              <span className="pharos-meta pharos-numeric">
-                {kills.length} kill · {anchors.length} anchor
+              <span className="pharos-meta">
+                <span className="pharos-numeric">{kills.length}</span> kill {kills.length === 1 ? "signal" : "signals"} ·{" "}
+                <span className="pharos-numeric">{anchors.length}</span> {anchors.length === 1 ? "anchor" : "anchors"}
               </span>
               <span className="ml-auto hidden w-24 shrink-0 sm:block">
                 <SignalPull killWeight={killWeight} anchorWeight={anchorWeight} />

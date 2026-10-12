@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { CAUSE_HEX, CAUSE_HEX_DARK, CAUSE_META } from "@shared/lib/cause-of-death";
 import type { StablecoinObituary } from "@shared/types";
 
@@ -33,10 +32,10 @@ export function FrozenStateBanner({ symbol, frozenAt, obituary }: FrozenStateBan
         className="absolute inset-x-0 top-0 h-[3px] bg-[var(--cause-hex)] dark:bg-[var(--cause-hex-dark)]"
         style={causeColorVars}
       />
-      <div className="pharos-eyebrow flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span aria-hidden="true">In Memoriam</span>
+      <div className="pharos-label flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span aria-hidden="true">In memoriam</span>
         <span aria-hidden="true" className="text-muted-foreground/50">·</span>
-        <span className={cn("normal-case", cause.textColor)}>{cause.label}</span>
+        <span className={cause.textColor}>{cause.label}</span>
       </div>
       <h2
         id={epitaphId}

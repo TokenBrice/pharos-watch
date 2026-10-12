@@ -551,7 +551,8 @@ export function YieldScatterPlot({
                           value: usesDefaultBenchmarkFrame
                             ? `${resolvedBenchmarkLabel} frame ${benchmarkRate.toFixed(2)}%`
                             : `${resolvedBenchmarkLabel} ${benchmarkRate.toFixed(2)}%`,
-                          position: "right",
+                          // Inside the plot: "right" sits in the narrow right margin and clips to one letter.
+                          position: "insideTopRight",
                           fill: CHART_SLATE,
                           fontSize: 13,
                           fontWeight: 600,

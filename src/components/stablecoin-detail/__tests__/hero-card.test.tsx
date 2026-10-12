@@ -409,6 +409,16 @@ describe("HeroCard", () => {
     }
   });
 
+  it.each(["card", "cell"] as const)("labels a frozen archive's %s price as its last observation, not a live peg reading", (variant) => {
+    const html = renderToStaticMarkup(<HeroPriceMetric
+      coin={{ ...coin, status: "frozen", frozenAt: "2026-06-30" }}
+      coinData={{ ...coinData, price: 0.9997 }}
+      price={{ pegRef: 1, deviationBps: null, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      variant={variant}
+    />);
+    expect(html).toContain("Last observed · 2026-06-30");
+  });
+
   it("renders website and social link destinations with accessible names", () => {
     const html = renderHero();
 

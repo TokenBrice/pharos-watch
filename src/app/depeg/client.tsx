@@ -316,6 +316,7 @@ export function DepegClient() {
       <DepegOutlookHero
         stats={pegData?.summary}
         activeDepegIds={activeDepegIds}
+        catalogCount={pegData?.coins ? pegData.coins.length : null}
         pendingCount={eventsData ? pendingIncidents.length : null}
         dewsAlertCount={dewsAlertCount}
         book={resolverEnabled ? resolverBook : null}

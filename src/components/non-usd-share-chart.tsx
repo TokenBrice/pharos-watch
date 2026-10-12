@@ -149,7 +149,7 @@ export function NonUsdShareChart({
       data={chartData}
       tsKey="ts"
       isLoading={isLoading}
-      title="Share Of Total Stablecoin Market Outside USD"
+      title="Share of total stablecoin market outside USD"
       loadingTitle="Non-USD Market Share"
       subtitle={
         latestTotal != null && latestTotal > 0 ? (

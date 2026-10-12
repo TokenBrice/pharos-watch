@@ -60,16 +60,19 @@ function HeroMetricRow({
   label,
   value,
   detail,
+  numeric = true,
 }: {
   label: string;
   value: string;
   detail: string;
+  /** Word values (a pillar name) stay in sans; mono is for figures only. */
+  numeric?: boolean;
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-2">
       <span className="min-w-0 truncate text-sm text-muted-foreground">{label}</span>
       <span className="shrink-0 text-right">
-        <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
+        <span className={cn("text-sm font-semibold text-foreground", numeric && "pharos-numeric")}>{value}</span>
         <span className="ml-2 text-2xs text-muted-foreground">{detail}</span>
       </span>
     </div>
@@ -131,7 +134,7 @@ export function SafetyScoresHero({
               <HeroMetricRow label={abSupply.label} value={abSupply.value} detail={abSupply.detail} />
             ) : null}
             {weakest ? (
-              <HeroMetricRow label={weakest.label} value={weakest.value} detail={weakest.detail} />
+              <HeroMetricRow label={weakest.label} value={weakest.value} detail={weakest.detail} numeric={false} />
             ) : null}
           </div>
         ) : null

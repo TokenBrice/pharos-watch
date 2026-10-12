@@ -28,6 +28,7 @@ import {
   prepareYieldUniverse,
   RISK_BUDGET_FILTER_KEYS,
   riskBudgetUrlValue,
+  selectTopPysRows,
   selectVisibleYieldRows,
   YIELD_LANDING_RISK_BUDGET,
   YIELD_PRESET_SPECS,
@@ -37,6 +38,7 @@ import {
   type YieldViewModel,
   type YieldViewModelRow,
 } from "@/lib/yield-view-model";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_ZONE_LABELS } from "@shared/lib/classification";
 import { resolveYieldZone } from "@/lib/yield-scatter";
@@ -301,12 +303,7 @@ export function YieldClient() {
   // The hero KPI is the headline APY of the best
   // risk-adjusted opportunity in the current view — the row with the highest
   // Pharos Yield Score, not the highest raw APY.
-  const topPysRows = useMemo<YieldViewModelRow[]>(() => {
-    return visibleRows
-      .filter((row) => row.pharosYieldScore != null)
-      .sort((a, b) => (b.pharosYieldScore ?? 0) - (a.pharosYieldScore ?? 0))
-      .slice(0, 3);
-  }, [visibleRows]);
+  const topPysRows = useMemo<YieldViewModelRow[]>(() => selectTopPysRows(visibleRows), [visibleRows]);
   const topPysRow = topPysRows[0] ?? null;
 
   const handleScrollToRow = useCallback((id: string) => {
@@ -528,7 +525,9 @@ export function YieldClient() {
             beamValue={
               topPysRow ? (
                 <span className="flex w-full items-end justify-between gap-2">
-                  <span>{formatPercent(topPysRow.apy30d)}</span>
+                  <RailHeroFigureTransition rail="yield">
+                    <span>{formatPercent(topPysRow.apy30d)}</span>
+                  </RailHeroFigureTransition>
                   <HeroPysPodium rows={topPysRows} logos={logos} onSelect={handleScrollToRow} />
                 </span>
               ) : (

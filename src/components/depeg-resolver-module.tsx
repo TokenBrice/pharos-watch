@@ -63,8 +63,9 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
           />
         </div>
         {lineage ? (
-          <p className="pharos-numeric text-3xs text-muted-foreground">
-            calibrated on {lineage.incidentCount.toLocaleString()} recovered incidents · {lineage.coinCount} coins
+          <p className="text-2xs text-muted-foreground">
+            Calibrated on <span className="pharos-numeric">{lineage.incidentCount.toLocaleString()}</span> recovered
+            incidents · <span className="pharos-numeric">{lineage.coinCount}</span> coins
           </p>
         ) : null}
       </div>

@@ -26,6 +26,7 @@ import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-regi
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
 import { formatCurrency, timeAgo } from "@shared/lib/format";
+import { normalizePegType } from "@shared/lib/peg-rates";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
 interface PriceTransparencyCardProps {
@@ -43,6 +44,17 @@ interface SourceInfo {
 
 function formatSourceDepthTargetLabel(sourceCount: number): string {
   return sourceCount >= 3 ? "3+/3" : `${sourceCount}/3`;
+}
+
+/**
+ * Every price on this card (consensus, DEX check, par reference) is USD. A
+ * non-USD peg's hero prints its native price ("EUR 0.9996"), so the USD basis
+ * is spelled out as an ISO prefix here instead of a bare `$` that reads as a
+ * 12% gap beside the hero.
+ */
+function formatUsdPrice(price: number, pegType: string): string {
+  const fixed = price.toFixed(4);
+  return normalizePegType(pegType) === "peggedUSD" ? `$${fixed}` : `USD ${fixed}`;
 }
 
 function formatCompactUpdatedAt(epochSec: number | null | undefined): string | null {
@@ -336,7 +348,7 @@ export function PriceTransparencyCard({
   );
   const nominalReferenceNote = nominalReference ? (
     <p className="text-sm text-muted-foreground">
-      Nominal par reference: ${nominalReference.price.toFixed(4)} ({nominalReference.source}). Not an observed price or a live redemption quote.
+      Nominal par reference: {formatUsdPrice(nominalReference.price, coinData.pegType)} ({nominalReference.source}). Not an observed price or a live redemption quote.
     </p>
   ) : null;
   const isProtocolRedeem = observed && isPricingSourceProtocolOverride(coinData.priceSource);
@@ -388,7 +400,7 @@ export function PriceTransparencyCard({
   // next to the word "Disagrees". `CircleCheck`/`TriangleAlert` is the house
   // severity glyph vocabulary (`src/components/severity-icon.tsx`).
   const DexAgreementIcon = dexPriceCheck?.agrees ? CircleCheck : TriangleAlert;
-  const priceLabel = !hasNoPrice && coinData.price != null ? `$${coinData.price.toFixed(4)}` : "N/A";
+  const priceLabel = !hasNoPrice && coinData.price != null ? formatUsdPrice(coinData.price, coinData.pegType) : "N/A";
   const rawConfidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
   // Sentence case: multi-word values never render as caps (three-register rule).
   const confidenceLabel = rawConfidenceLabel.charAt(0).toUpperCase() + rawConfidenceLabel.slice(1);
@@ -444,7 +456,7 @@ export function PriceTransparencyCard({
               </Badge>
             </div>
             <p className="mt-3 font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
-              ${dexPriceCheck.dexPrice.toFixed(4)}
+              {formatUsdPrice(dexPriceCheck.dexPrice, coinData.pegType)}
             </p>
             <p className="pharos-label mt-2">
               {formatCurrency(dexPriceCheck.sourceTvl)} TVL
@@ -549,11 +561,11 @@ export function PriceTransparencyCard({
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground">
-                {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"} · ${(dexPriceCheck.sourceTvl / 1e6).toFixed(1)}M TVL
+                {dexPriceCheck.sourcePools} price {dexPriceCheck.sourcePools === 1 ? "source" : "sources"} · {formatCurrency(dexPriceCheck.sourceTvl)} TVL
               </span>
             </div>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="font-mono font-medium">${dexPriceCheck.dexPrice.toFixed(4)}</span>
+              <span className="font-mono font-medium">{formatUsdPrice(dexPriceCheck.dexPrice, coinData.pegType)}</span>
               <span className="text-xs text-muted-foreground">
                 {Math.abs(dexPriceCheck.dexDeviationBps).toFixed(1)} bps deviation
               </span>

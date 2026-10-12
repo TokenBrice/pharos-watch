@@ -91,7 +91,7 @@ export function DetailLiquidityActivitySections({
         <section id="dex-liquidity">
           {frozenNote}
           <SectionErrorBoundary name="liquidity">
-            <LazySection minHeight={360}>
+            <LazySection minHeight={480}>
               <DexLiquidityCard stablecoinId={viewModel.id} />
             </LazySection>
           </SectionErrorBoundary>
@@ -120,7 +120,7 @@ export function DetailLiquidityActivitySections({
           <div>
             {frozenNote}
             <SectionErrorBoundary name="blacklist">
-              <LazySection minHeight={320}>
+              <LazySection minHeight={480}>
                 <BlacklistSection stablecoinId={viewModel.id} symbol={viewModel.blacklistSymbol!} />
               </LazySection>
             </SectionErrorBoundary>

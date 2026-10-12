@@ -9,6 +9,7 @@ import {
   CHART_TICK_FONT_SIZE,
 } from "@/lib/chart-theme";
 import { cn } from "@/lib/utils";
+import { formatChartDate } from "@shared/lib/format";
 
 // ---------------------------------------------------------------------------
 // IDEA-15 — Standalone static axis frame for partial chart render
@@ -269,13 +270,9 @@ export function ChartShellSkeleton({
   );
 }
 
-const DEFAULT_TIME_TICK_FMT = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  year: "2-digit",
-});
-
+/** Matches the live `<TimeXAxis>` default ("Oct '26"). */
 function defaultTimeTickFormatter(timestamp: number): string {
-  return DEFAULT_TIME_TICK_FMT.format(new Date(timestamp));
+  return formatChartDate(timestamp, "compact");
 }
 
 const DEFAULT_PLACEHOLDER_DAYS = 90;

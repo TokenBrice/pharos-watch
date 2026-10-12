@@ -133,10 +133,6 @@ export interface StablecoinSafetyScoreV9CardProps {
   publicationHealth: V9PublicationHealth;
   updatedAtMs: number | null;
   stablecoinName?: string;
-  /** Ticker for the header lockup — this module is the site's most-screenshotted
-   *  surface, so it names its subject instead of relying on page context. */
-  stablecoinSymbol?: string;
-  logoSrc?: string;
   /** Which pillar evidence boards the page renders; omitted, every pillar row links to its board. */
   evidenceAnchors?: PillarEvidenceAnchors;
 }
@@ -147,8 +143,6 @@ export function StablecoinSafetyScoreV9Card({
   publicationHealth,
   updatedAtMs,
   stablecoinName,
-  stablecoinSymbol,
-  logoSrc,
   evidenceAnchors,
 }: StablecoinSafetyScoreV9CardProps) {
   const presentation = buildStablecoinSafetyScoreV9Presentation(card);
@@ -157,13 +151,8 @@ export function StablecoinSafetyScoreV9Card({
     <Card className={DETAIL_MODULE_SHELL_CLASS} data-safety-model="v9">
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <StablecoinModuleTitle
-            className={DETAIL_MODULE_TITLE_CLASS}
-            symbol={stablecoinSymbol}
-            logoSrc={logoSrc}
-          >
-            Safety Score
-          </StablecoinModuleTitle>
+          {/* No coin prefix: the dossier hero and rail already name the coin. */}
+          <StablecoinModuleTitle className={DETAIL_MODULE_TITLE_CLASS}>Safety Score</StablecoinModuleTitle>
           <HeldPublicationChip health={publicationHealth} />
           {card.partialEvidence !== null ? <PartialEvidenceChip partialEvidence={card.partialEvidence} /> : null}
         </div>

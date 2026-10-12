@@ -7,13 +7,13 @@ export const content: ArchetypeContent = {
     "Protocol-level supply rules and arbitrage defend the peg; current designs can hold real collateral, unlike historical pure mint/burn systems.",
   lead: [
     "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI holds FRAX reserves and uses AMOs, USDD 2.0 combines collateralized vaults with Peg Stability Modules, and ZSD enforces a reserve-ratio floor against ZEPH collateral. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
-    "Pharos taxonomy no longer treats `algorithmic` as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The walkthrough below covers the historical pure mint/burn variant, exemplified by UST/LUNA, not the reserve mechanics of FPI, USDD 2.0, or ZSD. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
+    "Pharos taxonomy no longer treats algorithmic as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The walkthrough below covers the historical pure mint/burn variant, exemplified by UST/LUNA, not the reserve mechanics of FPI, USDD 2.0, or ZSD. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
   ],
   howItWorks: [
     {
       id: "burn-governance-token",
       title: "Historical pure mint/burn: burn governance token",
-      body: "In the UST/LUNA-style variant, a user burns a governance token of value `V`, and the protocol mints `V` worth of stablecoin. There is no segregated 1:1 collateral: the loop relies on the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for `V` of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
+      body: "In the UST/LUNA-style variant, a user burns governance tokens worth a given dollar value, and the protocol mints that same value of stablecoin. There is no segregated 1:1 collateral: the loop relies on the governance-token market float, itself partly determined by the stablecoin's success. The reverse trip exists too: redeem the stablecoin for the same value of newly minted governance token. Pharos now tracks this as mint-authority and mechanism risk rather than a FreezeWatch freeze tier.",
     },
     {
       id: "historical-mint-burn-arbitrage",
@@ -29,7 +29,7 @@ export const content: ArchetypeContent = {
   riskProfile: [
     {
       headline: "Reflexive collapse / death spiral",
-      body: "Terra/UST went from $1 to roughly $0.10 over four days between May 9 and May 13, 2022; LUNA went from above $80 to fractions of a cent across the same window. Roughly $40 billion of combined market value evaporated. The mechanism worked exactly as designed under normal conditions, and exactly as critics had predicted under coordinated stress. UST is retained as a Pharos shadow asset and replays through `/methodology/stability-index-changelog/` so the May 2022 event remains visible in PSI history.",
+      body: "Terra/UST went from $1 to roughly $0.10 over four days between May 9 and May 13, 2022; LUNA went from above $80 to fractions of a cent across the same window. Roughly $40 billion of combined market value evaporated. The mechanism worked exactly as designed under normal conditions, and exactly as critics had predicted under coordinated stress. UST is retained as a Pharos shadow asset and replays through the Stability Index changelog so the May 2022 event remains visible in PSI history.",
     },
     {
       headline: "Pure mint/burn arbitrage breakdown",
@@ -47,11 +47,11 @@ export const content: ArchetypeContent = {
   representativeCoins: [
     {
       coinId: "usdd-tron-dao-reserve",
-      note: "TRON DAO Reserve's stablecoin. USDD 2.0 mints against TRX and sTRX vaults with a CDP-style minimum collateral ratio, and operates USDT/USDC Peg Stability Modules on TRON and Ethereum. Reserves also include the Smart Allocator deployment of stablecoin reserves into Aave and JustLend. Structurally a CDP-plus-PSM hybrid today; classified `algorithmic` on Pharos because of the system's depeg history and retained privileged mint authority.",
+      note: "TRON DAO Reserve's stablecoin. USDD 2.0 mints against TRX and sTRX vaults with a CDP-style minimum collateral ratio, and operates USDT/USDC Peg Stability Modules on TRON and Ethereum. Reserves also include the Smart Allocator deployment of stablecoin reserves into Aave and JustLend. Structurally a CDP-plus-PSM hybrid today; classified as algorithmic on Pharos because of the system's depeg history and retained privileged mint authority.",
     },
     {
       coinId: "fpi-frax",
-      note: "Frax's CPI-pegged unit-of-account. Backed 100% by FRAX with AMOs deployed for yield; when AMO yield falls below the prevailing CPI rate, the protocol sells newly minted FPIS via a time-weighted AMM (TWAMM) to top up the treasury. Pegged to U.S. CPI rather than a fixed dollar (`pegCurrency: VAR`, `navToken` flag), so peg deviation is measured against CPI growth rather than $1.",
+      note: "Frax's CPI-pegged unit-of-account. Backed 100% by FRAX with AMOs deployed for yield; when AMO yield falls below the prevailing CPI rate, the protocol sells newly minted FPIS via a time-weighted AMM (TWAMM) to top up the treasury. Pegged to U.S. CPI rather than a fixed dollar (Pharos tracks it as a variable-peg NAV token), so peg deviation is measured against CPI growth rather than $1.",
     },
     {
       coinId: "hbd-hive",
@@ -76,14 +76,14 @@ export const content: ArchetypeContent = {
     {
       id: "cdp-psm-hybrids",
       title: "CDP-plus-PSM hybrids retained under the label",
-      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module, close to the `cdp` archetype in mechanism, but it is classified `algorithmic` because of its depeg history and privileged mint path. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
+      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module, close to the CDP archetype in mechanism, but it is classified as algorithmic because of its depeg history and privileged mint path. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
     },
   ],
   whatToWatch: [
     "Active depeg cap on the Safety Score. Algorithmic designs that trade meaningfully below peg are hard-capped at D (≥10% deviation) or F (≥25% deviation).",
-    "DEWS supply-velocity signal on `/depeg`. Algorithmic designs frequently trigger this sub-signal first; contraction in circulating supply is the on-chain symptom of the burn-and-redeem loop running against the peg.",
+    "DEWS supply-velocity signal on the Depeg Tracker. Algorithmic designs frequently trigger this sub-signal first; contraction in circulating supply is the on-chain symptom of the burn-and-redeem loop running against the peg.",
     "Mint Authority review. Most coins under this archetype retain privileged mint authority; sudden mint bursts and admin-key activity are supply-control risk rather than holder-freeze events.",
-    "PegScore and the 7-day deviation chart on `/stablecoin/[id]/`. The composite peg score caps lower for chronic deviators, and the chart shows whether a depeg actually closed or just went stale at a discount.",
+    "PegScore and the 7-day deviation chart on each coin page. The composite peg score caps lower for chronic deviators, and the chart shows whether a depeg actually closed or just went stale at a discount.",
     "PSI Top Contributors table. Chronic depegs decay through the PSI factor floor (0.25 after roughly 120 days), so a long-running algorithmic depeg is downweighted in the system-wide stability index rather than amplified.",
     "Live Reserve view where available. USDD exposes a 4-hourly collateral mix (TRX, sTRX, Smart Allocator, USDT PSM); FPI exposes its FRAX reserve and FPIS-sale state. Quarterly snapshots are too coarse for this design family.",
   ],
@@ -110,7 +110,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/cemetery/",
-      label: "/cemetery obituaries, including UST and earlier algorithmic designs",
+      label: "Cemetery obituaries, including UST and earlier algorithmic designs",
     },
     {
       href: "/learn/mechanisms/cdp/",

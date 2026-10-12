@@ -66,7 +66,7 @@ const route = createClientFeaturePage({
       <JsonLdScript json={safeJsonLd(buildPublicDatasetMirrorJsonLd("depeg-history"))} />
     ),
     leadParagraphs: [
-      "A live incident board for stablecoin depegs: confirmed deviations, pending confirmations, and early stress warnings, with forecasts for how each incident should resolve.",
+      "Live stablecoin depegs, pending confirmations, and early stress warnings, with recovery forecasts.",
     ],
   },
   afterClient: (

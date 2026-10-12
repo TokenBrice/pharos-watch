@@ -89,11 +89,11 @@ export const content: ArchetypeContent = {
     },
   ],
   whatToWatch: [
-    "DEWS on /depeg. Synthetic-delta-neutral tokens have full Depeg Early Warning System coverage; Pool Balance Drift, Liquidity Erosion, and Mint/Burn Flow signals fire early when an unwind begins.",
-    "Live Reserve panel on /stablecoin/usde-ethena/ and equivalents. It shows the live mix of stablecoins, BTC, ETH/LST, and the CEX venue distribution of the short legs.",
+    "DEWS on the Depeg Tracker. Synthetic-delta-neutral tokens have full Depeg Early Warning System coverage; Pool Balance Drift, Liquidity Erosion, and Mint/Burn Flow signals fire early when an unwind begins.",
+    "Live Reserve panel on the USDe coin page and equivalents. It shows the live mix of stablecoins, BTC, ETH/LST, and the CEX venue distribution of the short legs.",
     "Custody and venue posture on the report card. CEX-based strategies and fully on-chain lending strategies have different control, oracle, and failure domains.",
     "Redemption Backstop cooldown and holder eligibility. Most synthetic dollars enforce a multi-day cooldown; the backstop card surfaces the settlement delay and the verified-customer holder eligibility tier.",
-    "Mint/Burn Bank Run Gauge on /flows. A sustained burn surge against zero mints during a market-down move is the on-chain footprint of an active redemption queue against the delta-neutral book.",
+    "Mint/Burn Bank Run Gauge on the Flows page. A sustained burn surge against zero mints during a market-down move is the on-chain footprint of an active redemption queue against the delta-neutral book.",
     "Wrapper peg reference. sUSDe inherits its peg reference from USDe, so a severe downside depeg on the parent propagates as output-asset impairment on the wrapper's Redemption Backstop card.",
   ],
   crossLinks: [

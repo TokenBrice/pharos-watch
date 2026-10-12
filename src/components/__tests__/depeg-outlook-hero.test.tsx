@@ -44,6 +44,20 @@ describe("DepegOutlookHero source availability", () => {
   });
 });
 
+describe("DepegOutlookHero universe chip", () => {
+  it("names the peg catalog size when the summary was read, and only the set otherwise", () => {
+    const read = renderToStaticMarkup(
+      <DepegOutlookHero stats={observedZero} catalogCount={249} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} />,
+    );
+    expect(read).toContain("249 coins");
+    const unread = renderToStaticMarkup(
+      <DepegOutlookHero stats={undefined} catalogCount={null} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} />,
+    );
+    expect(unread).toContain("Peg catalog");
+    expect(unread).not.toContain("coins<");
+  });
+});
+
 describe("DepegOutlookHero current forecast posture", () => {
   it("excludes invalidated original outcomes and non-prediction rows from recovery outlook", () => {
     const valid = makeFrozenDdrV2Row(makeDdrSourceRow({ resolution: { tier: "recovery_likely", factors: [] } }));

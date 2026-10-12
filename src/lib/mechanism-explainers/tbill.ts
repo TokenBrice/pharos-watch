@@ -87,7 +87,7 @@ export const content: ArchetypeContent = {
     "NAV-tag treatment on the peg table. Coins flagged as NAV tokens show \"NAV\" rather than bps in the peg-deviation column, because per-token price is supposed to drift.",
     "Reserve composition on the detail page. These should be majority Treasuries, repos, and cash, the slices V10 Backing grades as lowest-risk. Anything else is unusual.",
     "Redemption Backstop route family. Most NAV tokens show off-chain issuer routing with bank-wire settlement; watch the settlement delay, daily redemption cap, minimum redeem size, and holder eligibility tier.",
-    "Yield Score (PYS) on /yield. PYS rewards consistent Treasury-derived yield over reward-heavy or single-source-dependent venues.",
+    "Yield Score (PYS) on the Yield page. PYS rewards consistent Treasury-derived yield over reward-heavy or single-source-dependent venues.",
     "DEWS exclusion for NAV tokens. DEWS skips fund-share tokens; the closest equivalent stress signal is the Redemption Backstop snapshot and issuer reserve cadence.",
     "Proof-of-Reserves attestor tier and cadence on the detail page. Big 4 with daily NAV is the gold standard for tokenized funds; niche attestors are acceptable but slower to respond.",
   ],

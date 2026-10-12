@@ -45,6 +45,7 @@ interface FocusedStackedAreaCardProps<T extends Record<K, number>, K extends key
   emptyMessage: string;
   series: StackedAreaSeries[];
   tooltip: ReactElement;
+  /** Value-axis domain; only the top is used, since a stacked area always starts at 0. */
   yDomain: (data: T[], range: TimeRangeOption) => [number, number | "auto"];
   yTickFormatter: (value: number) => string;
   tableColumns: ReadonlyArray<ChartDataTableColumn<T>>;
@@ -108,7 +109,9 @@ export function FocusedStackedAreaCard<T extends Record<K, number>, K extends ke
     [filteredData, series],
   );
   const autoAxis = useNiceValueAxis(stackHeights);
-  const valueAxis = domain[1] === "auto" && autoAxis.domain ? autoAxis : { domain };
+  // Stacked areas fill from zero and Recharts widens a raised floor back to 0
+  // with no ticks below it, so the floor is pinned at 0 and the baseline labelled.
+  const valueAxis = domain[1] === "auto" && autoAxis.domain ? autoAxis : { domain: [0, domain[1]] as [number, number | "auto"] };
 
   const handleRangeChange = (nextRange: TimeRangeOption) => {
     setRange(nextRange);

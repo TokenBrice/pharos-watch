@@ -47,13 +47,13 @@ describe("PegDiversityHeroLive", () => {
     expect(screen.queryByText("Fiat logo size")).toBeNull();
     expect(container.querySelector(".peg-hero__earth .peg-hero__scale-key")).not.toBeNull();
     expect(container.querySelector(".peg-hero__map-frame .peg-hero__scale-key")).toBeNull();
-    expect(screen.getByText("Largest Cohorts")).toBeTruthy();
+    expect(screen.getByText("Largest cohorts")).toBeTruthy();
     expect(screen.getAllByRole("link")).toHaveLength(5);
   });
 
   it("omits the cohort overview in fullscreen mode", () => {
     render(<PegDiversityHeroLive worldMap={<div data-testid="world-map" />} variant="fullscreen" />);
 
-    expect(screen.queryByText("Largest Cohorts")).toBeNull();
+    expect(screen.queryByText("Largest cohorts")).toBeNull();
   });
 });

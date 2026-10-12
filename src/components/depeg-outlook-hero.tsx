@@ -6,6 +6,7 @@ import { HERO_KPI_VALUE_CLASS } from "@/components/feature-hero-split";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { TIER_META } from "@/components/depeg-resolver-row-card-model";
 import { UniverseChip } from "@/components/universe-chip";
+import { RailHeroFigureTransition } from "@/components/view-transitions";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
@@ -18,6 +19,8 @@ interface DepegOutlookHeroProps {
   stats: PegSummaryStats | null | undefined;
   /** Coins in a confirmed live depeg. Drives the radar halos. */
   activeDepegIds: ReadonlySet<string>;
+  /** Coins in the live peg summary (the peg catalog); null while it is unread. */
+  catalogCount?: number | null;
   /** Threshold crossings still awaiting confirmation. */
   pendingCount: number | null;
   /** DEWS ALERT-or-worse coins, restricted to the peg catalog. */
@@ -71,6 +74,7 @@ function RailGroup({ label, children }: { label: string; children: ReactNode }) 
 export function DepegOutlookHero({
   stats,
   activeDepegIds,
+  catalogCount,
   pendingCount,
   dewsAlertCount,
   book,
@@ -100,9 +104,11 @@ export function DepegOutlookHero({
               <MethodologyLabel topic="activeDepegs">Active depegs</MethodologyLabel>
             </p>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className={HERO_KPI_VALUE_CLASS}>
-                {stats ? activeCount : "—"}
-              </span>
+              <RailHeroFigureTransition rail="depeg">
+                <span className={HERO_KPI_VALUE_CLASS}>
+                  {stats ? activeCount : "—"}
+                </span>
+              </RailHeroFigureTransition>
               <span className="text-sm text-muted-foreground">
                 {/* "All pegs holding" is a claim about data we have. Without a peg
                     summary the honest reading is that we cannot say. */}
@@ -126,9 +132,13 @@ export function DepegOutlookHero({
                 </span>
               ) : null}
             </div>
-            {/* The headline counts the peg catalog minus NAV tokens; the catalog has
-                no published size of its own, so the chip names the set only. */}
-            <UniverseChip universe="pegCatalog" className="mt-2" />
+            {/* The headline counts the peg catalog minus NAV tokens; the chip names
+                the catalog's size as read this render. */}
+            <UniverseChip
+              universe="pegCatalog"
+              value={catalogCount == null ? undefined : `${catalogCount.toLocaleString()} coins`}
+              className="mt-2"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-x-5 gap-y-2.5 border-t border-border/60 pt-3">

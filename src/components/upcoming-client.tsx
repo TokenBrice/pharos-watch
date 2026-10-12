@@ -37,8 +37,8 @@ export type UpcomingCoin = Pick<
 export type SortKey = "expected" | "announced" | "alphabetical";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "expected", label: "Expected Launch" },
-  { key: "announced", label: "Announced Date" },
+  { key: "expected", label: "Expected launch" },
+  { key: "announced", label: "Announced date" },
   { key: "alphabetical", label: "Name" },
 ];
 
@@ -181,13 +181,13 @@ export function UpcomingClient({
       <section aria-label="Pre-launch stablecoin readiness" className="pharos-card-shell overflow-hidden">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 border-b border-border/50 p-5 sm:p-6">
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-muted-foreground">Tracked Launches</p>
+            <p className="text-sm font-medium text-muted-foreground">Tracked launches</p>
             <p className="pharos-numeric text-[2.1rem] font-semibold leading-none tracking-tight text-foreground sm:text-[2.45rem]">
               {coins.length}
             </p>
           </div>
           {nearestLaunch?.expectedLaunchDate ? (
-            <div className="flex items-baseline gap-2 font-mono text-xs">
+            <div className="flex items-baseline gap-2 text-xs">
               <span className="text-muted-foreground">Soonest</span>
               <Link
                 href={buildStablecoinUrl(nearestLaunch.id)}
@@ -357,8 +357,8 @@ export function UpcomingClient({
                 {/* Footer: date + drift + milestones */}
                 <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
                   {coin.expectedLaunchDate && (
-                    <span className="pharos-numeric text-3xs text-muted-foreground/70">
-                      Expected {formatFuzzyDate(coin.expectedLaunchDate)}
+                    <span className="text-2xs text-muted-foreground">
+                      Expected <span className="pharos-numeric">{formatFuzzyDate(coin.expectedLaunchDate)}</span>
                     </span>
                   )}
                   <ExpectedLaunchDriftBadge dateHistory={coin.dateHistory} expectedLaunchDate={coin.expectedLaunchDate} />

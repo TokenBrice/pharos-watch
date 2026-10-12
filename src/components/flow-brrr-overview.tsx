@@ -95,6 +95,16 @@ function buildSnapshot(
   };
 }
 
+/**
+ * Calm by default: the headline stays in neutral ink and the gauge card is only
+ * tinted once the published gauge band reaches STRESS or CRISIS. A mild
+ * worsening (CAUTIOUS) reads as an amber chip, not a red page.
+ */
+const GAUGE_ALARM_BANDS: ReadonlySet<string> = new Set(["STRESS", "CRISIS"]);
+const CAUTION_BADGE_CLASS =
+  "border-amber-600/35 bg-amber-500/10 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/15 dark:text-amber-300";
+const NEUTRAL_GAUGE_PANEL_CLASS = "border-border/60 bg-background/55 dark:bg-background/35";
+
 function LoadingState() {
   return (
     <div className="space-y-4">
@@ -143,6 +153,9 @@ export function FlowBrrrOverview({
   const sceneStress = snapshot.score === null || snapshot.score >= -10
     ? 0
     : clamp((-10 - snapshot.score) / 90, 0, 1);
+  const gaugeAlarm = gauge?.band != null && GAUGE_ALARM_BANDS.has(gauge.band);
+  const pressureBadgeClass =
+    snapshot.pressureState === "worsening" && !gaugeAlarm ? CAUTION_BADGE_CLASS : snapshot.pressureUi.badgeClass;
   const gaugeDisplay = snapshot.score == null
     ? null
     : getPressureShiftDisplay(snapshot.score);
@@ -180,7 +193,7 @@ export function FlowBrrrOverview({
               <span
                 className={cn(
                   "inline-flex rounded-full border px-2 py-0.5 text-2xs font-semibold",
-                  snapshot.pressureUi.badgeClass,
+                  pressureBadgeClass,
                 )}
               >
                 {snapshot.pressureUi.label}
@@ -220,7 +233,7 @@ export function FlowBrrrOverview({
                   isCompact
                     ? "text-3xl font-black leading-[0.94] tracking-tight md:text-4xl 2xl:text-5xl"
                     : "text-3xl font-black tracking-tight sm:text-5xl",
-                  snapshot.pressureUi.headlineClass,
+                  snapshot.pressureState === "nr" ? "text-muted-foreground" : "text-foreground",
                 )}
               >
                 {snapshot.headline}
@@ -266,7 +279,7 @@ export function FlowBrrrOverview({
         <div
           className={cn(
             "space-y-2 rounded-xl border p-3",
-            snapshot.pressureUi.panelClass,
+            gaugeAlarm ? snapshot.pressureUi.panelClass : NEUTRAL_GAUGE_PANEL_CLASS,
           )}
         >
           <div className="flex items-center justify-between text-xs text-muted-foreground">

@@ -62,7 +62,7 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
 
 - **Left command rail**, top to bottom, hairline-separated: the headline count =
   `PegSummaryStats.activeDepegCount` in neutral ink (`HERO_KPI_VALUE_CLASS`), with the worst live
-  move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it; a four-cell figure grid (pending
+  move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread); a four-cell figure grid (pending
   confirmations, DEWS ALERT-or-worse, holding peg, median deviation); **Recovery outlook · DDR** — the
   whole-book verdict split and calibration lineage; **Forecast track record · DDRR** — headline
   recovery-call accuracy; then the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail

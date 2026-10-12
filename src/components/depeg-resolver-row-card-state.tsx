@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { getMissingReasons } from "@/components/depeg-resolver-row-card-model";
+import { formatDdrDirection, formatDdrReason, getMissingReasons } from "@/components/depeg-resolver-row-card-model";
 import type { DdrPublicPredictionState, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
 
@@ -55,7 +55,6 @@ export function StateOnlyCard({
   const missingReasons = getMissingReasons(row);
   const originalOutcome =
     row.kind === "invalidated_prediction" && row.originalKind === "no_call" ? "no-call" : "published prediction";
-  const dirGlyph = row.direction === "below" ? "▼" : "▲";
 
   return (
     <div className="pharos-card-shell gap-0 overflow-hidden p-4 sm:p-5">
@@ -64,15 +63,15 @@ export function StateOnlyCard({
           <div className="flex min-w-0 items-center gap-3">
             <CoinLockup row={row} logos={logos} logoSize={52} />
           </div>
-          <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 font-mono text-xs uppercase text-muted-foreground">
-            {dirGlyph} {row.direction} {row.pegCurrency}
+          <span className="shrink-0 rounded-full border border-border/70 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground">
+            {formatDdrDirection(row)}
           </span>
         </div>
 
         <div className={cn("rounded-lg border px-3 py-2.5", copy.tone)}>
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-base font-bold leading-none">{copy.title}</p>
-            <span className="rounded-full border border-current/30 px-1.5 py-0.5 font-mono text-xs uppercase">
+            <span className="rounded-full border border-current/30 px-1.5 py-0.5 text-xs font-medium">
               {copy.badge}
             </span>
           </div>
@@ -84,7 +83,9 @@ export function StateOnlyCard({
 
         {state === "lock_deferred" && deferralReason ? (
           <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2.5 text-xs">
-            <p className="text-foreground">Deferral reason: {deferralReason}</p>
+            <p className="text-foreground" title={deferralReason}>
+              Deferral reason: {formatDdrReason(deferralReason)}
+            </p>
           </div>
         ) : null}
 
@@ -119,7 +120,7 @@ export function StateOnlyCard({
             <div className="mt-2 space-y-1.5 text-xs text-muted-foreground">
               <p>
                 Original lock outcome:{" "}
-                <span className="font-mono uppercase text-foreground">{originalOutcome}</span>
+                <span className="text-foreground">{originalOutcome}</span>
               </p>
               <p>
                 Latest erratum: <span className="text-foreground">details unavailable</span>

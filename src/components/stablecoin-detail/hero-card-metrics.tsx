@@ -122,10 +122,14 @@ export function HeroPriceMetric({
   const observed = isObservedPrice(coinData) && typeof coinData.price === "number"
     && Number.isFinite(coinData.price) && coinData.price > 0;
   const price = formatHeroNativePrice(observed ? coinData.price : null, coin.flags.pegCurrency ?? "USD", pegRef);
-  const referenceLine = observed
-    ? formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, isNavToken })
-    : "Observed price unavailable";
-  const referenceClass = !observed || pegReferenceUnavailable
+  // A frozen archive's price is its last observation, not a live peg reading.
+  const frozenAt = coin.status === "frozen" ? coin.frozenAt ?? null : null;
+  const referenceLine = !observed
+    ? "Observed price unavailable"
+    : frozenAt
+      ? `Last observed · ${frozenAt}`
+      : formatPriceReferenceLine({ deviationBps, pegReferenceUnavailable, isNavToken });
+  const referenceClass = !observed || pegReferenceUnavailable || frozenAt
     ? "text-muted-foreground"
     : isNavToken
       ? "text-green-700 dark:text-green-400"

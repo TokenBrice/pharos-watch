@@ -30,7 +30,7 @@ describe("operator route chrome", () => {
 
   it.each([
     "/blog/", "/digest/2026-09-06/", "/compare/", "/compare/usdc-circle-vs-usdt-tether/",
-    "/stablecoin/usdc-circle/", "/learn/", "/depeg/usdc-2023-03-11/", "/screener/picker/",
+    "/stablecoin/usdc-circle/", "/learn/case-studies/", "/depeg/usdc-2023-03-11/", "/screener/picker/",
     "/admin/", "/admin-api/", "/pharoswatchbot/app/", null,
   ])("omits the data shortcut without a workspace target on %s", (pathname) => {
     usePathnameMock.mockReturnValue(pathname);

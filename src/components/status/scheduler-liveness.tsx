@@ -2,6 +2,7 @@ import type { SchedulerLiveness } from "@shared/types/status/public-health";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStatusTone } from "@/lib/status-dashboard-model";
+import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { maxPublicStatus } from "@shared/lib/public-health";
 
 const LANE_LABELS: Record<string, string> = {
@@ -9,6 +10,17 @@ const LANE_LABELS: Record<string, string> = {
   fiveMinuteTelegramAlerts: "Telegram alerts",
   digestTriggerPoll: "Digest trigger poll",
 };
+
+/** Same locale timestamp as the rest of the status surfaces; the ISO instant stays in the tooltip. */
+function SlotTime({ at, fallback }: { at: number | null | undefined; fallback: string }) {
+  if (at == null) return <>{fallback}</>;
+  const iso = new Date(at * 1000).toISOString();
+  return (
+    <time dateTime={iso} title={iso}>
+      {formatStatusTimestamp(at, { timeZoneName: "short" })}
+    </time>
+  );
+}
 
 export function SchedulerLivenessCard({ observation }: { observation: SchedulerLiveness | undefined }) {
   const publicStatus = observation?.status ?? "unavailable";
@@ -28,14 +40,14 @@ export function SchedulerLivenessCard({ observation }: { observation: SchedulerL
       <CardContent className="space-y-3 text-sm">
         <p>Actual slot starts, read live at request time. Completion and scheduled clocks are not delivery evidence.</p>
         <dl className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2"><dt className="text-muted-foreground">Last five-minute delivery</dt><dd className="font-mono">{observation?.lastFiveMinuteStartedAt != null ? new Date(observation.lastFiveMinuteStartedAt * 1000).toISOString() : "Unavailable"} · {publicStatus}</dd></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><dt className="text-muted-foreground">Last five-minute delivery</dt><dd className="font-mono"><SlotTime at={observation?.lastFiveMinuteStartedAt} fallback="Unavailable" /> · {publicStatus}</dd></div>
           <div><dt className="text-muted-foreground">Delivery age / budgets</dt><dd className="font-mono">{observation?.ageSeconds != null ? formatElapsedSeconds(observation.ageSeconds) : "Unavailable"}{observation ? ` · warning >${observation.warningAfterSec}s · stale >${observation.staleAfterSec}s` : ""}</dd></div>
-          {observation?.lanes.map((lane) => <div key={lane.scheduleKey}><dt className="text-muted-foreground">{LANE_LABELS[lane.scheduleKey] ?? lane.scheduleKey}</dt><dd className="break-all font-mono">{lane.lastStartedAt != null ? new Date(lane.lastStartedAt * 1000).toISOString() : "No start evidence"}</dd></div>)}
+          {observation?.lanes.map((lane) => <div key={lane.scheduleKey}><dt className="text-muted-foreground">{LANE_LABELS[lane.scheduleKey] ?? lane.scheduleKey}</dt><dd className="break-all font-mono"><SlotTime at={lane.lastStartedAt} fallback="No start evidence" /></dd></div>)}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             <dt className="text-muted-foreground">Heavy Worker delivery</dt>
             <dd><span className={`rounded-full border px-2.5 py-1 text-xs ${heavyTone.badgeClassName}`}>{heavyStatus}</span></dd>
           </div>
-          <div><dt className="text-muted-foreground">{observation?.heavy.scheduleKey ?? "Heavy lane unavailable"}</dt><dd className="break-all font-mono">{observation?.heavy.lastStartedAt != null ? new Date(observation.heavy.lastStartedAt * 1000).toISOString() : "No start evidence"}</dd></div>
+          <div><dt className="text-muted-foreground">{observation?.heavy.scheduleKey ?? "Heavy lane unavailable"}</dt><dd className="break-all font-mono"><SlotTime at={observation?.heavy.lastStartedAt} fallback="No start evidence" /></dd></div>
           <div><dt className="text-muted-foreground">Heavy delivery age / budgets</dt><dd className="font-mono">{observation?.heavy.ageSeconds != null ? formatElapsedSeconds(observation.heavy.ageSeconds) : "Unavailable"}{observation ? ` · warning >${observation.heavy.warningAfterSec}s · stale >${observation.heavy.staleAfterSec}s` : ""}</dd></div>
         </dl>
         {publicStatus === "unavailable" ? <p>Evidence unavailable: {observation?.unavailableReason ?? "Observation not supplied"}. This is not a healthy delivery claim.</p> : null}

@@ -25,6 +25,19 @@ const OUTCOME_CLASSES: Record<DigestForwardLookOutcome["status"], string> = {
   unavailable: "border-border/70 bg-muted/35 text-muted-foreground",
 };
 
+const OUTCOME_LABELS: Record<DigestForwardLookOutcome["status"], string> = {
+  hit: "Hit",
+  missed: "Missed",
+  pending: "Pending",
+  expired: "Expired",
+  unavailable: "Unavailable",
+};
+
+/** Stored tape values glue units to figures ("5070bps"); print the house "5,070 bps" form. */
+function formatTapeValue(value: string): string {
+  return value.replace(/(\d[\d,]*)\s*bps\b/gi, (_, digits: string) => `${Number(digits.replaceAll(",", "")).toLocaleString("en-US")} bps`);
+}
+
 interface DigestIntelligencePanelProps {
   changeSummary?: DigestChangeSummary | null;
   nextTriggers?: DigestNextTrigger[] | null;
@@ -37,12 +50,12 @@ interface DigestIntelligencePanelProps {
 function StandingConditionsStrip({ conditions }: { conditions: DigestStandingCondition[] }) {
   return (
     <p className="text-xs leading-relaxed text-muted-foreground">
-      <span className="font-mono font-semibold uppercase tracking-[0.16em]">Standing:</span>{" "}
+      <span className="font-medium text-foreground/80">Standing:</span>{" "}
       {conditions.slice(0, 5).map((condition, index) => (
         <span key={condition.stablecoinId ?? condition.symbol}>
           {index > 0 && " · "}
           {condition.symbol} d{condition.ageDays}
-          {condition.currentBps != null && ` ${Math.abs(condition.currentBps).toLocaleString()}bps`}
+          {condition.currentBps != null && ` ${Math.abs(condition.currentBps).toLocaleString()} bps`}
         </span>
       ))}
     </p>
@@ -72,12 +85,12 @@ function RiskTape({ items }: { items: DigestRiskTapeItem[] }) {
           key={item.id}
           title={item.detail}
           className={cn(
-            "rounded-md border px-2 py-1 font-mono text-[0.68rem] uppercase tracking-[0.16em]",
+            "rounded-md border px-2 py-1 text-2xs",
             RISK_TAPE_TONE_CLASSES[item.tone],
           )}
         >
-          <span className="text-muted-foreground/80">{item.label}</span>{" "}
-          <span className="font-semibold">{item.value}</span>
+          <span className="mr-1 text-muted-foreground/80">{item.label}</span>
+          <span className="font-mono font-semibold">{formatTapeValue(item.value)}</span>
         </div>
       ))}
     </div>
@@ -88,8 +101,8 @@ function OutcomeStrip({ outcomes }: { outcomes: DigestForwardLookOutcome[] }) {
   if (outcomes.length === 0) return null;
   return (
     <div className="space-y-1">
-      <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        Yesterday&apos;s Checks
+      <p className="pharos-label">
+        Yesterday&apos;s checks
       </p>
       <div className="flex flex-wrap gap-1.5">
         {outcomes.slice(0, 3).map((outcome) => (
@@ -97,11 +110,11 @@ function OutcomeStrip({ outcomes }: { outcomes: DigestForwardLookOutcome[] }) {
             key={outcome.id}
             title={outcome.detail}
             className={cn(
-              "rounded-full border px-2 py-1 font-mono text-[0.67rem] font-semibold uppercase tracking-[0.15em]",
+              "rounded-full border px-2 py-1 text-2xs font-medium",
               OUTCOME_CLASSES[outcome.status],
             )}
           >
-            {outcome.status}: {outcome.label}
+            {OUTCOME_LABELS[outcome.status]}: {outcome.label}
           </span>
         ))}
       </div>
@@ -120,13 +133,13 @@ function WhatChanged({ changeSummary }: { changeSummary: DigestChangeSummary }) 
   if (groups.length === 0) return null;
   return (
     <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-      <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        What Changed
+      <p className="pharos-label">
+        What changed
       </p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         {groups.slice(0, 4).map((group) => (
           <div key={group.label} className="space-y-1">
-            <p className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground/85">
+            <p className="text-2xs font-medium text-muted-foreground">
               {group.label}
             </p>
             {group.changes.map((change) => (
@@ -146,8 +159,8 @@ function NextTriggers({ triggers }: { triggers: DigestNextTrigger[] }) {
   if (triggers.length === 0) return null;
   return (
     <div className="rounded-lg border border-border/60 bg-background/70 p-3">
-      <p className="font-mono text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        Next Triggers
+      <p className="pharos-label">
+        Next triggers
       </p>
       <ol className="mt-2 space-y-1.5">
         {triggers.slice(0, 3).map((trigger, index) => (
@@ -190,7 +203,7 @@ export function DigestIntelligencePanel({
         {hasRiskTape && <RiskTape items={riskTapeItems} />}
         {hasNextTriggers && (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            <span className="font-mono font-semibold uppercase tracking-[0.16em]">Next:</span>{" "}
+            <span className="font-medium text-foreground/80">Next:</span>{" "}
             {triggerItems[0].detail}
           </p>
         )}

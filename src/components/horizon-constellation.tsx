@@ -115,7 +115,7 @@ export function HorizonConstellation({
               </div>
               <span className="flex w-full items-center gap-1.5">
                 <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-[3px] ${PHASE_DOT[phase]}`} />
-                <span className="font-mono text-2xs font-semibold uppercase text-foreground">
+                <span className="text-2xs font-semibold text-foreground">
                   {HORIZON_PHASE_SHORT_LABELS[phase]}
                 </span>
                 <span aria-hidden="true" className="text-3xs leading-none text-muted-foreground/50 sm:text-2xs">
@@ -140,7 +140,7 @@ export function HorizonConstellation({
                   aria-hidden="true"
                   className={`h-2 w-2 shrink-0 rounded-[3px] ${PHASE_DOT[phase]} ${count === 0 ? "opacity-40" : ""}`}
                 />
-                <span className="font-mono text-3xs font-semibold uppercase text-foreground sm:text-2xs">
+                <span className="text-2xs font-semibold text-foreground">
                   {HORIZON_PHASE_SHORT_LABELS[phase]}
                 </span>
                 <span aria-hidden="true" className="text-3xs leading-none text-muted-foreground/50 sm:text-2xs">

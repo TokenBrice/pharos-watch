@@ -12,6 +12,7 @@ import { usePreference } from "@/hooks/use-preferences";
 import { CoinFlowCard } from "@/components/coin-flow-card";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { formatCurrency } from "@shared/lib/format";
+import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { CoinSelector } from "@/components/coin-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartSkeleton } from "@/components/chart-skeleton";
@@ -510,6 +511,7 @@ export function CompareClient() {
                   title="Market Cap History Comparison"
                   series={supplySeries}
                   formatValue={formatCurrency}
+                  formatTick={formatCurrencyTick}
                   range={range}
                   onRangeChange={setRange}
                   normalizable

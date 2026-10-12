@@ -366,7 +366,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
                     <ChartAreaGradient id={dewsGradientId} color={DEWS_CHART_HEX} />
                   </defs>
                   <TimeGrid />
-                  <TimeXAxis dataKey="ts" tickFormatter={(ts: number) => formatChartDate(ts, "short")} />
+                  <TimeXAxis dataKey="ts" minTickGap={24} tickFormatter={(ts: number) => formatChartDate(ts, "short")} />
                   <MonoYAxis domain={[0, showBreakdown ? signalYMax : chartYMax]} tickKind="score" width={40} />
                   {(showBreakdown ? signalYMax : chartYMax) >= 50 && (
                     <ReferenceLine y={DEWS_THREAT_BANDS[1].upper} stroke={THREAT_BAND_HEX.WATCH} strokeDasharray="4 4" strokeOpacity={0.25} />

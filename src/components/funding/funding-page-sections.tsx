@@ -599,7 +599,7 @@ export function YearEndHorizon() {
         <p>
           The dashboard stays free for everyone, forever. Sustainability comes from two streams: community donations
           today, and &mdash; once mature &mdash; paid API access for institutional users with heavy programmatic needs.
-          Target: self-sustaining by Q4 2026, public dashboard untouched.
+          The goal is to cover running costs from those two streams, with the public dashboard untouched.
         </p>
         <p className="text-xs">
           If you can&apos;t support financially,{" "}
