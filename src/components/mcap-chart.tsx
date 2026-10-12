@@ -10,7 +10,7 @@ import { usePreference } from "@/hooks/use-preferences";
 import { formatChartDate, formatCurrency } from "@shared/lib/format";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { ChartScaleToggle } from "@/components/chart-primitives/scale-toggle";
-import { ChartAreaGradient, DateTooltip, MonoYAxis, useSvgId } from "@/components/chart-primitives/axes";
+import { ChartAreaGradient, DateTooltip, MonoYAxis, useNiceValueAxis, useSvgId } from "@/components/chart-primitives/axes";
 import type { ChartDataTableColumn } from "@/components/chart-primitives/data-table";
 import { MarketDataChartFigure } from "@/components/chart-primitives/market-data-chart-frame";
 import { computeChartYDomain } from "@/lib/chart-utils";
@@ -123,6 +123,10 @@ function McapChartBody({
       range === "all",
     );
   }, [range, visibleData, useLog]);
+  // An open ("auto") top resolves to the nice tick above the series.
+  const mcapValues = useMemo(() => visibleData.map((d) => d.mcap), [visibleData]);
+  const autoAxis = useNiceValueAxis(mcapValues, { kind: "currency" });
+  const valueAxis = yDomain[1] === "auto" && autoAxis.domain ? autoAxis : { domain: yDomain };
 
   // A daily delta needs the preceding UTC-day observation in the selected window.
   const readout = useMemo(() => {
@@ -211,7 +215,7 @@ function McapChartBody({
     >
           <MonoYAxis
             tickFormatter={(val: number) => formatCurrency(val)}
-            domain={yDomain}
+            {...valueAxis}
             scale={useLog ? "log" : "auto"}
             allowDataOverflow={useLog}
           />

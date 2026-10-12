@@ -97,7 +97,7 @@ export function ComparisonChart({
     <Card className="pharos-card-shell animate-in fade-in duration-300">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
-          <p className="pharos-kicker">Comparison Chart</p>
+          <p className="pharos-label">Comparison chart</p>
           <CardTitle as="h2" className="pharos-section-title">
             {title}
           </CardTitle>

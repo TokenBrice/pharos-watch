@@ -16,7 +16,17 @@ import { ChartSkeleton } from "@/components/chart-skeleton";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useSvgId } from "@/components/chart-primitives/axes";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { computeApyAxis, computeSafetyDomain, nudgeOverlaps, SAFETY_SCORE_THRESHOLD } from "@/lib/yield-scatter";
+import {
+  computeApyAxis,
+  computeSafetyDomain,
+  declutterScatterMarkers,
+  LOGO_DIAMETER_DESKTOP,
+  LOGO_DIAMETER_MOBILE,
+  SAFETY_SCORE_THRESHOLD,
+  type ScatterMarkerKind,
+} from "@/lib/yield-scatter";
+import { CHART_AXIS_LABEL, CHART_AXIS_LINE, CHART_AXIS_TICK, CHART_REFERENCE_DASH } from "@/lib/chart-theme";
+import { niceTicks } from "@/lib/chart-ticks";
 import {
   getYieldBenchmarkDisplayLabel,
   resolveYieldRowBenchmark,
@@ -34,8 +44,8 @@ import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
 interface ScatterDataPoint {
   x: number; // safety score (original, for tooltip)
   y: number; // APY 30d (original, for tooltip)
-  plotX: number; // nudged X for rendering
-  plotY: number; // clipped + nudged Y for rendering
+  plotX: number; // rendered X: the true safety score
+  plotY: number; // rendered Y: the true APY, or the rail when clipped
   id: string;
   name: string;
   symbol: string;
@@ -50,6 +60,8 @@ interface ScatterDataPoint {
   logoSrc?: string;
   isClipped: boolean;
   clipThreshold: number | null;
+  /** "dot" when a larger market's logo already occupies this spot. */
+  marker: ScatterMarkerKind;
 }
 
 interface YieldScatterPlotProps {
@@ -184,11 +196,24 @@ function LogoScatterPoint({
 }: LogoScatterShapeProps) {
   if (typeof cx !== "number" || typeof cy !== "number" || !payload) return null;
 
-  const diameter = compact ? 14 : 16;
+  const diameter = compact ? LOGO_DIAMETER_MOBILE : LOGO_DIAMETER_DESKTOP;
   const radius = diameter / 2;
   const haloRadius = radius + (emphasized ? 3 : 2);
   const clipId = `${idPrefix}-${sanitizeSvgId(payload.id)}-${emphasized ? "active" : "idle"}`;
   const ringStroke = emphasized ? CHART_BLUE : safetyTierColor(payload.x);
+
+  // A crowded point keeps its exact position as a tier-colored dot; hover
+  // (the active shape) still shows its logo.
+  if (payload.marker === "dot" && !emphasized) {
+    return (
+      <g transform={`translate(${cx}, ${cy})`}>
+        <circle r={3.5} fill={ringStroke} stroke="var(--color-card)" strokeWidth={1} />
+        {payload.isClipped ? (
+          <path d="M 0 -9.5 L 3 -5.5 L -3 -5.5 Z" fill={CHART_ORANGE} opacity={0.95} />
+        ) : null}
+      </g>
+    );
+  }
 
   return (
     <g transform={`translate(${cx}, ${cy})`}>
@@ -256,7 +281,7 @@ function CustomTooltip({
         <StablecoinLogo src={d.logoSrc} name={d.name} size={18} />
         <div className="min-w-0">
           <p className="font-semibold text-foreground leading-none">{d.name}</p>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{d.symbol}</p>
+          <p className="text-2xs uppercase text-muted-foreground">{d.symbol}</p>
         </div>
       </div>
       <p className="text-muted-foreground">
@@ -264,7 +289,7 @@ function CustomTooltip({
       </p>
       <p className="text-muted-foreground">
         Benchmark: <span className="pharos-numeric">{d.benchmarkRate.toFixed(2)}%</span>{" "}
-        <span className="text-[11px]">({d.benchmarkLabel})</span>
+        <span className="text-2xs">({d.benchmarkLabel})</span>
       </p>
       <p className="text-muted-foreground">
         Excess:{" "}
@@ -370,8 +395,31 @@ export function YieldScatterPlot({
         clipThreshold: apyAxis.clipThreshold,
       };
     });
-    return nudgeOverlaps(clipped, safetyDomain, plotYDomain, width || 900, height || 300, isMobile);
-  }, [apyAxis, rawData, safetyDomain, plotYDomain, width, height, isMobile]);
+    // Approximate plot area: the container less the y-axis column and x-axis row.
+    const plotWidth = (width || 900) - (isMobile ? 40 : 60);
+    const plotHeight = (height || 300) - (isMobile ? 42 : 68);
+    return declutterScatterMarkers(clipped, safetyDomain, plotYDomain, plotWidth, plotHeight, compactMarker);
+  }, [apyAxis, rawData, safetyDomain, plotYDomain, width, height, isMobile, compactMarker]);
+
+  // Ticks stay inside the data domain; the clipping rail gets its own
+  // ">N" label rather than a bare domain-end tick.
+  const safetyTicks = useMemo(
+    () => niceTicks(safetyDomain[0], safetyDomain[1], { kind: "score", count: isMobile ? 5 : 6, extend: false }).ticks,
+    [safetyDomain, isMobile],
+  );
+  const apyTicks = useMemo(() => {
+    // Whole-percent steps ("count" rules): a 2.5 step labels "12.5", which the narrow axis clips.
+    const ticks = niceTicks(0, apyAxis.domainMax, { kind: "count", count: isMobile ? 5 : 7, extend: false }).ticks;
+    if (apyAxis.clipThreshold === null) return ticks;
+    // Drop a nice tick that would crowd the rail label.
+    const minGap = (ticks[1] ?? apyAxis.domainMax) * 0.5;
+    return [...ticks.filter((tick) => apyAxis.domainMax - tick >= minGap), apyAxis.domainMax];
+  }, [apyAxis, isMobile]);
+  const formatApyTick = useCallback(
+    (value: number) =>
+      apyAxis.clipThreshold !== null && value === apyAxis.domainMax ? `>${apyAxis.clipThreshold}` : String(value),
+    [apyAxis],
+  );
 
   const logoIdPrefix = useSvgId("yield-logo");
 
@@ -453,7 +501,7 @@ export function YieldScatterPlot({
               height={height}
               margin={
                 compact
-                  ? { top: 4, right: 4, bottom: 4, left: 0 }
+                  ? { top: 4, right: 12, bottom: 4, left: 0 }
                   : isMobile
                     ? { top: 6, right: 6, bottom: 12, left: 0 }
                     : { top: 10, right: 14, bottom: 16, left: 2 }
@@ -495,7 +543,7 @@ export function YieldScatterPlot({
                 <ReferenceLine
                   y={benchmarkRate}
                   stroke={CHART_SLATE}
-                  strokeDasharray="4 4"
+                  strokeDasharray={CHART_REFERENCE_DASH}
                   label={
                     hideAxisLabels
                       ? undefined
@@ -524,16 +572,15 @@ export function YieldScatterPlot({
                         value: "Safety Score",
                         position: "insideBottom",
                         offset: 0,
-                        fill: "var(--color-muted-foreground)",
-                        fontSize: 11,
+                        ...CHART_AXIS_LABEL,
                       }
                 }
-                tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-                tickCount={isMobile ? 5 : 6}
+                tick={CHART_AXIS_TICK}
+                ticks={safetyTicks}
+                interval={0}
                 height={hideAxisLabels ? 30 : 42}
-                allowDecimals={false}
                 tickLine={false}
-                axisLine={{ stroke: "var(--color-border)" }}
+                axisLine={CHART_AXIS_LINE}
               />
               <YAxis
                 type="number"
@@ -549,15 +596,15 @@ export function YieldScatterPlot({
                         angle: -90,
                         position: "insideLeft",
                         offset: 6,
-                        fill: "var(--color-muted-foreground)",
-                        fontSize: 11,
+                        ...CHART_AXIS_LABEL,
                       }
                 }
-                tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-                tickCount={isMobile ? 5 : 7}
-                tickFormatter={(v: number) => String(Math.round(v) || 0)}
+                tick={CHART_AXIS_TICK}
+                ticks={apyTicks}
+                interval={0}
+                tickFormatter={formatApyTick}
                 tickLine={false}
-                axisLine={{ stroke: "var(--color-border)" }}
+                axisLine={CHART_AXIS_LINE}
                 width={hideAxisLabels ? (isMobile ? 28 : 34) : isMobile ? 40 : 46}
               />
 

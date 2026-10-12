@@ -75,7 +75,10 @@ describe("HomeAltHeroChart", () => {
   it("keeps the final x-axis label away from the SVG edge", () => {
     const { container } = render(<HomeAltHeroChart rows={rows} />);
 
-    const lastTick = Array.from(container.querySelectorAll("text")).find((text) => text.textContent === "Jun 26");
+    // Calendar ticks land on aligned year starts, not even fractions of the span.
+    const xTickLabels = Array.from(container.querySelectorAll("text[text-anchor='middle']")).map((text) => text.textContent);
+    expect(xTickLabels).toEqual(["2021", "2022", "2023", "2024", "2025", "2026"]);
+    const lastTick = Array.from(container.querySelectorAll("text")).find((text) => text.textContent === "2026");
     const lastTickX = Number(lastTick?.getAttribute("x"));
 
     expect(lastTick?.getAttribute("text-anchor")).toBe("middle");
@@ -117,8 +120,10 @@ describe("HomeAltHeroChart", () => {
   it("keeps the top y-axis label clear of the SVG edge", () => {
     const { container } = render(<HomeAltHeroChart rows={rows} />);
 
-    const topTick = Array.from(container.querySelectorAll("text")).find((text) => text.textContent?.startsWith("$"));
-    const topTickY = Number(topTick?.getAttribute("y"));
+    const valueTicks = Array.from(container.querySelectorAll("text")).filter((text) => text.textContent?.startsWith("$"));
+    // 1/2/2.5/5 steps up to the nice tick above the data (max 111), not even quarters of it.
+    expect(valueTicks.map((text) => text.textContent)).toEqual(["$0", "$25", "$50", "$75", "$100", "$125"]);
+    const topTickY = Math.min(...valueTicks.map((text) => Number(text.getAttribute("y"))));
 
     expect(topTickY).toBeGreaterThanOrEqual(24);
   });

@@ -54,7 +54,7 @@ export function ChartDataTable<T>({ caption, data, columns, srOnly = true, class
                 className={
                   srOnly
                     ? undefined
-                    : "border-b border-border/60 px-2 py-1.5 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground"
+                    : "border-b border-border/60 px-2 py-1.5 text-left pharos-label"
                 }
               >
                 {col.label}

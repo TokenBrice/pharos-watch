@@ -1,6 +1,13 @@
 "use client";
 
 import { MONO_Y_AXIS_WIDTH } from "@/components/chart-primitives/axes";
+import {
+  CHART_GRID_DASH,
+  CHART_GRID_STROKE,
+  CHART_TICK_FILL,
+  CHART_TICK_FONT_FAMILY,
+  CHART_TICK_FONT_SIZE,
+} from "@/lib/chart-theme";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -14,14 +21,14 @@ import { cn } from "@/lib/utils";
 
 /**
  * Default Recharts XAxis height with `axisLine={false}`, `tickLine={false}`,
- * `tickMargin={10}` and a 12px tick font. Empirically Recharts allocates
+ * `tickMargin={10}` and the shared tick font. Empirically Recharts allocates
  * ~30px regardless of `tickMargin`, so we match that.
  */
 const STATIC_X_AXIS_HEIGHT = 30;
-const STATIC_TICK_FONT_SIZE = 12;
-const STATIC_TICK_FILL = "var(--color-muted-foreground)";
-const STATIC_GRID_STROKE = "var(--color-border)";
-const STATIC_GRID_DASH = "2 6";
+const STATIC_TICK_FONT_SIZE = CHART_TICK_FONT_SIZE;
+const STATIC_TICK_FILL = CHART_TICK_FILL;
+const STATIC_GRID_STROKE = CHART_GRID_STROKE;
+const STATIC_GRID_DASH = CHART_GRID_DASH;
 
 interface StaticChartGeometry {
   /** Total SVG width in px. */
@@ -106,7 +113,7 @@ function StaticTimeXAxis({
             x={x}
             y={y1 + 10 + STATIC_TICK_FONT_SIZE}
             fill={STATIC_TICK_FILL}
-            fontFamily="var(--font-mono, monospace)"
+            fontFamily={CHART_TICK_FONT_FAMILY}
             fontSize={STATIC_TICK_FONT_SIZE}
             textAnchor="middle"
             style={{ opacity: 0.75 }}
@@ -158,7 +165,7 @@ function StaticMonoYAxis({
             x={x0 - 8}
             y={y + STATIC_TICK_FONT_SIZE / 2 - 2}
             fill={STATIC_TICK_FILL}
-            fontFamily="var(--font-mono, monospace)"
+            fontFamily={CHART_TICK_FONT_FAMILY}
             fontSize={STATIC_TICK_FONT_SIZE}
             textAnchor="end"
             style={{ opacity: 0.75 }}

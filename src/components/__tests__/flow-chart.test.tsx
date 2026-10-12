@@ -22,6 +22,7 @@ vi.mock("@/components/chart-primitives/axes", () => ({
   TimeXAxis: () => null,
   MonoYAxis: () => null,
   TimeGrid: () => null,
+  useNiceValueAxis: () => ({}),
 }));
 
 vi.mock("@/components/chart-primitives/legend", () => ({

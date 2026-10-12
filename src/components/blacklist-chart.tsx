@@ -5,6 +5,7 @@ import { Line } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { formatCurrency } from "@shared/lib/format";
+import { formatCurrencyTick } from "@/lib/chart-ticks";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { BLACKLIST_CHART_COLORS } from "@shared/lib/classification";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
@@ -83,7 +84,7 @@ export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistCh
       <div className="space-y-2 border-b border-border/50 p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <h2 className="pharos-kicker">Tracked Frozen Total by Quarter</h2>
+            <h2 className="pharos-label">Tracked frozen total by quarter</h2>
             <p className="text-sm text-muted-foreground">
               Quarterly spread of the tracked freeze ledger, attributed to each address&apos;s latest recorded freeze
               quarter.
@@ -130,7 +131,7 @@ export function BlacklistChart({ chart, isLoading, error, onRetry }: BlacklistCh
               <QuarterlyStackedBarChart
                 data={chartData}
                 series={chartSeries}
-                yAxis={{ tickFormatter: (val: number) => formatCurrency(val, 0), width: 62 }}
+                yAxis={{ tickFormatter: formatCurrencyTick, width: 62 }}
                 tooltipContent={<BlacklistTooltip />}
                 ariaLabel={`Tracked frozen total stacked bar chart showing ${chartData.length} quarters of freeze-ledger balances by stablecoin issuer`}
                 height={CHART_HEIGHT}

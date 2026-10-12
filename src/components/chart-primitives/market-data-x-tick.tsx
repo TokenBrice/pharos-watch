@@ -2,6 +2,7 @@
 
 import { formatChartDate } from "@shared/lib/format";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { CHART_TICK_FILL, CHART_TICK_FONT_FAMILY, CHART_TICK_FONT_SIZE } from "@/lib/chart-theme";
 
 export function MarketDataXTick({
   x,
@@ -27,9 +28,9 @@ export function MarketDataXTick({
           y={0}
           dy={12}
           textAnchor="middle"
-          fontSize={11}
-          fontFamily="var(--font-mono, monospace)"
-          fill={isJanuary ? "var(--color-foreground)" : "var(--color-muted-foreground)"}
+          fontSize={CHART_TICK_FONT_SIZE}
+          fontFamily={CHART_TICK_FONT_FAMILY}
+          fill={isJanuary ? "var(--color-foreground)" : CHART_TICK_FILL}
           fontWeight={isJanuary ? 600 : 400}
         >
           {month}
@@ -40,9 +41,9 @@ export function MarketDataXTick({
             y={0}
             dy={23}
             textAnchor="middle"
-            fontSize={10}
-            fontFamily="var(--font-mono, monospace)"
-            fill="var(--color-muted-foreground)"
+            fontSize={CHART_TICK_FONT_SIZE}
+            fontFamily={CHART_TICK_FONT_FAMILY}
+            fill={CHART_TICK_FILL}
           >
             {date.getUTCFullYear()}
           </text>
@@ -63,9 +64,9 @@ export function MarketDataXTick({
         y={0}
         dy={12}
         textAnchor="middle"
-        fontSize={12}
-        fontFamily="var(--font-mono, monospace)"
-        fill="var(--color-muted-foreground)"
+        fontSize={CHART_TICK_FONT_SIZE}
+        fontFamily={CHART_TICK_FONT_FAMILY}
+        fill={CHART_TICK_FILL}
       >
         {label}
       </text>

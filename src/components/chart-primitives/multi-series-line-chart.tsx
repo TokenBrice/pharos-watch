@@ -1,10 +1,11 @@
 "use client";
 
 import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip } from "recharts";
-import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis } from "@/components/chart-primitives/axes";
+import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@/components/chart-primitives/axes";
 import { ScreenReaderDataTable } from "@/components/chart-primitives/data-table";
 import { PharosChartTooltip, TooltipLabel, TooltipRow } from "@/components/pharos-chart-tooltip";
 import { mergeSeriesByTimestamp } from "@/lib/chart-utils";
+import { CHART_REFERENCE_DASH } from "@/lib/chart-theme";
 
 export interface MultiSeriesLineChartSeries<D extends { ts: number }> {
   id: string;
@@ -62,6 +63,7 @@ export function MultiSeriesLineChart<D extends { ts: number }>({
   tooltipVariant = "date",
 }: MultiSeriesLineChartProps<D>) {
   const mergedData = data ?? mergeMultiSeriesData(series, getValue);
+  const valueAxis = useNiceValueAxis(mergedData.flatMap((row) => series.map((item) => row[item.id])));
 
   return (
     <>
@@ -82,8 +84,8 @@ export function MultiSeriesLineChart<D extends { ts: number }>({
           <LineChart data={mergedData} margin={margin}>
             {showGrid ? <TimeGrid /> : null}
             <TimeXAxis dataKey="ts" minTickGap={minTickGap} tickFormatter={xTickFormatter} />
-            <MonoYAxis tickFormatter={yTickFormatter} />
-            {showZeroLine ? <ReferenceLine y={0} stroke="var(--color-border)" strokeDasharray="4 4" /> : null}
+            <MonoYAxis tickFormatter={yTickFormatter} {...valueAxis} />
+            {showZeroLine ? <ReferenceLine y={0} stroke="var(--color-border)" strokeDasharray={CHART_REFERENCE_DASH} /> : null}
             {tooltipVariant === "pharos" ? (
               <Tooltip
                 content={({ active, payload, label }) => {

@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { CHART_TOOLTIP_SURFACE } from "@/lib/chart-theme";
 import { cn } from "@/lib/utils";
 
 interface PharosChartTooltipProps {
@@ -7,24 +8,21 @@ interface PharosChartTooltipProps {
   className?: string;
 }
 
+/**
+ * The one chart tooltip shell: Recharts `content` tooltips render it, and
+ * hand-positioned SVG readouts reuse it through `ChartTooltipSurface`.
+ */
 export function PharosChartTooltip({ active, children, className }: PharosChartTooltipProps) {
   if (!active) return null;
-  return (
-    <div
-      className={cn(
-        "rounded-xl border border-border/70 bg-card px-3.5 py-3",
-        "text-sm",
-        className,
-      )}
-      style={{ boxShadow: "var(--elevation-raised)" }}
-    >
-      {children}
-    </div>
-  );
+  return <ChartTooltipSurface className={className}>{children}</ChartTooltipSurface>;
+}
+
+export function ChartTooltipSurface({ className, style, ...props }: ComponentProps<"div">) {
+  return <div className={cn("text-sm", className)} style={{ ...CHART_TOOLTIP_SURFACE, ...style }} {...props} />;
 }
 
 export function TooltipLabel({ children }: { children: ReactNode }) {
-  return <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-foreground/88">{children}</p>;
+  return <p className="pharos-label mb-2 text-foreground/88">{children}</p>;
 }
 
 export function TooltipRow({
