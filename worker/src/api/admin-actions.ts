@@ -1,4 +1,5 @@
 import type { TelegramCreds } from "../lib/telegram";
+import { DigestKindSchema, type DigestKind } from "@shared/types/digest";
 import { makeAdminRoute, makeIdempotentAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { setCache } from "../lib/db-cache";
 import { errorResponse, jsonResponse } from "../lib/api-response";
@@ -31,6 +32,7 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
   async ({ db, request }: TriggerDigestRouteContext) => {
     const requestText = await readRequestTextBounded(request, 1_024);
     if (requestText instanceof Response) return requestText;
+    let kind: DigestKind = "daily";
     let requestedStyleGateMode: { kind: DigestStyleGateKind; mode: "shadow" | "enforce" } | null = null;
     if (requestText.trim()) {
       let parsed: unknown;
@@ -43,8 +45,16 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
         return errorResponse(400, "Request body must be a JSON object");
       }
       const body = parsed as Record<string, unknown>;
-      if (Object.keys(body).some((key) => key !== "styleGateMode")) {
+      if (Object.keys(body).some((key) => key !== "styleGateMode" && key !== "kind")) {
         return errorResponse(400, "Request body contains an unknown field");
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "kind")) {
+        const parsedKind = DigestKindSchema.safeParse(body.kind);
+        if (!parsedKind.success) return errorResponse(400, 'kind must be "daily" or "weekly"');
+        if (Object.prototype.hasOwnProperty.call(body, "styleGateMode")) {
+          return errorResponse(400, "kind and styleGateMode must be separate actions");
+        }
+        kind = parsedKind.data;
       }
       if (Object.prototype.hasOwnProperty.call(body, "styleGateMode")) {
         const candidate = body.styleGateMode;
@@ -60,6 +70,10 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
         if (!mode) return errorResponse(400, 'styleGateMode value must be "shadow" or "enforce"');
         requestedStyleGateMode = { kind, mode };
       }
+    }
+    const requestedAt = Math.floor(Date.now() / 1000);
+    if (kind === "weekly" && new Date(requestedAt * 1_000).getUTCDay() !== 1) {
+      return errorResponse(400, "Weekly recap triggers are only accepted on Monday UTC");
     }
     if (requestedStyleGateMode) {
       await setCache(
@@ -82,11 +96,11 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
       );
     }
     const requestId = `manual-digest-${crypto.randomUUID()}`;
-    const requestedAt = Math.floor(Date.now() / 1000);
     await setCache(
       db,
       DIGEST_FORCE_RUN_CACHE_KEY,
       JSON.stringify({
+        kind,
         requestedAt,
         requestId,
         attempts: 0,
@@ -99,6 +113,7 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
       {
         ok: true,
         accepted: true,
+        kind,
         requestId,
         styleGateMode: effectiveStyleGateMode,
         message: "Digest trigger queued; will execute on the next polling tick (≤5 min).",
