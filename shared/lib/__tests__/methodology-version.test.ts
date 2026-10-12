@@ -237,7 +237,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.48");
+    expect(methodology.currentLabel).toBe("v6.49");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -253,7 +253,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 2).map((candidate) => candidate.version)).toEqual(["6.48", "6.47"]);
+    expect(methodology.entries.slice(0, 3).map((candidate) => candidate.version)).toEqual(["6.49", "6.48", "6.47"]);
   });
 
   it("provides an LLM-facing description for every changelog", () => {

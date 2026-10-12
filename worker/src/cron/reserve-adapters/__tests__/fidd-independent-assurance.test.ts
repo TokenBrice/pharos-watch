@@ -20,8 +20,8 @@ vi.mock("../independent-assurance", async () => {
   return { ...actual, fetchIndependentAssuranceReserves: vi.fn() };
 });
 
-const VIEWER_URL = "https://fwc.widen.net/s/drcwdbtqzk/fidelity-digital-assets---fidd-reserve-attestation-report---july26";
-const AUGUST_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---august26";
+const VIEWER_URL = "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026";
+const SEPTEMBER_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---september-2026";
 const CDN_PDF_URL =
   "https://cf-store.widencdn.net/fwc/1/4/7/147b4558-cc40-4196-b5a8-d5ad517e019a.pdf?response-content-type=application%2Fpdf";
 
@@ -40,13 +40,13 @@ function fidelityIndex(indexHtml: string) {
 
 function indexFixture(withViewerLink = true): string {
   return `<html><body>${withViewerLink
-    ? `<a href="${VIEWER_URL}">July</a>`
+    ? `<a href="${VIEWER_URL}">August</a>`
     : ""}<a href="https://fwc.widen.net/s/gbhfm2zv87/fidelity-digital-assets---fidd-reserve-attestation-report---june-2026">June</a></body></html>`;
 }
 
 function viewerFixture(withDownloadAnchor = true): string {
-  return `<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---July26.pdf</title></head><body>${withDownloadAnchor
-    ? `<a id="download" href="/content/iizyowcatt/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---July26.pdf?u=zfczv1&amp;download=true"><span>Download</span></a>`
+  return `<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf</title></head><body>${withDownloadAnchor
+    ? `<a id="download" href="/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&amp;download=true"><span>Download</span></a>`
     : ""}</body></html>`;
 }
 
@@ -99,23 +99,23 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
     vi.restoreAllMocks();
   });
 
-  it("reviews the July 31, 2026 PwC examination with the July 31 column figures", () => {
+  it("reviews the August 31, 2026 PwC examination with the August 31 column figures", () => {
     const manifest = getIndependentAssuranceManifest("FIDD");
     expect(manifest.assuranceTier).toBe("independent-assurance");
     expect(manifest.attestor).toBe("PricewaterhouseCoopers LLP");
     expect(manifest.conclusion).toBe("unmodified");
-    expect(manifest.reportAsOf).toBe("2026-07-31T17:00:00-04:00");
-    expect(manifest.reportIssuedAt).toBe("2026-08-26T23:59:00-04:00");
+    expect(manifest.reportAsOf).toBe("2026-08-31T17:00:00-04:00");
+    expect(manifest.reportIssuedAt).toBe("2026-09-25T23:59:00-04:00");
     expect(manifest.assets).toEqual([
-      { code: "cash-deposits", label: expect.stringContaining("Cash deposits held in bank deposit accounts"), amount: "20860119.65" },
-      { code: "us-treasury-bills", label: "U.S. Treasury bills (July 31 column)", amount: "30634836.55" },
+      { code: "cash-deposits", label: expect.stringContaining("Cash deposits held in bank deposit accounts"), amount: "20717851.25" },
+      { code: "us-treasury-bills", label: "U.S. Treasury bills (August 31 column)", amount: "31173738.08" },
     ]);
     expect(manifest.liabilities).toEqual([
-      { code: "ethereum", label: expect.stringContaining("Ethereum Mainnet tokens"), amount: "48882278" },
+      { code: "ethereum", label: expect.stringContaining("Ethereum Mainnet tokens"), amount: "49290319" },
     ]);
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "51494956.2",
-      liabilityTotal: "48882278",
+      computedAssetTotal: "51891589.33",
+      liabilityTotal: "49290319",
       reportedAssetDifference: "0",
       reportedLiabilityDifference: "0",
       reserveShortfall: "0",
@@ -131,26 +131,28 @@ describe("fidd-independent-assurance (PwC FIDD examination)", () => {
 
   it("derives the report year from dated viewer and PDF names", () => {
     expect(fiddReportDate("https://fwc.widen.net/s/id/report---august26", "")).toBe("2026-08-31");
+    expect(fiddReportDate(VIEWER_URL, "")).toBe("2026-08-31");
+    expect(fiddReportDate("https://fwc.widen.net/content/report---august-2026.pdf", "")).toBe("2026-08-31");
     expect(fiddReportDate("https://fwc.widen.net/content/report---january2027.pdf", "")).toBe("2027-01-31");
   });
 
   it("selects the newest matching dated viewer link", async () => {
     installAdapterNetwork({
       html: {
-        [AUGUST_VIEWER_URL]: viewerFixture().replaceAll("July26", "August26"),
+        [SEPTEMBER_VIEWER_URL]: viewerFixture().replaceAll("August-2026", "September-2026"),
       },
     });
     const profile = fiddIndependentAssuranceProfile(fiddParams().viewerUrlPattern);
     const prepared = await profile.prepareIndexHtml!(
-      `${indexFixture()}<a href="${AUGUST_VIEWER_URL}">August</a>`,
+      `${indexFixture()}<a href="${SEPTEMBER_VIEWER_URL}">September</a>`,
       new AbortController().signal,
     );
-    expect(prepared).toContain("August26.pdf");
+    expect(prepared).toContain("September-2026.pdf");
   });
 
 
   it("fails closed when no dated viewer link is present on the official index", async () => {
-    installFetch(indexFixture(false), viewerFixture());
+    installFetch("<a href=\"https://fwc.widen.net/s/id/fidelity-digital-assets---fidd-reserve-attestation-report---undated\">Report</a>", viewerFixture());
     await expect(verifyIndex())
       .rejects.toThrow("no dated attestation viewer link found");
   });

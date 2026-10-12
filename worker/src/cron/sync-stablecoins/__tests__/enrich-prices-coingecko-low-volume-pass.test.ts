@@ -139,6 +139,34 @@ describe("runCoingeckoLowVolumePass", () => {
     expect(expired.price).toBeNull();
   });
 
+  it.each([
+    ["nxusd-nereus", "nxusd", 1.0218116165811697, 1_791_761_973],
+    ["usdh-hermetica", "hermetica-usdh", 0.9997925123055649, 1_791_780_809],
+  ] as const)("recovers audited %s without renewing its clock or changing supply, then expires the quote", async (id, geckoId, price, observedAt) => {
+    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
+      "../../../lib/coingecko-simple-price",
+    );
+    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
+    vi.useFakeTimers();
+    vi.setSystemTime(1_791_787_489 * 1000);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      [geckoId]: { usd: price, last_updated_at: observedAt },
+    })));
+    const asset = makePeggedAsset({
+      id, price: null, supplySource: "defillama", circulating: { peggedUSD: 123 },
+    });
+    expect(await runCoingeckoLowVolumePass([asset], null, undefined)).toEqual({ resolved: 1, failures: [] });
+    expect(asset).toMatchObject({
+      price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
+      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+      supplySource: "defillama", circulating: { peggedUSD: 123 },
+    });
+    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
+    const expired = makePeggedAsset({ id, price: null });
+    expect(await runCoingeckoLowVolumePass([expired], null, undefined)).toEqual({ resolved: 0, failures: [] });
+    expect(expired.price).toBeNull();
+  });
+
   it("enriches only allowlisted missing assets, preserving priced and unrelated peers", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_700_000_100 * 1000);

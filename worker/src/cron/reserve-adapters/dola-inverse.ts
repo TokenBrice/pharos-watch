@@ -36,7 +36,7 @@ interface FirmMarketsResponse {
   timestamp: number | string;
 }
 
-type DolaBucket = "stablecoin" | "eth-lst" | "btc" | "governance" | "other";
+type DolaBucket = "stablecoin" | "eth-lst" | "btc" | "governance" | "sinvusd" | "other";
 
 const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD", "USR", "wstUSR", "reUSD", "FraxPyUSD lp", "DOLA-FRAXBP"]);
 const ETH_LST_ASSETS = new Set(["WETH", "wstETH", "stETH", "rETH", "weETH", "cbETH"]);
@@ -61,9 +61,11 @@ function getTrackedStablecoinAsset(symbol: string): { coinId: string; risk: Rese
   return TRACKED_STABLECOIN_ASSETS[symbol];
 }
 
-const KNOWN_ASSETS = new Set([...STABLECOIN_ASSETS, ...ETH_LST_ASSETS, ...BTC_ASSETS, ...GOVERNANCE_ASSETS]);
+const KNOWN_ASSETS = new Set([...STABLECOIN_ASSETS, ...ETH_LST_ASSETS, ...BTC_ASSETS, ...GOVERNANCE_ASSETS, "sinvUSD"]);
 
 export function bucketForAsset(symbol: string): DolaBucket {
+  // sinvUSD wraps governance-token-backed invUSD; keep it out of the generic stable bucket.
+  if (symbol === "sinvUSD") return "sinvusd";
   if (STABLECOIN_ASSETS.has(symbol)) return "stablecoin";
   if (ETH_LST_ASSETS.has(symbol)) return "eth-lst";
   if (BTC_ASSETS.has(symbol)) return "btc";
@@ -154,6 +156,12 @@ export function adaptFirmMarkets(
   const unclassifiedResidualUsd = unattributedUsd - (frontierBadDebtUsd ?? 0);
 
   const slices = slicesFromValues([
+    {
+      sourceKey: "dola-inverse:sinvusd",
+      name: "sinvUSD collateral (sINV-backed stablecoin vault)",
+      value: bucketTotals.get("sinvusd") ?? 0,
+      risk: "high",
+    },
     {
       sourceKey: "dola-inverse:unattributed",
       name: "Unclassified non-FiRM issuance residual",

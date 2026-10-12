@@ -93,6 +93,7 @@
           }
         ],
         "sourceUrls": [
+          "https://celo.blockscout.com/address/0x1B78f6acD05e7BcB00f74863bfd8a7C264143e37?tab=contract",
           "https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager"
         ]
       }

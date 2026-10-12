@@ -43,18 +43,20 @@ export interface EthenaCollateralResponse {
   totalBackingAssetsInUsd: number;
 }
 
-type EthenaBucket = "stable" | "btc" | "eth" | "other";
+type EthenaBucket = "stable" | "btc" | "eth" | "equity" | "other";
 
 const ETHENA_ETH_ASSETS = new Set(["ETH", "stETH", "WBETH", "mETH", "LsETH"]);
 const ETHENA_BTC_ASSETS = new Set(["BTC"]);
 const ETHENA_STABLE_ASSETS = new Set(["Liquid Cash"]);
-const ETHENA_OTHER_ASSETS = new Set(["SOL", "XRP", "BNB", "HYPE", "Gold"]);
+const ETHENA_OTHER_ASSETS = new Set(["SOL", "XRP", "BNB", "HYPE", "Gold", "Equity RWA"]);
 const ETHENA_BROWSER_HEADERS = buildBrowserHeaders(
   "https://app.ethena.fi",
   "https://app.ethena.fi/dashboards/transparency",
 );
 
 function bucketForEthenaAsset(asset: string): EthenaBucket {
+  // Issuer's equity basis strategy is not crypto collateral or liquid cash.
+  if (asset === "Equity RWA") return "equity";
   if (ETHENA_STABLE_ASSETS.has(asset)) return "stable";
   if (ETHENA_BTC_ASSETS.has(asset)) return "btc";
   if (ETHENA_ETH_ASSETS.has(asset)) return "eth";
@@ -111,6 +113,12 @@ export function adaptEthenaCollateral(
   const { slices } = buildBucketSlices(
     bucketTotals,
     [
+      {
+        name: "Equity RWA basis collateral",
+        bucket: "equity",
+        risk: "high",
+        sourceKey: "ethena:equity",
+      },
       {
         name: "Liquid Cash strategy basket",
         bucket: "stable",

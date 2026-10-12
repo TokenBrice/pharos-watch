@@ -1,7 +1,7 @@
 import { LEGACY_SOLOMON_USDV_ID } from "../../lib/solomon-usdv-identity";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { admitSupplyBuckets, getCirculatingRawOrNull, type SupplyBucketInvalidReason } from "@shared/lib/supply";
+import { admitSupplyBuckets, getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, type SupplyBucketInvalidReason } from "@shared/lib/supply";
 import { CHAIN_CIRCULATING_KEYS, normalizeChainSupplyValue } from "@shared/lib/chains/circulating";
 import { isRecord } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -315,15 +315,15 @@ export async function fillMissingSupplyHistory(
     const isReasonable = (value: number) =>
       currentValue > 0 && Math.abs(value - currentValue) / currentValue <= 0.30;
 
-    if (asset.circulatingPrevDay == null && historical.day != null && isReasonable(historical.day)) {
+    if (getPrevDayRawOrNull(asset) == null && historical.day != null && isReasonable(historical.day)) {
       asset.circulatingPrevDay = { [pegKey]: historical.day };
       fillCount++;
     }
-    if (asset.circulatingPrevWeek == null && historical.week != null && isReasonable(historical.week)) {
+    if (getPrevWeekRawOrNull(asset) == null && historical.week != null && isReasonable(historical.week)) {
       asset.circulatingPrevWeek = { [pegKey]: historical.week };
       fillCount++;
     }
-    if (asset.circulatingPrevMonth == null && historical.month != null && isReasonable(historical.month)) {
+    if (getPrevMonthRawOrNull(asset) == null && historical.month != null && isReasonable(historical.month)) {
       asset.circulatingPrevMonth = { [pegKey]: historical.month };
       fillCount++;
     }

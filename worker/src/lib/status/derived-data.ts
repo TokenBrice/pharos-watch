@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { buildCoinCoverageMap, readMintBurnCronSnapshot, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
@@ -275,8 +276,9 @@ export async function getMintBurnReconciliation(
   db: D1Database,
   now: number,
 ): Promise<MintBurnReconciliationSummary> {
+  const activeConfigs = MINT_BURN_CONFIGS.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId));
   const configsByStablecoin = new Map<string, MintBurnContractConfig[]>();
-  for (const config of MINT_BURN_CONFIGS) {
+  for (const config of activeConfigs) {
     const configs = configsByStablecoin.get(config.stablecoinId) ?? [];
     configs.push(config);
     configsByStablecoin.set(config.stablecoinId, configs);
@@ -290,16 +292,16 @@ export async function getMintBurnReconciliation(
     [firstSeenRows, lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
       loadMintBurnFirstHourRows(
         db,
-        MINT_BURN_CONFIGS.map((config) => ({
+        activeConfigs.map((config) => ({
           stablecoinId: config.stablecoinId,
           chainId: config.chain.chainId,
         })),
         "status",
       ),
-      readMintBurnSyncStateBatch(db, MINT_BURN_CONFIGS),
+      readMintBurnSyncStateBatch(db, activeConfigs),
       readMintBurnCronSnapshot(db),
       readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
-      readMintBurnConservationRecords(db, MINT_BURN_CONFIGS),
+      readMintBurnConservationRecords(db, activeConfigs),
     ]);
   } catch (err) {
     logWorkerEvent({

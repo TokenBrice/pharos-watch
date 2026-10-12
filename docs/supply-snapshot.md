@@ -187,7 +187,7 @@ JLTXX's supplemental supply admission is fail-closed on class scope: `abs(native
 
 **File:** `shared/lib/supply.ts`
 
-`admitSupplyBuckets()` is the current/history bucket authority: an explicit finite nonnegative record is observed (including zero), `{}`/null/undefined is absent, and a negative, nonfinite or overflowing record is invalid. No invalid bucket is discarded into a partial numeric total. `sumPegBucketsOrNull()` returns only an admitted total; otherwise it returns null.
+`admitSupplyBuckets()` is the current/history bucket authority: an explicit finite nonnegative record is observed (including zero), `{}`/null/undefined is absent, and a negative, nonfinite or overflowing record is invalid. No invalid bucket is discarded into a partial numeric total. `sumPegBucketsOrNull()` returns only an admitted total; otherwise it returns null. Publication's `fillMissingSupplyHistory()` uses the shared historical nullable helpers, so empty records also qualify for existing exact-day D1 history fallback. It preserves observed values (including zero), requires one current peg bucket and an observed 1d/7d/30d row within 30% of positive current supply, and never synthesizes missing dates.
 
 | Helper | Description |
 |--------|-------------|

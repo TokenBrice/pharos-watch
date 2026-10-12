@@ -26,10 +26,12 @@ Supplemental on-chain supply failures identify the asset, chain, contract and ma
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.48`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.49`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+The 2026-10-12 `v6.49` release admits NXUSD and Hermetica USDh to the existing CoinGecko low-volume fallback cohort. Only missing prices can recover, with fallback confidence and their original upstream clock; the seven-day age budget, future-skew gate, peg validation and supply rules are unchanged. The effective date is aligned with the October 12 release. Fresh production publication remains required to establish recovery.
 
 The 2026-10-11 `v6.48` release retires SOFID's nominal protocol-par override. Its existing exact-identity CoinGecko/Kraken market consensus now survives ordinary normalization and can show an observed discount or premium. Kraken retains `local_fetch` timing and `confirm_required` depeg trust; missing quotes and carried nominal references remain unavailable. No source, consensus weight, liquidity threshold or freshness budget is added. Supplemental Idle CDO NAV reachability and failure diagnostics restore existing supply-admission behavior rather than adding another methodology change.
 
