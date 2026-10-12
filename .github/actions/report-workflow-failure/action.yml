@@ -1,5 +1,5 @@
 name: Report Workflow Failure
-description: Maintain deduplicated main-workflow incidents and alert the existing private ops Telegram channel only on a green-to-red transition.
+description: Maintain deduplicated main-workflow incident issues on GitHub.
 
 inputs:
   workflow-file:
@@ -19,12 +19,6 @@ inputs:
   github-token:
     description: Caller token with actions read and issues write.
     required: true
-  telegram-bot-token:
-    description: Existing TELEGRAM_BOT_TOKEN credential, provisioned in Actions secrets.
-    required: false
-  telegram-operator-chat-id:
-    description: Existing private TELEGRAM_OPERATOR_CHAT_ID destination, never the public digest chat.
-    required: false
 
 runs:
   using: composite
@@ -40,6 +34,4 @@ runs:
         WORKFLOW_NEEDS: ${{ inputs.needs-json }}
         WORKFLOW_JOB_NAMES: ${{ inputs.job-names-json }}
         WORKFLOW_ALLOWED_SKIPS: ${{ inputs.allowed-skips }}
-        TELEGRAM_BOT_TOKEN: ${{ inputs.telegram-bot-token }}
-        TELEGRAM_OPERATOR_CHAT_ID: ${{ inputs.telegram-operator-chat-id }}
       run: node scripts/ci/report-workflow-failure.ts

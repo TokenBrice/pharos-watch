@@ -102,9 +102,8 @@ export function firstActionableError(log: string, step: string, timing?: Pick<Wo
 export async function reportWorkflowFailure(
   report: WorkflowReport,
   github: GitHubClient,
-  alert: (message: string) => Promise<void>,
-): Promise<{ opened: number; repeated: number; closed: number; alerted: boolean; ignored: boolean }> {
-  const result = { opened: 0, repeated: 0, closed: 0, alerted: false, ignored: false };
+): Promise<{ opened: number; repeated: number; closed: number; ignored: boolean }> {
+  const result = { opened: 0, repeated: 0, closed: 0, ignored: false };
   if (report.ref !== "refs/heads/main" || !["push", "schedule", "workflow_dispatch"].includes(report.event)) {
     return { ...result, ignored: true };
   }
@@ -163,7 +162,6 @@ export async function reportWorkflowFailure(
       }
     }
   }
-  const links: string[] = [];
   for (const failure of failures) {
     const marker = incidentMarker(report.workflowFile, failure.job, failure.step);
     const existing = issues.find((issue) => issue.body?.includes(marker));
@@ -176,16 +174,10 @@ export async function reportWorkflowFailure(
       await github.updateIssue(existing.number, { state: "open", body });
       if (existing.state === "open") result.repeated++;
       else result.opened++;
-      links.push(existing.html_url);
     } else {
-      const issue = await github.createIssue(`[CI failure] ${safeText(report.workflowName)} / ${safeText(failure.job)} / ${safeText(failure.step)}`.slice(0, 240), body);
+      await github.createIssue(`[CI failure] ${safeText(report.workflowName)} / ${safeText(failure.job)} / ${safeText(failure.step)}`.slice(0, 240), body);
       result.opened++;
-      links.push(issue.html_url);
     }
-  }
-  if (open.length === 0) {
-    await alert(`Pharos CI turned red: ${report.workflowName}\n${report.runUrl}\n${links.join("\n")}\n${failures[0]?.excerpt ?? ""}`);
-    result.alerted = true;
   }
   return result;
 }
@@ -241,22 +233,6 @@ export function createGitHubClient(repository: string, runId: string, token: str
   };
 }
 
-export async function sendOpsAlert(message: string, token: string | undefined, chatId: string | undefined): Promise<void> {
-  if (!token?.trim() || !chatId?.trim()) {
-    throw new Error("Ops alert blocked: provision existing TELEGRAM_BOT_TOKEN and TELEGRAM_OPERATOR_CHAT_ID as GitHub Actions secrets; incident issues were recorded.");
-  }
-  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text: message.slice(0, 4000), link_preview_options: { is_disabled: true } }),
-    signal: AbortSignal.timeout(30_000),
-  });
-  // Never include the Bot API URL or response body, which may contain credentials.
-  if (!response.ok) throw new Error(`Ops Telegram alert returned HTTP ${response.status}`);
-  const payload = await response.json() as { ok?: boolean };
-  if (payload.ok !== true) throw new Error("Ops Telegram alert was rejected");
-}
-
 runDirectCli(import.meta.url, async () => {
   const env = process.env;
   const required = (name: string): string => {
@@ -278,7 +254,7 @@ runDirectCli(import.meta.url, async () => {
     allowedSkips: (env.WORKFLOW_ALLOWED_SKIPS || "").split(",").map((id) => id.trim()).filter(Boolean),
   };
   const github = createGitHubClient(required("GITHUB_REPOSITORY"), required("GITHUB_RUN_ID"), required("GH_TOKEN"));
-  const outcome = await reportWorkflowFailure(report, github, (message) => sendOpsAlert(message, env.TELEGRAM_BOT_TOKEN, env.TELEGRAM_OPERATOR_CHAT_ID));
+  const outcome = await reportWorkflowFailure(report, github);
   console.log(JSON.stringify(outcome));
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, `## Workflow incident lifecycle\n\n\`\`\`json\n${JSON.stringify(outcome, null, 2)}\n\`\`\`\n`);
 }, { label: "report-workflow-failure" });

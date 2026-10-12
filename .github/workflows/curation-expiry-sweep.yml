@@ -270,5 +270,3 @@ jobs:
           workflow-file: curation-expiry-sweep.yml
           needs-json: ${{ toJSON(needs) }}
           github-token: ${{ github.token }}
-          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}
