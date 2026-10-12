@@ -60,6 +60,9 @@ export const RPC_LOG_SCAN_WINDOWS: Record<string, { alchemy: number; fallback: n
   gnosis: { alchemy: 9_000, fallback: 9_000 },
 };
 
+/** Serial catch-up on admitted Dwellir log endpoints; splits share this call cap. */
+const DWELLIR_CATCH_UP_MAX_CALLS = 100;
+
 type EvmLogLike = Pick<
   EtherscanLogEntry,
   "address" | "topics" | "data" | "blockNumber" | "transactionHash" | "logIndex"
@@ -418,10 +421,14 @@ export async function fetchEvmEventsIncremental(
       ? Math.min(targetSafeHead, fromBlock + target.scanWindowBlocks - 1)
       : targetSafeHead;
     const batches: AlchemyLogsFetchResult[] = [];
-    // Respect Avalanche's 2,000-block provider cap per request, but admit enough
-    // serial windows to exceed its normal six-hour chain growth.
-    const finalBlock = config.chain.chainId === "avalanche" && target.scanWindowBlocks === 2_000
-      ? Math.min(targetSafeHead, fromBlock + 16_000 - 1) : scanToBlock;
+    // Separate the per-request provider range from this config's catch-up range.
+    // Incumbent pacing stays unchanged, including Avalanche's eight serial pages.
+    const catchUpCalls = target.endpoint.operator === "dwellir" ? DWELLIR_CATCH_UP_MAX_CALLS : null;
+    const finalBlock = catchUpCalls != null && target.scanWindowBlocks != null
+      ? Math.min(targetSafeHead, fromBlock + target.scanWindowBlocks * catchUpCalls - 1)
+      : config.chain.chainId === "avalanche" && target.scanWindowBlocks === 2_000
+        ? Math.min(targetSafeHead, fromBlock + 16_000 - 1) : scanToBlock;
+    let calls = 0;
     let start = fromBlock;
     do {
       const end = Math.min(finalBlock, start + (target.scanWindowBlocks ?? finalBlock - start + 1) - 1);
@@ -430,10 +437,17 @@ export async function fetchEvmEventsIncremental(
         : await fetchAlchemyLogs(target.rpcUrl, config.contractAddress,
           [{ index: 0, value: topics.length === 1 ? topics[0]! : topics }], start, end,
           runBudget.subrequestBudget, signal, { deadlineMs: runBudget.deadlineMs,
-            endpoint: target.endpoint, headBlock: target.chainHead });
-      if (!batch) return { safeHead: targetSafeHead, scanToBlock: finalBlock, logs: null };
+            endpoint: target.endpoint, headBlock: target.chainHead,
+            maxSplitCalls: catchUpCalls == null ? undefined : catchUpCalls - calls });
+      if (!batch) {
+        if (batches.length === 0) return { safeHead: targetSafeHead, scanToBlock: finalBlock, logs: null };
+        batches.push({ logs: [], complete: false, scannedToBlock: start - 1, calls: 0, maxDepth: 0 });
+        break;
+      }
       batches.push(batch);
-      if (!batch.complete || blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)) break;
+      calls += batch.calls;
+      if (!batch.complete || blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)
+        || (catchUpCalls != null && calls >= catchUpCalls)) break;
       start = end + 1;
     } while (start <= finalBlock);
     const last = batches[batches.length - 1]!;
