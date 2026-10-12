@@ -144,5 +144,3 @@ jobs:
           needs-json: ${{ toJSON(needs) }}
           job-names-json: '{"full-static":"Full lint and typecheck","full-tests":"Full test suite"}'
           github-token: ${{ github.token }}
-          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}

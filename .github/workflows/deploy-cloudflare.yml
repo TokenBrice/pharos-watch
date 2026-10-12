@@ -284,5 +284,3 @@ jobs:
                 needs.plan.result == 'success' && needs.plan.outputs.pages_required == 'false' && 'pages-prepare,pages-release' || '',
                 needs.plan.result == 'success' && needs.plan.outputs.worker_required == 'false' && needs.plan.outputs.pages_required == 'false' && 'post-deploy-acceptance' || '') }}
           github-token: ${{ github.token }}
-          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}

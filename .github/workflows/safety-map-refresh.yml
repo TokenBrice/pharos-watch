@@ -206,5 +206,3 @@ jobs:
           job-names-json: '{"plan":"Plan publication","render":"Render and publish"}'
           allowed-skips: ${{ needs.plan.result == 'success' && needs.plan.outputs.should_render == 'false' && 'render' || '' }}
           github-token: ${{ github.token }}
-          telegram-bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          telegram-operator-chat-id: ${{ secrets.TELEGRAM_OPERATOR_CHAT_ID }}

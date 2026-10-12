@@ -147,7 +147,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`: `plan → (deploy-
 
 6. `report-failures`
    - runs after all deploy/acceptance dependencies using `always()` on `main`; `.github/workflows/rebuild-pages.yml` has the same terminal reporting owner after Pages preparation/release;
-   - uses `.github/actions/report-workflow-failure/action.yml` to reconcile workflow+job+step incident issues and send the first-failure operator alert. Reporting does not roll back production or turn failed acceptance into success.
+   - uses `.github/actions/report-workflow-failure/action.yml` to reconcile workflow+job+step incident issues. Reporting does not roll back production or turn failed acceptance into success.
 
 The daily/manual `.github/workflows/rebuild-pages.yml` runs `pages-prepare → pages-release` on `main`, with `refresh_data: true` and no Worker deployment.
 
@@ -276,7 +276,7 @@ Scheduled artifact PR secret:
 Route share cards are no longer screenshots: data-bearing routes select the live Worker card `/api/og/page/:slug` and every other route a committed timeless card ([OG Images](./og-images.md#1-route-cards)). After a Worker deploy, `GET` each live slug and decode the PNG; `X-Og-Status: timeless` names its `X-Og-Reason`.
 The [Protocol API Mechanism Refresh](./process/protocol-api-mechanism-refresh.md) and [CDP Shock-Coverage Refresh](./process/shock-coverage-refresh.md) pages document the append-only measurement PR paths and their freshness gates.
 
-Workflow incident reporting needs repository Actions secrets `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID`. Both names are provisioned, but the 2026-10-12 scheduled reporters received Telegram HTTP 401. Credential repair remains an open operational prerequisite; incident issues/report summaries do not prove Telegram delivery.
+Workflow incident reporting uses the job-scoped `github.token` for GitHub issues and requires no Telegram secrets.
 
 Repository variables used by the Pages build:
 
