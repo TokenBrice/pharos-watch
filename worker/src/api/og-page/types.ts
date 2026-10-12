@@ -2,17 +2,25 @@ import type { z } from "zod";
 import type { OgPageUnavailableReason, OgRouteSupportItem, OgRouteVisual } from "@shared/lib/og-route-cards";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 
 /**
- * Admission budget of a cron-backed card source: two producer intervals (the
- * repo's cron-backed convention), and never stricter than the page's own
- * endpoint budget, so a card does not flap to timeless between producer runs.
+ * Admission budget of a cron-backed card source: the same "fresh" ceiling the
+ * owner endpoint publishes in `_meta.status` (endpoint budget × the cache's
+ * fresh ratio), so a card shows its figure exactly while the page reads fresh
+ * and drops to timeless once the page itself would warn. Never stricter than
+ * two producer intervals, so a card does not flap between runs.
  */
-function admissionBudgetSec(producer: string, endpoint: keyof typeof API_FRESHNESS_MAX_AGE_SEC): number {
+function admissionBudgetSec(
+  producer: string,
+  endpoint: keyof typeof API_FRESHNESS_MAX_AGE_SEC,
+  cacheKey?: string,
+): number {
   const intervalSec = CRON_INTERVALS[producer];
   if (intervalSec == null) throw new Error(`Unknown OG source producer: ${producer}`);
-  return Math.max(2 * intervalSec, API_FRESHNESS_MAX_AGE_SEC[endpoint]);
+  const freshCeilingSec = API_FRESHNESS_MAX_AGE_SEC[endpoint] * getCacheRatioThresholds(cacheKey).degraded;
+  return Math.max(2 * intervalSec, freshCeilingSec);
 }
 
 export const OG_SOURCE_BUDGET_SEC = {
@@ -22,7 +30,7 @@ export const OG_SOURCE_BUDGET_SEC = {
   stabilityIndex: admissionBudgetSec("stability-index", "stabilityIndex"),
   mintBurnFlows: admissionBudgetSec("sync-mint-burn", "mintBurnFlows"),
   dexLiquidity: admissionBudgetSec("sync-dex-liquidity", "dexLiquidity"),
-  yieldRankings: admissionBudgetSec("sync-yield-data", "yieldRankings"),
+  yieldRankings: admissionBudgetSec("sync-yield-data", "yieldRankings", "yield-data"),
   reportCards: admissionBudgetSec("compute-safety-score-v9", "reportCards"),
 } as const;
 

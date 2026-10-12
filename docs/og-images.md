@@ -25,7 +25,7 @@ The live routes' metadata selects `buildLiveRouteOgImageUrl(slug)` (`src/lib/pag
 
 The timeline card counts the full open set the homepage reads, not the feed's windowed event page, so an incident opened before the feed window still counts (ADR-34). The `/api/og/depeg` summary card counts open `depeg_events` rows instead and labels that figure **OPEN DEPEG EVENTS**.
 
-The Budget column names the source; its admission budget is `OG_SOURCE_BUDGET_SEC` (`worker/src/api/og-page/types.ts`): two intervals of the producing cron job, never stricter than the endpoint's own `API_FRESHNESS_MAX_AGE_SEC` budget, so a card does not flap to timeless between producer runs.
+The Budget column names the source; its admission budget is `OG_SOURCE_BUDGET_SEC` (`worker/src/api/og-page/types.ts`): the same fresh ceiling the owner endpoint publishes as `_meta.status: "fresh"` (`API_FRESHNESS_MAX_AGE_SEC` × the cache's fresh ratio from `getCacheRatioThresholds`), never less than two producer intervals. A card therefore shows its figure exactly while its page reads fresh and goes timeless once the page itself would warn.
 
 Fail-closed contract:
 
