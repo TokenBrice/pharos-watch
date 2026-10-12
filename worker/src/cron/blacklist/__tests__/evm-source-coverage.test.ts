@@ -174,6 +174,83 @@ describe("EVM blacklist contiguous coverage", () => {
     }
   });
 
+  describe("Dwellir serial catch-up pacing", () => {
+    function setup() {
+      const config = { ...makeConfig("gnosis", [TOPIC_A, TOPIC_B]),
+        chain: { ...makeConfig("gnosis").chain, evmChainId: 100 } };
+      const rpc: ChainRpcConfig = {
+        chainId: "gnosis", chainName: "Gnosis", type: "evm", explorerUrl: "https://example.invalid",
+        endpoints: [{ url: "https://gnosis.invalid", operator: "dwellir", keyed: true,
+          position: "registry", stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000 }],
+      };
+      vi.mocked(getChainRpc).mockReturnValue(rpc);
+      vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20_000_180);
+      vi.mocked(fetchAlchemyLogs).mockImplementation(async (_rpc, _address, _topics, from, to, budget) => {
+        expect(to - from + 1).toBeLessThanOrEqual(9_000);
+        budget.count++;
+        return { logs: [], complete: true, scannedToBlock: to, calls: 1, maxDepth: 0 };
+      });
+      return { config, chainRpcs: new Map([["gnosis", rpc]]) };
+    }
+
+    it("scans 100 contiguous pages but does not certify the unscanned safe head", async () => {
+      const { config, chainRpcs } = setup();
+      const result = await fetchEvmEventsIncremental(
+        mockD1(), config, null, 1, new Map(), makeBudget(), limiter, undefined, chainRpcs,
+      );
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(100);
+      expect(fetchEvmLogsForTopicWithCompleteness).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ scannedToBlock: 900_000, safeHead: 20_000_000,
+        coverageOutcome: "incomplete", providerCalls: 100, coveredTopicCount: 2 });
+      for (const [index, call] of vi.mocked(fetchAlchemyLogs).mock.calls.entries()) {
+        expect(call[3]).toBe(index * 9_000 + 1);
+        expect(call[7]?.maxSplitCalls).toBe(100 - index);
+      }
+    });
+
+    it.each(["subrequest", "deadline", "split-calls"] as const)("stops at the %s budget with only the proven prefix", async (boundary) => {
+      const { config, chainRpcs } = setup();
+      const budget = makeBudget();
+      vi.mocked(fetchAlchemyLogs).mockImplementation(async (_rpc, _address, _topics, _from, to) => {
+        if (boundary === "subrequest") budget.subrequestBudget.count = budget.subrequestBudget.limit;
+        if (boundary === "deadline") budget.deadlineMs = Date.now() - 1;
+        return { logs: [], complete: true, scannedToBlock: to,
+          calls: boundary === "split-calls" ? 100 : 1, maxDepth: 0 };
+      });
+      const result = await fetchEvmEventsIncremental(
+        mockD1(), config, null, 1, new Map(), budget, limiter, undefined, chainRpcs,
+      );
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(1);
+      expect(result.scannedToBlock).toBe(9_000);
+      expect(result.coverageOutcome).not.toBe("quiet");
+      expect(result.coverageOutcome).not.toBe("complete");
+    });
+
+    it.each(["partial", "null"] as const)("does not advance across a mid-loop %s failure", async (failure) => {
+      const { config, chainRpcs } = setup();
+      vi.mocked(fetchAlchemyLogs)
+        .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 9_000, calls: 1, maxDepth: 0 })
+        .mockResolvedValueOnce(failure === "null" ? null
+          : { logs: [], complete: false, scannedToBlock: 9_000, calls: 1, maxDepth: 0 });
+      const result = await fetchEvmEventsIncremental(
+        mockD1(), config, null, 1, new Map(), makeBudget(), limiter, undefined, chainRpcs,
+      );
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(2);
+      expect(result).toMatchObject({ scannedToBlock: 9_000, coverageOutcome: "partial", apiError: true });
+    });
+
+    it("certifies coverage only after the final short page reaches the safe head", async () => {
+      const { config, chainRpcs } = setup();
+      vi.mocked(getAlchemyBlockNumber).mockResolvedValue(10_180);
+      const result = await fetchEvmEventsIncremental(
+        mockD1(), config, null, 1, new Map(), makeBudget(), limiter, undefined, chainRpcs,
+      );
+      expect(fetchAlchemyLogs).toHaveBeenCalledTimes(2);
+      expect(result).toMatchObject({ scannedToBlock: 10_000, safeHead: 10_000,
+        coverageOutcome: "quiet", incomplete: false, apiError: false });
+    });
+  });
+
   it.each([null, "[]", "42"])("holds malformed state with prior %s for two scans then durably quarantines it without losing valid rows", async (priorValue) => {
     const sqlite = new DatabaseSync(":memory:");
     sqlite.exec("CREATE TABLE cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)");
