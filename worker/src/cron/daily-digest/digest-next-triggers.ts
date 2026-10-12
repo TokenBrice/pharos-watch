@@ -46,13 +46,43 @@ function applyTriggerLifecycle(
   }
   const repeatedCount = (previous.repeatedCount ?? 0) + 1;
   if (repeatedCount >= TRIGGER_MAX_EDITIONS) return null;
-  return {
-    ...trigger,
-    ...(previous.thresholdValue != null
-      ? { thresholdValue: previous.thresholdValue, thresholdLabel: previous.thresholdLabel }
-      : {}),
-    repeatedCount,
-  };
+  // The detail sentence restates the threshold, so it is re-rendered from the
+  // kept one; carrying today's re-derived detail told the writer "-25 or lower"
+  // and "falls to -10" in the same trigger line.
+  const sticky = previous.thresholdValue != null
+    ? { ...trigger, thresholdValue: previous.thresholdValue, thresholdLabel: previous.thresholdLabel }
+    : trigger;
+  return { ...sticky, detail: triggerDetail(sticky), repeatedCount };
+}
+
+type TriggerWithoutDetail = Omit<DigestNextTrigger, "detail">;
+
+/** Reader-facing condition sentence, rendered from the trigger's own threshold. */
+function triggerDetail(trigger: TriggerWithoutDetail): string {
+  const symbol = trigger.symbol ?? "";
+  const threshold = trigger.thresholdValue ?? 0;
+  switch (trigger.metric) {
+    case "yield-apy":
+      return `If ${symbol}'s best APY falls back to ${threshold}%, the anomaly is cooling.`;
+    case "liquidity-score":
+      return `If ${symbol}'s DEX liquidity score ${trigger.comparator === "lte" ? "falls to" : "climbs to"} ${threshold}, the move has follow-through.`;
+    case "depeg-bps":
+      return `If ${symbol} reaches ${trigger.thresholdLabel}, the next digest should treat it as a stronger peg-stress signal.`;
+    case "supply-1d-usd":
+      return `If ${symbol} moves at least ${formatCurrency(threshold, 0)} in one day, the supply story graduates from drift to rotation.`;
+    case "supply-7d-usd":
+      return `If ${symbol}'s 7d supply move clears ${formatCurrency(threshold, 0)}, the market-structure story has follow-through.`;
+    case "bank-run-gauge":
+      return `If the Bank Run Gauge falls to ${trigger.thresholdLabel}, flow stress becomes the next lead candidate.`;
+    case "dews-band":
+      return `If ${symbol} remains ${trigger.thresholdLabel}, the risk signal survives the first-day band-change noise test.`;
+    case "psi-score":
+      return `If PSI falls to ${trigger.thresholdLabel}, tomorrow's story should shift from regime frame to active deterioration.`;
+  }
+}
+
+function withDetail(trigger: TriggerWithoutDetail): DigestNextTrigger {
+  return { ...trigger, detail: triggerDetail(trigger) };
 }
 
 export function buildNextTriggers(
@@ -174,7 +204,7 @@ function yieldTrigger(
 ): DigestNextTrigger {
   const symbol = anomaly.symbol.toUpperCase();
   const threshold = Math.round(anomaly.apy7d * 1.2 * 10) / 10;
-  return {
+  return withDetail({
     id: `trigger:yield:${symbol.toLowerCase()}`,
     label: `${symbol} yield anomaly cooling`,
     metric: "yield-apy",
@@ -184,8 +214,7 @@ function yieldTrigger(
     symbol,
     candidateId,
     rationale: "An APY back near its 7d average means the spike anomaly resolved rather than persisting.",
-    detail: `If ${symbol}'s best APY falls back to ${threshold}% (1.2x its 7d average of ${anomaly.apy7d}%), the anomaly is cooling.`,
-  };
+  });
 }
 
 function liquidityTrigger(
@@ -195,7 +224,7 @@ function liquidityTrigger(
   const symbol = shift.symbol.toUpperCase();
   const worsening = shift.scoreDelta < 0;
   const threshold = Math.round(worsening ? shift.currentScore - 8 : shift.currentScore + 8);
-  return {
+  return withDetail({
     id: `trigger:liquidity:${symbol.toLowerCase()}`,
     label: worsening ? `${symbol} liquidity decay continuing` : `${symbol} liquidity recovery continuing`,
     metric: "liquidity-score",
@@ -207,8 +236,7 @@ function liquidityTrigger(
     rationale: worsening
       ? "A second 8-point drop confirms structural depth loss rather than a one-day rebalance."
       : "A second 8-point gain confirms depth genuinely returning.",
-    detail: `If ${symbol}'s DEX liquidity score ${worsening ? "falls to" : "climbs to"} ${threshold}, the move has follow-through.`,
-  };
+  });
 }
 
 function depegTrigger(
@@ -220,7 +248,7 @@ function depegTrigger(
   if (absBps == null) return null;
   const threshold = roundToStep(Math.max(absBps + 25, absBps * 1.15), 25, "up");
   const symbol = depeg.symbol.toUpperCase();
-  return {
+  return withDetail({
     id: `trigger:depeg:${(depeg.stablecoinId ?? symbol).toLowerCase()}`,
     ...(depeg.stablecoinId != null ? { stablecoinId: depeg.stablecoinId } : {}),
     label: `${symbol} depeg widening`,
@@ -231,8 +259,7 @@ function depegTrigger(
     symbol,
     candidateId,
     rationale: "A wider deviation raises market-impact severity and lead priority.",
-    detail: `If ${symbol} reaches ${threshold} bps off peg, the next digest should treat it as a stronger peg-stress signal.`,
-  };
+  });
 }
 
 function supplyVelocityTrigger(
@@ -241,7 +268,7 @@ function supplyVelocityTrigger(
 ): DigestNextTrigger {
   const threshold = roundToStep(Math.max(Math.abs(velocity.change1d) * 1.25, 10_000_000), 5_000_000, "up");
   const symbol = velocity.coin.toUpperCase();
-  return {
+  return withDetail({
     id: `trigger:supply-1d:${symbol.toLowerCase()}`,
     label: `${symbol} 1d supply velocity`,
     metric: "supply-1d-usd",
@@ -251,8 +278,7 @@ function supplyVelocityTrigger(
     symbol,
     candidateId,
     rationale: "A larger one-day supply move confirms whether the velocity signal is still building.",
-    detail: `If ${symbol} moves at least ${formatCurrency(threshold, 0)} in one day, the supply story graduates from drift to rotation.`,
-  };
+  });
 }
 
 function weeklySupplyTrigger(
@@ -261,7 +287,7 @@ function weeklySupplyTrigger(
 ): DigestNextTrigger {
   const threshold = roundToStep(Math.max(Math.abs(mover.changeUsd) * 1.1, 25_000_000), 10_000_000, "up");
   const symbol = mover.symbol.toUpperCase();
-  return {
+  return withDetail({
     id: `trigger:supply-7d:${symbol.toLowerCase()}`,
     label: `${symbol} weekly supply move`,
     metric: "supply-7d-usd",
@@ -271,13 +297,12 @@ function weeklySupplyTrigger(
     symbol,
     candidateId,
     rationale: "The largest weekly mover stays editorially useful only if the move keeps scaling.",
-    detail: `If ${symbol}'s 7d supply move clears ${formatCurrency(threshold, 0)}, the market-structure story has follow-through.`,
-  };
+  });
 }
 
 function gaugeTrigger(score: number, candidateId?: string): DigestNextTrigger {
   const threshold = score < 0 ? roundToStep(score - 5, 5, "down") : -10;
-  return {
+  return withDetail({
     id: "trigger:gauge",
     label: "Bank Run Gauge pressure",
     metric: "bank-run-gauge",
@@ -286,14 +311,13 @@ function gaugeTrigger(score: number, candidateId?: string): DigestNextTrigger {
     thresholdLabel: `${formatScore(threshold)} or lower`,
     candidateId,
     rationale: "A lower gauge reading would confirm holder pressure instead of one-day noise.",
-    detail: `If the Bank Run Gauge falls to ${formatScore(threshold)} or lower, flow stress becomes the next lead candidate.`,
-  };
+  });
 }
 
 function dewsTrigger(symbol: string, band: string, candidateId?: string): DigestNextTrigger {
   const rank = Math.max(DEWS_BAND_RANK[band] ?? 2, DEWS_BAND_RANK.ALERT);
   const label = Object.entries(DEWS_BAND_RANK).find(([, value]) => value === rank)?.[0] ?? "ALERT";
-  return {
+  return withDetail({
     id: `trigger:dews:${symbol.toLowerCase()}`,
     label: `${symbol} DEWS severity`,
     metric: "dews-band",
@@ -303,13 +327,12 @@ function dewsTrigger(symbol: string, band: string, candidateId?: string): Digest
     symbol,
     candidateId,
     rationale: "A sustained or worsening DEWS band is stronger than a single transition.",
-    detail: `If ${symbol} remains ${label} or worse, the risk signal survives the first-day band-change noise test.`,
-  };
+  });
 }
 
 function psiTrigger(score: number, candidateId?: string): DigestNextTrigger {
   const threshold = Math.max(0, Math.floor(score - 2));
-  return {
+  return withDetail({
     id: "trigger:psi-score",
     label: "PSI deterioration",
     metric: "psi-score",
@@ -318,8 +341,7 @@ function psiTrigger(score: number, candidateId?: string): DigestNextTrigger {
     thresholdLabel: `${threshold} or lower`,
     candidateId,
     rationale: "A two-point PSI drop is large enough to change the regime frame.",
-    detail: `If PSI falls to ${threshold} or lower, tomorrow's story should shift from regime frame to active deterioration.`,
-  };
+  });
 }
 
 function triggerHit(
