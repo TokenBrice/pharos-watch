@@ -1,6 +1,6 @@
 import type { PsiConditionBand } from "../types/stability";
 import type { PsiBeaconModel, PsiBeaconPenaltyKey, PsiBeaconSpan } from "./psi-beacon";
-import { formatPath, formatPoints, project, round1, type ScenePoint, type SceneProjection } from "./scene/projection";
+import { formatPath, formatPoints, hull, project, round1, type ScenePoint, type SceneProjection } from "./scene/projection";
 import { LIGHTHOUSE_LANTERN_Z, LIGHTHOUSE_TOP_Z } from "./scene/objects/lighthouse";
 
 /**
@@ -60,8 +60,13 @@ export interface PsiBeaconLayout {
   axis: PsiBeaconLine;
   rings: { value: number; d: string; label: PsiBeaconLabel }[];
   zones: { band: PsiConditionBand; label: PsiBeaconLabel }[];
-  /** Lit cone from 0 to the score, its constant-geometry glow, and the crisp terminating edge at the score. */
-  beam: { points: string; halo: string; tip: PsiBeaconLine } | null;
+  /**
+   * Lit cone from 0 to the score, its constant-geometry glow, the crisp terminating edge at the score, and the light
+   * sheet falling from the lantern onto that cone (hull of the lantern and the cone's corners). The sheet ends exactly
+   * at the tip, so it adds no data channel: lit length is still the instant score. `sheetAxis` is the sheet
+   * gradient's vector (lantern → the cone's middle at the score).
+   */
+  beam: { points: string; halo: string; tip: PsiBeaconLine; sheet: string; sheetAxis: PsiBeaconLine } | null;
   gain: string | null;
   drag: string | null;
   fog: { key: PsiBeaconPenaltyKey; points: string; title: string; lowerBound: PsiBeaconLabel | null }[];
@@ -202,9 +207,13 @@ export function layoutPsiBeacon(model: PsiBeaconModel, p: PsiBeaconProjection): 
   const tipR = psiBeaconRadius(model.beam.to);
   const tip = cross(p, model.beam.to, w(tipR));
   const halo: Width = (r) => w(r) * HALO_SCALE;
+  const r0 = psiBeaconRadius(0);
+  const sheet = formatPolygon(hull([lantern, offset(p, r0, -w(r0)), offset(p, r0, w(r0)), offset(p, tipR, -w(tipR)), offset(p, tipR, w(tipR))]));
+  const tipMid = offset(p, tipR, 0);
+  const sheetAxis = { x1: round1(lantern[0]), y1: round1(lantern[1]), x2: round1(tipMid[0]), y2: round1(tipMid[1]) };
   return {
     ...base,
-    beam: { points: strip(p, 0, model.beam.to, w), halo: strip(p, 0, model.beam.to, halo), tip },
+    beam: { points: strip(p, 0, model.beam.to, w), halo: strip(p, 0, model.beam.to, halo), tip, sheet, sheetAxis },
     gain: model.gain ? strip(p, ...drawn(model.gain), w) : null,
     drag: model.drag ? strip(p, ...drawn(model.drag), w) : null,
     fog,

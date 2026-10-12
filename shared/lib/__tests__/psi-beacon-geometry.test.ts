@@ -37,6 +37,14 @@ describe("layoutPsiBeacon", () => {
     expect(Math.min(...xs(breadth.points))).toBeGreaterThan(Math.min(...xs(result.beam!.points)));
   });
 
+  it("emits the light sheet from the lantern and ends it exactly at the tip (no second data channel)", () => {
+    const result = layout(LIVE);
+    const pts = result.beam!.sheet.split(" ").map((pair) => pair.split(",").map(Number) as [number, number]);
+    expect(pts.some(([x, y]) => Math.abs(x - result.lantern[0]) < 0.11 && Math.abs(y - result.lantern[1]) < 0.11)).toBe(true);
+    expect(Math.max(...pts.map(([x]) => x))).toBeCloseTo(Math.max(...xs(result.beam!.points)), 0);
+    expect(layout(null).beam).toBeNull();
+  });
+
   it("cuts one fixed cone: its cross-section at a radius never depends on the score", () => {
     const short = layout({ ...LIVE, score: 50, band: "FRACTURE", components: undefined });
     const long = layout({ ...LIVE, score: 90, band: "BEDROCK", components: undefined });

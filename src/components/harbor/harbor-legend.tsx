@@ -4,7 +4,7 @@
 import type { CSSProperties, ReactElement } from "react";
 import { SceneMarks } from "@/components/scene/scene-marks";
 import { CHAIN_HEALTH_BAND_ORDER, CHAIN_HEALTH_LABELS, CHAIN_HEALTH_PENNANTS } from "@shared/lib/classification";
-import { HARBOR_CARGO_LABELS, MAX_BAYS_PER_TIER, WAKE_BREAK_PCT, WAKE_MIN_PCT, type HarborFlag } from "@shared/lib/harbor-scene";
+import { HARBOR_CARGO_LABELS, MAX_BAYS_PER_TIER, WAKE_BREAK_PCT, WAKE_HUE_PCT, WAKE_MIN_PCT, type HarborFlag } from "@shared/lib/harbor-scene";
 import { harborFlagMarks, HARBOR_LAYOUTS } from "@shared/lib/harbor-scene-geometry";
 import type { SceneMark } from "@shared/lib/scene/marks";
 import { bbox, SCENE_DIMETRIC } from "@shared/lib/scene/projection";
@@ -52,15 +52,18 @@ export function HarborLegend({ tiered }: { tiered: boolean }): ReactElement {
         const flag: HarborFlag = { kind: "band", band, label: CHAIN_HEALTH_LABELS[band], pennants: CHAIN_HEALTH_PENNANTS[band], score: null };
         return (
           <li key={band}>
-            <MiniMarks marks={harborFlagMarks(SCENE_DIMETRIC, 0, 0, 0, flag)} height={26} /> {CHAIN_HEALTH_LABELS[band]}
+            <MiniMarks marks={harborFlagMarks(SCENE_DIMETRIC, 0, 0, 0, flag)} height={22} /> {CHAIN_HEALTH_LABELS[band]}
           </li>
         );
       })}
       <li>
-        <MiniMarks marks={harborFlagMarks(SCENE_DIMETRIC, 0, 0, 0, { kind: "unrated", reason: "" })} height={26} /> Not rated
+        <MiniMarks marks={harborFlagMarks(SCENE_DIMETRIC, 0, 0, 0, { kind: "unrated", reason: "" })} height={22} /> Not rated
       </li>
-      <li className={styles.wide}>
-        7d wake: <span className={styles.wakeKey} data-dir="up">▲ growth</span> / <span className={styles.wakeKey} data-dir="down">▼ decline</span>, length linear to ±{WAKE_BREAK_PCT}% (break mark beyond), none under {WAKE_MIN_PCT}%
+      <li>
+        {/* one text run: the li is a flex row, so bare text nodes would pick up its gap */}
+        <span>
+          7d wake: chevrons point ▲ growth / ▼ decline, length linear to ±{WAKE_BREAK_PCT}% (break mark beyond), none under {WAKE_MIN_PCT}%; tinted <span className={styles.wakeKey} data-dir="up">green</span> / <span className={styles.wakeKey} data-dir="down">red</span> from ±{WAKE_HUE_PCT}%
+        </span>
       </li>
       {tiered ? <li>Containers beyond ${MAX_BAYS_PER_TIER * 10}B stack a second tier</li> : null}
     </ul>

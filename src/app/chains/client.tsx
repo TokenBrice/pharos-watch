@@ -121,7 +121,7 @@ export function ChainsLeaderboardClient() {
           <div className="pharos-subtle-band space-y-3 py-4">
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
               <div>
-                <p className="pharos-label">{partialGlobalSupply ? "Partial Stablecoin Supply" : "Total Stablecoin Supply"}</p>
+                <p className="pharos-label">{partialGlobalSupply ? "Partial stablecoin supply" : "Total stablecoin supply"}</p>
                 <p className="pharos-numeric mt-1 text-3xl font-extrabold tracking-tight text-foreground">
                   {formatCompactUsd(data.globalTotalUsd)}
                 </p>
@@ -135,8 +135,8 @@ export function ChainsLeaderboardClient() {
                     </span>
                   </span>
                 )}
-                <span>
-                  <span className="pharos-label mr-1.5">Chains</span>
+                <span title="Chains with at least one observed stablecoin supply row this run; the Chains count in the top strip is the full chain registry.">
+                  <span className="pharos-label mr-1.5">Chains with observed supply</span>
                   <span className="pharos-numeric font-semibold">{data.chains.length}</span>
                 </span>
               </div>
@@ -216,7 +216,11 @@ function ChainsLeaderboardTable({ sorted, sort }: { sorted: readonly ChainSummar
         striped
         sort={sort}
         mobileScrollHint={false}
-        viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0"
+        // At lg+ the 760px table fits, so drop the scrollers (overflow-clip
+        // on the shell, visible viewport) and let the sticky header pin to
+        // the page under the site chrome (--table-header-top).
+        containerClassName="lg:overflow-clip"
+        viewportClassName="pb-[calc(var(--mobile-utility-safe-offset)-1rem)] sm:pb-0 lg:overflow-visible"
         viewportProps={{ compactBottomPadding: false, vertical: true }}
         tableClassName="min-w-[760px] w-full"
         stickyHeader

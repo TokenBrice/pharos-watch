@@ -16,6 +16,7 @@ import { boxMarks, boxPoints, faceMatrixG } from "./scene/solids";
 import {
   CONTAINERS_PER_BAY,
   MAX_BAYS_PER_TIER,
+  WAKE_HUE_PCT,
   type HarborCargoKind,
   type HarborContainer,
   type HarborFlag,
@@ -204,7 +205,11 @@ export function harborFlagMarks(p: SceneProjection, i: number, jm: number, z0: n
     return out;
   }
   const cls = `flag-${flag.band}`;
-  out.push(worldPolygon(p, `${cls} e`, [[i + 0.04, jm, top - fh], [i + 0.04 + fw, jm, top - fh], [i + 0.04 + fw, jm, top], [i + 0.04, jm, top]]));
+  // Robust flies a swallowtail (forked fly), so it reads apart from Healthy's plain flag + pennant by shape, not only by green.
+  const fly: [number, number, number][] = flag.band === "robust"
+    ? [[i + 0.04 + fw, jm, top - fh], [i + 0.04 + fw * 0.8, jm, top - fh / 2], [i + 0.04 + fw, jm, top]]
+    : [[i + 0.04 + fw, jm, top - fh], [i + 0.04 + fw, jm, top]];
+  out.push(worldPolygon(p, `${cls} e`, [[i + 0.04, jm, top - fh], ...fly, [i + 0.04, jm, top]]));
   if (flag.score != null) {
     out.push({ kind: "glyph", cls: "flag-text", text: String(flag.score), transform: southMatrix(p, i + 0.04 + fw * 0.14, jm, top - fh * 0.8), scale: fh * 0.66 });
   }
@@ -226,7 +231,8 @@ function southMatrix(p: SceneProjection, i: number, j: number, z: number): [numb
 function wakeMarks(p: SceneProjection, layout: HarborLayout, i0: number, jm: number, half: number, wake: HarborWake): { marks: SceneMark[]; end: ScenePoint | null } {
   if (wake.kind !== "wake") return { marks: [], end: null };
   const length = wake.magnitude * layout.wakeMax;
-  const cls = wake.direction === "up" ? "wake-up" : "wake-down";
+  // Small moves draw in neutral ink; only |%| ≥ WAKE_HUE_PCT takes the growth/decline hue.
+  const cls = `${wake.direction === "up" ? "wake-up" : "wake-down"}${Math.abs(wake.pct) >= WAKE_HUE_PCT ? " wake-hue" : ""}`;
   const step = 0.42;
   const marks: SceneMark[] = [];
   const n = Math.max(1, Math.round(length / step));
@@ -243,7 +249,7 @@ function wakeMarks(p: SceneProjection, layout: HarborLayout, i0: number, jm: num
     for (const d of [0, 0.14]) {
       const a = project(p, endI + d, jm - half * 0.7, 0);
       const b = project(p, endI + d + 0.12, jm + half * 0.7, 0);
-      marks.push({ kind: "line", cls: "wake-break", x1: round1(a[0]), y1: round1(a[1]), x2: round1(b[0]), y2: round1(b[1]) });
+      marks.push({ kind: "line", cls: `wake-break ${cls}`, x1: round1(a[0]), y1: round1(a[1]), x2: round1(b[0]), y2: round1(b[1]) });
     }
   }
   return { marks, end: project(p, endI + (wake.broken ? 0.35 : 0.1), jm, 0) };

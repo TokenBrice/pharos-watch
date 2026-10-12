@@ -17,7 +17,7 @@ const WRAPPER_FORM_LABELS: Record<string, string> = {
 };
 
 function watershedDeltaChip(delta: WatershedDelta): string {
-  const count = `${delta.leafIds.length}${delta.remainder ? " more" : ""} ${delta.leafIds.length === 1 ? "dependent" : "dependents"}`;
+  const count = `${delta.leafIds.length}${delta.remainder ? " more" : ""} folded ${delta.leafIds.length === 1 ? "leaf" : "leaves"}`;
   const known = delta.leafIds.length > delta.unknownCount ? ` · ${formatCurrency(delta.knownUsd, 2)}` : " · USD unknown";
   return `${count}${known}${delta.unknownCount > 0 && delta.leafIds.length > delta.unknownCount ? ` (+${delta.unknownCount} unknown)` : ""}`;
 }
@@ -100,7 +100,7 @@ const LabelLayer = memo(function LabelLayer({ model, lit, labelOf }: {
   );
 });
 
-export function WatershedStage({ model, lit, roots, relationship, labelOf, previewTooltip, onPreview, onCommit }: {
+export function WatershedStage({ model, lit, roots, relationship, labelOf, previewTooltip, onPreview, onCommit, onClear }: {
   model: WatershedReadyModel;
   /** Minimum hop per reached coin (roots are hop 0); null when nothing is selected. */
   lit: ReadonlyMap<string, number> | null;
@@ -110,6 +110,8 @@ export function WatershedStage({ model, lit, roots, relationship, labelOf, previ
   previewTooltip: ReactNode;
   onPreview: (id: string | null) => void;
   onCommit: (id: string) => void;
+  /** Escape: drop the in-place pin. */
+  onClear?: () => void;
 }) {
   const { layout } = model;
   const hubs = useMemo(() => model.nodes.filter(node => node.kind === "hub"), [model]);
@@ -154,7 +156,7 @@ export function WatershedStage({ model, lit, roots, relationship, labelOf, previ
     else if (event.key === "ArrowLeft") moveFocus(strongest(node.id, "up")?.from);
     else if (event.key === "ArrowRight") moveFocus(strongest(node.id, "down")?.to);
     else if (event.key === "Enter" || event.key === " ") onCommit(node.id);
-    else if (event.key === "Escape") preview(null);
+    else if (event.key === "Escape") { preview(null); onClear?.(); }
     else return;
     event.preventDefault();
   };
@@ -174,6 +176,10 @@ export function WatershedStage({ model, lit, roots, relationship, labelOf, previ
           <pattern id="ws-wrapper-texture" width="4" height="4" patternUnits="userSpaceOnUse">
             <rect width="4" height="4" fill={DEPENDENCY_TYPE_PRESENTATION.wrapper.color} fillOpacity="0.3" />
             <circle cx="2" cy="2" r="0.9" fill={DEPENDENCY_TYPE_PRESENTATION.wrapper.color} />
+          </pattern>
+          <pattern id="ws-wrapper-texture-lit" width="4" height="4" patternUnits="userSpaceOnUse">
+            <rect width="4" height="4" style={{ fill: "var(--ws-beam)", fillOpacity: 0.35 }} />
+            <circle cx="2" cy="2" r="0.9" style={{ fill: "var(--ws-beam)" }} />
           </pattern>
         </defs>
         <RibbonLayer model={model} lit={lit} relationship={relationship} onHover={onRibbonHover} />

@@ -29,7 +29,7 @@ export function WatershedLegend({ model, labelOf }: { model: WatershedReadyModel
         {" "}A coin&apos;s left side stacks what it maps upstream; its right side stacks its dependents&apos; mapped supply. The two sides measure different things and need not match.
       </p>
       <p>
-        Grey stubs fold dependents that have no tracked dependents of their own.
+        Grey stubs (&quot;N folded leaves&quot;) fold dependents that have no tracked dependents of their own.
         {disclosures.multiParentLeafIds.length > 0 && ` ${disclosures.multiParentLeafIds.length} folded coins map to more than one upstream and are counted under each.`}
         {disclosures.doubleSerialDependentIds.length > 0 && ` ${disclosures.doubleSerialDependentIds.map(labelOf).join(", ")} ${disclosures.doubleSerialDependentIds.length === 1 ? "carries" : "carry"} two full claims and ${disclosures.doubleSerialDependentIds.length === 1 ? "is" : "are"} counted under each upstream.`}
         {disclosures.nullSupplyIds.length > 0 && ` ${disclosures.nullSupplyIds.length} linked coins have no published supply at evaluation; their links draw as unknown and are excluded from USD totals.`}

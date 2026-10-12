@@ -15,7 +15,8 @@ import { formatCompactUsd, formatSignedPercent } from "@shared/lib/format";
 import { buildHarborScene, isHarborChainVessel, stepHarborBerth, type HarborSceneInput, type HarborVessel } from "@shared/lib/harbor-scene";
 import { buildHarborGeometry, type HarborBerthGeometry } from "@shared/lib/harbor-scene-geometry";
 import { bbox } from "@shared/lib/scene/projection";
-import { boxToFrameRect, placeInspectorCard, placeTag, type SceneRect } from "@shared/lib/scene/placement";
+import { boxToFrameRect, placeInspectorCard, type SceneRect } from "@shared/lib/scene/placement";
+import { placeOnFreeWater } from "./harbor-placement";
 import { HarborRecordCard } from "./harbor-record-card";
 import { HarborLegend } from "./harbor-legend";
 import { HARBOR_KEYS_ID, HarborDefs, HarborSceneSvg, harborTokenStyle } from "./harbor-scene";
@@ -115,7 +116,7 @@ export function HarborHero({ data, retainedAfterError = false }: HarborHeroProps
     if (!(event.target as Element).closest("[data-berth]") && pinnedId) pin(null, "hero");
   };
 
-  // Hover / focus tag: the kit placement keeps it clear of the quay labels and inside the frame.
+  // Hover / focus tag: on the nearest open water to the berth's deck, clear of hulls and quay labels (frame px).
   useLayoutEffect(() => {
     const tag = tagRef.current;
     const frame = frameRef.current;
@@ -123,21 +124,22 @@ export function HarborHero({ data, retainedAfterError = false }: HarborHeroProps
     if (!tag || !frame || !berth) return;
     const fr = frame.getBoundingClientRect();
     const scale = fr.width / vbW;
+    const toFrame = ([x, y]: readonly [number, number]) => [(x - vb.x0) * scale, (y - vb.y0) * scale] as [number, number];
     const within = (el: Element): SceneRect => {
       const r = el.getBoundingClientRect();
       return { left: r.left - fr.left, top: r.top - fr.top, right: r.right - fr.left, bottom: r.bottom - fr.top };
     };
-    const obstacles = [...frame.querySelectorAll("[data-harbor-label]")].map(within);
-    const p = placeTag({
-      stone: boxToFrameRect(bbox(berth.hit), [vb.x0, vb.y0], scale),
-      tag: { width: tag.offsetWidth, height: tag.offsetHeight },
-      frame: { width: fr.width, height: fr.height },
-      obstacles,
-      top: CHROME_TOP - fr.top,
+    const p = placeOnFreeWater({
+      area: { left: 4, top: Math.max(4, CHROME_TOP - fr.top + 4), right: fr.width - 4, bottom: fr.height - 4 },
+      size: { width: tag.offsetWidth, height: tag.offsetHeight },
+      anchor: toFrame(berth.beamTarget),
+      hulls: geometry.berths.map((b) => b.hit.map(toFrame)),
+      labels: [...frame.querySelectorAll("[data-harbor-label]")].map(within),
+      distanceWeight: 0.05,
     });
     tag.style.left = `${p.x}px`;
     tag.style.top = `${p.y}px`;
-  }, [hotId, berths, vb.x0, vb.y0, vbW]);
+  }, [hotId, berths, geometry, vb.x0, vb.y0, vbW]);
 
   // Docked card (≥ 1280 px): beside the pinned berth, clear of the chrome and the Feedback corner.
   // `useSceneLayout` reports "narrow" while its query matches: here, while the viewport is wide enough to dock.
@@ -156,9 +158,29 @@ export function HarborHero({ data, retainedAfterError = false }: HarborHeroProps
     const fr = frame.getBoundingClientRect();
     const sr = stage.getBoundingClientRect();
     const scale = fr.width / vbW;
+    const toViewport = ([x, y]: readonly [number, number]) => [fr.left + (x - vb.x0) * scale, fr.top + (y - vb.y0) * scale] as [number, number];
+    const target = toViewport(berth.beamTarget);
+    // Visible band of the frame; with room for the card, take the open water that covers no hull or label.
+    const top = Math.max(CHROME_TOP, fr.top) + 8;
+    const bottom = Math.min(window.innerHeight, fr.bottom) - 8;
+    const h = Math.min(card.scrollHeight, bottom - top);
+    if (h >= Math.min(card.scrollHeight, 220)) {
+      const p = placeOnFreeWater({
+        area: { left: fr.left + 4, top, right: fr.right - 4, bottom },
+        size: { width: card.offsetWidth, height: h },
+        anchor: target,
+        hulls: geometry.berths.map((b) => b.hit.map(toViewport)),
+        labels: [...frame.querySelectorAll("[data-harbor-label]")].map((el) => el.getBoundingClientRect()),
+        blocked: [{ left: window.innerWidth - FEEDBACK_CORNER.width, top: window.innerHeight - FEEDBACK_CORNER.height, right: window.innerWidth, bottom: window.innerHeight }],
+        distanceWeight: 0.02,
+      });
+      card.style.left = `${p.x - sr.left}px`;
+      card.style.top = `${p.y - sr.top}px`;
+      card.style.maxHeight = `${h}px`;
+      return;
+    }
     const local = boxToFrameRect(bbox(berth.hit), [vb.x0, vb.y0], scale);
     const stone = { left: fr.left + local.left, top: fr.top + local.top, right: fr.left + local.right, bottom: fr.top + local.bottom };
-    const target = [fr.left + (berth.beamTarget[0] - vb.x0) * scale, fr.top + (berth.beamTarget[1] - vb.y0) * scale] as [number, number];
     const p = placeInspectorCard({
       stone,
       frame: fr,
@@ -171,7 +193,7 @@ export function HarborHero({ data, retainedAfterError = false }: HarborHeroProps
     card.style.left = `${p.x - sr.left}px`;
     card.style.top = `${p.y - sr.top}px`;
     card.style.maxHeight = `${p.maxHeight}px`;
-  }, [pinnedBerthId, berths, docked, vb.x0, vb.y0, vbW]);
+  }, [pinnedBerthId, berths, geometry, docked, vb.x0, vb.y0, vbW]);
 
   const hotVessel = hotId ? vessels.get(hotId) : undefined;
   const retained = scene.retained || retainedAfterError;

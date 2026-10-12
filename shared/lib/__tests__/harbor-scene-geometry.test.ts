@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { buildHarborScene, type HarborChainInput, type HarborSceneInput } from "../harbor-scene";
-import { buildHarborGeometry, validateHarborCapacity, type HarborPreset } from "../harbor-scene-geometry";
+import { buildHarborGeometry, harborFlagMarks, validateHarborCapacity, type HarborPreset } from "../harbor-scene-geometry";
+import { SCENE_DIMETRIC } from "../scene/projection";
 import { HARBOR_LIVE, scaleHarborInput as scale } from "./harbor-scene.test-support";
 
 const LIVE = HARBOR_LIVE;
@@ -35,6 +36,25 @@ const sha = (value: unknown) => createHash("sha256").update(JSON.stringify(value
 describe("buildHarborGeometry", () => {
   const scene = buildHarborScene(LIVE);
 
+  it("flies Robust as a swallowtail so it differs from Healthy by shape, not only hue", () => {
+    const face = (band: "robust" | "healthy") => harborFlagMarks(SCENE_DIMETRIC, 0, 0, 0, { kind: "band", band, label: band, pennants: band === "robust" ? 0 : 1, score: null })
+      .find((m) => m.cls === `flag-${band} e`)!;
+    expect(face("robust").kind === "polygon" && face("robust").points).toHaveLength(5);
+    expect(face("healthy").kind === "polygon" && face("healthy").points).toHaveLength(4);
+  });
+
+  it("tints wakes only from the hue threshold; smaller moves stay neutral ink", () => {
+    const wakeClasses = (pct: number) => {
+      const input = synthetic(3);
+      input.chains[0] = { ...input.chains[0]!, change7dPct: pct / 100 };
+      const g = buildHarborGeometry(buildHarborScene(input), "wide");
+      return [...new Set(g.berths[0]!.wake.map((m) => m.cls))];
+    };
+    expect(wakeClasses(-1)).toEqual(["wake-down"]);
+    expect(wakeClasses(6)).toEqual(["wake-up wake-hue"]);
+    expect(wakeClasses(-12)).toEqual(["wake-down wake-hue", "wake-break wake-down wake-hue"]);
+  });
+
   it.each(PRESETS)("draws one berth per vessel and every container (%s)", (preset) => {
     const geometry = buildHarborGeometry(scene, preset);
     expect(geometry.berths.map((b) => b.id)).toEqual(scene.vessels.map((v) => v.id));
@@ -50,8 +70,8 @@ describe("buildHarborGeometry", () => {
   it("is byte-stable for the 2026-10-12 fixture (golden)", () => {
     expect({ wide: sha(buildHarborGeometry(scene, "wide")), narrow: sha(buildHarborGeometry(scene, "narrow")) }).toMatchInlineSnapshot(`
       {
-        "narrow": "e79e5ecb04e34c0c",
-        "wide": "c1bd570104272c56",
+        "narrow": "f02d45eb8f11926a",
+        "wide": "d54876a5a266711d",
       }
     `);
   });

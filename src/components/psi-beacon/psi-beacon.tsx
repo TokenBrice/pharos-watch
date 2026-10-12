@@ -26,12 +26,14 @@ function Label({ label, className }: { label: PsiBeaconLabel; className: string 
 }
 
 function signed(value: number, digits: number): string {
+  // Sign follows the printed value, so a tiny drag never reads "−0.0".
+  if (Number(value.toFixed(digits)) === 0) return (0).toFixed(digits);
   if (value > 0) return `+${value.toFixed(digits)}`;
   if (value < 0) return `−${Math.abs(value).toFixed(digits)}`;
   return value.toFixed(digits);
 }
 
-function patternIds(uid: string): Record<PsiBeaconPenaltyKey | "drag" | "beam" | "halo", string> {
+function patternIds(uid: string): Record<PsiBeaconPenaltyKey | "drag" | "beam" | "halo" | "sheet", string> {
   const base = `psi-beacon-${uid.replace(/[^a-zA-Z0-9_-]/g, "")}`;
   return {
     severity: `${base}-sev`,
@@ -40,6 +42,7 @@ function patternIds(uid: string): Record<PsiBeaconPenaltyKey | "drag" | "beam" |
     drag: `${base}-drag`,
     beam: `${base}-beam`,
     halo: `${base}-halo`,
+    sheet: `${base}-sheet`,
   };
 }
 
@@ -47,9 +50,15 @@ function patternIds(uid: string): Record<PsiBeaconPenaltyKey | "drag" | "beam" |
  * Paint servers. The beam gradient runs along the fixed 0 → 100 ruler vector (user space), so the light at a given
  * distance is the same whatever the score: brightness never encodes the value, only where the cone is cut.
  */
-function Patterns({ ids, axis }: { ids: ReturnType<typeof patternIds>; axis: PsiBeaconLayout["axis"] }): ReactElement {
+function Patterns({ ids, axis, sheetAxis }: { ids: ReturnType<typeof patternIds>; axis: PsiBeaconLayout["axis"]; sheetAxis: PsiBeaconLayout["axis"] | null }): ReactElement {
   return (
     <defs>
+      {sheetAxis ? (
+        <linearGradient id={ids.sheet} gradientUnits="userSpaceOnUse" x1={sheetAxis.x1} y1={sheetAxis.y1} x2={sheetAxis.x2} y2={sheetAxis.y2}>
+          <stop offset="0" className={styles.sheetStop0} />
+          <stop offset="1" className={styles.sheetStop1} />
+        </linearGradient>
+      ) : null}
       <linearGradient id={ids.beam} gradientUnits="userSpaceOnUse" x1={axis.x1} y1={axis.y1} x2={axis.x2} y2={axis.y2}>
         <stop offset="0" className={styles.beamStop0} />
         <stop offset="1" className={styles.beamStop1} />
@@ -120,7 +129,7 @@ function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeacon
         <Swatch className={styles.fog} fill={`url(#${ids[key]})`} />
         <span>{PSI_BEACON_COMPONENT_LABELS[key]}</span>
         <span className={styles.legendValue}>
-          {value === null || missing.has(key) ? "n/a" : value.toFixed(2)}
+          {value === null || missing.has(key) ? "n/a" : value.toFixed(1)}
           {bank?.lowerBound ? " (≥)" : ""}
         </span>
       </li>
@@ -145,7 +154,7 @@ function Legend({ model, state, ids }: { model: PsiBeaconModel; state: PsiBeacon
           <li>
             {trend !== null && trend < 0 ? <Swatch className={styles.drag} fill={`url(#${ids.drag})`} /> : <Swatch className={styles.gain} />}
             <span>trend</span>
-            <span className={styles.legendValue}>{trend === null ? "n/a" : signed(trend, 2)}</span>
+            <span className={styles.legendValue}>{trend === null ? "n/a" : signed(trend, 1)}</span>
           </li>
           {model.unknown ? (
             <li>
@@ -201,7 +210,7 @@ export function PsiBeacon({ state, className }: { state: PsiBeaconState; classNa
         aria-label={model.ariaLabel}
         aria-busy={state.kind === "loading" ? true : undefined}
       >
-        <Patterns ids={ids} axis={layout.axis} />
+        <Patterns ids={ids} axis={layout.axis} sheetAxis={layout.beam?.sheetAxis ?? null} />
         {/* The sea fills the whole frame (beyond the letterboxed viewBox): the scene's chart surface. */}
         <rect className={kit.sea} x={VIEW_BOX.x - 2000} y={VIEW_BOX.y - 2000} width={VIEW_BOX.width + 4000} height={VIEW_BOX.height + 4000} />
         {layout.rings.map((ring) => (
@@ -256,6 +265,8 @@ export function PsiBeacon({ state, className }: { state: PsiBeaconState; classNa
           </g>
         ) : null}
         {layout.zeroLabel ? <Label label={layout.zeroLabel} className={styles.tickLabel} /> : null}
+        {/* The lamp's light falls from the lantern onto the ruler; the tower, painted after it, hides what is behind. */}
+        {layout.beam ? <polygon className={styles.sheet} points={layout.beam.sheet} fill={`url(#${ids.sheet})`} data-testid="psi-beacon-sheet" /> : null}
         <BeaconTower />
         {model.paint.mode === "lit" ? (
           <>

@@ -113,6 +113,21 @@
   stop-opacity: 0.62;
 }
 
+/* Light sheet from the lantern to the lit ruler: bright at the lamp, thinning toward the sea. */
+.sheet {
+  pointer-events: none;
+}
+
+.sheetStop0 {
+  stop-color: var(--beam);
+  stop-opacity: 0.36;
+}
+
+.sheetStop1 {
+  stop-color: var(--beam);
+  stop-opacity: 0.06;
+}
+
 .haloStop0 {
   stop-color: var(--beam);
   stop-opacity: var(--halo-0);
@@ -236,7 +251,8 @@
 }
 
 [data-paint="outline"] .lampHalo,
-[data-paint="outline"] .halo {
+[data-paint="outline"] .halo,
+[data-paint="outline"] .sheet {
   fill: none;
 }
 

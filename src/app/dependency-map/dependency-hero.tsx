@@ -48,7 +48,7 @@ export function DependencyHero({ model, cards, dependencyEdges, mcapMap, logos, 
   };
   const labels = useMemo(() => new Map(cards.map(card => [card.id, stablecoinLabel(card)])), [cards]);
   const labelOf = useMemo(() => (id: string) => labels.get(id) ?? id, [labels]);
-  const viewControls = desktop && <div className="flex gap-2 p-3" role="group" aria-label="Dependency map view">{VIEW_OPTIONS.map(option => <button key={option.value} type="button" aria-pressed={view === option.value} className={view === option.value ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-11 px-4 text-sm" : "pharos-focus-ring pharos-control-pill min-h-11 px-4 text-sm"} onClick={() => switchView(option.value)}>{option.label}</button>)}</div>;
+  const viewControls = desktop && <div className="pharos-segmented m-3" role="group" aria-label="Dependency map view">{VIEW_OPTIONS.map(option => <button key={option.value} type="button" aria-pressed={view === option.value} className="pharos-focus-ring pharos-segmented-item text-sm" onClick={() => switchView(option.value)}>{option.label}</button>)}</div>;
   const network = <ContagionGraph cards={cards} dependencyEdges={dependencyEdges} mcapMap={mcapMap} logos={logos} syncUrlState modeControls={<div className="flex flex-wrap">{workspace.modeControls}{viewControls}</div>} exposureOverlay={workspace.overlay} onUseAsExposureRoot={workspace.addRoot} hubExposures={model.hubs} commonModeGroups={commonModeGroups} />;
   const publication = workspace.exposure.publication;
   const supply = model.mappedSupply;

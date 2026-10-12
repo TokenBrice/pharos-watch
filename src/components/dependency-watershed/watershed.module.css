@@ -6,13 +6,18 @@
   position: relative;
 }
 
+/* Holds the pinned headline (three lines) so pinning never shifts the stage. */
+.readout {
+  min-height: 4.5rem;
+}
+
 .mark {
   transition: opacity 220ms ease;
   transition-delay: calc(var(--hop, 0) * 90ms);
 }
 
 .dimmed {
-  opacity: 0.12;
+  opacity: 0.15;
 }
 
 .filteredOut {
@@ -48,8 +53,20 @@
   fill: none;
 }
 
+/* Lit links take the beam colour; wrappers keep their dotted texture in it. */
 .lit.ribbonCollateral {
-  fill-opacity: 0.62;
+  fill: var(--ws-beam);
+  fill-opacity: 0.55;
+}
+
+.lit.ribbonWrapper {
+  fill: url(#ws-wrapper-texture-lit);
+}
+
+.lit.lineCollateral,
+.lit.lineWrapper {
+  stroke: var(--ws-beam);
+  stroke-opacity: 1;
 }
 
 .bar {

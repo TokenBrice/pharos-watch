@@ -43,7 +43,7 @@ describe("DependencyWatershed", () => {
     expect(screen.queryByText("network")).toBeNull();
   });
 
-  it("moves focus with arrows and commits a hub as an exposure root", () => {
+  it("moves focus with arrows, pins a hub in place, and traces exposure only on request", () => {
     const onAddRoot = vi.fn();
     render(<DependencyWatershed publication={publication(edges)} overlay={null} result={null} labelOf={labelOf} onAddRoot={onAddRoot} fallback={null} />);
     const [aaa, bbb] = within(screen.getByRole("group", { name: /Dependency watershed/ })).getAllByRole("button");
@@ -54,7 +54,22 @@ describe("DependencyWatershed", () => {
     fireEvent.keyDown(bbb!, { key: "ArrowLeft" });
     expect(document.activeElement).toBe(aaa);
     fireEvent.keyDown(aaa!, { key: "Enter" });
+    expect(onAddRoot).not.toHaveBeenCalled();
+    expect(aaa!.getAttribute("aria-pressed")).toBe("true");
+    fireEvent.blur(aaa!);
+    expect(screen.getByText(/^Downstream of AAA: /)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Trace exposure →" }));
     expect(onAddRoot).toHaveBeenCalledWith("aaa");
+    fireEvent.keyDown(aaa!, { key: "Escape" });
+    expect(aaa!.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("labels the folded stub as folded leaves and leads the hub tooltip with direct exposure", () => {
+    const { container } = render(<DependencyWatershed publication={publication(edges)} overlay={null} result={null} labelOf={labelOf} onAddRoot={vi.fn()} fallback={null} />);
+    expect([...container.querySelectorAll("text")].some(text => /^\d+ folded lea(f|ves) ·/.test(text.textContent ?? ""))).toBe(true);
+    const [, bbb] = within(screen.getByRole("group", { name: /Dependency watershed/ })).getAllByRole("button");
+    fireEvent.focus(bbb!);
+    expect(screen.getByText("Direct $250.00 · 2 dependents")).toBeTruthy();
   });
 
   it("keeps folded-dependent chips informational and names mixed supply clocks", () => {
@@ -62,7 +77,7 @@ describe("DependencyWatershed", () => {
     (pub.nodes[0] as { supplyAsOfSec: number | null }).supplyAsOfSec = 1_791_700_000;
     const onAddRoot = vi.fn();
     const { container } = render(<DependencyWatershed publication={pub} overlay={null} result={null} labelOf={labelOf} onAddRoot={onAddRoot} fallback={null} />);
-    const chip = [...container.querySelectorAll("text")].find(text => /dependents? ·/.test(text.textContent ?? ""))!;
+    const chip = [...container.querySelectorAll("text")].find(text => /folded lea(f|ves) ·/.test(text.textContent ?? ""))!;
     expect(chip.closest("[aria-hidden='true']")).toBeTruthy();
     fireEvent.click(chip);
     expect(onAddRoot).not.toHaveBeenCalled();

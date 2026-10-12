@@ -31,7 +31,7 @@ describe("ChainsLeaderboardClient", () => {
       isLoading: false, isError: false, error: null, refetch: vi.fn(), dataUpdatedAt: 0, meta: null,
     });
     render(<ChainsLeaderboardClient />);
-    expect(screen.getByText("Partial Stablecoin Supply")).toBeTruthy();
+    expect(screen.getByText("Partial stablecoin supply")).toBeTruthy();
     expect(screen.getByText(/3 assets excluded from global supply/).textContent).toContain("4 unavailable chain observations");
     expect(screen.getByText(/Partial · 2 unavailable/)).toBeTruthy();
     expect(screen.getByText(formatCompactUsd(456_000_000))).toBeTruthy();

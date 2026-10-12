@@ -1,10 +1,16 @@
+import { DEFAULT_NODE_LIMIT } from "@/lib/contagion-layout";
+
 export type DependencyMapView = "watershed" | "network";
 
-/** Explore parameters only the Network view reads, such as the coin-page `?focus=<id>` deep link. */
-const NETWORK_PARAMS = ["focus", "trace", "type", "limit"] as const;
+/**
+ * Explore parameters only the Network view reads, such as the coin-page `?focus=<id>` deep link, with the value the
+ * Network writes when untouched. The Network renders first during hydration and syncs its defaults into the URL, so
+ * default values are not a request for Network (otherwise every reload after a first visit would open Network).
+ */
+const NETWORK_PARAM_DEFAULTS = { focus: "all", trace: null, type: "all", limit: String(DEFAULT_NODE_LIMIT) } as const;
 
 function hasNetworkParams(params: URLSearchParams): boolean {
-  return NETWORK_PARAMS.some(name => params.has(name));
+  return Object.entries(NETWORK_PARAM_DEFAULTS).some(([name, fallback]) => params.has(name) && params.get(name) !== fallback);
 }
 
 /** Watershed is the default unless the URL asks for Network or carries Network-only Explore state. */

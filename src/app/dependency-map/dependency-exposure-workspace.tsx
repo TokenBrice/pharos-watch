@@ -48,7 +48,7 @@ export function useDependencyExposureWorkspace(publication: DependencyGraphRespo
     });
     trackEvent("dependency_map_action", { action: "mode_switch", value: mode });
   };
-  const modeControls = <div className="flex gap-2 p-3" aria-label="Dependency map mode">{(["explore", "exposure"] as const).map(mode => <button key={mode} data-exposure-mode={mode} type="button" aria-pressed={state.mode === mode} className={state.mode === mode ? "pharos-focus-ring pharos-control-pill pharos-control-pill-active min-h-11 px-4 text-sm" : "pharos-focus-ring pharos-control-pill min-h-11 px-4 text-sm"} onClick={() => switchMode(mode)}>{mode === "explore" ? "Explore" : "Exposure"}</button>)}</div>;
+  const modeControls = <div className="pharos-segmented m-3" role="group" aria-label="Dependency map mode">{(["explore", "exposure"] as const).map(mode => <button key={mode} data-exposure-mode={mode} type="button" aria-pressed={state.mode === mode} className="pharos-focus-ring pharos-segmented-item text-sm" onClick={() => switchMode(mode)}>{mode === "explore" ? "Explore" : "Exposure"}</button>)}</div>;
   return { state, exposure, overlay, modeControls, addRoot, inspectedId, tab, setTab, resultsTab,
     removeRoot: (id: string) => { update({ ...state, roots: state.roots.filter(root => root !== id) }); trackEvent("dependency_map_action", { action: "root_change", value: id }); },
     reset: () => {
@@ -89,8 +89,8 @@ export function DependencyExposureWorkspace({ workspace, options, children }: {
   const { state, exposure, tab, setTab } = workspace;
   return <div className="space-y-4">
     {state.mode === "exposure" && <div className="flex flex-wrap gap-2 md:hidden">
-      <div role="tablist" aria-label="Exposure workspace" className="flex gap-2">
-        {(["setup", "results", "graph"] as const).map((value, index, tabs) => <button type="button" key={value} ref={value === "results" ? workspace.resultsTab : undefined} role="tab" tabIndex={tab === value ? 0 : -1} id={`exposure-tab-${value}`} aria-controls={`exposure-panel-${value}`} aria-selected={tab === value} className="pharos-focus-ring min-h-11 rounded border border-border px-3 text-sm aria-selected:bg-muted" onClick={() => setTab(value)} onKeyDown={event => {
+      <div role="tablist" aria-label="Exposure workspace" className="pharos-segmented">
+        {(["setup", "results", "graph"] as const).map((value, index, tabs) => <button type="button" key={value} ref={value === "results" ? workspace.resultsTab : undefined} role="tab" tabIndex={tab === value ? 0 : -1} id={`exposure-tab-${value}`} aria-controls={`exposure-panel-${value}`} aria-selected={tab === value} className="pharos-focus-ring pharos-segmented-item min-h-11 text-sm md:min-h-8" onClick={() => setTab(value)} onKeyDown={event => {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
           event.preventDefault();
           const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;

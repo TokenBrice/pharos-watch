@@ -46,13 +46,13 @@ describe("PsiBeacon", () => {
     expect(root.querySelector('[data-testid="psi-beacon-fog-severity"] title')?.textContent).toContain("<0.3");
   });
 
-  it("prints exact component values in the legend", () => {
+  it("prints component values at the panels' one-decimal precision", () => {
     const legend = renderBeacon(LIVE).root.querySelector('[data-testid="psi-beacon-legend"]')!.textContent;
     expect(legend).toContain("instant91.9");
-    expect(legend).toContain("severity0.02");
-    expect(legend).toContain("breadth6.65");
-    expect(legend).toContain("stress breadth1.33");
-    expect(legend).toContain("trend−0.14");
+    expect(legend).toContain("severity0.0");
+    expect(legend).toContain("breadth6.7");
+    expect(legend).toContain("stress breadth1.3");
+    expect(legend).toContain("trend−0.1");
     expect(legend).toContain("24h avg92.1");
   });
 

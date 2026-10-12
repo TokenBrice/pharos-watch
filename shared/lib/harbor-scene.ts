@@ -26,6 +26,8 @@ export const SLIVER_FLOOR = 0.06;
 export const WAKE_BREAK_PCT = 10;
 /** Below this |%| no wake is drawn. */
 export const WAKE_MIN_PCT = 0.5;
+/** From this |%| the wake takes its direction hue; below it the wake is neutral ink and the chevron shape alone says ▲/▼. */
+export const WAKE_HUE_PCT = 5;
 /** Conservation tolerance between drawn containers and the published totals. */
 const CONSERVATION_TOLERANCE_USD = 1;
 

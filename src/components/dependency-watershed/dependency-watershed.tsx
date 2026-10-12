@@ -11,6 +11,7 @@ import { WatershedLegend } from "./watershed-legend";
 import { WatershedOtherBasins } from "./watershed-other-basins";
 import { WatershedStage, type WatershedRelationshipFilter } from "./watershed-stage";
 import { WatershedTable } from "./watershed-table";
+import styles from "./watershed.module.css";
 
 export interface WatershedOverlay {
   roots: readonly string[];
@@ -52,6 +53,8 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
   const [width, setWidth] = useState(1200);
   const [relationship, setRelationship] = useState<WatershedRelationshipFilter>("all");
   const [previewId, setPreviewId] = useState<string | null>(null);
+  // A hub click pins its footprint in place; Exposure mode is the explicit "Trace exposure" action.
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
   useEffect(() => {
     const element = container.current;
     if (!element || typeof ResizeObserver === "undefined") return;
@@ -65,18 +68,23 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
   const nodes = publication.nodes;
   const model = useMemo(() => buildWatershedModel({ nodes, edges: publication.edges, expandedHubs: roots, layout: { width } }), [nodes, publication.edges, roots, width]);
   const preview = useMemo(() => previewId ? computeDependencyExposure(publication, [previewId]) : null, [publication, previewId]);
+  const pinned = useMemo(() => pinnedId ? computeDependencyExposure(publication, [pinnedId]) : null, [publication, pinnedId]);
+  // Hover previews a hub; without one, the pin stays lit.
+  const focusId = preview ? previewId : pinned ? pinnedId : null;
+  const focus = preview ?? pinned;
   const lit = useMemo(() => {
-    if (!overlay && !preview) return null;
+    if (!overlay && !focus) return null;
     const hops = new Map<string, number>();
     const add = (id: string, hop: number) => hops.set(id, Math.min(hop, hops.get(id) ?? hop));
     for (const root of roots) add(root, 0);
     for (const [id, row] of overlay?.rows ?? []) add(id, row.minHop);
-    if (previewId && preview) {
-      add(previewId, 0);
-      for (const row of preview.rows) add(row.id, row.minHop);
+    if (focusId && focus) {
+      add(focusId, 0);
+      for (const row of focus.rows) add(row.id, row.minHop);
     }
     return hops;
-  }, [overlay, roots, preview, previewId]);
+  }, [overlay, roots, focus, focusId]);
+  const pressed = useMemo(() => pinnedId ? new Set([...roots, pinnedId]) : rootSet, [roots, rootSet, pinnedId]);
 
   if (!model.ok) {
     return (
@@ -91,9 +99,13 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
 
   const supplyClocks = [...new Set(nodes.filter(node => model.layers.has(node.id) && node.supplyAsOfSec !== null).map(node => node.supplyAsOfSec!))].sort((a, b) => a - b);
   const beam = overlay && result ? downstreamHeadline(roots.map(labelOf).join(" + "), result) : null;
+  const pinBeam = !beam && pinned && pinnedId ? downstreamHeadline(labelOf(pinnedId), pinned) : null;
+  const readout = beam ?? pinBeam;
   const previewHeadline = preview && previewId ? downstreamHeadline(labelOf(previewId), preview) : null;
   const previewTop = preview ? [...preview.rows].filter(row => row.exposureUsd !== null).sort((a, b) => b.exposureUsd! - a.exposureUsd! || a.id.localeCompare(b.id)).slice(0, 3) : [];
-  const commit = (id: string) => {
+  const previewHub = previewId ? model.nodes.find(node => node.id === previewId)?.exposure : undefined;
+  const pin = (id: string) => setPinnedId(current => current === id ? null : id);
+  const trace = (id: string) => {
     if (!rootSet.has(id)) onAddRoot(id);
   };
 
@@ -107,16 +119,29 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
         {controls}
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <ControlPillToggle ariaLabel="Relationship" options={RELATIONSHIP_OPTIONS} value={relationship} onChange={setRelationship} className="flex flex-wrap gap-1.5" buttonClassName="min-h-9 px-3 text-xs" />
+        <ControlPillToggle ariaLabel="Relationship" options={RELATIONSHIP_OPTIONS} value={relationship} onChange={setRelationship} variant="segmented" />
         <p className="text-xs text-muted-foreground">Filtering dims other links; totals always use every link.</p>
       </div>
-      {beam && (
-        <div className="space-y-1" aria-live="polite">
-          <p className="text-sm font-semibold">{beam.lead}</p>
-          <p className="pharos-numeric text-xs text-muted-foreground">{beam.detail}</p>
-          <p className="text-xs font-medium">Linked coins; not a loss forecast</p>
-        </div>
-      )}
+      {/* Fixed-height readout: pinning a hub never reflows the stage. */}
+      <div className={`${styles.readout} space-y-1`} aria-live="polite">
+        {readout ? (
+          <>
+            <p className="text-sm font-semibold">{readout.lead}</p>
+            <p className="pharos-numeric text-xs text-muted-foreground">{readout.detail}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="text-xs font-medium">Linked coins; not a loss forecast</p>
+              {pinBeam && pinnedId && (
+                <>
+                  <button type="button" className="pharos-focus-ring rounded text-xs font-medium text-foreground underline underline-offset-2" onClick={() => trace(pinnedId)}>Trace exposure →</button>
+                  <button type="button" className="pharos-focus-ring rounded text-xs text-muted-foreground underline underline-offset-2" onClick={() => setPinnedId(null)}>Clear</button>
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">Select a hub to light the links downstream of it. Trace exposure opens the full footprint table.</p>
+        )}
+      </div>
       <div className="flex justify-between text-xs text-muted-foreground" aria-hidden="true">
         <span>← Upstream</span>
         <span>Downstream →</span>
@@ -125,23 +150,25 @@ export function DependencyWatershed({ publication, overlay, result, labelOf, onA
         <WatershedStage
           model={model}
           lit={lit}
-          roots={rootSet}
+          roots={pressed}
           relationship={relationship}
           labelOf={labelOf}
           onPreview={setPreviewId}
-          onCommit={commit}
+          onCommit={pin}
+          onClear={() => setPinnedId(null)}
           previewTooltip={previewHeadline && (
             <div className="space-y-1">
+              {previewHub && <p className="pharos-numeric text-xs">Direct {model.directKnown.has(previewHub.hubId) ? `${formatCurrency(previewHub.direct.knownUsd, 2)}${previewHub.direct.complete ? "" : " (known only)"}` : "USD unavailable"} · {previewHub.dependentCount} {previewHub.dependentCount === 1 ? "dependent" : "dependents"}</p>}
               <p className="font-semibold">{previewHeadline.lead}</p>
               <p className="pharos-numeric text-xs">{previewHeadline.detail}</p>
               {previewTop.length > 0 && <p className="text-xs">Largest: {previewTop.map(row => `${labelOf(row.id)} ${formatCurrency(row.exposureUsd!, 2)}`).join(" · ")}</p>}
-              <p className="text-xs text-muted-foreground">Linked coins; not a loss forecast · {rootSet.has(previewId!) ? "selected" : "click or press Enter to select"}</p>
+              <p className="text-xs text-muted-foreground">Linked coins; not a loss forecast · {pinnedId === previewId || rootSet.has(previewId!) ? "selected" : "click or press Enter to light in place"}</p>
             </div>
           )}
         />
       </div>
       <WatershedLegend model={model} labelOf={labelOf} />
-      <WatershedOtherBasins model={model} labelOf={labelOf} roots={rootSet} onCommit={commit} />
+      <WatershedOtherBasins model={model} labelOf={labelOf} roots={rootSet} onCommit={trace} />
       <WatershedTable model={model} publication={publication} labelOf={labelOf} />
       <p className="break-all text-xs text-muted-foreground">
         Publication supply basis · V10 {publication.methodologyVersion} · publication {publication.publicationGenerationId.split(":").pop()?.slice(0, 7)} · {supplyClocks.length === 0 ? "supply clock not published" : supplyClocks.length === 1 ? `supply as of ${formatEventTimestamp(supplyClocks[0]!, true)}` : `mixed supply clocks, ${formatEventTimestamp(supplyClocks[0]!, true)} to ${formatEventTimestamp(supplyClocks[supplyClocks.length - 1]!, true)}`}

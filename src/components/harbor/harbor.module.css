@@ -33,6 +33,7 @@
   --shade-e: 28%;
   --wake-up: oklch(0.55 0.13 155);
   --wake-down: oklch(0.55 0.17 27);
+  --wake-ink: oklch(0.45 0.02 230 / 0.75);
   --mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -60,6 +61,7 @@
   --shade-e: 45%;
   --wake-up: oklch(0.72 0.14 155);
   --wake-down: oklch(0.7 0.15 27);
+  --wake-ink: oklch(0.78 0.015 230 / 0.7);
 }
 
 /* Retained (stale or errored) data: desaturated scene, outline-only flags. */
@@ -293,11 +295,15 @@
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
-.wake-up {
+/* neutral below WAKE_HUE_PCT: the chevron direction carries ▲/▼; hue only for large moves */
+.wake-up,
+.wake-down {
+  stroke: var(--wake-ink);
+}
+.wake-hue.wake-up {
   stroke: var(--wake-up);
 }
-.wake-down,
-.wake-break {
+.wake-hue.wake-down {
   stroke: var(--wake-down);
 }
 
@@ -504,10 +510,12 @@
 }
 
 /* ------------------------------------------------------------------ legend */
+/* one flowing row of keys, wrapping only when the width runs out */
 .legend {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
-  gap: 6px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
@@ -519,10 +527,6 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
-}
-/* the wake key is a sentence: give it the full row */
-.legend li.wide {
-  grid-column: 1 / -1;
 }
 .legend svg {
   flex: none;

@@ -23,6 +23,8 @@ function compareIds(a: string, b: string): number {
  * Tributary ordering: group each column under its primary parent's position,
  * then by value descending, then id. Four weighted barycenter sweeps follow;
  * ties keep the previous position, so the result is a pure function of input.
+ * The source column stays in value order so the largest upstream heads the
+ * stage; only downstream columns move to their barycenters.
  */
 export function orderColumns(columns: readonly (readonly OrderItem[])[], segments: readonly OrderSegment[]): string[][] {
   const ordered: string[][] = [];
@@ -41,7 +43,7 @@ export function orderColumns(columns: readonly (readonly OrderItem[])[], segment
   for (const direction of SWEEPS) {
     const range = direction === "down"
       ? Array.from({ length: Math.max(0, ordered.length - 1) }, (_, i) => i + 1)
-      : Array.from({ length: Math.max(0, ordered.length - 1) }, (_, i) => ordered.length - 2 - i);
+      : Array.from({ length: Math.max(0, ordered.length - 2) }, (_, i) => ordered.length - 2 - i);
     for (const c of range) {
       const neighbor = new Map(ordered[direction === "down" ? c - 1 : c + 1]!.map((id, index) => [id, index]));
       const bary = new Map<string, number>();

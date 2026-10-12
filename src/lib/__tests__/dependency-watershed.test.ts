@@ -174,6 +174,9 @@ describe("watershed view URL", () => {
   it("defaults to watershed, but opens Network-only explore state in Network", () => {
     expect(readDependencyMapView("")).toBe("watershed");
     expect(readDependencyMapView("?mode=exposure&root=usdc-circle")).toBe("watershed");
+    // The Network's own hydration-time defaults are not a request for Network.
+    expect(readDependencyMapView("?focus=all&type=all&limit=200")).toBe("watershed");
+    expect(readDependencyMapView("?focus=all&type=collateral&limit=200")).toBe("network");
     expect(readDependencyMapView("?focus=usdc-circle")).toBe("network");
     expect(readDependencyMapView("?focus=usdc-circle&view=watershed")).toBe("watershed");
     expect(readDependencyMapView("?view=network")).toBe("network");
