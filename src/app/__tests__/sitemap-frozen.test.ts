@@ -47,7 +47,7 @@ describe("sitemap", () => {
       ["/compliance/", "weekly", 0.6],
       ["/pharoswatchbot/", "weekly", 0.7], ["/methodology/", "monthly", 0.6],
       ["/changelog/", "weekly", 0.5], ["/blog/", "weekly", 0.6], ["/about/", "monthly", 0.5],
-      ["/depeg/archive/", "monthly", 0.5], ["/learn/", "monthly", 0.5],
+      ["/depeg/archive/", "monthly", 0.5],
       ["/api/", "monthly", 0.5],
       ["/stablecoins/", "weekly", 0.7], ["/stablecoins/backing/", "weekly", 0.6],
       ["/stablecoins/governance/", "weekly", 0.6], ["/stablecoins/infrastructure/", "weekly", 0.6],
@@ -210,8 +210,6 @@ describe("sitemap", () => {
 
   it("stamps every case-study detail page from generated per-study dates", () => {
     const lastEdited = sitemapDates as Record<string, string>;
-
-    expect(entriesByUrl.get(`${SITE_ORIGIN}/learn/`)?.lastModified).toEqual(new Date(lastEdited["/learn/"]));
 
     for (const study of CASE_STUDY_LIST) {
       const path = `/learn/case-studies/${study.slug}/`;

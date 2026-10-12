@@ -19,7 +19,8 @@ const PILL_CLASS =
 const FOOTER_NAV: ReadonlyArray<{ href: string; label: string }> = [
   { href: "/stablecoins/", label: "Stablecoins" },
   { href: "/chains/", label: "Chains" },
-  { href: "/learn/", label: "Learn" },
+  { href: "/learn/mechanisms/", label: "Mechanisms" },
+  { href: "/learn/case-studies/", label: "Case Studies" },
   { href: "/compare/", label: "Compare" },
   { href: "/depeg/", label: "Depeg" },
   { href: "/digest/", label: "Digest" },

@@ -5,7 +5,7 @@ Contract for the broader learning-center surfaces:
 - `/learn/case-studies/` - long-form depeg/failure retrospective index
 - `/learn/case-studies/[slug]/` - static case-study article pages
 
-Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mechanisms-page.md). This page covers the adjacent learning surfaces that sit beside them under `/learn/*`. The `/learn/` overview route is a server-rendered orientation hub linking Mechanisms and Case Studies. The former `/learn/glossary/` route 301s to the A–Z Definitions section of `/methodology/` (see [Definitions](./methodology-page.md#definitions)).
+Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mechanisms-page.md). This page covers the adjacent learning surfaces that sit beside them under `/learn/*`. There is no `/learn/` overview route: the former hub duplicated the Mechanisms and Case Studies indexes and was removed on 2026-10-12; `/learn/` 301s to `/learn/case-studies/` via `public/_redirects`. The former `/learn/glossary/` route 301s to the A–Z Definitions section of `/methodology/` (see [Definitions](./methodology-page.md#definitions)).
 
 ---
 
@@ -13,15 +13,14 @@ Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mec
 
 All `/learn/*` hub pages carry the homepage design grammar in its Category-C "light editorial" register; the shared One Beam rule lives under [Feature-page heroes](./design-language.md#feature-page-heroes):
 
-- **Titles** use the homepage Bricolage Grotesque display face. `LearnPageShell` (`/learn/`, `/learn/case-studies/`) sets its `h1` via `.pharos-page-title`, and section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale.
-- **Header hero** — a lighter shared band, `src/app/learn/_shared/learn-hero.tsx` (`LearnHero`): a flat `pharos-card-shell` with one frost "One Beam" figure + muted sub-metrics. `/learn/` opts out (its `OutcomeLedger` is promoted into a card-shell band and keeps the semantic survived/wounded/died ramp — a directional figure, never frost); `/learn/case-studies/` lights the neutral archive count.
+- **Titles** use the homepage Bricolage Grotesque display face. `LearnPageShell` (`/learn/case-studies/` and the mechanism pages) sets its `h1` via `.pharos-page-title`, and section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale.
+- **Header hero** — a lighter shared band, `src/app/learn/_shared/learn-hero.tsx` (`LearnHero`): a flat `pharos-card-shell` with one frost "One Beam" figure + muted sub-metrics. `/learn/case-studies/` lights the neutral archive count.
 - **Controls** — the case-study outcome/mechanism filters use `pharos-toggle-pill` / `pharos-control-pill-active` (never frost on controls). The case-study hub keeps its editorial carve-out: no ordinal ranking, no row→card conversion.
 
 ---
 
 ## Route Shape
 
-- **Learn overview:** `src/app/learn/page.tsx`
 - **Case-study hub:** `src/app/learn/case-studies/page.tsx`
 - **Case-study detail route:** `src/app/learn/case-studies/[slug]/page.tsx`
 - **Case-study body:** `src/app/learn/case-studies/case-study-body.tsx` (the separate page-shell wrapper was folded into the detail route during the routes consolidation)
@@ -60,11 +59,12 @@ Client surfaces must not import the full content registry. The generated `src/li
 
 ## Sitemap + Inbound Surfaces
 
-`src/app/sitemap.ts` includes `/learn/`, `/learn/mechanisms/`, every mechanism archetype page, `/learn/case-studies/`, and every case-study slug. `scripts/maintenance/generate-sitemap-dates.ts` derives case-study `lastModified` dates from content modules rather than stamping deploy-time `now`.
+`src/app/sitemap.ts` includes `/learn/mechanisms/`, every mechanism archetype page, `/learn/case-studies/`, and every case-study slug. `scripts/maintenance/generate-sitemap-dates.ts` derives case-study `lastModified` dates from content modules rather than stamping deploy-time `now`.
 
 Primary inbound surfaces:
 
-- Top-nav `Resources` menu, `Research` column in `src/lib/nav-config.ts`, with the `/learn/` overview and direct links to Mechanisms and Case Studies
+- Top-nav `Resources` menu, `Research` column in `src/lib/nav-config.ts`, with Blog and direct links to Mechanisms and Case Studies
+- Footer hub row (`src/components/footer.tsx`) and the command-palette empty-state chips
 - Mechanism pages' Continue Reading links into relevant case studies
 - Depeg event pages, via `CASE_STUDY_BY_DEPEG_SLUG`
 - About, methodology, and taxonomy pages linking into mechanism explainers or methodology definitions
