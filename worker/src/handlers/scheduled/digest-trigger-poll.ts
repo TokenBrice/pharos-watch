@@ -1,8 +1,9 @@
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { DigestKindSchema, type DigestKind } from "@shared/types/digest";
 // Digest trigger poll slot (every 5 minutes, cron "*/5 * * * *"):
-//   If `digest:force-run-request` cache key is set, run daily-digest under
-//   scheduled-event wall-clock (15 min). The `daily-digest` lease serializes
-//   execution with the 08:05 UTC scheduled run; if the lease is held, we
+//   If `digest:force-run-request` cache key is set, run its daily or weekly job
+//   under scheduled-event wall-clock (15 min). Each job's lease serializes
+//   execution with its primary scheduled run; if the lease is held, we
 //   preserve the intent for the next poll. Transient failures retain the
 //   bounded intent with backoff, while permanent or exhausted failures remain
 //   as dead letters for operator inspection. Success clears the intent and
@@ -42,6 +43,8 @@ import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { runWeeklyRecapForRuntime } from "./weekly-recap-invocation";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS } from "../../lib/cron-timeouts";
 import { runSafetyMapProducerKick } from "../../cron/safety-map-producer-kick";
 
 export const DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY = "digest:last-trigger-result";
@@ -52,7 +55,7 @@ const DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS = SCHEDULED_SLOT_PLANS.digestTriggerP
 export const MAX_ATTEMPTS = 3;
 export const DIGEST_TRIGGER_POLL_INTERVAL_SECONDS = 5 * 60;
 /**
- * A `running` state is only reclaimable after one `daily-digest` lease TTL.
+ * A `running` state is only reclaimable after the scheduled invocation budget.
  * Each start consumes its attempt durably before work, including starts whose
  * isolate terminates before the post-run handler.
  */
@@ -64,6 +67,9 @@ const DIGEST_FORCE_RUN_RUNNING_DEADLINE_SEC = 15 * 60;
  * the rest of Monday. Matches the three-attempt bound on forced daily runs.
  */
 const WEEKLY_RECAP_MAX_RUNS_PER_EDITION = MAX_ATTEMPTS;
+// Give the primary weekly invocation its full budget before recovery can claim its lease.
+const WEEKLY_RECAP_RESUME_START_SEC = CRON_SCHEDULE_CADENCES.daily0810Utc.offsetSec
+  + SCHEDULED_EVENT_WALL_CLOCK_LIMIT_MS / 1_000;
 
 async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): Promise<void> {
   const startedMs = Date.now();
@@ -177,6 +183,7 @@ type DigestForceRunState =
   | "dead_letter";
 
 interface DigestForceRunRequest {
+  kind: DigestKind;
   requestedAt: number;
   requestId: string;
   attempts: number;
@@ -196,6 +203,7 @@ function isDigestForceRunState(value: unknown): value is DigestForceRunState {
 function parseForceRunPayload(value: string): DigestForceRunRequest | null {
   try {
     const parsed = JSON.parse(value) as {
+      kind?: unknown;
       requestedAt?: unknown;
       requestId?: unknown;
       attempts?: unknown;
@@ -203,7 +211,8 @@ function parseForceRunPayload(value: string): DigestForceRunRequest | null {
       state?: unknown;
       lastError?: unknown;
     };
-    if (typeof parsed.requestedAt !== "number"
+    const kind = DigestKindSchema.safeParse(parsed.kind === undefined ? "daily" : parsed.kind);
+    if (!kind.success || typeof parsed.requestedAt !== "number"
       || !Number.isFinite(parsed.requestedAt)
       || typeof parsed.requestId !== "string"
       || parsed.requestId.length === 0) {
@@ -211,6 +220,7 @@ function parseForceRunPayload(value: string): DigestForceRunRequest | null {
     }
     if (parsed.attempts == null && parsed.nextAttemptAt == null && parsed.state == null && parsed.lastError == null) {
       return {
+        kind: kind.data,
         requestedAt: parsed.requestedAt,
         requestId: parsed.requestId,
         attempts: 0,
@@ -230,6 +240,7 @@ function parseForceRunPayload(value: string): DigestForceRunRequest | null {
       return null;
     }
     return {
+      kind: kind.data,
       requestedAt: parsed.requestedAt,
       requestId: parsed.requestId,
       attempts: parsed.attempts,
@@ -270,11 +281,11 @@ function classifyFailure(errorMessage: string): "permanent" | "transient" {
   return "transient";
 }
 
-function resultFailureMessage(result: CronResult | null): string {
+function resultFailureMessage(result: CronResult | null, job: string): string {
   if (typeof result?.metadata === "string" && result.metadata.length > 0) {
     return result.metadata;
   }
-  return `daily-digest returned status ${result?.status ?? "unknown"}`;
+  return `${job} returned status ${result?.status ?? "unknown"}`;
 }
 
 function isFailureResult(result: CronResult | null): boolean {
@@ -346,7 +357,7 @@ async function runWeeklyResumeIfDue(
   const secondsIntoDay = slotDate.getUTCHours() * 3_600
     + slotDate.getUTCMinutes() * 60
     + slotDate.getUTCSeconds();
-  if (slotDate.getUTCDay() !== 1 || secondsIntoDay < 8 * 3_600 + 10 * 60) {
+  if (slotDate.getUTCDay() !== 1 || secondsIntoDay < WEEKLY_RECAP_RESUME_START_SEC) {
     return null;
   }
   const dayStart = bucketUnixSecondsToUtcDay(runtime.slotStartedAt);
@@ -428,9 +439,9 @@ async function finishSkippedDigestTriggerPoll(
   startedMs: number,
   skippedReason: string,
   metadata: Record<string, unknown>,
-  neutral = false,
+  options: { neutral?: boolean; resumeWeekly?: boolean } = {},
 ) {
-  const weeklyResume = await runWeeklyResumeIfDue(runtime, startedMs);
+  const weeklyResume = options.resumeWeekly === false ? null : await runWeeklyResumeIfDue(runtime, startedMs);
   if (weeklyResume) return weeklyResume;
   await recordBudgetSurfaceTelemetry(runtime.db, {
     surface: DIGEST_TRIGGER_POLL_SURFACE,
@@ -443,7 +454,7 @@ async function finishSkippedDigestTriggerPoll(
     producer: getRuntimeProducerIdentity(runtime, DIGEST_TRIGGER_POLL_SURFACE),
   });
   return buildScheduledSlotSummary([
-    summarizeSkippedScheduledJob("digest-trigger-poll", skippedReason, neutral ? { neutral: true } : undefined),
+    summarizeSkippedScheduledJob("digest-trigger-poll", skippedReason, options.neutral ? { neutral: true } : undefined),
   ], { budgetOnlyJobs: DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS });
 }
 
@@ -459,13 +470,14 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       startedMs,
       "no-pending-request",
       { pending: false },
-      true,
+      { neutral: true },
     );
   }
 
   const payload = parseForceRunPayload(pending.value);
   if (!payload) {
     const malformedPayload: DigestForceRunRequest = {
+      kind: "daily",
       requestedAt: Math.floor(Date.now() / 1000),
       requestId: "malformed-digest-request",
       attempts: 0,
@@ -500,6 +512,23 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       attempts: payload.attempts,
     });
   }
+  if (payload.kind === "weekly"
+    && (new Date(payload.requestedAt * 1_000).getUTCDay() !== 1
+      || bucketUnixSecondsToUtcDay(payload.requestedAt) !== bucketUnixSecondsToUtcDay(now)
+      || bucketUnixSecondsToUtcDay(payload.requestedAt) !== bucketUnixSecondsToUtcDay(runtime.slotStartedAt))) {
+    await replaceForceRunRequest(runtime.db, pending.value, {
+      ...payload,
+      state: "dead_letter",
+      nextAttemptAt: now,
+      lastError: "weekly-edition-expired",
+    }, now);
+    return finishSkippedDigestTriggerPoll(runtime, startedMs, "weekly-edition-expired", {
+      pending: true,
+      requestId: payload.requestId,
+      kind: payload.kind,
+      deadLettered: true,
+    }, { resumeWeekly: false });
+  }
   if (payload.nextAttemptAt > now) {
     return finishSkippedDigestTriggerPoll(runtime, startedMs, "retry-not-due", {
       pending: true,
@@ -510,13 +539,14 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     });
   }
 
+  const job = payload.kind === "weekly" ? "weekly-recap" : "daily-digest";
   let result: CronResult | null = null;
   let caught: unknown = null;
   let claimedPayload: DigestForceRunRequest | null = null;
   let noStartReason: string | null = null;
 
   try {
-    result = (await runtime.runLeasedCron("daily-digest", async (signal, reportProgress) => {
+    result = (await runtime.runLeasedCron(job, async (signal, reportProgress) => {
       const claimedAt = Math.floor(Date.now() / 1_000);
       if (payload.attempts >= MAX_ATTEMPTS) {
         const exhausted = await replaceForceRunRequest(runtime.db, pending.value, {
@@ -539,11 +569,12 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         return { status: "skipped_neutral", metadata: noStartReason };
       }
       claimedPayload = claim;
+      if (payload.kind === "weekly") return runWeeklyRecapForRuntime(runtime, signal, reportProgress);
       return runDailyDigestWithResume(runtime, true, signal, reportProgress);
     })) ?? null;
   } catch (err) {
     caught = err;
-    logWorkerEvent({ scope: "handler", level: "error", event: "digest_force_run_failed", message: "Forced daily digest failed", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
+    logWorkerEvent({ scope: "handler", level: "error", event: "digest_force_run_failed", message: "Forced digest failed", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId, kind: payload.kind } });
   }
 
   if (noStartReason) {
@@ -579,7 +610,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       && result.metadata.startsWith("skipped:")) {
       outcome = "skipped";
     }
-    errorMessage = resultFailureMessage(result);
+    errorMessage = resultFailureMessage(result, job);
   } else {
     const status = result?.status;
     if (status === "skipped_neutral") {
@@ -594,7 +625,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
 
   const failed = !leaseLocked && (Boolean(caught) || isFailureResult(result));
   const failureClass = failed
-    ? classifyFailure(errorMessage ?? resultFailureMessage(result))
+    ? classifyFailure(errorMessage ?? resultFailureMessage(result, job))
     : null;
   const attemptPayload = claimedPayload ?? payload;
   const nextAttempts = attemptPayload.attempts;
@@ -625,7 +656,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
         logWorkerEvent({ scope: "handler", level: "warn", event: "digest_trigger_state_persistence_failed", message: "Failed to persist succeeded digest trigger state", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
       }
     } else {
-      const lastError = boundedErrorMessage(errorMessage ?? resultFailureMessage(result));
+      const lastError = boundedErrorMessage(errorMessage ?? resultFailureMessage(result, job));
       const nextAttemptAt = deadLettered
         ? finishedAt
         : finishedAt + 2 * DIGEST_TRIGGER_POLL_INTERVAL_SECONDS * nextAttempts;
@@ -646,6 +677,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       runtime.db,
       DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY,
       JSON.stringify({
+        kind: payload.kind,
         requestId: payload.requestId,
         requestedAt: payload.requestedAt,
         finishedAt,
@@ -668,16 +700,17 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     processedCount: claimedPayload === null ? 0 : 1,
     outcome: telemetryOutcome,
     skippedReason: outcome === "skipped_locked"
-      ? "daily-digest-lease-locked"
+      ? `${job}-lease-locked`
       : outcome === "skipped"
-        ? "daily-digest-skipped"
+        ? `${job}-skipped`
         : null,
     error: errorMessage,
     metadata: {
       pending: true,
       requestId: payload.requestId,
       requestedAt: payload.requestedAt,
-      dailyDigestOutcome: outcome,
+      kind: payload.kind,
+      ...(payload.kind === "daily" ? { dailyDigestOutcome: outcome } : { weeklyRecapOutcome: outcome }),
       state: finalState,
       attempts: nextAttempts,
       nextAttemptAt: claimedPayload !== null && failed && !deadLettered
@@ -694,7 +727,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
   // pattern and keeps the scheduled slot fence clean.
   return buildScheduledSlotSummary([
     caught
-      ? summarizeThrownScheduledJob("daily-digest", caught)
-      : summarizeCronResult("daily-digest", result),
+      ? summarizeThrownScheduledJob(job, caught)
+      : summarizeCronResult(job, result),
   ], { budgetOnlyJobs: DIGEST_TRIGGER_POLL_BUDGET_ONLY_JOBS });
 }

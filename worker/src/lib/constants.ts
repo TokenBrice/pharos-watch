@@ -249,6 +249,20 @@ export const DIGEST_MAX_TOKENS = 16_000;
 export const DIGEST_MAX_EDITION_OUTPUT_TOKENS = 2 * DIGEST_MAX_TOKENS;
 
 /**
+ * Edition output budget under the `heavy` profile: the standard budget (draft
+ * plus corrective) plus one full request each for the evidence audit and the
+ * revision. The same full-ceiling reservation applies before every request, so
+ * a heavy stage that no longer fits is skipped and the draft publishes.
+ *
+ * A 2026-10-12 replay of ten production dailies measured heavy at $0.42-0.65
+ * per edition (median $0.53) in 151 s median. Worst case at this budget is
+ * about twelve billed ~22k-token inputs plus 64k output tokens, roughly $2.30
+ * per invocation at Opus 5.5 prices. This is a per-invocation token budget,
+ * not a monetary cap.
+ */
+export const DIGEST_HEAVY_MAX_EDITION_OUTPUT_TOKENS = 4 * DIGEST_MAX_TOKENS;
+
+/**
  * `high`, not `xhigh`: on the same production prompts Opus 5.5 at `xhigh`
  * emitted 11-12k output tokens per daily and 19,996 on the heaviest weekly
  * (up to 2.8x Opus 5 at `xhigh`), which no ceiling inside the cost envelope

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbCacheMocks = vi.hoisted(() => ({
   setCache: vi.fn<(_db: D1Database, key: string, value: string) => Promise<void>>(async () => {}),
@@ -21,6 +21,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { handleTriggerDigest } from "../api/admin-actions";
 import { DIGEST_STYLE_GATE_MODE_CACHE_KEYS } from "../lib/digest-style-gate";
+import { DIGEST_LLM_PROFILE_CACHE_KEYS } from "../lib/digest-llm-profile";
 
 function makeRequest(body?: string): Request {
   return new Request("https://ops-api.pharos.watch/api/trigger-digest", {
@@ -39,6 +40,8 @@ describe("trigger-digest route", () => {
     dbCacheMocks.getCache.mockReset().mockResolvedValue(null);
     dbCacheMocks.setCache.mockReset().mockResolvedValue(undefined);
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it("writes the force-run cache key and returns 202 without long-running waitUntil", async () => {
     const request = makeRequest();
@@ -68,6 +71,7 @@ describe("trigger-digest route", () => {
     const setCacheArgs = dbCacheMocks.setCache.mock.calls[0] as unknown[];
     expect(setCacheArgs[1]).toBe("digest:force-run-request");
     const persistedValue = JSON.parse(setCacheArgs[2] as string) as {
+      kind: string;
       requestId: string;
       requestedAt: number;
       attempts: number;
@@ -75,6 +79,7 @@ describe("trigger-digest route", () => {
       state: string;
       lastError: string | null;
     };
+    expect(persistedValue.kind).toBe("daily");
     expect(persistedValue.requestId).toBe(body.requestId);
     expect(typeof persistedValue.requestedAt).toBe("number");
     expect(persistedValue.attempts).toBe(0);
@@ -84,6 +89,41 @@ describe("trigger-digest route", () => {
 
     // waitUntil is not used for digest execution anymore.
     expect(ctx.waitUntil).not.toHaveBeenCalled();
+  });
+
+  it.each(["daily", "weekly"] as const)("queues an explicit %s kind on Monday", async (kind) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-12T11:00:00Z"));
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ kind })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ kind, accepted: true });
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(dbCacheMocks.setCache.mock.calls[0]![2])).toMatchObject({
+      kind,
+      requestedAt: Date.now() / 1_000,
+      attempts: 0,
+      state: "pending",
+    });
+  });
+
+  it("rejects a weekly trigger outside Monday UTC without queueing", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-13T00:00:00Z"));
+    const response = await handleTriggerDigest({
+      request: makeRequest('{"kind":"weekly"}'),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(400);
+    expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
   });
 
   it.each(["daily", "weekly"] as const)("updates only %s mode without queuing a force-run", async (kind) => {
@@ -173,6 +213,55 @@ describe("trigger-digest route", () => {
     }
   });
 
+  it.each(["daily", "weekly"] as const)("updates only the %s LLM profile without queuing a force-run", async (kind) => {
+    const otherKind = kind === "daily" ? "weekly" : "daily";
+    dbCacheMocks.getCache.mockImplementation(async (_db, key) =>
+      key === DIGEST_LLM_PROFILE_CACHE_KEYS[otherKind] ? { value: "heavy", updatedAt: 1 } : null);
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ llmProfile: { [kind]: "heavy" } })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(202);
+    expect(await response.json()).toMatchObject({ llmProfile: { [kind]: "heavy", [otherKind]: "heavy" } });
+    expect(dbCacheMocks.setCache).toHaveBeenCalledTimes(1);
+    expect(dbCacheMocks.setCache).toHaveBeenCalledWith(expect.anything(), DIGEST_LLM_PROFILE_CACHE_KEYS[kind], "heavy");
+  });
+
+  it("does not report a guessed profile when the post-write read fails", async () => {
+    dbCacheMocks.getCache.mockRejectedValue(new Error("D1 unavailable after commit"));
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify({ llmProfile: { daily: "standard" } })),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+    expect(response.status).toBe(500);
+    expect(dbCacheMocks.setCache).toHaveBeenCalledWith(expect.anything(), DIGEST_LLM_PROFILE_CACHE_KEYS.daily, "standard");
+  });
+
+  it.each([
+    { llmProfile: "heavy" },
+    { llmProfile: { daily: "heavy", weekly: "heavy" } },
+    { llmProfile: { monthly: "heavy" } },
+    { llmProfile: { daily: "turbo" } },
+    { llmProfile: null },
+    { llmProfile: { daily: "heavy" }, kind: "daily" },
+    { llmProfile: { daily: "heavy" }, styleGateMode: { daily: "enforce" } },
+  ])("rejects an unscoped, malformed, or combined LLM profile payload (%j)", async (body) => {
+    const response = await handleTriggerDigest({
+      request: makeRequest(JSON.stringify(body)),
+      db: mockD1(),
+      execCtx: makeExecutionContext().ctx,
+      trustedAdmin: true,
+    });
+
+    expect(response.status).toBe(400);
+    expect(dbCacheMocks.setCache).not.toHaveBeenCalled();
+  });
+
   it.each([
     { styleGateMode: "enforce" },
     { styleGateMode: { daily: "enforce", weekly: "shadow" } },
@@ -195,6 +284,10 @@ describe("trigger-digest route", () => {
     ["invalid JSON", "{", 400],
     ["non-object JSON", "[]", 400],
     ["unknown field", '{"unexpected":true}', 400],
+    ["unknown kind", '{"kind":"monthly"}', 400],
+    ["null kind", '{"kind":null}', 400],
+    ["combined actions", '{"kind":"weekly","styleGateMode":{"weekly":"enforce"}}', 400],
+    ["backfill date", '{"kind":"weekly","date":"2026-10-05"}', 400],
     ["oversized body", " ".repeat(1_025), 413],
   ] as const)("rejects %s without changing settings or queueing", async (_name, body, status) => {
     const response = await handleTriggerDigest({

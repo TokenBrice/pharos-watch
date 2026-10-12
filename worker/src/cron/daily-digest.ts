@@ -49,6 +49,7 @@ import {
 import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request";
 import { DAILY_DIGEST_LLM_CONFIG, type DigestLlmConfig } from "../lib/constants";
 import { resolveDigestStyleGateMode } from "../lib/digest-style-gate";
+import { resolveDigestLlmProfile } from "../lib/digest-llm-profile";
 
 export { classifyRegime } from "./daily-digest/prompt";
 
@@ -162,6 +163,7 @@ export async function generateDailyDigest(
     recentLeadSignalIds,
   });
   const styleGateMode = await resolveDigestStyleGateMode(db, "daily", signal);
+  const llmProfile = await resolveDigestLlmProfile(db, "daily", signal);
   const userPromptContent = buildUserPrompt(inputData, recentMeta, { leadRequirements, recentLeadSignalIds });
   await reportCronProgress(reportProgress, {
     stage: "input-collected",
@@ -212,6 +214,7 @@ export async function generateDailyDigest(
     llmConfig: resolvedLlmConfig,
     signal,
     logPrefix: "daily-digest",
+    llmProfile,
     reportAttempt: (llmAttempts) => reportDigestLlmAttempt(reportProgress, "daily digest", llmAttempts),
     validationProfile: {
       kind: "daily",

@@ -62,13 +62,15 @@ Use the evidence below before retriggering:
 
    The endpoint writes a bounded force-run intent to `digest:force-run-request` and returns `202 Accepted` with a `requestId` and the full effective `styleGateMode: {daily, weekly}` state. It does not hold the HTTP request open for model generation.
 
-3. Wait for the next `digestTriggerPoll` tick. The poll runs every five minutes, executes the leased `daily-digest` job, and records the result in `digest:last-trigger-result` and cron history. Inspect the request id, outcome, state, attempt count, and error before issuing another trigger.
+   For a reviewed missing or blocked weekly edition, use `--data '{"kind":"weekly"}'` instead. Weekly recovery is accepted only on Monday UTC and expires at that day's end. It uses the weekly lease, quality gate, edition deduplication, and duplicate-safe channel delivery. This explicit intent has at most three attempts even when automatic recovery exhausted its separate three-run cap; retain the original failed cron rows.
+
+3. Wait for the next `digestTriggerPoll` tick. The poll runs every five minutes, executes the selected leased `daily-digest` or `weekly-recap` job, and records the result in `digest:last-trigger-result` and cron history. Inspect the request id, outcome, state, attempt count, and error before issuing another trigger.
 
 4. If the retrigger produces another style block while enforcement is active, use the rollback procedure below before trying again. If the trigger has no corresponding poll result, classify the incident as a missing or scheduled-slot problem and use the appropriate runbook.
 
 ## Late publication and edition numbers
 
-A retrigger may publish when the new response passes the active gate and the channel paths are available. Generation uses the current UTC date. A trigger that runs after the date has rolled publishes a current-date edition; it does not backfill the missed date.
+A retrigger may publish when the new response passes the active gate and the channel paths are available. Daily generation uses the current UTC date. A daily trigger that runs after the date has rolled publishes a current-date edition; it does not backfill the missed date. A weekly intent instead expires at the end of its requested Monday and requires a new deliberate request on a later Monday.
 
 Blocked rows never consume an edition number. A successful daily or weekly row receives the next number calculated from non-blocked rows. If the retrigger runs during the original UTC date, the successful row can use that date and the next available number. A late current-date edition does not renumber earlier editions.
 
@@ -103,6 +105,22 @@ npx --no-install wrangler d1 execute stablecoin-db --remote --command \
 ```
 
 Record edition IDs, schedule/invocation identities, observation bounds, policy version/hash, rendered prompt and generation configuration, and requested/served model and effort from LLM provenance. Review raw copy and findings for omissions and known false positives; a detail truncation flag cannot certify per-rule incidence. Relevant prompt/model changes restart continuity unless the readiness owner records an explicit exception. After each failed readiness window, the owner records an explicit reject/retry decision; there is no automatic cancellation policy.
+
+## Switch the generation profile
+
+`digest:llm-profile:daily` and `digest:llm-profile:weekly` select `standard` (one writer call plus the hard-issue corrective) or `heavy` (adds an evidence audit and a revision; see [digest-pipeline.md](../digest-pipeline.md#llm-call)). Each kind changes independently, without a deploy, and the next scheduled edition of that kind uses it:
+
+```bash
+curl -fsS -X POST "https://ops-api.pharos.watch/api/trigger-digest" \
+  -H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
+  -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET" \
+  -H "X-Pharos-Admin: 1" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: digest-profile-daily-standard-$(date -u +%Y%m%dT%H%M%SZ)" \
+  --data '{"llmProfile":{"daily":"standard"}}'
+```
+
+The heavy stages cannot add a hard issue: every heavy failure keeps the draft, and a revision with more hard issues than the draft is discarded. When a heavy edition is blocked, read `digest_meta.heavy.outcome` first; the hard issues belong to whichever copy published (`revised` means the revision, anything else the draft). `digest_meta.heavy.draft` holds the replaced draft and its quality codes when a revision published.
 
 ## Promote or roll back enforcement
 

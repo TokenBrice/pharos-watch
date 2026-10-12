@@ -19,7 +19,7 @@ type DigestArchiveInput = {
   riskTape?: unknown[];
 };
 type DigestArchiveMeta = {
-  llm?: { servedModel?: unknown; attempts?: { servedModel?: unknown }[] };
+  llm?: { servedModel?: unknown; copyServedModel?: unknown; attempts?: { servedModel?: unknown }[] };
   type?: string;
   internal?: unknown;
   editorialStyleVersion?: string;
@@ -127,9 +127,13 @@ export const handleDigestArchive = async (db: D1Database): Promise<Response> => 
     if (meta?.type === "weekly") {
       digestType = "weekly";
     }
-    const servedModel = Array.isArray(meta?.llm?.attempts)
-      ? meta.llm.attempts[meta.llm.attempts.length - 1]?.servedModel
-      : meta?.llm?.servedModel;
+    // Heavy-profile editions record which attempt produced the copy: their
+    // last attempt can be an evidence audit or a discarded revision.
+    const servedModel = typeof meta?.llm?.copyServedModel === "string"
+      ? meta.llm.copyServedModel
+      : Array.isArray(meta?.llm?.attempts)
+        ? meta.llm.attempts[meta.llm.attempts.length - 1]?.servedModel
+        : meta?.llm?.servedModel;
     const isInternal = meta?.internal === true || meta?.internal === 1 || meta?.internal === "true";
     // Legacy rows have no stored style provenance. This display-only marker
     // is computed at the API boundary and is never written back to D1.

@@ -50,6 +50,7 @@ import { generateWeeklyRecap } from "../../../cron/weekly-recap";
 
 type CronResult = { status?: string; metadata?: string; itemCount?: number };
 type DigestForceRunIntent = {
+  kind?: "daily" | "weekly";
   requestedAt: number;
   requestId: string;
   attempts: number;
@@ -642,7 +643,115 @@ describe("runDigestTriggerPollSlot", () => {
     expect(runLeasedCron).not.toHaveBeenCalled();
   });
 
-  it("resumes a missing weekly recap on Monday after 08:10", async () => {
+  it.each([
+    ["2026-08-31T08:10:00Z", "2026-08-31T08:10:00Z", 0],
+    ["2026-08-31T08:20:00Z", "2026-08-31T08:20:00Z", 0],
+    ["2026-08-31T08:24:59Z", "2026-08-31T08:24:59Z", 0],
+    ["2026-08-31T08:25:00Z", "2026-08-31T08:25:00Z", 1],
+    ["2026-08-31T08:10:00Z", "2026-09-01T00:05:00Z", 0],
+    ["2026-08-31T08:25:00Z", "2026-09-01T00:05:00Z", 1],
+    ["2026-09-01T08:25:00Z", "2026-09-01T08:25:00Z", 0],
+  ])("reserves the primary weekly budget by scheduled time (%s delivered %s -> %i resumes)", async (scheduledAt, deliveredAt, expectedResumes) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(deliveredAt));
+    vi.mocked(getCache).mockResolvedValueOnce(null);
+    runLeasedCron.mockResolvedValue({ itemCount: 1, metadata: "weekly ok" });
+    const runtime = buildRuntime();
+    runtime.slotStartedAt = Date.parse(scheduledAt) / 1_000;
+
+    await runDigestTriggerPollSlot(runtime);
+
+    expect(runLeasedCron).toHaveBeenCalledTimes(expectedResumes);
+    if (expectedResumes > 0) {
+      expect(runLeasedCron).toHaveBeenCalledWith("weekly-recap", expect.any(Function));
+    }
+  });
+
+  it("runs an explicit weekly request after the automatic cap without calling the daily generator", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-12T11:00:00Z"));
+    const requestedAt = Date.now() / 1_000;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      fixture.sqlite.prepare("INSERT INTO cron_runs (job, started_at, slot_started_at, status, duration_ms) VALUES ('weekly-recap', ?, ?, 'error', 0)")
+        .run(requestedAt - (attempt + 1) * 600, requestedAt - (attempt + 1) * 600);
+    }
+    queueIntent(buildIntent("manual-weekly", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt }));
+    vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ status: "skipped_neutral", metadata: "weekly-recap-exists" });
+    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    const runtime = buildRuntime();
+    runtime.slotStartedAt = requestedAt;
+
+    const summary = await runDigestTriggerPollSlot(runtime);
+
+    expect(runLeasedCron).toHaveBeenCalledWith("weekly-recap", expect.any(Function));
+    expect(generateWeeklyRecap).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(generateWeeklyRecap).mock.calls[0]?.[6]).toBe(requestedAt);
+    expect(generateDailyDigest).not.toHaveBeenCalled();
+    expect(resumeDailyDigestDelivery).not.toHaveBeenCalled();
+    expect(latestIntentWrite()).toMatchObject({ kind: "weekly", state: "succeeded", attempts: 1 });
+    expect(fixture.sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DIGEST_FORCE_RUN_CACHE_KEY)).toBeUndefined();
+    expect(summary.jobs[0]).toMatchObject({ job: "weekly-recap" });
+  });
+
+  it("retains weekly kind across bounded transient retries", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-12T11:00:00Z"));
+    const requestedAt = Date.now() / 1_000;
+    let intent = buildIntent("manual-weekly-retries", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt });
+    vi.mocked(generateWeeklyRecap).mockRejectedValue(new Error("network timeout"));
+    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      vi.setSystemTime(new Date(intent.nextAttemptAt * 1_000));
+      queueIntent(intent);
+      const runtime = buildRuntime();
+      runtime.slotStartedAt = Date.now() / 1_000;
+      await runDigestTriggerPollSlot(runtime);
+      intent = latestIntentWrite()!;
+      expect(intent).toMatchObject({ kind: "weekly", requestedAt, attempts: attempt,
+        state: attempt === MAX_ATTEMPTS ? "dead_letter" : "failed_transient" });
+    }
+    expect(generateWeeklyRecap).toHaveBeenCalledTimes(MAX_ATTEMPTS);
+    expect(generateDailyDigest).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["2026-10-12T23:55:00Z", "2026-10-12T23:55:00Z", 1, 0],
+    ["2026-10-12T23:55:00Z", "2026-10-13T00:05:00Z", 0, 0],
+    ["2026-10-13T00:05:00Z", "2026-10-13T00:05:00Z", 0, 0],
+    ["2026-10-12T23:55:00Z", "2026-10-13T00:05:00Z", 0, 1_800],
+  ])("binds a weekly intent to its requested Monday (%s delivered %s -> %i runs, retry delay %i)", async (scheduledAt, deliveredAt, expectedRuns, retryDelaySec) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(deliveredAt));
+    const requestedAt = Date.parse("2026-10-12T23:50:00Z") / 1_000;
+    queueIntent(buildIntent("manual-weekly-late", { kind: "weekly", requestedAt, nextAttemptAt: requestedAt + retryDelaySec }));
+    vi.mocked(generateWeeklyRecap).mockResolvedValueOnce({ itemCount: 1 });
+    runLeasedCron.mockImplementation(async (_job, fn) => fn(new AbortController().signal, async () => {}));
+    const runtime = buildRuntime();
+    runtime.slotStartedAt = Date.parse(scheduledAt) / 1_000;
+
+    await runDigestTriggerPollSlot(runtime);
+
+    expect(generateWeeklyRecap).toHaveBeenCalledTimes(expectedRuns);
+    expect(generateDailyDigest).not.toHaveBeenCalled();
+    expect(latestIntentWrite()).toMatchObject(expectedRuns
+      ? { kind: "weekly", state: "succeeded" }
+      : { kind: "weekly", state: "dead_letter", lastError: "weekly-edition-expired", attempts: 0 });
+  });
+
+  it.each([null, "monthly", 1])("dead-letters invalid persisted kind %j without generating", async (kind) => {
+    const value = JSON.stringify({ ...buildIntent("malformed-kind"), kind });
+    fixture.sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(DIGEST_FORCE_RUN_CACHE_KEY, value, 0);
+    vi.mocked(getCache).mockResolvedValueOnce({ value, updatedAt: 0 });
+
+    await runDigestTriggerPollSlot(buildRuntime());
+
+    expect(runLeasedCron).not.toHaveBeenCalled();
+    expect(latestIntentWrite()).toMatchObject({ state: "dead_letter", lastError: "malformed-payload" });
+  });
+
+  it("resumes a missing weekly recap on Monday after the primary budget", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-31T09:00:00Z"));
     vi.mocked(getCache).mockResolvedValueOnce(null);

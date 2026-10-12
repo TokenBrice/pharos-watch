@@ -1,4 +1,5 @@
 import type { TelegramCreds } from "../lib/telegram";
+import { DigestKindSchema, type DigestKind, type DigestLlmProfile } from "@shared/types/digest";
 import { makeAdminRoute, makeIdempotentAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { setCache } from "../lib/db-cache";
 import { errorResponse, jsonResponse } from "../lib/api-response";
@@ -9,6 +10,11 @@ import {
   parseDigestStyleGateMode,
   resolveDigestStyleGateModes,
 } from "../lib/digest-style-gate";
+import {
+  DIGEST_LLM_PROFILE_CACHE_KEYS,
+  parseDigestLlmProfile,
+  readDigestLlmProfiles,
+} from "../lib/digest-llm-profile";
 import { CONTRACT_CONFIGS } from "../lib/blacklist-contracts";
 import { normalizeBlacklistSyncStateKey } from "../lib/db";
 
@@ -31,7 +37,9 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
   async ({ db, request }: TriggerDigestRouteContext) => {
     const requestText = await readRequestTextBounded(request, 1_024);
     if (requestText instanceof Response) return requestText;
+    let kind: DigestKind = "daily";
     let requestedStyleGateMode: { kind: DigestStyleGateKind; mode: "shadow" | "enforce" } | null = null;
+    let requestedLlmProfile: { kind: DigestKind; profile: DigestLlmProfile } | null = null;
     if (requestText.trim()) {
       let parsed: unknown;
       try {
@@ -43,8 +51,33 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
         return errorResponse(400, "Request body must be a JSON object");
       }
       const body = parsed as Record<string, unknown>;
-      if (Object.keys(body).some((key) => key !== "styleGateMode")) {
+      if (Object.keys(body).some((key) => key !== "styleGateMode" && key !== "kind" && key !== "llmProfile")) {
         return errorResponse(400, "Request body contains an unknown field");
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "llmProfile")) {
+        if (Object.keys(body).length !== 1) {
+          return errorResponse(400, "llmProfile must be a separate action");
+        }
+        const candidate = body.llmProfile;
+        if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+          return errorResponse(400, "llmProfile must target exactly one of daily or weekly");
+        }
+        const entries = Object.entries(candidate);
+        if (entries.length !== 1 || (entries[0]?.[0] !== "daily" && entries[0]?.[0] !== "weekly")) {
+          return errorResponse(400, "llmProfile must target exactly one of daily or weekly");
+        }
+        const [profileKind, value] = entries[0] as [DigestKind, unknown];
+        const profile = parseDigestLlmProfile(value);
+        if (!profile) return errorResponse(400, 'llmProfile value must be "standard" or "heavy"');
+        requestedLlmProfile = { kind: profileKind, profile };
+      }
+      if (Object.prototype.hasOwnProperty.call(body, "kind")) {
+        const parsedKind = DigestKindSchema.safeParse(body.kind);
+        if (!parsedKind.success) return errorResponse(400, 'kind must be "daily" or "weekly"');
+        if (Object.prototype.hasOwnProperty.call(body, "styleGateMode")) {
+          return errorResponse(400, "kind and styleGateMode must be separate actions");
+        }
+        kind = parsedKind.data;
       }
       if (Object.prototype.hasOwnProperty.call(body, "styleGateMode")) {
         const candidate = body.styleGateMode;
@@ -60,6 +93,24 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
         if (!mode) return errorResponse(400, 'styleGateMode value must be "shadow" or "enforce"');
         requestedStyleGateMode = { kind, mode };
       }
+    }
+    if (requestedLlmProfile) {
+      await setCache(db, DIGEST_LLM_PROFILE_CACHE_KEYS[requestedLlmProfile.kind], requestedLlmProfile.profile);
+      const effectiveLlmProfile = await readDigestLlmProfiles(db);
+      effectiveLlmProfile[requestedLlmProfile.kind] = requestedLlmProfile.profile;
+      return jsonResponse(
+        {
+          ok: true,
+          accepted: true,
+          llmProfile: effectiveLlmProfile,
+          message: "Digest LLM profile updated; no digest generation queued.",
+        },
+        { status: 202, noStore: true },
+      );
+    }
+    const requestedAt = Math.floor(Date.now() / 1000);
+    if (kind === "weekly" && new Date(requestedAt * 1_000).getUTCDay() !== 1) {
+      return errorResponse(400, "Weekly recap triggers are only accepted on Monday UTC");
     }
     if (requestedStyleGateMode) {
       await setCache(
@@ -82,11 +133,11 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
       );
     }
     const requestId = `manual-digest-${crypto.randomUUID()}`;
-    const requestedAt = Math.floor(Date.now() / 1000);
     await setCache(
       db,
       DIGEST_FORCE_RUN_CACHE_KEY,
       JSON.stringify({
+        kind,
         requestedAt,
         requestId,
         attempts: 0,
@@ -99,6 +150,7 @@ export const handleTriggerDigest = makeIdempotentAdminRoute(
       {
         ok: true,
         accepted: true,
+        kind,
         requestId,
         styleGateMode: effectiveStyleGateMode,
         message: "Digest trigger queued; will execute on the next polling tick (≤5 min).",

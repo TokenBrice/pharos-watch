@@ -2,7 +2,7 @@ import type {
   DigestStyleGateMode,
   DigestValidationIssue,
 } from "../daily-digest/response";
-import type { DigestSafetyContext } from "@shared/types/digest";
+import type { DigestLlmProfile, DigestSafetyContext } from "@shared/types/digest";
 import { throwIfAborted } from "../../lib/abort";
 import {
   type DigestEffort,
@@ -20,10 +20,14 @@ import { findUnboundDigestSafetyClaimMarkers } from "../../lib/digest-safety-con
 import type { AnthropicFallbackHandoff, AnthropicRefusalCategory, AnthropicUsageIteration } from "./anthropic-stream";
 import { tryParseJson } from "../../lib/json-parse";
 import type { DigestCredentialDiagnostics, DigestPublicationOutcome } from "./publish";
+import type { DigestHeavyTelemetry } from "./heavy-review";
+
+/** `audit` and `revise` run only under the heavy profile. */
+export type DigestLlmRequestKind = "original" | "corrective" | "audit" | "revise";
 
 export interface DigestLlmAttemptTelemetry {
   attemptNumber: number;
-  requestKind: "original" | "corrective";
+  requestKind: DigestLlmRequestKind;
   httpAttempt: number;
   requestedModel: string;
   servedModel: string | null;
@@ -85,6 +89,10 @@ export interface RequestDigestCopyResult {
   llmAttempts: DigestLlmAttemptTelemetry[];
   refusalCategory: AnthropicRefusalCategory | null;
   editorialStyleGate?: DigestEditorialStyleGateTelemetry;
+  llmProfile?: DigestLlmProfile;
+  /** Model that produced the published copy; heavy audit attempts never do. */
+  copyServedModel?: string | null;
+  heavy?: DigestHeavyTelemetry;
 }
 
 interface InsertDigestRecordOptions {
@@ -147,6 +155,8 @@ export interface DigestLlmTelemetry {
   model: string;
   effort: DigestEffort;
   maxTokens: number;
+  profile: DigestLlmProfile;
+  copyServedModel: string | null;
   attempts: DigestLlmAttemptTelemetry[];
 }
 
@@ -164,7 +174,7 @@ interface FinalizeDigestCronResultOptions {
   qualityIssues: readonly DigestValidationIssue[];
   hasBlockingQualityIssues: boolean;
   llmConfig: DigestLlmConfig;
-  digestCopy: Pick<RequestDigestCopyResult, "llmAttempts" | "editorialStyleGate">;
+  digestCopy: Pick<RequestDigestCopyResult, "llmAttempts" | "editorialStyleGate" | "llmProfile" | "copyServedModel" | "heavy">;
   onQualityMetadata?: (qualityMetadata: string) => void;
 }
 
@@ -222,7 +232,8 @@ export async function finalizeDigestCronResult(
       ...options.metadataAfterSummary,
       ...(quality.length > 0 ? { quality: { issues: quality } } : {}),
       channels,
-      llm: buildDigestLlmTelemetry(options.llmConfig, options.digestCopy.llmAttempts),
+      llm: buildDigestLlmTelemetry(options.llmConfig, options.digestCopy.llmAttempts, options.digestCopy),
+      ...(options.digestCopy.heavy ? { heavy: { ...options.digestCopy.heavy, draft: undefined } } : {}),
       editorialStyleGate: options.digestCopy.editorialStyleGate,
       wrapperEditorialAlerts: options.publication.wrapperEditorialAlerts,
     }),
@@ -358,11 +369,14 @@ export async function reportDigestGenerationComplete(
 export function buildDigestLlmTelemetry(
   config: DigestLlmConfig,
   attempts: DigestLlmAttemptTelemetry[],
+  copy: Pick<RequestDigestCopyResult, "llmProfile" | "copyServedModel"> = {},
 ): DigestLlmTelemetry {
   return {
     model: config.model,
     effort: config.effort,
     maxTokens: config.maxTokens,
+    profile: copy.llmProfile ?? "standard",
+    copyServedModel: copy.copyServedModel ?? attempts[attempts.length - 1]?.servedModel ?? null,
     attempts,
   };
 }
