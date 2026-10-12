@@ -166,6 +166,12 @@ describe("classifyChangedFiles", () => {
       checks: ["npx vitest run scripts/__tests__"],
     },
     {
+      name: "historical secret-scan exceptions to CI policy ownership",
+      files: [".gitleaksignore"],
+      mappings: ["validation-ci-policy"],
+      docs: ["docs/testing.md#ci-pipeline"],
+    },
+    {
       name: "Telegram delivery changes to the unified Telegram contract",
       files: ["worker/src/lib/telegram/mini-app-auth.ts", "shared/lib/telegram-delivery-policy.ts"],
       mappings: ["telegram"],

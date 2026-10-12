@@ -442,6 +442,21 @@ describe("generate-dependency-coverage-audit", () => {
     ]);
   });
 
+  it.each(["serial", "basket"] as const)("compares published %s edges with variant precedence over reserve slices", (kind) => {
+    const activeCoins = [coin({ id: "upstream" }), coin({
+      id: "dependent", variantOf: "upstream",
+      reserves: [{ name: "Parent shares", pct: 100, risk: "low", coinId: "upstream", depType: "collateral" }],
+    })];
+    const audit = buildDependencyCoverageAudit({
+      activeCoins,
+      reportCards: reportCardFixture({
+        cards: [{ id: "upstream", score: 80 }, { id: "dependent", score: 70 }],
+        dependencyGraph: { edges: [{ from: "upstream", to: "dependent", kind, weight: kind === "serial" ? null : 1 }] },
+      }),
+    });
+    expect(audit.summary.publishedKindMismatchCount).toBe(kind === "serial" ? 0 : 1);
+  });
+
   it("gates untyped published runtime coverage even when authored reserves are typed", () => {
     const activeCoins = [
       coin({ id: "upstream" }),
@@ -1127,6 +1142,28 @@ describe("generate-dependency-coverage-audit", () => {
     });
     expect(blankReason.adapterMappingReviewGaps).toContainEqual(expect.objectContaining({ reason: "stale-review" }));
     expect(blankReason.adapterMappingReviewGaps).toContainEqual(expect.objectContaining({ reason: "invalid-provenance" }));
+  });
+
+  it.each([
+    { identityVerified: true, upstreamAssetId: "upstream", reason: "outside-active-set:upstream", referenced: true },
+    { identityVerified: false, upstreamAssetId: null, reason: "outside-active-set:upstream", referenced: false },
+    { identityVerified: true, upstreamAssetId: null, reason: "outside-active-set:upstream", referenced: false },
+    { identityVerified: true, upstreamAssetId: "upstream", reason: "unresolved", referenced: false },
+  ])("requires verified withheld references for target dispositions: $identityVerified/$upstreamAssetId/$reason", ({ referenced, ...coverage }) => {
+    const upstream = coin({ id: "upstream", status: "quarantined" });
+    const dependent = coin({ id: "dependent" });
+    const audit = buildDependencyCoverageAudit({
+      activeCoins: [dependent], trackedCoins: [upstream, dependent],
+      targetDispositions: [targetDisposition("upstream", "quarantined")],
+      reportCards: reportCardFixture({
+        cards: [{ id: "dependent", score: 70, dependencyCoverage: [{
+          upstreamLabel: "Upstream", share: 0.12, sourceAsOf: null, ...coverage,
+        }] }],
+        dependencyGraph: { edges: [] },
+      }),
+    });
+    expect(audit.targetDispositionValidationIssues.map((issue) => issue.reason)).toEqual(referenced ? [] : ["no-current-edge"]);
+    expect(audit.dependencyEdges).toEqual([]);
   });
 
   it("reports a retained link missing from the current report even when the static registry still has it", () => {

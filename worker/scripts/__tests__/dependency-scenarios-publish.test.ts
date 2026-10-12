@@ -12,7 +12,8 @@ import { buildSafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/report-cards-v9-cache";
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, serializeSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../src/lib/safety-score-v9/publication-store";
 import { makeV9FixedInput, makeXautObservation } from "../../src/test-helpers/v9-fixed-input";
 import { normalizeFixedInput } from "../../src/lib/report-cards-fixed-input";
 import { deriveXautRepresentationGroupSupplyAttribution } from "../../src/lib/safety-score-v9/xaut-supply-attribution-contract";
@@ -150,17 +151,21 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     const newerEntry = await buildReportCardsFixedInputCacheEntry(createReplayFixedInput(base.clockSec + 1800));
     const db = new DatabaseSync(fixture.databasePath);
     try {
-      for (const [key, value] of [[entry.key, entry.value], [SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, baseEntry.value], [newerEntry.key, newerEntry.value]]) {
+      for (const [key, value] of [[entry.key, entry.value], [SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, baseEntry.value], [newerEntry.key, newerEntry.value],
+        [SAFETY_SCORE_V9_CACHE_KEYS.publication, await serializeSafetyScoreV9Publication(candidate)],
+        [SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, stableJsonStringifyV1(source.publicationHealth)]]) {
         db.prepare("INSERT OR REPLACE INTO cache VALUES (?, ?, ?)").run(key, value, base.clockSec);
       }
     } finally { db.close(); }
     const fetchShim = resolve(fixture.directory, "fetch.mjs");
-    writeFileSync(fetchShim, `import { readFileSync } from 'node:fs'; globalThis.fetch = async () => new Response(readFileSync(process.env.SCENARIO_TEST_PUBLICATION, 'utf8'));`);
-    const plan = spawnSync(process.execPath, ["--import", "tsx", "--import", fetchShim, "worker/scripts/compute-dependency-scenarios.ts", "--mode", "plan", "--out-dir", fixture.directory], {
+    writeFileSync(fetchShim, `globalThis.fetch = async () => { throw new Error('Plan must use the atomic D1 snapshot, not HTTP'); };`);
+    const plan = () => spawnSync(process.execPath, ["--import", "tsx", "--import", fetchShim, "worker/scripts/compute-dependency-scenarios.ts", "--mode", "plan", "--out-dir", fixture.directory], {
       encoding: "utf8", timeout: 30_000,
-      env: { ...process.env, PATH: `${resolve(fixture.directory, "bin")}:${process.env.PATH}`, PHAROS_API_KEY: "test-only", SCENARIO_TEST_PUBLICATION: resolve(fixture.directory, "publication.json"), SCENARIO_TEST_DB: fixture.databasePath, SCENARIO_TEST_EVENTS: resolve(fixture.directory, "events.jsonl") },
+      env: { ...process.env, PATH: `${resolve(fixture.directory, "bin")}:${process.env.PATH}`, PHAROS_API_KEY: "", SCENARIO_TEST_DB: fixture.databasePath, SCENARIO_TEST_EVENTS: resolve(fixture.directory, "events.jsonl") },
     });
-    expect(plan.status, plan.stderr).toBe(0);
+    const planned = plan();
+    expect(planned.status, planned.stderr).toBe(0);
+    expect(fixture.events()).toHaveLength(1);
     const complete = invoke();
     expect(complete.status, complete.stderr).toBe(0);
     expect(JSON.parse(complete.stdout).acceptedPublicationVerified).toBe(true);
@@ -168,6 +173,23 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     const replay = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/replay-safety-score-v9.ts", "--input", resolve(fixture.directory, "capture.json"), "--output", replayPath, "--published-at", String(base.clockSec)], { encoding: "utf8", timeout: 30_000 });
     expect(replay.status, replay.stderr).toBe(0);
     expect(JSON.parse(readFileSync(replayPath, "utf8")).pipeline.candidate.publicationGenerationId).toBe(candidate.publicationGenerationId);
+    const changedDb = new DatabaseSync(fixture.databasePath);
+    try {
+      changedDb.prepare("UPDATE cache SET updated_at = updated_at + 1 WHERE key = ?").run(entry.key);
+      const mismatchedClock = plan();
+      expect(mismatchedClock.status).not.toBe(0);
+      expect(mismatchedClock.stderr).toContain("accepted-publication-replay-retention-clock-mismatch");
+      changedDb.prepare("UPDATE cache SET updated_at = updated_at - 1 WHERE key = ?").run(entry.key);
+      const changedCandidate = { ...candidate, publicationGenerationId: `report-cards:v9:v1:${"f".repeat(64)}` };
+      changedDb.prepare("UPDATE cache SET value = ? WHERE key = ?").run(await serializeSafetyScoreV9Publication(changedCandidate), SAFETY_SCORE_V9_CACHE_KEYS.publication);
+      const mismatchedGeneration = plan();
+      expect(mismatchedGeneration.status).not.toBe(0);
+      expect(mismatchedGeneration.stderr).toContain("accepted-publication-replay-capture-generation-mismatch");
+      changedDb.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.publication);
+      const missingPublication = plan();
+      expect(missingPublication.status).not.toBe(0);
+      expect(missingPublication.stderr).toContain("accepted-publication-snapshot-unavailable");
+    } finally { changedDb.close(); }
   }, 30_000);
   it("rejects a missing stamp before touching the remote store", () => {
     const fixture = setup();

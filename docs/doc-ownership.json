@@ -825,6 +825,7 @@
         "package-lock.json",
         "worker/package.json",
         ".gitignore",
+        ".gitleaksignore",
         "functions/**",
         "next.config.ts",
         "eslint.config.mjs",
