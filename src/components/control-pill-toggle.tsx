@@ -25,6 +25,11 @@ interface ControlPillToggleProps<T extends string | number | boolean> {
   className?: string;
   /** Per-button sizing/typography classes appended to the shared pill pair. */
   buttonClassName?: string;
+  /**
+   * `segmented` renders the options in one `.pharos-segmented` track (the
+   * secondary mode/filter style) instead of loose control pills.
+   */
+  variant?: "pill" | "segmented";
 }
 
 /**
@@ -43,10 +48,12 @@ export function ControlPillToggle<T extends string | number | boolean>({
   ariaLabel,
   className,
   buttonClassName,
+  variant = "pill",
 }: ControlPillToggleProps<T>) {
+  const segmented = variant === "segmented";
   return (
     <div
-      className={className}
+      className={segmented ? cn("pharos-segmented", className) : className}
       role={ariaLabel ? "group" : undefined}
       aria-label={ariaLabel}
     >
@@ -64,8 +71,8 @@ export function ControlPillToggle<T extends string | number | boolean>({
             disabled={descriptor?.disabled}
             onClick={() => onChange(optionValue)}
             className={cn(
-              "pharos-focus-ring pharos-control-pill",
-              isActive && "pharos-control-pill-active",
+              segmented ? "pharos-focus-ring pharos-segmented-item" : "pharos-focus-ring pharos-control-pill",
+              !segmented && isActive && "pharos-control-pill-active",
               buttonClassName,
             )}
           >

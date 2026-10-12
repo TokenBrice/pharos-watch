@@ -18,7 +18,7 @@ export function MobileBottomNav() {
   return (
     <nav
       aria-label="Mobile navigation"
-      className="fixed inset-x-0 bottom-0 z-[55] border-t border-border/70 bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-chrome-dock border-t border-border/70 bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
     >
       <div className="grid h-[var(--mobile-bottom-nav-height)] grid-cols-5">
         {MOBILE_ROUTE_ITEMS.map((item) => {

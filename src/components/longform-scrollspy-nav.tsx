@@ -384,7 +384,7 @@ export function LongformScrollspyNav({
               className="pharos-pill-tabs-rule pharos-pill-tabs-rule-left hidden h-px w-28 shrink-0 lg:block xl:w-36 2xl:w-44"
             />
           ) : null}
-          <div className={edgeFade ? "relative min-w-0 flex-1" : "contents"}>
+          <div className={edgeFade ? "relative min-w-0 flex-1 overflow-hidden" : "contents"}>
           <nav
             ref={bannerScrollerRef}
             aria-label={navAriaLabel}
@@ -397,7 +397,7 @@ export function LongformScrollspyNav({
               className={cn(
                 "flex min-w-max snap-x snap-mandatory items-center",
                 isPillTabs ? "gap-0.5" : "gap-1.5",
-                edgeFade && "pr-10",
+                edgeFade && "pr-16",
               )}
             >
               {sections.map((section) => {
@@ -448,7 +448,7 @@ export function LongformScrollspyNav({
           </nav>
           {edgeFade ? (
             <div
-              className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent"
+              className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-background via-background/80 to-transparent"
               aria-hidden="true"
             />
           ) : null}

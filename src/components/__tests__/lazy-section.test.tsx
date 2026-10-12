@@ -71,4 +71,45 @@ describe("LazySection", () => {
     // After IO fires, the child renders.
     expect(getByTestId("child").textContent).toBe("payload");
   });
+
+  it("holds the reserve after mount until the section has been seen and scrolled off screen", () => {
+    const observers: Array<{ cb: IntersectionObserverCallback; target: Element | null }> = [];
+    class FakeIntersectionObserver {
+      private entry: { cb: IntersectionObserverCallback; target: Element | null };
+      constructor(cb: IntersectionObserverCallback) {
+        this.entry = { cb, target: null };
+        observers.push(this.entry);
+      }
+      observe(target: Element) { this.entry.target = target; }
+      disconnect() {}
+      unobserve() {}
+      takeRecords() { return []; }
+      root = null;
+      rootMargin = "";
+      thresholds = [];
+    }
+    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
+    const fire = (index: number, isIntersecting: boolean, bottom = 500) => act(() => {
+      observers[index]!.cb(
+        [{ isIntersecting, boundingClientRect: { bottom, top: bottom - 100 } } as IntersectionObserverEntry],
+        observers[index] as unknown as IntersectionObserver,
+      );
+    });
+
+    const { container, getByTestId } = render(
+      <LazySection minHeight={300}>
+        <div data-testid="child">short</div>
+      </LazySection>,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    fire(0, true); // near: mount children
+    expect(getByTestId("child")).toBeTruthy();
+    // The loading child is shorter than the reserve; the reserve holds while on screen.
+    expect(wrapper.getAttribute("style") ?? "").toMatch(/min-height:\s*300px/);
+    fire(1, false); // not yet seen: keep
+    expect(wrapper.getAttribute("style") ?? "").toMatch(/min-height:\s*300px/);
+    fire(1, true); // seen
+    fire(1, false, 1200); // exits below the viewport: release
+    expect(wrapper.style.minHeight).toBe("");
+  });
 });

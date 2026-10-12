@@ -30,4 +30,21 @@ describe("ThemeControls", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dark theme" }));
     expect(setThemeMock).toHaveBeenCalledWith("dark");
   });
+
+  it("labels each option visibly and cross-fades the switch through a view transition", () => {
+    const startViewTransition = vi.fn((callback: () => void) => callback());
+    Object.defineProperty(document, "startViewTransition", { value: startViewTransition, configurable: true });
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    try {
+      render(<ThemeControls density="desktop" />);
+      const dark = screen.getByRole("button", { name: "Dark theme" });
+      expect(dark.textContent).toBe("Dark");
+      fireEvent.click(dark);
+      expect(startViewTransition).toHaveBeenCalledTimes(1);
+      expect(setThemeMock).toHaveBeenCalledWith("dark");
+    } finally {
+      delete (document as { startViewTransition?: unknown }).startViewTransition;
+      vi.unstubAllGlobals();
+    }
+  });
 });

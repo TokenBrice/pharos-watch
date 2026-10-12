@@ -54,6 +54,10 @@ This table covers the categories referenced most often in product code, not the 
 - Avoid unscoped `text-*-300` / `text-*-400` in app code unless the element only renders on dark-only surfaces.
 - DEWS radar guide lines should stay theme-tuned via tokens (`--dews-radar-spoke`, `--dews-radar-calm-boundary`); dark mode requires visibly higher alpha than `0.04` to keep axis spokes readable.
 - Dense interactive controls should use the `--control-pill-*` token family rather than ad-hoc translucent button backgrounds.
+- Selected pills have one style: `.pharos-control-pill-active`, `.pharos-toggle-pill[data-state="on"]` and `.pharos-pill-tab-active` all paint `--control-pill-active-bg` (the `--interactive-active` neutral), `--control-pill-active-text` and a 1px `--control-pill-active-ring`. Never a solid ink fill, and never a `.dark` hex override (tokens carry both themes). Navigation keeps its own frost-lit `.pharos-rail-tab-active`.
+- Secondary mode, view and window switches (dependency-map Explore/Exposure and Watershed/Network, the exposure workspace tabs, the watershed relationship filter, the home Freezes 24h/7d window) use `.pharos-segmented` with `.pharos-segmented-item` children: one bordered track, selection from `aria-pressed` / `aria-selected`, painted with the shared active tokens. `ControlPillToggle` renders it with `variant="segmented"`.
+- `--table-header-top` is the bottom edge of the sticky site chrome (60px for the 768–1023px header, 59px for the lg+ TopNav, 56px on phones); sticky table headers pin there and `scroll-padding-top` uses it.
+- Stacking uses the named layers from the `@theme` block in `globals.css`, lowest first: `z-chrome` (sticky desktop header, floating page controls), `z-chrome-dock` (mobile bottom nav), `z-chrome-header` (mobile header), `z-regime` (PSI regime line and its panel), `z-modal` (dialogs, sheets, popovers, dropdowns, tooltips) and `z-toast` / `z-skip`. New fixed or portalled surfaces pick a layer instead of a numeric `z-[…]`.
 - Dedicated chart stages should use the `--chart-stage-*` token family so chart canvases stay visually distinct from the outer card shell.
 
 #### Hex Companion Variables

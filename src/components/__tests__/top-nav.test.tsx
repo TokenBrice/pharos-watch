@@ -29,6 +29,10 @@ vi.mock("@/lib/command-palette", () => ({
   openCommandPalette: vi.fn(),
 }));
 
+vi.mock("@/components/regime-bar", () => ({
+  RegimeBarToggle: () => null,
+}));
+
 vi.mock("@/hooks/api-hooks", () => ({
   useHealth: useHealthMock,
 }));
@@ -160,13 +164,13 @@ describe("TopNav", () => {
   });
 
   it("marks a section trigger current on detail routes beneath its items", () => {
-    pathnameMock.current = "/stablecoin/usdc-circle/";
+    pathnameMock.current = "/chains/ethereum/";
     installMatchMediaMock(true);
 
     render(<TopNav />);
 
-    // Coin profiles are Directory leaves: the rail stays quiet while the
-    // Markets trigger owns the current section.
+    // Chain detail pages sit beneath the Markets Chains row: the rail stays
+    // quiet while the Markets trigger owns the current section.
     expect(screen.getByRole("button", { name: "Markets" }).getAttribute("aria-current")).toBe("true");
     expect(screen.getByRole("button", { name: "Risk" }).getAttribute("aria-current")).toBeNull();
     expect(screen.getByRole("button", { name: "Tools" }).getAttribute("aria-current")).toBeNull();
@@ -241,6 +245,18 @@ describe("TopNav", () => {
     fireEvent.keyDown(link, { key: "Escape" });
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it("closes an open section panel on Esc while focus is outside it", () => {
+    installMatchMediaMock(true);
+
+    render(<TopNav />);
+    const trigger = screen.getByRole("button", { name: NAV_GROUPS.find((group) => !group.columns)!.label });
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("keeps the Status destination label and shows health as separate metadata", () => {

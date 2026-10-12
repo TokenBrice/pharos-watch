@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, Search, SunMoon } from "lucide-react";
 import { PharosLogo } from "@/components/pharos-logo";
+import { RegimeBarToggle } from "@/components/regime-bar";
 import { ThemeControls } from "@/components/theme-controls";
 import {
   DropdownMenu,
@@ -249,11 +250,29 @@ export function TopNav() {
     setOpenMenu(null);
   };
 
+  // A hover-opened panel must be dismissible without moving the pointer
+  // (WCAG 1.4.13). The wrapper's onKeyDown only hears Esc while focus is
+  // inside the menu, so listen on the document when focus is elsewhere.
+  useEffect(() => {
+    if (!openMenu || openMenu === APPEARANCE_MENU_KEY) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const region = sectionNavRef.current?.querySelector<HTMLElement>(`[data-section-menu="${openMenu}"]`);
+      if (region?.contains(document.activeElement)) return;
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      if (openTimer.current) clearTimeout(openTimer.current);
+      hoverOpenRef.current = false;
+      setOpenMenu(null);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [openMenu]);
+
   return (
     <header
       aria-label="Primary"
       className={cn(
-        "sticky z-50 hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex xl:px-6",
+        "sticky z-chrome hidden h-14 w-full items-center gap-2 border-b border-border/70 bg-background/85 px-4 backdrop-blur-md lg:flex xl:px-6",
         topOffsetClass,
       )}
     >
@@ -448,6 +467,7 @@ export function TopNav() {
             );
           })}
         </nav>
+        <RegimeBarToggle />
         <DropdownMenu
           modal={false}
           open={openMenu === APPEARANCE_MENU_KEY}

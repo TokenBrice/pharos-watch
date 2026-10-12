@@ -2,7 +2,6 @@
 
 import { Fragment, useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LazySection } from "@/components/lazy-section";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
@@ -46,19 +45,6 @@ const PEG_OPTIONS: ReadonlyArray<{ key: Exclude<PegFilter, "all">; label: string
   { key: "fiat-non-usd", label: "Fiat non USD" },
   { key: "commodities", label: "Commodities" },
 ];
-
-const lazyCardSkeleton = (
-  <div
-    className="flex h-[250px] flex-col items-center justify-center gap-2 rounded-xl border bg-muted/20 animate-pulse"
-    role="status"
-    aria-busy="true"
-    aria-label="Loading score card"
-  >
-    <div className="h-8 w-8 rounded-full bg-muted/40" />
-    <div className="h-4 w-20 rounded bg-muted/40" />
-    <div className="h-6 w-12 rounded bg-muted/40" />
-  </div>
-);
 
 function GradeFilterButtons({
   gradeFilter,
@@ -287,20 +273,21 @@ export function ReportCardsV9Client() {
   if (reportCardsQuery.isLoading) return <SafetyScoresContentLoadingState />;
 
   const renderCard = (card: V9ConsumerCard, index: number) => (
+    // content-visibility skips off-screen card rendering without a JS mount
+    // gate, so the grid keeps its height (no scroll-time layout shift) and the
+    // card text stays in the static HTML.
     <div
       key={card.id}
-      className="min-w-0 rounded-xl [&>div]:h-full [&>div>div]:h-full"
+      className="min-w-0 rounded-xl [contain-intrinsic-size:auto_274px] [content-visibility:auto] [&>div]:h-full [&>div>div]:h-full"
     >
-      <LazySection rootMargin="100px" placeholder={lazyCardSkeleton}>
-        <div className="pharos-card-enter">
-          <ReportCardMiniV9
-            card={card}
-            identity={reportCardsQuery.data!.safetyScoreIdentity}
-            logo={logos?.[card.id]}
-            animIndex={index % 5}
-          />
-        </div>
-      </LazySection>
+      <div className="pharos-card-enter">
+        <ReportCardMiniV9
+          card={card}
+          identity={reportCardsQuery.data!.safetyScoreIdentity}
+          logo={logos?.[card.id]}
+          animIndex={index % 5}
+        />
+      </div>
     </div>
   );
 

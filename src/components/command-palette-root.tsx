@@ -23,6 +23,40 @@ import {
 import { buildCommandPaletteSearchResults } from "@/components/command-palette/results";
 import { useCommandPaletteVerbActions } from "@/components/command-palette/use-verb-actions";
 
+/**
+ * Result-row logo. Some coin assets are wide wordmarks that crop to an empty
+ * or stray-colored disc at 20px, and a failed load leaves a blank slot; both
+ * fall back to a monogram of the row label.
+ */
+function PaletteLogo({ src, label }: { src: string; label: string }) {
+  const [unusable, setUnusable] = useState(false);
+  if (unusable) {
+    return (
+      <span
+        className="flex size-5 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted text-3xs font-bold text-muted-foreground"
+        aria-hidden="true"
+      >
+        {label.charAt(0).toUpperCase()}
+      </span>
+    );
+  }
+  return (
+    <Image
+      src={src}
+      alt=""
+      width={20}
+      height={20}
+      className="w-5 h-5 rounded-full shrink-0"
+      unoptimized
+      onError={() => setUnusable(true)}
+      onLoad={(event) => {
+        const img = event.currentTarget;
+        if (img.naturalHeight > 0 && img.naturalWidth / img.naturalHeight > 1.5) setUnusable(true);
+      }}
+    />
+  );
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 interface CommandPaletteProps {
@@ -33,7 +67,7 @@ interface CommandPaletteProps {
 const EMPTY_STATE_CHIPS: { label: string; href: string }[] = [
   { label: "Stablecoin Directory", href: "/stablecoins/" },
   { label: "Chains", href: "/chains/" },
-  { label: "Learn", href: "/learn/" },
+  { label: "Case Studies", href: "/learn/case-studies/" },
   { label: "Screener", href: "/screener/" },
 ];
 
@@ -368,14 +402,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   >
                     {/* Icon or logo */}
                     {item.logoUrl ? (
-                      <Image
-                        src={item.logoUrl}
-                        alt=""
-                        width={20}
-                        height={20}
-                        className="w-5 h-5 rounded-full shrink-0"
-                        unoptimized
-                      />
+                      <PaletteLogo src={item.logoUrl} label={item.label} />
                     ) : item.imagePath ? (
                       <Image
                         src={item.imagePath}

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 
 interface LazySectionProps {
@@ -22,14 +22,59 @@ interface LazySectionProps {
  * the first client render, then flips to `true` from a mount effect when the
  * element approaches the viewport (or immediately when `IntersectionObserver`
  * is unavailable).
+ *
+ * The reserve outlives the mount: mounted children usually pass through a
+ * chunk-load or fetch state shorter than the reserve, and collapsing to it
+ * while the section is on screen shoves everything below (layout shift). The
+ * reserve is released only once the wrapper is off screen, where the browser's
+ * scroll anchoring absorbs any height change.
  */
 export function LazySection({ minHeight, className, rootMargin, placeholder, children }: LazySectionProps) {
   const { ref, near } = useNearViewport<HTMLDivElement>(rootMargin);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [holdReserve, setHoldReserve] = useState(true);
+  const setRefs = useCallback((el: HTMLDivElement | null) => {
+    wrapperRef.current = el;
+    ref(el);
+  }, [ref]);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!near || !holdReserve || !el || typeof IntersectionObserver === "undefined") return;
+    let wasVisible = false;
+    const io = new IntersectionObserver((entries) => {
+      const entry = entries[entries.length - 1];
+      if (!entry) return;
+      // Release on the first exit after the section has been seen, so a
+      // section mounted inside the 300px margin keeps its reserve until read.
+      if (entry.isIntersecting) {
+        wasVisible = true;
+        return;
+      }
+      if (!wasVisible) return;
+      // Above the viewport, scroll anchoring absorbs the shrink only while the
+      // page has that much scroll room left below; at the page end the scroll
+      // position would clamp and visibly jump, so keep the reserve for now.
+      if (entry.boundingClientRect.bottom <= 0) {
+        let contentHeight = 0;
+        for (const child of Array.from(el.children)) contentHeight += (child as HTMLElement).offsetHeight;
+        const shrink = el.offsetHeight - contentHeight;
+        const roomBelow = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
+        if (shrink > roomBelow) return;
+      }
+      setHoldReserve(false);
+      io.disconnect();
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [holdReserve, near]);
+
+  const reserve = !near || holdReserve;
   return (
     <div
-      ref={ref}
-      className={near ? undefined : className}
-      style={!near && minHeight != null ? { minHeight } : undefined}
+      ref={setRefs}
+      className={reserve ? className : undefined}
+      style={reserve && minHeight != null ? { minHeight } : undefined}
     >
       {near ? children : placeholder ?? null}
     </div>

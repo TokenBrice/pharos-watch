@@ -123,8 +123,12 @@
   --interactive-disabled: var(--p-neutral-200);
   --control-pill-bg: oklch(1 0 0 / 0.78);
   --control-pill-border: oklch(0.87 0.01 255 / 0.78);
-  --control-pill-active-bg: oklch(0.19 0.01 255);
-  --control-pill-active-text: var(--p-neutral-50);
+  /* One selected state for every control pill, toggle pill and tab pill: an
+     elevated neutral with a hairline ring, never a solid ink fill (two ink
+     actives side by side read as alarms). */
+  --control-pill-active-bg: var(--interactive-active);
+  --control-pill-active-text: var(--text-primary);
+  --control-pill-active-ring: oklch(0.19 0.01 255 / 0.3);
 
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.12;
@@ -263,8 +267,9 @@
   --interactive-disabled: var(--p-neutral-800);
   --control-pill-bg: oklch(1 0 0 / 0.05);
   --control-pill-border: oklch(1 0 0 / 0.1);
-  --control-pill-active-bg: oklch(0.92 0.01 255);
-  --control-pill-active-text: var(--p-neutral-950);
+  --control-pill-active-bg: var(--interactive-active);
+  --control-pill-active-text: var(--text-primary);
+  --control-pill-active-ring: oklch(1 0 0 / 0.24);
 
   /* ── Chart ────────────────────────────────────────────────────── */
   --chart-grid-opacity: 0.08;
