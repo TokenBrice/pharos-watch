@@ -72,7 +72,7 @@ export function TokenRevealDialog({
           </pre>
           <CopyButton
             text={revealedToken.token}
-            className="size-11 border border-amber-500/30 bg-background text-foreground hover:bg-muted hover:text-foreground"
+            className="size-11 border border-state-warn bg-background text-foreground hover:bg-muted hover:text-foreground"
           />
         </div>
 

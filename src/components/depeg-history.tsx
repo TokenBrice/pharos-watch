@@ -156,16 +156,16 @@ export function DepegHistory({
             </p>
           </div>
         ) : depegEventCoverageLimited ? (
-          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-            <p className="text-sm text-amber-700 dark:text-amber-400">
+          <div className="rounded-lg border border-state-warn-solid/20 bg-state-warn-solid/5 px-4 py-3">
+            <p className="text-sm text-state-warn">
               No depeg incidents recorded. This coin is currently below the {formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)}{" "}
               live depeg-event floor, so Pharos shows the price deviation but does not open live depeg events at this
               size.
             </p>
           </div>
         ) : (
-          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
-            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+          <div className="rounded-lg border border-state-positive-solid/20 bg-state-positive-solid/5 px-4 py-3">
+            <p className="text-sm font-medium text-state-positive">
               No depeg incidents are recorded in the observed coverage window.
             </p>
           </div>
@@ -204,15 +204,15 @@ export function DepegHistory({
           <div>
             <span className="text-muted-foreground">Current Streak </span>
             {metrics.depeggedNow ? (
-              <span className="inline-flex items-center gap-1.5 font-semibold text-red-700 dark:text-red-400">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-state-danger">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-state-danger-solid" />
                 </span>
                 Depegged now
               </span>
             ) : metrics.currentStreakDays !== null ? (
-              <span className="font-mono font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="font-mono font-semibold text-state-positive">
                 {metrics.currentStreakDays}d at peg
               </span>
             ) : (
@@ -245,7 +245,7 @@ export function DepegHistory({
         </p>
       ) : null}
       {isAutoLoadCapped ? (
-        <p className="mb-3 text-xs text-amber-700 dark:text-amber-400">
+        <p className="mb-3 text-xs text-state-warn">
           Partial history: the newest {loadedCount.toLocaleString()}
           {knownTotal != null ? ` of ${knownTotal.toLocaleString()}` : ""} incidents are loaded. Peg-stability metrics need the
           full history and stay hidden until the rest is loaded.
@@ -418,7 +418,7 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
           <span className="inline-flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-state-danger-solid" />
             </span>
             Ongoing
           </span>

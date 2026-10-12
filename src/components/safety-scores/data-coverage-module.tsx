@@ -178,9 +178,9 @@ function GapTypeRow({ label, assetCount }: { label: string; assetCount: number }
 
 function HoldRow({ hold }: { hold: NonNullable<DataCoverageModel["hold"]> }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2">
+    <div className="flex items-start gap-2.5 rounded-lg border border-state-warn bg-state-warn-solid/[0.08] px-3 py-2">
       <PauseCircle
-        className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400"
+        className="mt-0.5 h-4 w-4 shrink-0 text-state-warn"
         aria-hidden="true"
       />
       <p className="min-w-0 text-xs leading-relaxed text-amber-800 dark:text-amber-300">

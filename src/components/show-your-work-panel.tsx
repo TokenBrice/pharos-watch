@@ -106,7 +106,7 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
   const labels = getContextLabels(props);
 
   return (
-    <div className="rounded-lg border border-dashed border-sky-500/40 bg-sky-500/5 px-3 py-3 text-xs">
+    <div className="rounded-lg border border-dashed border-state-info-solid/40 bg-state-info-solid/5 px-3 py-3 text-xs">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -115,7 +115,7 @@ export function ShowYourWorkPanel(props: ShowYourWorkPanelProps) {
         aria-controls={panelId}
       >
         <span className="flex items-center gap-2">
-          <span className="pharos-label text-sky-700 dark:text-sky-400">Inputs · {item.title}</span>
+          <span className="pharos-label text-state-info">Inputs · {item.title}</span>
           {table.versionLabel ?? item.versionLabel ? (
             <span className="font-mono text-3xs text-muted-foreground">
               {table.versionLabel ?? item.versionLabel}

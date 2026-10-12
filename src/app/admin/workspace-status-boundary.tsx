@@ -42,7 +42,7 @@ export function WorkspaceStatusBoundary({ data, error, isLoading, onRetry, child
         role="alert"
         aria-live="assertive"
         aria-atomic="true"
-        className={cn("border p-5 text-red-800 dark:text-red-200", SEVERITY_TONE_CLASS.alert.banner)}
+        className={cn("border p-5 text-state-danger-strong", SEVERITY_TONE_CLASS.alert.banner)}
       >
         <h2 className="text-base font-semibold">Status data failed to load</h2>
         <p className="mt-2 text-sm">{error.message}</p>

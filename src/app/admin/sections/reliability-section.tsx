@@ -116,7 +116,7 @@ export function ReliabilitySection({
         return (
           <div className="space-y-4">
             {model.cacheUnknownCount > 0 ? (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/[0.06] px-3 py-2.5 text-sm text-amber-950 dark:text-amber-100">
+              <div className="rounded-md border border-state-warn-solid/40 bg-state-warn-solid/[0.06] px-3 py-2.5 text-sm text-state-warn-ink">
                 {model.cacheUnknownCount} cache {model.cacheUnknownCount === 1 ? "row has" : "rows have"} missing age or
                 budget evidence and remains Unknown.
               </div>

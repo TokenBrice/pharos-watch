@@ -138,8 +138,8 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
           className={cn(
             "mt-4 rounded-md border p-3 text-xs",
             row.cron.inFlight.stale
-              ? "border-red-500/25 bg-red-500/5 text-red-800 dark:text-red-300"
-              : "border-sky-500/25 bg-sky-500/5 text-sky-800 dark:text-sky-300",
+              ? "border-state-danger-solid/25 bg-state-danger-solid/5 text-red-800 dark:text-red-300"
+              : "border-state-info-solid/25 bg-state-info-solid/5 text-sky-800 dark:text-sky-300",
           )}
           aria-label={row.cron.inFlight.stale ? "Stale running progress" : "Current running progress"}
         >
@@ -148,8 +148,8 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
               className={cn(
                 "text-xs",
                 row.cron.inFlight.stale
-                  ? "bg-red-500/15 text-red-800 dark:text-red-300"
-                  : "bg-sky-500/15 text-sky-800 dark:text-sky-300",
+                  ? "bg-state-danger-solid/15 text-red-800 dark:text-red-300"
+                  : "bg-state-info-solid/15 text-sky-800 dark:text-sky-300",
               )}
             >
               {row.cron.inFlight.stale ? "Stale heartbeat" : "Running now"}

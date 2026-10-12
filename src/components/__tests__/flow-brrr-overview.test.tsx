@@ -52,7 +52,7 @@ describe("FlowBrrrOverview", () => {
     expect(mild.container.querySelector("h3")?.className).toContain("text-foreground");
     const panel = (root: HTMLElement) =>
       root.querySelector('[aria-label="Mint and burn pressure gauges"]')?.firstElementChild?.className ?? "";
-    expect(screen.getByText("Pressure worsening").className).toContain("text-amber-700");
+    expect(screen.getByText("Pressure worsening").className).toContain("text-state-warn");
     expect(panel(mild.container)).not.toContain("bg-red-500/10");
     mild.unmount();
     const crisis = render(<FlowBrrrOverview gauge={gauge(-80, "CRISIS")} coins={[legacyCoin(-100)]} />);

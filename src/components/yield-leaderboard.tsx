@@ -524,7 +524,7 @@ export function YieldMobileCard({
       data-yield-freshness={freshness?.displayText ?? ""}
       data-yield-warning-count={warningCount}
       data-yield-benchmark={benchmarkReferenceText}
-      className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-amber-500/60" : ""}`}
+      className={`pharos-card-shell rounded-xl p-4 ${warningCount >= 2 ? "border-l-2 border-l-state-warn-solid/60" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
@@ -618,14 +618,14 @@ export function YieldMobileCard({
           {depthDisplay.isNativeUnmeasured ? depthDisplay.phrase : `Depth: ${depthDisplay.label}`}
         </p>
         {sourceRiskSummary ? (
-          <p className="mt-1 font-mono text-2xs tabular-nums text-amber-700 dark:text-amber-300">
+          <p className="mt-1 font-mono text-2xs tabular-nums text-state-warn-bright">
             {sourceRiskSummary}
           </p>
         ) : null}
       </div>
 
       {warningCount > 0 ? (
-        <ul className="mt-3 space-y-1 text-xs text-amber-700 dark:text-amber-300">
+        <ul className="mt-3 space-y-1 text-xs text-state-warn-bright">
           {row.warningSignals.slice(0, 2).map((signal) => (
             <li key={signal}>{formatYieldWarningSignal(signal)}</li>
           ))}

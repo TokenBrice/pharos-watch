@@ -39,10 +39,10 @@ const ACTIVITY_CLASS: Record<ActionActivity["status"], string> = {
   running: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
   accepted: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
   queued: "bg-blue-500/10 text-blue-700 dark:text-blue-300",
-  succeeded: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  failed: "bg-red-500/10 text-red-700 dark:text-red-300",
-  error: "bg-red-500/10 text-red-700 dark:text-red-300",
-  unknown: "bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  succeeded: "bg-state-positive-subtle text-state-positive-bright",
+  failed: "bg-state-danger-subtle text-state-danger-bright",
+  error: "bg-state-danger-subtle text-state-danger-bright",
+  unknown: "bg-state-warn-subtle text-state-warn-strong",
 };
 
 interface AdminActionsPanelProps {
@@ -144,8 +144,8 @@ function ActionCatalogRow({
             <StatusPill
               className={
                 liveReadiness.blocked
-                  ? "bg-red-500/10 text-red-700 dark:text-red-300"
-                  : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  ? "bg-state-danger-subtle text-state-danger-bright"
+                  : "bg-state-positive-subtle text-state-positive-bright"
               }
             >
               {readinessLabel(action, readinessChecks)}
@@ -219,7 +219,7 @@ function ActionCatalogRow({
             <div>
               <div className="font-medium text-foreground">Current evidence</div>
               {liveReadiness.reasons.length > 0 ? (
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-red-700 dark:text-red-300">
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-state-danger-bright">
                   {liveReadiness.reasons.map((reason) => (
                     <li key={reason}>{reason}</li>
                   ))}
@@ -338,8 +338,8 @@ export function AdminActionsPanel({
                       <StatusPill
                         className={
                           buildActionReadiness(recommendation.action, readinessChecks, "live").blocked
-                            ? "bg-red-500/10 text-red-700 dark:text-red-300"
-                            : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                            ? "bg-state-danger-subtle text-state-danger-bright"
+                            : "bg-state-positive-subtle text-state-positive-bright"
                         }
                       >
                         {readinessLabel(recommendation.action, readinessChecks)}
@@ -399,7 +399,7 @@ export function AdminActionsPanel({
           )}
         </div>
         {actionLog.isError && (
-          <p role="alert" className="mt-2 text-xs text-red-700 dark:text-red-300">
+          <p role="alert" className="mt-2 text-xs text-state-danger-bright">
             Persisted history could not be loaded: {actionLog.error?.message ?? "Unknown error"}
           </p>
         )}

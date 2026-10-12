@@ -205,7 +205,7 @@ describe("ReferenceRatesStrip", () => {
     render(<ReferenceRatesStrip benchmarks={null} poolInputMeta={staleMeta} safetySnapshot={null} />);
 
     const chip = screen.getByText(/Pool input age 90m/i);
-    expect(chip.className).toContain("amber");
+    expect(chip.className).toContain("state-warn");
   });
 
   it("does not render the freshness footer when no source meta is provided", () => {
@@ -230,7 +230,7 @@ describe("ReferenceRatesStrip", () => {
 
     // The stale observation is visibly marked while a freshly fetched record is not.
     const dateChip = within(cadRow!).getByText("2026-04-08");
-    expect(dateChip.className).toContain("amber");
+    expect(dateChip.className).toContain("state-warn");
     expect(within(cadRow!).getByLabelText(/observation.*freshness/i)).toBe(dateChip);
 
     // Age marker appended through the shared benchmark suffix.
@@ -240,7 +240,7 @@ describe("ReferenceRatesStrip", () => {
     const usdRow = within(table)
       .getAllByRole("row")
       .find((r) => within(r).queryByText("USD"));
-    expect(within(usdRow!).getByText("2026-05-19").className).not.toContain("amber");
+    expect(within(usdRow!).getByText("2026-05-19").className).not.toContain("state-warn");
     expect(within(usdRow!).queryByText(/old/)).toBeNull();
   });
 
@@ -261,7 +261,7 @@ describe("ReferenceRatesStrip", () => {
     const cadRow = within(table)
       .getAllByRole("row")
       .find((r) => within(r).queryByText("CAD"));
-    expect(within(cadRow!).getByText("2026-04-08").className).not.toContain("amber");
+    expect(within(cadRow!).getByText("2026-04-08").className).not.toContain("state-warn");
     expect(within(cadRow!).queryByText(/old/)).toBeNull();
   });
 });

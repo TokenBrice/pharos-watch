@@ -111,7 +111,7 @@ export function PublicServiceSummarySection({
             ) : null}
           </div>
           {healthData.mintBurn.staleMajorSymbols != null && healthData.mintBurn.staleMajorSymbols.length > 0 ? (
-            <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
               Impacted majors: {healthData.mintBurn.staleMajorSymbols.join(", ")}
             </div>
           ) : null}
@@ -210,12 +210,12 @@ export function PublicServiceSummarySection({
             </div>
           </div>
           {(telegramSummary.pendingDeliveries ?? 0) > 0 && (
-            <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
               {telegramSummary.pendingDeliveries} {pluralizeCount(telegramSummary.pendingDeliveries ?? 0, "alert")} pending delivery
             </div>
           )}
           {telegramSummary.safetyAlertsSuppressed && (
-            <div className="rounded-[1rem] border border-amber-500/20 bg-amber-500/5 p-3 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
               Safety alerts are paused because the live report-card source is {telegramSummary.safetyAlertSourceState ?? "unavailable"}
               {telegramSummary.safetyAlertSourceAgeSeconds != null
                 ? ` (${telegramSummary.safetyAlertSourceAgeSeconds}s old)`

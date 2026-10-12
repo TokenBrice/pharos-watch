@@ -331,7 +331,7 @@ function HealthZone({
           </div>
         </div>
       ) : (
-        <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+        <p className="rounded-lg border border-state-warn-solid/20 bg-state-warn-subtle px-3 py-2 text-xs text-state-warn-strong">
           {buildHealthUnavailableMessage(apiMeta, chain)}
         </p>
       )}

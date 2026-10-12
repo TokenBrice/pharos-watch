@@ -33,7 +33,7 @@ function IncidentRow({ incident }: { incident: DdrTrackRecordIncidentRow }) {
         {incident.actualOutcomeLabel}
       </span>
       {incident.erratumLabel ? (
-        <span className="pharos-label text-amber-700 dark:text-amber-400">
+        <span className="pharos-label text-state-warn">
           {incident.erratumLabel}
         </span>
       ) : null}

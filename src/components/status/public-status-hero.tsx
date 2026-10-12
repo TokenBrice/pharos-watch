@@ -31,18 +31,18 @@ const HERO_COPY = {
     headline: "Public surface steady.",
     /* Flat card; no accent stripe when healthy. */
     shell: "",
-    accentDot: "bg-emerald-500",
+    accentDot: "bg-state-positive-solid",
   },
   degraded: {
     headline: "Public surface under pressure.",
     /* Data-driven severity accent for a real degraded state. */
-    shell: "border-l-[3px] border-l-amber-500",
-    accentDot: "bg-amber-500",
+    shell: "border-l-[3px] border-l-state-warn-solid",
+    accentDot: "bg-state-warn-solid",
   },
   stale: {
     headline: "Public surface compromised.",
-    shell: "border-l-[3px] border-l-red-500",
-    accentDot: "bg-red-500",
+    shell: "border-l-[3px] border-l-state-danger-solid",
+    accentDot: "bg-state-danger-solid",
   },
 } as const;
 

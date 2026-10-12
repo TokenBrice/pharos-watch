@@ -125,7 +125,7 @@ export function YieldDetailSectionAltSources({
                       {source.displayLabel}
                     </TableSourceLink>
                     {isBest ? (
-                      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-3xs font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="rounded-full bg-state-positive-solid/15 px-1.5 py-0.5 text-3xs font-medium text-state-positive">
                         Best
                       </span>
                     ) : null}
@@ -276,7 +276,7 @@ export function YieldDetailSectionAltSources({
                       {source.displayLabel}
                     </TableSourceLink>
                     {isBest ? (
-                      <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-3xs font-medium text-emerald-700 dark:text-emerald-400">
+                      <span className="rounded-full bg-state-positive-solid/15 px-1.5 py-0.5 text-3xs font-medium text-state-positive">
                         Best
                       </span>
                     ) : null}

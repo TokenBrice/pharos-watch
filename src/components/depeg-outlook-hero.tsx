@@ -174,7 +174,7 @@ export function DepegOutlookHero({
               </div>
               <p className="pharos-meta mt-1">
                 {book.pastPeakCount > 0 ? (
-                  <span className="text-amber-700 dark:text-amber-400">
+                  <span className="text-state-warn">
                     {book.pastPeakCount === 1 ? "1 is" : `${book.pastPeakCount} are`} past their worst ·{" "}
                   </span>
                 ) : null}

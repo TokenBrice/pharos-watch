@@ -22,9 +22,9 @@ export const STATUS_PAGE_RISK_CLASSES: Record<StatusPageActionRisk, string> = {
 export type OperationalTone = "ok" | "warning" | "error" | "unknown";
 
 export const OPERATIONAL_PILL_CLASS: Record<OperationalTone, string> = {
-  ok: `bg-emerald-500/15 ${SEVERITY_TONE_CLASS.ok.text}`,
-  warning: `bg-amber-500/15 ${SEVERITY_TONE_CLASS.watch.text}`,
-  error: `bg-red-500/15 ${SEVERITY_TONE_CLASS.alert.text}`,
+  ok: `bg-state-positive-solid/15 ${SEVERITY_TONE_CLASS.ok.text}`,
+  warning: `bg-state-warn-solid/15 ${SEVERITY_TONE_CLASS.watch.text}`,
+  error: `bg-state-danger-solid/15 ${SEVERITY_TONE_CLASS.alert.text}`,
   unknown: `bg-muted ${SEVERITY_TONE_CLASS.neutral.text}`,
 };
 
@@ -77,7 +77,7 @@ export function getIssueKindBadgeClass(kind: DashboardIssueKind): string {
 }
 
 export function getNoticeTone(tone: DashboardNotice["tone"]): string {
-  if (tone === "critical") return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
-  if (tone === "warning") return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  if (tone === "critical") return "border-state-danger bg-state-danger-subtle text-state-danger-bright";
+  if (tone === "warning") return "border-state-warn bg-state-warn-subtle text-state-warn-bright";
   return "border-border/60 bg-muted/30 text-muted-foreground";
 }

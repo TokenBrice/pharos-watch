@@ -74,7 +74,7 @@ export function PipelineQualityTable({ model }: { model: PipelineQualityModel })
         </TableFrame>
       </section>
 
-      <aside className="border-l-2 border-sky-500 bg-sky-500/[0.06] px-3 py-2.5" aria-label="Active depegs">
+      <aside className="border-l-2 border-state-info-solid bg-state-info-solid/[0.06] px-3 py-2.5" aria-label="Active depegs">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <div>
             <span className="text-sm font-medium text-foreground">Active depegs</span>

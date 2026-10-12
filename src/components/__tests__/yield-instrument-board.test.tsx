@@ -209,7 +209,7 @@ describe("YieldInstrumentBoard", () => {
     renderBoard(row);
 
     const freshness = screen.getByText("Stale · 4h ago");
-    expect(freshness.className).toContain("text-amber-700");
+    expect(freshness.className).toContain("text-state-warn");
     expect(screen.queryByText("Fresh · 4h ago")).toBeNull();
   });
 
@@ -224,7 +224,7 @@ describe("YieldInstrumentBoard", () => {
     renderMobileCard(row);
 
     const freshness = screen.getByText("Fresh · 1d ago");
-    expect(freshness.className).toContain("text-emerald-700");
+    expect(freshness.className).toContain("text-state-positive");
     expect(screen.queryByText("Stale · 1d ago")).toBeNull();
   });
 

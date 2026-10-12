@@ -301,7 +301,7 @@ describe("getYieldSourceFreshnessDisplay", () => {
       displayText: "Stale · 4h ago",
       ageContext: { band: "within-6h" },
     });
-    expect(result?.textClassName).toContain("amber");
+    expect(result?.textClassName).toContain("state-warn");
     expect(result?.tooltipText).toContain("Published source freshness: Stale");
   });
 
@@ -316,7 +316,7 @@ describe("getYieldSourceFreshnessDisplay", () => {
       displayText: "Fresh · 1d ago",
       ageContext: { band: "over-24h" },
     });
-    expect(result?.textClassName).toContain("emerald");
+    expect(result?.textClassName).toContain("state-positive");
     expect(result?.tooltipText).toContain("age context: observed more than 24 hours ago");
   });
 

@@ -29,7 +29,7 @@ export function CronInFlightProgress({ itemsDone, itemsTotal, stale, className }
       <div
         className={cn(
           "h-full transition-[width] duration-500 ease-out",
-          stale ? "bg-amber-500" : "bg-emerald-500",
+          stale ? "bg-state-warn-solid" : "bg-state-positive-solid",
         )}
         style={{ width: `${pct}%` }}
       />

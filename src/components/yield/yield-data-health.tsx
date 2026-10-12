@@ -51,7 +51,7 @@ export function YieldApiWarnings({ warnings }: { warnings: YieldRankingsSummaryR
         ) : (
         <div
           key={`${warning.code}:${warning.message}`}
-          className={cn("rounded-xl border px-4 py-3 text-sm text-amber-950 dark:text-amber-100", SEVERITY_TONE_CLASS.watch.banner)}
+          className={cn("rounded-xl border px-4 py-3 text-sm text-state-warn-ink", SEVERITY_TONE_CLASS.watch.banner)}
         >
           <p className="font-medium">{warning.message}</p>
           {warning.reasons && warning.reasons.length > 0 ? (

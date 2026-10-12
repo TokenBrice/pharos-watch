@@ -297,7 +297,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
             {amplifiers.map((amp) => (
               <span
                 key={amp.key}
-                className="rounded-sm border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-300"
+                className="rounded-sm border border-state-warn bg-state-warn-subtle px-2 py-1 text-xs text-state-warn-bright"
               >
                 {amp.label} {amp.value.toFixed(2)}x
               </span>

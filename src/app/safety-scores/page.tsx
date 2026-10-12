@@ -93,7 +93,7 @@ const route = createClientFeaturePage({
     <>
       <CalloutBanner
         icon={<Bell className="h-4 w-4" />}
-        className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+        className="border-state-info bg-state-info-subtle text-state-info-bright"
       >
         Get notified when a safety grade changes.{" "}
         <Link

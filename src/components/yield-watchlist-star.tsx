@@ -33,12 +33,12 @@ export function YieldWatchlistStar({ stablecoinId, symbol, className }: YieldWat
         if (event.key === "Enter" || event.key === " ") event.stopPropagation();
       }}
       className={cn(
-        "pharos-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-amber-500",
-        active && "text-amber-500",
+        "pharos-focus-ring inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-state-warn-solid",
+        active && "text-state-warn-solid",
         className,
       )}
     >
-      <Star className={cn("h-4 w-4", active && "fill-amber-500")} />
+      <Star className={cn("h-4 w-4", active && "fill-state-warn-solid")} />
     </button>
   );
 }

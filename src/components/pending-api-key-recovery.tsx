@@ -59,7 +59,7 @@ export function PendingApiKeyRecovery() {
 
   if (!tokens.length) return null;
   return (
-    <section aria-label="Unsaved API keys" role="region" className="fixed inset-x-4 bottom-4 z-50 mx-auto max-h-[80vh] max-w-xl overflow-y-auto rounded-xl border border-amber-500/40 bg-background p-5 shadow-xl">
+    <section aria-label="Unsaved API keys" role="region" className="fixed inset-x-4 bottom-4 z-50 mx-auto max-h-[80vh] max-w-xl overflow-y-auto rounded-xl border border-state-warn-solid/40 bg-background p-5 shadow-xl">
       <h2 className="text-lg font-semibold" tabIndex={-1} ref={(node) => { node?.focus(); }}>Save your API key before closing this tab</h2>
       <p className="mt-2 text-sm text-muted-foreground">You left the issuance page. Your unsaved key is still available here until you copy it or mark it saved.</p>
       {copyError ? <p role="alert" className="mt-2 text-sm">Copy failed. Select the token and copy it manually, then mark it saved.</p> : null}

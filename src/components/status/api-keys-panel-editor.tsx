@@ -210,7 +210,7 @@ function ApiKeyAuditHistory({
       {!isLoading && error ? (
         <div
           role="alert"
-          className="space-y-3 border-l-2 border-red-500/60 pl-3 text-sm text-red-700 dark:text-red-400"
+          className="space-y-3 border-l-2 border-state-danger-solid/60 pl-3 text-sm text-state-danger"
         >
           <div>
             <p className="font-medium">Audit history unavailable</p>
@@ -315,7 +315,7 @@ export function ApiKeyDetailEditor({
           <div className="flex flex-wrap gap-2">
             <StatusPill className={apiKeyStatusBadgeClassName(keyStatus)}>{keyStatus}</StatusPill>
             {expiringSoon ? (
-              <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-medium text-amber-700 dark:text-amber-400">
+              <span className="rounded-full bg-state-warn-solid/15 px-2 py-0.5 text-2xs font-medium text-state-warn">
                 expiring soon
               </span>
             ) : null}
@@ -363,7 +363,7 @@ export function ApiKeyDetailEditor({
           </dl>
 
           {draft.expiryMode === "non-expiring" ? (
-            <div className="border-l-2 border-amber-500/60 pl-3 text-xs text-muted-foreground">
+            <div className="border-l-2 border-state-warn-solid/60 pl-3 text-xs text-muted-foreground">
               Saving will persist <span className="font-mono tabular-nums">expiresAt: null</span> as an explicit
               non-expiring exception.
             </div>

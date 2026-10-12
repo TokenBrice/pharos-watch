@@ -132,10 +132,10 @@ export function DepegFeed({
                       source={evt.source}
                     />
                     {isOngoing && (
-                      <span className="flex items-center gap-1 text-xs text-red-700 dark:text-red-400 font-medium">
+                      <span className="flex items-center gap-1 text-xs text-state-danger font-medium">
                         <span className="relative flex h-2 w-2">
                           <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-state-danger-solid" />
                         </span>
                         LIVE
                       </span>

@@ -71,7 +71,7 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
   const bandClass = band && beacon.isCurrent ? (PSI_BAND_CLASSES[band] ?? "text-foreground") : "text-muted-foreground";
   const bandLabel = band ? band.charAt(0) + band.slice(1).toLowerCase() : null;
   const avgDeltaClass =
-    avgDelta != null && avgDelta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400";
+    avgDelta != null && avgDelta >= 0 ? "text-green-700 dark:text-green-400" : "text-state-danger";
   const state = resolveQueryViewState({
     hasData: current !== null,
     isLoading,

@@ -403,7 +403,7 @@ export function DonorKeyClaim() {
       ) : null}
 
       {failure ? (
-        <div role="alert" className="rounded-md border border-red-500/30 bg-red-500/8 px-3 py-2 text-sm text-red-700 dark:text-red-300">
+        <div role="alert" className="rounded-md border border-state-danger bg-state-danger-solid/8 px-3 py-2 text-sm text-state-danger-bright">
           {failure.text}
         </div>
       ) : null}

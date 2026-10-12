@@ -36,13 +36,13 @@ export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBrea
       <TableCell className="py-2 font-mono text-xs">{name}</TableCell>
       <TableCell className="py-2">
         {circuit.state === "closed" && (
-          <Badge className="bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-400">closed</Badge>
+          <Badge className="bg-state-positive-solid/15 text-xs text-state-positive">closed</Badge>
         )}
         {circuit.state === "half-open" && (
-          <Badge className="bg-amber-500/15 text-xs text-amber-700 dark:text-amber-400">half-open</Badge>
+          <Badge className="bg-state-warn-solid/15 text-xs text-state-warn">half-open</Badge>
         )}
         {circuit.state === "open" && (
-          <Badge className="bg-red-500/15 text-xs text-red-700 dark:text-red-400">open</Badge>
+          <Badge className="bg-state-danger-solid/15 text-xs text-state-danger">open</Badge>
         )}
       </TableCell>
       <TableCell className="py-2 pharos-numeric">{circuit.consecutiveFailures}</TableCell>

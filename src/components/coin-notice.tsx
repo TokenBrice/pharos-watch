@@ -5,12 +5,12 @@ import type { CoinNotice as CoinNoticeType } from "@shared/types";
 const STYLES: Record<CoinNoticeType["type"], { banner: string; icon: string; title: string }> = {
   danger: {
     banner: SEVERITY_TONE_CLASS.alert.banner,
-    icon: "text-red-700 dark:text-red-400",
+    icon: "text-state-danger",
     title: "text-red-600 dark:text-red-400",
   },
   warning: {
     banner: SEVERITY_TONE_CLASS.watch.banner,
-    icon: "text-amber-700 dark:text-amber-400",
+    icon: "text-state-warn",
     title: "text-amber-600 dark:text-amber-400",
   },
   info: {

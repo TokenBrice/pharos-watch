@@ -341,7 +341,7 @@ export function ApiKeyTable({
                 <div className="flex flex-wrap gap-1.5">
                   <StatusPill className={apiKeyStatusBadgeClassName(keyStatus)}>{keyStatus}</StatusPill>
                   {expiringSoon ? (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-2xs font-medium text-amber-700 dark:text-amber-400">
+                    <span className="rounded-full bg-state-warn-solid/15 px-2 py-0.5 text-2xs font-medium text-state-warn">
                       expiring soon
                     </span>
                   ) : null}

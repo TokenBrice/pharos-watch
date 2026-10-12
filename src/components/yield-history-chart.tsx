@@ -78,7 +78,7 @@ export function YieldHistoryChart({
       {source.isLoading ? <p className="text-xs text-muted-foreground">Loading history</p> : null}
       <QueryErrorNotice error={source.error} hasData={source.hasData} onRetry={source.onRetry} />
       {source.warning ? (
-        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+        <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
           {source.warning}
           {!source.error ? <button type="button" onClick={source.onRetry} className="pharos-focus-ring ml-2 underline">Retry</button> : null}
         </div>
@@ -390,7 +390,7 @@ export function YieldHistoryChart({
               <span className="font-mono tabular-nums">{formatChartNumber(benchmarkRate)}%</span>
               Benchmark: {benchmarkLabel ?? "Rate"}
               {benchmarkIsFallback ? (
-                <span className="rounded bg-amber-500/15 px-1 py-px text-3xs font-medium uppercase text-amber-700 dark:text-amber-400">
+                <span className="rounded bg-state-warn-solid/15 px-1 py-px text-3xs font-medium uppercase text-state-warn">
                   fallback
                 </span>
               ) : null}

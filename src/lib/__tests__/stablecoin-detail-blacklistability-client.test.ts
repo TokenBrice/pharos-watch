@@ -46,7 +46,7 @@ describe("projectBlacklistabilityClientSummary", () => {
     expect(summary).not.toBeNull();
     expect(summary!.status).toBe("freezable");
     expect(summary!.statusLabel).toBe("Freezable");
-    expect(summary!.statusToneClass).toContain("amber");
+    expect(summary!.statusToneClass).toContain("state-warn");
     expect(summary!.statusNote).toContain("can freeze or seize");
     expect(summary!.evidence).toBe(FREEZABLE_REVIEW.evidence);
     expect(summary!.basisLabel).toBe("Sourced review");
@@ -62,7 +62,7 @@ describe("projectBlacklistabilityClientSummary", () => {
     );
     expect(summary!.status).toBe("not-freezable");
     expect(summary!.statusLabel).toBe("Not freezable");
-    expect(summary!.statusToneClass).toContain("emerald");
+    expect(summary!.statusToneClass).toContain("state-positive");
     expect(summary!.statusNote).toContain("no issuer freeze");
   });
 
@@ -72,7 +72,7 @@ describe("projectBlacklistabilityClientSummary", () => {
     );
     expect(summary!.status).toBe("possible");
     expect(summary!.statusLabel).toBe("Possible");
-    expect(summary!.statusToneClass).toContain("amber");
+    expect(summary!.statusToneClass).toContain("state-warn");
     expect(summary!.statusNote).toContain("plausible");
   });
 

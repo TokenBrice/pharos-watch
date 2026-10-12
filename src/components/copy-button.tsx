@@ -21,7 +21,7 @@ export function CopyButton({ text, className }: CopyButtonProps) {
       aria-label={copied ? "Copied" : "Copy to clipboard"}
       className={cn(
         "pharos-focus-ring inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-        copied && "text-emerald-700 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-400",
+        copied && "text-state-positive hover:text-state-positive",
         className,
       )}
     >

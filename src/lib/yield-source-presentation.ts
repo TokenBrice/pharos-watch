@@ -55,8 +55,8 @@ export interface YieldSourceFreshnessDisplay {
 }
 
 const YIELD_SOURCE_FRESHNESS_STYLES: Record<YieldSourcePublishedFreshness, string> = {
-  fresh: "text-emerald-700 dark:text-emerald-400",
-  stale: "text-amber-700 dark:text-amber-400",
+  fresh: "text-state-positive",
+  stale: "text-state-warn",
   unknown: "text-muted-foreground",
 };
 

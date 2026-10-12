@@ -15,9 +15,9 @@ import type { HealthResponse } from "@shared/types";
 // Per-status accent dots. Lookup map of COMPLETE static class strings so the
 // Tailwind scanner sees every variant (no dynamic concatenation).
 const TONE_DOT: Record<HealthResponse["status"], string> = {
-  healthy: "bg-emerald-500",
-  degraded: "bg-amber-500",
-  stale: "bg-red-500",
+  healthy: "bg-state-positive-solid",
+  degraded: "bg-state-warn-solid",
+  stale: "bg-state-danger-solid",
 };
 
 const LINE_LINK_CLASS =

@@ -31,10 +31,10 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
               className={cn(
                 "text-[11px]",
                 surface.telemetryStatus === "fresh"
-                  ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+                  ? "bg-state-positive-solid/15 text-emerald-800 dark:text-emerald-300"
                   : surface.telemetryStatus === "stale"
-                    ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
-                    : "bg-red-500/15 text-red-800 dark:text-red-300",
+                    ? "bg-state-warn-solid/15 text-amber-800 dark:text-amber-300"
+                    : "bg-state-danger-solid/15 text-red-800 dark:text-red-300",
               )}
             >
               {row.telemetryLabel} telemetry

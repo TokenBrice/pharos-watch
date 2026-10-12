@@ -251,7 +251,7 @@ function ContractCopyIcons({ copied, iconClass }: { copied: boolean; iconClass: 
         aria-hidden="true"
       />
       <Check
-        className={`pharos-copy-icon absolute ${iconClass} text-emerald-500 ${copied ? "opacity-100" : "opacity-0"}`}
+        className={`pharos-copy-icon absolute ${iconClass} text-state-positive-solid ${copied ? "opacity-100" : "opacity-0"}`}
         aria-hidden="true"
       />
       {copied ? <span className="pharos-copy-ring" aria-hidden="true" /> : null}

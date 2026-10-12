@@ -33,13 +33,13 @@ function buildCredentialSummaryItemsFromResponse(
       label: "Expiring soon",
       value: summary == null ? "Unknown" : String(summary.expiringSoon),
       detail: "active keys inside 7 days",
-      emphasisClassName: summary != null && summary.expiringSoon > 0 ? "text-amber-700 dark:text-amber-300" : undefined,
+      emphasisClassName: summary != null && summary.expiringSoon > 0 ? "text-state-warn-bright" : undefined,
     },
     {
       label: "Expired",
       value: summary == null ? "Unknown" : String(summary.expired),
       detail: "needs rotation or deactivation",
-      emphasisClassName: summary != null && summary.expired > 0 ? "text-red-700 dark:text-red-300" : undefined,
+      emphasisClassName: summary != null && summary.expired > 0 ? "text-state-danger-bright" : undefined,
     },
     {
       label: "Non-expiring",
@@ -51,7 +51,7 @@ function buildCredentialSummaryItemsFromResponse(
       value: summary?.auditAnomalies7d == null ? "Unknown" : String(summary.auditAnomalies7d),
       detail: "rotations and deactivations, 7 days",
       emphasisClassName: summary?.auditAnomalies7d != null && summary.auditAnomalies7d > 0
-        ? "text-amber-700 dark:text-amber-300"
+        ? "text-state-warn-bright"
         : undefined,
     },
   ];
@@ -88,7 +88,7 @@ export function CredentialSummaryCard() {
       ) : (
         <>
           {summary.isError ? (
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/40 bg-amber-500/[0.06] px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-state-warn-solid/40 bg-state-warn-solid/[0.06] px-3 py-2 text-xs text-state-warn-ink">
               <span>Credential inventory could not be loaded; counts below are Unknown.</span>
               <Button
                 type="button"

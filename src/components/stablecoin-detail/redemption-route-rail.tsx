@@ -29,7 +29,7 @@ function AccessGate({ accessModel, accessLabel }: { accessModel: RedemptionAcces
     <span
       className={cn(
         "inline-flex w-fit items-center gap-1.5 rounded-md border px-2.5 py-1.5",
-        open ? "border-emerald-600/40 bg-emerald-500/5" : "border-border/60",
+        open ? "border-emerald-600/40 bg-state-positive-solid/5" : "border-border/60",
       )}
       title={accessLabel}
     >
@@ -40,7 +40,7 @@ function AccessGate({ accessModel, accessLabel }: { accessModel: RedemptionAcces
       <span
         className={cn(
           "pharos-label",
-          open ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
+          open ? "text-state-positive" : "text-foreground",
         )}
       >
         {shortLabel}

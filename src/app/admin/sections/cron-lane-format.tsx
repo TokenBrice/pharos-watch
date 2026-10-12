@@ -35,21 +35,21 @@ export function getCronStatusColor(status: string | undefined): string {
 }
 
 export function getStateBadgeClass(state: CronWorkbenchState): string {
-  if (state === "unhealthy") return "bg-red-500/15 text-red-800 dark:text-red-300";
-  if (state === "degraded") return "bg-amber-500/15 text-amber-800 dark:text-amber-300";
+  if (state === "unhealthy") return "bg-state-danger-solid/15 text-red-800 dark:text-red-300";
+  if (state === "degraded") return "bg-state-warn-solid/15 text-amber-800 dark:text-amber-300";
   if (state === "skipped") return OPERATIONAL_PILL_CLASS.unknown;
-  if (state === "running") return "bg-sky-500/15 text-sky-800 dark:text-sky-300";
+  if (state === "running") return "bg-state-info-solid/15 text-sky-800 dark:text-sky-300";
   if (state === "unknown") return "bg-slate-500/15 text-slate-800 dark:text-slate-300";
-  return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
+  return "bg-state-positive-solid/15 text-emerald-800 dark:text-emerald-300";
 }
 
 export function getRowTone(state: CronWorkbenchState): string {
-  if (state === "unhealthy") return "border-l-red-500/70";
-  if (state === "degraded") return "border-l-amber-500/70";
+  if (state === "unhealthy") return "border-l-state-danger-solid/70";
+  if (state === "degraded") return "border-l-state-warn-solid/70";
   if (state === "skipped") return "border-l-muted-foreground/40";
-  if (state === "running") return "border-l-sky-500/70";
+  if (state === "running") return "border-l-state-info-solid/70";
   if (state === "unknown") return "border-l-slate-500/60";
-  return "border-l-emerald-500/60";
+  return "border-l-state-positive-solid/60";
 }
 
 export function formatLastRun(row: CronWorkbenchRow, nowSeconds: number): string {

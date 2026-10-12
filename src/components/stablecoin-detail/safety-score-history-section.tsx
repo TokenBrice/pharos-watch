@@ -119,7 +119,7 @@ function TransitionIndicator({ point }: { point: DisplayHistoryPoint }) {
 
   if (curr > prev) {
     return (
-      <span className="flex items-center gap-1 whitespace-nowrap text-xs text-red-700 dark:text-red-400">
+      <span className="flex items-center gap-1 whitespace-nowrap text-xs text-state-danger">
         <ArrowDown className="h-3 w-3" />
         Downgraded from {point.prevGrade}
       </span>

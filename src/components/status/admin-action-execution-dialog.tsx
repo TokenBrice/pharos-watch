@@ -136,9 +136,9 @@ function StructuredExecutionResult({ execution }: { execution: AdminActionExecut
           <pre
             className={`mt-2 max-h-60 overflow-auto rounded-md p-3 text-xs ${
               execution.status === "failed"
-                ? "bg-red-500/10 text-red-700 dark:text-red-400"
+                ? "bg-state-danger-subtle text-state-danger"
                 : execution.status === "unknown"
-                  ? "bg-amber-500/10 text-amber-900 dark:text-amber-100"
+                  ? "bg-state-warn-subtle text-amber-900 dark:text-amber-100"
                   : "bg-muted"
             }`}
           >
@@ -357,7 +357,7 @@ export function AdminActionExecutionDialog({
                   onRemove={() => setSelectedAsset(null)}
                 />
                 {!selectedAsset && (
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                  <p className="text-xs text-state-warn-bright">
                     Select a tracked stablecoin for single-asset scope.
                   </p>
                 )}
@@ -397,7 +397,7 @@ export function AdminActionExecutionDialog({
               </span>
             </label>
           ) : (
-            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
+            <div className="rounded-md border border-state-positive bg-state-positive-subtle px-3 py-2 text-sm text-state-positive-strong">
               Dry run only from this dashboard control.
             </div>
           ))}
@@ -490,7 +490,7 @@ export function AdminActionExecutionDialog({
           </div>
         )}
         {execution?.warning && (
-          <div className={cn("rounded-md border px-3 py-2 text-xs text-amber-800 dark:text-amber-200", SEVERITY_TONE_CLASS.watch.banner)}>
+          <div className={cn("rounded-md border px-3 py-2 text-xs text-state-warn-strong", SEVERITY_TONE_CLASS.watch.banner)}>
             {execution.warning}
           </div>
         )}

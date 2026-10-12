@@ -357,7 +357,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
                   <span
                     className={`text-sm font-mono ${
                       Math.abs(liq.dexDeviationBps) >= 50
-                        ? "text-amber-700 dark:text-amber-400"
+                        ? "text-state-warn"
                         : "text-muted-foreground"
                     }`}
                   >

@@ -65,7 +65,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
       <CardContent className="space-y-3 text-sm">
         {scoreInputHold ? (
           <div className={cn("rounded-lg border p-3 text-xs leading-relaxed text-amber-900 dark:text-amber-200", SEVERITY_TONE_CLASS.watch.banner)}>
-            <div className="text-sm font-medium text-amber-950 dark:text-amber-100">
+            <div className="text-sm font-medium text-state-warn-ink">
               Report-card inputs are conservative
             </div>
             <p className="mt-1">
@@ -169,7 +169,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
             </div>
           </div>
           {health.persistentlyStaleIndependentCoins.length > 0 ? (
-            <div className="text-xs text-amber-700 dark:text-amber-300">
+            <div className="text-xs text-state-warn-bright">
               Persistently stale independent feeds:{" "}
               {formatPersistentStaleIndependentFeeds(health.persistentlyStaleIndependentCoins)}
             </div>

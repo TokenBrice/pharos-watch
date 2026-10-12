@@ -20,10 +20,10 @@ import {
 type RecentRunTone = "success" | "warning" | "skipped" | "failed";
 
 const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; className: string }>> = {
-  success: { label: "Succeeded", className: "bg-emerald-500" },
-  warning: { label: "Completed with warnings", className: "bg-amber-500" },
+  success: { label: "Succeeded", className: "bg-state-positive-solid" },
+  warning: { label: "Completed with warnings", className: "bg-state-warn-solid" },
   skipped: { label: "Skipped", className: "bg-zinc-500" },
-  failed: { label: "Failed", className: "bg-red-500" },
+  failed: { label: "Failed", className: "bg-state-danger-solid" },
 };
 
 function getRecentRunTone(run: CronRun): RecentRunTone {
@@ -182,7 +182,7 @@ export function StaleArtifactEvidence({ artifacts }: { artifacts: CronStaleArtif
         <h4 id="cron-stale-artifacts-heading" className="text-xs font-semibold text-foreground">
           Stale lease and progress evidence
         </h4>
-        <Badge className="bg-red-500/15 text-red-800 dark:text-red-300">{artifacts.length}</Badge>
+        <Badge className="bg-state-danger-solid/15 text-red-800 dark:text-red-300">{artifacts.length}</Badge>
       </div>
       <ul className="mt-2 divide-y divide-border/55 border-y border-border/55 text-xs">
         {artifacts.map((artifact, index) => (

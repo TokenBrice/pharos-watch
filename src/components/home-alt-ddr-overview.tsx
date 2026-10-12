@@ -108,7 +108,7 @@ function DurationCell({ item }: { item: ForecastItem }) {
     return <span className="font-mono text-2xs text-muted-foreground">—</span>;
   }
   if (item.tier === "recovery_unlikely") {
-    return <span className="font-mono text-2xs font-semibold text-red-700 dark:text-red-400">no return</span>;
+    return <span className="font-mono text-2xs font-semibold text-state-danger">no return</span>;
   }
   if (item.medianSec != null) {
     return (

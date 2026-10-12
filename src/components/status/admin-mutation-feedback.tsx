@@ -43,7 +43,7 @@ export function AdminMutationFeedback({
       className={`space-y-2 rounded-md border px-3 py-2 text-xs ${
         unknown
           ? cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-900 dark:text-amber-100")
-          : cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-800 dark:text-red-200")
+          : cn(SEVERITY_TONE_CLASS.alert.banner, "text-state-danger-strong")
       }`}
     >
       <p className="font-medium">{unknown ? "Outcome unknown" : "Action failed"}</p>
@@ -98,7 +98,7 @@ export function AdminMutationReceipt({
     <div
       role="status"
       aria-live="polite"
-      className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200"
+      className="rounded-md border border-state-positive bg-state-positive-subtle px-3 py-2 text-sm text-state-positive-strong"
     >
       <p>{message}</p>
       <p className="mt-1 font-mono text-2xs">

@@ -138,8 +138,8 @@ export function TriageSummary({
     reserveForecast.state === "blocked"
       ? cn(SEVERITY_TONE_CLASS.alert.banner, "text-red-900 dark:text-red-200")
       : reserveForecast.state === "clear"
-        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200"
-        : cn(SEVERITY_TONE_CLASS.watch.banner, "text-amber-950 dark:text-amber-100");
+        ? "border-state-positive bg-state-positive-subtle text-emerald-900 dark:text-emerald-200"
+        : cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink");
 
   return (
     <section
@@ -268,24 +268,24 @@ export function TriageSummary({
                 <SummaryBadge
                   label="Reserve"
                   value={data.reserveComposition.status}
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
                 <SummaryBadge
                   label="Next"
                   value={formatNextRunWindow(reserveForecast.nextRunAt, data.timestamp)}
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
                 <SummaryBadge
                   label="Runs"
                   value={
                     reserveForecast.estimatedRunsToClear == null ? "—" : String(reserveForecast.estimatedRunsToClear)
                   }
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
                 <SummaryBadge
                   label="Score-grade"
                   value={formatReserveCoverage(data.reserveComposition.authoritativeFreshCoverageRatio)}
-                  className="border-amber-500/30 bg-background/60 text-amber-800 dark:text-amber-200"
+                  className="border-state-warn bg-background/60 text-state-warn-strong"
                 />
               </div>
             </div>

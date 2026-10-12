@@ -280,8 +280,8 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     <span
                       className={
                         coin.largestEvent24h.direction === "mint"
-                          ? "text-emerald-700 dark:text-emerald-400"
-                          : "text-red-700 dark:text-red-400"
+                          ? "text-state-positive"
+                          : "text-state-danger"
                       }
                     >
                       {coin.largestEvent24h.direction === "mint" ? "+" : "-"}

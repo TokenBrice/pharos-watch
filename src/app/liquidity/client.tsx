@@ -140,7 +140,7 @@ export function LiquidityClient() {
         <div
           role="alert"
           title={meta.warning}
-          className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
+          className="rounded-lg border border-state-warn bg-state-warn-subtle px-4 py-3 text-sm text-state-warn-bright"
         >
           {formatLiquidityWarningMessage(meta.warning)}
         </div>

@@ -16,8 +16,8 @@ const API_KEY_LOAD_COLUMNS = defineStatusColumns([
 
 function trafficClassBadgeClassName(trafficClass: "external" | "site"): string {
   return trafficClass === "site"
-    ? "bg-sky-500/15 text-sky-700 dark:text-sky-300"
-    : "bg-amber-500/15 text-amber-700 dark:text-amber-300";
+    ? "bg-state-info-solid/15 text-state-info-bright"
+    : "bg-state-warn-solid/15 text-state-warn-bright";
 }
 
 export function ApiKeyLoadTable({

@@ -67,7 +67,7 @@ export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
           <span
             id={`hero-verdict-${coin.id}`}
             data-archetype={verdict.archetype}
-            className="inline-flex h-5 items-center gap-1 rounded-full bg-sky-500/15 px-2.5 text-xs font-medium leading-none text-sky-700 dark:text-sky-300"
+            className="inline-flex h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-none text-state-info-bright"
           >
             <BadgeCheck aria-hidden="true" className="h-3 w-3" />
             {verdict.label}

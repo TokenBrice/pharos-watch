@@ -39,9 +39,9 @@ function sourceLabel(sources: readonly OperationalActivitySource[]): string {
 }
 
 function outcomeClassName(outcome: OperationalActivityEntry["outcome"]): string {
-  if (outcome === "error") return "bg-red-500/15 text-red-700 dark:text-red-300";
-  if (outcome === "unknown") return "bg-amber-500/15 text-amber-800 dark:text-amber-200";
-  if (outcome === "ok") return "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300";
+  if (outcome === "error") return "bg-state-danger-solid/15 text-state-danger-bright";
+  if (outcome === "unknown") return "bg-state-warn-solid/15 text-state-warn-strong";
+  if (outcome === "ok") return "bg-state-positive-solid/12 text-state-positive-bright";
   return OPERATIONAL_PILL_CLASS.unknown;
 }
 
@@ -76,7 +76,7 @@ function SourceStatus<TEntry>({ label, state }: { label: string; state: Operatio
         ) : null}
       </div>
       {state.error ? (
-        <p role="alert" className="break-words text-xs text-red-700 dark:text-red-300">
+        <p role="alert" className="break-words text-xs text-state-danger-bright">
           {state.error.message}
         </p>
       ) : null}

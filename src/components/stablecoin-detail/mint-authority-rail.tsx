@@ -130,13 +130,13 @@ function ControlChip({ node }: { node: RailControlNode }) {
           aria-hidden="true"
           className={cn(
             "h-3 w-3 shrink-0",
-            glyph.caution ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground",
+            glyph.caution ? "text-state-warn" : "text-muted-foreground",
           )}
         />
         <span
           className={cn(
             "text-2xs font-medium",
-            glyph.caution ? "text-amber-700 dark:text-amber-400" : "text-foreground/90",
+            glyph.caution ? "text-state-warn" : "text-foreground/90",
           )}
         >
           {label}

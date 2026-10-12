@@ -146,7 +146,7 @@ export function SupplyMovesCard(): React.JSX.Element {
           </span>
           <span
             className={`pharos-numeric text-3xl font-bold tracking-tight ${
-              peak.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+              peak.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-state-danger"
             }`}
           >
             {formatPct(peak.pctChange)}
@@ -194,7 +194,7 @@ function MoverList({
                 <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
                 <span
                   className={`font-semibold pharos-numeric ${
-                    row.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                    row.pctChange >= 0 ? "text-green-700 dark:text-green-400" : "text-state-danger"
                   }`}
                 >
                   {formatPct(row.pctChange)}

@@ -61,22 +61,22 @@ export interface SeverityToneClasses {
 
 export const SEVERITY_TONE_CLASS: Record<SeverityTone, SeverityToneClasses> = {
   ok: {
-    pill: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-    banner: "border-emerald-500/30 bg-emerald-500/10",
-    text: "text-emerald-700 dark:text-emerald-400",
-    bar: "bg-emerald-500",
+    pill: "border-state-positive bg-state-positive-subtle text-state-positive",
+    banner: "border-state-positive bg-state-positive-subtle",
+    text: "text-state-positive",
+    bar: "bg-state-positive-solid",
   },
   watch: {
-    pill: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    banner: "border-amber-500/30 bg-amber-500/10",
-    text: "text-amber-700 dark:text-amber-400",
-    bar: "bg-amber-500",
+    pill: "border-state-warn bg-state-warn-subtle text-state-warn",
+    banner: "border-state-warn bg-state-warn-subtle",
+    text: "text-state-warn",
+    bar: "bg-state-warn-solid",
   },
   alert: {
-    pill: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-    banner: "border-red-500/30 bg-red-500/10",
-    text: "text-red-700 dark:text-red-400",
-    bar: "bg-red-500",
+    pill: "border-state-danger bg-state-danger-subtle text-state-danger",
+    banner: "border-state-danger bg-state-danger-subtle",
+    text: "text-state-danger",
+    bar: "bg-state-danger-solid",
   },
   neutral: {
     pill: "border-border/60 bg-muted/30 text-muted-foreground",
@@ -91,10 +91,10 @@ export const SEVERITY_TONE_CLASS: Record<SeverityTone, SeverityToneClasses> = {
     bar: "bg-blue-500",
   },
   sky: {
-    pill: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-    banner: "border-sky-500/25 bg-sky-500/10",
-    text: "text-sky-700 dark:text-sky-300",
-    bar: "bg-sky-500",
+    pill: "border-state-info-solid/25 bg-state-info-subtle text-state-info-bright",
+    banner: "border-state-info-solid/25 bg-state-info-subtle",
+    text: "text-state-info-bright",
+    bar: "bg-state-info-solid",
   },
   rose: {
     pill: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",

@@ -217,7 +217,7 @@ export function ReferenceRatesStrip({
                               <span
                                 tabIndex={0}
                                 aria-label={row.age.reason ?? undefined}
-                                className="pharos-focus-ring inline-flex min-h-6 cursor-help items-center justify-end rounded-sm text-amber-700 dark:text-amber-300"
+                                className="pharos-focus-ring inline-flex min-h-6 cursor-help items-center justify-end rounded-sm text-state-warn-bright"
                               >
                                 {row.recordDate ?? "—"}
                               </span>
@@ -250,7 +250,7 @@ export function ReferenceRatesStrip({
                       tabIndex={0}
                       className={cn(
                         "pharos-focus-ring inline-flex min-h-6 items-center cursor-help rounded-sm",
-                        poolIsStale ? "text-amber-700 dark:text-amber-300" : undefined,
+                        poolIsStale ? "text-state-warn-bright" : undefined,
                       )}
                     >
                       {formatPoolInputAge(poolInputMeta)}

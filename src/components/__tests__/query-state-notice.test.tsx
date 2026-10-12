@@ -12,7 +12,7 @@ describe("QueryStateNotice", () => {
     expect(screen.getByText("Liquidity data is temporarily unavailable. No status claim is being made.")).toBeTruthy();
     const className = container.firstElementChild?.getAttribute("class") ?? "";
     expect(className).toContain("bg-muted/40");
-    expect(className).not.toContain("bg-amber-500");
+    expect(className).not.toMatch(/bg-amber-500|bg-state-warn/);
   });
 
   it("keeps compact sizing for stale data", () => {

@@ -177,7 +177,7 @@ const CLAMP_BADGE_SLATE_CLASS = cn(
 );
 const CLAMP_BADGE_AMBER_CLASS = cn(
   CLAMP_BADGE_BASE_CLASS,
-  "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  "border-state-warn bg-state-warn-subtle text-state-warn-bright",
 );
 
 function ClampBadge({
@@ -387,7 +387,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
                 <TooltipTrigger asChild>
                   <span
                     role="listitem"
-                    className="inline-flex cursor-help items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-3xs text-amber-700 dark:text-amber-300"
+                    className="inline-flex cursor-help items-center rounded-full border border-state-warn bg-state-warn-subtle px-1.5 py-0.5 text-3xs text-state-warn-bright"
                     aria-label={`${driver.label}: ${driver.description}`}
                   >
                     {driver.label}

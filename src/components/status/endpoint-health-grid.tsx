@@ -134,17 +134,17 @@ export function EndpointHealthGrid({
                         {probe ? (
                           <>
                             {isOk && (
-                              <Badge className="bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-400">
+                              <Badge className="bg-state-positive-solid/15 text-xs text-state-positive">
                                 {statusLabel}
                               </Badge>
                             )}
                             {isSemanticDegraded && (
-                              <Badge className="bg-amber-500/15 text-xs text-amber-700 dark:text-amber-400">
+                              <Badge className="bg-state-warn-solid/15 text-xs text-state-warn">
                                 {statusLabel}
                               </Badge>
                             )}
                             {isError && (
-                              <Badge className="bg-red-500/15 text-xs text-red-700 dark:text-red-400">
+                              <Badge className="bg-state-danger-solid/15 text-xs text-state-danger">
                                 {statusLabel}
                               </Badge>
                             )}

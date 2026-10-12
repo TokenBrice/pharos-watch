@@ -568,7 +568,7 @@ function PillarReading({
   weakest: boolean;
 }) {
   return (
-    <span className={weakest ? "font-bold text-amber-700 dark:text-amber-300" : "text-foreground"}>
+    <span className={weakest ? "font-bold text-state-warn-bright" : "text-foreground"}>
       <span className="text-muted-foreground">{label}</span>{value == null ? "—" : Math.round(value)}
     </span>
   );

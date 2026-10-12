@@ -186,7 +186,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     <YieldDetailSectionFrame headerEnd={headerEnd}>
       <QueryErrorNotice error={view.refreshError} hasData />
       {view.apiWarning ? (
-        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+        <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
           {view.apiWarning}
         </div>
       ) : null}
@@ -305,7 +305,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             scalingFactor={view.pysBreakdown.scalingFactor}
           />
           {view.ranking.provenance?.usedDefaultSafety ? (
-            <p className="mt-0.5 text-2xs text-amber-700 dark:text-amber-300">Default safety inputs</p>
+            <p className="mt-0.5 text-2xs text-state-warn-bright">Default safety inputs</p>
           ) : null}
         </StatTile>
         <StatTile

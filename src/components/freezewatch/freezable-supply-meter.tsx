@@ -157,7 +157,7 @@ function BucketCard({ bucket, totalMarketCap, isSelected, onSelect, variant }: B
             <span className={labelClass}>{BLACKLIST_STATUS_BUCKET_LABELS[bucket.key]}</span>
           </div>
           {variant === "safe" ? (
-            <span className="pharos-label shrink-0 text-emerald-700 dark:text-emerald-400">
+            <span className="pharos-label shrink-0 text-state-positive">
               Safe haven
             </span>
           ) : null}

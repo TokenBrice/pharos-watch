@@ -102,7 +102,7 @@ export function MissingDefenseMark({ size = "md", className }: { size?: "sm" | "
         className,
       )}
     >
-      <LockOpen className={cn("text-amber-700 dark:text-amber-400", size === "sm" ? "h-2.5 w-2.5" : "h-3 w-3")} />
+      <LockOpen className={cn("text-state-warn", size === "sm" ? "h-2.5 w-2.5" : "h-3 w-3")} />
     </span>
   );
 }

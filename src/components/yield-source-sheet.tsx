@@ -294,7 +294,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                           <span
                             className={cn(
                               "font-mono tabular-nums text-3xs",
-                              delta >= 0 ? "text-emerald-500" : "text-muted-foreground",
+                              delta >= 0 ? "text-state-positive-solid" : "text-muted-foreground",
                             )}
                           >
                             {formatYieldApyDelta(delta)}

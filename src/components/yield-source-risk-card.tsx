@@ -158,7 +158,7 @@ export function YieldSourceRiskCard({
         ) : null}
         {dependency ? (
           <span
-            className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-amber-800 dark:text-amber-200"
+            className="rounded-full border border-state-warn-solid/25 bg-state-warn-subtle px-2 py-0.5 text-state-warn-strong"
             title={dependency.note}
           >
             {dependency.severity} {dependency.ecosystem} dependency
@@ -180,7 +180,7 @@ export function YieldSourceRiskCard({
             {sourceRiskDrivers.map((driver) => (
               <span
                 key={driver.key}
-                className="rounded-full border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-3xs font-medium text-amber-800 dark:text-amber-200"
+                className="rounded-full border border-state-warn-solid/25 bg-state-warn-subtle px-2 py-0.5 text-3xs font-medium text-state-warn-strong"
                 title={driver.description}
               >
                 {driver.label}

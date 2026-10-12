@@ -188,21 +188,21 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
         ) : null}
 
         {chronic ? (
-          <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+          <p className="text-xs font-medium text-state-warn">
             Unusually prolonged — already past comparable incidents&apos; P99.
           </p>
         ) : null}
 
         {/* Suppressed-duration reasons (terminal / insufficient / no-support) */}
         {terminal ? (
-          <div className="rounded-lg border border-red-500/25 bg-red-500/[0.06] px-3 py-2.5">
+          <div className="rounded-lg border border-state-danger-solid/25 bg-state-danger-solid/[0.06] px-3 py-2.5">
             <p className="text-sm font-medium text-foreground">DDR does not expect this depeg to recover.</p>
             <p className="mt-1 text-xs leading-snug text-muted-foreground">
               Comparable structural failures did not return to peg, so no duration estimate is shown.
             </p>
             <Link
               href="/cemetery"
-              className="pharos-focus-ring mt-1.5 inline-block rounded-sm text-xs font-medium text-red-700 hover:underline dark:text-red-400"
+              className="pharos-focus-ring mt-1.5 inline-block rounded-sm text-xs font-medium text-state-danger hover:underline"
             >
               See the Stablecoin Cemetery →
             </Link>
@@ -351,7 +351,7 @@ export function StablecoinDepegResolverRows({ stablecoinId, data, logoSrc }: Sta
   return (
     <section aria-label={`Depeg Duration Resolver for ${rows[0]?.symbol ?? stablecoinId}`} className="space-y-4">
       {showStaleRows ? (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+        <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
           Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
         </p>
       ) : null}
