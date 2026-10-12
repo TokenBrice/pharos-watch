@@ -500,7 +500,7 @@ async function writeBlacklistSummarySnapshot(db: D1Database, snapshot: CachedBla
 async function buildBlacklistSummaryPayload(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
-  options?: { freshnessTsOverride?: number },
+  options?: { freshnessTsOverride?: number | null },
 ): Promise<BuiltBlacklistSummary> {
   await reconcileBlacklistIdentities(db);
   const sevenDayCutoffSec = now - 7 * 86400;
@@ -693,8 +693,8 @@ async function buildBlacklistSummaryPayload(
     ).values(),
   ].sort((a, b) => a.name.localeCompare(b.name));
 
-  const freshness: CronTimestampLookupResult = options?.freshnessTsOverride != null
-    ? { timestamp: options.freshnessTsOverride, status: "ok" }
+  const freshness: CronTimestampLookupResult = options?.freshnessTsOverride !== undefined
+    ? { timestamp: options.freshnessTsOverride, status: options.freshnessTsOverride === null ? "missing" : "ok" }
     : await getLatestSuccessfulCronTimestampResult(db, "sync-blacklist");
 
   return {
@@ -753,15 +753,15 @@ async function buildBlacklistSummaryPayload(
 async function buildAndWriteBlacklistSummarySnapshot(
   db: D1Database,
   now: number,
-  freshnessTs?: number,
+  freshnessTs?: number | null,
 ): Promise<CachedBlacklistSummarySnapshot> {
   const boundedFreshnessTs = freshnessTs == null
-    ? undefined
+    ? freshnessTs
     : Math.min(now, Math.max(0, Math.floor(freshnessTs)));
   const built = await buildBlacklistSummaryPayload(
     db,
     now,
-    boundedFreshnessTs == null ? undefined : { freshnessTsOverride: boundedFreshnessTs },
+    boundedFreshnessTs === undefined ? undefined : { freshnessTsOverride: boundedFreshnessTs },
   );
   const snapshot: CachedBlacklistSummarySnapshot = {
     version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
@@ -777,7 +777,7 @@ async function buildAndWriteBlacklistSummarySnapshot(
 export async function materializeBlacklistSummarySnapshot(
   db: D1Database,
   now = Math.floor(Date.now() / 1000),
-  freshnessTs = now,
+  freshnessTs: number | null = now,
 ): Promise<{ written: boolean }> {
   await buildAndWriteBlacklistSummarySnapshot(db, now, freshnessTs);
   return { written: true };
