@@ -6,6 +6,7 @@ import { ChartDataTable, type ChartDataTableColumn } from "@/components/chart-pr
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 import { CAUSE_BG_CLASS, CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
+import { niceTicks } from "@/lib/chart-ticks";
 import { cn } from "@/lib/utils";
 import styles from "./cemetery-below-fold.module.css";
 
@@ -34,7 +35,6 @@ const TOP_PAD = 30;
 const BASELINE = PLOT_HEIGHT;
 const PLOT_SPAN = BASELINE - TOP_PAD;
 const BAR_WIDTH_RATIO = 0.6;
-const STEP_CANDIDATES = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
 const SHARE_TICKS = [0, 0.25, 0.5, 0.75, 1];
 
 function pct(value: number): string {
@@ -42,12 +42,7 @@ function pct(value: number): string {
 }
 
 function countTicks(max: number): number[] {
-  const safeMax = Math.max(1, max);
-  const step = STEP_CANDIDATES.find((candidate) => Math.ceil(safeMax / candidate) <= 4) ?? Math.ceil(safeMax / 4);
-  const top = step * Math.ceil(safeMax / step);
-  const ticks: number[] = [];
-  for (let value = 0; value <= top; value += step) ticks.push(value);
-  return ticks;
+  return niceTicks(0, Math.max(1, max), { kind: "count", count: 5 }).ticks;
 }
 
 interface Segment {

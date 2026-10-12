@@ -8,9 +8,10 @@
  * route head ("Stablecoin Cemetery" in Newsreader plus the `{first}–{latest} · each with cause, date, obituary and
  * source` sub-line) and the frost `113` figure, and frames the plan so the colossi and the lighthouse stay in view.
  *
- * Styles without a bundler: the CSS module is loaded through an in-thread Node load hook that returns an identity
- * class map (`hero` → `hero`, parsed from the module with PostCSS), and the stylesheet is the same module with its
- * `:global(…)` wrappers unwrapped, so every class the components emit matches a rule verbatim. The global tokens the
+ * The rendering pipeline is the scene kit's (`scripts/lib/scene-og.ts`); this script is the cemetery's configuration
+ * and composition. Styles without a bundler: the CSS module is loaded through an in-thread Node load hook that returns
+ * an identity class map (`hero` → `hero`), and the stylesheet is the same module with its `:global(…)` wrappers
+ * unwrapped, so every class the components emit matches a rule verbatim. The global tokens the
  * module reads (`--foreground`, `--frost-blue`, …) are resolved from the light `:root` blocks of the design-token
  * sheets and `globals.css`, only the ones the module references plus their `var()` closure. Fonts (Newsreader for the
  * title, Geist for text, JetBrains Mono for figures) and the logo atlas are inlined as data URIs, so the page is one
@@ -27,15 +28,11 @@
  *   npm run build:og-cemetery -- --check
  *   npm run check:generated-artifacts -- --only=og-cemetery
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { registerHooks } from "node:module";
+import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { firefox } from "playwright";
-import postcss, { AtRule } from "postcss";
 import { createElement as h } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import sharp from "sharp";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { sha256Hex, sha256HexFromBytes } from "@shared/lib/sha256";
 import { formatRegisterDeathDate } from "@/components/cemetery/cemetery-register-model";
@@ -44,6 +41,22 @@ import { toPlotLogoAtlas, toPlotMapInput, type PlotLogoAtlasManifest } from "@/l
 import { buildCemeteryRegisterRows } from "@/lib/cemetery-register";
 import { buildCemeteryStats } from "@/lib/cemetery-stats";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import {
+  buildSignedPng,
+  checkSignedPng,
+  cssModuleClassMap,
+  dataUri,
+  registerCssModuleHook,
+  renderScenePng,
+  resolveRootTokens,
+  rootCustomProperties,
+  serializeJson,
+  unwrapCssModule,
+  woff2FontFace,
+  type SignedPngSpec,
+} from "../lib/scene-og";
+
+export { cssModuleClassMap, resolveRootTokens, rootCustomProperties, serializeJson, unwrapCssModule };
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");
@@ -83,7 +96,8 @@ export const OG_CEMETERY_PNG_OPTIONS = {
 
 /** Repo-relative inputs the document is built from (besides the TypeScript modules it imports). */
 export const OG_CEMETERY_FILES = {
-  cssModule: "src/components/cemetery/plot-map.module.css",
+  /** Inlined in the order the app imports them: the scene kit (which `.tokens` / `.map` compose), then the art. */
+  cssModules: ["src/components/scene/scene-tokens.module.css", "src/components/cemetery/plot-map.module.css"],
   tokenSheets: ["src/styles/tokens/primitives.css", "src/styles/tokens/semantic.css", "src/app/globals.css"],
   atlasManifest: "src/lib/cemetery-logo-atlas.generated.json",
   fonts: {
@@ -95,107 +109,8 @@ export const OG_CEMETERY_FILES = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// CSS: module class map, global unwrapping, token closure (pure)
-// ---------------------------------------------------------------------------
-
-const CLASS_IN_SELECTOR = /\.(-?[_a-zA-Z][\w-]*)/g;
-const GLOBAL_WRAPPER = /:global\(([^()]*)\)/g;
-const VAR_REFERENCE = /var\(\s*(--[\w-]+)/g;
-const CUSTOM_PROPERTY = /^--[\w-]+$/;
-
-/**
- * Identity class map for a CSS module: every local class name the module declares maps to itself. Classes that
- * only appear inside `:global(…)` are global in the module, so they are not exported.
- */
-export function cssModuleClassMap(css: string): Record<string, string> {
-  const names = new Set<string>();
-  postcss.parse(css).walkRules((rule) => {
-    if (rule.parent instanceof AtRule && /keyframes$/i.test(rule.parent.name)) return;
-    for (const match of rule.selector.replace(GLOBAL_WRAPPER, "").matchAll(CLASS_IN_SELECTOR)) names.add(match[1]);
-  });
-  return Object.fromEntries([...names].sort().map((name) => [name, name]));
-}
-
-/** The module as a plain stylesheet under the identity class map: `:global(.dark) .tokens` → `.dark .tokens`. */
-export function unwrapCssModule(css: string): string {
-  const root = postcss.parse(css);
-  root.walkRules((rule) => {
-    rule.selector = rule.selector.replace(GLOBAL_WRAPPER, "$1");
-  });
-  return root.toString();
-}
-
-/** Custom properties declared on top-level (or `@layer`-wrapped) `:root` rules, later sheets and rules winning. */
-export function rootCustomProperties(sheets: readonly string[]): Map<string, string> {
-  const props = new Map<string, string>();
-  for (const css of sheets) {
-    const root = postcss.parse(css);
-    root.walkRules((rule) => {
-      if (rule.selector.trim() !== ":root") return;
-      for (let parent = rule.parent; parent && parent.type !== "root"; parent = parent.parent) {
-        if (!(parent instanceof AtRule) || parent.name !== "layer") return;
-      }
-      rule.walkDecls((decl) => {
-        if (CUSTOM_PROPERTY.test(decl.prop)) props.set(decl.prop, decl.value);
-      });
-    });
-  }
-  return props;
-}
-
-/**
- * The light-theme root tokens a stylesheet needs: every `var(--x)` it reads that it does not declare itself and that
- * `:root` defines, plus the `var()` closure of those values. Properties set inline by the components (the layout
- * variables) are neither declared by the sheet nor on `:root` and are left alone. Throws on a dangling reference
- * inside the closure, which would otherwise render as an unstyled fallback.
- */
-export function resolveRootTokens(css: string, rootProps: ReadonlyMap<string, string>): Record<string, string> {
-  const declared = new Set<string>();
-  const referenced = new Set<string>();
-  postcss.parse(css).walkDecls((decl) => {
-    if (CUSTOM_PROPERTY.test(decl.prop)) declared.add(decl.prop);
-    for (const match of decl.value.matchAll(VAR_REFERENCE)) referenced.add(match[1]);
-  });
-  const out = new Map<string, string>();
-  const visit = (name: string, from: string | null): void => {
-    if (out.has(name)) return;
-    const value = rootProps.get(name);
-    if (value === undefined) {
-      if (from === null) return;
-      throw new Error(`Root token ${from} references ${name}, which no :root block defines`);
-    }
-    out.set(name, value);
-    for (const match of value.matchAll(VAR_REFERENCE)) visit(match[1], name);
-  };
-  for (const name of [...referenced].sort()) if (!declared.has(name)) visit(name, null);
-  return Object.fromEntries([...out.entries()].sort(([a], [b]) => (a < b ? -1 : 1)));
-}
-
-// ---------------------------------------------------------------------------
 // Document (server render, no browser)
 // ---------------------------------------------------------------------------
-
-let cssModuleHookRegistered = false;
-
-/**
- * Lets Node import `*.module.css` as an identity class map (the bundler's job in the app). In-thread hook, so it
- * applies whether tsx compiles the components to CommonJS or ESM.
- */
-function registerCssModuleHook(): void {
-  if (cssModuleHookRegistered) return;
-  cssModuleHookRegistered = true;
-  registerHooks({
-    load(url, context, nextLoad) {
-      if (!url.endsWith(".module.css")) return nextLoad(url, context);
-      const classes = cssModuleClassMap(readFileSync(fileURLToPath(url), "utf8"));
-      return { format: "commonjs", shortCircuit: true, source: `module.exports = ${JSON.stringify(classes)};\n` };
-    },
-  });
-}
-
-function dataUri(mime: string, bytes: Uint8Array): string {
-  return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
-}
 
 export interface OgCemeteryDocument {
   html: string;
@@ -234,7 +149,7 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
   const atlasBytes = read(`public${manifest.image}`);
   const atlas = { ...toPlotLogoAtlas(manifest), href: dataUri("image/webp", atlasBytes) };
 
-  const moduleCss = read(OG_CEMETERY_FILES.cssModule).toString("utf8");
+  const moduleCss = OG_CEMETERY_FILES.cssModules.map((path) => read(path).toString("utf8")).join("\n");
   const tokens = resolveRootTokens(
     moduleCss,
     rootCustomProperties(OG_CEMETERY_FILES.tokenSheets.map((path) => read(path).toString("utf8"))),
@@ -279,8 +194,7 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
     ),
   );
 
-  const font = (family: string, file: string, weight: string) =>
-    `@font-face{font-family:"${family}";font-style:normal;font-weight:${weight};font-display:block;src:url("${dataUri("font/woff2", read(file))}") format("woff2");}`;
+  const font = (family: string, file: string, weight: string) => woff2FontFace(family, weight, read(file));
   const { fonts } = OG_CEMETERY_FILES;
   const { viewportWidth, pagePad } = OG_CEMETERY_RENDER;
   const css = [
@@ -320,7 +234,7 @@ export async function buildOgCemeteryDocument(repoRoot = REPO_ROOT): Promise<OgC
 }
 
 // ---------------------------------------------------------------------------
-// Signature and check (pure over files)
+// Signature, check, render and build (the kit pipeline, cemetery parameters)
 // ---------------------------------------------------------------------------
 
 export interface OgCemeteryImageRecord {
@@ -360,93 +274,35 @@ export function buildOgCemeterySignature(document: OgCemeteryDocument, image: Og
   };
 }
 
-export function serializeJson(value: unknown): string {
-  return `${JSON.stringify(value, null, 2)}\n`;
+function signedPngSpec(document: OgCemeteryDocument): SignedPngSpec {
+  return {
+    html: document.html,
+    signature: (image) => buildOgCemeterySignature(document, image),
+    width: OG_CEMETERY_WIDTH,
+    height: OG_CEMETERY_HEIGHT,
+    staleHint: "a death, the plot map, its styles, fonts or the atlas changed",
+    label: "og-cemetery",
+  };
 }
 
-/** The committed signature's document hash and image record, or null when the file is absent or malformed. */
-function readCommittedSignature(path: string): { documentSha256: unknown; image: OgCemeteryImageRecord } | null {
-  if (!existsSync(path)) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(readFileSync(path, "utf8"));
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== "object" || !("image" in parsed)) return null;
-  const { image } = parsed;
-  if (!image || typeof image !== "object" || !("sha256" in image) || !("bytes" in image)) return null;
-  if (typeof image.sha256 !== "string" || typeof image.bytes !== "number") return null;
-  return { documentSha256: "documentSha256" in parsed ? parsed.documentSha256 : undefined, image: { sha256: image.sha256, bytes: image.bytes } };
-}
-
-/** Platform-stable freshness check: the document hash and the committed PNG hash, never a re-render. */
+/** Platform-stable freshness check (the kit's `checkSignedPng`): the document hash and the committed PNG hash. */
 export async function checkOgCemetery(document: OgCemeteryDocument, paths: OgCemeteryPaths): Promise<OgCemeteryProblem[]> {
-  const committed = readCommittedSignature(paths.signaturePath);
-  if (!committed) return [{ kind: "missing-signature", message: `${paths.signaturePath} is missing or unreadable` }];
-
-  const problems: OgCemeteryProblem[] = [];
-  const documentSha256 = sha256Hex(document.html);
-  if (committed.documentSha256 !== documentSha256) {
-    problems.push({
-      kind: "stale-inputs",
-      message: `document signature ${String(committed.documentSha256).slice(0, 12)} != expected ${documentSha256.slice(0, 12)} (a death, the plot map, its styles, fonts or the atlas changed)`,
-    });
-  }
-  if (readFileSync(paths.signaturePath, "utf8") !== serializeJson(buildOgCemeterySignature(document, committed.image))) {
-    problems.push({ kind: "stale-signature", message: `${paths.signaturePath} does not match the expected signature` });
-  }
-  if (!existsSync(paths.imagePath)) {
-    problems.push({ kind: "missing-image", message: `${paths.imagePath} is missing` });
-    return problems;
-  }
-  const bytes = readFileSync(paths.imagePath);
-  if (sha256HexFromBytes(bytes) !== committed.image.sha256) {
-    problems.push({ kind: "image-modified", message: `${paths.imagePath} does not match the hash recorded when it was generated` });
-  }
-  const { format, width, height } = await sharp(bytes).metadata();
-  if (format !== "png" || width !== OG_CEMETERY_WIDTH || height !== OG_CEMETERY_HEIGHT) {
-    problems.push({
-      kind: "image-dimensions",
-      message: `${paths.imagePath} is ${format} ${width}x${height}; expected png ${OG_CEMETERY_WIDTH}x${OG_CEMETERY_HEIGHT}`,
-    });
-  }
-  return problems;
+  return checkSignedPng(signedPngSpec(document), paths);
 }
-
-// ---------------------------------------------------------------------------
-// Render (browser) and build
-// ---------------------------------------------------------------------------
 
 /** Screenshots the document with Playwright Firefox and downscales the 2× capture to the 1200×630 PNG. */
 export async function renderOgCemeteryPng(html: string): Promise<Buffer> {
   const { viewportWidth, deviceScaleFactor, cropAboveHead } = OG_CEMETERY_RENDER;
-  const cropHeight = Math.round((viewportWidth * OG_CEMETERY_HEIGHT) / OG_CEMETERY_WIDTH);
-  const browser = await firefox.launch({ headless: true });
-  try {
-    const page = await browser.newPage({ viewport: { width: viewportWidth, height: cropHeight + 400 }, deviceScaleFactor });
-    await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
-    await page.setContent(html, { waitUntil: "load", timeout: 30_000 });
-    await page.evaluate(() => document.fonts.ready);
-    const headTop = await page.evaluate(() => document.querySelector(".og-head")?.getBoundingClientRect().top ?? null);
-    if (headTop === null) throw new Error("og-cemetery: the route head did not render");
-    const capture = await page.screenshot({
-      clip: { x: 0, y: Math.max(0, headTop - cropAboveHead), width: viewportWidth, height: cropHeight },
-      scale: "device",
-      timeout: 30_000,
-    });
-    return await sharp(capture)
-      .resize(OG_CEMETERY_WIDTH, OG_CEMETERY_HEIGHT, { fit: "fill", kernel: "lanczos3" })
-      .png(OG_CEMETERY_PNG_OPTIONS)
-      .toBuffer();
-  } finally {
-    await browser.close();
-  }
-}
-
-function writeFileEnsuringDir(path: string, contents: string | Buffer): void {
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, contents);
+  return renderScenePng(html, {
+    viewportWidth,
+    deviceScaleFactor,
+    width: OG_CEMETERY_WIDTH,
+    height: OG_CEMETERY_HEIGHT,
+    anchorSelector: ".og-head",
+    cropAbove: cropAboveHead,
+    png: OG_CEMETERY_PNG_OPTIONS,
+    label: "og-cemetery",
+  });
 }
 
 export interface BuildOgCemeteryResult {
@@ -467,17 +323,8 @@ export async function buildOgCemetery({
   document?: OgCemeteryDocument;
 }): Promise<BuildOgCemeteryResult> {
   const doc = document ?? (await buildOgCemeteryDocument());
-  if (!force && (await checkOgCemetery(doc, paths)).length === 0) {
-    return { status: "current", document: doc, imageBytes: readFileSync(paths.imagePath).length };
-  }
-  const png = await render(doc.html);
-  const { format, width, height } = await sharp(png).metadata();
-  if (format !== "png" || width !== OG_CEMETERY_WIDTH || height !== OG_CEMETERY_HEIGHT) {
-    throw new Error(`og-cemetery: rendered ${format} ${width}x${height}, expected png ${OG_CEMETERY_WIDTH}x${OG_CEMETERY_HEIGHT}; nothing written`);
-  }
-  writeFileEnsuringDir(paths.imagePath, png);
-  writeFileEnsuringDir(paths.signaturePath, serializeJson(buildOgCemeterySignature(doc, { sha256: sha256HexFromBytes(png), bytes: png.length })));
-  return { status: "written", document: doc, imageBytes: png.length };
+  const { status, imageBytes } = await buildSignedPng({ spec: signedPngSpec(doc), paths, render, force });
+  return { status, document: doc, imageBytes };
 }
 
 export function defaultOgCemeteryPaths(): OgCemeteryPaths {

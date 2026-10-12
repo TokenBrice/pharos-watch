@@ -17,143 +17,63 @@
  * the scene maps each token to its CSS-module class. Screen coordinates are rounded to 0.1 SVG units, face-local
  * path data to 0.001 world units, so output is byte-stable.
  */
+import {
+  SCENE_DIMETRIC,
+  SCENE_UNIT,
+  SCENE_Z_SCALE,
+  bbox,
+  formatMatrix,
+  formatPath,
+  formatPoints,
+  hull,
+  project,
+  round1,
+  round3,
+  roundBox,
+  roundHalfWidth,
+  roundPoint,
+  type SceneBox,
+  type SceneCell,
+  type SceneMatrix,
+  type ScenePoint,
+  type SceneProjection,
+} from "@shared/lib/scene/projection";
+import { fnv1a, seededStream } from "@shared/lib/scene/seed";
+import { screenPolygon, worldPolygon, type SceneMark, type SceneObjectGeometry } from "@shared/lib/scene/marks";
+import { boxMarks, boxPoints, cylinder as sceneCylinder, faceMatrixE, faceMatrixG, shadowMark, type SceneBoxMaterial, type SceneCylinder } from "@shared/lib/scene/solids";
+import { lighthouseGeometry } from "@shared/lib/scene/objects/lighthouse";
 import type { CauseOfDeath } from "@shared/lib/cause-of-death";
 import type { DesktopPlotMap, PlotGrave, PortraitPlotMap } from "@/lib/cemetery-plot-map";
 
-export type PlotPoint = [number, number];
+// The projection core, marks and solids live in the scene kit (`shared/lib/scene/`); the Cemetery keeps its names.
+export { bbox, faceMatrixE, fnv1a, formatMatrix, formatPoints, hull, lighthouseGeometry, project, round1, roundBox, roundPoint, seededStream };
+export type PlotPoint = ScenePoint;
 /** Screen-space bounding box (SVG user units unless stated otherwise). */
-export interface PlotBox {
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-}
+export type PlotBox = SceneBox;
 /** SVG `matrix(a,b,c,d,e,f)` operands. */
-export type PlotMatrix = [number, number, number, number, number, number];
+export type PlotMatrix = SceneMatrix;
 /** Axis-aligned world footprint. */
-export interface PlotCell {
-  i0: number;
-  i1: number;
-  j0: number;
-  j1: number;
-}
+export type PlotCell = SceneCell;
+export type PlotBoxMaterial = SceneBoxMaterial;
+export type PlotCylinder = SceneCylinder;
+export type PlotObjectGeometry = SceneObjectGeometry;
 
 /** SVG units per world unit along a horizontal axis. */
-export const PLOT_UNIT = 20;
+export const PLOT_UNIT = SCENE_UNIT;
 /** Vertical foreshortening of the 30° dimetric camera. */
-export const PLOT_Z_SCALE = 1.2247;
+export const PLOT_Z_SCALE = SCENE_Z_SCALE;
 const DEG = Math.PI / 180;
 
 export type PlotProjectionName = "dimetric" | "portrait";
-export interface PlotProjection {
+export interface PlotProjection extends SceneProjection {
   name: PlotProjectionName;
-  A: PlotPoint;
-  B: PlotPoint;
-  C: PlotPoint;
-  /** World (i, j) offset of a shadow per unit of caster height. */
-  shadow: PlotPoint;
 }
 
 const S = PLOT_UNIT;
 export const PLOT_PROJECTIONS: Readonly<Record<PlotProjectionName, PlotProjection>> = {
-  dimetric: { name: "dimetric", A: [S, S / 2], B: [-S, S / 2], C: [0, -S * PLOT_Z_SCALE], shadow: [-0.58, 0.3] },
+  dimetric: { ...SCENE_DIMETRIC, name: "dimetric" },
   portrait: { name: "portrait", A: [S * 0.07, S * 0.9], B: [-S, 0], C: [0, -S * 1.0], shadow: [-0.45, 0.4] },
 };
-
-/** Round to 0.1 (screen coordinates); `+ 0` folds −0 into 0 so rounded data survives a JSON round trip exactly. */
-export const round1 = (n: number): number => Math.round(n * 10) / 10 + 0;
-/** Round to 0.001 (matrix coefficients, face-local path data). */
-const round3 = (n: number): number => Math.round(n * 1000) / 1000 + 0;
-
-export function project(p: PlotProjection, i: number, j: number, z = 0): PlotPoint {
-  return [i * p.A[0] + j * p.B[0] + z * p.C[0], i * p.A[1] + j * p.B[1] + z * p.C[1]];
-}
-
-/** Screen half-width of a unit horizontal radius (screen-aligned round bodies: urns, trees, domes). */
-function roundHalfWidth(p: PlotProjection): number {
-  return Math.hypot(p.A[0], p.B[0]);
-}
-
-export function roundPoint(pt: PlotPoint): PlotPoint {
-  return [round1(pt[0]), round1(pt[1])];
-}
-
-/** `points` attribute value ("x,y x,y …"), 0.1-rounded. */
-export function formatPoints(pts: readonly PlotPoint[]): string {
-  return pts.map(([x, y]) => `${round1(x)},${round1(y)}`).join(" ");
-}
-
-/** Open polyline as path data ("Mx,yLx,y…"), 0.1-rounded. */
-function formatPath(pts: readonly PlotPoint[]): string {
-  return pts.map(([x, y], k) => `${k ? "L" : "M"}${round1(x)},${round1(y)}`).join("");
-}
-
-/** `transform` attribute value for a {@link PlotMatrix}. */
-export function formatMatrix(m: PlotMatrix): string {
-  return `matrix(${m[0]},${m[1]},${m[2]},${m[3]},${m[4]},${m[5]})`;
-}
-
-/** Convex hull (monotone chain), counter-clockwise from the left-most point. */
-export function hull(points: readonly PlotPoint[]): PlotPoint[] {
-  const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  if (p.length < 3) return p;
-  const cross = (o: PlotPoint, a: PlotPoint, b: PlotPoint) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lo: PlotPoint[] = [];
-  const hi: PlotPoint[] = [];
-  for (const q of p) {
-    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
-    lo.push(q);
-  }
-  for (let k = p.length - 1; k >= 0; k--) {
-    const q = p[k];
-    while (hi.length >= 2 && cross(hi[hi.length - 2], hi[hi.length - 1], q) <= 0) hi.pop();
-    hi.push(q);
-  }
-  return lo.slice(0, -1).concat(hi.slice(0, -1));
-}
-
-export function bbox(pts: readonly PlotPoint[]): PlotBox {
-  let x0 = Infinity;
-  let y0 = Infinity;
-  let x1 = -Infinity;
-  let y1 = -Infinity;
-  for (const [x, y] of pts) {
-    if (x < x0) x0 = x;
-    if (y < y0) y0 = y;
-    if (x > x1) x1 = x;
-    if (y > y1) y1 = y;
-  }
-  return { x0, y0, x1, y1 };
-}
-
-export function roundBox(b: PlotBox): PlotBox {
-  return { x0: round1(b.x0), y0: round1(b.y0), x1: round1(b.x1), y1: round1(b.y1) };
-}
-
-// ---------------------------------------------------------------------------
-// Seeds
-// ---------------------------------------------------------------------------
-
-/** FNV-1a 32-bit hash: the only seed source (`fnv1a(id)`). */
-export function fnv1a(str: string): number {
-  let h = 2166136261;
-  for (let k = 0; k < str.length; k++) {
-    h ^= str.charCodeAt(k);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
-/** mulberry32 stream in [0, 1) from a 32-bit seed. */
-export function seededStream(seed: number): () => number {
-  let a = seed | 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Marks
@@ -172,100 +92,10 @@ export interface PlotMedallionMark {
   initial: { x: number; y: number; fontSize: number };
 }
 
-export type PlotMark =
-  | { kind: "polygon"; cls: string; points: PlotPoint[] }
-  | { kind: "polyline"; cls: string; points: PlotPoint[] }
-  /** `d` is in screen units, or in face-local world units when `transform` is set. */
-  | { kind: "path"; cls: string; d: string; transform: PlotMatrix | null }
-  | { kind: "circle"; cls: string; cx: number; cy: number; r: number; transform: PlotMatrix | null }
-  | { kind: "ellipse"; cls: string; cx: number; cy: number; rx: number; ry: number }
-  | { kind: "line"; cls: string; x1: number; y1: number; x2: number; y2: number }
-  /** Footstone peg glyph: one em at `font-size: 1`, placed by `transform` then scaled by `scale`. */
-  | { kind: "glyph"; cls: "glyph"; text: string; transform: PlotMatrix; scale: number }
-  | PlotMedallionMark;
+/** The kit's marks plus the grave medallion (cause ring + atlas logo window), which the Cemetery renders itself. */
+export type PlotMark = SceneMark | PlotMedallionMark;
 
-/** Face classes of a box: a stem ("st" → st-t / st-e / st-s) or explicit classes. */
-export type PlotBoxMaterial = string | { t: string; e: string; s: string };
-
-/** Polygon from screen points (0.1-rounded). */
-function screenPolygon(cls: string, pts: readonly PlotPoint[]): PlotMark {
-  return { kind: "polygon", cls, points: pts.map(roundPoint) };
-}
-
-/** Polygon from world points. */
-function worldPolygon(p: PlotProjection, cls: string, world: readonly (readonly number[])[]): PlotMark {
-  return screenPolygon(
-    cls,
-    world.map((w) => project(p, w[0], w[1], w[2] || 0)),
-  );
-}
-
-/** Axis-aligned box: the three camera-facing faces (south, east, top), in that paint order. */
-function boxMarks(
-  p: PlotProjection,
-  i0: number,
-  j0: number,
-  z0: number,
-  di: number,
-  dj: number,
-  dz: number,
-  mat: PlotBoxMaterial,
-  edge = " e",
-): PlotMark[] {
-  const i1 = i0 + di;
-  const j1 = j0 + dj;
-  const z1 = z0 + dz;
-  const m = typeof mat === "string" ? { t: `${mat}-t`, e: `${mat}-e`, s: `${mat}-s` } : mat;
-  return [
-    worldPolygon(p, m.s + edge, [[i0, j1, z0], [i1, j1, z0], [i1, j1, z1], [i0, j1, z1]]),
-    worldPolygon(p, m.e + edge, [[i1, j0, z0], [i1, j1, z0], [i1, j1, z1], [i1, j0, z1]]),
-    worldPolygon(p, m.t + edge, [[i0, j0, z1], [i1, j0, z1], [i1, j1, z1], [i0, j1, z1]]),
-  ];
-}
-
-/** The eight projected corners of a box (unrounded; for extents and hulls). */
-function boxPoints(p: PlotProjection, i0: number, j0: number, z0: number, di: number, dj: number, dz: number): PlotPoint[] {
-  const out: PlotPoint[] = [];
-  for (const i of [i0, i0 + di]) for (const j of [j0, j0 + dj]) for (const z of [z0, z0 + dz]) out.push(project(p, i, j, z));
-  return out;
-}
-
-function matrixAt(o: PlotPoint, u: PlotPoint, v: PlotPoint): PlotMatrix {
-  return [round3(u[0]), round3(u[1]), round3(v[0]), round3(v[1]), round1(o[0]), round1(o[1])];
-}
-
-/** Lit east-face frame at (i, j, z): u → −j, v → −z (text reads left → right on the face). */
-export function faceMatrixE(p: PlotProjection, i: number, j: number, z: number): PlotMatrix {
-  return matrixAt(project(p, i, j, z), [-p.B[0], -p.B[1]], [-p.C[0], -p.C[1]]);
-}
-
-/** Ground frame: u → +i, v → +j. */
-function faceMatrixG(p: PlotProjection, i: number, j: number, z = 0): PlotMatrix {
-  return matrixAt(project(p, i, j, z), p.A, p.B);
-}
-
-/** Start angle (radians) of the camera-facing half of a horizontal circle. */
-function frontArcStart(p: PlotProjection): number {
-  const ta = Math.atan2(p.B[0], p.A[0]);
-  const ty = Math.atan2(p.B[1], p.A[1]);
-  let d = ty - ta;
-  while (d < 0) d += 2 * Math.PI;
-  while (d >= 2 * Math.PI) d -= 2 * Math.PI;
-  return d <= Math.PI ? ta : ta - Math.PI;
-}
-
-export interface PlotCylinder {
-  marks: PlotMark[];
-  /** Visible body outline (unrounded). */
-  body: PlotPoint[];
-  /** Body + cap points (unrounded; extents). */
-  pts: PlotPoint[];
-}
-
-/**
- * Vertical cylinder, visible half only; `topFn(θ)` offsets the top rim in z (fractured tops).
- * Marks: body (`${bodyCls} e`), then cap (`${capCls} e`).
- */
+/** The kit's vertical cylinder; the cap defaults to the stone top (`st-t`) and the rim to flat. */
 export function cylinder(
   p: PlotProjection,
   ic: number,
@@ -277,22 +107,7 @@ export function cylinder(
   topFn: ((theta: number) => number) | null = null,
   capCls = "st-t",
 ): PlotCylinder {
-  const N = 20;
-  const t0 = frontArcStart(p);
-  const top: PlotPoint[] = [];
-  const bot: PlotPoint[] = [];
-  const cap: PlotPoint[] = [];
-  for (let k = 0; k <= N; k++) {
-    const th = t0 + (Math.PI * k) / N;
-    top.push(project(p, ic + r * Math.cos(th), jc + r * Math.sin(th), z1 + (topFn ? topFn(th) : 0)));
-    bot.push(project(p, ic + r * Math.cos(th), jc + r * Math.sin(th), z0));
-  }
-  for (let k = 0; k < 2 * N; k++) {
-    const th = (k / (2 * N)) * 2 * Math.PI;
-    cap.push(project(p, ic + r * Math.cos(th), jc + r * Math.sin(th), z1 + (topFn ? topFn(th) : 0)));
-  }
-  const body = top.concat(bot.reverse());
-  return { marks: [screenPolygon(`${bodyCls} e`, body), screenPolygon(`${capCls} e`, cap)], body, pts: body.concat(cap) };
+  return sceneCylinder(p, ic, jc, r, z0, z1, bodyCls, topFn, capCls);
 }
 
 /**
@@ -309,39 +124,6 @@ export function columnFractureTop(opts: { phase: number; amp: number; drop?: num
  * falls left → right on screen and its cross-section (`brk`) faces the light, the lightest face of the column.
  */
 const PLOT_FRACTURE_PHASE = Math.atan2(-0.383, 0.924);
-
-/** Octagonal prism: the three camera-facing faces then the cap. */
-function octPrismMarks(
-  p: PlotProjection,
-  ic: number,
-  jc: number,
-  R: number,
-  z0: number,
-  z1: number,
-  cls: readonly [string, string, string] = ["lh-e", "lh-m", "lh-s"],
-  capCls = "lh-t",
-): PlotMark[] {
-  const Rv = R / Math.cos(22.5 * DEG);
-  const v = (deg: number, z: number) => project(p, ic + Rv * Math.cos(deg * DEG), jc + Rv * Math.sin(deg * DEG), z);
-  const out: PlotMark[] = [];
-  const faces: [number, number, string][] = [[-22.5, 22.5, cls[0]], [22.5, 67.5, cls[1]], [67.5, 112.5, cls[2]]];
-  for (const [a, b, c] of faces) out.push(screenPolygon(`${c} e`, [v(a, z0), v(b, z0), v(b, z1), v(a, z1)]));
-  const cap: PlotPoint[] = [];
-  for (let k = 0; k < 8; k++) cap.push(v(22.5 + 45 * k, z1));
-  out.push(screenPolygon(`${capCls} e`, cap));
-  return out;
-}
-
-/** Ground shadow of an axis-aligned footprint [i0, i1, j0, j1] cast by height H. */
-function shadowMark(p: PlotProjection, foot: readonly [number, number, number, number], H: number, cls = "shadow"): PlotMark {
-  const [i0, i1, j0, j1] = foot;
-  const all: PlotPoint[] = [];
-  for (const [i, j] of [[i0, j0], [i1, j0], [i1, j1], [i0, j1]]) {
-    all.push(project(p, i, j, 0));
-    all.push(project(p, i + p.shadow[0] * H, j + p.shadow[1] * H, 0));
-  }
-  return screenPolygon(cls, hull(all));
-}
 
 // ---------------------------------------------------------------------------
 // Graves
@@ -849,12 +631,6 @@ export function graveHitHull(p: PlotProjection, geo: PlotGraveGeometry, cell: Pl
 // Scenery objects
 // ---------------------------------------------------------------------------
 
-export interface PlotObjectGeometry {
-  marks: PlotMark[];
-  /** Extent points (unrounded). */
-  pts: PlotPoint[];
-}
-
 /** Cypress: height ∝ deaths that calendar year; an empty year stays a bare planting bed. */
 export function cypressGeometry(p: PlotProjection, i: number, j: number, h: number): PlotObjectGeometry & { top: PlotPoint } {
   const marks = [worldPolygon(p, "tree-bed e", [[i - 0.26, j - 0.26, 0.01], [i + 0.26, j - 0.26, 0.01], [i + 0.26, j + 0.26, 0.01], [i - 0.26, j + 0.26, 0.01]])];
@@ -902,45 +678,6 @@ export function lampGeometry(p: PlotProjection, i: number, j: number): PlotObjec
 function lampPoolMark(p: PlotProjection, i: number, j: number): PlotMark {
   const [x, y] = project(p, i, j, 0);
   return { kind: "ellipse", cls: "pool", cx: round1(x), cy: round1(y), rx: round1(S * 1.7), ry: round1(S * 0.85) };
-}
-
-/**
- * The Pharos on its bastion (square base, octagonal middle, round lantern), kept shorter than the UST column so
- * UST stays the tallest element. `lantern` is the beam origin, `top` the finial.
- */
-export function lighthouseGeometry(p: PlotProjection, i: number, j: number): PlotObjectGeometry & { lantern: PlotPoint; top: PlotPoint } {
-  const m: PlotMark[] = [];
-  m.push(...octPrismMarks(p, i, j, 1.18, -0.55, 0.16, ["rock", "rock", "rock-s"], "rock"));
-  m.push(...boxMarks(p, i - 0.92, j - 0.92, 0.16, 1.84, 1.84, 0.28, "lh"));
-  m.push(...boxMarks(p, i - 0.7, j - 0.7, 0.44, 1.4, 1.4, 2.35, "lh"));
-  for (let row = 0; row < 3; row++) {
-    const z = 0.9 + row * 0.62;
-    m.push(worldPolygon(p, "lh-win", [[i + 0.705, j - 0.06, z], [i + 0.705, j + 0.06, z], [i + 0.705, j + 0.06, z + 0.26], [i + 0.705, j - 0.06, z + 0.26]]));
-    m.push(worldPolygon(p, "lh-win", [[i - 0.06, j + 0.705, z + 0.15], [i + 0.06, j + 0.705, z + 0.15], [i + 0.06, j + 0.705, z + 0.41], [i - 0.06, j + 0.705, z + 0.41]]));
-  }
-  m.push(...boxMarks(p, i - 0.8, j - 0.8, 2.79, 1.6, 1.6, 0.12, "lh"));
-  m.push(...octPrismMarks(p, i, j, 0.52, 2.91, 4.35));
-  m.push(worldPolygon(p, "lh-win", [[i + 0.525, j - 0.05, 3.4], [i + 0.525, j + 0.05, 3.4], [i + 0.525, j + 0.05, 3.7], [i + 0.525, j - 0.05, 3.7]]));
-  m.push(...octPrismMarks(p, i, j, 0.63, 4.35, 4.44));
-  m.push(...cylinder(p, i, j, 0.36, 4.44, 5.05, "lh-c", null, "lh-t").marks);
-  m.push(...cylinder(p, i, j, 0.46, 5.05, 5.11, "lh-c", null, "lh-t").marks);
-  m.push(...cylinder(p, i, j, 0.29, 5.11, 5.52, "lh-glass", null, "lh-t").marks);
-  const [dx, dy] = project(p, i, j, 5.52);
-  const drx = 0.33 * roundHalfWidth(p);
-  m.push({
-    kind: "path",
-    cls: "lh-t e",
-    d: `M${round1(dx - drx)},${round1(dy)} A${round1(drx)},${round1(drx * 0.95)} 0 0 1 ${round1(dx + drx)},${round1(dy)} A${round1(drx)},${round1(drx / 2)} 0 0 1 ${round1(dx - drx)},${round1(dy)} Z`,
-    transform: null,
-  });
-  const fin = project(p, i, j, 6.05);
-  m.push({ kind: "line", cls: "e", x1: round1(dx), y1: round1(dy - drx * 0.95), x2: round1(fin[0]), y2: round1(fin[1]) });
-  return {
-    marks: m,
-    lantern: project(p, i, j, 5.3),
-    top: fin,
-    pts: [project(p, i - 1.2, j, -0.55), project(p, i + 1.2, j, -0.55), project(p, i, j + 1.2, -0.55), project(p, i, j - 1.2, -0.55), fin],
-  };
 }
 
 /** Gate on the south curb at the avenue: two low piers and a hairline arch. */

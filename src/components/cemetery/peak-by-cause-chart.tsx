@@ -6,6 +6,7 @@ import { ChartDataTable, type ChartDataTableColumn } from "@/components/chart-pr
 import { PharosChartTooltip, TooltipLabel } from "@/components/pharos-chart-tooltip";
 import { useCemeterySelection } from "@/components/cemetery/cemetery-selection-context";
 import { CAUSE_BG_CLASS, CAUSE_TEXT_FILL_CLASS, causeColorVars } from "@/lib/cemetery-cause-style";
+import { logTicks } from "@/lib/chart-ticks";
 import { cn } from "@/lib/utils";
 import styles from "./cemetery-below-fold.module.css";
 
@@ -99,11 +100,7 @@ function buildGeometry(lanes: readonly PeakLaneDatum[]) {
   const logMax = Math.log10(max);
   const x = (value: number) => X_INSET + ((Math.log10(value) - logMin) / (logMax - logMin)) * (100 - 2 * X_INSET);
 
-  const ticks: { value: number; x: number }[] = [];
-  for (let exponent = Math.ceil(logMin); exponent <= Math.floor(logMax); exponent += 1) {
-    const value = 10 ** exponent;
-    ticks.push({ value, x: x(value) });
-  }
+  const ticks = logTicks(min, max, { extend: false }).ticks.map((value) => ({ value, x: x(value) }));
 
   // Keyboard order: lane (CAUSE_ORDER), then peak descending.
   const dots: PlacedDot[] = [];

@@ -1,0 +1,210 @@
+/*
+ * Scene kit tokens and faces: the shared material layer of the isometric scenes (the Cemetery, Harbor, the PSI
+ * lighthouse). Local atmosphere, not data: these tokens encode materials (sea, rock, the lighthouse, hairlines), never
+ * a classification or a value. Data colour stays with each scene (cause colours, cargo slots) and with
+ * `shared/lib/classification.ts`.
+ *
+ * - `tokens`: put on the scene's root element (compose it into the scene's own token class). Light "surveyor's
+ *   daylight" / dark "lamplit night" (the `.dark` ancestor); nothing reads the theme in JS.
+ * - `scene`: put on every scene `<svg>`; its face rules map the kit's mark class tokens (`e`, `lh-e`, `rock`, …).
+ * - `defs`, `hatchLine`, `stopClear`, `colShade` / `colMid` / `colLit`: paint-server classes for `SceneDefs`.
+ * - Motion: every transition or animation in a scene reads `--scene-dur-*`, which are 0 ms under reduced motion
+ *   (`data-motion="reduced"`, or the OS setting unless `data-motion="full"`). No idle motion.
+ * One light from the east-north-east; one hairline weight (0.6 px, non-scaling); no filters.
+ */
+
+/* ------------------------------------------------------------------ tokens: surveyor's daylight */
+.tokens {
+  --sea: oklch(0.885 0.012 165);
+  --swell: oklch(0.52 0.02 165 / 0.28);
+  --earth-e: oklch(0.86 0.028 75);
+  --earth-s: oklch(0.8 0.03 70);
+  --strata: oklch(0.45 0.03 70 / 0.22);
+  --lawn: oklch(0.955 0.014 118);
+  --gravel: oklch(0.955 0.012 85);
+  --gravel-strip: oklch(0.935 0.012 85);
+  --edge: oklch(0.32 0.012 75 / 0.62);
+  --edge-soft: oklch(0.32 0.012 75 / 0.3);
+  --shadow: oklch(0.35 0.02 90 / 0.13);
+  --lh-e: oklch(0.98 0.006 85);
+  --lh-m: oklch(0.93 0.008 85);
+  --lh-s: oklch(0.85 0.012 80);
+  --lh-t: oklch(0.95 0.008 85);
+  --lh-win: oklch(0.42 0.012 80);
+  --lh-glass: oklch(0.93 0.01 90);
+  --rock: oklch(0.72 0.012 80);
+  --rock-s: oklch(0.6 0.012 80);
+  --hatch: oklch(0.35 0.012 75 / 0.55);
+  --ring: oklch(0.2 0 0 / 0.55);
+  --ring-fill: oklch(0.2 0 0 / 0.06);
+  --plate: color-mix(in oklab, var(--card) 92%, transparent);
+  --plate-border: oklch(0.2 0 0 / 0.14);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* main padding (route-chrome MainContent: px-4 / lg:px-5 / xl:px-9): the sky runs full-bleed through it */
+  --page-pad: 16px;
+  /* the lantern deck's paint server: a scene that renders its own column gradient points this at it */
+  --scene-col: url(#scene-g-col);
+  --scene-dur-fast: 120ms;
+  --scene-dur-glide: 260ms;
+  --scene-dur-bloom: 520ms;
+}
+
+/* ------------------------------------------------------------------ tokens: lamplit night */
+:global(.dark) .tokens {
+  --sea: oklch(0.17 0.012 220);
+  --swell: oklch(0.7 0.02 220 / 0.14);
+  --earth-e: oklch(0.24 0.012 60);
+  --earth-s: oklch(0.19 0.01 60);
+  --strata: oklch(0.8 0.02 60 / 0.1);
+  --lawn: oklch(0.2 0.02 145);
+  --gravel: oklch(0.255 0.008 80);
+  --gravel-strip: oklch(0.22 0.008 80);
+  --edge: oklch(1 0 0 / 0.16);
+  --edge-soft: oklch(1 0 0 / 0.08);
+  --shadow: oklch(0 0 0 / 0.35);
+  --lh-e: oklch(0.6 0.01 250);
+  --lh-m: oklch(0.47 0.01 250);
+  --lh-s: oklch(0.3 0.008 250);
+  --lh-t: oklch(0.52 0.01 250);
+  --lh-win: oklch(0.8 0.13 75);
+  --lh-glass: oklch(0.93 0.06 90);
+  --rock: oklch(0.3 0.008 250);
+  --rock-s: oklch(0.22 0.006 250);
+  --hatch: oklch(1 0 0 / 0.3);
+  --ring: oklch(1 0 0 / 0.6);
+  --ring-fill: oklch(1 0 0 / 0.07);
+  --plate-border: oklch(1 0 0 / 0.14);
+}
+
+@media (min-width: 1024px) {
+  .tokens {
+    --page-pad: 20px;
+  }
+}
+@media (min-width: 1280px) {
+  .tokens {
+    --page-pad: 36px;
+  }
+}
+
+/* ------------------------------------------------------------------ motion: reduced */
+:root[data-motion="reduced"] .tokens {
+  --scene-dur-fast: 0ms;
+  --scene-dur-glide: 0ms;
+  --scene-dur-bloom: 0ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="full"]) .tokens {
+    --scene-dur-fast: 0ms;
+    --scene-dur-glide: 0ms;
+    --scene-dur-bloom: 0ms;
+  }
+}
+
+/* ------------------------------------------------------------------ faces */
+.scene .e {
+  stroke: var(--edge);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.scene .eo {
+  stroke: var(--edge);
+  stroke-width: 0.8px;
+  stroke-dasharray: 2 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.scene .es {
+  stroke: var(--edge-soft);
+  stroke-width: 0.5px;
+  vector-effect: non-scaling-stroke;
+}
+.scene .sea {
+  fill: var(--sea);
+}
+.scene .sea.far {
+  opacity: 0.42;
+}
+.scene .swell {
+  stroke: var(--swell);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+  stroke-dasharray: 14 9;
+}
+.scene .earth-e {
+  fill: var(--earth-e);
+}
+.scene .earth-s {
+  fill: var(--earth-s);
+}
+.scene .strata {
+  stroke: var(--strata);
+  stroke-width: 0.6px;
+  vector-effect: non-scaling-stroke;
+  fill: none;
+  stroke-dasharray: 3 3;
+}
+.scene .lawn {
+  fill: var(--lawn);
+}
+.scene .gravel {
+  fill: var(--gravel);
+}
+.scene .gravel.strip {
+  fill: var(--gravel-strip);
+}
+.scene .shadow {
+  fill: var(--shadow);
+}
+.scene .lh-e {
+  fill: var(--lh-e);
+}
+.scene .lh-m {
+  fill: var(--lh-m);
+}
+.scene .lh-s {
+  fill: var(--lh-s);
+}
+.scene .lh-t {
+  fill: var(--lh-t);
+}
+.scene .lh-c {
+  fill: var(--scene-col);
+}
+.scene .lh-win {
+  fill: var(--lh-win);
+}
+.scene .lh-glass {
+  fill: var(--lh-glass);
+}
+.scene .rock {
+  fill: var(--rock);
+}
+.scene .rock-s {
+  fill: var(--rock-s);
+}
+
+/* ------------------------------------------------------------------ paint servers */
+.hatchLine {
+  stroke: var(--hatch);
+  stroke-width: 0.55;
+}
+.stopClear {
+  stop-color: transparent;
+}
+.defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+.colShade {
+  stop-color: var(--lh-s);
+}
+.colMid {
+  stop-color: var(--lh-t);
+}
+.colLit {
+  stop-color: var(--lh-e);
+}
