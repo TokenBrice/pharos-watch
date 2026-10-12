@@ -6,10 +6,8 @@ import { PSI_HEX_COLORS, PSI_UNKNOWN_BAND_HEX, isConditionBand } from "@shared/l
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
-import { deriveDataHealth, formatDataHealthTimestamp } from "@/lib/data-health";
-import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
-import { useHydrated } from "@/hooks/use-hydrated";
-import type { ApiMeta } from "@/lib/api";
+import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
+import { PsiBeaconMicro } from "@/components/psi-beacon/psi-beacon-micro";
 
 const BAND_STRIP_WINDOW_DAYS = 30;
 type StabilityIndexLightData = {
@@ -42,32 +40,22 @@ export function RegimeBar() {
   const psiData = psiQuery.data;
   const lightData = psiData as StabilityIndexLightData | undefined;
   const [expanded, setExpanded] = useState(false);
-  const hydrated = useHydrated();
-
   const current = lightData?.current;
-  if (!current) return <div className="fixed left-0 right-0 top-0 z-[60] h-[3px] max-w-[100vw]" />;
+  const beacon = usePsiBeaconState({
+    current,
+    meta: psiQuery.meta,
+    dataUpdatedAt: psiQuery.dataUpdatedAt,
+    error: psiQuery.error,
+  });
+
+  if (!current || !beacon.health) return <div className="fixed left-0 right-0 top-0 z-[60] h-[3px] max-w-[100vw]" />;
 
   const displayedPsi = getDisplayedPsi(current);
   const displayBasis = getDisplayedPsiBasis(current);
   const band = displayedPsi.band;
   const score = displayedPsi.score;
-  const meta = psiQuery.meta;
-  const generationUpdatedAt = Math.min(meta?.updatedAt ?? current.computedAt, current.computedAt);
-  const generationMeta: ApiMeta = meta?.updatedAt === null ? meta : {
-    ...meta,
-    updatedAt: generationUpdatedAt,
-    ageSeconds: meta?.ageSeconds ?? Math.max(0, psiQuery.dataUpdatedAt / 1000 - generationUpdatedAt),
-    status: meta?.status ?? "fresh",
-  };
-  const health = deriveDataHealth({
-    ...DATA_HEALTH_PRESETS.stabilityIndex,
-    dataUpdatedAt: psiQuery.dataUpdatedAt,
-    error: psiQuery.error,
-    hasData: true,
-    meta: generationMeta,
-  }, hydrated ? undefined : psiQuery.dataUpdatedAt);
-  const isCurrent = health.state === "fresh";
-  const retainedLabel = `Retained observation as of ${formatDataHealthTimestamp(current.computedAt * 1000, "en-US", "UTC")}`;
+  const { health, isCurrent } = beacon;
+  const retainedLabel = beacon.retainedLabel;
   // Legacy rows and unvalidated caches can carry a band outside the closed vocabulary.
   const color = isCurrent && isConditionBand(band) ? PSI_HEX_COLORS[band] : PSI_UNKNOWN_BAND_HEX;
   const isElevated = isCurrent && (band === "FRACTURE" || band === "CRISIS" || band === "MELTDOWN");
@@ -98,6 +86,7 @@ export function RegimeBar() {
       aria-label={isCurrent
         ? `Market regime: ${band}, PSI ${Math.round(score)}, ${displayBasis}`
         : `Current market regime unavailable. ${health.message} ${retainedLabel}: ${band}, PSI ${Math.round(score)}, ${displayBasis}`}
+      title={`Market regime bar: its color tracks the Pharos Stability Index (PSI) band, currently ${isCurrent ? band : "unavailable"}. Click for details.`}
     >
       {/* Use grid-template-rows for smooth expand/collapse (height:auto can't transition) */}
       <div
@@ -106,11 +95,14 @@ export function RegimeBar() {
       >
         <div className="min-h-0 overflow-hidden">
           <div className={cn(
-            "flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-1 text-[11px] leading-none font-mono tabular-nums",
+            "flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-1 text-2xs leading-none font-mono tabular-nums",
             useDarkText ? "text-gray-900/90" : "text-white/90",
           )}>
             {!isCurrent && <span>Current regime unavailable · {retainedLabel}</span>}
-            <span className="font-semibold tracking-wide">{band}</span>
+            <span className="inline-flex items-center gap-1.5">
+              <PsiBeaconMicro score={score} retained={!isCurrent} />
+              <span className="font-semibold">{band}</span>
+            </span>
             {isCurrent && daysInBand && <span>for {daysInBand}d</span>}
             <span className={useDarkText ? "text-gray-900/70" : "text-white/80"} aria-hidden="true">·</span>
             <span>PSI {Math.round(score)} · {displayBasis}</span>

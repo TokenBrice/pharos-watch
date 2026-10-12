@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { RowSparkline } from "@/components/row-sparkline";
 import { useStabilityIndex } from "@/hooks/api-hooks";
+import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
@@ -52,10 +53,18 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
   }, [current, sparkValues]);
   const displayedPsi = current ? getDisplayedPsi(current) : null;
   const displayedPsiBasis = current ? getDisplayedPsiBasis(current) : null;
+  const beacon = usePsiBeaconState({
+    current,
+    meta: query.meta,
+    dataUpdatedAt: query.dataUpdatedAt,
+    error: query.error,
+    isLoading,
+  });
 
   const band = current?.band as ConditionBand | undefined;
   const sparkColor = CHART_BLUE;
-  const bandClass = band ? (PSI_BAND_CLASSES[band] ?? "text-foreground") : "text-muted-foreground";
+  // A retained (non-fresh) observation keeps its band name but not its hue, like the regime bar (R3).
+  const bandClass = band && beacon.isCurrent ? (PSI_BAND_CLASSES[band] ?? "text-foreground") : "text-muted-foreground";
   const bandLabel = band ? band.charAt(0) + band.slice(1).toLowerCase() : null;
   const avgDeltaClass =
     avgDelta != null && avgDelta >= 0 ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400";
@@ -96,7 +105,10 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
                 {current.score.toFixed(2)}
               </span>
             ) : null}
-            <p className="mt-1.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            <p className="pharos-meta mt-1.5">
+              {current && !beacon.isCurrent && beacon.retainedLabel ? (
+                <span className="block" data-testid="psi-band-card-retained">{beacon.retainedLabel}</span>
+              ) : null}
               {current ? (
                 <>
                   <span>raw instant</span>

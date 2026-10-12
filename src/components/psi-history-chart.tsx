@@ -11,6 +11,7 @@ import { useChartShell } from "@/hooks/use-chart-shell";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { CHART_BLUE, CHART_SLATE, CHART_HEIGHT } from "@/lib/chart-colors";
+import { CHART_BAND_OPACITY } from "@/lib/chart-theme";
 import { BAND_ZONES, PSI_EVENTS, buildVisiblePsiChartEvents } from "@/lib/psi-history-events";
 import { trackEvent } from "@/lib/analytics";
 import { ChartAreaGradient, DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useSvgId } from "@/components/chart-primitives/axes";
@@ -146,6 +147,7 @@ export function ScoreChart({
                       y1={zone.y1}
                       y2={zone.y2}
                       fill={zone.color}
+                      fillOpacity={CHART_BAND_OPACITY}
                       ifOverflow="extendDomain"
                     />
                   ))}
@@ -197,7 +199,7 @@ export function ScoreChart({
                     minTickGap={72}
                     tickFormatter={formatTimestamp}
                   />
-                  <MonoYAxis domain={[0, 100]} />
+                  <MonoYAxis domain={[0, 100]} tickKind="score" />
                   <DateTooltip
                     formatter={(value) => [Number(value).toFixed(1), "Score"]}
                   />

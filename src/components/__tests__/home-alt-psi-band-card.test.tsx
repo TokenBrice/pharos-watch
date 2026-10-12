@@ -68,4 +68,39 @@ describe("PsiBandCard", () => {
     expect(polyline).toBeTruthy();
     expect(polyline?.getAttribute("points")?.trim().split(/\s+/)).toHaveLength(4);
   });
+
+  it("keeps the band hue and lights the beacon while the sample is fresh", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const data = makePsiResponse();
+    data.current!.computedAt = nowSec;
+    useStabilityIndexMock.mockReturnValue({
+      data,
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+      meta: { updatedAt: nowSec, ageSeconds: 0, status: "fresh" },
+    });
+
+    const { getByText, queryByTestId } = render(<PsiBandCard />);
+
+    expect(getByText("· Bedrock").className).toContain("text-green-700");
+    expect(queryByTestId("psi-band-card-retained")).toBeNull();
+  });
+
+  it("drops the band hue and names the retained observation when stale", () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const data = makePsiResponse();
+    data.current!.computedAt = nowSec - 8 * 3600;
+    useStabilityIndexMock.mockReturnValue({
+      data,
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+      meta: { updatedAt: nowSec - 8 * 3600, ageSeconds: 8 * 3600, status: "stale" },
+    });
+
+    const { getByText, getByTestId } = render(<PsiBandCard />);
+
+    expect(getByText("· Bedrock").className).toContain("text-muted-foreground");
+    expect(getByText("· Bedrock").className).not.toContain("text-green");
+    expect(getByTestId("psi-band-card-retained").textContent).toMatch(/^Retained observation as of /);
+  });
 });

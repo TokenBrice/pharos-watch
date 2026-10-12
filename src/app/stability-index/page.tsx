@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { FaqSection } from "@/components/faq-section";
+import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import type { FaqItem } from "@/lib/faq";
@@ -46,6 +47,8 @@ const route = createClientFeaturePage({
       version: PSI_METHODOLOGY_VERSION_LABEL,
       changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH,
     },
+    header: "instrument",
+    headerActions: <ShareButton ogPath={API_PATHS.ogStabilityIndex()} />,
     leadParagraphs: [
       "A VIX for stablecoins: read the market regime before you trade.",
     ],

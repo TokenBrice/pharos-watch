@@ -80,6 +80,9 @@ describe("RegimeBar freshness", () => {
         expect(html).not.toContain('aria-label="Market regime:');
         expect(html).not.toContain(`background-color:${PSI_HEX_COLORS.BEDROCK}`);
       }
+      // The beacon glyph is decorative (the button carries the label) and drops to an outline when retained.
+      expect(html).toMatch(/<svg[^>]*aria-hidden="true"[^>]*data-testid="psi-beacon-micro"[^>]*data-state="(current|retained)"/);
+      expect(html).toContain(`data-state="${state === "fresh" ? "current" : "retained"}"`);
     },
   );
 });

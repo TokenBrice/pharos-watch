@@ -5,6 +5,7 @@ import { QueryErrorNotice } from "@/components/query-error-notice";
 import { ScoreChart } from "@/components/psi-history-chart";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useStabilityIndexDetail } from "@/hooks/api-hooks";
+import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { logosById } from "@/lib/logos";
 import { ShowYourWorkPanel } from "@/components/show-your-work-panel";
 import {
@@ -36,6 +37,7 @@ export function StabilityIndexClient() {
   const history = data?.history;
   const current = data?.current ?? null;
   const methodology = data?.methodology ?? null;
+  const beacon = usePsiBeaconState({ current, meta, dataUpdatedAt, error, isLoading });
 
   const daysInBand = useMemo(() => {
     if (!current || !history?.length) return 0;
@@ -105,6 +107,7 @@ export function StabilityIndexClient() {
         historyStats={historyStats}
         lanes={beamDimmerLanes}
         componentData={componentData}
+        beaconState={beacon.state}
       />
 
       <ShowYourWorkPanel kind="psi" current={current} />
