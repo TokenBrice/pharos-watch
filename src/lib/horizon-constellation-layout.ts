@@ -1,5 +1,6 @@
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
+import { PRE_LAUNCH_PHASE_CLASSES } from "@shared/lib/classification";
 import type { LaunchPhase } from "@shared/types";
 import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import { dateScore } from "@/lib/pre-launch";
@@ -23,11 +24,11 @@ export const HORIZON_PHASE_SHORT_LABELS: Record<LaunchPhase, string> = {
 };
 
 export const HORIZON_PHASE_FIELD_CLASSES: Record<LaunchPhase, string> = {
-  announced: "border-amber-500/35 bg-amber-500/[0.05] dark:border-amber-400/35 dark:bg-amber-400/[0.07]",
-  testnet: "border-indigo-500/35 bg-indigo-500/[0.05] dark:border-indigo-400/35 dark:bg-indigo-400/[0.07]",
-  auditing: "border-violet-500/35 bg-violet-500/[0.05] dark:border-violet-400/35 dark:bg-violet-400/[0.07]",
-  beta: "border-emerald-500/35 bg-emerald-500/[0.05] dark:border-emerald-400/35 dark:bg-emerald-400/[0.07]",
-  "launching-soon": "border-sky-500/45 bg-sky-500/[0.07] dark:border-sky-400/45 dark:bg-sky-400/[0.09]",
+  announced: PRE_LAUNCH_PHASE_CLASSES.announced.orbit,
+  testnet: PRE_LAUNCH_PHASE_CLASSES.testnet.orbit,
+  auditing: PRE_LAUNCH_PHASE_CLASSES.auditing.orbit,
+  beta: PRE_LAUNCH_PHASE_CLASSES.beta.orbit,
+  "launching-soon": PRE_LAUNCH_PHASE_CLASSES["launching-soon"].orbit,
 };
 
 export interface HorizonPoint {

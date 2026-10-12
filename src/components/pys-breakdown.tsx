@@ -171,6 +171,7 @@ function shouldShowBenchmarkFallbackBadge(props: PysBreakdownProps): boolean {
 
 const CLAMP_BADGE_BASE_CLASS =
   "inline-flex items-center rounded-full border px-1.5 py-0.5 text-3xs font-medium";
+// raw: neutral grey pill, no state token
 const CLAMP_BADGE_SLATE_CLASS = cn(
   CLAMP_BADGE_BASE_CLASS,
   "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300",

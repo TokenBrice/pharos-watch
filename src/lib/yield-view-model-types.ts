@@ -1,3 +1,4 @@
+import type { YieldRiskBudgetKey } from "@shared/lib/classification";
 import type { YieldSourceDepthLens, YieldSourcePosture } from "@/lib/yield-source-risk";
 import type {
   YieldAttentionFilter,
@@ -53,7 +54,7 @@ export interface YieldPresetState {
   overrides: Partial<YieldViewModelFilters>;
 }
 
-export type YieldRiskBudgetKey = "conservative" | "balanced" | "opportunistic" | "all";
+export type { YieldRiskBudgetKey };
 
 export interface YieldRiskBudgetStop {
   key: YieldRiskBudgetKey;

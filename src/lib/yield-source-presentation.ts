@@ -1,3 +1,4 @@
+import { YIELD_SOURCE_CONFIDENCE_CLASSES } from "@shared/lib/classification";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
 import type { YieldRankChangeAttribution, YieldRanking } from "@shared/types";
 
@@ -6,8 +7,7 @@ export type YieldSourcePublishedFreshness = NonNullable<
   NonNullable<YieldRanking["provenance"]>["sourceFreshness"]
 >;
 
-// Confidence tier styles — one consistent visual language per tier.
-// emerald = deterministic, sky = curated, amber = discovered, slate = fallback.
+// Confidence tier colours come from YIELD_SOURCE_CONFIDENCE_CLASSES; layout stays here.
 export interface YieldSourceConfidenceStyle {
   pill: string;
   dot: string;
@@ -16,24 +16,24 @@ export interface YieldSourceConfidenceStyle {
 
 export const YIELD_SOURCE_CONFIDENCE_STYLES: Record<YieldSourceConfidenceTier, YieldSourceConfidenceStyle> = {
   deterministic: {
-    pill: "inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400",
-    dot: "inline-block size-1.5 rounded-full bg-emerald-500",
-    text: "text-emerald-700 dark:text-emerald-400",
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.pill}`,
+    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.dot}`,
+    text: YIELD_SOURCE_CONFIDENCE_CLASSES.deterministic.text,
   },
   curated: {
-    pill: "inline-flex items-center rounded-full border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[11px] font-medium text-sky-700 dark:text-sky-400",
-    dot: "inline-block size-1.5 rounded-full bg-sky-500",
-    text: "text-sky-700 dark:text-sky-400",
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.curated.pill}`,
+    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.curated.dot}`,
+    text: YIELD_SOURCE_CONFIDENCE_CLASSES.curated.text,
   },
   discovered: {
-    pill: "inline-flex items-center rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400",
-    dot: "inline-block size-1.5 rounded-full bg-amber-500",
-    text: "text-amber-700 dark:text-amber-400",
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.pill}`,
+    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.dot}`,
+    text: YIELD_SOURCE_CONFIDENCE_CLASSES.discovered.text,
   },
   fallback: {
-    pill: "inline-flex items-center rounded-full border border-slate-500/20 bg-slate-500/10 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:text-slate-400",
-    dot: "inline-block size-1.5 rounded-full bg-slate-500",
-    text: "text-slate-700 dark:text-slate-400",
+    pill: `inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.pill}`,
+    dot: `inline-block size-1.5 rounded-full ${YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.dot}`,
+    text: YIELD_SOURCE_CONFIDENCE_CLASSES.fallback.text,
   },
 };
 

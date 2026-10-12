@@ -1,4 +1,4 @@
-import { PEG_BADGE_STYLES } from "@shared/lib/classification";
+import { PEG_BADGE_STYLES, type YieldRiskBudgetKey } from "@shared/lib/classification";
 import { YIELD_BENCHMARK_KEY_VALUES } from "@shared/types/yield";
 import { type PegCurrency, type YieldBenchmarkKey, type YieldType } from "@shared/types";
 import type { YieldSourceDepthLens, YieldSourcePosture } from "@/lib/yield-source-risk";
@@ -15,11 +15,7 @@ export type YieldPresetKey =
   | "non-usd"
   | "new-rising"
   | "watchlist-warnings";
-export type YieldRiskBudgetKey =
-  | "conservative"
-  | "balanced"
-  | "opportunistic"
-  | "all";
+export type { YieldRiskBudgetKey };
 export type YieldPegFilter = PegCurrency | "all" | "non-usd" | "aud-cad" | "other";
 export type YieldWarningsFilter = "all" | "hide" | "only";
 export type YieldBenchmarkFilter = "all" | YieldBenchmarkKey;

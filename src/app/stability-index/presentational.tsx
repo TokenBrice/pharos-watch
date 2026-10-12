@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCurrency, formatScore } from "@shared/lib/format";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
+import { type ConditionBand, DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES, PSI_BAND_CLASSES } from "@shared/lib/classification";
 import { PsiBeamDimmers } from "./psi-beam-dimmers";
 import { PsiBeacon } from "@/components/psi-beacon/psi-beacon";
 import type { PsiBeaconState } from "@shared/lib/psi-beacon";
@@ -188,8 +188,8 @@ export function StabilityIndexPanel({
   // Retained data keeps its number but loses its band hue, matching the beacon and regime bar (R3).
   const colorClass = beaconState.kind === "current" ? (PSI_BAND_CLASSES[conditionBand] ?? "text-foreground") : "text-foreground";
   const deltaClass = delta != null && delta >= 0
-    ? "text-green-700 dark:text-green-400"
-    : "text-red-700 dark:text-red-400";
+    ? DIRECTION_TONE_CLASSES.up
+    : DIRECTION_TONE_CLASSES.down;
 
   return (
     <Card variant="shell" className="gap-5 py-6 sm:py-7">
@@ -287,6 +287,7 @@ export function PsiEventTimelineCard({ rows }: { rows: PsiEventTimelineRow[] }) 
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      /* raw: link colour, no exact export */
                       className="pharos-focus-ring text-sm text-blue-700 dark:text-blue-400 hover:underline inline-flex items-center gap-1 min-w-0 shrink rounded-sm"
                     >
                       <span className="truncate" title={link.title}>{link.title}</span>
@@ -328,7 +329,7 @@ export function PsiMethodologyCard({
           )}
           <Link
             href={methodology.changelogPath}
-            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors rounded-sm"
+            className="pharos-focus-ring text-xs text-foreground underline underline-offset-4 hover:text-amber-700 dark:hover:text-amber-400 transition-colors rounded-sm"
           >
             Version history &rarr;
           </Link>
@@ -348,7 +349,7 @@ export function PsiMethodologyCard({
           Chronically depegged coins decay linearly from full impact at 30 days to a 25% floor at 150 days.{" "}
           <Link
             href="/methodology/#stability-index-methodology"
-            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-amber-700 dark:text-amber-400 transition-colors rounded-sm"
+            className="pharos-focus-ring text-foreground underline underline-offset-4 hover:text-amber-700 dark:hover:text-amber-400 transition-colors rounded-sm"
           >
             Full methodology &rarr;
           </Link>
@@ -444,6 +445,7 @@ export function PsiContributorsTableCard({
                     <TableCell className={CONTRIBUTOR_CELL_CLASS}>
                       <Link
                         href={buildStablecoinUrl(row.id)}
+                        /* raw: link hover colour, no exact export */
                         className="pharos-focus-ring flex items-center gap-2 font-medium text-foreground hover:text-blue-700 dark:hover:text-blue-400 transition-colors rounded-sm"
                       >
                         <StablecoinLogo src={logos?.[row.id]} name={row.symbol} size={22} />
@@ -460,8 +462,8 @@ export function PsiContributorsTableCard({
                         CONTRIBUTOR_CELL_CLASS,
                         "text-right pharos-numeric",
                         row.bps < 0
-                          ? "text-red-700 dark:text-red-400"
-                          : "text-amber-700 dark:text-amber-400",
+                          ? DEPEG_DIRECTION_CLASSES.below.text
+                          : DEPEG_DIRECTION_CLASSES.above.text,
                       )}
                     >
                       {row.bps > 0 ? "+" : ""}

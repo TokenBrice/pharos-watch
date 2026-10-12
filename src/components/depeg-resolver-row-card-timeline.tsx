@@ -17,6 +17,7 @@ import {
   TIER_META,
   timeToForwardX,
 } from "@/components/depeg-resolver-row-card-model";
+import { DDR_TIMELINE_CLASSES } from "@shared/lib/classification";
 
 function PastDeviationSpark({ row }: { row: DdrV2ResponseRow }) {
   const peakDeviationBps = getPeakDeviationBps(row);
@@ -38,7 +39,7 @@ function PastDeviationSpark({ row }: { row: DdrV2ResponseRow }) {
     <svg
       viewBox="0 0 100 40"
       preserveAspectRatio="none"
-      className="absolute inset-0 h-full w-full text-red-500"
+      className={cn("absolute inset-0 h-full w-full", DDR_TIMELINE_CLASSES.terminalGlyph)}
       aria-hidden="true"
     >
       <line
@@ -76,15 +77,15 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
 
   return (
     <div className="absolute inset-0">
-      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-sky-500/60 via-sky-500/30 to-transparent" />
+      <span className={cn("absolute inset-x-0 top-1/2 h-px -translate-y-1/2", DDR_TIMELINE_CLASSES.pendingTrack)} />
       <span
-        className="absolute right-0 top-1/2 -translate-y-1/2 border-y-[3px] border-l-[5px] border-y-transparent border-l-sky-500/40"
+        className={cn("absolute right-0 top-1/2 -translate-y-1/2 border-y-[3px] border-l-[5px] border-y-transparent", DDR_TIMELINE_CLASSES.pendingArrow)}
         aria-hidden="true"
       />
 
       {iqrLeft != null && iqrRight != null ? (
         <span
-          className="absolute top-1/2 h-2 -translate-y-1/2 rounded-full bg-sky-500/20"
+          className={cn("absolute top-1/2 h-2 -translate-y-1/2 rounded-full", DDR_TIMELINE_CLASSES.pendingFill)}
           style={{ left: `${iqrLeft}%`, width: `${Math.max(2, iqrRight - iqrLeft)}%` }}
         />
       ) : null}
@@ -100,7 +101,7 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
           >
             <span className="pharos-meta font-medium">{cell.horizon}</span>
             {hasProb ? (
-              <span className="pharos-numeric text-xs leading-none text-sky-700 dark:text-sky-400">
+              <span className={cn("pharos-numeric text-xs leading-none", DDR_TIMELINE_CLASSES.pendingText)}>
                 {Math.round((cell.probability ?? 0) * 100)}%
               </span>
             ) : (
@@ -127,7 +128,7 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
           <span className="absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap font-mono text-xs font-semibold leading-none text-foreground">
             ~{formatDurationSec(duration.medianSec)}
           </span>
-          <span className="block h-2.5 w-2.5 rotate-45 bg-sky-500" aria-hidden="true" />
+          <span className={cn("block h-2.5 w-2.5 rotate-45", DDR_TIMELINE_CLASSES.pendingMarker)} aria-hidden="true" />
         </div>
       ) : null}
     </div>
@@ -135,8 +136,8 @@ function ForwardProjection({ duration }: { duration: DdrDuration }) {
 }
 
 function ForwardCap({ tone, label }: { tone: "terminal" | "muted"; label: string }) {
-  const lineTone = tone === "terminal" ? "bg-red-500/30" : "bg-border";
-  const textTone = tone === "terminal" ? "text-red-700 dark:text-red-400" : "text-muted-foreground/80";
+  const lineTone = tone === "terminal" ? DDR_TIMELINE_CLASSES.terminalLine : "bg-border";
+  const textTone = tone === "terminal" ? DDR_TIMELINE_CLASSES.terminalText : "text-muted-foreground/80";
   return (
     <div className="absolute inset-0 flex items-center">
       <span className={cn("h-px flex-1", lineTone)} aria-hidden="true" />

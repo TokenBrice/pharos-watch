@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
-import { MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
+import { CASE_STUDY_OUTCOME_CLASSES, MECHANISM_ARCHETYPE_LABELS } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
 import { LearnHero } from "../_shared/learn-hero";
@@ -76,21 +76,21 @@ export default function CaseStudiesHub() {
         subKicker="Outcome spread"
         sub={
           <p className="pharos-numeric text-sm text-muted-foreground">
-            <span className="text-emerald-700 dark:text-emerald-400">
+            <span className={CASE_STUDY_OUTCOME_CLASSES.survived.text}>
               {CASE_STUDY_OUTCOME_COUNTS.survived}
             </span>{" "}
             survived
             <span aria-hidden="true" className="px-1.5 text-muted-foreground/50">
               ·
             </span>
-            <span className="text-amber-700 dark:text-amber-400">
+            <span className={CASE_STUDY_OUTCOME_CLASSES.wounded.text}>
               {CASE_STUDY_OUTCOME_COUNTS.wounded}
             </span>{" "}
             wounded
             <span aria-hidden="true" className="px-1.5 text-muted-foreground/50">
               ·
             </span>
-            <span className="text-rose-600 dark:text-rose-400">
+            <span className={CASE_STUDY_OUTCOME_CLASSES.died.text}>
               {CASE_STUDY_OUTCOME_COUNTS.died}
             </span>{" "}
             died

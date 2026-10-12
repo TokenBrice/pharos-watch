@@ -24,7 +24,7 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { PRICE_TRANSPARENCY_SOURCE_KEYS, getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { CONFIDENCE_LEVEL_COLORS } from "@shared/lib/classification";
+import { CONFIDENCE_LEVEL_COLORS, ORACLE_BRAND_SWATCH_CLASSES, PRICE_SOURCE_STATUS_CLASSES } from "@shared/lib/classification";
 import { formatCurrency, timeAgo } from "@shared/lib/format";
 import { normalizePegType } from "@shared/lib/peg-rates";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
@@ -66,15 +66,15 @@ type RenderedSourceStatus = Exclude<SourceStatus, "not-applicable">;
 
 const SOURCE_CHIP_STYLES: Record<RenderedSourceStatus, { wrap: string; label: string; badge: string; text: string }> = {
   used: {
-    wrap: "border-emerald-500/20 bg-emerald-500/[0.03]",
+    wrap: PRICE_SOURCE_STATUS_CLASSES.used.wrap,
     label: "font-medium",
-    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+    badge: PRICE_SOURCE_STATUS_CLASSES.used.badge,
     text: "Used",
   },
   available: {
     wrap: "border-border",
     label: "font-medium text-muted-foreground",
-    badge: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+    badge: PRICE_SOURCE_STATUS_CLASSES.available.badge,
     text: "Available",
   },
   "no-data": {
@@ -86,8 +86,8 @@ const SOURCE_CHIP_STYLES: Record<RenderedSourceStatus, { wrap: string; label: st
 };
 
 const SOURCE_DOT_CLASSES: Record<RenderedSourceStatus, string> = {
-  used: "bg-emerald-500",
-  available: "bg-sky-400",
+  used: PRICE_SOURCE_STATUS_CLASSES.used.dot,
+  available: PRICE_SOURCE_STATUS_CLASSES.available.dot,
   "no-data": "bg-muted-foreground/40",
 };
 
@@ -147,10 +147,6 @@ const SOURCE_LOGO_PATHS: Record<string, string> = {
   cached: INTERNAL_SOURCE_LOGO,
 };
 
-const SOURCE_LOGO_WELL_CLASSES: Record<string, string> = {
-  redstone: "bg-zinc-950",
-};
-
 function SourceLogo({ sourceKey, compact = false }: { sourceKey: string; compact?: boolean }) {
   const src = SOURCE_LOGO_PATHS[sourceKey] ?? INTERNAL_SOURCE_LOGO;
   const sizeClass = compact ? "h-5 w-5" : "h-6 w-6";
@@ -160,7 +156,7 @@ function SourceLogo({ sourceKey, compact = false }: { sourceKey: string; compact
     <span
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/50 p-0.5",
-        SOURCE_LOGO_WELL_CLASSES[sourceKey] ?? "bg-white",
+        ORACLE_BRAND_SWATCH_CLASSES[sourceKey] ?? "bg-white",
         sizeClass,
       )}
     >
@@ -305,11 +301,11 @@ function SourcesModal({
         </div>
         <div className="flex items-center justify-center gap-3 border-t border-border/40 px-5 py-3">
           <span className="pharos-label flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-[2px] bg-emerald-500" aria-hidden="true" />
+            <span className={cn("h-2 w-2 rounded-[2px]", PRICE_SOURCE_STATUS_CLASSES.used.dot)} aria-hidden="true" />
             Used
           </span>
           <span className="pharos-label flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-[2px] bg-sky-400" aria-hidden="true" />
+            <span className={cn("h-2 w-2 rounded-[2px]", PRICE_SOURCE_STATUS_CLASSES.available.dot)} aria-hidden="true" />
             Available
           </span>
           <span className="pharos-label flex items-center gap-1.5">
@@ -530,13 +526,13 @@ export function PriceTransparencyCard({
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
             {!hasNoPrice && (
               <span className="inline-flex items-center gap-1">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className={cn("inline-block h-1.5 w-1.5 rounded-full", PRICE_SOURCE_STATUS_CLASSES.used.dot)} />
                 {usedSources.length} used
               </span>
             )}
             {availableSources.length > 0 && (
               <span className="inline-flex items-center gap-1">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-sky-400" />
+                <span className={cn("inline-block h-1.5 w-1.5 rounded-full", PRICE_SOURCE_STATUS_CLASSES.available.dot)} />
                 {availableSources.length} available
               </span>
             )}

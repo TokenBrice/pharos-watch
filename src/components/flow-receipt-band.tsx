@@ -2,6 +2,7 @@
 
 import { ReceiptText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FLOW_RECEIPT_TONE_CLASSES } from "@shared/lib/classification";
 import {
   buildFlowPressureReceiptModel,
   type FlowPressureReceiptRow,
@@ -26,8 +27,8 @@ interface FlowReceiptBandProps {
 }
 
 function toneClass(tone: FlowPressureReceiptRow["tone"]): string {
-  if (tone === "mint") return "text-emerald-700 dark:text-emerald-300";
-  if (tone === "burn") return "text-red-700 dark:text-red-300";
+  if (tone === "mint") return FLOW_RECEIPT_TONE_CLASSES.mint;
+  if (tone === "burn") return FLOW_RECEIPT_TONE_CLASSES.burn;
   return "text-foreground";
 }
 
@@ -155,13 +156,13 @@ export function FlowReceiptBand({
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="text-muted-foreground text-xs">Top minter</span>
-            <span className="pharos-numeric text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+            <span className={cn("pharos-numeric text-sm font-semibold", FLOW_RECEIPT_TONE_CLASSES.mint)}>
               {model.topMint
                 ? `${model.topMint.symbol} ${formatSignedCurrency(model.topMint.valueUsd)}`
                 : "None"}
             </span>
             <span className="text-muted-foreground text-xs">Top burner</span>
-            <span className="pharos-numeric text-sm font-semibold text-red-700 dark:text-red-300">
+            <span className={cn("pharos-numeric text-sm font-semibold", FLOW_RECEIPT_TONE_CLASSES.burn)}>
               {model.topBurn
                 ? `${model.topBurn.symbol} ${formatSignedCurrency(model.topBurn.valueUsd)}`
                 : "None"}

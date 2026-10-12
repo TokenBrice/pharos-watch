@@ -4,6 +4,7 @@
  * All protocol/chain names, colors, and formatting helpers live here.
  * Tailwind classes are static string literals for purge safety.
  */
+import { CHAIN_SWATCH_CLASSES, DEX_FALLBACK_SWATCH_CLASSES, DEX_PROTOCOL_SWATCH_CLASSES } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";
 
 const PROTOCOL_NAMES: Record<string, string> = {
@@ -44,48 +45,11 @@ export const PROTOCOL_LOGOS: Record<string, string> = {
   ekubo: "/dexes/ekubo.jpeg",
 };
 
-export const PROTOCOL_COLORS: Record<string, string> = {
-  curve: "bg-blue-500",
-  "uniswap-v2": "bg-pink-300",
-  "uniswap-v3": "bg-pink-500",
-  "uniswap-v4": "bg-pink-400",
-  fluid: "bg-cyan-500",
-  balancer: "bg-violet-500",
-  aerodrome: "bg-sky-500",
-  velodrome: "bg-red-500",
-  pancakeswap: "bg-amber-500",
-  sushiswap: "bg-indigo-500",
-  "trader-joe": "bg-orange-500",
-  raydium: "bg-purple-500",
-  orca: "bg-teal-400",
-  meteora: "bg-sky-500",
-  quickswap: "bg-violet-500",
-  ekubo: "bg-orange-500",
-};
+export const PROTOCOL_COLORS: Record<string, string> = DEX_PROTOCOL_SWATCH_CLASSES;
 
-export const EXTRA_COLORS = [
-  "bg-emerald-500",
-  "bg-lime-500",
-  "bg-teal-500",
-  "bg-rose-500",
-  "bg-fuchsia-500",
-  "bg-yellow-500",
-  "bg-purple-500",
-  "bg-orange-400",
-];
+export const EXTRA_COLORS = DEX_FALLBACK_SWATCH_CLASSES;
 
-const CHAIN_COLORS: Record<string, string> = {
-  ethereum: "bg-blue-600",
-  arbitrum: "bg-sky-500",
-  base: "bg-blue-400",
-  polygon: "bg-violet-500",
-  bsc: "bg-amber-500",
-  optimism: "bg-red-500",
-  avalanche: "bg-red-600",
-  solana: "bg-emerald-500",
-  gnosis: "bg-teal-500",
-  fantom: "bg-blue-300",
-};
+const CHAIN_COLORS: Record<string, string> = CHAIN_SWATCH_CLASSES;
 
 /** Hex equivalents of CHAIN_COLORS for SVG fill attributes (Recharts) */
 export const CHAIN_HEX: Record<string, string> = {

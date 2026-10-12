@@ -8,6 +8,7 @@ import { LiquidityTechnicalDetails } from "./liquidity-technical-details";
 import { LiquidityOverview, LiquidityPreconditions } from "./liquidity-overview";
 import { LiquidityPoolMatchingDetails } from "./liquidity-pool-matching-details";
 import { LiquidityWorkedExample } from "./liquidity-worked-example";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 
 export function LiquidityMethodologySection() {
   return (
@@ -17,7 +18,7 @@ export function LiquidityMethodologySection() {
       versionBadge={{ label: LIQUIDITY_METHODOLOGY_VERSION_LABEL }}
       changelogPath={LIQUIDITY_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when liquidity formula weights, source inclusion rules, or TVL normalization logic changes."
-      changelogClassName="hover:text-sky-700 dark:hover:text-sky-400"
+      changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.liquidity.changelogHover}
     >
       <LiquidityOverview />
       <LiquidityPoolMatchingDetails />

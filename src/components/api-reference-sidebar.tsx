@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HTTP_METHOD_BADGE_CLASSES } from "@shared/lib/classification";
 
 export interface SidebarSubsection {
   id: string;
@@ -28,8 +29,7 @@ function MethodBadge({ method }: { method: "GET" | "POST" }) {
     <span
       className={cn(
         "inline-flex shrink-0 rounded-full border px-1.5 py-px font-mono text-3xs font-bold leading-tight",
-        method === "GET" && "border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-        method === "POST" && "border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-400",
+        HTTP_METHOD_BADGE_CLASSES[method],
       )}
     >
       {method}

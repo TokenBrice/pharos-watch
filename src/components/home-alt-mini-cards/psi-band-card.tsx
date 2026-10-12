@@ -10,7 +10,7 @@ import { useStabilityIndex } from "@/hooks/api-hooks";
 import { usePsiBeaconState } from "@/hooks/use-psi-beacon-state";
 import { CHART_BLUE } from "@/lib/chart-colors";
 import { resolveQueryViewState } from "@/lib/query-view-state";
-import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
+import { type ConditionBand, DIRECTION_TONE_CLASSES, PSI_BAND_CLASSES } from "@shared/lib/classification";
 import { formatScore } from "@shared/lib/format";
 import { buildPsiChartData, getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 
@@ -71,7 +71,7 @@ export function PsiBandCard({ embedded = false }: { embedded?: boolean } = {}): 
   const bandClass = band && beacon.isCurrent ? (PSI_BAND_CLASSES[band] ?? "text-foreground") : "text-muted-foreground";
   const bandLabel = band ? band.charAt(0) + band.slice(1).toLowerCase() : null;
   const avgDeltaClass =
-    avgDelta != null && avgDelta >= 0 ? "text-green-700 dark:text-green-400" : "text-state-danger";
+    avgDelta != null && avgDelta >= 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down;
   const state = resolveQueryViewState({
     hasData: current !== null,
     isLoading,

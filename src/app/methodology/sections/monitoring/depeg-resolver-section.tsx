@@ -1,6 +1,7 @@
 import { DDR_METHODOLOGY_CHANGELOG_PATH, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { MethodologyDetails, MethodologyFacts, MethodologySectionShell } from "../../methodology-shared";
 import { DEPEG_RESOLVER_SECTION_CONTENT } from "@/lib/methodology-content";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 
 export function DepegResolverMethodologySection() {
   return (
@@ -12,7 +13,7 @@ export function DepegResolverMethodologySection() {
       }}
       changelogPath={DDR_METHODOLOGY_CHANGELOG_PATH}
       versionNote="DDR v4 updates the resolution rubric, duration landmarks, incident lifecycle, support gates, and reviewer audit contract."
-      changelogClassName="hover:text-violet-700 dark:hover:text-violet-400"
+      changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.depegResolver.changelogHover}
     >
       <p>
         When Pharos confirms an active depeg, the Depeg Duration Resolver answers two questions in order at the public

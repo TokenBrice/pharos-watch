@@ -30,6 +30,7 @@ import {
   NOW_DOT_TONE,
   TIER_META,
 } from "@/components/depeg-resolver-row-card-model";
+import { DDR_VERDICT_CLASSES } from "@shared/lib/classification";
 
 // Above this many open depegs the board splits into two balanced columns so all
 // forecasts stay visible without an over-tall single list.
@@ -44,11 +45,11 @@ const TIER_SHORT: Record<DdrResolutionTier, string> = {
 };
 
 // Tier-colored ring around each coin logo — keeps terminality readable at the
-// identity slot. Complete static strings for the Tailwind scanner.
+// identity slot.
 const RING_TONE: Record<DdrResolutionTier, string> = {
-  recovery_likely: "ring-emerald-500/70",
-  at_risk: "ring-amber-500/70",
-  recovery_unlikely: "ring-red-500/70",
+  recovery_likely: DDR_VERDICT_CLASSES.recovery_likely.ring,
+  at_risk: DDR_VERDICT_CLASSES.at_risk.ring,
+  recovery_unlikely: DDR_VERDICT_CLASSES.recovery_unlikely.ring,
   insufficient_signal: "ring-muted-foreground/40",
 };
 

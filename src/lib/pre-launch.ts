@@ -1,3 +1,9 @@
+import {
+  PRE_LAUNCH_DRIFT_BADGE_CLASSES,
+  PRE_LAUNCH_MILESTONE_BADGE_CLASSES,
+  PRE_LAUNCH_PHASE_CLASSES,
+  type PreLaunchDriftStatus,
+} from "@shared/lib/classification";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DateHistoryEntry, LaunchMilestoneType, LaunchPhase } from "@shared/types";
 
@@ -15,24 +21,20 @@ export const LAUNCH_PHASE_LABELS: Record<LaunchPhase, string> = {
 
 /** Phase → solid accent dot class (static for Tailwind scanner). */
 export const PHASE_DOT: Record<LaunchPhase, string> = {
-  announced: "bg-amber-500",
-  testnet: "bg-indigo-500",
-  auditing: "bg-violet-500",
-  beta: "bg-emerald-500",
-  "launching-soon": "bg-sky-500",
+  announced: PRE_LAUNCH_PHASE_CLASSES.announced.dot,
+  testnet: PRE_LAUNCH_PHASE_CLASSES.testnet.dot,
+  auditing: PRE_LAUNCH_PHASE_CLASSES.auditing.dot,
+  beta: PRE_LAUNCH_PHASE_CLASSES.beta.dot,
+  "launching-soon": PRE_LAUNCH_PHASE_CLASSES["launching-soon"].dot,
 };
 
 /** Phase → full badge class string (static for Tailwind scanner). */
 export const PHASE_BADGE: Record<LaunchPhase, string> = {
-  announced:
-    "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  testnet:
-    "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-  auditing:
-    "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  beta: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  "launching-soon":
-    "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  announced: PRE_LAUNCH_PHASE_CLASSES.announced.badge,
+  testnet: PRE_LAUNCH_PHASE_CLASSES.testnet.badge,
+  auditing: PRE_LAUNCH_PHASE_CLASSES.auditing.badge,
+  beta: PRE_LAUNCH_PHASE_CLASSES.beta.badge,
+  "launching-soon": PRE_LAUNCH_PHASE_CLASSES["launching-soon"].badge,
 };
 
 // ---------------------------------------------------------------------------
@@ -50,40 +52,16 @@ export const MILESTONE_TYPE_LABELS: Record<LaunchMilestoneType, string> = {
 };
 
 /** Milestone type → badge class string (static for Tailwind scanner). */
-export const MILESTONE_TYPE_BADGE: Record<LaunchMilestoneType, string> = {
-  announcement:
-    "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400",
-  milestone:
-    "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  delay:
-    "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
-  partnership:
-    "border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400",
-  regulatory:
-    "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  audit:
-    "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  testnet:
-    "border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-};
+export const MILESTONE_TYPE_BADGE: Record<LaunchMilestoneType, string> = PRE_LAUNCH_MILESTONE_BADGE_CLASSES;
 
 // ---------------------------------------------------------------------------
 // Date drift display
 // ---------------------------------------------------------------------------
 
-export type DriftStatus = "on-track" | "pushed-once" | "pushed-multiple" | "overdue";
+export type DriftStatus = PreLaunchDriftStatus;
 
 /** Drift status → badge class string (static for Tailwind scanner). */
-export const DRIFT_STATUS_BADGE: Record<DriftStatus, string> = {
-  "on-track":
-    "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  "pushed-once":
-    "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  "pushed-multiple":
-    "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
-  overdue:
-    "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
-};
+export const DRIFT_STATUS_BADGE: Record<DriftStatus, string> = PRE_LAUNCH_DRIFT_BADGE_CLASSES;
 
 export const DRIFT_STATUS_LABEL: Record<DriftStatus, string> = {
   "on-track": "On track",

@@ -1,4 +1,4 @@
-import { getHhiBand } from "@shared/lib/classification";
+import { QUALITY_TIER_3_CLASSES, getHhiBand } from "@shared/lib/classification";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import type { DexLiquidityData, DexLiquidityPool } from "@shared/types";
 
@@ -20,21 +20,21 @@ export function getOrganicFractionTier(
   if (fraction >= 0.7) {
     return {
       label: "Organic",
-      badgeClass: "text-emerald-600 bg-emerald-500/10",
-      summaryColor: "text-emerald-700 dark:text-emerald-400",
+      badgeClass: QUALITY_TIER_3_CLASSES.good.badgeSoft,
+      summaryColor: QUALITY_TIER_3_CLASSES.good.text,
     };
   }
   if (fraction >= 0.3 || maturityDays >= 365) {
     return {
       label: maturityDays >= 365 && fraction < 0.3 ? "Established" : "Mixed",
-      badgeClass: "text-amber-600 bg-amber-500/10",
-      summaryColor: "text-amber-700 dark:text-amber-400",
+      badgeClass: QUALITY_TIER_3_CLASSES.watch.badgeSoft,
+      summaryColor: QUALITY_TIER_3_CLASSES.watch.text,
     };
   }
   return {
     label: "Incentivized",
-    badgeClass: "text-red-600 bg-red-500/10",
-    summaryColor: "text-red-700 dark:text-red-400",
+    badgeClass: QUALITY_TIER_3_CLASSES.bad.badgeSoft,
+    summaryColor: QUALITY_TIER_3_CLASSES.bad.text,
   };
 }
 

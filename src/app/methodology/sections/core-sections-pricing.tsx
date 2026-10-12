@@ -13,6 +13,7 @@ import {
   WorkedExample,
 } from "../methodology-shared";
 import { PRICING_PIPELINE_SECTION_CONTENT } from "@/lib/methodology-content";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES, CONFIDENCE_LEVEL_COLORS, METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
 
 const CONSENSUS_EXAMPLE_SOURCES = [
   { label: "CoinGecko", price: 1.0001, weight: 2 },
@@ -36,7 +37,7 @@ export function PricingPipelineMethodologySection() {
       versionBadge={{ label: PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL }}
       changelogPath={PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when price sources, consensus algorithm, enrichment passes, or validation rules change."
-      changelogClassName="hover:text-blue-700 dark:hover:text-blue-400"
+      changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.pricing.changelogHover}
     >
         <p>
           Every score Pharos computes starts with a price. The pricing pipeline collects quotes from more than a dozen
@@ -312,7 +313,7 @@ export function PricingPipelineMethodologySection() {
               { title: "N-Source Consensus", subtitle: "Pairwise clusters; publish cluster median, keep best member for provenance" },
               {
                 title: "Pool Challenge",
-                className: "border-orange-500/40",
+                className: METHODOLOGY_TABLE_ACCENT_CLASSES.pricingMarket,
                 subtitle: (
                   <>
                     <span className="md:hidden">Soft-only → replace with protocol-aware weighted medians</span>
@@ -320,7 +321,7 @@ export function PricingPipelineMethodologySection() {
                   </>
                 ),
               },
-              { title: "Authoritative Overrides", className: "border-blue-500/40", subtitle: "Protocol redemption (cUSD, iUSD) after market probes" },
+              { title: "Authoritative Overrides", className: METHODOLOGY_TABLE_ACCENT_CLASSES.pricingOverride, subtitle: "Protocol redemption (cUSD, iUSD) after market probes" },
               {
                 title: "Enrichment Pipeline",
                 subtitle: (
@@ -433,19 +434,19 @@ export function PricingPipelineMethodologySection() {
                 { id: "effect", header: "Downstream effect", cellClassName: "whitespace-normal" },
               ]}
               rows={[
-                { id: "high", cellClassNames: { level: "text-green-700 dark:text-green-400 font-medium" }, cells: {
+                { id: "high", cellClassNames: { level: `${CONFIDENCE_LEVEL_COLORS.high} font-medium` }, cells: {
                   level: "high", condition: "Independent agreeing cluster survives list-aggregator downgrade and pool challenge",
                   effect: "Published as the agreeing cluster median; depeg detection still checks authoritative-source trust before skipping confirmation",
                 } },
-                { id: "single-source", cellClassNames: { level: "text-yellow-700 dark:text-yellow-400 font-medium" }, cells: {
+                { id: "single-source", cellClassNames: { level: `${CONFIDENCE_LEVEL_COLORS["single-source"]} font-medium` }, cells: {
                   level: "single-source", condition: "One usable source, or a non-independent list-aggregator cluster treated as one source",
                   effect: "Depeg detection requires pending confirmation",
                 } },
-                { id: "low", cellClassNames: { level: "text-orange-700 dark:text-orange-400 font-medium" }, cells: {
+                { id: "low", cellClassNames: { level: `${CONFIDENCE_LEVEL_COLORS.low} font-medium` }, cells: {
                   level: "low", condition: "Sources disagree beyond threshold, or pool challenge fired",
                   effect: "Pool challenge: TVL-weighted pool price used; otherwise closest to peg reference; depeg requires confirmation",
                 } },
-                { id: "fallback", cellClassNames: { level: "text-red-700 dark:text-red-400 font-medium" }, cells: {
+                { id: "fallback", cellClassNames: { level: `${CONFIDENCE_LEVEL_COLORS.fallback} font-medium` }, cells: {
                   level: "fallback", condition: "All primary sources down; enrichment or cache used",
                   effect: "Depeg mutations blocked; stale banner shown on frontend",
                 } },

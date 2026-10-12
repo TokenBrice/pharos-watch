@@ -11,6 +11,13 @@ import {
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
+import {
+  COVERAGE_AUTHORITATIVE_ACCENT_CLASSES,
+  COVERAGE_BREAKDOWN_TONE_CLASSES,
+  COVERAGE_FEATURE_ACCENT_CLASSES,
+  COVERAGE_GAP_BAR_CLASS,
+  type CoverageBreakdownToneKey,
+} from "@shared/lib/classification";
 import type { CoverageFeatureKey } from "@/lib/coverage";
 import { COVERAGE_FEATURES } from "@/lib/coverage-features";
 
@@ -62,6 +69,8 @@ export const FEATURE_ICON: Record<CoverageFeatureKey, typeof Activity> = {
   mintAuthority: KeyRound,
 };
 
+export { COVERAGE_GAP_BAR_CLASS };
+
 export const FEATURE_ACCENT_CLASSES: Record<
   CoverageFeatureKey,
   {
@@ -74,93 +83,77 @@ export const FEATURE_ACCENT_CLASSES: Record<
 > = {
   price: {
     icon: "text-muted-foreground",
-    countBar: "bg-sky-400/80",
-    chip: "border-sky-500/24 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.price,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   safety: {
     icon: "text-muted-foreground",
-    countBar: "bg-emerald-400/80",
-    chip: "border-emerald-500/24 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.safety,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   dex: {
     icon: "text-muted-foreground",
-    countBar: "bg-cyan-400/80",
-    chip: "border-cyan-500/24 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.dex,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   reserves: {
     icon: "text-muted-foreground",
-    countBar: "bg-amber-400/85",
-    chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.reserves,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   redemption: {
     icon: "text-muted-foreground",
-    countBar: "bg-rose-400/85",
-    chip: "border-rose-500/24 bg-rose-500/10 text-rose-800 dark:text-rose-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.redemption,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   yield: {
     icon: "text-muted-foreground",
-    countBar: "bg-teal-400/85",
-    chip: "border-teal-500/24 bg-teal-500/10 text-teal-800 dark:text-teal-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.yield,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   flows: {
     icon: "text-muted-foreground",
-    countBar: "bg-indigo-400/85",
-    chip: "border-indigo-500/24 bg-indigo-500/10 text-indigo-800 dark:text-indigo-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.flows,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   blacklist: {
     icon: "text-muted-foreground",
-    countBar: "bg-orange-400/85",
-    chip: "border-orange-500/28 bg-orange-500/12 text-orange-800 dark:text-orange-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.blacklist,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   mica: {
     icon: "text-muted-foreground",
-    countBar: "bg-blue-400/85",
-    chip: "border-blue-500/24 bg-blue-500/10 text-blue-800 dark:text-blue-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.mica,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   genius: {
     icon: "text-muted-foreground",
-    countBar: "bg-purple-400/85",
-    chip: "border-purple-500/24 bg-purple-500/10 text-purple-800 dark:text-purple-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.genius,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   dependency: {
     icon: "text-muted-foreground",
-    countBar: "bg-frost-blue/85",
-    chip: "border-frost-blue/24 bg-frost-blue/10 text-sky-800 dark:text-sky-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.dependency,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
   mintAuthority: {
     icon: "text-muted-foreground",
-    countBar: "bg-lime-400/85",
-    chip: "border-lime-500/24 bg-lime-500/10 text-lime-800 dark:text-lime-200",
+    ...COVERAGE_FEATURE_ACCENT_CLASSES.mintAuthority,
     tile: "border-border/60 bg-muted/40",
     title: "text-foreground",
   },
 };
-
-const COVERAGE_GAP_CHIP_CLASS = "border-border/70 bg-muted/60 text-muted-foreground";
-export const COVERAGE_GAP_BAR_CLASS =
-  "bg-muted-foreground/35 bg-[repeating-linear-gradient(135deg,transparent_0_5px,oklch(1_0_0_/0.08)_5px_10px)]";
 
 interface CoverageBreakdownVisual {
   chip: string;
@@ -168,106 +161,14 @@ interface CoverageBreakdownVisual {
   barText?: string;
 }
 
-/** Bar label colour used whenever the bar fill is light enough for dark text. */
-const BAR_TEXT_ON_LIGHT = "text-slate-950";
-
-/**
- * Tone recipes shared by two or more `(feature, breakdown-kind)` pairs. Each
- * class value stays a complete literal so Tailwind keeps seeing it; the recipes
- * only remove the copy-paste, never compose class names at runtime.
- */
-const BREAKDOWN_TONES = {
-  /** Uncovered / not-applicable buckets (11 pairs). */
-  gap: {
-    chip: COVERAGE_GAP_CHIP_CLASS,
-    bar: COVERAGE_GAP_BAR_CLASS,
-  },
-  emerald: {
-    chip: "border-emerald-500/28 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
-    bar: "bg-emerald-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  emeraldFaint: {
-    chip: "border-emerald-500/24 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
-    bar: "bg-emerald-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  sky: {
-    chip: "border-sky-500/28 bg-sky-500/10 text-sky-800 dark:text-sky-200",
-    bar: "bg-sky-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  skyFaint: {
-    chip: "border-sky-500/26 bg-sky-500/10 text-sky-800 dark:text-sky-200",
-    bar: "bg-sky-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  skyMuted: {
-    chip: "border-sky-500/28 bg-sky-500/10 text-sky-800 dark:text-sky-200",
-    bar: "bg-sky-400/80",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  cyan: {
-    chip: "border-cyan-500/28 bg-cyan-500/10 text-cyan-800 dark:text-cyan-200",
-    bar: "bg-cyan-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  amber: {
-    chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
-    bar: "bg-amber-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  amberMuted: {
-    chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
-    bar: "bg-amber-400/80",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  amberStrong: {
-    chip: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
-    bar: "bg-amber-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  orangeStrong: {
-    chip: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
-    bar: "bg-orange-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-  violet: {
-    chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
-    bar: "bg-violet-400/85",
-  },
-  violetMuted: {
-    chip: "border-violet-500/28 bg-violet-500/10 text-violet-800 dark:text-violet-200",
-    bar: "bg-violet-400/80",
-  },
-  teal: {
-    chip: "border-teal-500/28 bg-teal-500/10 text-teal-800 dark:text-teal-200",
-    bar: "bg-teal-400/85",
-    barText: BAR_TEXT_ON_LIGHT,
-  },
-} satisfies Record<string, CoverageBreakdownVisual>;
-
-type BreakdownToneKey = keyof typeof BREAKDOWN_TONES;
-
-/**
- * Per-feature breakdown visuals. A string picks a shared tone recipe; an inline
- * object is a deliberately bespoke pairing used by exactly one breakdown key.
- */
+/** Per-feature breakdown visuals; each kind picks a recipe from `COVERAGE_BREAKDOWN_TONE_CLASSES`. */
 const COVERAGE_BREAKDOWN_TONES: Partial<
-  Record<CoverageFeatureKey, Record<string, BreakdownToneKey | CoverageBreakdownVisual>>
+  Record<CoverageFeatureKey, Record<string, CoverageBreakdownToneKey>>
 > = {
   price: {
     tracked: "sky",
-    "price-only": {
-      chip: "border-blue-500/24 bg-blue-500/10 text-blue-800 dark:text-blue-200",
-      bar: "bg-blue-400/75",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
-    "sources-5-plus": {
-      chip: "border-emerald-500/26 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
-      bar: "bg-emerald-400/85",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    "price-only": "blueFaintDim",
+    "sources-5-plus": "emeraldSoft",
     "sources-3-4": "skyFaint",
     "sources-1-2": "amber",
     "data-unavailable": "gap",
@@ -275,11 +176,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
   safety: {
     rated: "emerald",
     nr: "gap",
-    // Amber-on-amber: the outage chip must not read as a coverage gap.
-    "data-unavailable": {
-      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
-      bar: "bg-amber-400/75",
-    },
+    "data-unavailable": "amberOutage",
   },
   dex: {
     primary: "emerald",
@@ -291,55 +188,21 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
   reserves: {
     live: "emerald",
     "live-configured": "amberMuted",
-    checking: {
-      chip: "border-yellow-500/28 bg-yellow-500/12 text-yellow-800 dark:text-yellow-200",
-      bar: "bg-yellow-400/80",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    checking: "yellow",
     "curated-validated": "skyMuted",
     proof: "violetMuted",
-    curated: {
-      chip: "border-blue-500/26 bg-blue-500/10 text-blue-800 dark:text-blue-200",
-      bar: "bg-blue-400/80",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
-    estimated: {
-      chip: "border-orange-500/28 bg-orange-500/12 text-orange-800 dark:text-orange-200",
-      bar: "bg-orange-400/80",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    curated: "blueSoftMuted",
+    estimated: "orangeMuted",
   },
   redemption: {
-    "modeled-heuristic": {
-      chip: "border-amber-500/30 bg-amber-500/12 text-amber-800 dark:text-amber-200",
-      bar: "bg-amber-400/80",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
-    "resolved-unscored": {
-      chip: "border-violet-500/30 bg-violet-500/12 text-violet-800 dark:text-violet-200",
-      bar: "bg-violet-400/80",
-    },
-    "configured-unrated": {
-      chip: "border-orange-500/30 bg-orange-500/12 text-orange-800 dark:text-orange-200",
-      bar: "bg-orange-400/80",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
-    impaired: {
-      chip: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
-      bar: "bg-red-400/80",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
-    "offchain-issuer": {
-      chip: "border-rose-500/28 bg-rose-500/10 text-rose-800 dark:text-rose-200",
-      bar: "bg-rose-400/85",
-    },
+    "modeled-heuristic": "amberStrongMuted",
+    "resolved-unscored": "violetStrongMuted",
+    "configured-unrated": "orangeStrongMuted",
+    impaired: "redStrongMuted",
+    "offchain-issuer": "rose",
     "psm-swap": "sky",
     "queue-redeem": "violet",
-    "collateral-redeem": {
-      chip: "border-blue-500/28 bg-blue-500/10 text-blue-800 dark:text-blue-200",
-      bar: "bg-blue-400/85",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    "collateral-redeem": "blue",
     "stablecoin-redeem": "emerald",
     "basket-redeem": "teal",
     "data-unavailable": "gap",
@@ -350,47 +213,26 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     "data-unavailable": "gap",
   },
   flows: {
-    full: {
-      chip: "border-indigo-500/28 bg-indigo-500/10 text-indigo-800 dark:text-indigo-200",
-      bar: "bg-indigo-400/85",
-    },
+    full: "indigo",
     "partial-history": "skyMuted",
     lagging: "amberMuted",
     bootstrapping: "violetMuted",
-    unknown: {
-      chip: "border-amber-500/28 bg-amber-500/12 text-amber-800 dark:text-amber-200",
-      bar: "bg-amber-400/75",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    unknown: "amberDim",
     "data-unavailable": "gap",
   },
   blacklist: {
-    live: {
-      chip: "border-rose-500/30 bg-rose-500/12 text-rose-800 dark:text-rose-200",
-      bar: "bg-rose-400/90",
-    },
-    yes: {
-      chip: "border-red-500/30 bg-red-500/12 text-red-800 dark:text-red-200",
-      bar: "bg-red-500/90",
-    },
+    live: "roseStrong",
+    yes: "redStrong",
     upstream: "orangeStrong",
     possible: "amberStrong",
-    no: {
-      chip: "border-emerald-500/30 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200",
-      bar: "bg-emerald-400/85",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    no: "emeraldStrong",
     "data-unavailable": "gap",
   },
   mica: {
     authorized: "emerald",
     pending: "amber",
     transitional: "amberMuted",
-    "non-compliant": {
-      chip: "border-red-500/35 bg-red-500/12 text-red-800 dark:text-red-200",
-      bar: "bg-red-400/85",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    "non-compliant": "redHeavy",
     "out-of-scope": "gap",
     unassessed: "gap",
   },
@@ -407,11 +249,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
   dependency: {
     both: "violet",
     dependent: "amberStrong",
-    upstream: {
-      chip: "border-frost-blue/28 bg-frost-blue/10 text-sky-800 dark:text-sky-200",
-      bar: "bg-frost-blue/85",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    upstream: "frostBlue",
     "resolved-none": "emeraldFaint",
     gaps: "gap",
     "data-unavailable": "gap",
@@ -422,31 +260,19 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     "multisig-mint": "violetMuted",
     "issuer-or-backend-mint": "amber",
     "bridge-mint": "cyan",
-    "inherited-authority": {
-      chip: "border-slate-500/24 bg-slate-500/10 text-slate-700 dark:text-slate-200",
-      bar: "bg-slate-400/75",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    "inherited-authority": "slate",
     unknown: "gap",
     "score-hardened": "emerald",
-    "score-governed": {
-      chip: "border-blue-500/26 bg-blue-500/10 text-blue-800 dark:text-blue-200",
-      bar: "bg-blue-400/85",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    "score-governed": "blueSoft",
     "score-managed": "amber",
     "score-concentrated": "orangeStrong",
-    "score-exposed": {
-      chip: "border-red-500/35 bg-red-500/12 text-red-800 dark:text-red-200",
-      bar: "bg-red-400/85",
-      barText: BAR_TEXT_ON_LIGHT,
-    },
+    "score-exposed": "redHeavy",
     "score-nr": "gap",
   },
 };
 
-function resolveBreakdownVisual(spec: BreakdownToneKey | CoverageBreakdownVisual): CoverageBreakdownVisual {
-  return typeof spec === "string" ? BREAKDOWN_TONES[spec] : spec;
+function resolveBreakdownVisual(spec: CoverageBreakdownToneKey): CoverageBreakdownVisual {
+  return COVERAGE_BREAKDOWN_TONE_CLASSES[spec];
 }
 
 export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
@@ -457,12 +283,7 @@ export const COVERAGE_BREAKDOWN_VISUAL_CLASSES: Partial<
     Object.fromEntries(Object.entries(kinds).map(([kind, spec]) => [kind, resolveBreakdownVisual(spec)])),
   ]),
 );
-export const AUTHORITATIVE_ACCENT = {
-  container: "border-violet-500/25 bg-violet-500/[0.03]",
-  badge: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-  card: "border-violet-500/30 bg-violet-500/10",
-  cardLabel: "text-violet-800 dark:text-violet-300",
-} as const;
+export const AUTHORITATIVE_ACCENT = COVERAGE_AUTHORITATIVE_ACCENT_CLASSES;
 
 export type CoverageFilterGroup = "tier" | "feature" | "gap";
 

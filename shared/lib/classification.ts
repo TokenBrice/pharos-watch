@@ -24,6 +24,14 @@ export * from "./classification/chain-health";
 export * from "./classification/cause-of-death";
 export * from "./classification/resolve-mechanism-archetype";
 export * from "./classification/resolve-implementation-launch-date";
+export * from "./classification/coverage";
+export * from "./classification/peg-severity";
+export * from "./classification/depeg";
+export * from "./classification/flows";
+export * from "./classification/pre-launch";
+export * from "./classification/provenance";
+export * from "./classification/score-tiers";
+export * from "./classification/brand";
 export type { BadgeStyle } from "./classification/common";
 
 export const HERO_CHIP_PEG_LABELS = PEG_HERO_CHIP_LABELS;
@@ -368,6 +376,14 @@ export const COLLATERAL_COVERAGE_PILL_CLASSES = {
   par: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   under: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
 } as const satisfies Record<CollateralCoverageBand, string>;
+
+/** Threshold-gauge pointer arrows, same hues as the pills; `clampLow` points left off the scale. */
+export const COLLATERAL_COVERAGE_ARROW_CLASSES = {
+  over: "border-y-4 border-l-[5px] border-y-transparent border-l-emerald-500",
+  par: "border-y-4 border-l-[5px] border-y-transparent border-l-emerald-500",
+  under: "border-y-4 border-l-[5px] border-y-transparent border-l-rose-500",
+  clampLow: "border-y-4 border-r-[5px] border-y-transparent border-r-rose-500",
+} as const satisfies Record<CollateralCoverageBand | "clampLow", string>;
 
 /**
  * Peg-deviation chart bands share the live USD depeg trigger rather than

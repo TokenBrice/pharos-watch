@@ -6,6 +6,7 @@ import {
   TableRow,
 } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
+import { FLOW_EVENT_BADGE_CLASSES } from "@shared/lib/classification";
 import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { TablePagination } from "@/components/table-pagination";
 import { ExternalLink } from "lucide-react";
@@ -62,41 +63,41 @@ function getEventBadge(event: MintBurnEvent): {
   if (event.flowType === "atomic_roundtrip") {
     return {
       label: "Roundtrip",
-      className: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 text-xs",
+      className: `${FLOW_EVENT_BADGE_CLASSES.roundtrip} text-xs`,
     };
   }
 
   if (event.flowType === "bridge_transfer") {
     return {
       label: "Bridge transfer",
-      className: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 text-xs",
+      className: `${FLOW_EVENT_BADGE_CLASSES.bridgeTransfer} text-xs`,
     };
   }
 
   if (event.flowType === "protocol_internal") {
     return {
       label: "Protocol-internal",
-      className: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/20 text-xs",
+      className: `${FLOW_EVENT_BADGE_CLASSES.protocolInternal} text-xs`,
     };
   }
 
   if (event.direction === "burn" && event.burnType === "review_required") {
     return {
       label: "Review burn",
-      className: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-500/20 text-xs",
+      className: `${FLOW_EVENT_BADGE_CLASSES.reviewBurn} text-xs`,
     };
   }
 
   if (event.direction === "mint") {
     return {
       label: "Mint",
-      className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 text-xs",
+      className: `${FLOW_EVENT_BADGE_CLASSES.mint} text-xs`,
     };
   }
 
   return {
     label: "Burn",
-    className: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20 text-xs",
+    className: `${FLOW_EVENT_BADGE_CLASSES.burn} text-xs`,
   };
 }
 

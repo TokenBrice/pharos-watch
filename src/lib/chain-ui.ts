@@ -1,4 +1,5 @@
 import { getNetColor } from "@shared/lib/format";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 /** Health band presentation is owned by `shared/lib/classification/chain-health.ts` (one authority with the Worker). */
 export {
@@ -10,9 +11,9 @@ export {
 export function trendColor(value: number | null): string {
   if (value == null) return "text-muted-foreground";
   return getNetColor(value, {
-    positiveClass: "text-emerald-600 dark:text-emerald-400",
-    negativeClass: "text-red-600 dark:text-red-400",
-    zeroClass: "text-emerald-600 dark:text-emerald-400",
+    positiveClass: DIRECTION_TONE_CLASSES.up,
+    negativeClass: DIRECTION_TONE_CLASSES.down,
+    zeroClass: DIRECTION_TONE_CLASSES.up,
     positiveInclusiveZero: true,
   });
 }

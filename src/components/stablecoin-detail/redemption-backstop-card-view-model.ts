@@ -2,6 +2,7 @@ import { formatCurrency, formatPercent } from "@shared/lib/format";
 import { formatRelativeDurationSeconds } from "@shared/lib/relative-time";
 import type { RedemptionBackstopEntry } from "@shared/types";
 import { REDEMPTION_ACCESS_LABELS,
+SCORE_TIER_5_CLASSES,
 REDEMPTION_OUTPUT_ASSET_LABELS,
 REDEMPTION_SETTLEMENT_LABELS,
 formatRedemptionDocsProvenance,
@@ -55,11 +56,11 @@ function scoreToneClass(score: number | null): string {
   return scoreToColorClass(
     score,
     [
-      { min: 80, className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" },
-      { min: 65, className: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400" },
-      { min: 50, className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400" },
-      { min: 35, className: "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-400" },
-      { min: Number.NEGATIVE_INFINITY, className: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400" },
+      { min: 80, className: SCORE_TIER_5_CLASSES.t80.pill },
+      { min: 65, className: SCORE_TIER_5_CLASSES.t65.pill },
+      { min: 50, className: SCORE_TIER_5_CLASSES.t50.pill },
+      { min: 35, className: SCORE_TIER_5_CLASSES.t35.pill },
+      { min: Number.NEGATIVE_INFINITY, className: SCORE_TIER_5_CLASSES.t0.pill },
     ],
     "border-border/60 bg-muted/30 text-muted-foreground",
   );
@@ -67,11 +68,11 @@ function scoreToneClass(score: number | null): string {
 
 function scoreTextClass(score: number | null): string {
   return scoreToColorClass(score, [
-    { min: 80, className: "text-emerald-700 dark:text-emerald-400" },
-    { min: 65, className: "text-blue-700 dark:text-blue-400" },
-    { min: 50, className: "text-amber-700 dark:text-amber-400" },
-    { min: 35, className: "text-orange-700 dark:text-orange-400" },
-    { min: Number.NEGATIVE_INFINITY, className: "text-red-700 dark:text-red-400" },
+    { min: 80, className: SCORE_TIER_5_CLASSES.t80.text },
+    { min: 65, className: SCORE_TIER_5_CLASSES.t65.text },
+    { min: 50, className: SCORE_TIER_5_CLASSES.t50.text },
+    { min: 35, className: SCORE_TIER_5_CLASSES.t35.text },
+    { min: Number.NEGATIVE_INFINITY, className: SCORE_TIER_5_CLASSES.t0.text },
   ]);
 }
 

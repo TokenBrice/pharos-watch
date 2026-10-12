@@ -1,5 +1,6 @@
 import type { YieldVenueRiskScoresPayload } from "@shared/types";
 import { cn } from "@/lib/utils";
+import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 /**
  * Compact 5-factor Yearn-style venue-risk card (yield v8.292). Renders the five
@@ -31,18 +32,18 @@ const CATEGORY_LABELS: Record<keyof YieldVenueRiskScoresPayload, string> = {
 };
 
 const TIER_TONE: Record<NonNullable<VenueRiskBreakdownProps["tier"]>, string> = {
-  low: "text-emerald-700 dark:text-emerald-400",
-  medium: "text-amber-700 dark:text-amber-400",
-  high: "text-red-700 dark:text-red-400",
+  low: QUALITY_TIER_3_CLASSES.good.text,
+  medium: QUALITY_TIER_3_CLASSES.watch.text,
+  high: QUALITY_TIER_3_CLASSES.bad.text,
   unknown: "text-muted-foreground",
 };
 
 // 1–2 = safe (emerald), 3 = elevated (amber), 4–5 = risky (red).
 function segmentTone(score: number, index: number): string {
   if (index >= score) return "bg-muted";
-  if (score <= 2) return "bg-emerald-500";
-  if (score === 3) return "bg-amber-500";
-  return "bg-red-500";
+  if (score <= 2) return QUALITY_TIER_3_CLASSES.good.bar;
+  if (score === 3) return QUALITY_TIER_3_CLASSES.watch.bar;
+  return QUALITY_TIER_3_CLASSES.bad.bar;
 }
 
 export function VenueRiskBreakdown({ scores, tier, weighted, confidence }: VenueRiskBreakdownProps) {

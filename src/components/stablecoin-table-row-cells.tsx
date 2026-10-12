@@ -15,12 +15,7 @@ import type { StablecoinTableRowCellProps } from "@/components/stablecoin-table-
 import { confidenceClass } from "@/lib/confidence";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import {
-  BACKING_BADGE_STYLES,
-  BACKING_LABELS_SHORT,
-  GOVERNANCE_BADGE_STYLES,
-  GOVERNANCE_LABELS_SHORT,
-} from "@shared/lib/classification";
+import { BACKING_BADGE_STYLES, BACKING_LABELS_SHORT, DIRECTION_TONE_CLASSES, GOVERNANCE_BADGE_STYLES, GOVERNANCE_LABELS_SHORT, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatPercentChange, getNetColor } from "@shared/lib/format";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 
@@ -212,8 +207,8 @@ function MarketCells({ row, model }: RowCellsProps) {
       {row.isVisible("change24h") ? (
         <TableCell className="text-right pharos-numeric text-sm">
           <span className={model.change24h == null ? "text-muted-foreground" : getNetColor(model.change24h, {
-            positiveClass: "text-green-700 dark:text-green-400",
-            negativeClass: "text-red-700 dark:text-red-400",
+            positiveClass: DIRECTION_TONE_CLASSES.up,
+            negativeClass: DIRECTION_TONE_CLASSES.down,
             positiveInclusiveZero: true,
           })}>
             {model.change24h != null && model.circulating != null && model.prevDay != null ? (
@@ -225,8 +220,8 @@ function MarketCells({ row, model }: RowCellsProps) {
       {row.isVisible("change7d") ? (
         <TableCell className="text-right pharos-numeric text-sm">
           <span className={model.change7d == null ? "text-muted-foreground" : getNetColor(model.change7d, {
-            positiveClass: "text-green-700 dark:text-green-400",
-            negativeClass: "text-red-700 dark:text-red-400",
+            positiveClass: DIRECTION_TONE_CLASSES.up,
+            negativeClass: DIRECTION_TONE_CLASSES.down,
             positiveInclusiveZero: true,
           })}>
             {model.change7d != null && model.circulating != null && model.prevWeek != null ? (
@@ -274,16 +269,17 @@ function RiskCells({ row, model }: RowCellsProps) {
       ) : null}
       {row.isVisible("stability") ? <TableCell className="text-right pharos-numeric text-sm">{stabilityCell}</TableCell> : null}
       {row.isVisible("liquidity") ? <TableCell className="text-right pharos-numeric text-sm">{liquidityCell}</TableCell> : null}
+      {/* raw: blacklist "No" is a favourable status, no exact export */}
       {row.isVisible("blacklistable") ? (
         <TableCell className="text-center pharos-numeric text-sm">
           {model.blacklistStatus === true ? (
-            <span className="text-red-700 dark:text-red-400">Yes</span>
+            <span className={QUALITY_TIER_3_CLASSES.bad.text}>Yes</span>
           ) : model.blacklistStatus === false ? (
             <span className="text-green-700 dark:text-green-400">No</span>
           ) : model.blacklistStatus === "possible" ? (
-            <span className="text-amber-700 dark:text-amber-400">Possible</span>
+            <span className={QUALITY_TIER_3_CLASSES.watch.text}>Possible</span>
           ) : model.blacklistStatus === "inherited" ? (
-            <span className="text-amber-700 dark:text-amber-400">Upstream</span>
+            <span className={QUALITY_TIER_3_CLASSES.watch.text}>Upstream</span>
           ) : (
             <span className="text-muted-foreground">—</span>
           )}

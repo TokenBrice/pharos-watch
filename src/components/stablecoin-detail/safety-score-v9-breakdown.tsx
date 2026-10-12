@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { SafetyScoreReasonList } from "@/components/stablecoin-detail/safety-score-reason-list";
+import { SAFETY_BREAKDOWN_ROW_TONE_TEXT_CLASSES } from "@shared/lib/classification";
 import { scoreToGrade } from "@shared/lib/report-card-core";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import type { StablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
@@ -30,6 +31,7 @@ export type PillarEvidenceAnchors = Record<
  * Restrained tinting: a bar leaves neutral only when the input is the problem,
  * so a long list stays calm and the eye lands on the weak rows.
  */
+// raw: neutral grey fill with a bespoke dark hex, no state token
 const ROW_TONE_FILL_CLASS: Record<BreakdownRow["tone"], string> = {
   neutral: "bg-neutral-500 dark:bg-[#858585]",
   warn: "bg-[var(--severity-moderate)]",
@@ -38,10 +40,11 @@ const ROW_TONE_FILL_CLASS: Record<BreakdownRow["tone"], string> = {
 
 const ROW_TONE_SCORE_CLASS: Record<BreakdownRow["tone"], string> = {
   neutral: "text-foreground",
-  warn: "text-amber-700 dark:text-amber-400",
-  critical: "text-rose-700 dark:text-rose-400",
+  warn: SAFETY_BREAKDOWN_ROW_TONE_TEXT_CLASSES.warn,
+  critical: SAFETY_BREAKDOWN_ROW_TONE_TEXT_CLASSES.critical,
 };
 
+// raw: neutral track with bespoke dark hexes, no state token
 const TRACK_CLASS =
   "overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]";
 /** Unavailable: an empty dashed outline (as in the pillar strips), never an empty solid track that reads as zero. */
@@ -311,7 +314,7 @@ function PillarInputFallback({
             className="flex min-w-0 items-center justify-between gap-2 border-b border-border/30 py-1.5 last:border-b-0"
           >
             <span className="flex min-w-0 items-center gap-2 text-foreground/85">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-[2px] bg-emerald-500" aria-hidden="true" />
+              <span className="h-1.5 w-1.5 shrink-0 rounded-[2px] bg-state-positive-solid" aria-hidden="true" />
               <span className="truncate">{component.label}</span>
             </span>
             <span className="pharos-label shrink-0">

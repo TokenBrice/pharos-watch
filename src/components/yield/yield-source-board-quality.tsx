@@ -14,6 +14,7 @@ import {
   type YieldSourcePosture,
 } from "@/lib/yield-source-risk";
 import type { YieldSourceBoardModel } from "@/lib/yield-source-board-model";
+import { QUALITY_TIER_3_CLASSES, YIELD_SOURCE_DEPTH_FILL_CLASSES, YIELD_SOURCE_QUALITY_FILL_CLASSES } from "@shared/lib/classification";
 
 export interface YieldSourceBoardFilters {
   depth?: string;
@@ -22,14 +23,12 @@ export interface YieldSourceBoardFilters {
 }
 
 const DEPTH_ORDER: readonly YieldSourceDepthLens[] = ["deep", "moderate", "thin", "unknown"];
-const DEPTH_BG: Record<YieldSourceDepthLens, string> = {
-  deep: "bg-emerald-500/40", moderate: "bg-sky-500/40", thin: "bg-amber-500/40", unknown: "bg-muted/40",
-};
-const CONFIDENCE_BG: Record<YieldSourceConfidenceTier, string> = {
-  deterministic: "bg-emerald-500/40", curated: "bg-sky-500/40", discovered: "bg-amber-500/40", fallback: "bg-slate-500/40",
-};
+const DEPTH_BG: Record<YieldSourceDepthLens, string> = YIELD_SOURCE_DEPTH_FILL_CLASSES;
+const CONFIDENCE_BG: Record<YieldSourceConfidenceTier, string> = YIELD_SOURCE_QUALITY_FILL_CLASSES;
 const POSTURE_BG: Record<YieldSourcePosture, string> = {
-  clean: "bg-emerald-500/40", watch: "bg-amber-500/40", speculative: "bg-red-500/40",
+  clean: QUALITY_TIER_3_CLASSES.good.bar40,
+  watch: QUALITY_TIER_3_CLASSES.watch.bar40,
+  speculative: QUALITY_TIER_3_CLASSES.bad.bar40,
 };
 
 type FilterTarget = { key: "depth" | "sourceConfidence" | "sourcePosture"; value: string };

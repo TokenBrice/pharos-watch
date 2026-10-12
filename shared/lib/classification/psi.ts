@@ -23,3 +23,11 @@ export const PSI_HEX_COLORS = projectDescriptors(PSI_BAND_DESCRIPTORS, (descript
 export const PSI_BAND_CLASSES = projectDescriptors(PSI_BAND_DESCRIPTORS, (descriptor) => descriptor.textClassName);
 /** Faster sweeps encode urgency; chart and text colors intentionally differ by medium. */
 export const PSI_SWEEP_DURATION = projectDescriptors(PSI_BAND_DESCRIPTORS, (descriptor) => descriptor.sweep);
+
+/** PSI beam-dimmer lane fills: support reads positive, stress lanes escalate by severity. */
+export const PSI_LANE_TONE_CLASSES = {
+  support: { bar: "bg-emerald-500" },
+  stressBreadth: { bar: "bg-amber-500" },
+  breadth: { bar: "bg-orange-500" },
+  pressure: { bar: "bg-red-500" },
+} as const satisfies Record<"support" | "stressBreadth" | "breadth" | "pressure", { bar: string }>;

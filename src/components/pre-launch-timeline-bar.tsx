@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useSyncExternalStore } from "react";
+import { PRE_LAUNCH_ACCENT_CLASSES } from "@shared/lib/classification";
 import { clampScore } from "@shared/lib/math";
+import { cn } from "@/lib/utils";
 import { formatFuzzyDate, parseFuzzyDate } from "@/lib/pre-launch";
 
 const subscribeToHydration = () => () => {};
@@ -60,7 +62,7 @@ export function PreLaunchTimelineBar({
         aria-valuemax={100}
         aria-label="Launch timeline progress"
       >
-        <div className="absolute inset-y-0 left-0 rounded-full bg-indigo-500/60" style={{ width: `${pct}%` }} />
+        <div className={cn("absolute inset-y-0 left-0 rounded-full", PRE_LAUNCH_ACCENT_CLASSES.progressFill)} style={{ width: `${pct}%` }} />
         {pct > 2 && pct < 98 && (
           <div
             className="absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-foreground"

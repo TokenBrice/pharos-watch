@@ -10,6 +10,7 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { BLACKLIST_SECTION_CONTENT } from "@/lib/methodology-content";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 export function BlacklistTrackerMethodologySection() {
   return (
           <MethodologySectionShell
@@ -18,7 +19,7 @@ export function BlacklistTrackerMethodologySection() {
             versionBadge={{ label: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL }}
             changelogPath={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH}
             versionNote="Version increments when classification ownership, tracked contracts, event parsing rules, cursor semantics, or amount-enrichment logic change."
-            changelogClassName="hover:text-rose-700 dark:hover:text-rose-400"
+            changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.blacklist.changelogHover}
           >
               <p>
                 The Blacklist Tracker monitors issuer intervention events across USDC, USDT, PAXG, XAUT, PYUSD, USD1,

@@ -1,6 +1,7 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { clampScore } from "@shared/lib/math";
+import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 
 interface YieldSourceRiskBarProps {
   score: number | null;
@@ -18,9 +19,9 @@ function getSegmentClass(index: number, score: number): string {
     return "bg-muted/40";
   }
   // First two segments are emerald/sky, middle is amber, top two are amber/red.
-  if (index <= 1) return "bg-emerald-500/40";
-  if (index === 2) return "bg-amber-500/40";
-  return "bg-red-500/40";
+  if (index <= 1) return QUALITY_TIER_3_CLASSES.good.bar40;
+  if (index === 2) return QUALITY_TIER_3_CLASSES.watch.bar40;
+  return QUALITY_TIER_3_CLASSES.bad.bar40;
 }
 
 export function YieldSourceRiskBar({

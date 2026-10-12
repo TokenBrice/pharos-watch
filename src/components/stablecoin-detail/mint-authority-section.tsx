@@ -31,6 +31,7 @@ import {
 } from "@/lib/mint-issuance-diagnostics";
 import type { ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import { cn } from "@/lib/utils";
+import { MINT_AUTHORITY_SCORE_DESCRIPTORS, SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
 import { MINT_AUTHORITY_POSTURE_DOT_CLASS } from "@/components/stablecoin-detail/mint-authority-presentation";
 
 /** The five published V9 posture bands — ordinal, not score ranges: 9.1
@@ -38,11 +39,11 @@ import { MINT_AUTHORITY_POSTURE_DOT_CLASS } from "@/components/stablecoin-detail
  *  than positioning a marker on a fictional scale. Rendered worst → best so
  *  "right = safer" reads the same as the redemption score track. */
 const MINT_BAND_SPECTRUM: readonly SpectrumBand[] = [
-  { key: "exposed", label: "Exposed", fillClass: "bg-red-500/70", textClass: "text-red-700 dark:text-red-400" },
-  { key: "concentrated", label: "Concentrated", fillClass: "bg-orange-500/70", textClass: "text-orange-700 dark:text-orange-400" },
-  { key: "managed", label: "Managed", fillClass: "bg-amber-500/70", textClass: "text-amber-700 dark:text-amber-400" },
-  { key: "governed", label: "Governed", fillClass: "bg-blue-500/70", textClass: "text-blue-700 dark:text-blue-400" },
-  { key: "hardened", label: "Hardened", fillClass: "bg-emerald-500/70", textClass: "text-emerald-700 dark:text-emerald-400" },
+  { key: "exposed", label: "Exposed", fillClass: SCORE_TIER_5_CLASSES.t0.fill, textClass: MINT_AUTHORITY_SCORE_DESCRIPTORS.exposed.textClassName },
+  { key: "concentrated", label: "Concentrated", fillClass: SCORE_TIER_5_CLASSES.t35.fill, textClass: MINT_AUTHORITY_SCORE_DESCRIPTORS.concentrated.textClassName },
+  { key: "managed", label: "Managed", fillClass: SCORE_TIER_5_CLASSES.t50.fill, textClass: MINT_AUTHORITY_SCORE_DESCRIPTORS.managed.textClassName },
+  { key: "governed", label: "Governed", fillClass: SCORE_TIER_5_CLASSES.t65.fill, textClass: MINT_AUTHORITY_SCORE_DESCRIPTORS.governed.textClassName },
+  { key: "hardened", label: "Hardened", fillClass: SCORE_TIER_5_CLASSES.t80.fill, textClass: MINT_AUTHORITY_SCORE_DESCRIPTORS.hardened.textClassName },
 ];
 
 /**

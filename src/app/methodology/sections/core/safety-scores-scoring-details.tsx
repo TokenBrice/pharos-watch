@@ -1,5 +1,7 @@
+import { cn } from "@/lib/utils";
 import { ContentTable } from "@/components/table";
 import { MethodologyDiagramFlow } from "../../methodology-shared";
+import { METHODOLOGY_TABLE_ACCENT_CLASSES } from "@shared/lib/classification";
 
 export function SafetyScoresScoringDetails() {
   return (
@@ -26,7 +28,7 @@ export function SafetyScoresScoringDetails() {
           {
             title: <>&times; No-Liquidity Penalty</>,
             subtitle: <>0.9&times; if no DEX or redemption signal</>,
-            className: "md:w-64 border-amber-500/40",
+            className: cn("md:w-64", METHODOLOGY_TABLE_ACCENT_CLASSES.safetyScoring),
           },
           { title: "Final grade", subtitle: "A+ through F", className: "md:w-64" },
         ]}

@@ -9,6 +9,7 @@ import type {
   DdrV2ResponseRow,
 } from "@shared/types/depeg-resolver";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
+import { DDR_VERDICT_CLASSES } from "@shared/lib/classification";
 
 type DdrRelatedContext = DdrV2PredictionRow["frozen"]["relatedContext"];
 
@@ -43,20 +44,20 @@ export const TIER_META: Record<DdrResolutionTier, { label: string; blurb: string
   recovery_likely: {
     label: "Recovery likely",
     blurb: "Structure and live signals favor a return to peg.",
-    band: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-    accent: "text-emerald-700 dark:text-emerald-400",
+    band: DDR_VERDICT_CLASSES.recovery_likely.band,
+    accent: DDR_VERDICT_CLASSES.recovery_likely.accent,
   },
   at_risk: {
     label: "At risk",
     blurb: "Recovery is plausible but not assured — the kill signals are live.",
-    band: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-    accent: "text-amber-700 dark:text-amber-400",
+    band: DDR_VERDICT_CLASSES.at_risk.band,
+    accent: DDR_VERDICT_CLASSES.at_risk.accent,
   },
   recovery_unlikely: {
     label: "Recovery unlikely",
     blurb: "Comparable structural failures did not return to peg.",
-    band: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-    accent: "text-red-700 dark:text-red-400",
+    band: DDR_VERDICT_CLASSES.recovery_unlikely.band,
+    accent: DDR_VERDICT_CLASSES.recovery_unlikely.accent,
   },
   insufficient_signal: {
     label: "Insufficient signal",
@@ -93,9 +94,9 @@ export function formatDdrDirection(row: Pick<DdrV2ResponseRow, "direction" | "pe
 }
 
 export const NOW_DOT_TONE: Record<DdrResolutionTier, string> = {
-  recovery_likely: "bg-emerald-500",
-  at_risk: "bg-amber-500",
-  recovery_unlikely: "bg-red-500",
+  recovery_likely: DDR_VERDICT_CLASSES.recovery_likely.dot,
+  at_risk: DDR_VERDICT_CLASSES.at_risk.dot,
+  recovery_unlikely: DDR_VERDICT_CLASSES.recovery_unlikely.dot,
   insufficient_signal: "bg-muted-foreground/60",
 };
 

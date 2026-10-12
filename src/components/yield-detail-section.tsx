@@ -30,6 +30,11 @@ import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
 } from "@/lib/yield-source-risk";
+import {
+  DIRECTION_CHIP_CLASSES,
+  DIRECTION_TONE_CLASSES,
+  YIELD_ATTRIBUTION_TONE_CLASSES,
+} from "@shared/lib/classification";
 import { formatPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
@@ -269,8 +274,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
                   excessWithinDisplayPrecision
                     ? "bg-muted text-muted-foreground"
                     : excessYield >= 0
-                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                      : "bg-red-500/10 text-red-700 dark:text-red-400",
+                      ? DIRECTION_CHIP_CLASSES.up
+                      : DIRECTION_CHIP_CLASSES.down,
                 )}
               >
                 {formatYieldBenchmarkSpreadChip(excessYield)}
@@ -422,24 +427,8 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   );
 }
 
-const ATTRIBUTION_TONE: Record<YieldChangeAttributionResult["attribution"], { wrapper: string; kicker: string }> = {
-  organic: {
-    wrapper: "border-emerald-500/25 bg-emerald-500/5",
-    kicker: "text-emerald-700 dark:text-emerald-400",
-  },
-  "source-switch": {
-    wrapper: "border-sky-500/25 bg-sky-500/5",
-    kicker: "text-sky-700 dark:text-sky-300",
-  },
-  mixed: {
-    wrapper: "border-amber-500/25 bg-amber-500/5",
-    kicker: "text-amber-700 dark:text-amber-300",
-  },
-  "insufficient-data": {
-    wrapper: "border-border/60 bg-muted/20",
-    kicker: "text-muted-foreground",
-  },
-};
+const ATTRIBUTION_TONE: Record<YieldChangeAttributionResult["attribution"], { wrapper: string; kicker: string }> =
+  YIELD_ATTRIBUTION_TONE_CLASSES;
 
 export function YieldChangeAttributionCard({ attribution }: { attribution: YieldChangeAttributionResult }) {
   const tone = ATTRIBUTION_TONE[attribution.attribution];
@@ -554,9 +543,9 @@ export function YieldRankMovementCard({ attribution }: { attribution: YieldRankC
   const arrow = rankDelta == null ? "■" : rankDelta > 0 ? "▲" : rankDelta < 0 ? "▼" : "■";
   const rankColor =
     rankDelta != null && rankDelta > 0
-      ? "text-emerald-700 dark:text-emerald-400"
+      ? DIRECTION_TONE_CLASSES.up
       : rankDelta != null && rankDelta < 0
-        ? "text-red-700 dark:text-red-400"
+        ? DIRECTION_TONE_CLASSES.down
         : "text-muted-foreground";
 
   const driverLabel = primaryDriver != null ? (YIELD_RANK_CHANGE_DRIVER_LABELS[primaryDriver]?.short ?? null) : null;

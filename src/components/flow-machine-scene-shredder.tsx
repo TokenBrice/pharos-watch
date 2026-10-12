@@ -20,6 +20,7 @@ export function FlowMachineShredder({
     return buildShredderMachineModel(size, reducedMotion ? 0 : intensity);
   }, [intensity, reducedMotion, size]);
 
+  // raw: machine illustration paints fixed metal/paper colours, not a classification scale
   return (
     <div className={model.dims.areaClass}>
       {model.bills.map((bill) => (

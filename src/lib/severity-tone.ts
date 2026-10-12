@@ -1,10 +1,16 @@
+import { SEVERITY_NAMED_TONE_CLASSES } from "@shared/lib/classification";
+
 /**
  * Shared severity tone tokens (WS8.4).
  *
- * Deliberately NOT in `shared/lib/classification.ts` — that module owns
- * classification labels/colors (backing, governance, peg…). This module owns
- * the orthogonal "how bad is this signal" ramp that ~100 component files were
- * spelling by hand, with 18 emerald and 21 amber variants in circulation.
+ * This module owns the orthogonal "how bad is this signal" UI-state ramp that
+ * ~100 component files were spelling by hand, with 18 emerald and 21 amber
+ * variants in circulation. The `ok`/`watch`/`alert`/`sky` rows are backed by
+ * state tokens. The two named-palette rows (`info` blue, `rose`) are
+ * classification colours (score tiers, the detail rail's "structurally short"
+ * slot), so their values live in `SEVERITY_NAMED_TONE_CLASSES` in
+ * `shared/lib/classification.ts` and are re-exposed here unchanged; edit them
+ * there, never here.
  *
  * Every value is a complete static Tailwind string (hard rule: no dynamic
  * class construction), and every value is the **majority spelling** measured
@@ -84,22 +90,12 @@ export const SEVERITY_TONE_CLASS: Record<SeverityTone, SeverityToneClasses> = {
     text: "text-muted-foreground",
     bar: "bg-muted-foreground/40",
   },
-  info: {
-    pill: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
-    banner: "border-blue-500/30 bg-blue-500/10",
-    text: "text-blue-700 dark:text-blue-400",
-    bar: "bg-blue-500",
-  },
+  info: SEVERITY_NAMED_TONE_CLASSES.info,
   sky: {
     pill: "border-state-info-solid/25 bg-state-info-subtle text-state-info-bright",
     banner: "border-state-info-solid/25 bg-state-info-subtle",
     text: "text-state-info-bright",
     bar: "bg-state-info-solid",
   },
-  rose: {
-    pill: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
-    banner: "border-rose-500/30 bg-rose-500/10",
-    text: "text-rose-700 dark:text-rose-400",
-    bar: "bg-rose-500",
-  },
+  rose: SEVERITY_NAMED_TONE_CLASSES.rose,
 };

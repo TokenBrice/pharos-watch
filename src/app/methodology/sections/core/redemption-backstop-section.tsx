@@ -9,6 +9,7 @@ import {
   MethodologySectionShell,
 } from "../../methodology-shared";
 import { REDEMPTION_BACKSTOP_SECTION_CONTENT } from "@/lib/methodology-content";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES } from "@shared/lib/classification";
 
 export function RedemptionBackstopMethodologySection() {
   const weights = EXIT_ROUTE_SCORING_TABLES.componentWeights;
@@ -21,7 +22,7 @@ export function RedemptionBackstopMethodologySection() {
       versionBadge={{ label: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL }}
       changelogPath={REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH}
       versionNote="The standalone route score and V10 Exit share scoring primitives but ask different capacity requests."
-      changelogClassName="hover:text-emerald-700 dark:hover:text-emerald-400"
+      changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.redemptionBackstop.changelogHover}
     >
       <p>
         The Redemption Backstop score rates one issuer or protocol redemption route from 0 to 100. It is a standalone

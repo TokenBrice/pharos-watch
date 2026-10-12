@@ -1,6 +1,6 @@
 "use client";
 
-import { REPORT_CARD_GRADE_RANGE_METADATA, getPysBarColor } from "@shared/lib/classification";
+import { QUALITY_TIER_3_CLASSES, REPORT_CARD_GRADE_RANGE_METADATA, getPysBarColor } from "@shared/lib/classification";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 
 import Link from "next/link";
@@ -85,12 +85,12 @@ function ApyBenchmarkBar({ apy30d, benchmarkRate }: { apy30d: number; benchmarkR
   const excess = benchmarkRate != null ? apy30d - benchmarkRate : null;
   const tone =
     excess == null
-      ? "bg-emerald-500"
+      ? QUALITY_TIER_3_CLASSES.good.bar
       : excess >= 0.5
-        ? "bg-emerald-500"
+        ? QUALITY_TIER_3_CLASSES.good.bar
         : excess >= -0.5
-          ? "bg-amber-500"
-          : "bg-red-500";
+          ? QUALITY_TIER_3_CLASSES.watch.bar
+          : QUALITY_TIER_3_CLASSES.bad.bar;
   return (
     <div
       role="img"

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMediaQuery } from "@/hooks/use-is-mobile";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
+import { DEPEG_LIVE_PING_CLASS } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +135,7 @@ export function DepegFeed({
                     {isOngoing && (
                       <span className="flex items-center gap-1 text-xs text-state-danger font-medium">
                         <span className="relative flex h-2 w-2">
-                          <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                          <span className={`motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full ${DEPEG_LIVE_PING_CLASS} opacity-75`} />
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-state-danger-solid" />
                         </span>
                         LIVE

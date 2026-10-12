@@ -1,4 +1,9 @@
-import { DEPEG_TRACKER_UNKNOWN_STATUS } from "@shared/lib/classification";
+import {
+  DEPEG_ROW_STATUS_CLASSES,
+  DEPEG_TRACKER_UNKNOWN_STATUS,
+  QUALITY_TIER_3_CLASSES,
+  THREAT_BAND_ACCENT_CLASSES,
+} from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 
 // ---------------------------------------------------------------------------
@@ -17,25 +22,25 @@ export function statusLabel(row: DepegTrackerRow): string {
 }
 
 export function statusClassName(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
-  if (row.pendingIncident) return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
-  if (row.coin.depegEventCoverageLimited) return "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300";
+  if (row.coin.activeDepeg) return DEPEG_ROW_STATUS_CLASSES.active.pill;
+  if (row.pendingIncident) return DEPEG_ROW_STATUS_CLASSES.pending.pill;
+  if (row.coin.depegEventCoverageLimited) return DEPEG_ROW_STATUS_CLASSES.coverageLimited.pill;
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") {
-    return "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300";
+    return DEPEG_ROW_STATUS_CLASSES.watch.pill;
   }
   if (!Number.isFinite(row.coin.currentDeviationBps) || !Number.isFinite(row.dews?.score)) {
     return DEPEG_TRACKER_UNKNOWN_STATUS.cls;
   }
-  return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  return DEPEG_ROW_STATUS_CLASSES.clear.pill;
 }
 
 export function rowToneClassName(row: DepegTrackerRow): string {
   // Active depegs fill the top of the Attention sort, so a tint there marks every row;
   // the LIVE status chip and deviation bar already carry that signal.
   if (row.coin.activeDepeg) return "";
-  if (row.pendingIncident) return "bg-amber-500/[0.06]";
-  if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return "bg-orange-500/[0.05]";
-  if (row.coin.depegEventCoverageLimited) return "bg-sky-500/[0.04]";
+  if (row.pendingIncident) return DEPEG_ROW_STATUS_CLASSES.pending.rowTint;
+  if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return THREAT_BAND_ACCENT_CLASSES[row.dews.band].rowTint;
+  if (row.coin.depegEventCoverageLimited) return DEPEG_ROW_STATUS_CLASSES.coverageLimited.rowTint;
   return "";
 }
 
@@ -49,11 +54,11 @@ export function getDeviationBarWidthPercent(abs: number): number {
 export function metricTone(value: number | null | undefined, goodHigh = true): string {
   if (value == null) return "bg-muted-foreground";
   if (goodHigh) {
-    if (value >= 80) return "bg-emerald-500";
-    if (value >= 55) return "bg-amber-500";
-    return "bg-red-500";
+    if (value >= 80) return QUALITY_TIER_3_CLASSES.good.bar;
+    if (value >= 55) return QUALITY_TIER_3_CLASSES.watch.bar;
+    return QUALITY_TIER_3_CLASSES.bad.bar;
   }
-  if (value >= 75) return "bg-red-500";
-  if (value >= 36) return "bg-amber-500";
-  return "bg-emerald-500";
+  if (value >= 75) return QUALITY_TIER_3_CLASSES.bad.bar;
+  if (value >= 36) return QUALITY_TIER_3_CLASSES.watch.bar;
+  return QUALITY_TIER_3_CLASSES.good.bar;
 }

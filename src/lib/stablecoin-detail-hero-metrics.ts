@@ -7,12 +7,20 @@ import type {
 } from "@shared/types";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatSignedPercent } from "@shared/lib/format";
-import { THREAT_BAND_LABELS, THREAT_BAND_STYLES, isThreatBand, type ThreatBand } from "@shared/lib/classification";
+import {
+  DIRECTION_TONE_CLASSES,
+  QUALITY_TIER_3_CLASSES,
+  THREAT_BAND_ACCENT_CLASSES,
+  THREAT_BAND_LABELS,
+  THREAT_BAND_STYLES,
+  isThreatBand,
+  type ThreatBand,
+} from "@shared/lib/classification";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { getYieldBenchmarkGapReferenceText, getYieldBenchmarkGapUnavailableText } from "@/lib/yield-benchmark";
 
-export const HERO_POSITIVE_TREND_CLASS = "text-green-700 dark:text-green-400";
-export const HERO_NEGATIVE_TREND_CLASS = "text-red-700 dark:text-red-400";
+export const HERO_POSITIVE_TREND_CLASS = DIRECTION_TONE_CLASSES.up;
+export const HERO_NEGATIVE_TREND_CLASS = DIRECTION_TONE_CLASSES.down;
 export const HERO_MUTED_CLASS = "text-muted-foreground";
 
 export interface HeroDisplayValue {
@@ -136,23 +144,24 @@ export function buildDewsDisplay(stressSignal: StressSignalEntry | null): HeroDe
 export function buildPegScoreAccent(pegScoreResult: PegSummaryCoin | null): string | undefined {
   const score = pegScoreResult?.pegScore;
   if (score == null) return undefined;
-  if (score < 50) return "border-l-2 border-l-red-500";
-  if (score < 70) return "border-l-2 border-l-amber-500";
+  if (score < 50) return QUALITY_TIER_3_CLASSES.bad.borderL;
+  if (score < 70) return QUALITY_TIER_3_CLASSES.watch.borderL;
   return undefined;
 }
 
 export function buildLiquidityAccent(liquidityData: DexLiquidityData | undefined): string | undefined {
   const score = liquidityData?.liquidityScore;
   if (score == null) return undefined;
-  if (score < 30) return "border-l-2 border-l-red-500";
-  if (score < 50) return "border-l-2 border-l-amber-500";
+  if (score < 30) return QUALITY_TIER_3_CLASSES.bad.borderL;
+  if (score < 50) return QUALITY_TIER_3_CLASSES.watch.borderL;
   return undefined;
 }
 
 export function buildDewsAccent(stressSignal: StressSignalEntry | null): string | undefined {
   if (!stressSignal || !isThreatBand(stressSignal.band)) return undefined;
-  if (stressSignal.band === "DANGER") return "border-l-2 border-l-red-500";
-  if (stressSignal.band === "WARNING") return "border-l-2 border-l-orange-500";
+  if (stressSignal.band === "DANGER" || stressSignal.band === "WARNING") {
+    return THREAT_BAND_ACCENT_CLASSES[stressSignal.band].borderL;
+  }
   return undefined;
 }
 

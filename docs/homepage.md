@@ -63,7 +63,7 @@ and crawlable when JavaScript is unavailable while the live table remains the hy
 Derived helpers:
 
 - `buildHomepageCriticalViewModel(...)` and `buildHomepageOptionalViewModel(...)` in `src/components/homepage-client-view-model.ts` (the critical builder derives `pegScores` and `filteredRowCount`; the optional builder derives `reportCardMap`)
-- `bucketByDeviationBps(...)` mini-card aggregate helper in `src/lib/home-alt-aggregates.ts`
+ (buckets by the shared peg-deviation levels: healthy under 50 bps, mild 50–200, moderate 200–500, severe 500 and above, from `PEG_DEVIATION_LEVEL_MIN_BPS`; the Peg Health card legend uses `PEG_DEVIATION_LEVEL_LABELS`)
 - `useHomeAltFilters()` for URL-backed peg cohort filtering
 
 Live homepage modules resolve query state through the shared `loading`, `ready`, `empty`, `unavailable`, and `stale-with-data` contract. A failed source without retained data renders an explicit unavailable state and retry action rather than a healthy or empty message. Retained data stays visible with its age and a stale notice, while a successful zero-row response can use the module's normal empty copy. The rankings workbench identifies failed source families instead of replacing them with the generic empty table.

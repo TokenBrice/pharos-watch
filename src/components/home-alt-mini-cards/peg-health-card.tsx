@@ -6,21 +6,34 @@ import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { usePegSummary } from "@/hooks/api-hooks";
 import { bucketByDeviationBps } from "@/lib/home-alt-aggregates";
 import { resolveQueryViewState } from "@/lib/query-view-state";
+import {
+  PEG_DEVIATION_LEVEL_LABELS,
+  PEG_DEVIATION_LEVEL_MIN_BPS,
+  PEG_DEVIATION_TONE_CLASSES,
+  type PegDeviationLevel,
+} from "@shared/lib/classification";
 
-// Segment colors follow the shared severity ramp (see deviationBgClass in
-// src/lib/severity-colors.ts): healthy green → mild amber → moderate orange → severe red.
-const SEGMENTS = [
-  { key: "tight", label: "≤25 bps", legend: "Good", colorClass: "bg-green-500" },
-  { key: "loose", label: "25–100 bps", legend: "Alert", colorClass: "bg-amber-500" },
-  { key: "stressed", label: "100–250 bps", legend: "Warning", colorClass: "bg-orange-500" },
-  { key: "severe", label: ">250 bps", legend: "Danger", colorClass: "bg-red-500" },
-] as const;
+// Buckets, fills and legend all come from the shared peg-deviation levels
+// (healthy green → mild amber → moderate orange → severe red).
+const { mild, moderate, severe } = PEG_DEVIATION_LEVEL_MIN_BPS;
+const SEGMENT_RANGES: ReadonlyArray<readonly [PegDeviationLevel, string]> = [
+  ["healthy", `<${mild} bps`],
+  ["mild", `${mild}–${moderate} bps`],
+  ["moderate", `${moderate}–${severe} bps`],
+  ["severe", `≥${severe} bps`],
+];
+const SEGMENTS = SEGMENT_RANGES.map(([key, label]) => ({
+  key,
+  label,
+  legend: PEG_DEVIATION_LEVEL_LABELS[key],
+  colorClass: PEG_DEVIATION_TONE_CLASSES[key].bar,
+}));
 
 export function PegHealthCard(): React.JSX.Element {
   const query = usePegSummary();
   const { data, isLoading } = query;
   const buckets = useMemo(() => bucketByDeviationBps(data?.coins ?? []), [data?.coins]);
-  const total = buckets.tight + buckets.loose + buckets.stressed + buckets.severe;
+  const total = buckets.healthy + buckets.mild + buckets.moderate + buckets.severe;
   const summary = data?.summary;
   const state = resolveQueryViewState({
     hasData: summary !== undefined,

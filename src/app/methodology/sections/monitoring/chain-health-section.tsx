@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import {
   CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH,
   CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL,
@@ -12,6 +13,7 @@ import {
   WorkedExample,
 } from "../../methodology-shared";
 import { CHAIN_HEALTH_SECTION_CONTENT } from "@/lib/methodology-content";
+import { METHODOLOGY_SECTION_ACCENT_CLASSES, CHAIN_HEALTH_TEXT_CLASSES } from "@shared/lib/classification";
 
 const PEG_COVERAGE_COMPOSITE_MIN_PCT = Math.round(PEG_COVERAGE_COMPOSITE_MIN * 100);
 /** Most the composite can move if the unobserved share (at most 1 − minimum coverage) were fully off peg. */
@@ -25,7 +27,7 @@ export function ChainHealthMethodologySection() {
       versionBadge={{ label: CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL }}
       changelogPath={CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH}
       versionNote="Version increments when factor weights, tier assignments, or sub-factor formulas change."
-      changelogClassName="hover:text-teal-700 dark:hover:text-teal-400"
+      changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.chainHealth.changelogHover}
     >
       <p>
         The Chain Health Score is a 0&ndash;100 composite that rates each blockchain&rsquo;s stablecoin ecosystem across
@@ -276,7 +278,7 @@ export function ChainHealthMethodologySection() {
           </TableHeader>
           <TableBody className="text-foreground">
             <TableRow>
-              <TableCell className="whitespace-normal px-4 py-2 font-medium text-emerald-600 dark:text-emerald-400">
+              <TableCell className={cn("whitespace-normal px-4 py-2 font-medium", CHAIN_HEALTH_TEXT_CLASSES.robust)}>
                 Robust
               </TableCell>
               <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">80&ndash;100</TableCell>
@@ -285,14 +287,14 @@ export function ChainHealthMethodologySection() {
               </TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="whitespace-normal px-4 py-2 font-medium text-sky-600 dark:text-sky-400">
+              <TableCell className={cn("whitespace-normal px-4 py-2 font-medium", CHAIN_HEALTH_TEXT_CLASSES.healthy)}>
                 Healthy
               </TableCell>
               <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">60&ndash;79</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">Good ecosystem with room for improvement</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="whitespace-normal px-4 py-2 font-medium text-amber-600 dark:text-amber-400">
+              <TableCell className={cn("whitespace-normal px-4 py-2 font-medium", CHAIN_HEALTH_TEXT_CLASSES.mixed)}>
                 Mixed
               </TableCell>
               <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">40&ndash;59</TableCell>
@@ -301,14 +303,14 @@ export function ChainHealthMethodologySection() {
               </TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="whitespace-normal px-4 py-2 font-medium text-orange-600 dark:text-orange-400">
+              <TableCell className={cn("whitespace-normal px-4 py-2 font-medium", CHAIN_HEALTH_TEXT_CLASSES.fragile)}>
                 Fragile
               </TableCell>
               <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">20&ndash;39</TableCell>
               <TableCell className="whitespace-normal px-4 py-2">Significant ecosystem weaknesses</TableCell>
             </TableRow>
             <TableRow>
-              <TableCell className="whitespace-normal px-4 py-2 font-medium text-red-600 dark:text-red-400">
+              <TableCell className={cn("whitespace-normal px-4 py-2 font-medium", CHAIN_HEALTH_TEXT_CLASSES.concentrated)}>
                 Concentrated
               </TableCell>
               <TableCell className="whitespace-normal px-4 py-2 pharos-numeric">0&ndash;19</TableCell>

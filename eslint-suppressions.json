@@ -14,116 +14,6 @@
       "count": 2
     }
   },
-  "src/app/api/api-reference-panel.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 16
-    }
-  },
-  "src/app/learn/case-studies/page.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 6
-    }
-  },
-  "src/app/methodology/sections/core-sections-pricing.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 12
-    }
-  },
-  "src/app/methodology/sections/core/liquidity-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/methodology/sections/core/mint-burn-flow-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/methodology/sections/core/redemption-backstop-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/methodology/sections/core/safety-scores-scoring-details.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 1
-    }
-  },
-  "src/app/methodology/sections/core/safety-scores-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/methodology/sections/core/stability-index-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 3
-    }
-  },
-  "src/app/methodology/sections/monitoring/blacklist-tracker-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/methodology/sections/monitoring/chain-health-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 12
-    }
-  },
-  "src/app/methodology/sections/monitoring/depeg-resolver-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/methodology/sections/monitoring/pegscore-dews-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/methodology/sections/monitoring/yield-intelligence-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/pharoswatchbot/app/components/CoinInsightPanel.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/pharoswatchbot/app/components/ForgottenView.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/app/pharoswatchbot/app/components/MiniAppSessionStatus.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 16
-    }
-  },
-  "src/app/pharoswatchbot/app/components/MiniButton.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 3
-    }
-  },
-  "src/app/pharoswatchbot/app/components/PreviewState.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/app/pharoswatchbot/app/components/SettingsPanel.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 12
-    }
-  },
-  "src/app/pharoswatchbot/app/components/StatusPanel.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 12
-    }
-  },
-  "src/app/pharoswatchbot/instrument-panel.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 10
-    }
-  },
   "src/app/safety-scores/presentational.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
@@ -131,12 +21,12 @@
   },
   "src/app/stability-index/presentational.tsx": {
     "pharos/no-raw-palette-colour": {
-      "count": 16
+      "count": 8
     }
   },
   "src/app/stability-index/psi-beam-dimmers.tsx": {
     "pharos/no-raw-palette-colour": {
-      "count": 6
+      "count": 2
     }
   },
   "src/app/status/client.tsx": {
@@ -144,24 +34,9 @@
       "count": 2
     }
   },
-  "src/components/api-reference-sidebar.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 8
-    }
-  },
   "src/components/blacklist-stats.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 1
-    }
-  },
-  "src/components/bluechip-header-badge.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 8
-    }
-  },
-  "src/components/chain-type-badge.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 8
     }
   },
   "src/components/command-palette-root.tsx": {
@@ -174,69 +49,14 @@
       "count": 2
     }
   },
-  "src/components/depeg-board-model.ts": {
-    "pharos/no-raw-palette-colour": {
-      "count": 29
-    }
-  },
   "src/components/depeg-board-primitives.tsx": {
     "pharos/no-raw-palette-colour": {
-      "count": 7
-    }
-  },
-  "src/components/depeg-feed.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 1
-    }
-  },
-  "src/components/depeg-history.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 18
+      "count": 2
     }
   },
   "src/components/depeg-resolver-module.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
-    }
-  },
-  "src/components/depeg-resolver-reviewer-module.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 13
-    }
-  },
-  "src/components/depeg-resolver-row-card-model.ts": {
-    "pharos/no-raw-palette-colour": {
-      "count": 21
-    }
-  },
-  "src/components/depeg-resolver-row-card-parts.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 10
-    }
-  },
-  "src/components/depeg-resolver-row-card-state.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/components/depeg-resolver-row-card-timeline.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 11
-    }
-  },
-  "src/components/dex-liquidity-card-model.ts": {
-    "pharos/no-raw-palette-colour": {
-      "count": 12
-    }
-  },
-  "src/components/dex-liquidity-card-parts.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 3
-    }
-  },
-  "src/components/dex-liquidity-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 12
     }
   },
   "src/components/exploit-notice-banner.tsx": {
@@ -249,87 +69,12 @@
       "count": 2
     }
   },
-  "src/components/flow-event-feed.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 24
-    }
-  },
-  "src/components/flow-machine-scene-printer.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 20
-    }
-  },
-  "src/components/flow-machine-scene-shredder.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 16
-    }
-  },
-  "src/components/flow-receipt-band.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 8
-    }
-  },
-  "src/components/flow-table-logic.ts": {
-    "pharos/no-raw-palette-colour": {
-      "count": 16
-    }
-  },
-  "src/components/home-alt-ddr-overview.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 3
-    }
-  },
-  "src/components/home-alt-mini-cards/active-depegs-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 6
-    }
-  },
-  "src/components/home-alt-mini-cards/daily-digest-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/components/home-alt-mini-cards/mint-burn-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/components/home-alt-mini-cards/peg-health-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/components/home-alt-mini-cards/psi-band-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/components/home-alt-mini-cards/supply-moves-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
   "src/components/horizon-constellation.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 1
     }
   },
   "src/components/methodology-hint.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 1
-    }
-  },
-  "src/components/minting-pressure-gauge.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/components/pre-launch-detail.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 8
-    }
-  },
-  "src/components/pre-launch-timeline-bar.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 1
     }
@@ -349,22 +94,12 @@
       "count": 2
     }
   },
-  "src/components/safety-scores/data-coverage-module.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 3
-    }
-  },
   "src/components/selector/selector-question-card.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 5
     }
   },
   "src/components/selector/selector-result-summary.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/components/stablecoin-detail/custody-card.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
     }
@@ -379,11 +114,6 @@
       "count": 2
     }
   },
-  "src/components/stablecoin-detail/hero-card-metrics.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
   "src/components/stablecoin-detail/listing-state-banner.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
@@ -391,7 +121,7 @@
   },
   "src/components/stablecoin-detail/mint-authority-section.tsx": {
     "pharos/no-raw-palette-colour": {
-      "count": 19
+      "count": 4
     }
   },
   "src/components/stablecoin-detail/ops-status-chip.tsx": {
@@ -404,21 +134,6 @@
       "count": 2
     }
   },
-  "src/components/stablecoin-detail/price-transparency-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 17
-    }
-  },
-  "src/components/stablecoin-detail/redemption-backstop-card-view-model.ts": {
-    "pharos/no-raw-palette-colour": {
-      "count": 30
-    }
-  },
-  "src/components/stablecoin-detail/redemption-backstop-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 15
-    }
-  },
   "src/components/stablecoin-detail/redemption-route-rail.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 3
@@ -429,17 +144,7 @@
       "count": 2
     }
   },
-  "src/components/stablecoin-detail/safety-score-history-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
   "src/components/stablecoin-detail/safety-score-v9-breakdown.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 9
-    }
-  },
-  "src/components/stablecoin-detail/threshold-gauge.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4
     }
@@ -451,7 +156,7 @@
   },
   "src/components/stablecoin-table-row-cells.tsx": {
     "pharos/no-raw-palette-colour": {
-      "count": 18
+      "count": 4
     }
   },
   "src/components/status/admin-mutation-feedback.tsx": {
@@ -462,16 +167,6 @@
   "src/components/status/coingecko-price-diff.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4
-    }
-  },
-  "src/components/status/reliability-endpoints-panel.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/components/status/request-source-attribution-card.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
     }
   },
   "src/components/status/reserve-sync-health.tsx": {
@@ -494,37 +189,12 @@
       "count": 5
     }
   },
-  "src/components/venue-risk-breakdown.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 9
-    }
-  },
   "src/components/yield-compare-drawer.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
     }
   },
-  "src/components/yield-detail-section-alt-sources.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/components/yield-detail-section.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 22
-    }
-  },
-  "src/components/yield-history-chart-model.ts": {
-    "pharos/no-raw-palette-colour": {
-      "count": 5
-    }
-  },
   "src/components/yield-history-chart-ui.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/components/yield-instrument-board.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4
     }
@@ -539,21 +209,6 @@
       "count": 2
     }
   },
-  "src/components/yield-risk-budget-slider.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 20
-    }
-  },
-  "src/components/yield-scatter-plot.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 3
-    }
-  },
-  "src/components/yield-source-risk-bar.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 3
-    }
-  },
   "src/components/yield-source-sheet.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4
@@ -562,11 +217,6 @@
   "src/components/yield/yield-data-health.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
-    }
-  },
-  "src/components/yield/yield-source-board-quality.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 10
     }
   }
 }

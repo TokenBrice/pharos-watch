@@ -26,6 +26,7 @@ import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { computePegStability } from "@/lib/peg-stability";
 import { cn } from "@/lib/utils";
+import { DEPEG_DIRECTION_CLASSES, DEPEG_LIVE_PING_CLASS } from "@shared/lib/classification";
 import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
@@ -206,7 +207,7 @@ export function DepegHistory({
             {metrics.depeggedNow ? (
               <span className="inline-flex items-center gap-1.5 font-semibold text-state-danger">
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                  <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-75", DEPEG_LIVE_PING_CLASS)} />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-state-danger-solid" />
                 </span>
                 Depegged now
@@ -326,11 +327,7 @@ function DepegEventCard({ event, pegCurrency }: { event: DepegEvent; pegCurrency
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Badge
               variant="outline"
-              className={
-                event.direction === "below"
-                  ? "border-red-500/20 bg-red-500/10 text-xs text-red-700 dark:text-red-400"
-                  : "border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400"
-              }
+              className={cn("text-xs", DEPEG_DIRECTION_CLASSES[event.direction].pill)}
             >
               {event.direction === "below" ? "Below" : "Above"}
             </Badge>
@@ -389,11 +386,7 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
       <TableCell>
         <Badge
           variant="outline"
-          className={
-            event.direction === "below"
-              ? "border-red-500/20 bg-red-500/10 text-xs text-red-700 dark:text-red-400"
-              : "border-amber-500/20 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-400"
-          }
+          className={cn("text-xs", DEPEG_DIRECTION_CLASSES[event.direction].pill)}
         >
           {event.direction === "below" ? "Below" : "Above"}
         </Badge>
@@ -417,7 +410,7 @@ function DepegRow({ event, pegCurrency }: { event: DepegEvent; pegCurrency: stri
         {isOngoing ? (
           <span className="inline-flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+              <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-75", DEPEG_LIVE_PING_CLASS)} />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-state-danger-solid" />
             </span>
             Ongoing

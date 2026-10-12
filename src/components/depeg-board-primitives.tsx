@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { getPegDeviationLevel, PEG_DEVIATION_TONE_CLASSES, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 import { clampScore } from "@shared/lib/math";
 import { getDeviationBarWidthPercent } from "@/components/depeg-board-model";
 
@@ -10,14 +11,7 @@ export function DeviationBar({ bps }: { bps: number | null }) {
   }
   const abs = Math.abs(bps);
   const width = clampScore(getDeviationBarWidthPercent(abs));
-  const barClass =
-    abs >= 500
-      ? "bg-red-500"
-      : abs >= 200
-        ? "bg-orange-500"
-        : abs >= 50
-          ? "bg-amber-500"
-          : "bg-emerald-500";
+  const barClass = PEG_DEVIATION_TONE_CLASSES[getPegDeviationLevel(abs)].bar;
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-label={`Deviation ${bps > 0 ? "+" : ""}${bps} basis points`}>
       <div className={cn("h-full rounded-full", barClass)} style={{ width: `${Math.max(3, width)}%` }} />
@@ -28,7 +22,7 @@ export function DeviationBar({ bps }: { bps: number | null }) {
 export function LinearGauge({
   value,
   max = 100,
-  tone = "bg-emerald-500",
+  tone = QUALITY_TIER_3_CLASSES.good.bar,
   ariaLabel,
 }: {
   value: number | null | undefined;
@@ -53,6 +47,7 @@ export function EventLoadMeter({ count, symbol }: { count: number; symbol: strin
           key={index}
           className={cn(
             "h-1.5 flex-1 rounded-[2px] border border-border/50",
+            // raw: event-load pip, no exact export
             index < filled ? "border-orange-500/40 bg-orange-500" : "bg-muted/35",
           )}
         />

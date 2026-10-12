@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { COLLATERAL_COVERAGE_ARROW_CLASSES } from "@shared/lib/classification";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 
@@ -29,12 +30,12 @@ const COVERAGE_TEXT_CLASS: Record<CollateralCoverageTone, string> = {
 };
 
 const CLAMP_HIGH_ARROW_CLASS: Record<CollateralCoverageTone, string> = {
-  over: "border-y-4 border-l-[5px] border-y-transparent border-l-emerald-500",
-  par: "border-y-4 border-l-[5px] border-y-transparent border-l-emerald-500",
-  under: "border-y-4 border-l-[5px] border-y-transparent border-l-rose-500",
+  over: COLLATERAL_COVERAGE_ARROW_CLASSES.over,
+  par: COLLATERAL_COVERAGE_ARROW_CLASSES.par,
+  under: COLLATERAL_COVERAGE_ARROW_CLASSES.under,
 };
 
-const CLAMP_LOW_ARROW_CLASS = "border-y-4 border-r-[5px] border-y-transparent border-r-rose-500";
+const CLAMP_LOW_ARROW_CLASS = COLLATERAL_COVERAGE_ARROW_CLASSES.clampLow;
 
 /**
  * The empty track. `bg-muted` sits within a few luminance steps of the dark
