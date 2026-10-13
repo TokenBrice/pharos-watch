@@ -3,7 +3,7 @@ import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { throwIfAborted, yieldToEventLoop } from "../../lib/abort";
 import { isResponseBodyTooLargeError } from "../../lib/response-body";
-import { SUBGRAPH_PAGE_MAX_RESPONSE_BYTES } from "./constants";
+import { SUBGRAPH_PAGE_MAX_RESPONSE_BYTES, SUBGRAPH_PER_CHAIN_TIMEOUT_MS } from "./constants";
 import type { DexPriceObs } from "./types";
 
 export type SubgraphPriceObservation = { stablecoinId: string; obs: DexPriceObs };
@@ -97,6 +97,7 @@ export async function fetchSubgraphEntities<TEntity>(
         body: JSON.stringify({ query: config.buildQuery(skip) }),
         signal: config.signal,
       }, 2, {
+        timeoutMs: SUBGRAPH_PER_CHAIN_TIMEOUT_MS,
         maxResponseBytes,
         // Preserve the final thrown failure so the overflow class survives the
         // retry loop instead of collapsing into a generic "no response".
