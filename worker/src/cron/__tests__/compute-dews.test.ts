@@ -438,7 +438,7 @@ describe("computeAndStoreDEWS", () => {
     ["stale", -3601, "stale-sample"],
     ["future", 61, "future-timestamp"],
     ["missing", null, "missing-sample"],
-  ] as const)("holds accepted DEWS publication for inadmissible PSI %s", async (_label, offset, reason) => {
+  ] as const)("publishes DEWS without the amplifier for inadmissible PSI %s", async (_label, offset, reason) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const storedAt = offset == null ? null : nowSec + offset;
     const result = await computeAndStoreDEWS(makeDb([], {
@@ -449,12 +449,10 @@ describe("computeAndStoreDEWS", () => {
       updatedAt: storedAt, freshnessBudgetSec: 3600, reason,
     });
     expect(computeDEWS).toHaveBeenCalledWith(expect.objectContaining({ psiScore: reason == null ? 0 : null }));
-    expect(metadata.publicationPointerWritten).toBe(reason == null || reason === "missing-sample");
-    expect(metadata.freshnessSentinelPublished).toBe(reason == null || reason === "missing-sample");
-    if (reason === "stale-sample" || reason === "future-timestamp") {
-      expect(metadata.sourceFailures).toContainEqual({ source: "stability-index-samples", reason });
-      expect(metadata.degradedSources).toContain("stability-index-samples");
-    }
+    // PSI requires a fresh DEWS generation, so holding here would deadlock both producers.
+    expect(metadata.publicationPointerWritten).toBe(true);
+    expect(metadata.freshnessSentinelPublished).toBe(true);
+    expect(metadata.degradedSources).not.toContain("stability-index-samples");
   });
   it.each([
     ["fresh", 0, null],
