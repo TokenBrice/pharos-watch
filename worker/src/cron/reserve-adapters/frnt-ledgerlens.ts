@@ -185,6 +185,8 @@ export async function fetchFrntLedgerlensReserves(
     throw new Error(`${KEY}: unexpected coin, input URL or params`);
   }
   return adaptFrntLedgerlens(await fetchJsonWithRetry<unknown>(input.url, signal, 12_000, ctx, {
-    headers: { "x-tsr-serverFn": "true", Accept: "application/json" }, maxResponseBytes: 256_000,
+    // TanStack Start's server-function CSRF guard now 403s GETs that lack the
+    // browser's same-origin fetch-metadata header (observed 2026-10-13).
+    headers: { "x-tsr-serverFn": "true", Accept: "application/json", "Sec-Fetch-Site": "same-origin" }, maxResponseBytes: 256_000,
   }));
 }
