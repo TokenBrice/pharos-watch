@@ -6,6 +6,8 @@ import { CIRCUIT_SOURCE_REGISTRY } from "@shared/lib/circuit-sources";
 import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
 import {
   getAcknowledgedPriceGapNotice,
+  describePublicHeadline,
+  getAgeBandState,
   getImpactedPublicSurfaces,
   getPublicDivergenceNotice,
   getPublicHealthWarningPresentation,
@@ -293,6 +295,28 @@ describe("public status helpers", () => {
     };
     expect(countPublicImpactOpenCircuits(sharedOutage)).toBe(3);
     expect(getCircuitImpactStatus(countPublicImpactOpenCircuits(sharedOutage))).toBe("degraded");
+  });
+});
+
+describe("getAgeBandState", () => {
+  it("maps ages onto the public component bands, outage at twice the degraded band", () => {
+    expect(getAgeBandState(600, 600, 1200)).toBe("operational");
+    expect(getAgeBandState(601, 600, 1200)).toBe("delayed");
+    expect(getAgeBandState(1201, 600, 1200)).toBe("degraded");
+    expect(getAgeBandState(2400, 600, 1200)).toBe("degraded");
+    expect(getAgeBandState(2401, 600, 1200)).toBe("outage");
+  });
+
+  it("describes the public headline for admin surfaces, loading before failure (R2)", () => {
+    expect(describePublicHeadline(undefined, false)).toEqual({ state: null, label: "Loading", title: null });
+    expect(describePublicHeadline(undefined, true).label).toBe("Unavailable");
+    expect(describePublicHeadline(BASE_HEALTH, false)).toMatchObject({ state: "operational", label: "Operational" });
+  });
+
+  it("keeps raw enum words out of divergence sentences", () => {
+    const notice = getPublicDivergenceNotice("stale", "degraded");
+    expect(notice.kind).toBe("both-degraded-different-severity");
+    expect(notice.kind !== "in-sync" && notice.detail).not.toMatch(/\b(stale|degraded|healthy)\b/);
   });
 });
 

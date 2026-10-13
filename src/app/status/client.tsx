@@ -1,43 +1,44 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { PublicStatusHistoryWindow } from "@shared/types";
-import { isPublicImpactCircuitKey } from "@shared/lib/public-health";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { FaqSection } from "@/components/faq-section";
-import { PublicServiceSummarySection } from "@/components/status/public-service-summary-section";
+import { Button } from "@/components/ui/button";
+import {
+  PublicServiceSummarySection,
+  type PublicHistoryLoadState,
+} from "@/components/status/public-service-summary-section";
 import { PublicStatusHistorySection } from "@/components/status/public-status-history-section";
 import { PublicStatusHero } from "@/components/status/public-status-hero";
 import { PublicStatusReliabilitySection } from "@/components/status/public-status-reliability-section";
-import { UptimeBar } from "@/components/status/uptime-bar";
-import { NoticeRail } from "@/components/status/page-primitives";
 import { useHealth } from "@/hooks/api-hooks";
 import { usePublicEndpointProbes } from "@/hooks/use-endpoint-probes";
 import { usePublicStatusHistory } from "@/hooks/use-public-status-history";
-import { buildBrowserProbeSummary, type DashboardNotice } from "@/lib/status-dashboard-model";
+import { buildBrowserProbeSummary } from "@/lib/status-dashboard-model";
 import {
+  getAcknowledgedPriceGapNotice,
   getPublicDivergenceNotice,
-  getPublicHealthWarningPresentation,
-  getPublicWorstCacheSummary,
+  resolvePublicProjection,
 } from "@/lib/status/public-status";
+import { buildComponentDayCells, getHeadlineSince } from "@/lib/status/public-status-timeline";
 import type { FaqItem } from "@/lib/faq";
-import { SchedulerLivenessCard } from "@/components/status/scheduler-liveness";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { getPollingWindow } from "@/lib/api-query-polling";
-import { CRON_15MIN } from "@/lib/cron-intervals";
 
-const RUNWAY_WINDOW: PublicStatusHistoryWindow = "30d";
+const HISTORY_WINDOW: PublicStatusHistoryWindow = "30d";
+const HISTORY_DAYS = 30;
 const HEALTH_FETCH_BUDGET_MS = getPollingWindow(FRONTEND_API_QUERY_DESCRIPTORS.health.producerIntervalMs).refetchInterval;
-const PROBE_FETCH_BUDGET_MS = getPollingWindow(CRON_15MIN).refetchInterval;
+/** Re-evaluates "is the shown verdict older than its budget"; not a data poll. */
+const STALENESS_CLOCK_MS = 60_000;
 const STATUS_SHELL_PROPS = {
   breadcrumbName: "System Status",
   path: "/status/",
   title: "System Status",
-  leadParagraphs: ["Live public telemetry for route freshness, browser reachability, and ingestion drift."],
+  leadParagraphs: ["Current state of Pharos pages, the public API and each data feed, with 30 days of incident history."],
 } as const;
 
 export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[] }) {
-  const [historyWindow, setHistoryWindow] = useState<PublicStatusHistoryWindow>("7d");
   const {
     data: healthData,
     error: healthError,
@@ -52,139 +53,91 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
     refetch: refetchProbes,
     dataUpdatedAt: probesUpdatedAt,
   } = usePublicEndpointProbes();
-  const { data: runwayHistoryData, error: runwayHistoryError } = usePublicStatusHistory(RUNWAY_WINDOW);
-  const {
-    data: historyData,
-    isLoading: historyLoading,
-    error: historyError,
-  } = usePublicStatusHistory(historyWindow);
-  const runwayHistoryAvailable = runwayHistoryData != null && runwayHistoryError == null;
+  const { data: historyData, isLoading: historyLoading, error: historyError } = usePublicStatusHistory(HISTORY_WINDOW);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowMs(Date.now()), STALENESS_CLOCK_MS);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleRefresh = () => {
     void refetchHealth();
     void refetchProbes();
   };
 
-  const notices = useMemo(() => {
-    if (!healthData) return [];
-
-    const items: DashboardNotice[] = healthData.warnings.map((warning, index) => {
-      const presentation = getPublicHealthWarningPresentation(warning, healthData);
-      return {
-        id: `health-warning-${index}`,
-        title: presentation.title,
-        detail: presentation.detail,
-        tone: healthData.status === "stale" ? "critical" : "warning",
-      };
+  const projection = useMemo(() => (healthData ? resolvePublicProjection(healthData) : null), [healthData]);
+  // A failed history read never renders as a quiet history, even with retained data (R2).
+  const historyState: PublicHistoryLoadState = historyError ? "error" : historyData ? "ready" : historyLoading ? "loading" : "error";
+  const dayCells = useMemo(() => {
+    if (!projection || !historyData || historyError) return null;
+    return buildComponentDayCells({
+      transitions: historyData.transitions,
+      liveComponents: projection.components,
+      publicHistoryStartedAt: historyData.publicHistoryStartedAt,
+      nowSec: historyData.timestamp,
+      days: HISTORY_DAYS,
+      truncated: historyData.hasMore === true,
     });
-
-    if (healthError) {
-      items.unshift({
-        id: "health-fetch-error",
-        title: "Health response is stale",
-        detail: healthError.message,
-        tone: "warning",
-      });
-    }
-
-    if (probesError) {
-      items.push({
-        id: "public-probe-error",
-        title: "Public endpoint probes unavailable",
-        detail: probesError.message,
-        tone: "warning",
-      });
-    }
-
-    return items;
-  }, [healthData, healthError, probesError]);
+  }, [historyData, historyError, projection]);
 
   let content: ReactNode;
 
   if (healthLoading && !healthData) {
     content = (
-      <div className="space-y-6">
-        <div className="h-[200px] animate-pulse rounded-xl bg-muted/30" />
-        <div className="rounded-xl bg-muted/30 animate-pulse h-[60px]" />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-xl bg-muted/30 animate-pulse h-[300px]" />
-          <div className="rounded-xl bg-muted/30 animate-pulse h-[300px]" />
-        </div>
+      <div className="space-y-6" aria-busy="true" aria-label="Loading status">
+        <div className="h-[72px] animate-pulse rounded-xl bg-muted/30" />
+        <div className="h-[420px] animate-pulse rounded-xl bg-muted/30" />
       </div>
     );
-  } else if (healthError && !healthData) {
+  } else if (!healthData || !projection) {
     content = (
-      <div className="rounded-xl border border-state-danger bg-state-danger-subtle p-6 text-state-danger-bright">
-        Failed to load public status data: {healthError.message}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-state-danger bg-state-danger-subtle p-4 text-sm text-state-danger">
+        <span title={healthError?.message}>The status check could not be reached.</span>
+        <Button variant="outline" size="sm" className="min-h-11" onClick={handleRefresh}>
+          Refresh
+        </Button>
       </div>
     );
-  } else if (!healthData) {
-    content = <div className="py-20 text-center text-muted-foreground">Public health data is unavailable.</div>;
   } else {
-    const worstCache = getPublicWorstCacheSummary(healthData.caches);
     const probeSummary = buildBrowserProbeSummary(probes, probesUpdatedAt ?? 0);
-    const publicImpactCircuits = healthData.circuits == null ? null : Object.entries(healthData.circuits)
-      .filter(([key]) => isPublicImpactCircuitKey(key))
-      .map(([, circuit]) => circuit);
-    const openCircuits = publicImpactCircuits == null ? null : publicImpactCircuits.filter((circuit) => circuit.state === "open").length;
-    const halfOpenCircuits = publicImpactCircuits == null ? null : publicImpactCircuits.filter((circuit) => circuit.state === "half-open").length;
-    const divergence = probeSummary
-      ? getPublicDivergenceNotice(healthData.status, probeSummary.status)
-      : { kind: "in-sync" as const };
+    const divergence = probeSummary ? getPublicDivergenceNotice(healthData.status, probeSummary.status) : null;
+    const fetchStale = healthUpdatedAt > 0 && nowMs - healthUpdatedAt > HEALTH_FETCH_BUDGET_MS;
 
     content = (
       <div className="space-y-6">
-        {/* Verdict and runway first; the operator delivery evidence follows the
-            service summary instead of opening the page. */}
         <PublicStatusHero
-          healthData={healthData}
-          healthUpdatedAt={healthUpdatedAt ?? 0}
-          healthStaleAfterMs={HEALTH_FETCH_BUDGET_MS}
-          probesUpdatedAt={probesUpdatedAt ?? 0}
-          probesStaleAfterMs={PROBE_FETCH_BUDGET_MS}
-          probeSummary={probeSummary}
-          probesLoading={probesLoading}
-          probesFailed={probesError != null}
-          worstCacheRatio={worstCache.ratio}
-          worstCacheStatus={worstCache.status}
-          impactedCacheLanes={worstCache.impactedCount}
-          openCircuits={openCircuits}
-          halfOpenCircuits={halfOpenCircuits}
+          headline={projection.headline}
+          since={getHeadlineSince(projection.components)}
+          checkedAt={healthData.timestamp}
+          fetchError={healthError}
+          fetchStale={fetchStale}
           onRefresh={handleRefresh}
         />
 
-        <UptimeBar
-          transitions={runwayHistoryAvailable ? runwayHistoryData.transitions : []}
-          currentStatus={runwayHistoryAvailable ? runwayHistoryData.currentStatus : healthData.status}
-          lastChangedAt={runwayHistoryAvailable ? runwayHistoryData.lastChangedAt : null}
-          historyUnavailable={!runwayHistoryAvailable}
+        <PublicServiceSummarySection
+          components={projection.components}
+          dayCells={dayCells}
+          historyState={historyState}
+          historyDays={HISTORY_DAYS}
+          nowSec={historyData?.timestamp ?? healthData.timestamp}
+          publicHistoryStartedAt={historyData?.publicHistoryStartedAt ?? null}
+          footnote={getAcknowledgedPriceGapNotice(healthData.activePriceCoverage)}
         />
 
-        <NoticeRail notices={notices} />
-
-        {divergence.kind !== "in-sync" && (
-          <div className="rounded-xl border border-state-warn bg-state-warn-subtle p-4 text-sm text-amber-900 dark:text-amber-200">
-            {divergence.detail}
-          </div>
-        )}
-
-        <PublicServiceSummarySection healthData={healthData} />
-
-        <SchedulerLivenessCard observation={healthData.schedulerLiveness} />
+        <PublicStatusHistorySection
+          historyData={historyData}
+          historyDays={HISTORY_DAYS}
+          historyLoading={historyLoading}
+          historyError={historyError}
+          liveOperational={projection.headline.state === "operational"}
+        />
 
         <PublicStatusReliabilitySection
           healthData={healthData}
           probes={probes}
           probesLoading={probesLoading}
-          probeSummary={probeSummary}
-        />
-
-        <PublicStatusHistorySection
-          historyData={historyData}
-          historyWindow={historyWindow}
-          historyLoading={historyLoading}
-          historyError={historyError}
-          onHistoryWindowChange={setHistoryWindow}
+          probesError={probesError}
+          divergenceDetail={divergence && divergence.kind !== "in-sync" ? divergence.detail : null}
         />
       </div>
     );
@@ -193,23 +146,7 @@ export default function StatusClient({ faqItems }: { faqItems: readonly FaqItem[
   return (
     <FeaturePageShell {...STATUS_SHELL_PROPS}>
       {content}
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="pharos-card-shell px-4 py-4">
-          <p className="pharos-label">Reading status</p>
-          <div className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
-            <p>
-              The page is a public reliability view, not an operator console. It favors signals that affect readers and
-              API consumers: freshness, public probes, incident runway, and whether cache-backed data is still inside
-              its expected age window.
-            </p>
-            <p>
-              For API integrations, combine this page with response headers such as X-Data-Age, Warning, Retry-After,
-              and the endpoint-specific cache profile in the API reference.
-            </p>
-          </div>
-        </div>
-        <FaqSection items={faqItems} title="System Status FAQ" includeJsonLd />
-      </section>
+      <FaqSection items={faqItems} title="System Status FAQ" includeJsonLd />
     </FeaturePageShell>
   );
 }

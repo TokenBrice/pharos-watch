@@ -1,4 +1,9 @@
-import { FRESHNESS_RATIOS, getCacheRatioThresholds, STATUS_CACHE_RATIO_THRESHOLDS } from "@shared/lib/status-thresholds";
+import {
+  FRESHNESS_RATIOS,
+  getCacheRatioThresholds,
+  STATUS_CACHE_RATIO_THRESHOLDS,
+} from "@shared/lib/status-thresholds";
+import { PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER } from "@shared/lib/public-health";
 import type { CacheStatus } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { getCacheFreshnessRatio, getCacheFreshnessStatus } from "@shared/lib/cache-health";
@@ -7,7 +12,9 @@ import { TableCell, TableRow } from "@/components/table";
 import { StatusPill } from "./severity-pill";
 import { PublicSignalCard } from "./public-signal-card";
 import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
-import { defineStatusColumns } from "./page-primitives";
+import { ComponentStatePill, defineStatusColumns } from "./page-primitives";
+import { getAgeBandState } from "@/lib/status/public-status";
+import type { PublicComponentState } from "@shared/types";
 
 interface CacheFreshnessTableProps {
   caches: Record<string, CacheStatus>;
@@ -15,8 +22,8 @@ interface CacheFreshnessTableProps {
 
 const CACHE_FRESHNESS_COLUMNS = defineStatusColumns([
   ["lane", "Lane"], ["provider", "Provider"], ["producer", "Producer"], ["cache", "Cache"],
-  ["endpoint-basis", "Endpoint Basis"], ["source", "Source"], ["mode", "Mode"], ["band", "Band"],
-  ["note", "Actionable Note"],
+  ["endpoint-basis", "Endpoint basis"], ["source", "Source"], ["mode", "Mode"], ["band", "Band"],
+  ["note", "Note"],
 ]);
 
 export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
@@ -28,45 +35,18 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
 
   const describeBand = (cache: CacheStatus, key: string) => {
     const thresholds = getCacheRatioThresholds(key);
+    const outageRatio = thresholds.stale * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER;
     const thresholdLabel =
       thresholds.degraded !== STATUS_CACHE_RATIO_THRESHOLDS.degraded ||
       thresholds.stale !== STATUS_CACHE_RATIO_THRESHOLDS.stale
-        ? `degraded >${thresholds.degraded.toFixed(2)}x · stale >${thresholds.stale.toFixed(2)}x`
+        ? `Delayed >${thresholds.degraded.toFixed(2)}x · degraded >${thresholds.stale.toFixed(2)}x · outage >${outageRatio.toFixed(2)}x`
         : null;
-    const { ageSeconds } = cache;
-    if (ageSeconds == null) {
-      return {
-        label: "missing",
-        ratio: null,
-        className: "bg-muted text-muted-foreground",
-        thresholdLabel,
-      };
-    }
-
     const ratio = getCacheFreshnessRatio(cache);
-    const status = getCacheFreshnessStatus(cache, key);
-    if (status === "stale") {
-      return {
-        label: `stale (>${thresholds.stale.toFixed(2)}x)`,
-        ratio,
-        className: OPERATIONAL_PILL_CLASS.error,
-        thresholdLabel,
-      };
-    }
-    if (status === "degraded") {
-      return {
-        label: `degraded (>${thresholds.degraded.toFixed(2)}x)`,
-        ratio,
-        className: OPERATIONAL_PILL_CLASS.warning,
-        thresholdLabel,
-      };
-    }
-    return {
-      label: "ok",
-      ratio,
-      className: OPERATIONAL_PILL_CLASS.ok,
-      thresholdLabel,
-    };
+    // Missing age grades as Degraded, matching the public component projection.
+    const state: PublicComponentState = ratio == null
+      ? "degraded"
+      : getAgeBandState(ratio, thresholds.degraded, thresholds.stale);
+    return { state, ratio, thresholdLabel };
   };
 
   const describeSource = (cache: CacheStatus): string => {
@@ -146,13 +126,16 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
           </StatusPill>
         </TableCell>
         <TableCell className="py-2 align-top">
-          <StatusPill className={band.className}>{band.label}</StatusPill>
+          <ComponentStatePill state={band.state} />
+          {band.ratio == null ? (
+            <div className="mt-1 text-xs leading-relaxed text-muted-foreground">Update time unavailable</div>
+          ) : null}
           {band.thresholdLabel ? (
             <div className="mt-1 text-2xs leading-relaxed text-muted-foreground">{band.thresholdLabel}</div>
           ) : null}
         </TableCell>
         <TableCell className="py-2 align-top text-xs leading-relaxed text-muted-foreground">
-          {noteParts.length > 0 ? noteParts.join(" · ") : "No extra warning"}
+          {noteParts.length > 0 ? noteParts.join(" · ") : "—"}
         </TableCell>
       </TableRow>
     );
@@ -162,10 +145,10 @@ export function CacheFreshnessTable({ caches }: CacheFreshnessTableProps) {
     <PublicSignalCard title="Cache freshness">
       <div>
         <div className="mb-3 text-xs text-muted-foreground">
-          Availability uses ratio thresholds of {">"}
-          {STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x (degraded) and {">"}
-          {STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x (stale) against each lane availability budget. Endpoint
-          basis is the max-age used by `X-Data-Age` / `_meta`; generic freshness `Warning` starts after{" "}
+          Each lane is Delayed past {STATUS_CACHE_RATIO_THRESHOLDS.degraded.toFixed(2)}x its availability budget,
+          Degraded past {STATUS_CACHE_RATIO_THRESHOLDS.stale.toFixed(2)}x and an Outage past{" "}
+          {(STATUS_CACHE_RATIO_THRESHOLDS.stale * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER).toFixed(2)}x. Endpoint
+          basis is the max-age used by the X-Data-Age header and _meta; the generic freshness Warning header starts after{" "}
           {FRESHNESS_RATIOS.FRESH.toFixed(0)}x that basis.
         </div>
         <PrioritySplitTable

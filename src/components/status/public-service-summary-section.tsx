@@ -1,265 +1,128 @@
 "use client";
 
-import { getBlacklistGapStatus } from "@shared/lib/status-thresholds";
-import { TELEGRAM_METRIC_SEMANTICS, pluralizeCount } from "@shared/lib/telegram-metrics";
-import type { HealthResponse } from "@shared/types";
-import { StatusSection, StatusSummaryBadge } from "@/components/status/page-primitives";
-import { PublicSignalCard } from "@/components/status/public-signal-card";
-import {
-  getAcknowledgedPriceGapNotice,
-  getImpactedPublicSurfaces,
-  getPublicMintBurnStatus,
-} from "@/lib/status/public-status";
-import { formatTimestampSeconds } from "@/lib/status-dashboard-model";
+import type { PublicStatusComponent, PublicStatusComponentId } from "@shared/types";
+import { PUBLIC_COMPONENT_LABEL, PUBLIC_COMPONENT_SCOPE } from "@shared/lib/classification";
+import { formatElapsedSeconds } from "@shared/lib/format";
+import { ComponentStatePill, StatusSection, Timestamp } from "@/components/status/page-primitives";
+import { UptimeBar } from "@/components/status/uptime-bar";
+import type { ComponentDayCell } from "@/lib/status/public-status-timeline";
+
+export type PublicHistoryLoadState = "loading" | "error" | "ready";
 
 interface PublicServiceSummarySectionProps {
-  healthData: HealthResponse;
+  /** Every public component, in PUBLIC_STATUS_COMPONENT_IDS order. */
+  components: readonly PublicStatusComponent[];
+  /** Per-component daily cells; read only when `historyState` is "ready". */
+  dayCells: Record<PublicStatusComponentId, ComponentDayCell[]> | null;
+  historyState: PublicHistoryLoadState;
+  historyDays: number;
+  /** History sample time (epoch seconds), the "today" of the bars. */
+  nowSec: number;
+  /** First persisted public row; days before it render as no data. */
+  publicHistoryStartedAt: number | null;
+  /** Informational note on reviewed price gaps (not an incident). */
+  footnote?: string | null;
+}
+
+function formatBudget(budget: NonNullable<PublicStatusComponent["budget"]>): string {
+  return `Delayed after ${formatElapsedSeconds(budget.delayedAfterSec)}, degraded after ${formatElapsedSeconds(budget.degradedAfterSec)}, outage after ${formatElapsedSeconds(budget.outageAfterSec)} without an update.`;
+}
+
+function ComponentRow({
+  component,
+  cells,
+  historyState,
+}: {
+  component: PublicStatusComponent;
+  cells: ComponentDayCell[] | undefined;
+  historyState: PublicHistoryLoadState;
+}) {
+  const label = PUBLIC_COMPONENT_LABEL[component.id];
+  const operational = component.state === "operational";
+  return (
+    <li className="border-b border-border/60 py-3 last:border-0" data-testid={`public-component-${component.id}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium text-foreground">{label}</h3>
+          <p className="text-xs text-muted-foreground">{PUBLIC_COMPONENT_SCOPE[component.id]}</p>
+        </div>
+        <ComponentStatePill state={component.state} className="shrink-0" />
+      </div>
+      {!operational ? (
+        <div className="mt-2 space-y-1 text-sm text-foreground">
+          {component.summary ? <p>{component.summary}</p> : null}
+          <p className="flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+            {component.since != null ? (
+              <span>
+                For <Timestamp epochSec={component.since} variant="duration" />
+              </span>
+            ) : null}
+            {component.budget ? <span>{formatBudget(component.budget)}</span> : null}
+          </p>
+          {component.reasons.length > 0 ? (
+            <details className="text-xs text-muted-foreground">
+              <summary className="pharos-focus-ring cursor-pointer rounded-sm hover:text-foreground">Technical detail</summary>
+              <ul className="mt-1 space-y-0.5 font-mono">
+                {component.reasons.map((reason) => (
+                  <li key={reason} className="break-all">{reason}</li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="mt-2">
+        {historyState === "loading" ? (
+          <div className="h-5 animate-pulse rounded-sm bg-muted/40" aria-label={`Loading ${label} history`} role="img" />
+        ) : historyState === "ready" && cells ? (
+          <UptimeBar cells={cells} label={label} />
+        ) : null}
+      </div>
+    </li>
+  );
 }
 
 export function PublicServiceSummarySection({
-  healthData,
+  components,
+  dayCells,
+  historyState,
+  historyDays,
+  nowSec,
+  publicHistoryStartedAt,
+  footnote,
 }: PublicServiceSummarySectionProps) {
-  const mintBurnStatus = getPublicMintBurnStatus(healthData.mintBurn.sync);
-  const blacklistStatus = getBlacklistGapStatus({
-    missingRatio: healthData.blacklist.missingRatio,
-  });
-  const blacklistWindowHours = healthData.blacklist.recentWindowSec == null
-    ? null : Math.max(1, Math.round(healthData.blacklist.recentWindowSec / 3600));
-  const telegramSummary = healthData.telegramSummary ?? null;
-  const impactedPublicSurfaces = getImpactedPublicSurfaces(healthData);
-  const acknowledgedPriceGapNotice = getAcknowledgedPriceGapNotice(healthData.activePriceCoverage);
-
+  const windowStart = nowSec - historyDays * 86_400;
   return (
-    <StatusSection
-      id="overview"
-      kicker="Service health"
-      title="Public service summary"
-      summary={
-        <>
-          <StatusSummaryBadge label="Status" status={healthData.status} />
-          {blacklistStatus !== "healthy" && (
-            <StatusSummaryBadge
-              label="Blacklist gaps"
-              value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
-              status={blacklistStatus}
-            />
-          )}
-          {healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && (
-            <StatusSummaryBadge
-              label="Major Mint/Burn Stale"
-              value={String(healthData.mintBurn.majorStaleCount)}
-              status="degraded"
-            />
-          )}
-          {telegramSummary && (telegramSummary.pendingDeliveries ?? 0) > 0 && (
-            <StatusSummaryBadge
-              label="Alert queue"
-              value={String(telegramSummary.pendingDeliveries)}
-              status="degraded"
-            />
-          )}
-          {telegramSummary?.safetyAlertsSuppressed && (
-            <StatusSummaryBadge
-              label="Safety alerts"
-              value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
-              status="degraded"
-            />
-          )}
-        </>
-      }
-    >
-      <div className="grid gap-5 xl:grid-cols-2">
-        <PublicSignalCard
-          title="Mint/Burn Sync"
-          badges={
-            mintBurnStatus !== "healthy" || (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0) ? (
-              <div className="flex flex-wrap gap-2">
-                {mintBurnStatus !== "healthy" && (
-                  <StatusSummaryBadge label="Writer" value={mintBurnStatus} status={mintBurnStatus} />
-                )}
-                {healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && (
-                  <StatusSummaryBadge
-                    label="Major stale"
-                    value={String(healthData.mintBurn.majorStaleCount)}
-                    status="degraded"
-                  />
-                )}
-              </div>
-            ) : undefined
-          }
-        >
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {healthData.mintBurn.unavailableReason
-              ? `Mint/burn health evidence unavailable (${healthData.mintBurn.unavailableReason}).`
-              : healthData.mintBurn.sync.warning
-                ?? "Critical mint/burn lanes are within their expected freshness and run-health windows."}
-          </p>
-          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <div className="border-t border-border/60 pt-3">
-              <div className="pharos-label">Last successful sync</div>
-              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
-                {formatTimestampSeconds(healthData.mintBurn.sync.lastSuccessfulSyncAt)}
-              </div>
-            </div>
-            {healthData.mintBurn.latestHourlyTs != null ? (
-              <div className="border-t border-border/60 pt-3">
-                <div className="pharos-label">Latest hourly rollup</div>
-                <div className="mt-1.5 pharos-numeric text-sm text-foreground">
-                  {formatTimestampSeconds(healthData.mintBurn.latestHourlyTs)}
-                </div>
-              </div>
-            ) : null}
+    <StatusSection id="overview" title="Components">
+      <ul>
+        {components.map((component) => (
+          <ComponentRow
+            key={component.id}
+            component={component}
+            cells={dayCells?.[component.id]}
+            historyState={historyState}
+          />
+        ))}
+      </ul>
+      <div className="space-y-1 text-2xs text-muted-foreground">
+        {historyState === "ready" ? (
+          <div className="flex justify-between">
+            <span>{historyDays} days ago</span>
+            <span>Today</span>
           </div>
-          {healthData.mintBurn.staleMajorSymbols != null && healthData.mintBurn.staleMajorSymbols.length > 0 ? (
-            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
-              Impacted majors: {healthData.mintBurn.staleMajorSymbols.join(", ")}
-            </div>
-          ) : null}
-        </PublicSignalCard>
-
-        <PublicSignalCard
-          title="Blacklist ingestion"
-          badges={
-            blacklistStatus !== "healthy" ? (
-              <div className="flex flex-wrap gap-2">
-                <StatusSummaryBadge
-                  label="Missing amounts"
-                  value={healthData.blacklist.missingAmounts == null ? "Unavailable" : String(healthData.blacklist.missingAmounts)}
-                  status={blacklistStatus}
-                />
-              </div>
-            ) : undefined
-          }
-        >
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Missing blacklist amounts surface here because they directly affect public data quality and downstream risk calculations.
+        ) : null}
+        {historyState === "error" ? (
+          <p className="text-xs">Component history could not be loaded, so the {historyDays}-day bars are not shown.</p>
+        ) : null}
+        {historyState === "ready" && (publicHistoryStartedAt == null || publicHistoryStartedAt > windowStart) ? (
+          <p className="text-xs">
+            {publicHistoryStartedAt == null
+              ? "Component history has not started recording yet; earlier days show no data."
+              : <>Component history began <Timestamp epochSec={publicHistoryStartedAt} nowSec={nowSec} />; earlier days show no data.</>}
           </p>
-          <div className="border-t border-border/60 pt-3">
-            <div className="pharos-label">Public health interpretation</div>
-            <div className="mt-1.5 leading-relaxed text-foreground">
-              {healthData.blacklist.missingAmounts == null
-                ? `Blacklist health evidence unavailable (${healthData.blacklist.unavailableReason ?? "unavailable"}).`
-                : healthData.blacklist.missingAmounts > 0
-                ? healthData.blacklist.recentMissingAmounts == null
-                  ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts. Recent gap evidence is unavailable (${healthData.blacklist.unavailableReason ?? "unavailable"}).`
-                  : blacklistStatus === "healthy"
-                  ? `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but they are below the public warning threshold${healthData.blacklist.recentMissingAmounts > 0 ? ` (${healthData.blacklist.recentMissingAmounts} recent in the last ${blacklistWindowHours}h)` : ""}.`
-                  : healthData.blacklist.recentMissingAmounts > 0
-                    ? `${healthData.blacklist.recentMissingAmounts} recent blacklist event(s) in the last ${blacklistWindowHours}h are still missing amounts.`
-                    : `${healthData.blacklist.missingAmounts} blacklist event(s) are still missing amounts, but no new gaps were recorded in the last ${blacklistWindowHours}h.`
-                : "No current blacklist amount gaps are affecting the public health signal."}
-            </div>
-            {healthData.blacklist.missingAmounts != null && healthData.blacklist.missingAmounts > 0 && healthData.blacklist.missingRatio != null ? (
-              <div className="mt-2 text-xs text-muted-foreground">
-                Missing ratio {(healthData.blacklist.missingRatio * 100).toFixed(2)}% of {healthData.blacklist.totalEvents} tracked events.
-              </div>
-            ) : null}
-          </div>
-        </PublicSignalCard>
+        ) : null}
+        {footnote ? <p className="text-xs">{footnote}</p> : null}
       </div>
-
-      {telegramSummary && (
-        <PublicSignalCard
-          title="Telegram bot health"
-          badges={
-            (telegramSummary.pendingDeliveries ?? 0) > 0
-            || telegramSummary.safetyAlertsSuppressed
-            || (telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok") ? (
-              <div className="flex flex-wrap gap-2">
-                {(telegramSummary.pendingDeliveries ?? 0) > 0 && (
-                  <StatusSummaryBadge
-                    label="Pending"
-                    value={String(telegramSummary.pendingDeliveries)}
-                    status="degraded"
-                  />
-                )}
-                {telegramSummary.safetyAlertsSuppressed && (
-                  <StatusSummaryBadge
-                    label="Safety alerts"
-                    value={telegramSummary.safetyAlertSourceState ?? "suppressed"}
-                    status="degraded"
-                  />
-                )}
-                {telegramSummary.lastDispatchStatus && telegramSummary.lastDispatchStatus !== "ok" && (
-                  <StatusSummaryBadge
-                    label="Last dispatch"
-                    value={telegramSummary.lastDispatchStatus}
-                    status="stale"
-                  />
-                )}
-              </div>
-            ) : undefined
-          }
-        >
-          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <div className="border-t border-border/60 pt-3">
-              <div className="pharos-label" title={TELEGRAM_METRIC_SEMANTICS.registeredChats.description}>
-                {TELEGRAM_METRIC_SEMANTICS.registeredChats.label}
-              </div>
-              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
-                {telegramSummary.totalChats} {pluralizeCount(telegramSummary.totalChats, "chat")} registered
-              </div>
-            </div>
-            <div className="border-t border-border/60 pt-3">
-              <div className="pharos-label">Last dispatch</div>
-              <div className="mt-1.5 pharos-numeric text-sm text-foreground">
-                {telegramSummary.lastDispatchAt
-                  ? formatTimestampSeconds(telegramSummary.lastDispatchAt)
-                  : "No dispatch recorded"}
-              </div>
-            </div>
-          </div>
-          {(telegramSummary.pendingDeliveries ?? 0) > 0 && (
-            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
-              {telegramSummary.pendingDeliveries} {pluralizeCount(telegramSummary.pendingDeliveries ?? 0, "alert")} pending delivery
-            </div>
-          )}
-          {telegramSummary.safetyAlertsSuppressed && (
-            <div className="rounded-[1rem] border border-state-warn-solid/20 bg-state-warn-solid/5 p-3 text-xs leading-relaxed text-state-warn-bright">
-              Safety alerts are paused because the live report-card source is {telegramSummary.safetyAlertSourceState ?? "unavailable"}
-              {telegramSummary.safetyAlertSourceAgeSeconds != null
-                ? ` (${telegramSummary.safetyAlertSourceAgeSeconds}s old)`
-                : ""}.
-            </div>
-          )}
-        </PublicSignalCard>
-      )}
-
-      <PublicSignalCard
-        title="Impacted public surfaces"
-        badges={
-          impactedPublicSurfaces.length > 0 ? (
-            <StatusSummaryBadge
-              label="Impacted surfaces"
-              value={String(impactedPublicSurfaces.length)}
-              status="degraded"
-            />
-          ) : undefined
-        }
-      >
-        {impactedPublicSurfaces.length > 0 ? (
-          <div className="grid gap-x-6 gap-y-3 lg:grid-cols-2">
-            {impactedPublicSurfaces.map((surface) => (
-              <div key={surface.id} className="border-t border-border/60 pt-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-sm font-medium text-foreground">{surface.title}</div>
-                  <StatusSummaryBadge label="Impact" value={surface.tone} status={surface.tone} />
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{surface.detail}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="border-t border-border/60 pt-3 text-sm leading-relaxed text-muted-foreground">
-            {healthData.warnings.length > 0
-              ? "Health warnings are summarized above. No additional surfaces meet the impact thresholds tracked in this section."
-              : "No current public surface impact flags are active beyond the hero summary."}
-          </div>
-        )}
-        {acknowledgedPriceGapNotice && (
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{acknowledgedPriceGapNotice}</p>
-        )}
-      </PublicSignalCard>
     </StatusSection>
   );
 }

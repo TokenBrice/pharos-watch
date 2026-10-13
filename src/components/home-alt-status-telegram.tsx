@@ -5,20 +5,13 @@ import { Send, SquareArrowRight } from "lucide-react";
 
 import { useHealth } from "@/hooks/api-hooks";
 import { useTelegramPulse } from "@/hooks/api-hooks";
-import { getStatusTone } from "@/lib/status-dashboard-model";
+import { resolvePublicProjection } from "@/lib/status/public-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatDecimal, timeAgo } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
-import type { HealthResponse } from "@shared/types";
-
-// Per-status accent dots. Lookup map of COMPLETE static class strings so the
-// Tailwind scanner sees every variant (no dynamic concatenation).
-const TONE_DOT: Record<HealthResponse["status"], string> = {
-  healthy: "bg-state-positive-solid",
-  degraded: "bg-state-warn-solid",
-  stale: "bg-state-danger-solid",
-};
+import { PUBLIC_COMPONENT_LABEL, PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
+import type { PublicStatusHeadline } from "@shared/types";
 
 const LINE_LINK_CLASS =
   "pharos-focus-ring group flex min-w-0 items-center gap-2 rounded-md py-0.5 transition-colors";
@@ -26,13 +19,11 @@ const LINE_LINK_CLASS =
 const ARROW_CLASS =
   "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-foreground";
 
-// Deliberately status-derived prose only. `health.warnings` carries machine
-// slugs with id payloads (`active-price-coverage-incomplete:<coin ids>`), which
-// belong on /status/ — the line below links there for the detail.
-function statusMessage(health: HealthResponse): string {
-  if (health.status === "healthy") return "All public pipelines operational";
-  if (health.status === "degraded") return "Some data pipelines are delayed";
-  return "Public health data is outdated";
+// Headline-derived prose only: component names, never the machine slugs in
+// `health.warnings`; the line links to /status/ for the detail.
+function statusMessage(headline: PublicStatusHeadline): string {
+  if (headline.state === "operational") return "All public components operational";
+  return headline.affected.map((id) => PUBLIC_COMPONENT_LABEL[id]).join(", ");
 }
 
 /** Left line: system health as a single clickable status line → /status/. */
@@ -43,12 +34,14 @@ function StatusLine(): React.JSX.Element {
   if (!health || isError) {
     return <span className="text-sm text-muted-foreground">System status unavailable</span>;
   }
+  const { headline } = resolvePublicProjection(health);
+  const tone = PUBLIC_HEADLINE_TONE[headline.state];
 
   return (
     <Link href="/status/" prefetch={false} className={cn(LINE_LINK_CLASS, "text-foreground hover:text-frost-blue")}>
-      <span aria-hidden="true" className={cn("h-2 w-2 shrink-0 rounded-full", TONE_DOT[health.status])} />
-      <span className="shrink-0 text-sm font-semibold">{getStatusTone(health.status).label}</span>
-      <span className="hidden truncate text-sm text-muted-foreground sm:inline">· {statusMessage(health)}</span>
+      <span aria-hidden="true" className={cn("h-2 w-2 shrink-0 rounded-full", tone.dot)} />
+      <span className="shrink-0 text-sm font-semibold">{tone.label}</span>
+      <span className="hidden truncate text-sm text-muted-foreground sm:inline">· {statusMessage(headline)}</span>
       <span className="hidden shrink-0 text-xs text-muted-foreground/70 lg:inline">· updated {timeAgo(health.timestamp)}</span>
       <SquareArrowRight aria-hidden="true" className={ARROW_CLASS} strokeWidth={2} />
     </Link>

@@ -1,159 +1,35 @@
-"use client";
-
-import { useMemo } from "react";
-import type { PublicStatusTransition } from "@shared/types";
+import { PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
+import type { ComponentDayCell, ComponentDayState } from "@/lib/status/public-status-timeline";
 import { cn } from "@/lib/utils";
-import { STATUS_TONE } from "@shared/lib/classification";
 
-interface UptimeBarProps {
-  transitions: PublicStatusTransition[];
-  currentStatus: "healthy" | "degraded" | "stale";
-  lastChangedAt: number | null;
-  days?: number;
-  /** A failed history read has no runway: it must not render as "no probe". */
-  historyUnavailable?: boolean;
+const NO_DATA = { label: "No data", bar: "bg-muted" } as const;
+
+function cellTone(state: ComponentDayState) {
+  return state === "no-data" ? NO_DATA : PUBLIC_COMPONENT_STATE_TONE[state];
 }
 
-interface DaySegment {
-  date: string; // YYYY-MM-DD
-  status: "healthy" | "degraded" | "stale" | "unknown";
+/** "27d operational · 2d delayed · 1d no data": counts over the observed cells, no-data kept separate (R1). */
+export function summarizeDayCells(cells: readonly ComponentDayCell[]): string {
+  const counts = new Map<ComponentDayState, number>();
+  for (const cell of cells) counts.set(cell.state, (counts.get(cell.state) ?? 0) + 1);
+  const order: ComponentDayState[] = ["operational", "delayed", "degraded", "outage", "no-data"];
+  return order
+    .filter((state) => counts.has(state))
+    .map((state) => `${counts.get(state)}d ${cellTone(state).label.toLowerCase()}`)
+    .join(" · ");
 }
 
-function buildDaySegments(
-  transitions: PublicStatusTransition[],
-  currentStatus: "healthy" | "degraded" | "stale",
-  days: number,
-): DaySegment[] {
-  const now = new Date();
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const segments: DaySegment[] = [];
-
-  // Build daily slots (oldest first).
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(todayUtc - i * 86400_000);
-    segments.push({
-      date: d.toISOString().slice(0, 10),
-      status: "unknown",
-    });
-  }
-
-  if (transitions.length === 0) {
-    const today = segments.at(-1);
-    if (today) today.status = currentStatus;
-    return segments;
-  }
-
-  // Sort transitions chronologically (oldest first)
-  const sorted = [...transitions].sort((a, b) => a.at - b.at);
-
-  // The state before an init transition was not observed. Apply its `to`
-  // status only when the transition's day is reached.
-  let runningStatus: DaySegment["status"] =
-    sorted[0].transitionType === "init"
-      ? "unknown"
-      : ((sorted[0].from as DaySegment["status"]) ?? "unknown");
-
-  let transitionIndex = 0;
-  for (const day of segments) {
-    const dayStart = new Date(day.date).getTime() / 1000;
-    const dayEnd = dayStart + 86400;
-
-    // Apply any transitions that happened before or during this day
-    while (transitionIndex < sorted.length && sorted[transitionIndex].at < dayEnd) {
-      runningStatus = sorted[transitionIndex].to as DaySegment["status"];
-      transitionIndex += 1;
-    }
-
-    day.status = runningStatus;
-  }
-
-  // History can omit a current degradation that comes from a public-health
-  // signal rather than a persisted status transition. The live assessment is
-  // authoritative for today's segment.
-  const today = segments.at(-1);
-  if (today) today.status = currentStatus;
-
-  return segments;
-}
-
-export function UptimeBar({
-  transitions,
-  currentStatus,
-  lastChangedAt,
-  days = 30,
-  historyUnavailable = false,
-}: UptimeBarProps) {
-  const segments = useMemo(
-    () => buildDaySegments(transitions, currentStatus, days),
-    [currentStatus, days, transitions],
-  );
-
-  // Compute holding days from the last segment's date as a pure proxy for "now"
-  const holdingDays = useMemo(() => {
-    if (lastChangedAt == null || segments.length === 0) return null;
-    const todayEpoch = new Date(segments[segments.length - 1].date).getTime() / 1000;
-    return Math.max(0, Math.floor((todayEpoch + 86400 - lastChangedAt) / 86400));
-  }, [lastChangedAt, segments]);
-
-  const summaryParts = useMemo(() => {
-    const c = { healthy: 0, degraded: 0, stale: 0, unknown: 0 };
-    for (const s of segments) c[s.status]++;
-
-    const parts: string[] = [];
-    if (c.healthy === days) {
-      parts.push(`100% healthy over the last ${days} days`);
-    } else {
-      if (c.healthy > 0) parts.push(`${c.healthy}d healthy`);
-      if (c.degraded > 0) parts.push(`${c.degraded}d degraded`);
-      if (c.stale > 0) parts.push(`${c.stale}d stale`);
-      if (c.unknown > 0) parts.push(`${c.unknown}d no data`);
-    }
-
-    return parts;
-  }, [days, segments]);
-
+/** Daily bar for one public component; each cell is the worst state held that UTC day. */
+export function UptimeBar({ cells, label }: { cells: readonly ComponentDayCell[]; label: string }) {
   return (
-    <div className="pharos-card-shell space-y-3 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="pharos-label">Status runway</div>
-          <div className="mt-1 text-sm text-muted-foreground">Daily posture over the last {days} days.</div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-border/70 px-3 py-1 text-xs font-medium text-foreground">
-            Last {days}d
-          </span>
-          {holdingDays != null && holdingDays > 0 && (
-            <span className="pharos-numeric rounded-full border border-border/70 px-3 py-1 text-xs text-muted-foreground">
-              {currentStatus} for {holdingDays}d
-            </span>
-          )}
-        </div>
-      </div>
-      {historyUnavailable && transitions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Status history is unavailable, so the last {days} days cannot be shown.
-        </p>
-      ) : (
-        <>
-          <div
-            className="flex items-center gap-1.5"
-            role="img"
-            aria-label={`${days}-day status runway: ${summaryParts.join(", ")}`}
-          >
-            {segments.map((segment) => (
-              <div
-                key={segment.date}
-                className={cn("h-2 flex-1 rounded-full transition-colors", STATUS_TONE[segment.status].barClassName)}
-                title={`${segment.date}: ${STATUS_TONE[segment.status].label}`}
-              />
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-            <span>{summaryParts.join(" · ")}</span>
-          </div>
-        </>
-      )}
+    <div className="flex h-5 items-stretch gap-px" role="img" aria-label={`${label}, last ${cells.length} days: ${summarizeDayCells(cells)}`}>
+      {cells.map((cell) => (
+        <div
+          key={cell.date}
+          className={cn("min-w-0 flex-1 rounded-[1px]", cellTone(cell.state).bar)}
+          title={`${cell.date}: ${cellTone(cell.state).label}`}
+        />
+      ))}
     </div>
   );
 }

@@ -1,137 +1,60 @@
 // @vitest-environment jsdom
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { makeActivePriceCoverage, makeHealthyHealthResponse, makeMissingActiveAsset } from "@/test-utils/status-fixtures";
+import type { PublicStatusComponent } from "@shared/types";
+import { PUBLIC_STATUS_COMPONENT_IDS } from "@shared/types/status";
 import { PublicServiceSummarySection } from "../public-service-summary-section";
 
+const NOW = 1_790_000_000;
+
+function components(overrides: Partial<Record<string, Partial<PublicStatusComponent>>> = {}): PublicStatusComponent[] {
+  return PUBLIC_STATUS_COMPONENT_IDS.map((id) => ({
+    id, state: "operational", summary: "", reasons: [], ageSeconds: null, budget: null, since: null, ...overrides[id],
+  }));
+}
+
 describe("PublicServiceSummarySection", () => {
-  it("renders unavailable mint/burn evidence without dereferencing unknown stale cohorts", () => {
-    const health = makeHealthyHealthResponse();
-    render(<PublicServiceSummarySection healthData={{
-      ...health,
-      mintBurn: { ...health.mintBurn, majorStaleCount: null, staleMajorSymbols: null,
-        unavailableReason: "mint-burn-read-failed", sync: { ...health.mintBurn.sync, criticalLaneHealthy: null } },
-    }} />);
-    expect(screen.getByText("Mint/burn health evidence unavailable (mint-burn-read-failed).")).toBeTruthy();
-    expect(screen.queryByText("Critical mint/burn lanes are within their expected freshness and run-health windows.")).toBeNull();
+  it("lists every component with its state and keeps operational rows quiet", () => {
+    render(<PublicServiceSummarySection components={components()} dayCells={null} historyState="loading"
+      historyDays={30} nowSec={NOW} publicHistoryStartedAt={null} />);
+
+    expect(screen.getAllByText("Operational")).toHaveLength(PUBLIC_STATUS_COMPONENT_IDS.length);
+    expect(screen.getByText("Website and API")).toBeTruthy();
+    expect(screen.queryByText("Technical detail")).toBeNull();
+    expect(screen.getByRole("img", { name: "Loading Yield history" })).toBeTruthy();
   });
 
-  it.each([0.001, 0.2])("keeps missing recent-gap evidence distinct from no new gaps (ratio %s)", (missingRatio) => {
-    render(<PublicServiceSummarySection healthData={{
-      ...makeHealthyHealthResponse(),
-      blacklist: { totalEvents: 100, missingAmounts: 2, recentMissingAmounts: null,
-        recentWindowSec: 86_400, missingRatio, unavailableReason: "blacklist-read-failed" },
-    }} />);
-    expect(screen.getByText("2 blacklist event(s) are still missing amounts. Recent gap evidence is unavailable (blacklist-read-failed).")).toBeTruthy();
-    expect(screen.queryByText(/no new gaps were recorded/i)).toBeNull();
+  it("names the summary, budget and machine reason of a non-operational component (R3/R4)", () => {
+    render(<PublicServiceSummarySection
+      components={components({
+        yield: {
+          state: "delayed", summary: "Yield rankings last updated 2h ago.", reasons: ["cache-stale:yield-data:delayed"],
+          ageSeconds: 7200, budget: { delayedAfterSec: 3600, degradedAfterSec: 10_800, outageAfterSec: 21_600 }, since: NOW - 1800,
+        },
+      })}
+      dayCells={null} historyState="error" historyDays={30} nowSec={NOW} publicHistoryStartedAt={null}
+    />);
+
+    const row = within(screen.getByTestId("public-component-yield"));
+    expect(row.getByText("Delayed")).toBeTruthy();
+    expect(row.getByText("Yield rankings last updated 2h ago.")).toBeTruthy();
+    expect(row.getByText("Delayed after 1h, degraded after 3h, outage after 6h without an update.")).toBeTruthy();
+    expect(row.getByText("cache-stale:yield-data:delayed")).toBeTruthy();
+    // A failed history read shows no bars rather than an empty (healthy-looking) runway.
+    expect(screen.queryAllByRole("img")).toHaveLength(0);
+    expect(screen.getByText(/Component history could not be loaded/)).toBeTruthy();
   });
 
-  it("renders unavailable blacklist measurements without a zero-gap claim", () => {
-    render(<PublicServiceSummarySection healthData={{
-      ...makeHealthyHealthResponse(),
-      blacklist: { totalEvents: null, missingAmounts: null, recentMissingAmounts: null,
-        recentWindowSec: null, missingRatio: null, unavailableReason: "blacklist-read-failed" },
-    }} />);
-    expect(screen.getByText("Blacklist health evidence unavailable (blacklist-read-failed).")).toBeTruthy();
-    expect(screen.getAllByText("Unavailable").length).toBeGreaterThan(0);
-    expect(screen.queryByText("No current blacklist amount gaps are affecting the public health signal.")).toBeNull();
-  });
-  it("keeps telegram queue warnings visible without inventing impacted surfaces", () => {
-    render(
-      <PublicServiceSummarySection
-        healthData={{
-          ...makeHealthyHealthResponse(),
-          telegramSummary: {
-            totalChats: 12,
-            pendingDeliveries: 2,
-            lastDispatchAt: 1_712_345_500,
-            lastDispatchStatus: "ok",
-            safetyAlertSourceState: "ok",
-            safetyAlertSourceAgeSeconds: 30,
-            safetyAlertsSuppressed: false,
-            safetyAlertSourceGeneration: "v1",
-          },
-        }}
-      />,
-    );
-    expect(screen.getByText("Alert queue")).toBeTruthy();
-    expect(screen.getByText("2 alerts pending delivery")).toBeTruthy();
-  });
+  it("states when component history began inside the window", () => {
+    const cells = Object.fromEntries(PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, [
+      { date: "2026-10-12", state: "no-data" as const }, { date: "2026-10-13", state: "operational" as const },
+    ]])) as never;
+    render(<PublicServiceSummarySection components={components()} dayCells={cells} historyState="ready"
+      historyDays={30} nowSec={NOW} publicHistoryStartedAt={NOW - 3600} footnote="Two price gaps are under review." />);
 
-  it("surfaces degraded blacklist ingestion in both summary and impact cards", () => {
-    render(
-      <PublicServiceSummarySection
-        healthData={{
-          ...makeHealthyHealthResponse(),
-          blacklist: {
-            totalEvents: 40,
-            missingAmounts: 8,
-            recentMissingAmounts: 4,
-            recentWindowSec: 86_400,
-            missingRatio: 0.2,
-          },
-        }}
-      />,
-    );
-
-    expect(screen.getByText("Blacklist gaps")).toBeTruthy();
-    expect(screen.getByText("Blacklist risk context")).toBeTruthy();
-    expect(screen.getAllByText("Missing amounts").length).toBeGreaterThan(0);
-  });
-
-  it("omits the hourly mint/burn rollup when no rollup has been recorded", () => {
-    // The shared healthy baseline records no hourly rollup (latestHourlyTs: null).
-    render(<PublicServiceSummarySection healthData={makeHealthyHealthResponse()} />);
-
-    expect(screen.getByText("Last successful sync")).toBeTruthy();
-    expect(screen.queryByText("Latest hourly rollup")).toBeNull();
-  });
-
-  it("does not claim there are no impact flags while health warnings are active", () => {
-    render(
-      <PublicServiceSummarySection
-        healthData={{
-          ...makeHealthyHealthResponse(),
-          status: "degraded",
-          warnings: ["cache-quality-degraded: yield-data:producer-degraded-since-last-clean-run"],
-        }}
-      />,
-    );
-
-    expect(screen.queryByText("No current public surface impact flags are active beyond the hero summary.")).toBeNull();
-    expect(
-      screen.getByText("Health warnings are summarized above. No additional surfaces meet the impact thresholds tracked in this section."),
-    ).toBeTruthy();
-  });
-
-  it("reports acknowledged price gaps as informational review text, not as an impacted surface", () => {
-    render(
-      <PublicServiceSummarySection
-        healthData={{
-          ...makeHealthyHealthResponse(),
-          activePriceCoverage: makeActivePriceCoverage([
-            makeMissingActiveAsset({
-              stablecoinId: "wusd-worldwide",
-              symbol: "WUSD",
-              alertEligible: false,
-              consecutiveMissingGenerations: 2000,
-              acknowledgedGap: {
-                owner: "ops",
-                reason: "No admissible quote on any lane; issuer data requested.",
-                sources: ["https://example.com/review"],
-                reviewedAt: 1_790_121_600,
-                expiresAt: 1_792_713_600,
-              },
-            }),
-          ]),
-        }}
-      />,
-    );
-
-    expect(
-      screen.getByText("1 acknowledged price gap under review; next review expires 2026-10-23 (UTC). Prices remain unavailable and gaps re-alert when their reviews expire."),
-    ).toBeTruthy();
-    expect(screen.queryByText("Impacted surfaces")).toBeNull();
+    expect(screen.getAllByRole("img")).toHaveLength(PUBLIC_STATUS_COMPONENT_IDS.length);
+    expect(screen.getByText(/Component history began/)).toBeTruthy();
+    expect(screen.getByText("Two price gaps are under review.")).toBeTruthy();
   });
 });

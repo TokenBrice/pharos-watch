@@ -163,7 +163,8 @@ function FreshnessTransitionAnnouncer({
   useEffect(() => {
     const previous = previousStateRef.current;
     previousStateRef.current = state;
-    if (previous === state || state === "unavailable") return;
+    // Leaving "unavailable" is a first load, not a recovery worth announcing.
+    if (previous === state || state === "unavailable" || previous === "unavailable") return;
     if (regionRef.current) {
       regionRef.current.textContent = `${labelPrefix ?? "Data"} is ${state === "stale" ? "stale" : "current again"}.`;
     }

@@ -1,10 +1,9 @@
 import type { CircuitRecord } from "@shared/types";
 import { TableCell, TableRow } from "@/components/table";
 import { Badge } from "@/components/ui/badge";
-import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 import { PublicSignalCard } from "./public-signal-card";
 import { PrioritySplitTable } from "./priority-split-table";
-import { defineStatusColumns } from "./page-primitives";
+import { defineStatusColumns, Timestamp } from "./page-primitives";
 
 interface CircuitBreakerTableProps {
   circuits: Record<string, CircuitRecord> | null | undefined;
@@ -13,7 +12,7 @@ interface CircuitBreakerTableProps {
 
 const CIRCUIT_BREAKER_COLUMNS = defineStatusColumns([
   ["name", "Name"], ["state", "State"], ["failures", "Failures"],
-  ["last-failure", "Last Failure"], ["last-success", "Last Success"],
+  ["last-failure", "Last failure"], ["last-success", "Last success"],
 ]);
 
 export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBreakerTableProps) {
@@ -36,21 +35,21 @@ export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBrea
       <TableCell className="py-2 font-mono text-xs">{name}</TableCell>
       <TableCell className="py-2">
         {circuit.state === "closed" && (
-          <Badge className="bg-state-positive-solid/15 text-xs text-state-positive">closed</Badge>
+          <Badge className="bg-state-positive-solid/15 text-xs text-state-positive">Closed</Badge>
         )}
         {circuit.state === "half-open" && (
-          <Badge className="bg-state-warn-solid/15 text-xs text-state-warn">half-open</Badge>
+          <Badge className="bg-state-warn-solid/15 text-xs text-state-warn">Half-open</Badge>
         )}
         {circuit.state === "open" && (
-          <Badge className="bg-state-danger-solid/15 text-xs text-state-danger">open</Badge>
+          <Badge className="bg-state-danger-solid/15 text-xs text-state-danger">Open</Badge>
         )}
       </TableCell>
       <TableCell className="py-2 pharos-numeric">{circuit.consecutiveFailures}</TableCell>
-      <TableCell className="py-2 font-mono text-xs text-muted-foreground">
-        {formatStatusTimestamp(circuit.lastFailureAt, { fallback: "—", timeZoneName: "short" })}
+      <TableCell className="py-2 text-xs text-muted-foreground">
+        <Timestamp epochSec={circuit.lastFailureAt} />
       </TableCell>
-      <TableCell className="py-2 font-mono text-xs text-muted-foreground">
-        {formatStatusTimestamp(circuit.lastSuccessAt, { fallback: "—", timeZoneName: "short" })}
+      <TableCell className="py-2 text-xs text-muted-foreground">
+        <Timestamp epochSec={circuit.lastSuccessAt} />
       </TableCell>
     </TableRow>
   );
@@ -58,11 +57,11 @@ export function CircuitBreakerTable({ circuits, unavailableReason }: CircuitBrea
   return (
     <PublicSignalCard title="Circuit breakers" contentClassName="mt-0">
       <p className="text-sm text-muted-foreground leading-relaxed mb-4">
-        Circuit breakers protect data quality by temporarily disabling a data source after repeated failures.{" "}
-        <strong className="text-foreground">Closed</strong> means the source is healthy.{" "}
-        <strong className="text-foreground">Half-open</strong> means Pharos is cautiously retesting after a failure
-        period. <strong className="text-foreground">Open</strong> means the source is disabled — affected features will
-        show cached data until the source recovers.
+        A circuit breaker pauses an upstream data source after repeated failures.{" "}
+        <strong className="text-foreground">Closed</strong> means the source is in use.{" "}
+        <strong className="text-foreground">Half-open</strong> means the source is being retested after a failure
+        period. <strong className="text-foreground">Open</strong> means the source is paused, and affected features
+        show their last good data until it recovers.
       </p>
       <div className="mt-4">
         <PrioritySplitTable

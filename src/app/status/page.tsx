@@ -14,17 +14,17 @@ const STATUS_FAQ_ITEMS = [
   {
     question: "What does System Status monitor?",
     answer:
-      "System Status monitors public Pharos health, cache freshness, endpoint probes, circuit-breaker state, and recent status transitions. It is the public view of whether the dashboard and data API are serving fresh enough information.",
+      "System Status shows each public Pharos component, such as the website and API, stablecoin prices, charts, risk signals and event feeds, with its current state and 30 days of history. It is the public view of whether the dashboard and data API are serving fresh enough information.",
   },
   {
     question: "Why can status differ from a single endpoint response?",
     answer:
-      "The status page blends cache freshness, Worker health, browser reachability probes, and incident history. A single endpoint can be slow or stale while the overall system remains available, or the aggregate can degrade when several public data lanes drift together.",
+      "Each component is graded against its own freshness budget: Delayed past the first budget, Degraded past the stale limit, and Outage only once the data has stayed stale for a further grace period or a core check fails. A single endpoint can be slow or stale while its component stays inside budget. The probes and cache tables under For integrators show the raw readings.",
   },
   {
-    question: "How often should I refresh the status page?",
+    question: "How often does the status page update?",
     answer:
-      "Manual refresh is enough for most users. Public status data is cached on short intervals, and external integrations should rely on API response headers, Retry-After, and endpoint-specific polling guidance instead of aggressively refreshing this page.",
+      "The page re-reads public health on the same schedule as the underlying check, so a manual refresh is rarely needed. External integrations should rely on API response headers, Retry-After, and endpoint-specific polling guidance instead of polling this page.",
   },
 ] as const satisfies readonly FaqItem[];
 

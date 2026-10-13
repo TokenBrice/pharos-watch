@@ -1,190 +1,27 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { UptimeBar } from "../uptime-bar";
-import { STATUS_TONE } from "@shared/lib/classification";
-
-function runwayDates(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll("[title]"), (node) => node.getAttribute("title")!.slice(0, 10));
-}
+import { PUBLIC_COMPONENT_STATE_TONE } from "@shared/lib/classification";
+import { UptimeBar, summarizeDayCells } from "../uptime-bar";
 
 describe("UptimeBar", () => {
-  it.each(["healthy", "degraded", "stale"] as const)("uses canonical %s label and runway color", (status) => {
-    const { container } = render(<UptimeBar days={2} transitions={[]} currentStatus={status} lastChangedAt={null} />);
-    const cells = Array.from(container.querySelectorAll("[title]"));
-    expect(cells[0].getAttribute("title")).toContain(STATUS_TONE.unknown.label);
-    expect(cells[0].className).toContain(STATUS_TONE.unknown.barClassName);
-    expect(cells[1].getAttribute("title")).toContain(STATUS_TONE[status].label);
-    expect(cells[1].className).toContain(STATUS_TONE[status].barClassName);
-  });
+  it("colours observed days by component state and keeps no-data days apart", () => {
+    const cells = [
+      { date: "2026-10-11", state: "no-data" as const },
+      { date: "2026-10-12", state: "degraded" as const },
+      { date: "2026-10-13", state: "operational" as const },
+    ];
+    const { container } = render(<UptimeBar cells={cells} label="Yield" />);
 
-  const ORIGINAL_TZ = process.env.TZ;
-
-  afterEach(() => {
-    vi.useRealTimers();
-    if (ORIGINAL_TZ === undefined) delete process.env.TZ;
-    else process.env.TZ = ORIGINAL_TZ;
-  });
-
-  it("leaves prior days unknown when no public transition history exists", () => {
-    render(<UptimeBar transitions={[]} currentStatus="healthy" lastChangedAt={null} />);
-
-    expect(screen.getByText("Status runway")).toBeTruthy();
-    expect(screen.getByText("Daily posture over the last 30 days.")).toBeTruthy();
-    expect(screen.getByText("Last 30d")).toBeTruthy();
-    expect(screen.getByText("1d healthy · 29d no data")).toBeTruthy();
-  });
-
-  it("overlays only today with a live degradation when history is empty", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-13T12:00:00Z"));
-
-    const { container } = render(<UptimeBar days={3} transitions={[]} currentStatus="degraded" lastChangedAt={null} />);
-
-    expect(screen.getByText("1d degraded · 2d no data")).toBeTruthy();
-    expect(container.querySelector('[title="2026-04-11: No probe."]')).toBeTruthy();
-    expect(container.querySelector('[title="2026-04-13: Degraded"]')).toBeTruthy();
-  });
-
-  it("renders pre-init days as No probe instead of backfilling the init status", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-09-16T12:00:00Z"));
-
-    const { container } = render(
-      <UptimeBar
-        days={5}
-        currentStatus="healthy"
-        lastChangedAt={Date.parse("2026-09-14T12:00:00Z") / 1000}
-        transitions={[
-          {
-            id: 1,
-            from: null,
-            to: "healthy",
-            transitionType: "init",
-            reason: "First probe",
-            at: Date.parse("2026-09-14T12:00:00Z") / 1000,
-          },
-        ]}
-      />,
+    expect(container.querySelector('[title="2026-10-11: No data"]')?.className).toContain("bg-muted");
+    expect(container.querySelector('[title="2026-10-12: Degraded"]')?.className).toContain(PUBLIC_COMPONENT_STATE_TONE.degraded.bar);
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe(
+      "Yield, last 3 days: 1d operational · 1d degraded · 1d no data",
     );
-
-    expect(container.querySelector('[title="2026-09-12: No probe."]')).not.toBeNull();
-    expect(container.querySelector('[title="2026-09-13: No probe."]')).not.toBeNull();
-    expect(container.querySelector('[title="2026-09-14: Healthy"]')).not.toBeNull();
-    expect(screen.getByRole("img").getAttribute("aria-label")).toContain("2d no data");
   });
 
-  it("reports an unavailable runway instead of 30 unknown days when history fails", () => {
-    render(<UptimeBar transitions={[]} currentStatus="healthy" lastChangedAt={null} historyUnavailable />);
-
-    expect(screen.getByText("Status history is unavailable, so the last 30 days cannot be shown.")).toBeTruthy();
-    expect(screen.queryByText("1d healthy · 29d no data")).toBeNull();
-  });
-
-  it("does not carry a stale segment forward after a coherent recovery transition", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-13T12:00:00Z"));
-
-    render(
-      <UptimeBar
-        days={3}
-        currentStatus="healthy"
-        lastChangedAt={Date.parse("2026-04-12T12:00:00Z") / 1000}
-        transitions={[
-          {
-            id: 2,
-            from: "stale",
-            to: "healthy",
-            transitionType: "recover",
-            reason: "raw-healthy-recovery-from-stale",
-            at: Date.parse("2026-04-12T12:00:00Z") / 1000,
-          },
-          {
-            id: 1,
-            from: "healthy",
-            to: "stale",
-            transitionType: "degrade",
-            reason: "raw-stale-immediate-escalation",
-            at: Date.parse("2026-04-11T12:00:00Z") / 1000,
-          },
-        ]}
-      />,
-    );
-
-    expect(screen.getByText("2d healthy · 1d stale")).toBeTruthy();
-  });
-
-  it("marks today degraded when live public health is worse than the transition stream", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-13T12:00:00Z"));
-
-    const { container } = render(
-      <UptimeBar
-        days={3}
-        currentStatus="degraded"
-        lastChangedAt={null}
-        transitions={[
-          {
-            id: 1,
-            from: "degraded",
-            to: "healthy",
-            transitionType: "recover",
-            reason: "raw-healthy-recovery",
-            at: Date.parse("2026-04-11T12:00:00Z") / 1000,
-          },
-        ]}
-      />,
-    );
-
-    expect(screen.getByText("2d healthy · 1d degraded")).toBeTruthy();
-    expect(container.querySelector('[title="2026-04-13: Degraded"]')).toBeTruthy();
-  });
-
-  // The runway is built from UTC calendar days, so a DST-observing local zone
-  // must not shift, duplicate, or drop a slot. A `+02:00` literal only fixes an
-  // instant; the process timezone is what exercises local-calendar arithmetic.
-  it.each([
-    {
-      name: "spring-forward Sunday",
-      timeZone: "America/New_York",
-      now: "2026-03-08T12:00:00Z",
-      expected: ["2026-03-05", "2026-03-06", "2026-03-07", "2026-03-08"],
-    },
-    {
-      name: "fall-back Sunday inside the repeated local hour",
-      timeZone: "America/New_York",
-      now: "2026-11-01T05:30:00Z",
-      expected: ["2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"],
-    },
-    {
-      name: "UTC day already ahead of the local day",
-      timeZone: "America/New_York",
-      now: "2026-03-08T02:30:00Z",
-      expected: ["2026-03-05", "2026-03-06", "2026-03-07", "2026-03-08"],
-    },
-  ])("labels the runway with consecutive UTC days: $name", ({ timeZone, now, expected }) => {
-    process.env.TZ = timeZone;
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(now));
-
-    const { container } = render(<UptimeBar days={4} transitions={[]} currentStatus="healthy" lastChangedAt={null} />);
-
-    expect(runwayDates(container)).toEqual(expected);
-  });
-
-  it("ends the default runway on today's UTC day under a half-hour DST offset", () => {
-    process.env.TZ = "Australia/Lord_Howe";
-    vi.useFakeTimers();
-    // 00:30 local on 2026-04-06, still 2026-04-05 in UTC.
-    vi.setSystemTime(new Date("2026-04-05T13:30:00Z"));
-
-    const { container } = render(<UptimeBar transitions={[]} currentStatus="healthy" lastChangedAt={null} />);
-
-    const dates = runwayDates(container);
-    expect(dates).toHaveLength(30);
-    expect(dates[0]).toBe("2026-03-07");
-    expect(dates.at(-1)).toBe("2026-04-05");
-    expect(new Set(dates).size).toBe(30);
+  it("never counts no-data days as operational", () => {
+    expect(summarizeDayCells([{ date: "a", state: "no-data" }, { date: "b", state: "no-data" }])).toBe("2d no data");
   });
 });

@@ -9,6 +9,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DataTableColumn } from "@/components/data-table-shell";
 import { cn } from "@/lib/utils";
+import {
+  OPERATOR_VERDICT_TONE,
+  PUBLIC_COMPONENT_STATE_TONE,
+  type OperatorVerdict,
+} from "@shared/lib/classification";
+import { formatElapsedSeconds, timeAgo } from "@shared/lib/format";
+import type { PublicComponentState } from "@shared/types";
 
 export function getCoinLabel(coinId: string): string {
   const meta = ACTIVE_META_BY_ID.get(coinId);
@@ -83,7 +90,8 @@ export function SummaryBadge({ label, value, className }: { label: string; value
       )}
     >
       <span className="text-muted-foreground">{label}</span>
-      <span className="ml-1.5 pharos-numeric text-foreground">{value}</span>
+      {/* Zero stays quiet: colour and weight are reserved for counts that need a look. */}
+      <span className={cn("ml-1.5 pharos-numeric", value === "0" ? "text-muted-foreground" : "text-foreground")}>{value}</span>
     </div>
   );
 }
@@ -183,5 +191,103 @@ export function NoticeRail({ notices }: { notices: DashboardNotice[] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * Operator verdict pill: the single "do I need to act?" vocabulary shared by
+ * every admin workspace (`OPERATOR_VERDICT_TONE`).
+ */
+export function VerdictPill({ verdict, label, className }: { verdict: OperatorVerdict; label?: string; className?: string }) {
+  const tone = OPERATOR_VERDICT_TONE[verdict];
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium", tone.pill, className)}>
+      <span aria-hidden="true" className={cn("size-1.5 rounded-full", tone.dot)} />
+      {label ?? tone.label}
+    </span>
+  );
+}
+
+/**
+ * Collapsed raw codes and state words (reason codes, enum values) kept
+ * reachable for operators without leading the row (R4 stays satisfied).
+ */
+export function TechnicalDetail({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <details className={cn("text-xs text-muted-foreground", className)}>
+      <summary className="pharos-focus-ring cursor-pointer rounded-sm hover:text-foreground">Technical detail</summary>
+      <div className="mt-1 break-all font-mono">{children}</div>
+    </details>
+  );
+}
+
+/** Public component state pill (`PUBLIC_COMPONENT_STATE_TONE`). */
+export function ComponentStatePill({ state, className }: { state: PublicComponentState; className?: string }) {
+  const tone = PUBLIC_COMPONENT_STATE_TONE[state];
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium", tone.pill, className)}>
+      <span aria-hidden="true" className={cn("size-1.5 rounded-full", tone.dot)} />
+      {tone.label}
+    </span>
+  );
+}
+
+/** Elapsed span since an instant ("2h 10m"); defaults to the client clock like `timeAgo`. */
+function elapsedSince(epochSec: number, nowSec = Date.now() / 1000): string {
+  return formatElapsedSeconds(Math.max(0, nowSec - epochSec));
+}
+
+/**
+ * Relative time with the exact instant on hover and in `dateTime`. Use it for
+ * every operator/status timestamp instead of long inline locale strings.
+ * `null` renders the unavailable dash, never a fabricated time (R1).
+ * `variant="duration"` renders the elapsed span alone ("2h 10m") for
+ * "For 2h 10m" phrasing, so "Since 2h ago" never appears.
+ */
+export function Timestamp({
+  epochSec,
+  nowSec,
+  className,
+  fallback = "—",
+  variant = "ago",
+}: {
+  epochSec: number | null | undefined;
+  nowSec?: number;
+  className?: string;
+  fallback?: string;
+  variant?: "ago" | "duration";
+}) {
+  if (epochSec == null || !Number.isFinite(epochSec) || epochSec <= 0) {
+    return <span className={cn("text-muted-foreground", className)}>{fallback}</span>;
+  }
+  const date = new Date(epochSec * 1000);
+  return (
+    <time dateTime={date.toISOString()} title={date.toLocaleString()} className={cn("pharos-numeric whitespace-nowrap", className)}>
+      {variant === "duration"
+        ? elapsedSince(epochSec, nowSec)
+        : timeAgo(epochSec, nowSec)}
+    </time>
+  );
+}
+
+/**
+ * A count that stays quiet at zero: zero is muted grey, a positive count takes
+ * the given tone, and `null` is the unavailable dash, never zero (R1).
+ */
+export function CountValue({
+  value,
+  tone = "text-foreground",
+  className,
+}: {
+  value: number | null | undefined;
+  /** Static Tailwind text class applied only when the count is positive. */
+  tone?: string;
+  className?: string;
+}) {
+  if (value == null) return <span className={cn("pharos-numeric text-muted-foreground", className)}>—</span>;
+  return (
+    <span className={cn("pharos-numeric", value === 0 ? "text-muted-foreground" : tone, className)}>
+      {value.toLocaleString()}
+    </span>
   );
 }

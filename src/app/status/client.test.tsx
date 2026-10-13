@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
-import type { PublicStatusHistoryResponse } from "@shared/types";
+import type { HealthResponse, PublicStatusHistoryResponse } from "@shared/types";
 
 const { useHealthMock, useHistoryMock, useProbesMock } = vi.hoisted(() => ({
   useHealthMock: vi.fn(),
@@ -13,15 +13,14 @@ const { useHealthMock, useHistoryMock, useProbesMock } = vi.hoisted(() => ({
 }));
 vi.mock("@/hooks/api-hooks", () => ({ useHealth: useHealthMock }));
 vi.mock("@/hooks/use-public-status-history", () => ({ usePublicStatusHistory: useHistoryMock }));
-vi.mock("@/hooks/use-endpoint-probes", () => ({
+vi.mock("@/hooks/use-endpoint-probes", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/use-endpoint-probes")>()),
   usePublicEndpointProbes: useProbesMock,
 }));
 vi.mock("@/components/feature-page-shell", () => ({
   FeaturePageShell: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 vi.mock("@/components/faq-section", () => ({ FaqSection: () => null }));
-vi.mock("@/components/status/public-service-summary-section", () => ({ PublicServiceSummarySection: () => null }));
-vi.mock("@/components/status/public-status-reliability-section", () => ({ PublicStatusReliabilitySection: () => null }));
 
 import StatusClient from "./client";
 
@@ -30,13 +29,24 @@ const emptyHistory: PublicStatusHistoryResponse = {
   currentStatus: "healthy",
   lastChangedAt: null,
   transitions: [],
+  publicHistoryStartedAt: 1_780_000_000,
+  hasMore: false,
 };
 
-beforeEach(() => {
+function mockHealth(data: HealthResponse | undefined, overrides: Record<string, unknown> = {}) {
   useHealthMock.mockReturnValue({
-    data: makeHealthyHealthResponse(), error: null, isLoading: false,
-    refetch: vi.fn(), dataUpdatedAt: Date.now(),
+    data, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: Date.now(), ...overrides,
   });
+}
+
+function openIntegrators() {
+  const details = screen.getByText("For integrators").closest("details")!;
+  details.open = true;
+  fireEvent(details, new Event("toggle"));
+}
+
+beforeEach(() => {
+  mockHealth(makeHealthyHealthResponse());
   useProbesMock.mockReturnValue({
     data: undefined, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: 0,
   });
@@ -48,18 +58,102 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("public incident history availability", () => {
+describe("public verdict", () => {
+  it("reads the worker headline and keeps operational quiet", () => {
+    mockHealth({
+      ...makeHealthyHealthResponse(),
+      headline: { state: "operational", title: "All systems operational", affected: [] },
+    });
+    render(<StatusClient faqItems={[]} />);
+    const verdict = screen.getByRole("heading", { name: "All systems operational" }).closest("section")!;
+    expect(verdict.className).not.toContain("border-l-");
+    expect(within(verdict).getByText(/Checked/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull();
+    expect(screen.queryByText(/Public surface/)).toBeNull();
+  });
+
+  it("derives the headline from the shared projection when an older payload has none", () => {
+    mockHealth({ ...makeHealthyHealthResponse(), status: "degraded", warnings: [] });
+    render(<StatusClient faqItems={[]} />);
+    const verdict = screen.getByRole("heading", { name: "Degraded: Website and API" }).closest("section")!;
+    expect(verdict.className).toContain("border-l-state-warn-solid");
+  });
+
+  it("offers a refresh only when the last fetch failed or is past its budget", () => {
+    mockHealth(makeHealthyHealthResponse(), { error: new Error("network down") });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
+    const fetchNotice = screen.getByText("The status check could not be reached. Showing the last good reading.");
+    // The raw error stays reachable on hover, never as visible copy.
+    expect(fetchNotice.getAttribute("title")).toBe("network down");
+    cleanup();
+
+    vi.useFakeTimers();
+    const now = 1_790_000_000_000;
+    vi.setSystemTime(now);
+    mockHealth(makeHealthyHealthResponse(), { dataUpdatedAt: now - 1_800_001 });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
+    cleanup();
+
+    mockHealth(makeHealthyHealthResponse(), { dataUpdatedAt: now - 1_800_000 });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull();
+  });
+
+  it("shows a loading skeleton, not an error, while health is pending", () => {
+    mockHealth(undefined, { isLoading: true });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByLabelText("Loading status")).toBeTruthy();
+    expect(screen.queryByText(/could not be loaded/)).toBeNull();
+  });
+});
+
+describe("public history availability", () => {
+  it("shows pending history as loading, never as unavailable or empty", () => {
+    useHistoryMock.mockReturnValue({ data: undefined, isLoading: true, error: null });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByText("Loading incident history")).toBeTruthy();
+    expect(screen.queryByText(/could not be loaded/)).toBeNull();
+    expect(screen.queryByText(/No incidents recorded/)).toBeNull();
+  });
+
+  it("does not turn a failed history read into a quiet history, even with retained data", () => {
+    useHistoryMock.mockReturnValue({ data: emptyHistory, isLoading: false, error: new Error("history unavailable") });
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByText("Incident history could not be loaded: history unavailable")).toBeTruthy();
+    expect(screen.getByText(/Component history could not be loaded/)).toBeTruthy();
+    expect(screen.queryByText(/No incidents recorded/)).toBeNull();
+    expect(screen.queryByRole("img", { name: /last 30 days/ })).toBeNull();
+  });
+
+  it("renders an observed empty history as empty, with per-component bars", () => {
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.getByText("No incidents recorded in the last 30 days.")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /^Yield, last 30 days/ })).toBeTruthy();
+  });
+});
+
+describe("for integrators", () => {
+  it("is collapsed by default", () => {
+    render(<StatusClient faqItems={[]} />);
+    expect(screen.queryByText("Scheduled delivery")).toBeNull();
+    openIntegrators();
+    expect(screen.getByText("Scheduled delivery")).toBeTruthy();
+  });
+
   it("never presents an unavailable circuit read as all closed", () => {
-    const health = {
+    mockHealth({
       ...makeHealthyHealthResponse(), circuits: null, circuitsUnavailableReason: "circuits-read-failed",
       status: "degraded", warnings: ["circuit-query-failed"],
-    };
-    useHealthMock.mockReturnValue({ data: health, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: Date.now() });
+    });
     render(<StatusClient faqItems={[]} />);
-    expect(screen.getByText("Unavailable")).toBeTruthy();
+    openIntegrators();
+    expect(screen.getByText("Circuit breaker evidence unavailable (circuits-read-failed).")).toBeTruthy();
     expect(screen.queryByText("All closed")).toBeNull();
   });
-  it("renders heavy delivery loss while the public scheduler remains healthy", () => {
+
+  it("renders background computation delay without internal lane names", () => {
     const health = makeHealthyHealthResponse();
     health.status = "degraded";
     health.warnings = ["heavy_scheduled_delivery_stalled"];
@@ -67,87 +161,22 @@ describe("public incident history availability", () => {
       ...health.schedulerLiveness!.heavy, status: "degraded", ageSeconds: 1801,
       lastStartedAt: health.timestamp - 1801,
     };
-    useHealthMock.mockReturnValue({ data: health, error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: Date.now() });
-    useHistoryMock.mockReturnValue({ data: emptyHistory, isLoading: false, error: null });
+    mockHealth(health);
     render(<StatusClient faqItems={[]} />);
-    expect(screen.getByText("Heavy Worker delivery")).toBeTruthy();
-    expect(screen.getByText("v9SupplyAttributionOffset")).toBeTruthy();
-    expect(screen.getByText(/warning >1800s · stale >2700s/)).toBeTruthy();
-    expect(screen.getByText(/· healthy/)).toBeTruthy();
-  });
-  it.each(["loading", "failed"] as const)("does not turn %s history into an empty observation", (state) => {
-    useHistoryMock.mockReturnValue({
-      data: undefined,
-      isLoading: state === "loading",
-      error: state === "failed" ? new Error("history unavailable") : null,
-    });
-    render(<StatusClient faqItems={[]} />);
-
-    expect(screen.queryByRole("img", { name: /status runway/ })).toBeNull();
-    expect(screen.getByText(/last 30 days cannot be shown/)).toBeTruthy();
-    expect(screen.queryByText(/No status changes recorded/)).toBeNull();
+    openIntegrators();
+    expect(screen.getByText("Background computation lane")).toBeTruthy();
+    expect(screen.queryByText("v9SupplyAttributionOffset")).toBeNull();
+    expect(screen.getByText(/Delayed after 30m, degraded after 45m, outage after 1h 30m\./)).toBeTruthy();
   });
 
-  it("renders a successfully observed empty history as empty", () => {
-    useHistoryMock.mockReturnValue({ data: emptyHistory, isLoading: false, error: null });
-    render(<StatusClient faqItems={[]} />);
-
-    expect(screen.getByRole("img", { name: /status runway/ })).toBeTruthy();
-    expect(screen.getByText(/No status changes recorded/)).toBeTruthy();
-    expect(screen.queryByText(/last 30 days cannot be shown/)).toBeNull();
-  });
-
-  it("does not present a retained runway as current after a refresh failure", () => {
-    useHistoryMock.mockReturnValue({
-      data: { ...emptyHistory, lastChangedAt: 1_789_000_000, transitions: [{
-        id: 1, from: "degraded", to: "healthy", transitionType: "recover",
-        reason: "Recovery", at: 1_789_000_000,
-      }] },
-      isLoading: false,
-      error: new Error("history unavailable"),
-    });
-    render(<StatusClient faqItems={[]} />);
-
-    expect(screen.queryByRole("img", { name: /status runway/ })).toBeNull();
-    expect(screen.queryByText(/healthy for \d+d/)).toBeNull();
-    expect(screen.getByText(/last 30 days cannot be shown/)).toBeTruthy();
-  });
-});
-
-describe("public probe evidence", () => {
   it.each([
-    ["pending", undefined, true, null, "Loading"],
-    ["failed", undefined, false, new Error("probe read failed"), "Unknown"],
-    ["empty", [], false, null, "Unknown"],
-  ] as const)("never labels %s browser probe evidence Healthy", (_label, data, isLoading, error, expected) => {
+    ["pending", undefined, true, null, "Probing endpoints"],
+    ["failed", undefined, false, new Error("probe read failed"), "Browser probes could not run: probe read failed"],
+  ] as const)("keeps %s probe evidence distinct from a pass", (_label, data, isLoading, error, expected) => {
     useProbesMock.mockReturnValue({ data, isLoading, error, refetch: vi.fn(), dataUpdatedAt: 0 });
     render(<StatusClient faqItems={[]} />);
-    const tile = within(screen.getByText("Browser probes").parentElement!);
-    expect(tile.getByText(expected)).toBeTruthy();
-    expect(tile.queryByText("Healthy")).toBeNull();
-    expect(tile.getByText("—")).toBeTruthy();
-  });
-});
-
-describe("public query freshness", () => {
-  it.each([
-    ["normal four-minute probes", 0, 240_000, "current", "current"],
-    ["overdue probes", 0, 1_800_001, "current", "stale"],
-    ["overdue health", 1_800_001, 0, "stale", "current"],
-    ["exact polling budget", 1_800_000, 1_800_000, "current", "current"],
-  ] as const)("uses independent polling budgets for %s", (_label, healthAge, probeAge, healthState, probeState) => {
-    vi.useFakeTimers();
-    const now = 1_790_000_000_000;
-    vi.setSystemTime(now);
-    useHealthMock.mockReturnValue({
-      data: makeHealthyHealthResponse(), error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: now - healthAge,
-    });
-    useProbesMock.mockReturnValue({
-      data: [{ path: "/api/health", status: 200, latencyMs: 40 }],
-      error: null, isLoading: false, refetch: vi.fn(), dataUpdatedAt: now - probeAge,
-    });
-    render(<StatusClient faqItems={[]} />);
-    expect(screen.getByText(/^Health fetch: /).closest("time")?.getAttribute("data-state")).toBe(healthState);
-    expect(screen.getByText(/^Probe fetch: /).closest("time")?.getAttribute("data-state")).toBe(probeState);
+    openIntegrators();
+    expect(screen.getByText(expected)).toBeTruthy();
+    expect(screen.queryByText("OK")).toBeNull();
   });
 });

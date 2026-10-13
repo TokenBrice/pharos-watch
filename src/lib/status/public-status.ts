@@ -1,8 +1,16 @@
 import { getBlacklistGapStatus, getStablecoinPublicationImpactStatus } from "@shared/lib/status-thresholds";
-import { getPublicMintBurnStatus, getStatusSeverity, type PublicStatusTone } from "@shared/lib/public-health";
+import {
+  getPublicMintBurnStatus,
+  getStatusSeverity,
+  PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER,
+  type PublicStatusTone,
+} from "@shared/lib/public-health";
 import type { HealthResponse, StatusHealthValue } from "@shared/types";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { formatProseList } from "@shared/lib/format";
+import { projectPublicStatus, type PublicStatusProjection } from "@shared/lib/public-status-components";
+import type { PublicComponentState, PublicHeadlineState } from "@shared/types";
+import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 import { STATUS_PRIORITY } from "@/lib/status/dashboard-presentation";
 
 export interface PublicCacheSummary {
@@ -234,6 +242,13 @@ export function getPublicWorstCacheSummary(
   return { ratio, status, impactedCount };
 }
 
+/** Plain words for the divergence sentences; raw enum values never reach copy. */
+const DIVERGENCE_WORD: Record<StatusHealthValue, string> = {
+  healthy: "no problem",
+  degraded: "a partial problem",
+  stale: "a serious problem",
+};
+
 export type PublicDivergenceNotice =
   | { kind: "in-sync" }
   | { kind: "health-degraded-probes-ok"; detail: string }
@@ -250,18 +265,18 @@ export function getPublicDivergenceNotice(
   if (h > 0 && p === 0) {
     return {
       kind: "health-degraded-probes-ok",
-      detail: `Health endpoint reports ${healthStatus}, but browser probes are green. A data-quality or ingestion issue likely, not an API outage.`,
+      detail: `The health check reports ${DIVERGENCE_WORD[healthStatus]} while browser probes pass. This points to a data freshness or ingestion issue rather than an API outage.`,
     };
   }
   if (p > 0 && h === 0) {
     return {
       kind: "probes-degraded-health-ok",
-      detail: `Browser probes report ${probeStatus}, but health endpoint is green. Your network path may be the issue; refresh or try another network.`,
+      detail: `Browser probes report ${DIVERGENCE_WORD[probeStatus]} while the health check passes. The problem may be on the network path from this browser.`,
     };
   }
   return {
     kind: "both-degraded-different-severity",
-    detail: `Health: ${healthStatus}. Probes: ${probeStatus}.`,
+    detail: `The health check reports ${DIVERGENCE_WORD[healthStatus]} and browser probes report ${DIVERGENCE_WORD[probeStatus]}.`,
   };
 }
 
@@ -336,4 +351,48 @@ export function getImpactedPublicSurfaces(
   }
 
   return items;
+}
+
+/**
+ * The public headline and components for a health payload. The Worker
+ * projection is the authority (ADR-32); an older cached payload without it
+ * falls back to the same shared projection function.
+ */
+export function resolvePublicProjection(health: HealthResponse): PublicStatusProjection {
+  if (health.headline && health.components) return { headline: health.headline, components: health.components };
+  return projectPublicStatus(health);
+}
+
+/**
+ * Grade an age against the public component bands (the same bands the Worker
+ * projection uses): past `delayedAfterSec` is Delayed, past `degradedAfterSec`
+ * is Degraded, past the outage grace multiple of that is Outage.
+ */
+export function getAgeBandState(ageSeconds: number, delayedAfterSec: number, degradedAfterSec: number): PublicComponentState {
+  if (ageSeconds > degradedAfterSec * PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER) return "outage";
+  if (ageSeconds > degradedAfterSec) return "degraded";
+  if (ageSeconds > delayedAfterSec) return "delayed";
+  return "operational";
+}
+
+export interface PublicHeadlineSummary {
+  state: PublicHeadlineState | null;
+  /** Headline state word ("Operational", "Delayed"...), or "Loading"/"Unavailable" without a payload (R2). */
+  label: string;
+  /** Headline sentence, when health has loaded. */
+  title: string | null;
+}
+
+/**
+ * What the public `/status/` page shows as its headline, for admin surfaces
+ * that summarise public health. A missing payload is "Loading" until the read
+ * has failed, never a fabricated state.
+ */
+export function describePublicHeadline(
+  health: HealthResponse | null | undefined,
+  loadFailed: boolean,
+): PublicHeadlineSummary {
+  if (!health) return { state: null, label: loadFailed ? "Unavailable" : "Loading", title: null };
+  const { headline } = resolvePublicProjection(health);
+  return { state: headline.state, label: PUBLIC_HEADLINE_TONE[headline.state].label, title: headline.title };
 }

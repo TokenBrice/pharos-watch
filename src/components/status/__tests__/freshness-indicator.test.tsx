@@ -175,7 +175,8 @@ describe("FreshnessIndicator", () => {
     rerender(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
     expect(screen.getByText("30s ago")).toBeTruthy();
     expect(screen.getByRole("time").getAttribute("data-state")).toBe("current");
-    expect(screen.getByRole("status").textContent).toBe("Data is current again.");
+    // A first load is not a recovery: nothing is announced.
+    expect(screen.getByRole("status").textContent).toBe("");
   });
 
   it("pauses ticking while the document is hidden and catches up on visibility", () => {
