@@ -117,7 +117,7 @@ export async function runMintBurnConfigPhase(input: {
   }
   const conservationBoundaries = await fetchConservationBoundaries({
     requests: [...boundaryRequests.values()],
-    rpcUrlByChain: new Map([...input.chainContexts].map(([chainId, context]) => [chainId, context.alchemyUrl])),
+    rpcEndpointsByChain: new Map([...input.chainContexts].map(([chainId, context]) => [chainId, context.rpcEndpoints])),
     budget: input.budget,
     checkedAt: nowSec,
     signal: input.signal,
@@ -245,7 +245,7 @@ export async function runMintBurnConfigPhase(input: {
       fromBlock,
       scanTo,
       chainHead: chainContext.chainHead,
-      alchemyUrl: chainContext.alchemyUrl,
+      rpcEndpoints: chainContext.rpcEndpoints,
       signal: input.signal,
       configBudgetLimit,
       runTimestamp: input.runTimestamp,

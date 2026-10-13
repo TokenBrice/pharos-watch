@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mintBurnAlchemyEndpoint } from "../mint-burn-pipeline/rpc";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -42,7 +43,7 @@ function ready(delta = 1n): ReadyBoundary {
     fromTimestamp: 1000, toTimestamp: 1024, fromSupplyRaw: "100", toSupplyRaw: (100n + delta).toString() };
 }
 function boundaryInput(requests: ConservationBoundaryRequest[] = [{ key: "one", config, fromBlock: 101, toBlock: 102 }]) {
-  return { requests, rpcUrlByChain: new Map([["ethereum", "https://rpc.example"]]),
+  return { requests, rpcEndpointsByChain: new Map([["ethereum", [mintBurnAlchemyEndpoint("https://rpc.example")]]]),
     budget: { count: 0, limit: 100 }, checkedAt: 1100 };
 }
 async function auditWithBoundaries() {
@@ -206,7 +207,7 @@ describe("pooled conservation boundaries", () => {
       { ...disjointRequests[0], key: "invalid", fromBlock: 0 },
       disjointRequests[0],
     ];
-    const result = await fetchConservationBoundaries({ ...boundaryInput(requests), rpcUrlByChain: new Map() });
+    const result = await fetchConservationBoundaries({ ...boundaryInput(requests), rpcEndpointsByChain: new Map() });
     expect(result.has("unsupported")).toBe(false);
     expect(result.get("invalid")).toEqual({ status: "unavailable", reason: "invalid-audit-range" });
     expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-rpc-unavailable" });
@@ -673,7 +674,7 @@ describe("reviewed alternative conservation laws", () => {
       { key: "usdt", config: usdtConfig, fromBlock: 101, toBlock: 102 },
       { key: "ousd", config: ousdConfig, fromBlock: 101, toBlock: 102 },
       { key: "usdo", config: usdoConfig, fromBlock: 101, toBlock: 102 },
-    ], rpcUrlByChain: new Map([["ethereum", "https://rpc.example"]]), budget: { count: 0, limit: 100 }, checkedAt: 2000 });
+    ], rpcEndpointsByChain: new Map([["ethereum", [mintBurnAlchemyEndpoint("https://rpc.example")]]]), budget: { count: 0, limit: 100 }, checkedAt: 2000 });
     const pinnedCalls = vi.mocked(fetchEvmRpcBatchDetailed).mock.calls
       .flatMap(([, calls]) => calls.filter((call) => call.method !== "eth_getBlockByNumber"));
     expect(pinnedCalls.some((call) => call.method === "eth_call" &&

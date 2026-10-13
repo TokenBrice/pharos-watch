@@ -11,6 +11,8 @@ import { buildInClause, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./d1-primitives";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import conservationRuntimeLookup from "./mint-burn-conservation-runtime.generated.json";
+import type { RpcEndpoint } from "./chain-registry";
+import { MINT_BURN_DWELLIR_FALLBACK_CHAINS } from "./mint-burn-pipeline/rpc";
 
 const TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const ZERO = `0x${"0".repeat(64)}`;
@@ -634,7 +636,7 @@ function validAuditRange(fromBlock: number, toBlock: number): boolean {
 
 export async function fetchConservationBoundaries(input: {
   requests: ConservationBoundaryRequest[];
-  rpcUrlByChain: ReadonlyMap<string, string>;
+  rpcEndpointsByChain: ReadonlyMap<string, readonly RpcEndpoint[]>;
   budget: SubrequestBudget;
   checkedAt: number;
   signal?: AbortSignal;
@@ -668,7 +670,7 @@ export async function fetchConservationBoundaries(input: {
       if (!evidence.has(key)) evidence.set(key, { status: "unavailable", reason });
     }
   };
-  async function phase(rpcUrl: string, calls: BoundaryCall[]): Promise<void> {
+  async function phase(endpoints: readonly RpcEndpoint[], calls: BoundaryCall[]): Promise<void> {
     const pending = calls.filter(({ keys }) => keys.some((key) => !evidence.has(key)));
     for (let offset = 0; offset < pending.length; offset += maxBatchCalls) {
       throwIfAborted(signal);
@@ -680,36 +682,53 @@ export async function fetchConservationBoundaries(input: {
         for (const { keys } of chunk) fail(keys, "audit-budget-or-deadline");
         continue;
       }
-      budget.count++;
-      let result;
-      try {
-        result = await fetchEvmRpcBatchDetailed(undefined, chunk.map(({ call }) => call), {
-          extraRpcUrls: [rpcUrl], signal, maxRetries: 0,
-          // Trial invariant 2: the mint/burn lane never reads a supplemental (Dwellir) endpoint.
-          excludeSupplementalRpc: true,
-          timeoutMs: Math.max(1, Math.min(MINT_BURN_CONSERVATION_CHUNK_TIMEOUT_MS, (deadlineMs ?? Infinity) - now)),
-        });
-      } catch {
+      let result = null;
+      let retryChunk = chunk;
+      const acceptedResults = new Map<BoundaryCall, unknown>();
+      let unavailableReason = "audit-rpc-unavailable";
+      for (const endpoint of endpoints) {
+        const attemptNow = Date.now();
+        if (budget.count >= budget.limit || (deadlineMs != null && attemptNow >= deadlineMs)) {
+          unavailableReason = "audit-budget-or-deadline";
+          break;
+        }
+        budget.count++;
+        try {
+          result = await fetchEvmRpcBatchDetailed(undefined, retryChunk.map(({ call }) => call), {
+            extraRpcUrls: [endpoint.url], signal, maxRetries: 0,
+            excludeSupplementalRpc: endpoint.operator !== "dwellir",
+            timeoutMs: Math.max(1, Math.min(MINT_BURN_CONSERVATION_CHUNK_TIMEOUT_MS, (deadlineMs ?? Infinity) - attemptNow)),
+          });
+        } catch {
+          throwIfAborted(signal);
+          result = null;
+        }
         throwIfAborted(signal);
-        result = null;
+        const failed = new Set(result?.errors.map(({ index }) => index));
+        if (result) {
+          for (let index = 0; index < retryChunk.length; index++) {
+            if (!failed.has(index)) acceptedResults.set(retryChunk[index], result.results[index]);
+          }
+        }
+        retryChunk = retryChunk.filter((call) => !acceptedResults.has(call));
+        if (retryChunk.length === 0) break;
       }
-      throwIfAborted(signal);
-      const errors = new Set(result?.errors.map(({ index }) => index));
-      for (let index = 0; index < chunk.length; index++) {
-        const { keys, accept } = chunk[index];
-        if (!result || errors.has(index)) {
-          fail(keys, "audit-rpc-unavailable");
+      for (const item of chunk) {
+        const { keys, accept } = item;
+        if (!acceptedResults.has(item)) {
+          fail(keys, unavailableReason);
           continue;
         }
-        try { accept(result.results[index]); } catch (error) { fail(keys, auditReason(error)); }
+        try { accept(acceptedResults.get(item)); } catch (error) { fail(keys, auditReason(error)); }
       }
     }
   }
 
   for (const [chainId, requests] of groups) {
     throwIfAborted(signal);
-    const rpcUrl = input.rpcUrlByChain.get(chainId);
-    if (!rpcUrl) {
+    const endpoints = input.rpcEndpointsByChain.get(chainId)?.filter((endpoint) => endpoint.operator !== "dwellir"
+      || (MINT_BURN_DWELLIR_FALLBACK_CHAINS[chainId] && !endpoint.routingDisabled));
+    if (!endpoints?.length) {
       fail(requests.map(({ key }) => key), "audit-rpc-unavailable");
       continue;
     }
@@ -733,7 +752,7 @@ export async function fetchConservationBoundaries(input: {
         headers.set(block, { hash: header.hash.toLowerCase(), timestamp: quantity(header.timestamp) });
       },
     }));
-    await phase(rpcUrl, headerCalls);
+    await phase(endpoints, headerCalls);
     const supplies = new Map<string, string[]>();
     const deprecatedByRequest = new Map<string, boolean[]>();
     const viewsByRequest = new Map<string, { from: Record<string, string>; to: Record<string, string> }>();
@@ -819,8 +838,8 @@ export async function fetchConservationBoundaries(input: {
         }
       }
     }
-    await phase(rpcUrl, supplyCalls);
-    await phase(rpcUrl, headerCalls.map(({ block, call, keys }) => ({
+    await phase(endpoints, supplyCalls);
+    await phase(endpoints, headerCalls.map(({ block, call, keys }) => ({
       call, keys,
       accept(value) {
         const original = headers.get(block)!;

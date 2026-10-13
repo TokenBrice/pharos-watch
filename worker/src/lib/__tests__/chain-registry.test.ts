@@ -301,7 +301,7 @@ describe("buildChainRpcs", () => {
     },
   );
 
-  it.each(["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche"])(
+  it.each(["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche", "polygon"])(
     "promotes %s state before keyed and keyless incumbents", (chainId) => {
       for (const { alchemyApiKey, drpcApiKey } of KEY_COMBINATIONS) {
         const baseline = buildChainRpcs(alchemyApiKey, drpcApiKey).get(chainId);

@@ -42,6 +42,14 @@ describe("Dwellir raw log transport", () => {
       .toMatchObject({ complete: false, scannedToBlock: 10_000 });
   });
 
+  it.each([undefined, null, ""])("holds the frontier when a log omits its block hash (%s)", async (blockHash) => {
+    const log = { address: "0xabc", topics: [], data: "0x", blockNumber: "0x2711", transactionHash: "0xa",
+      transactionIndex: "0x0", logIndex: "0x0", removed: false, blockHash };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(response([])).mockResolvedValueOnce(response([log])));
+    expect(await fetchAlchemyLogs(endpoint.url, "0xabc", [], 1, 20_000, createBudget(20), undefined, { endpoint }))
+      .toMatchObject({ complete: false, scannedToBlock: 10_000, logs: [], failureReason: "invalid-log-payload" });
+  });
+
   it("rejects retained history before issuing requests", async () => {
     const fetcher = vi.fn().mockResolvedValue(response(null));
     vi.stubGlobal("fetch", fetcher);

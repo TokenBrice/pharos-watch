@@ -99,6 +99,7 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
 });
 
 import { syncMintBurn } from "../sync-mint-burn";
+import { mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
 import { syncMintBurnConfig } from "../mint-burn/sync-config";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { batchExecute } from "../../lib/db";
@@ -280,7 +281,7 @@ describe("syncMintBurn", () => {
       fromBlock: 21_900_000,
       scanTo: 21_949_999,
       chainHead: 22_000_000,
-      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
+      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       configBudgetLimit: 200,
       runTimestamp: 1_718_650_752,
       priceContext: {
@@ -328,7 +329,7 @@ describe("syncMintBurn", () => {
       fromBlock: 21_955_001,
       scanTo: 21_960_000,
       chainHead: 22_000_000,
-      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
+      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       configBudgetLimit: 200,
       runTimestamp: 1_718_650_752,
       priceContext: {
@@ -379,7 +380,7 @@ describe("syncMintBurn", () => {
       fromBlock: 21_900_000,
       scanTo: 21_960_000,
       chainHead: 22_000_000,
-      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
+      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       configBudgetLimit: 200,
       runTimestamp: 1_718_650_752,
       priceContext: {
@@ -435,7 +436,7 @@ describe("syncMintBurn", () => {
       fromBlock: failedBlock,
       scanTo: 21_960_000,
       chainHead: 22_000_000,
-      alchemyUrl: "https://eth-mainnet.g.alchemy.com/v2/",
+      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       configBudgetLimit: 200,
       runTimestamp: 1_718_650_752,
       priceContext: {

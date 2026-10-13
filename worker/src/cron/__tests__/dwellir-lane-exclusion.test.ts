@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { jsonResponse, mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { buildAlchemyUrl } from "../../lib/alchemy-logs";
+import { mintBurnRpcEndpoints } from "../../lib/mint-burn-pipeline/rpc";
 import { fetchEvmTokenBalance } from "../../lib/blacklist/balance-providers";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { createBlacklistRunBudget } from "../../lib/blacklist/run-budget";
@@ -21,7 +22,7 @@ import { fetchEvmEventsIncremental, RPC_LOG_SCAN_WINDOWS } from "../blacklist/ev
 import { ethereumConfig } from "../blacklist/__tests__/balance.test-support";
 
 /**
- * Non-allowlisted BSC logs and direct-Alchemy mint/burn never read Dwellir.
+ * Non-allowlisted BSC logs and Ethereum mint/burn never read Dwellir.
  *
  * Every case below runs the real transports against a recorded fetch while a
  * Dwellir-enabled registry is present, so an excluded-operator leak is
@@ -299,7 +300,7 @@ describe("mint/burn conservation boundaries", () => {
     const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
     const evidence = await fetchConservationBoundaries({
       requests: [{ key: "gusd", config, fromBlock: 101, toBlock: 102 }],
-      rpcUrlByChain: new Map([["ethereum", alchemyUrl]]),
+      rpcEndpointsByChain: new Map([["ethereum", mintBurnRpcEndpoints("ethereum", "alchemy-test", chainRpcs)]]),
       budget: createBudget(100),
       checkedAt: 1_100,
     });

@@ -8,6 +8,7 @@ import { parseQueryParams } from "../../src/lib/api-params";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { assertActiveStablecoin } from "../../src/lib/frozen-guards";
 import { classifyBridgeBurnRows } from "../../src/lib/mint-burn-pipeline/classification";
+import { mintBurnAlchemyEndpoint } from "../../src/lib/mint-burn-pipeline/rpc";
 import { loadMintBurnPriceContextBatch } from "../../src/lib/mint-burn-pipeline/context";
 import { parseMintBurnLogs } from "../../src/lib/mint-burn-pipeline/parse";
 import { DECODE_QUARANTINE_REASON, EVM_SAFETY_MARGIN_BLOCKS, mintBurnSuccessfulScanFrontier, shouldQuarantineDecodeFailure } from "../../src/lib/mint-burn-pipeline/scan-policy";
@@ -318,7 +319,7 @@ export async function handleBackfillMintBurn({
         allParsedRows.push(...parsed.rows);
       }
 
-      const burnCounts = await classifyBridgeBurnRows(allParsedRows, config, alchemyUrl, budget, txContextCache);
+      const burnCounts = await classifyBridgeBurnRows(allParsedRows, config, [mintBurnAlchemyEndpoint(alchemyUrl)], budget, txContextCache);
       if (burnCounts.txContextShortfalls > 0) {
         txContextShortfalls += burnCounts.txContextShortfalls;
         return errorResponse(

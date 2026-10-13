@@ -2,7 +2,9 @@ import type { MintBurnConservationRecord } from "@shared/types/status";
 import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence, type ConservationLogBatch } from "../../lib/mint-burn-conservation";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
-import { blockHashesForLogs, fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
+import { blockHashesForLogs } from "../../lib/alchemy-logs";
+import type { RpcEndpoint } from "../../lib/chain-registry";
+import { fetchMintBurnLogs, resolveMintBurnBlockTimestamps } from "../../lib/mint-burn-pipeline/rpc";
 import { budgetExhausted, createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
@@ -81,7 +83,7 @@ export interface SyncMintBurnConfigInput {
   fromBlock: number;
   scanTo: number;
   chainHead: number;
-  alchemyUrl: string;
+  rpcEndpoints: readonly RpcEndpoint[];
   signal?: AbortSignal;
   configBudgetLimit: number;
   runTimestamp: number;
@@ -194,7 +196,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     fromBlock,
     scanTo,
     chainHead,
-    alchemyUrl,
+    rpcEndpoints,
     signal,
     configBudgetLimit,
     runTimestamp,
@@ -235,8 +237,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
 
     const topics = eventDefTopicFilters(eventDef);
 
-    const fetched = await fetchAlchemyLogs(
-      alchemyUrl,
+    const fetched = await fetchMintBurnLogs(
+      rpcEndpoints,
       config.contractAddress,
       topics,
       fromBlock,
@@ -292,8 +294,8 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       summary.failedEventDefs.push(`${label}:budget`);
       continue;
     }
-    const fetched = await fetchAlchemyLogs(
-      alchemyUrl,
+    const fetched = await fetchMintBurnLogs(
+      rpcEndpoints,
       eventDef.emitter ?? config.contractAddress,
       eventDefTopicFilters(eventDef),
       fromBlock,
@@ -323,7 +325,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     )),
   ];
   const blockTimestamps = timestampRequiredBlocks.length > 0
-    ? await resolveBlockTimestamps(alchemyUrl, timestampRequiredBlocks, configBudget, {
+    ? await resolveMintBurnBlockTimestamps(rpcEndpoints, timestampRequiredBlocks, configBudget, {
         signal,
         localCache: chainTimestampCache,
         blockHashes: blockHashesForLogs(allConfigLogs.flatMap(({ logs }) => logs)),
@@ -412,11 +414,13 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   const burnCounts = await classifyBridgeBurnRows(
     allParsedRows,
     config,
-    alchemyUrl,
+    rpcEndpoints,
     configBudget,
     txContextCache,
     signal,
-    { deadlineMs },
+    { deadlineMs, blockHashesByTx: rpcEndpoints.length > 1 ? new Map(allConfigLogs.flatMap(({ logs }) =>
+      logs.filter((log) => typeof log.blockHash === "string")
+        .map((log) => [log.transactionHash, log.blockHash.toLowerCase()] as const))) : undefined },
   );
   summary.txContextShortfalls = burnCounts.txContextShortfalls;
   const deferredTxHashSet = new Set(burnCounts.deferredTxHashes);

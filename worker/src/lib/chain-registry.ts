@@ -240,6 +240,8 @@ export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, DwellirStatePlacem
   arbitrum: "primary",
   optimism: "primary",
   avalanche: "primary",
+  // Archive host since 2026-10-11; logs stay off the log allowlist (two log timeouts in 41 runs).
+  polygon: "primary",
   linea: "supplemental-first",
   scroll: "supplemental-first",
   unichain: "supplemental-first",

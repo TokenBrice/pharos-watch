@@ -35,6 +35,7 @@ import {
 } from "./mint-burn/run-state";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { throwIfAborted } from "../lib/abort";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 
 const MAX_SCAN_RANGE = 50_000;
 
@@ -56,6 +57,7 @@ export interface SyncMintBurnOptions {
   lane?: MintBurnLane;
   jobName?: string;
   onProgress?: CronProgressReporter;
+  chainRpcs?: ReadonlyMap<string, ChainRpcConfig>;
 }
 
 function laneIncludesConfig(lane: MintBurnLane, config: MintBurnContractConfig): boolean {
@@ -191,6 +193,7 @@ export async function syncMintBurn(
     apiKey,
     budget,
     signal,
+    chainRpcs: options.chainRpcs,
   });
   const chainHeads = new Map(
     [...chainContexts.entries()].map(([chainId, context]) => [chainId, context.chainHead]),

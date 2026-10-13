@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import type { DatabaseSync } from "node:sqlite";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
@@ -192,7 +193,7 @@ function makeChainContext() {
   return new Map([
     ["ethereum", {
       chainHead: 22_050_000,
-      alchemyUrl: "https://eth.example",
+      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth.example")],
       chainTimestampCache: new Map<string, number>(),
       txContextCache: new Map(),
     }],
