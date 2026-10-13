@@ -1,4 +1,5 @@
 import type { FreshnessStatus } from "@shared/lib/status-thresholds";
+import { MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO } from "@shared/lib/public-health";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { parseCsvEnv } from "./env";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
@@ -18,8 +19,6 @@ const SECONDS_PER_HOUR = 3600;
 const DEFAULT_MINT_BURN_STALE_WARN_SEC = 6 * SECONDS_PER_HOUR;
 const DEFAULT_MINT_BURN_STALE_CRIT_SEC = 24 * SECONDS_PER_HOUR;
 const DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC = SECONDS_PER_HOUR;
-// Public freshness tolerates one missed critical-lane run; the next half-window is degraded.
-const MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO = 1.5;
 
 export const MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC =
   API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;

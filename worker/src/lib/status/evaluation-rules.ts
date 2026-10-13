@@ -14,6 +14,7 @@ import type { DataQuality, StatusCause, StatusResponse } from "@shared/types/sta
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import type { StatusLevel } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
+import type { CronFindingJobs } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
 import { maxStatus } from "./evaluation-state";
 
@@ -107,7 +108,15 @@ function evaluateStatusRuleSet<Input>(
   return { status, causes };
 }
 
-type CauseDetails = Pick<StatusCause, "metric" | "value" | "threshold">;
+type CauseDetails = Pick<StatusCause, "metric" | "value" | "threshold" | "subjects">;
+
+/** Append the named jobs to a counted cron cause; counts alone never say what to inspect. */
+function withJobs(message: string, jobs: readonly string[] | undefined): { message: string; subjects?: string[] } {
+  if (!jobs || jobs.length === 0) return { message };
+  const shown = jobs.slice(0, 6);
+  const more = jobs.length - shown.length;
+  return { message: `${message} Jobs: ${shown.join(", ")}${more > 0 ? ` and ${more} more` : ""}.`, subjects: [...jobs] };
+}
 
 function makeCause(
   layer: StatusCause["layer"],
@@ -130,6 +139,8 @@ export interface AvailabilityEvaluationInput {
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
+  /** Job ids behind each count; optional so fixtures without them keep count-only messages. */
+  cronFindingJobs?: Partial<CronFindingJobs>;
 }
 
 export interface DataQualityEvaluationInput {
@@ -309,11 +320,11 @@ type CronDiagnosticsInput = Pick<
 >;
 type WatchCronErrorsInput = Pick<
   AvailabilityEvaluationInput,
-  "cronErrorCount" | "availabilityImpactingCronErrors"
+  "cronErrorCount" | "availabilityImpactingCronErrors" | "cronFindingJobs"
 >;
 type WatchTailInput = Pick<
   AvailabilityEvaluationInput,
-  "watchUnhealthyCrons" | "degradedCronRuns"
+  "watchUnhealthyCrons" | "degradedCronRuns" | "cronFindingJobs"
 >;
 
 function evaluateCronDiagnosticQueries(input: CronDiagnosticsInput): Partial<StatusRuleEvaluation> | null {
@@ -327,17 +338,22 @@ function evaluateCronDiagnosticQueries(input: CronDiagnosticsInput): Partial<Sta
 function evaluateWatchCronErrors(input: WatchCronErrorsInput): Partial<StatusRuleEvaluation> | null {
   const watchCronErrors = Math.max(0, input.cronErrorCount - input.availabilityImpactingCronErrors);
   return watchCronErrors > 0
-    ? ruleResult("healthy", [makeCause("availability", "watch_cron_error_runs", "info", `${watchCronErrors} watch-tier cron job(s) currently have last-run status=error.`, { metric: "watchCronErrors", value: watchCronErrors, threshold: 1 })])
+    ? (() => {
+      const named = withJobs(`${watchCronErrors} watch-tier cron job(s) currently have last-run status=error.`, input.cronFindingJobs?.watchErrors);
+      return ruleResult("healthy", [makeCause("availability", "watch_cron_error_runs", "info", named.message, { metric: "watchCronErrors", value: watchCronErrors, threshold: 1, subjects: named.subjects })]);
+    })()
     : null;
 }
 
 function evaluateWatchTailDiagnostics(input: WatchTailInput): Partial<StatusRuleEvaluation> | null {
   const causes: StatusCause[] = [];
   if (input.watchUnhealthyCrons > 0) {
-    causes.push(makeCause("availability", "watch_unhealthy_crons_present", "info", `${input.watchUnhealthyCrons} watch-tier cron job(s) are unavailable/stale.`, { metric: "watchUnhealthyCrons", value: input.watchUnhealthyCrons, threshold: 1 }));
+    const named = withJobs(`${input.watchUnhealthyCrons} watch-tier cron job(s) are unavailable/stale.`, input.cronFindingJobs?.watchUnhealthy);
+    causes.push(makeCause("availability", "watch_unhealthy_crons_present", "info", named.message, { metric: "watchUnhealthyCrons", value: input.watchUnhealthyCrons, threshold: 1, subjects: named.subjects }));
   }
   if (input.degradedCronRuns > 0) {
-    causes.push(makeCause("availability", "degraded_cron_warning", "info", `${input.degradedCronRuns} cron job(s) report incomplete work or output quality warnings.`, { metric: "degradedCrons", value: input.degradedCronRuns, threshold: 1 }));
+    const named = withJobs(`${input.degradedCronRuns} cron job(s) report incomplete work or output quality warnings.`, input.cronFindingJobs?.degraded);
+    causes.push(makeCause("availability", "degraded_cron_warning", "info", named.message, { metric: "degradedCrons", value: input.degradedCronRuns, threshold: 1, subjects: named.subjects }));
   }
   return ruleResult("healthy", causes);
 }
@@ -482,14 +498,15 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
       const stale = input.availabilityImpactingConsecutiveCronErrors > 0;
       const degraded = input.availabilityImpactingCronErrors > 0;
       if (!stale && !degraded) return null;
+      const named = stale
+        ? withJobs(`${input.availabilityImpactingConsecutiveCronErrors} availability-impacting cron job(s) have 2+ consecutive failed runs.`, input.cronFindingJobs?.availabilityImpactingConsecutiveErrors)
+        : withJobs(`${input.availabilityImpactingCronErrors} availability-impacting cron job(s) had a single transient failed run.`, input.cronFindingJobs?.availabilityImpactingErrors);
       const cause = makeCause(
         "availability",
         "cron_error_runs",
         stale ? "critical" : "warning",
-        stale
-          ? `${input.availabilityImpactingConsecutiveCronErrors} availability-impacting cron job(s) have 2+ consecutive failed runs.`
-          : `${input.availabilityImpactingCronErrors} availability-impacting cron job(s) had a single transient failed run.`,
-        { metric: "availabilityImpactingCronErrors", value: input.availabilityImpactingCronErrors, threshold: 1 },
+        named.message,
+        { metric: "availabilityImpactingCronErrors", value: input.availabilityImpactingCronErrors, threshold: 1, subjects: named.subjects },
       );
       return ruleResult(stale ? "stale" : "degraded", [cause]);
   },
@@ -497,17 +514,22 @@ const AVAILABILITY_STATUS_RULES: readonly StatusRule<AvailabilityEvaluationInput
   (input) => {
       const status = input.availabilityImpactingUnhealthyCrons >= 2 ? "stale" : input.availabilityImpactingUnhealthyCrons > 0 ? "degraded" : null;
       if (status == null) return null;
+      const unhealthyNamed = withJobs(
+        input.availabilityImpactingUnhealthyCrons >= 2
+          ? `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron jobs are unavailable/stale.`
+          : `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron job(s) are unavailable/stale.`,
+        input.cronFindingJobs?.availabilityImpactingUnhealthy,
+      );
       const cause = makeCause(
         "availability",
         input.availabilityImpactingUnhealthyCrons >= 2 ? "multiple_unhealthy_crons" : "unhealthy_crons_present",
         input.availabilityImpactingUnhealthyCrons >= 2 ? "critical" : "warning",
-        input.availabilityImpactingUnhealthyCrons >= 2
-          ? `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron jobs are unavailable/stale.`
-          : `${input.availabilityImpactingUnhealthyCrons} availability-impacting cron job(s) are unavailable/stale.`,
+        unhealthyNamed.message,
         {
           metric: "availabilityImpactingUnhealthyCrons",
           value: input.availabilityImpactingUnhealthyCrons,
           threshold: input.availabilityImpactingUnhealthyCrons >= 2 ? 2 : 1,
+          subjects: unhealthyNamed.subjects,
         },
       );
       return ruleResult(status, cause ? [cause] : []);

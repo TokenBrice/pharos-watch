@@ -203,6 +203,7 @@ export async function computeRawStatus(
 
   const availabilityEvaluation = evaluateAvailabilityStatus({
     publicHealth,
+    cronFindingJobs: cronHealth.cronFindingJobs,
     availabilityImpactingCronErrors,
     availabilityImpactingUnhealthyCrons,
     availabilityImpactingConsecutiveCronErrors,

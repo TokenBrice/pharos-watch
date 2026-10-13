@@ -8,7 +8,8 @@ import { makeDb, readHistory, transition } from "./public-status-history.test-su
 // publicHealth outcome without wiring up the full mint-burn / circuit /
 // cache fixture stack. vitest hoists vi.mock above the dynamic import below.
 const { assessPublicHealthMock } = vi.hoisted(() => ({ assessPublicHealthMock: vi.fn() }));
-vi.mock("../../lib/public-health-assessment", () => ({
+vi.mock("../../lib/public-health-assessment", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/public-health-assessment")>()),
   assessPublicHealth: assessPublicHealthMock,
 }));
 
@@ -356,5 +357,39 @@ describe("handlePublicStatusHistory", () => {
       ]);
       expect(body.lastChangedAt).toBe(now - 1800);
     });
+  });
+  it("serves persisted public-projection rows and legacy rows only before the cutover", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const startedAt = now - 3600;
+    const publicCause = [{ code: "unhealthy_crons_present", layer: "availability", severity: "warning", message: "x" }] as StatusCause[];
+    const db = makeDb({
+      publicStartedAt: startedAt,
+      publicRows: [{
+        id: 90, previous_status: "healthy", next_status: "degraded", transition_type: "degrade",
+        reason: "public-projection-changed", created_at: now - 600,
+        causes_json: JSON.stringify({
+          version: 1,
+          headline: { state: "delayed", title: "Updates delayed: Historical charts", affected: ["charts"] },
+          components: [{ id: "charts", state: "delayed", reasons: ["cache:stablecoin-charts:delayed"] }],
+        }),
+      }],
+      transitions: [
+        transition({ id: 2, next_status: "degraded", causes: publicCause, created_at: now - 1800 }),
+        transition({ id: 1, next_status: "degraded", causes: publicCause, created_at: now - 7200 }),
+      ],
+    });
+
+    const response = await handlePublicStatusHistory(db, new Request("https://pharos.watch/api/public-status-history?window=24h"));
+    const body = await response.json() as {
+      publicHistoryStartedAt: number | null;
+      transitions: Array<{ id: number; source?: string; headline?: { state: string }; components?: Array<{ id: string }> }>;
+    };
+
+    expect(body.publicHistoryStartedAt).toBe(startedAt);
+    expect(body.transitions.map(({ id, source }) => ({ id, source }))).toEqual([
+      { id: 90, source: "public" },
+      { id: 1, source: "legacy" },
+    ]);
+    expect(body.transitions[0]).toMatchObject({ headline: { state: "delayed" }, components: [{ id: "charts" }] });
   });
 });

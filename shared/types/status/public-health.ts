@@ -27,6 +27,70 @@ export const PUBLIC_STATUS_HISTORY_WINDOWS = ["24h", "7d", "30d"] as const;
 
 export type PublicStatusHistoryWindow = (typeof PUBLIC_STATUS_HISTORY_WINDOWS)[number];
 
+/**
+ * Public status components: the reader-facing projection of the public health
+ * inputs (`shared/lib/public-status-components.ts` owns the mapping). The
+ * component vocabulary and state ladder live here once; labels and colours
+ * live in `shared/lib/classification/operational-status.ts`.
+ */
+export const PUBLIC_STATUS_COMPONENT_IDS = [
+  "website-api",
+  "stablecoin-data",
+  "charts",
+  "risk-signals",
+  "liquidity",
+  "yield",
+  "mint-burn",
+  "blacklist",
+  "data-refresh",
+] as const;
+export type PublicStatusComponentId = (typeof PUBLIC_STATUS_COMPONENT_IDS)[number];
+
+/** Ordered by severity: delayed is inside its grace budget, outage is past it or unservable. */
+export const PUBLIC_COMPONENT_STATES = ["operational", "delayed", "degraded", "outage"] as const;
+export type PublicComponentState = (typeof PUBLIC_COMPONENT_STATES)[number];
+
+export const PUBLIC_HEADLINE_STATES = ["operational", "delayed", "degraded", "partial-outage", "major-outage"] as const;
+export type PublicHeadlineState = (typeof PUBLIC_HEADLINE_STATES)[number];
+
+/** Age budgets for a freshness-graded component, named so the verdict carries its basis (R3). */
+export const PublicComponentBudgetSchema = z.object({
+  delayedAfterSec: z.number().positive(),
+  degradedAfterSec: z.number().positive(),
+  outageAfterSec: z.number().positive(),
+});
+export type PublicComponentBudget = z.output<typeof PublicComponentBudgetSchema>;
+
+export const PublicStatusComponentSchema = z.object({
+  id: z.enum(PUBLIC_STATUS_COMPONENT_IDS),
+  state: z.enum(PUBLIC_COMPONENT_STATES),
+  /** One plain sentence on what readers see; empty only when operational. */
+  summary: z.string(),
+  /** Machine-readable reasons behind a non-operational state (R4); empty when operational. */
+  reasons: z.array(z.string()),
+  /** Age of the freshest-graded input in seconds; null when not age-graded or unreadable. */
+  ageSeconds: z.number().nonnegative().nullable(),
+  budget: PublicComponentBudgetSchema.nullable(),
+  /** When this state began, from the persisted public projection; null when unknown. */
+  since: z.number().nullable(),
+});
+export type PublicStatusComponent = z.output<typeof PublicStatusComponentSchema>;
+
+export const PublicStatusHeadlineSchema = z.object({
+  state: z.enum(PUBLIC_HEADLINE_STATES),
+  title: z.string(),
+  /** Non-operational component ids, worst first. */
+  affected: z.array(z.enum(PUBLIC_STATUS_COMPONENT_IDS)),
+});
+export type PublicStatusHeadline = z.output<typeof PublicStatusHeadlineSchema>;
+
+export const PublicStatusTransitionComponentSchema = z.object({
+  id: z.enum(PUBLIC_STATUS_COMPONENT_IDS),
+  state: z.enum(PUBLIC_COMPONENT_STATES),
+  reasons: z.array(z.string()),
+});
+export type PublicStatusTransitionComponent = z.output<typeof PublicStatusTransitionComponentSchema>;
+
 export const PublicStatusTransitionSchema = z
   .object({
     id: z.number(),
@@ -35,6 +99,16 @@ export const PublicStatusTransitionSchema = z
     transitionType: z.enum(["degrade", "recover", "init"]),
     reason: z.string(),
     at: z.number(),
+    /**
+     * `public` rows are persisted public-projection changes; `legacy` rows are
+     * operator state-machine transitions filtered to public-impact causes,
+     * served only for the period before the first public row.
+     */
+    source: z.enum(["public", "legacy"]).optional(),
+    /** Public rows only: the headline after this change. */
+    headline: PublicStatusHeadlineSchema.optional(),
+    /** Public rows only: every non-operational component after this change. */
+    components: z.array(PublicStatusTransitionComponentSchema).optional(),
   })
   .passthrough();
 export type PublicStatusTransition = z.output<typeof PublicStatusTransitionSchema>;
@@ -45,6 +119,10 @@ export const PublicStatusHistoryResponseSchema = z
     currentStatus: StatusHealthValueSchema,
     lastChangedAt: z.number().nullable(),
     transitions: z.array(PublicStatusTransitionSchema),
+    /** Earliest persisted public-projection row; legacy rows cover only time before it. */
+    publicHistoryStartedAt: z.number().nullable().optional(),
+    /** True when the window holds more rows than `limit` returned (R7). */
+    hasMore: z.boolean().optional(),
   })
   .passthrough();
 export type PublicStatusHistoryResponse = z.output<typeof PublicStatusHistoryResponseSchema>;
@@ -136,6 +214,12 @@ export const HealthResponseSchema = z.object({
   activePriceCoverage: ActivePriceCoverageHealthSchema.optional(),
   schedulerLiveness: SchedulerLivenessSchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
+  /**
+   * Reader-facing verdict. `status` stays the worst raw input (compatibility);
+   * `headline` and `components` are the public projection the status page shows.
+   */
+  headline: PublicStatusHeadlineSchema.optional(),
+  components: z.array(PublicStatusComponentSchema).optional(),
 });
 export type HealthResponse = z.output<typeof HealthResponseSchema>;
 

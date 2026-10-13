@@ -4,6 +4,18 @@ import type { CacheStatus, CircuitRecord, HealthResponse, StatusHealthValue } fr
 
 export type PublicStatusTone = StatusHealthValue;
 
+/** Public mint/burn freshness tolerates one missed critical-lane run; the next half-window is degraded. */
+export const MINT_BURN_PUBLIC_FRESHNESS_DEGRADED_RATIO = 1.5;
+
+/**
+ * Public component grace: an age-graded component past its stale band stays
+ * `degraded` (last good data still served) until its age reaches this multiple
+ * of the stale band, which proves the stale state has persisted for at least one
+ * further full stale budget. Only then does the public projection report an
+ * outage. The multiple is printed with every age-graded verdict (R3).
+ */
+export const PUBLIC_COMPONENT_OUTAGE_GRACE_MULTIPLIER = 2;
+
 const STATUS_SEVERITY: Record<PublicStatusTone, number> = {
   healthy: 0,
   degraded: 1,

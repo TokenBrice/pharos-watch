@@ -2,7 +2,9 @@ import { parseEnumParam, parseQueryParams } from "../lib/api-params";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { listRecentStatusTransitions } from "../lib/status-reliability";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { assessPublicHealth } from "../lib/public-health-assessment";
+import { assessPublicHealth, buildPublicHealthResponse } from "../lib/public-health-assessment";
+import { headlineToStatusLevel, projectPublicStatus } from "@shared/lib/public-status-components";
+import { listPublicStatusTransitions } from "../lib/status/public-status-state";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import {
   PUBLIC_STATUS_HISTORY_WINDOWS,
@@ -29,6 +31,7 @@ function toPublicTransition(t: StatusTransition): PublicStatusTransition {
     transitionType: t.transitionType,
     reason: t.reason,
     at: t.at,
+    source: "legacy",
   };
 }
 
@@ -49,15 +52,17 @@ function filterPublicStatusTransitions(transitions: StatusTransition[]): StatusT
 }
 
 function getPublicLastChangedAt(
-  transitions: StatusTransition[],
+  transitions: PublicStatusTransition[],
   currentStatus: PublicStatusHistoryResponse["currentStatus"],
+  headlineLevel: PublicStatusHistoryResponse["currentStatus"],
 ): number | null {
-  const latest = transitions.reduce<StatusTransition | null>((candidate, transition) => {
+  const latest = transitions.reduce<PublicStatusTransition | null>((candidate, transition) => {
     if (!candidate || transition.at > candidate.at) return transition;
     if (transition.at === candidate.at && transition.id > candidate.id) return transition;
     return candidate;
   }, null);
-  return latest?.to === currentStatus ? latest.at : null;
+  if (!latest) return null;
+  return latest.to === (latest.source === "public" ? headlineLevel : currentStatus) ? latest.at : null;
 }
 
 export const handlePublicStatusHistory = async (db: D1Database, request: Request): Promise<Response> => {
@@ -73,37 +78,51 @@ export const handlePublicStatusHistory = async (db: D1Database, request: Request
     const from = now - WINDOW_TO_SECONDS[window];
     let transitionQueryFailed = false;
 
-    // Two parallel loads:
-    //   1. the full transition list in the window (will be filtered below)
-    //   2. the public health assessment — same function /api/health uses,
-    //      so the hero badge and this endpoint stay in sync
-    const [allTransitions, publicHealth] = await Promise.all([
-      listRecentStatusTransitions(db, parsed.limit, { from }, () => {
+    // Public-projection rows and the live assessment load together; legacy
+    // operator rows are read only for time before the first public row, so a
+    // growing post-cutover operator log can never crowd them out of the page.
+    const [publicHistory, publicHealth] = await Promise.all([
+      listPublicStatusTransitions(db, parsed.limit, from).catch(() => {
         transitionQueryFailed = true;
+        return { transitions: [] as PublicStatusTransition[], startedAt: null, hasMore: false };
       }),
       assessPublicHealth(db, now, { logPrefix: "public-status-history" }),
     ]);
+    const startedAt = publicHistory.startedAt;
+    const legacyTransitions = startedAt != null && startedAt <= from
+      ? []
+      : await listRecentStatusTransitions(db, parsed.limit, { from, to: startedAt == null ? null : startedAt - 1 }, () => {
+        transitionQueryFailed = true;
+      });
 
     if (transitionQueryFailed) {
       return errorResponse(503, "Public status history unavailable", { noStore: true });
     }
 
-    // Filter transitions to public-impact incidents, while preserving the
-    // recovery rows needed to keep the returned state-machine stream coherent.
-    // Recovery rows can be info-only after the public-impacting cause clears.
-    const filteredTransitions = filterPublicStatusTransitions(allTransitions);
+    const legacy = filterPublicStatusTransitions(legacyTransitions)
+      .filter((transition) => startedAt == null || transition.at < startedAt)
+      .map(toPublicTransition);
+    const merged = [...publicHistory.transitions, ...legacy].sort((a, b) => b.at - a.at || b.id - a.id);
+    const transitions = merged.slice(0, parsed.limit);
 
     // Public currentStatus comes from assessPublicHealth — NOT from the
     // state machine's hysteresis-smoothed admin status. This keeps the
     // public hero (/api/health) and this endpoint in sync. The admin
     // /status/ page continues to use /api/status for its smoothed view.
     const publicCurrentStatus = publicHealth.overallStatus;
+    // Public rows store the headline's level, so compare like with like.
+    const headlineLevel = headlineToStatusLevel(
+      projectPublicStatus(buildPublicHealthResponse(publicHealth, now)).headline.state,
+    );
 
     const body: PublicStatusHistoryResponse = {
       timestamp: now,
       currentStatus: publicCurrentStatus,
-      lastChangedAt: getPublicLastChangedAt(filteredTransitions, publicCurrentStatus),
-      transitions: filteredTransitions.map(toPublicTransition),
+      lastChangedAt: getPublicLastChangedAt(transitions, publicCurrentStatus, headlineLevel),
+      transitions,
+      publicHistoryStartedAt: startedAt,
+      // R7: a bounded page says so instead of passing for the whole window.
+      hasMore: publicHistory.hasMore || legacyTransitions.length >= parsed.limit || merged.length > parsed.limit,
     };
 
     return jsonResponse(body, { headers: { "Cache-Control": CACHE_PROFILES.publicStatus } });

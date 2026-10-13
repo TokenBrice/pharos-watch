@@ -91,6 +91,10 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
         ...(discrepancyError ? { discrepancy: discrepancyError } : {}),
         ...(stateError ? { state: stateError } : {}),
         ...(probeError ? { probe: probeError } : {}),
+        // R2: a failed transitions read is not an empty history.
+        ...(transitionQueryFailed
+          ? { transitions: { code: "status_transition_list_failed", message: "Status transitions could not be read; this does not mean none were recorded." } }
+          : {}),
       },
     };
 

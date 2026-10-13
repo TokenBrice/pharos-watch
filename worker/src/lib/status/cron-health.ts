@@ -16,8 +16,19 @@ import { buildInClause } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import { classifyFreshness } from "./freshness-oracle";
 
+/** Job ids behind each cron finding count, so causes can name what to look at (R4). */
+export interface CronFindingJobs {
+  availabilityImpactingUnhealthy: string[];
+  watchUnhealthy: string[];
+  degraded: string[];
+  availabilityImpactingErrors: string[];
+  availabilityImpactingConsecutiveErrors: string[];
+  watchErrors: string[];
+}
+
 export interface CronHealthSnapshot {
   crons: Record<string, CronStatus>;
+  cronFindingJobs: CronFindingJobs;
   unhealthyCrons: number;
   availabilityImpactingUnhealthyCrons: number;
   watchUnhealthyCrons: number;
@@ -695,6 +706,14 @@ export async function loadCronHealth(
   let staleCronArtifacts = 0;
   let expiredCronLeases = 0;
   let orphanedCronProgressRows = 0;
+  const cronFindingJobs: CronFindingJobs = {
+    availabilityImpactingUnhealthy: [],
+    watchUnhealthy: [],
+    degraded: [],
+    availabilityImpactingErrors: [],
+    availabilityImpactingConsecutiveErrors: [],
+    watchErrors: [],
+  };
 
   for (const [job, interval] of Object.entries(CRON_INTERVALS)) {
     const runs = cronByJob.get(job) ?? [];
@@ -755,8 +774,10 @@ export async function loadCronHealth(
       unhealthyCrons++;
       if (statusImpact === "critical") {
         availabilityImpactingUnhealthyCrons++;
+        cronFindingJobs.availabilityImpactingUnhealthy.push(job);
       } else {
         watchUnhealthyCrons++;
+        cronFindingJobs.watchUnhealthy.push(job);
       }
     }
     if (
@@ -765,6 +786,7 @@ export async function loadCronHealth(
         || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS && latestRequiredRun?.status === "degraded" && latestRequiredRunFresh))
     ) {
       degradedCronRuns++;
+      cronFindingJobs.degraded.push(job);
     }
     const latestErrorRunFresh =
       (lastRun?.status === "error" && isFresh)
@@ -776,6 +798,9 @@ export async function loadCronHealth(
       cronErrorCount++;
       if (statusImpact === "critical") {
         availabilityImpactingCronErrors++;
+        cronFindingJobs.availabilityImpactingErrors.push(job);
+      } else {
+        cronFindingJobs.watchErrors.push(job);
       }
       // Consecutive-error streak: only counts if the two most-recent runs are
       // both in-error. Generic neutral skips do not reset the streak because
@@ -790,6 +815,7 @@ export async function loadCronHealth(
         && requiredRuns[1]?.status === "error"
       ) {
         availabilityImpactingConsecutiveCronErrors++;
+        cronFindingJobs.availabilityImpactingConsecutiveErrors.push(job);
       }
     }
 
@@ -830,6 +856,7 @@ export async function loadCronHealth(
 
   return {
     crons,
+    cronFindingJobs,
     unhealthyCrons,
     availabilityImpactingUnhealthyCrons,
     watchUnhealthyCrons,
