@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registerRpcAuth, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
+import { buildChainRpcs, registerRpcAuth, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
 import { FetchRequestNotStartedError } from "../abort";
 
 const fetchWithRetryMock = vi.fn();
@@ -27,6 +27,7 @@ const {
   MULTICALL3_ADDRESS,
   encodeMulticall3Aggregate3CallData,
   fetchEvmRpcBatch,
+  usableCcipRpcEndpoints,
   fetchEvmRpcBatchDetailed,
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmBlockHeader,
@@ -115,6 +116,80 @@ describe("evm-rpc helpers", () => {
     fetchWithRetryMock.mockReset();
     recordDwellirCreditsMock.mockReset();
     vi.restoreAllMocks();
+  });
+
+  it.each(["ink", "berachain"])("routes CCIP hash-pinned state and historical logs through authenticated, metered Dwellir first on %s", async (chain) => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const dwellir = chainRpcs.get(chain)!.endpoints.find(endpoint => endpoint.operator === "dwellir")!;
+    const block = { blockHash: `0x${"a".repeat(64)}`, requireCanonical: true };
+    const state = [
+      { method: "eth_getCode", params: ["0xContract", block] },
+      { method: "eth_call", params: [{ to: "0xContract", data: "0x12345678" }, block] },
+    ];
+    fetchWithRetryMock.mockImplementation(async (_url, init) => rpcResponse(
+      JSON.parse(String(init.body)).map((request: { id: number; method: string }) => ({
+        jsonrpc: "2.0", id: request.id, result: request.method === "eth_getLogs" ? [] : "0x6000",
+      })),
+    ));
+    const options = { chainRpcs, ccipArchiveRpc: true, maxRetries: 0 };
+    expect(await fetchEvmRpcBatch(chain, state, options)).toEqual(["0x6000", "0x6000"]);
+    expect(await fetchEvmRpcBatch(chain, [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2710" }] }], options)).toEqual([[]]);
+    expect(attemptedUrls()).toEqual([dwellir.url, dwellir.url]);
+    expect(JSON.parse(String(fetchWithRetryMock.mock.calls[0]![1].body))).toEqual(state.map((request, i) => ({ jsonrpc: "2.0", id: i + 1, ...request })));
+    for (const [, init] of fetchWithRetryMock.mock.calls) expect(init.headers).toMatchObject({ "X-Api-Key": "dwellir-key" });
+    expect(recordDwellirCreditsMock.mock.calls).toEqual([[2], [1]]);
+  });
+
+  it.each(["ink", "berachain"])("falls back from CCIP Dwellir to Alchemy then public on %s without exceeding endpoint log spans", async (chain) => {
+    const dwellir = { ...dwellirEndpoint(`https://${chain}.ccip-dwellir.example`), maxLogBlockSpan: 10_000 };
+    const alchemy = { ...registryEndpoint(`https://${chain}.ccip-alchemy.example`, "alchemy"), maxLogBlockSpan: 1_000 };
+    const publicRpc = { ...registryEndpoint(`https://${chain}.ccip-public.example`), maxLogBlockSpan: 10_000 };
+    const chainRpcs = chainRpcsWith(chain, [alchemy, publicRpc, dwellir]);
+    const options = { chainRpcs, ccipArchiveRpc: true, maxRetries: 0 };
+    const logs = (toBlock: string) => [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock }] }];
+    fetchWithRetryMock.mockResolvedValueOnce(httpFailure(503)).mockResolvedValueOnce(httpFailure(503))
+      .mockResolvedValueOnce(rpcResponse([{ jsonrpc: "2.0", id: 1, result: [] }]));
+    expect(await fetchEvmRpcBatch(chain, logs("0x3e8"), options)).toEqual([[]]);
+    expect(attemptedUrls()).toEqual([dwellir.url, alchemy.url, publicRpc.url]);
+    fetchWithRetryMock.mockClear();
+    fetchWithRetryMock.mockResolvedValueOnce(httpFailure(503))
+      .mockResolvedValueOnce(rpcResponse([{ jsonrpc: "2.0", id: 1, result: [] }]));
+    expect(await fetchEvmRpcBatch(chain, logs("0x2710"), options)).toEqual([[]]);
+    expect(attemptedUrls()).toEqual([dwellir.url, publicRpc.url]);
+  });
+
+  it.each([
+    ["ink", "unadmitted"], ["ink", "disabled"], ["berachain", "unadmitted"],
+    ["berachain", "disabled"], ["monad", "admitted"],
+  ])("preserves the previous CCIP request order and payloads on %s when %s", async (chain, admission) => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, admission === "unadmitted" ? undefined : {
+      dwellirApiKey: "dwellir-key", dwellirRoutingDisabledChains: admission === "disabled" ? new Set([chain]) : undefined,
+    });
+    const requests = [
+      [{ method: "eth_getCode", params: ["0xContract", { blockHash: `0x${"a".repeat(64)}`, requireCanonical: true }] }],
+      [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x3e8" }] }],
+    ];
+    fetchWithRetryMock.mockResolvedValue(httpFailure(503));
+    for (const calls of requests) await fetchEvmRpcBatch(chain, calls, { chainRpcs, excludeSupplementalRpc: true, maxRetries: 0 });
+    const previous = fetchWithRetryMock.mock.calls.map(([url, init]) => [url, init.headers, init.body]);
+    fetchWithRetryMock.mockClear();
+    for (const calls of requests) await fetchEvmRpcBatch(chain, calls, { chainRpcs, ccipArchiveRpc: true, maxRetries: 0 });
+    expect(fetchWithRetryMock.mock.calls.map(([url, init]) => [url, init.headers, init.body])).toEqual(previous);
+    expect(previous.length).toBeGreaterThan(0);
+    expect(recordDwellirCreditsMock).not.toHaveBeenCalled();
+  });
+
+  it("retains run-local Dwellir demotion for the CCIP archive profile", async () => {
+    const dwellir = dwellirEndpoint("https://ink.ccip-demotion.example");
+    const alchemy = registryEndpoint("https://ink.ccip-fallback.example", "alchemy");
+    const chainRpcs = chainRpcsWith("ink", [alchemy, dwellir]);
+    const calls = [{ method: "eth_getCode", params: ["0xContract", { blockHash: `0x${"a".repeat(64)}`, requireCanonical: true }] }];
+    expect(usableCcipRpcEndpoints("ink", chainRpcs)).toEqual([dwellir, alchemy]);
+    fetchWithRetryMock.mockRejectedValueOnce(new Error("network failure"))
+      .mockResolvedValue(rpcResponse([{ jsonrpc: "2.0", id: 1, result: "0x6000" }]));
+    for (let i = 0; i < 2; i++) expect(await fetchEvmRpcBatch("ink", calls, { chainRpcs, ccipArchiveRpc: true, maxRetries: 0 })).toEqual(["0x6000"]);
+    expect(attemptedUrls()).toEqual([dwellir.url, alchemy.url, alchemy.url]);
+    expect(usableCcipRpcEndpoints("ink", chainRpcs)).toEqual([alchemy]);
   });
 
   it("parses uint256 hex values safely", () => {
@@ -1087,14 +1162,14 @@ describe("evm-rpc helpers", () => {
   });
 
   it("excludes promoted Dwellir from unreviewed log batches", async () => {
-    const chainRpcs = chainRpcsWith("base", [
-      { ...dwellirEndpoint("https://api-base-log-test.n.dwellir.com"), position: "registry" },
-      registryEndpoint("https://base-log-public.example"),
+    const chainRpcs = chainRpcsWith("arbitrum", [
+      { ...dwellirEndpoint("https://api-arbitrum-log-test.n.dwellir.com"), position: "registry" },
+      registryEndpoint("https://arbitrum-log-public.example"),
     ]);
     fetchWithRetryMock.mockResolvedValue(null);
-    await fetchEvmRpcBatch("base", [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2" }] }],
+    await fetchEvmRpcBatch("arbitrum", [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2" }] }],
       { chainRpcs, maxRetries: 0 });
-    expect(attemptedUrls()).toEqual(["https://base-log-public.example"]);
+    expect(attemptedUrls()).toEqual(["https://arbitrum-log-public.example"]);
   });
 
   it("keeps log lanes on registry endpoints when supplemental RPC is excluded", async () => {

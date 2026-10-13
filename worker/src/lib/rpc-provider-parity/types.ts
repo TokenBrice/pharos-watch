@@ -124,7 +124,7 @@ export interface RpcParityChainSummary {
   chainId: string;
   dwellirHost: string;                       // e.g. "api-base-mainnet-archive.n.dwellir.com"
   /** Current scheduled routing policy after key/budget/circuit admission and operator rollback. */
-  routing: { statePlacement: "primary" | "after-alchemy" | "supplemental" | "unavailable"; logScan: boolean };
+  routing: { statePlacement: "primary" | "supplemental-first" | "supplemental" | "unavailable"; logScan: boolean };
   lastFailures: RpcParityFailure[];
   comparator: { operator: "alchemy" | "drpc" | "public"; host: string; source: "registry" | "pin" };
   /** Newest logs baseline (planned when unsampled); null records an unavailable pin. */

@@ -228,7 +228,7 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_API_KEY",
     valueType: "string",
-    description: "Scheduled-only Dwellir credential for reviewed primary/after-Alchemy EVM routing, supplemental fallback elsewhere, and native state reads; sent only as the X-Api-Key header.",
+    description: "Scheduled-only Dwellir credential for reviewed primary and supplemental-first EVM state routing, supplemental-last elsewhere, allowlisted logs-first and CCIP observer reads, and native state reads; sent only as the X-Api-Key header.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -237,7 +237,7 @@ export const ENV_BINDINGS = [
   {
     key: "DWELLIR_ROUTING_DISABLED_CHAINS",
     valueType: "string",
-    description: "Optional CSV of chain IDs that revert Dwellir to supplemental-last state fallback and exclude it from log scans. Applied after scheduled key, budget, and circuit admission.",
+    description: "Optional CSV of chain IDs that revert Dwellir to supplemental-last state fallback and exclude it from global log scans and CCIP observer routes. Applied after scheduled key, budget, and circuit admission.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

@@ -113,7 +113,7 @@ function getRpcLogCandidates(
     .map((endpoint) => ({
       url: endpoint.url,
       endpoint,
-      // Today's `alchemyPrimary`: only an Alchemy primary earns the wide window.
+      // Each incumbent retains its own window even after a Dwellir-first attempt.
       windowClass: endpoint.operator === "alchemy" ? "alchemy" : "fallback",
     }));
 }
@@ -356,8 +356,9 @@ async function resolveRpcLogTarget(
     const chainHead = await getAlchemyBlockNumber(target.url, runBudget.subrequestBudget, signal);
     if (chainHead != null) {
       const chainWindow = RPC_LOG_SCAN_WINDOWS[chainId];
-      const scanWindowBlocks = Math.min(chainWindow?.[target.windowClass] ?? Infinity,
-        target.endpoint.operator === "dwellir" ? target.endpoint.maxLogBlockSpan ?? Infinity : Infinity);
+      const scanWindowBlocks = target.endpoint.operator === "dwellir"
+        ? Math.min(chainWindow?.alchemy ?? Infinity, target.endpoint.maxLogBlockSpan ?? Infinity)
+        : chainWindow?.[target.windowClass] ?? Infinity;
       return {
         rpcUrl: target.url,
         endpoint: target.endpoint,

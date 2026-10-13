@@ -226,7 +226,9 @@ const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 
-export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, "primary" | "after-alchemy">> = {
+export type DwellirStatePlacement = "primary" | "supplemental-first";
+
+export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, DwellirStatePlacement>> = {
   mantle: "primary",
   sonic: "primary",
   gnosis: "primary",
@@ -234,10 +236,19 @@ export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, "primary" | "after
   // Archive history observed, not vendor-guaranteed. Historical reads rely on a
   // pruned node erroring so they fall back to public; parity checks near-head only.
   plasma: "primary",
-  base: "after-alchemy",
+  base: "primary",
+  arbitrum: "primary",
+  optimism: "primary",
+  avalanche: "primary",
+  linea: "supplemental-first",
+  scroll: "supplemental-first",
+  unichain: "supplemental-first",
+  worldchain: "supplemental-first",
+  megaeth: "supplemental-first",
+  stable: "supplemental-first",
 };
 
-export const DWELLIR_LOG_SCAN_CHAINS: ReadonlySet<string> = new Set(["gnosis"]);
+export const DWELLIR_LOG_SCAN_CHAINS: ReadonlySet<string> = new Set(["gnosis", "base", "optimism", "avalanche"]);
 
 /** Single attachment authority; callers must admit the scheduled runtime first. */
 function appendDwellirEndpoints(
@@ -257,12 +268,11 @@ function appendDwellirEndpoints(
     const routingDisabled = disabledChains?.has(entry.chainId) === true;
     const placement = routingDisabled ? undefined : DWELLIR_STATE_PLACEMENT[entry.chainId];
     const endpoints = config?.endpoints.filter((row) => row.operator !== "dwellir") ?? [];
-    const insertionIndex = placement === "primary" && endpoints.some((row) => row.position === "registry")
-      ? 0
-      : placement === "after-alchemy" && endpoints[0]?.operator === "alchemy" && endpoints[0].position === "registry"
-        ? 1
-        : endpoints.length;
-    const promoted = insertionIndex < endpoints.length;
+    const promoted = placement === "primary" && endpoints.some((row) => row.position === "registry");
+    const firstSupplemental = placement === "supplemental-first"
+      ? endpoints.findIndex((row) => row.position === "supplemental")
+      : -1;
+    const insertionIndex = promoted ? 0 : firstSupplemental >= 0 ? firstSupplemental : endpoints.length;
     const endpoint: RpcEndpoint = {
       url,
       operator: "dwellir",
@@ -442,9 +452,21 @@ export function supplementalRpcEndpoints(
   return supplemental.filter((endpoint) => endpoint.stateHistory === "archive");
 }
 
-/** Reviewed log operators only, retaining their admitted runtime placement order. */
+/** Reviewed Dwellir logs first, independent of state placement; incumbents retain their order. */
 export function logScanRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
-  return config?.endpoints.filter((endpoint) => endpoint.operator === "dwellir"
+  const endpoints = config?.endpoints.filter((endpoint) => endpoint.operator === "dwellir"
     ? DWELLIR_LOG_SCAN_CHAINS.has(config.chainId) && !endpoint.routingDisabled && endpoint.logsHistory === "full"
     : endpoint.position === "registry") ?? [];
+  const dwellirIndex = endpoints.findIndex((endpoint) => endpoint.operator === "dwellir");
+  if (dwellirIndex > 0) endpoints.unshift(...endpoints.splice(dwellirIndex, 1));
+  return endpoints;
+}
+
+/** CCIP's reviewed hash-pinned state and historical-ramp-log routes, not a global log promotion. */
+export function ccipRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
+  const incumbents = registryRpcEndpoints(config).filter((endpoint) => endpoint.operator !== "dwellir");
+  if (config?.chainId !== "ink" && config?.chainId !== "berachain") return incumbents;
+  const dwellir = config.endpoints.find((endpoint) => endpoint.operator === "dwellir"
+    && !endpoint.routingDisabled && endpoint.stateHistory === "archive" && endpoint.logsHistory === "full");
+  return dwellir ? [dwellir, ...incumbents] : incumbents;
 }

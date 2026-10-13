@@ -8,6 +8,7 @@ import {
   buildAlchemyRpcUrl,
   CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON,
   buildChainRpcs,
+  ccipRpcEndpoints,
   DWELLIR_LOG_SCAN_CHAINS,
   DWELLIR_STATE_PLACEMENT,
   getRpcAuthHeaders,
@@ -189,6 +190,30 @@ describe("buildChainRpcs", () => {
     });
   });
 
+  it.each(["ink", "berachain"])("uses admitted %s Dwellir for CCIP only and rolls back to incumbents", (chainId) => {
+    const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
+    const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId)!;
+    expect(ccipRpcEndpoints(admitted)[0]).toMatchObject({
+      operator: "dwellir", stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000,
+    });
+    expect(ccipRpcEndpoints(admitted).slice(1)).toEqual(ccipRpcEndpoints(baseline));
+    expect(logScanRpcEndpoints(admitted)).toEqual(logScanRpcEndpoints(baseline));
+    const disabled = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, {
+      dwellirApiKey: DWELLIR_KEY, dwellirRoutingDisabledChains: new Set([chainId]),
+    }).get(chainId);
+    expect(ccipRpcEndpoints(disabled)).toEqual(ccipRpcEndpoints(baseline));
+    for (const capabilities of [{ stateHistory: "recent" as const }, { logsHistory: "none" as const }]) {
+      expect(ccipRpcEndpoints({ ...admitted, endpoints: admitted.endpoints.map((endpoint) =>
+        endpoint.operator === "dwellir" ? { ...endpoint, ...capabilities } : endpoint) })).toEqual(ccipRpcEndpoints(baseline));
+    }
+  });
+
+  it.each(["monad", "base", "linea"])("does not admit %s Dwellir into CCIP's reviewed routes", (chainId) => {
+    const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
+    const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
+    expect(ccipRpcEndpoints(admitted)).toEqual(ccipRpcEndpoints(baseline));
+  });
+
   it("maps registry operators to alchemy/drpc keyed and public unkeyed", () => {
     const chainRpcs = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY);
 
@@ -242,13 +267,59 @@ describe("buildChainRpcs", () => {
       const dwellir = config.endpoints.filter((endpoint) => endpoint.operator === "dwellir");
       expect(dwellir).toHaveLength(1);
       const placement = DWELLIR_STATE_PLACEMENT[entry.chainId];
-      const index = placement === "primary" ? 0 : placement === "after-alchemy" && alchemyApiKey ? 1 : config.endpoints.length - 1;
+      const index = placement === "primary" || placement === "supplemental-first" ? 0 : config.endpoints.length - 1;
       expect(config.endpoints[index]).toBe(dwellir[0]);
       expect(dwellir[0]).toMatchObject({
         url: dwellirRpcUrl(entry), maxLogBlockSpan: entry.maxLogBlockSpan,
-        position: placement === "primary" || (placement === "after-alchemy" && alchemyApiKey) ? "registry" : "supplemental",
+        position: placement === "primary" ? "registry" : "supplemental",
       });
     }
+  });
+
+  it.each(["linea", "scroll", "unichain", "worldchain", "megaeth", "stable"])(
+    "orders %s Dwellir before census Alchemy without adding registry or log eligibility", (chainId) => {
+      const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
+      const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
+      expect(supplementalRpcEndpoints(admitted).map((endpoint) => endpoint.operator)).toEqual(["dwellir", "alchemy"]);
+      expect(supplementalRpcEndpoints(admitted, { historicalBlock: true })).toEqual(supplementalRpcEndpoints(admitted));
+      expect(registryRpcUrls(admitted)).toEqual(registryRpcUrls(baseline));
+      expect(primaryRpcUrl(admitted)).toBeUndefined();
+      expect(hasRegistryRpc(admitted)).toBe(false);
+      expect(logScanRpcEndpoints(admitted)).toEqual([]);
+    },
+  );
+
+  it.each(["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche"])(
+    "promotes %s state before keyed and keyless incumbents", (chainId) => {
+      for (const { alchemyApiKey, drpcApiKey } of KEY_COMBINATIONS) {
+        const baseline = buildChainRpcs(alchemyApiKey, drpcApiKey).get(chainId);
+        const admitted = buildChainRpcs(alchemyApiKey, drpcApiKey, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
+        expect(registryRpcEndpoints(admitted)[0]).toMatchObject({ operator: "dwellir", position: "registry" });
+        expect(registryRpcUrls(admitted).slice(1)).toEqual(registryRpcUrls(baseline));
+      }
+    },
+  );
+
+  it.each(["gnosis", "base", "optimism", "avalanche"])(
+    "puts %s Dwellir logs first independent of state placement and retains incumbents", (chainId) => {
+      const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
+      const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId)!;
+      const dwellir = admitted.endpoints.find((endpoint) => endpoint.operator === "dwellir")!;
+      const reordered = { ...admitted, endpoints: [...admitted.endpoints.filter((endpoint) => endpoint !== dwellir),
+        { ...dwellir, position: "supplemental" as const }] };
+      expect(logScanRpcEndpoints(reordered)[0]).toMatchObject({ operator: "dwellir" });
+      expect(logScanRpcEndpoints(reordered).slice(1)).toEqual(logScanRpcEndpoints(baseline));
+      expect(logScanRpcEndpoints({ ...reordered, endpoints: reordered.endpoints.map((endpoint) => endpoint.operator === "dwellir"
+        ? { ...endpoint, logsHistory: "none" as const } : endpoint) })).toEqual(logScanRpcEndpoints(baseline));
+    },
+  );
+
+  it("keeps BSC on incumbent state and log routes despite admitted Dwellir fallback", () => {
+    const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get("bsc");
+    const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get("bsc");
+    expect(registryRpcUrls(admitted)).toEqual(registryRpcUrls(baseline));
+    expect(logScanRpcEndpoints(admitted)).toEqual(logScanRpcEndpoints(baseline));
+    expect(supplementalRpcEndpoints(admitted)[0]).toMatchObject({ operator: "dwellir", position: "supplemental" });
   });
 
   it("rolls disabled chains back to supplemental-last and excludes their log scans", () => {

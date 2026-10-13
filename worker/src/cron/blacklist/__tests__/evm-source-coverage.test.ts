@@ -33,7 +33,7 @@ import { EXPLORER_LOG_SCAN_WINDOWS, fetchEvmEventsIncremental, getEvmSafeHead } 
 import { createBlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import { fetchEvmLogsForTopicWithCompleteness } from "../../../lib/evm-logs";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../../lib/alchemy-logs";
-import { getChainRpc, type ChainRpcConfig } from "../../../lib/chain-registry";
+import { buildChainRpcs, getChainRpc, type ChainRpcConfig } from "../../../lib/chain-registry";
 
 const TOPIC_A = "0x" + "11".repeat(32);
 const TOPIC_B = "0x" + "22".repeat(32);
@@ -172,6 +172,80 @@ describe("EVM blacklist contiguous coverage", () => {
       cursor = result.scannedToBlock!;
       head += 10_800;
     }
+  });
+
+  describe("batch3 Dwellir blacklist log routing", () => {
+    function setup(chainId: "base" | "optimism" | "avalanche", disabled = false, alchemy = true) {
+      const config = makeConfig(chainId, [TOPIC_A, TOPIC_B]);
+      config.chain.evmChainId = chainId === "base" ? 8453 : chainId === "optimism" ? 10 : 43114;
+      const chainRpcs = buildChainRpcs(alchemy ? "alchemy" : undefined, undefined, {
+        dwellirApiKey: "dwellir", dwellirRoutingDisabledChains: disabled ? new Set([chainId]) : undefined,
+      });
+      vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get(chainId));
+      vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20_000_450);
+      vi.mocked(fetchAlchemyLogs).mockImplementation(async (_rpc, _address, _topics, _from, to, budget) => {
+        budget.count++;
+        return { logs: [], complete: true, scannedToBlock: to, calls: 1, maxDepth: 0 };
+      });
+      return { config, chainRpcs };
+    }
+
+    it.each(["base", "optimism", "avalanche"] as const)(
+      "scans %s Dwellir first in 10,000-block pages under the existing catch-up allowance", async (chainId) => {
+        const { config, chainRpcs } = setup(chainId);
+        const budget = createBlacklistRunBudget({ subrequestLimit: 2_000, runtimeBudgetMs: 600_000 });
+        const result = await fetchEvmEventsIncremental(mockD1(), config, null, 1, new Map(), budget, limiter, undefined, chainRpcs);
+        expect(fetchAlchemyLogs).toHaveBeenCalledTimes(600);
+        for (const [index, call] of vi.mocked(fetchAlchemyLogs).mock.calls.entries()) {
+          expect(call[0]).toContain(".n.dwellir.com");
+          expect(call[3]).toBe(index * 10_000 + 1);
+          expect(call[4]).toBe((index + 1) * 10_000);
+          expect(call[7]?.maxSplitCalls).toBe(600 - index);
+        }
+        expect(result).toMatchObject({ scannedToBlock: 6_000_000, safeHead: 20_000_000,
+          coverageOutcome: "incomplete", providerCalls: 600, coveredTopicCount: 2 });
+      },
+    );
+
+    it.each(["base", "optimism", "avalanche"] as const)(
+      "keeps %s's unconditional 100-page allowance when extension reserves are exhausted", async (chainId) => {
+        const { config, chainRpcs } = setup(chainId);
+        const budget = makeBudget();
+        budget.deadlineMs = Date.now() + 200_000;
+        const result = await fetchEvmEventsIncremental(mockD1(), config, null, 1, new Map(), budget, limiter, undefined, chainRpcs);
+        expect(fetchAlchemyLogs).toHaveBeenCalledTimes(100);
+        expect(result.scannedToBlock).toBe(1_000_000);
+      },
+    );
+
+    it.each([
+      ["base", 500_000, 50_000], ["optimism", 500_000, 50_000], ["avalanche", 250_000, 2_000],
+    ] as const)("retains %s incumbent page windows on rollback, failed Dwellir head, and failed Dwellir logs", async (chainId, alchemyWindow, publicWindow) => {
+      for (const alchemy of [true, false]) {
+        for (const failure of ["disabled", "head", "logs"] as const) {
+          vi.clearAllMocks();
+          const { config, chainRpcs } = setup(chainId, failure === "disabled", alchemy);
+          if (failure === "head") {
+            vi.mocked(getAlchemyBlockNumber).mockImplementation(async (url) =>
+              url.includes(".n.dwellir.com") ? null : 20_000_450);
+          }
+          if (failure === "logs") {
+            vi.mocked(fetchAlchemyLogs).mockImplementation(async (url, _address, _topics, from, to) =>
+              url.includes(".n.dwellir.com")
+                ? { logs: [], complete: false, scannedToBlock: from - 1, calls: 1, maxDepth: 0, failureReason: "rpc-error" }
+                : { logs: [], complete: true, scannedToBlock: to, calls: 1, maxDepth: 0 });
+          }
+          const result = await fetchEvmEventsIncremental(mockD1(), config, null, 1, new Map(), makeBudget(), limiter, undefined, chainRpcs);
+          const incumbentCalls = vi.mocked(fetchAlchemyLogs).mock.calls.filter((call) => !call[0].includes(".n.dwellir.com"));
+          expect(incumbentCalls).toHaveLength(!alchemy && chainId === "avalanche" ? 8 : 1);
+          for (const call of incumbentCalls) {
+            expect(call[4] - call[3] + 1).toBe(alchemy ? alchemyWindow : publicWindow);
+            expect(call[7]?.maxSplitCalls).toBeUndefined();
+          }
+          expect(result.scannedToBlock).toBe(alchemy ? alchemyWindow : chainId === "avalanche" ? 16_000 : publicWindow);
+        }
+      }
+    });
   });
 
   describe("Dwellir serial catch-up pacing", () => {

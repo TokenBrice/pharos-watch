@@ -7,7 +7,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { CCIP_MONAD_CANONICAL_HASH_ARCHIVE_REQUIRED_REASON, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmRpcBatch, type EvmBlockHeader } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmRpcBatch, usableCcipRpcEndpoints, type EvmBlockHeader } from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
 import { emitSupplyAttributionDiagnostic } from "./supply-attribution-diagnostics";
@@ -186,7 +186,7 @@ export async function observeCcipPending(input: {
   | { status: "accepted"; amount: string; proof: Proof; responseSha256: string; checkpoint: CcipPendingCheckpoint }
   | { status: "rejected"; reason: string; checkpoint?: CcipPendingCheckpoint }
 > {
-  const options = { chainRpcs: input.chainRpcs, signal: input.signal, excludeSupplementalRpc: true, maxRetries: 0 };
+  const options = { chainRpcs: input.chainRpcs, signal: input.signal, ccipArchiveRpc: true, maxRetries: 0 };
   let checkpoint: CcipPendingCheckpoint | undefined;
   let context: Partial<SupplyAttributionAttemptDiagnostic> = {};
   const emit = (detail: Partial<SupplyAttributionAttemptDiagnostic>) => emitSupplyAttributionDiagnostic(input.onDiagnostic, { observer: "ccip", sourceId: input.source.sourceId, ...context, ...detail });
@@ -453,9 +453,8 @@ export async function observeCcipPending(input: {
       if (backlog.length === 0) { idleChains++; continue; }
       idleChains = 0;
       let declaredSpan: number | undefined;
-      for (const endpoint of input.chainRpcs.get(chain)?.endpoints ?? []) {
-        if (endpoint.position !== "registry" || endpoint.operator === "dwellir" ||
-          endpoint.logsHistory !== "full" || endpoint.maxLogBlockSpan === undefined) continue;
+      for (const endpoint of usableCcipRpcEndpoints(chain, input.chainRpcs)) {
+        if (endpoint.logsHistory !== "full" || endpoint.maxLogBlockSpan === undefined) continue;
         if (!Number.isSafeInteger(endpoint.maxLogBlockSpan) || endpoint.maxLogBlockSpan < 1) fail("rpc-log-span-invalid");
         declaredSpan = Math.max(declaredSpan ?? endpoint.maxLogBlockSpan, endpoint.maxLogBlockSpan);
       }
