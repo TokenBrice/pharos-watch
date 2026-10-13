@@ -139,6 +139,38 @@ describe("runCoingeckoLowVolumePass", () => {
     expect(expired.price).toBeNull();
   });
 
+  it("recovers BRLV on carried supply without renewing its upstream clock, then rejects it at expiry", async () => {
+    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
+      "../../../lib/coingecko-simple-price",
+    );
+    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
+    const observedAt = 1_791_806_930;
+    const fxRates = { peggedREAL: 0.2006 };
+    vi.useFakeTimers();
+    vi.setSystemTime(1_791_885_552 * 1000);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      "crown-brlv": { usd: 0.200255, last_updated_at: observedAt },
+    })));
+    const carried = makePeggedAsset({
+      id: "brlv-crown", symbol: "BRLV", pegType: "peggedREAL", price: null,
+      supplyRestored: true, supplySource: "coingecko-fallback",
+      supplyObservedAt: observedAt, circulating: { peggedREAL: 73_888_563 },
+    });
+
+    expect(await runCoingeckoLowVolumePass([carried], null, fxRates)).toEqual({ resolved: 1, failures: [] });
+    expect(carried).toMatchObject({
+      price: 0.200255, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
+      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+      supplyRestored: true, supplyObservedAt: observedAt,
+      circulating: { peggedREAL: 73_888_563 },
+    });
+
+    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
+    const expired = makePeggedAsset({ id: "brlv-crown", symbol: "BRLV", pegType: "peggedREAL", price: null });
+    expect(await runCoingeckoLowVolumePass([expired], null, fxRates)).toEqual({ resolved: 0, failures: [] });
+    expect(expired.price).toBeNull();
+  });
+
   it.each([
     ["nxusd-nereus", "nxusd", 1.0218116165811697, 1_791_761_973],
     ["usdh-hermetica", "hermetica-usdh", 0.9997925123055649, 1_791_780_809],
