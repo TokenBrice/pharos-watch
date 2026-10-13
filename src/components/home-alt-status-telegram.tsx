@@ -5,12 +5,11 @@ import { Send, SquareArrowRight } from "lucide-react";
 
 import { useHealth } from "@/hooks/api-hooks";
 import { useTelegramPulse } from "@/hooks/api-hooks";
-import { resolvePublicProjection } from "@/lib/status/public-status";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { formatDecimal, timeAgo } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
-import { PUBLIC_COMPONENT_LABEL, PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
+import { PUBLIC_COMPONENT_LABEL, PUBLIC_HEADLINE_TONE } from "@shared/lib/classification/operational-status";
 import type { PublicStatusHeadline } from "@shared/types";
 
 const LINE_LINK_CLASS =
@@ -23,7 +22,9 @@ const ARROW_CLASS =
 // `health.warnings`; the line links to /status/ for the detail.
 function statusMessage(headline: PublicStatusHeadline): string {
   if (headline.state === "operational") return "All public components operational";
-  return headline.affected.map((id) => PUBLIC_COMPONENT_LABEL[id]).join(", ");
+  return headline.affected.length > 0
+    ? headline.affected.map((id) => PUBLIC_COMPONENT_LABEL[id]).join(", ")
+    : "Some public checks are not passing";
 }
 
 /** Left line: system health as a single clickable status line → /status/. */
@@ -34,7 +35,11 @@ function StatusLine(): React.JSX.Element {
   if (!health || isError) {
     return <span className="text-sm text-muted-foreground">System status unavailable</span>;
   }
-  const { headline } = resolvePublicProjection(health);
+  // Server headline only: the homepage must not bundle the projection. A
+  // pre-projection payload (Worker rollback) maps its raw level conservatively.
+  const headline: PublicStatusHeadline = health.headline ?? (health.status === "healthy"
+    ? { state: "operational", title: "All systems operational", affected: [] }
+    : { state: "degraded", title: "Degraded", affected: [] });
   const tone = PUBLIC_HEADLINE_TONE[headline.state];
 
   return (
