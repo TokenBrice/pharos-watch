@@ -28,6 +28,8 @@ export interface StaleQuery {
   isLoading?: boolean;
   /** Producer catch-up detail, so an aged coverage clock with current totals is not read as a stall. */
   catchUp?: DataHealthCatchUp | null;
+  /** Drop this entry when its only finding is a producer catch-up (compact surfaces defer that notice to the owning page). */
+  hideCatchUp?: boolean;
 }
 
 /**
@@ -45,12 +47,12 @@ function isFirstFetchInFlight(query: StaleQuery): boolean {
 
 export function StaleDataBanner({ queries }: { queries: readonly StaleQuery[] }) {
   const hydrated = useHydrated();
-  const health = queries.filter((q) => !isFirstFetchInFlight(q)).map((q) => {
+  const health = queries.filter((q) => !isFirstFetchInFlight(q)).flatMap((q) => {
     const preset = q.preset ? DATA_HEALTH_PRESETS[q.preset] : null;
     const label = q.label ?? preset?.label ?? "Data";
     const staleTime = q.staleTime ?? preset?.staleTime ?? 15 * 60_000;
     // Initial markup describes the saved query; browser-clock aging begins after hydration.
-    return deriveDataHealth({
+    const info = deriveDataHealth({
       label,
       dataUpdatedAt: q.dataUpdatedAt,
       staleTime,
@@ -59,6 +61,7 @@ export function StaleDataBanner({ queries }: { queries: readonly StaleQuery[] })
       meta: q.meta ?? null,
       catchUp: q.catchUp,
     }, hydrated ? undefined : q.dataUpdatedAt);
+    return q.hideCatchUp && info.degradationReason === "catch-up" ? [] : [info];
   });
 
   return <DataHealthBanner entries={health} />;

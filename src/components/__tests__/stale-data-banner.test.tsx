@@ -89,4 +89,19 @@ describe("StaleDataBanner first-fetch handling", () => {
 
     expect(html).toContain("Flows, Chart, and 1 more dataset have not populated yet");
   });
+
+  it("hides a catch-up-only notice when the caller opts out, but keeps real stalls", () => {
+    const nowMs = Date.now();
+    const nowSec = nowMs / 1000;
+    const query = {
+      label: "Freeze totals", dataUpdatedAt: nowMs, staleTime: 6 * 3600_000, hasData: true, hideCatchUp: true,
+      meta: { updatedAt: nowSec - 56 * 3600, ageSeconds: 56 * 3600, status: "fresh" as const, freshBudgetSec: 48 * 3600, warning: '110 - "Response is stale"' },
+    };
+    const sources = [{ label: "BRZ on Gnosis", lastSucceededAt: nowSec - 56 * 3600 }];
+
+    const catchingUp = renderToStaticMarkup(<StaleDataBanner queries={[{ ...query, catchUp: { observedAt: nowSec - 3600, sources } }]} />);
+    expect(catchingUp).toBe("");
+    expect(renderToStaticMarkup(<StaleDataBanner queries={[{ ...query, hideCatchUp: false, catchUp: { observedAt: nowSec - 3600, sources } }]} />)).toContain("still catching up");
+    expect(renderToStaticMarkup(<StaleDataBanner queries={[{ ...query, catchUp: null }]} />)).toContain("running behind");
+  });
 });
