@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
+import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNearViewport } from "@/hooks/use-near-viewport";
 import {
@@ -181,26 +182,28 @@ function StablecoinDetailClientContent({
   }
 
   return (
-    <DetailContent
-      activeBannerId={activeBannerId}
-      activityGateRef={activityGateRef}
-      exploreNextContent={exploreNextContent}
-      faqContent={faqContent}
-      feedbackOpen={feedbackOpen}
-      heroRef={heroRef}
-      historyGateRef={historyGateRef}
-      onActiveBannerChange={setActiveBannerId}
-      mechanismBacking={mechanismBacking}
-      mechanismCollateralization={mechanismCollateralization}
-      mechanismReview={mechanismReview}
-      parentLiquidationEngine={parentLiquidationEngine}
-      backingParent={backingParent}
-      transferReview={transferReview}
-      failureScenario={failureScenario}
-      onFeedbackOpenChange={setFeedbackOpen}
-      overviewGateRef={overviewGateRef}
-      viewModel={viewModel}
-    />
+    <StablecoinDetailIdentityProvider symbol={viewModel.coin.symbol} logoSrc={viewModel.logoSrc}>
+      <DetailContent
+        activeBannerId={activeBannerId}
+        activityGateRef={activityGateRef}
+        exploreNextContent={exploreNextContent}
+        faqContent={faqContent}
+        feedbackOpen={feedbackOpen}
+        heroRef={heroRef}
+        historyGateRef={historyGateRef}
+        onActiveBannerChange={setActiveBannerId}
+        mechanismBacking={mechanismBacking}
+        mechanismCollateralization={mechanismCollateralization}
+        mechanismReview={mechanismReview}
+        parentLiquidationEngine={parentLiquidationEngine}
+        backingParent={backingParent}
+        transferReview={transferReview}
+        failureScenario={failureScenario}
+        onFeedbackOpenChange={setFeedbackOpen}
+        overviewGateRef={overviewGateRef}
+        viewModel={viewModel}
+      />
+    </StablecoinDetailIdentityProvider>
   );
 }
 
