@@ -77,7 +77,7 @@ describe("ReliabilitySection", () => {
     const impact = screen.getByRole("tab", { name: /^Impact/ });
     const endpoints = screen.getByRole("tab", { name: /^Endpoints/ });
     expect(screen.getByText("Impact panel mounted")).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1, name: "Reliability Workbench" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Reliability" })).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: "Impact reliability view" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("Reliability view: Impact");
     expect(screen.queryByText("Endpoints panel mounted")).toBeNull();

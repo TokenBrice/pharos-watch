@@ -51,7 +51,7 @@ describe("TriageSummary workspace links", () => {
     });
     const pipelineSection: DashboardSection = {
       id: "pipeline",
-      title: "Pipeline Health",
+      title: "Pipeline",
       value: "Healthy",
       summary: "0 missing prices, 0 stale on-chain feeds, 0 blacklist gaps",
     };
@@ -60,12 +60,8 @@ describe("TriageSummary workspace links", () => {
       <TriageSummary
         data={data}
         healthData={healthData}
-        overallTone={model.overallTone}
-        statusHoldingAge={model.statusHoldingAge}
         issueGroups={model.issueGroups}
         evidence={model.evidence}
-        decision={model.decision}
-        latestTransition={model.latestTransition}
         attentionSections={[pipelineSection]}
         recommendedActions={[]}
         isDiagnosticsOpen={false}
@@ -77,22 +73,25 @@ describe("TriageSummary workspace links", () => {
         clientDataStale={model.clientDataStale}
         lastUpdated={1_700_000_000_000}
         handleRefresh={vi.fn()}
-        showSignOut={false}
       />,
     );
 
     expect(screen.getByRole("heading", { level: 1, name: "Triage" }).tagName).toBe("H1");
     expect(
       screen.getByRole("heading", { level: 1, name: "Triage" }).closest("section")?.getAttribute("aria-labelledby"),
-    ).toBe("triage-title");
-    const overviewHeading = screen.getByRole("heading", { level: 2, name: "Operational overview" });
-    const issuesHeading = screen.getByRole("heading", { level: 3, name: "Current issues" });
-    expect(overviewHeading.className).toContain("sr-only");
-    expect(overviewHeading.compareDocumentPosition(issuesHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    ).toBe("overview-title");
+    const contentHeading = screen.getByRole("heading", { level: 2, name: "Triage workspace content" });
+    const issuesHeading = screen.getByRole("heading", { level: 3, name: "Issues" });
+    expect(contentHeading.className).toContain("sr-only");
+    expect(contentHeading.compareDocumentPosition(issuesHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("diagnostics")).toBeNull();
-    expect(screen.getByText("State machine, probe, and discrepancy diagnostics").className).toContain("min-h-11");
-    expect(screen.getByRole("link", { name: /pipeline health/i }).getAttribute("href")).toBe("/admin/pipeline/");
+    expect(screen.getByText("Diagnostics").className).toContain("min-h-11");
+    expect(screen.getByRole("link", { name: /^Pipeline/ }).getAttribute("href")).toBe("/admin/pipeline/");
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+    // Healthy: the top line answers the action question, with no generic recommendation card.
+    expect(screen.getByText("Nothing needs action.")).toBeTruthy();
+    expect(screen.queryByText("Recommended now")).toBeNull();
+    expect(screen.queryByText(/DEGRADED|Hold the line|Investigate/)).toBeNull();
   });
 });
 
@@ -122,12 +121,8 @@ describe("TriageSummary reserve score-input hold", () => {
       <TriageSummary
         data={data}
         healthData={healthData}
-        overallTone={model.overallTone}
-        statusHoldingAge={model.statusHoldingAge}
         issueGroups={model.issueGroups}
         evidence={model.evidence}
-        decision={model.decision}
-        latestTransition={model.latestTransition}
         attentionSections={[]}
         recommendedActions={[]}
         isDiagnosticsOpen={false}
@@ -139,7 +134,6 @@ describe("TriageSummary reserve score-input hold", () => {
         clientDataStale={model.clientDataStale}
         lastUpdated={1_700_000_000_000}
         handleRefresh={vi.fn()}
-        showSignOut={false}
       />,
     );
   }
@@ -178,5 +172,69 @@ describe("TriageSummary reserve score-input hold", () => {
     });
 
     expect(screen.getByText("Reserve recovery forecast")).toBeTruthy();
+  });
+});
+
+describe("TriageSummary issue inbox", () => {
+  it("leads with the action answer, links the named cron, and collapses informational watches", () => {
+    const base = makeHealthyStatusResponse();
+    const causes = [
+      {
+        code: "unhealthy_crons_present",
+        layer: "availability" as const,
+        severity: "warning" as const,
+        message: "1 availability-impacting cron job(s) are unavailable/stale. Jobs: sync-fx-rates.",
+        subjects: ["sync-fx-rates"],
+      },
+      { code: "degraded_cron_warning", layer: "availability" as const, severity: "info" as const, message: "1 cron job(s) report output quality warnings." },
+    ];
+    const data: StatusResponse = {
+      ...base,
+      overallStatus: "degraded",
+      causes: { availability: causes, dataQuality: [], overall: causes },
+    };
+    const healthData = makeHealthyHealthResponse();
+    const model = buildStatusDashboardData({
+      data,
+      healthData,
+      probes: [],
+      querySyncs: {
+        statusUpdatedAt: 1_700_000_000_000,
+        healthUpdatedAt: 1_700_000_000_000,
+        probesUpdatedAt: 1_700_000_000_000,
+        historyUpdatedAt: 0,
+        requestSourceUpdatedAt: 0,
+      },
+      nowMs: 1_700_000_000_000,
+      healthError: null,
+      probesError: null,
+      historyError: null,
+      requestSourceError: null,
+      historyTransitions: undefined,
+    });
+    render(
+      <TriageSummary
+        data={data}
+        healthData={healthData}
+        issueGroups={model.issueGroups}
+        evidence={model.evidence}
+        attentionSections={[]}
+        recommendedActions={[]}
+        isDiagnosticsOpen={false}
+        setIsDiagnosticsOpen={vi.fn()}
+        browserProbeSummary={model.browserProbeSummary}
+        querySyncs={model.querySyncs}
+        freshnessFloorMs={model.freshnessFloorMs}
+        clientDataStale={model.clientDataStale}
+        lastUpdated={1_700_000_000_000}
+        handleRefresh={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/^Act on 1: .+\. Watching 1\.$/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open cron" }).getAttribute("href")).toBe("/admin/crons/?job=sync-fx-rates");
+    const watching = screen.getByText("Informational (1)").closest("details") as HTMLDetailsElement;
+    expect(watching.open).toBe(false);
+    expect(screen.queryByText("1 cron job(s) report output quality warnings.")).toBeNull();
   });
 });

@@ -6,19 +6,23 @@ import type { CredentialLifecycleSummaryResponse } from "@shared/types";
 import { Button } from "@/components/ui/button";
 import { useCredentialLifecycleSummary } from "@/hooks/admin-api-hooks";
 import { cn } from "@/lib/utils";
-import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { CountValue, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 export interface CredentialSummaryItem {
   label: string;
-  value: string;
+  /** null = evidence missing; renders Unknown, never zero. */
+  value: number | null;
   detail: string;
-  emphasisClassName?: string;
+  /** Static text class for a positive count; zero stays muted. */
+  tone?: string;
 }
 
 /**
  * Compact credential-lifecycle summary for the Triage workspace. Counts only:
  * the inventory rows, editors, and mutations stay in `/admin-api/` (plan
- * section 7.7). Missing evidence renders as Unknown, never zero.
+ * section 7.7). Missing evidence renders as Unknown, never zero. Expired keys
+ * are neutral information: the summary does not say whether they are still
+ * in use, so only expiring-soon keys and audit anomalies take a tone.
  */
 function buildCredentialSummaryItemsFromResponse(
   summary: CredentialLifecycleSummaryResponse | undefined,
@@ -26,33 +30,30 @@ function buildCredentialSummaryItemsFromResponse(
   return [
     {
       label: "Active",
-      value: summary == null ? "Unknown" : String(summary.active),
+      value: summary?.active ?? null,
       detail: summary == null ? "inventory not loaded" : `of ${summary.totalKeys} total keys`,
     },
     {
       label: "Expiring soon",
-      value: summary == null ? "Unknown" : String(summary.expiringSoon),
+      value: summary?.expiringSoon ?? null,
       detail: "active keys inside 7 days",
-      emphasisClassName: summary != null && summary.expiringSoon > 0 ? "text-state-warn-bright" : undefined,
+      tone: "text-state-warn",
     },
     {
       label: "Expired",
-      value: summary == null ? "Unknown" : String(summary.expired),
-      detail: "needs rotation or deactivation",
-      emphasisClassName: summary != null && summary.expired > 0 ? "text-state-danger-bright" : undefined,
+      value: summary?.expired ?? null,
+      detail: "past their expiry date",
     },
     {
       label: "Non-expiring",
-      value: summary == null ? "Unknown" : String(summary.nonExpiring),
+      value: summary?.nonExpiring ?? null,
       detail: "explicit exceptions",
     },
     {
       label: "Audit anomalies",
-      value: summary?.auditAnomalies7d == null ? "Unknown" : String(summary.auditAnomalies7d),
+      value: summary?.auditAnomalies7d ?? null,
       detail: "rotations and deactivations, 7 days",
-      emphasisClassName: summary?.auditAnomalies7d != null && summary.auditAnomalies7d > 0
-        ? "text-state-warn-bright"
-        : undefined,
+      tone: "text-state-warn",
     },
   ];
 }
@@ -106,10 +107,14 @@ export function CredentialSummaryCard() {
             {items.map((item) => (
               <div key={item.label} className="min-w-0 border-y border-border/60 py-2">
                 <div className="pharos-label">{item.label}</div>
-                <div className={cn("mt-1 pharos-numeric text-xl font-semibold text-foreground", item.emphasisClassName)}>
-                  {item.value}
+                <div className="mt-1 text-xl font-semibold">
+                  {item.value == null ? (
+                    <span className="text-muted-foreground">Unknown</span>
+                  ) : (
+                    <CountValue value={item.value} tone={item.tone} />
+                  )}
                 </div>
-                <div className="text-2xs text-muted-foreground">{item.detail}</div>
+                <div className="text-xs text-muted-foreground">{item.detail}</div>
               </div>
             ))}
           </div>

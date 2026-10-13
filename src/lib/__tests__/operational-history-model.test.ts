@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ApiKeyAuditEntry } from "@shared/types";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
-import { buildOperationalActivityView, sanitizeOperationalDetail } from "@/lib/operational-history-model";
+import {
+  buildOperationalActivityView,
+  groupConsecutiveActivity,
+  sanitizeOperationalDetail,
+} from "@/lib/operational-history-model";
 
 const adminLifecycle: AdminActionAuditEntry = {
   id: 1,
@@ -138,5 +142,35 @@ describe("operational history model", () => {
     expect(sanitizeOperationalDetail({ values: Array.from({ length: 25 }, (_, index) => index) })).toMatchObject({
       values: expect.arrayContaining(["[5 more items]"]),
     });
+  });
+});
+
+describe("groupConsecutiveActivity", () => {
+  const entry = (id: string, at: number, actionCode = "debug_sync_state") => ({
+    id,
+    sources: ["admin-action" as const],
+    at,
+    actors: ["operator"],
+    actionCode,
+    actionLabel: actionCode,
+    target: "sync-mint-burn",
+    outcome: "ok" as const,
+    httpStatus: 200,
+    detail: null,
+    lifecycleIdentity: null,
+  });
+
+  it("groups only identical consecutive rows and keeps the time range", () => {
+    const groups = groupConsecutiveActivity([
+      entry("a", 400),
+      entry("b", 300),
+      entry("c", 200, "trigger_cron"),
+      entry("d", 100),
+    ]);
+    expect(groups.map((group) => [group.entry.id, group.count, group.firstAt, group.lastAt])).toEqual([
+      ["a", 2, 300, 400],
+      ["c", 1, 200, 200],
+      ["d", 1, 100, 100],
+    ]);
   });
 });

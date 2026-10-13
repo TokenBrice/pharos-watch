@@ -1,3 +1,4 @@
+import { formatElapsedSeconds } from "@shared/lib/format";
 import {
   PENDING_DRAIN_TIME_ALERT_SEC,
   PENDING_NEAR_TTL_WINDOW_SEC,
@@ -542,4 +543,24 @@ export function buildCommsWorkbenchModel(input: {
       sectionError: sectionError?.message ?? null,
     },
   };
+}
+
+/**
+ * "Not applicable" is not "Unknown" (A4, R1): an empty queue has no oldest
+ * item, and an alert type that sent nothing has no first-send latency.
+ * `Unknown` stays reserved for genuinely missing telemetry.
+ */
+export function formatOldestBacklogAge(ageSec: number | null, pendingDeliveries: number | null): string {
+  if (ageSec != null) return formatElapsedSeconds(ageSec);
+  return pendingDeliveries === 0 ? "No backlog" : "Unknown";
+}
+
+export function formatFirstSendLatency(latencyMs: number | null, sent: number | null): string {
+  if (latencyMs != null) return `${latencyMs.toLocaleString()}ms`;
+  return sent === 0 ? "None sent" : "Unknown";
+}
+
+/** True only when every value is a measured zero; any missing value keeps the full table visible. */
+export function allMeasuredZero(values: readonly (number | null)[]): boolean {
+  return values.every((value) => value === 0);
 }

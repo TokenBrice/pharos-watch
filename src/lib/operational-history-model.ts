@@ -267,3 +267,34 @@ export function buildOperationalActivityView(
     deduplicatedCount,
   };
 }
+
+export interface OperationalActivityGroup {
+  /** The newest entry of the run. */
+  entry: OperationalActivityEntry;
+  count: number;
+  firstAt: number;
+  lastAt: number;
+}
+
+function activityRunKey(entry: OperationalActivityEntry): string {
+  return JSON.stringify([entry.sources, entry.actionCode, entry.target, entry.outcome, entry.httpStatus, entry.actors]);
+}
+
+/** Collapses identical consecutive rows (same action, target, outcome, actor) into one ×N row (A5). */
+export function groupConsecutiveActivity(entries: readonly OperationalActivityEntry[]): OperationalActivityGroup[] {
+  const groups: OperationalActivityGroup[] = [];
+  let previousKey: string | null = null;
+  for (const entry of entries) {
+    const key = activityRunKey(entry);
+    const last = groups[groups.length - 1];
+    if (last && key === previousKey) {
+      last.count += 1;
+      last.firstAt = Math.min(last.firstAt, entry.at);
+      last.lastAt = Math.max(last.lastAt, entry.at);
+    } else {
+      groups.push({ entry, count: 1, firstAt: entry.at, lastAt: entry.at });
+    }
+    previousKey = key;
+  }
+  return groups;
+}

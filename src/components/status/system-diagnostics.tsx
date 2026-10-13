@@ -1,6 +1,7 @@
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { StatusDiscrepancyReason, StatusResponse, StatusSectionError } from "@shared/types";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
+import { describeSelfCheck } from "@/lib/status/triage-inbox";
 
 function discrepancyReasonLabel(reason: StatusDiscrepancyReason): string {
   switch (reason) {
@@ -25,6 +26,8 @@ interface SystemDiagnosticsProps {
   state: StatusResponse["state"];
   staleness: StatusResponse["staleness"];
   probe: StatusResponse["probe"];
+  /** Slowest path from the latest self-check run, used to name a latency-only degradation. */
+  slowestProbePath?: string | null;
   discrepancy: StatusResponse["discrepancy"];
   browserProbe?: BrowserProbeSummary | null;
   browserProbeLabel?: string;
@@ -36,6 +39,7 @@ export function SystemDiagnostics({
   state,
   staleness,
   probe,
+  slowestProbePath = null,
   discrepancy,
   browserProbe,
   browserProbeLabel = "Browser probe loop",
@@ -52,7 +56,7 @@ export function SystemDiagnostics({
     // Triage section shell, so each cell is a section band with divider rules.
     <div className="grid gap-x-4 gap-y-3 md:grid-cols-2 xl:grid-cols-5">
       <div className="min-w-0 border-y border-border/60 py-2">
-        <div className="text-xs text-muted-foreground">State Machine</div>
+        <div className="text-xs text-muted-foreground">State machine</div>
         <div className="font-mono text-sm">
           {state.currentStatus} (raw: {state.rawStatus})
         </div>
@@ -66,15 +70,15 @@ export function SystemDiagnostics({
           raw streak h/d/s {state.consecutiveRaw.healthy}/{state.consecutiveRaw.degraded}/{state.consecutiveRaw.stale}
         </div>
         {error && (
-          <div className="mt-2 text-xs text-amber-600 dark:text-amber-300">
+          <div className="mt-2 text-xs text-state-warn">
             {error.code}: {error.message}
           </div>
         )}
       </div>
       <div className="min-w-0 border-y border-border/60 py-2">
-        <div className="text-xs text-muted-foreground">Status Freshness</div>
+        <div className="text-xs text-muted-foreground">Status freshness</div>
         <div
-          className={`font-mono text-sm ${staleness.isStale ? "text-state-danger" : "text-state-positive"}`}
+          className={`font-mono text-sm ${staleness.isStale ? "text-state-danger" : "text-foreground"}`}
         >
           {staleness.isStale ? "stale" : "fresh"}
         </div>
@@ -83,10 +87,8 @@ export function SystemDiagnostics({
         </div>
       </div>
       <div className="min-w-0 border-y border-border/60 py-2">
-        <div className="text-xs text-muted-foreground">Worker Self-Check</div>
-        <div className="font-mono text-sm">
-          {probe.status} ({probe.passCount}/{probe.sampleCount})
-        </div>
+        <div className="text-xs text-muted-foreground">Worker self-check</div>
+        <div className="text-sm text-foreground">{describeSelfCheck(probe, slowestProbePath)}</div>
         <div className="text-xs text-muted-foreground">
           p95 {probe.p95LatencyMs != null ? `${probe.p95LatencyMs}ms` : "—"}
         </div>
@@ -121,7 +123,7 @@ export function SystemDiagnostics({
         <div className="text-xs text-muted-foreground">Divergence</div>
         <div
           className={`font-mono text-sm ${
-            discrepancy.statusSeverity == null ? "text-muted-foreground" : discrepancy.hasDivergence ? "text-state-warn" : "text-state-positive"
+            discrepancy.statusSeverity == null ? "text-muted-foreground" : discrepancy.hasDivergence ? "text-state-warn" : "text-foreground"
           }`}
         >
           {discrepancy.statusSeverity == null ? "unavailable" : discrepancy.hasDivergence ? "detected" : "none"}

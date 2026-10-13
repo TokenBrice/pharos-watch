@@ -13,18 +13,19 @@ import {
 } from "./cron-lane-format";
 
 /**
- * Recent-run history for a cron lane: the dot strip, its legend, the last-5
- * table, and the stale lease/progress evidence block. Rendered only inside the
- * cron detail panel.
+ * Recent-run history for a cron lane: the dot strip (row and detail), the
+ * last-5 table, and the stale lease/progress evidence block. Each dot carries
+ * its outcome in a title tooltip instead of a separate legend.
  */
 type RecentRunTone = "success" | "warning" | "skipped" | "failed";
 
 const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; className: string }>> = {
-  success: { label: "Succeeded", className: "bg-state-positive-solid" },
-  warning: { label: "Completed with warnings", className: "bg-state-warn-solid" },
-  // raw: neutral grey dot, no state token
-  skipped: { label: "Skipped", className: "bg-zinc-500" },
-  failed: { label: "Failed", className: "bg-state-danger-solid" },
+  // Shape carries the outcome without colour: dots succeed or warn, a hollow
+  // ring is skipped, a square with an outer ring is failed.
+  success: { label: "Succeeded", className: "rounded-full bg-state-positive-solid" },
+  warning: { label: "Completed with warnings", className: "rounded-full bg-state-warn-solid" },
+  skipped: { label: "Skipped", className: "rounded-full border-2 border-muted-foreground/60 bg-transparent" },
+  failed: { label: "Failed", className: "rounded-[1px] bg-state-danger-solid ring-1 ring-state-danger-solid ring-offset-1 ring-offset-background" },
 };
 
 function getRecentRunTone(run: CronRun): RecentRunTone {
@@ -35,21 +36,7 @@ function getRecentRunTone(run: CronRun): RecentRunTone {
   return "failed";
 }
 
-export function RecentRunLegend() {
-  return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-muted-foreground">
-      <span className="font-medium text-foreground">Recent runs</span>
-      {(Object.keys(RECENT_RUN_TONE_COPY) as RecentRunTone[]).map((tone) => (
-        <span key={tone} className="inline-flex items-center gap-1.5">
-          <span className={cn("size-2.5 rounded-full", RECENT_RUN_TONE_COPY[tone].className)} aria-hidden="true" />
-          {RECENT_RUN_TONE_COPY[tone].label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function CronRunDots({ runs }: { runs: CronRun[] }) {
+export function CronRunDots({ runs }: { runs: CronRun[] }) {
   if (runs.length === 0) {
     return <span className="text-xs text-muted-foreground">No recent runs</span>;
   }
@@ -70,7 +57,7 @@ function CronRunDots({ runs }: { runs: CronRun[] }) {
             title={`${label}${timing.duration ? `; ${timing.duration.exactLabel}` : ""}${timing.note ? `; ${timing.note}` : ""}`}
           >
             <span
-              className={cn("block size-2.5 rounded-full", RECENT_RUN_TONE_COPY[tone].className)}
+              className={cn("block size-2.5", RECENT_RUN_TONE_COPY[tone].className)}
               aria-hidden="true"
             />
           </span>
@@ -109,7 +96,7 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
         <CronRunDots runs={recentRuns} />
       </div>
       <div className="overflow-hidden rounded-md border border-border/60">
-        <div className="hidden grid-cols-[minmax(7rem,0.8fr)_minmax(5rem,0.5fr)_minmax(0,1.7fr)] gap-2 border-b border-border/60 bg-muted/35 px-3 py-2 text-2xs font-medium text-muted-foreground sm:grid">
+        <div className="hidden grid-cols-[minmax(7rem,0.8fr)_minmax(5rem,0.5fr)_minmax(0,1.7fr)] gap-2 border-b border-border/60 bg-muted/35 px-3 py-2 text-xs font-medium text-muted-foreground sm:grid">
           <span>Outcome</span>
           <span>Runtime</span>
           <span>Reserve queue</span>
@@ -145,13 +132,13 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
               >
                 <span className="min-w-0">
                   <Badge
-                    className={`max-w-full whitespace-normal break-words text-left text-2xs leading-tight ${getCronStatusColor(
+                    className={`max-w-full whitespace-normal break-words text-left text-xs leading-tight ${getCronStatusColor(
                       isCronRunNotStarted(run) ? "skipped_neutral" : run.status,
                     )}`}
                   >
                     {formatCronRunStatus(run.status, run.metadata)}
                   </Badge>
-                  <span className="mt-1 block break-all font-mono text-3xs text-muted-foreground">{run.status}</span>
+                  <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">{run.status}</span>
                 </span>
                 <span
                   className="font-mono tabular-nums text-muted-foreground"
@@ -159,7 +146,7 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
                 >
                   {formatDurationValue(timing.duration, timing.unavailableLabel ?? "Unknown")}
                   {timing.note ? (
-                    <span className="mt-1 block max-w-48 whitespace-normal font-sans text-3xs leading-tight">
+                    <span className="mt-1 block max-w-48 whitespace-normal font-sans text-xs leading-tight">
                       {timing.note}
                     </span>
                   ) : null}

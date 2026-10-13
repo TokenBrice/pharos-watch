@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MintBurnReconciliationSummary, StatusSectionError } from "@shared/types";
 import { cn } from "@/lib/utils";
-import { StatusCardEmptyState, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { CountValue, StatusCardEmptyState, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 
 const COLLAPSED_ROW_COUNT = 6;
 type IntegrityStatus = "Verified" | "Critical" | "Unverified";
@@ -81,9 +81,10 @@ export function MintBurnReconciliationCard({ summary, error }: {
       <CardContent className="space-y-5">
         <div className="grid gap-3 sm:grid-cols-3">
           {(["Verified", "Critical", "Unverified"] as const).map((status) => (
-            <div key={status} className={cn("rounded-lg border p-3", statusTileTone(status))}>
+            // Tone a tile only when it counts something; zero stays neutral (S6).
+            <div key={status} className={cn("rounded-lg border p-3", counts[status] > 0 ? statusTileTone(status) : statusTileTone("Unverified"))}>
               <div className="text-xs text-muted-foreground">{status} assets</div>
-              <div className={cn("pharos-numeric text-xl font-semibold", statusTone(status))}>{counts[status]}</div>
+              <CountValue value={counts[status]} tone={statusTone(status)} className="block text-xl font-semibold" />
             </div>
           ))}
         </div>
@@ -111,7 +112,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
               <div key={row.stablecoinId} role="group" aria-label={`${row.symbol} mint/burn integrity`} className={cn("min-w-0 rounded-[1rem] border p-4", statusTileTone(status))}>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium text-foreground">{row.symbol}</span>
-                  <span className={cn("rounded-full px-2 py-0.5 text-3xs font-semibold uppercase", statusTone(status))}>{status}</span>
+                  <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", statusTone(status))}>{status}</span>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">Audit coverage: {status === "Verified" ? "All configured contracts verified" : "See contract audit status below"}</p>
                 {!records?.length ? <p className="mt-3 text-xs text-muted-foreground">No matched-block audit available.</p> : records.map((record) => {

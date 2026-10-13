@@ -1,5 +1,6 @@
 import type { EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { OPERATOR_VERDICT_TONE, type OperatorVerdict } from "@shared/lib/classification";
 import { getCacheFreshnessRatio, getCacheImpactStatus } from "@shared/lib/cache-health";
 import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";
@@ -246,32 +247,56 @@ function buildAttentionSections(sections: readonly DashboardSection[], sectionPr
   });
 }
 
-function buildDashboardSections({ data, pipelineTone, browserProbeSummary, cronGroups, runningCrons, commsModel }: {
+/** "Workspaces with findings" values speak the operator verdict vocabulary; OK and zero stay muted. */
+function verdictValue(verdict: OperatorVerdict, count?: number): Pick<DashboardSection, "value" | "valueClassName"> {
+  const tone = OPERATOR_VERDICT_TONE[verdict];
+  return { value: count == null ? tone.label : `${count} ${tone.label.toLowerCase()}`, valueClassName: tone.text };
+}
+
+const STATUS_VERDICT = { healthy: "ok", degraded: "watch", stale: "act" } as const satisfies Record<StatusResponse["overallStatus"], OperatorVerdict>;
+
+function buildDashboardSections({ data, browserProbeSummary, cronGroups, runningCrons, commsModel }: {
   data: StatusResponse;
-  pipelineTone: ReturnType<typeof getStatusTone>;
   browserProbeSummary: BrowserProbeSummary | null;
   cronGroups: DashboardCronGroup[];
   runningCrons: number;
   commsModel: CommsWorkbenchModel;
 }): DashboardSection[] {
+  const impactingCrons = data.summary.availabilityImpactingUnhealthyCrons;
+  const watchCrons = data.summary.watchUnhealthyCrons;
+  const delivery = commsModel.delivery;
   return [
-    { id: "pipeline", title: "Pipeline Health", value: pipelineTone.label, valueClassName: pipelineTone.valueClassName, summary: data.dataQuality == null ? "Data-quality evidence unavailable" : `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps` },
+    { id: "pipeline", title: "Pipeline", ...verdictValue(STATUS_VERDICT[data.dataQualityStatus]), summary: data.dataQuality == null ? "Data-quality evidence unavailable" : `${data.dataQuality.missingPrices} missing prices, ${data.dataQuality.staleOnchainSupply} stale on-chain feeds, ${data.dataQuality.blacklistMissingAmounts} blacklist gaps` },
     {
-      id: "reliability", title: "Probes, breakers, and cache pressure",
-      value: browserProbeSummary ? `${browserProbeSummary.passCount}/${browserProbeSummary.sampleCount}` : "Unknown",
-      valueClassName: browserProbeSummary && browserProbeSummary.failCount > 0 ? "text-state-warn" : "text-foreground",
+      id: "reliability", title: "Reliability",
+      ...(browserProbeSummary == null
+        ? verdictValue("unavailable")
+        : browserProbeSummary.failCount > 0
+          ? verdictValue("watch", browserProbeSummary.failCount)
+          : verdictValue("ok")),
       summary: `${data.summary.availabilityImpactingCronErrors ?? "unavailable"} impacting cron errors, ${browserProbeSummary ? `${browserProbeSummary.failCount} failing browser probes` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio == null ? "unavailable" : `${data.summary.worstCacheRatio.toFixed(2)}x`}`,
     },
     {
-      id: "crons", title: "Cron Lanes", value: data.summary.availabilityImpactingUnhealthyCrons == null ? "Unavailable" : `${data.summary.availabilityImpactingUnhealthyCrons} impacting`,
-      valueClassName: data.summary.availabilityImpactingUnhealthyCrons == null ? "text-muted-foreground" : data.summary.availabilityImpactingUnhealthyCrons > 0 ? "text-state-danger" : "text-state-positive",
-      summary: `${cronGroups.length} groups, ${data.summary.watchUnhealthyCrons ?? "unavailable"} watch unhealthy, ${data.summary.degradedCrons ?? "unavailable"} degraded jobs, ${runningCrons} running now`,
+      id: "crons", title: "Crons",
+      ...(impactingCrons == null
+        ? verdictValue("unavailable")
+        : impactingCrons > 0
+          ? verdictValue("act", impactingCrons)
+          : watchCrons != null && watchCrons > 0
+            ? verdictValue("watch", watchCrons)
+            : verdictValue("ok")),
+      summary: `${cronGroups.length} groups, ${watchCrons ?? "unavailable"} watch unhealthy, ${data.summary.degradedCrons ?? "unavailable"} degraded jobs, ${runningCrons} running now`,
     },
     {
       id: "comms", title: "Comms",
-      value: commsModel.delivery.health === "unknown" ? "Unknown" : commsModel.delivery.health === "failed" ? "Failed" : `${commsModel.delivery.pendingDeliveries ?? 0} pending`,
-      valueClassName: commsModel.delivery.health === "failed" ? "text-state-danger" : commsModel.delivery.health === "degraded" ? "text-state-warn" : commsModel.delivery.health === "healthy" ? "text-state-positive" : "text-muted-foreground",
-      summary: `${commsModel.delivery.healthReason} ${commsModel.audience.deliverableChats == null ? "Alert-ready audience Unknown." : `${commsModel.audience.deliverableChats} alert-ready chats.`}`,
+      ...(delivery.health === "unknown"
+        ? verdictValue("unavailable")
+        : delivery.health === "failed"
+          ? verdictValue("act")
+          : delivery.health === "degraded"
+            ? verdictValue("watch")
+            : verdictValue("ok")),
+      summary: `${delivery.healthReason} ${commsModel.audience.deliverableChats == null ? "Alert-ready audience unknown." : `${commsModel.audience.deliverableChats} alert-ready chats.`}`,
     },
   ];
 }
@@ -309,7 +334,6 @@ export function buildStatusDashboardData({ data, healthData, probes, probeLabel 
   const issueGroups = groupDashboardIssues(normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData)));
   const decision = buildDashboardDecision({ data, healthData, evidence, issueGroups, recommendedActions });
   const overallTone = decision.systemState === "unknown" ? getStatusTone(data.overallStatus) : getStatusTone(decision.systemState);
-  const pipelineTone = getStatusTone(data.dataQualityStatus);
   const notices = buildDashboardNotices({
     evidence, statusError, healthError, probesError, historyError, requestSourceError, publicHealthNeedsCallout,
     healthDiffersFromStatus, healthData, status: data.overallStatus, timestamp: data.timestamp,
@@ -319,7 +343,7 @@ export function buildStatusDashboardData({ data, healthData, probes, probeLabel 
   });
   const commsModel = buildCommsWorkbenchModel({ telegramBot: data.telegramBot, dispatchCron: data.crons["dispatch-telegram-alerts"], sectionError: data.sectionErrors.telegramBot, nowSeconds: data.timestamp });
   const sectionPriority = buildSectionPriority({ data, healthData, browserProbeSummary, issueGroups, evidence, commsModel });
-  const attentionSections = buildAttentionSections(buildDashboardSections({ data, pipelineTone, browserProbeSummary, cronGroups, runningCrons, commsModel }), sectionPriority);
+  const attentionSections = buildAttentionSections(buildDashboardSections({ data, browserProbeSummary, cronGroups, runningCrons, commsModel }), sectionPriority);
   return {
     attentionSections,
     browserProbeSummary,

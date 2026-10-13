@@ -8,6 +8,7 @@ import { degraded, makeHealthyStatusResponse } from "@/test-utils/status-fixture
 
 afterEach(() => {
   cleanup();
+  window.history.replaceState(null, "", "/");
 });
 
 function makeCronStatus(overrides: Partial<CronStatus> = {}): CronStatus {
@@ -63,13 +64,11 @@ function makeBudgetSurface(overrides: Partial<BudgetOnlySurfaceStatus> = {}): Bu
 function renderCrons({
   groups,
   data = makeHealthyStatusResponse(),
-  runningCrons = 0,
 }: {
   groups: CronGroup[];
   data?: StatusResponse;
-  runningCrons?: number;
 }) {
-  return render(<CronsSection data={data} runningCrons={runningCrons} cronGroups={groups} />);
+  return render(<CronsSection data={data} cronGroups={groups} />);
 }
 
 describe("CronsSection", () => {
@@ -91,15 +90,16 @@ describe("CronsSection", () => {
         telemetryUnknownReason: history === "unknown" ? "cron-history-read-failed" : undefined,
       })]])] });
       const row = screen.getByTestId("cron-row-sync-stablecoins");
+      const detail = screen.getByRole("complementary", { name: /Details for/ });
       if (history === "unknown") {
-        expect(within(row).getByText("completed Unknown: cron-history-read-failed")).toBeTruthy();
+        expect(within(detail).getByText("Last success: Unknown: cron-history-read-failed")).toBeTruthy();
+        expect(within(row).getByText("Unavailable")).toBeTruthy();
       } else if (history === "success") {
-        expect(within(row).queryByText(/No successful run/)).toBeNull();
-        expect(within(row).getAllByText(/ago$/).length).toBeGreaterThanOrEqual(2);
+        expect(within(detail).queryByText(/No successful run/)).toBeNull();
+        expect(within(row).getByText("1m ago")).toBeTruthy();
       } else {
-        expect(within(row).getByText("completed No successful run in recent history")).toBeTruthy();
+        expect(within(detail).getByText("Last success: No successful run in recent history")).toBeTruthy();
       }
-      expect(within(row).queryByText("No successful run", { exact: true })).toBeNull();
     },
   );
   it("defers healthy rows by default and lets the operator mount all jobs explicitly", () => {
@@ -111,18 +111,16 @@ describe("CronsSection", () => {
       ],
     });
 
-    expect(screen.getByText("Cron Lanes")).toBeTruthy();
-    expect(
-      screen.getByText("No cron jobs need attention. Healthy and routine skipped jobs are not mounted in the default view."),
-    ).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Crons" })).toBeTruthy();
+    expect(screen.getByText("Nothing to act on or watch. 1 OK job is hidden.")).toBeTruthy();
     expect(screen.queryByTestId("cron-row-sync-stablecoins")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Show all jobs" }));
 
     expect(screen.getByTestId("cron-row-sync-stablecoins")).toBeTruthy();
     expect(screen.getByRole("table", { name: "Cron jobs by trigger group" })).toBeTruthy();
-    expect(screen.getAllByText("Healthy").length).toBeGreaterThan(0);
-    expect(screen.getByText(/Unavailable means there is no fresh usable run/)).toBeTruthy();
+    expect(within(screen.getByTestId("cron-row-sync-stablecoins")).getByText("OK")).toBeTruthy();
+    expect(screen.getByText("1 job · 1 OK")).toBeTruthy();
   });
 
   it("renders trigger-group boundaries and canonical severity ordering inside each group", () => {
@@ -158,7 +156,7 @@ describe("CronsSection", () => {
 
     expect(screen.getAllByText("15-minute slot").length).toBeGreaterThan(0);
     expect(screen.getAllByText("5-minute slot").length).toBeGreaterThan(0);
-    expect(screen.getByText(/3\/3 shown · 2 unavailable · 1 warning/)).toBeTruthy();
+    expect(screen.getByText("3 jobs · 1 act now · 2 watch")).toBeTruthy();
     const firstGroup = screen.getByRole("rowgroup", { name: "15-minute slot cron jobs" });
     const rowIds = within(firstGroup)
       .getAllByTestId(/^cron-row-/)
@@ -185,7 +183,8 @@ describe("CronsSection", () => {
     });
 
     const row = screen.getByTestId("cron-row-weekly-recap");
-    expect(within(row).getByText("Run warning")).toBeTruthy();
+    expect(within(row).getByText("Watch")).toBeTruthy();
+    expect(within(row).queryByText("Run warning")).toBeNull();
     expect(within(row).getByText("Completed with warnings (latest required run)")).toBeTruthy();
     const warningBadge = screen
       .getAllByText("Completed with warnings")
@@ -212,11 +211,11 @@ describe("CronsSection", () => {
     });
 
     const row = screen.getByTestId("cron-row-weekly-recap");
-    expect(within(row).getByText("Unavailable")).toBeTruthy();
+    expect(within(row).getByText("Watch")).toBeTruthy();
     expect(within(row).getByText("Failed (latest required run)")).toBeTruthy();
   });
 
-  it("labels a fresh neutral-only no-op as skipped while keeping it in the attention view", () => {
+  it("keeps a fresh neutral-only no-op without success evidence in the attention view as one verdict", () => {
     const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
     renderCrons({
       groups: [
@@ -234,12 +233,12 @@ describe("CronsSection", () => {
     });
 
     const row = screen.getByTestId("cron-row-compute-safety-score-v9");
-    expect(within(row).getByText("Skipped")).toBeTruthy();
-    expect(within(row).queryByText("Unavailable")).toBeNull();
-    expect(screen.getByText(/1\/1 shown · 0 unavailable · 0 warnings · 0 unknown · 1 skipped/)).toBeTruthy();
+    expect(within(row).getByText("Watch")).toBeTruthy();
+    expect(within(row).getByText("Skipped: no work required", { exact: false })).toBeTruthy();
+    expect(screen.getByText("1 job · 1 watch")).toBeTruthy();
   });
 
-  it("combines state, impact, trigger-group, running, and search filters", () => {
+  it("combines verdict chips, impact, trigger-group, and search filters", () => {
     renderCrons({
       groups: [
         makeGroup([
@@ -258,7 +257,9 @@ describe("CronsSection", () => {
       ],
     });
 
-    fireEvent.change(screen.getByLabelText("State"), { target: { value: "all" } });
+    expect(screen.getByRole("button", { name: "Act now 1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Needs attention 2" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "All 3" }));
     expect(screen.getByTestId("cron-row-snapshot-chain-supply")).toBeTruthy();
     expect(screen.getByTestId("cron-row-dispatch-telegram-alerts")).toBeTruthy();
 
@@ -271,7 +272,7 @@ describe("CronsSection", () => {
     expect(screen.getByTestId("cron-row-dispatch-telegram-alerts")).toBeTruthy();
     expect(screen.queryByTestId("cron-row-sync-stablecoins")).toBeNull();
 
-    fireEvent.change(screen.getByLabelText("Running status"), { target: { value: "running" } });
+    fireEvent.click(screen.getByRole("button", { name: "Running 1" }));
     expect(screen.getByTestId("cron-row-dispatch-telegram-alerts")).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Search jobs"), { target: { value: "no-match" } });
@@ -290,27 +291,63 @@ describe("CronsSection", () => {
 
     const stablecoinRow = screen.getByTestId("cron-row-sync-stablecoins");
     const fxRow = screen.getByTestId("cron-row-sync-fx-rates");
-    expect(stablecoinRow.getAttribute("aria-selected")).toBe("true");
-    expect(stablecoinRow.getAttribute("aria-controls")).toBe("cron-selected-job-detail");
-    expect(fxRow.getAttribute("aria-selected")).toBe("false");
-    expect(fxRow.hasAttribute("aria-controls")).toBe(false);
     const stablecoinSelect = within(stablecoinRow).getByRole("button");
     const fxSelect = within(fxRow).getByRole("button");
+    // Selection is announced on the row button (aria-current), not aria-selected on a non-grid <tr>.
+    expect(stablecoinRow.hasAttribute("aria-selected")).toBe(false);
+    expect(stablecoinSelect.getAttribute("aria-current")).toBe("true");
+    expect(fxSelect.hasAttribute("aria-current")).toBe(false);
     expect(stablecoinSelect.getAttribute("aria-controls")).toBe("cron-selected-job-detail");
     expect(fxSelect.hasAttribute("aria-controls")).toBe(false);
     expect(within(fxRow).getAllByRole("button")).toHaveLength(1);
 
     fireEvent.click(fxSelect);
 
-    expect(fxRow.getAttribute("aria-selected")).toBe("true");
-    expect(fxRow.getAttribute("aria-controls")).toBe("cron-selected-job-detail");
+    expect(fxSelect.getAttribute("aria-current")).toBe("true");
     expect(fxSelect.getAttribute("aria-controls")).toBe("cron-selected-job-detail");
-    expect(stablecoinRow.getAttribute("aria-selected")).toBe("false");
+    expect(stablecoinSelect.hasAttribute("aria-current")).toBe(false);
     expect(stablecoinSelect.hasAttribute("aria-controls")).toBe(false);
     expect(screen.getByRole("complementary", { name: "Details for FX rates" })).toBeTruthy();
 
+    expect(window.location.search).toBe("?job=sync-fx-rates");
+
     fireEvent.click(stablecoinRow);
-    expect(stablecoinRow.getAttribute("aria-selected")).toBe("true");
+    expect(stablecoinSelect.getAttribute("aria-current")).toBe("true");
+  });
+
+  it("selects a deep-linked job and keeps it visible under the default filter", () => {
+    window.history.replaceState(null, "", "/admin/crons/?job=snapshot-chain-supply");
+    renderCrons({
+      groups: [
+        makeGroup([
+          ["sync-stablecoins", makeCronStatus({ healthy: false })],
+          ["snapshot-chain-supply", makeCronStatus()],
+        ]),
+      ],
+    });
+
+    const row = screen.getByTestId("cron-row-snapshot-chain-supply");
+    expect(within(row).getByRole("button").getAttribute("aria-current")).toBe("true");
+    expect(screen.getByRole("complementary", { name: /Details for/ }).textContent).toContain("snapshot-chain-supply");
+    expect(screen.getByText("2 jobs · 1 act now · 1 OK")).toBeTruthy();
+  });
+
+  it("leads the detail panel with the reason, budget, and operator actions", () => {
+    renderCrons({
+      groups: [makeGroup([["sync-blacklist", makeCronStatus({ healthy: false, lastRun: null, recentRuns: [] })]])],
+    });
+
+    const detail = screen.getByRole("complementary", { name: /Details for/ });
+    const why = within(detail).getByRole("region", { name: "Why this state" });
+    expect(within(why).getByText(/No usable run within the 2m budget\. Public data depends on this job\./)).toBeTruthy();
+    expect(within(why).getByText("no-fresh-run")).toBeTruthy();
+    expect(within(why).getByText(/Expected every 1m, stale after 2m without a usable run\./)).toBeTruthy();
+    const actions = within(detail).getByRole("region", { name: "Actions" });
+    expect(within(actions).getByRole("link", { name: /Blacklist sync runbook/ }).getAttribute("href")).toContain("docs/runbooks/blacklist-sync.md");
+    expect(within(actions).getByRole("link", { name: "View status history" }).getAttribute("href")).toMatch(/^\/admin\/history\/?$/);
+    expect(within(actions).getByText("wrangler tail stablecoin-api --format pretty --search sync-blacklist")).toBeTruthy();
+    expect(within(actions).getAllByRole("link").length).toBeGreaterThanOrEqual(3);
+    expect(within(detail).getByText("Resource telemetry not measured on this runtime.")).toBeTruthy();
   });
 
   it("shows readable outcomes, exact long durations, visible dot legend, and accessible dot labels", () => {
@@ -335,14 +372,13 @@ describe("CronsSection", () => {
       ],
     });
 
-    expect(screen.getAllByText("Recent runs").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Skipped").length).toBeGreaterThan(0);
+    expect(screen.getByRole("columnheader", { name: "Recent runs" })).toBeTruthy();
     expect(screen.getAllByText("43m 2s").length).toBeGreaterThan(0);
-    expect(screen.getByText("Raw: skipped_neutral")).toBeTruthy();
-    expect(screen.getByLabelText(/Skipped: .*raw status skipped_neutral/)).toBeTruthy();
-    expect(screen.getByLabelText(/Succeeded: .*raw status ok/)).toBeTruthy();
-    expect(screen.getByLabelText(/Completed with warnings: .*raw status degraded/)).toBeTruthy();
-    expect(screen.getByLabelText(/Failed: .*raw status error/)).toBeTruthy();
+    expect(screen.getAllByText("skipped_neutral").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/Skipped: .*raw status skipped_neutral/).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/Succeeded: .*raw status ok/).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/Completed with warnings: .*raw status degraded/).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/Failed: .*raw status error/).length).toBeGreaterThan(0);
     expect(screen.getAllByTitle(/2582\.4s \(2582400ms\)/).length).toBeGreaterThan(0);
   });
 
@@ -467,7 +503,13 @@ describe("CronsSection", () => {
     const row = screen.getByRole("row", { name: /Supply snapshot/ });
     const itemsColumn = screen.getAllByRole("columnheader").findIndex((header) => header.textContent === "Items");
     expect(itemsColumn).toBeGreaterThanOrEqual(0);
-    expect(within(row).getAllByRole("cell")[itemsColumn].textContent).toBe(itemCount === undefined ? "N/A" : "0");
+    const cell = within(row).getAllByRole("cell")[itemsColumn]!;
+    if (itemCount === undefined) {
+      expect(cell.textContent).toContain("—");
+      expect(within(cell).getByTitle("N/A: this job does not report an item count.")).toBeTruthy();
+    } else {
+      expect(cell.textContent).toBe("0");
+    }
   });
 
   it("renders budget-only trigger groups from top-level telemetry with outcome, counts, duration, and budget", async () => {

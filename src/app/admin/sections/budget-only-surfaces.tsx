@@ -24,12 +24,12 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
         <summary className="pharos-focus-ring flex min-h-11 min-w-0 cursor-pointer list-none flex-wrap items-start justify-between gap-3 rounded-md marker:hidden">
           <span className="min-w-0">
             <span className="block break-words text-sm font-medium text-foreground">{row.label}</span>
-            <span className="mt-1 block break-all font-mono text-2xs text-muted-foreground">{row.job}</span>
+            <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">{row.job}</span>
           </span>
           <span className="flex flex-wrap items-center justify-end gap-2">
             <Badge
               className={cn(
-                "text-2xs",
+                "text-xs",
                 surface.telemetryStatus === "fresh"
                   ? "bg-state-positive-solid/15 text-state-positive-strong"
                   : surface.telemetryStatus === "stale"
@@ -40,7 +40,7 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
               {row.telemetryLabel} telemetry
             </Badge>
             <Badge
-              className={`max-w-full whitespace-normal break-words text-left text-2xs leading-tight ${getCronStatusColor(surface.outcome)}`}
+              className={`max-w-full whitespace-normal break-words text-left text-xs leading-tight ${getCronStatusColor(surface.outcome)}`}
             >
               {row.outcomeLabel}
             </Badge>
@@ -58,7 +58,7 @@ function BudgetSurfaceStatus({ row }: { row: BudgetOnlySurfaceRow }) {
         <div className="min-w-0">
           <dt className="text-muted-foreground">Checked</dt>
           <dd className="mt-1 text-foreground">{checkedAge}</dd>
-          <dd className="mt-0.5 break-words text-3xs text-muted-foreground">{formatTimestamp(surface.checkedAt)}</dd>
+          <dd className="mt-0.5 break-words text-xs text-muted-foreground">{formatTimestamp(surface.checkedAt)}</dd>
         </div>
         <div className="min-w-0">
           <dt className="text-muted-foreground">Runtime</dt>
@@ -141,11 +141,16 @@ export function BudgetOnlySurfacePanel({ surfaces }: { surfaces: BudgetOnlySurfa
                   >
                     {group.scheduleKey}
                   </h4>
-                  <p className="mt-1 break-all font-mono text-2xs text-muted-foreground">{group.schedule}</p>
+                  <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{group.schedule}</p>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {group.summary.total} surfaces · {group.summary.stale} stale · {group.summary.missing} missing ·{" "}
-                  {group.summary.errors} failed
+                <span className="pharos-numeric text-xs text-muted-foreground">
+                  {[
+                    `${group.summary.total} surface${group.summary.total === 1 ? "" : "s"}`,
+                    group.summary.stale > 0 ? `${group.summary.stale} stale` : null,
+                    group.summary.missing > 0 ? `${group.summary.missing} missing` : null,
+                    group.summary.unreadable > 0 ? `${group.summary.unreadable} unreadable` : null,
+                    group.summary.errors > 0 ? `${group.summary.errors} failed` : null,
+                  ].filter(Boolean).join(" · ")}
                 </span>
               </div>
               <div className="mt-2">

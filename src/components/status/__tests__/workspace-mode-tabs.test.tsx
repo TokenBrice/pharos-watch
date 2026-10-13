@@ -43,6 +43,10 @@ describe("WorkspaceModeTabs", () => {
       "Markets0 issues, healthy",
       "Reserves2 issues, critical",
     ]);
+    // Color only for a non-zero, non-OK count: the zero healthy badge stays muted.
+    const badge = (name: RegExp) => screen.getByRole("tab", { name }).querySelector("span[title]")?.className ?? "";
+    expect(badge(/Markets/)).toContain("text-muted-foreground");
+    expect(badge(/Reserves/)).toContain("text-state-danger");
     expect(qualityTab.id).toBe("pipeline-tab-quality");
     expect(qualityTab.getAttribute("aria-controls")).toBe("pipeline-panel-quality");
     // Unselected tabs own no panel, so no dangling aria-controls target exists.

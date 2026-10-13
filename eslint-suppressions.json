@@ -1,14 +1,4 @@
 {
-  "src/app/admin/sections/cron-lane-format.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 4
-    }
-  },
-  "src/app/admin/sections/cron-run-history.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 1
-    }
-  },
   "src/app/admin/workspace-status-boundary.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
@@ -25,11 +15,6 @@
     }
   },
   "src/app/stability-index/psi-beam-dimmers.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/app/status/client.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 2
     }
@@ -167,21 +152,6 @@
   "src/components/status/coingecko-price-diff.tsx": {
     "pharos/no-raw-palette-colour": {
       "count": 4
-    }
-  },
-  "src/components/status/reserve-sync-health.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/components/status/system-diagnostics.tsx": {
-    "pharos/no-raw-palette-colour": {
-      "count": 2
-    }
-  },
-  "src/components/status/top-fold-copy.ts": {
-    "pharos/no-raw-palette-colour": {
-      "count": 20
     }
   },
   "src/components/table-toolbar.tsx": {

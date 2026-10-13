@@ -4,7 +4,6 @@ import { useRef } from "react";
 import type { KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
 export type WorkspaceModeSeverity = "healthy" | "watch" | "critical" | "unknown";
 
@@ -15,11 +14,14 @@ export interface WorkspaceModeSummary<TMode extends string> {
   severity: WorkspaceModeSeverity;
 }
 
+const QUIET_COUNT_CLASS = "border-border/60 bg-transparent text-muted-foreground";
+
+// Color is reserved for a non-zero, non-OK count; zero and healthy stay quiet.
 const SEVERITY_CLASS: Record<WorkspaceModeSeverity, string> = {
-  healthy: STATUS_OK_PILL_CLASS,
+  healthy: QUIET_COUNT_CLASS,
   watch: SEVERITY_TONE_CLASS.watch.pill,
   critical: SEVERITY_TONE_CLASS.alert.pill,
-  unknown: "border-border bg-muted text-muted-foreground",
+  unknown: "border-dashed border-border bg-transparent text-muted-foreground",
 };
 
 interface WorkspaceModeTabsProps<TMode extends string> {
@@ -102,10 +104,12 @@ export function WorkspaceModeTabs<TMode extends string>({
               <span>{mode.label}</span>
               <span
                 className={cn(
-                  "inline-flex min-w-5 items-center justify-center rounded-sm border px-1.5 py-0.5 font-mono text-3xs tabular-nums",
+                  "inline-flex min-w-5 items-center justify-center rounded-sm border px-1.5 py-0.5 font-mono text-xs tabular-nums",
                   isActive
                     ? "border-background/30 bg-background/10 text-background forced-colors:border-[Highlight] forced-colors:text-[Highlight]"
-                    : SEVERITY_CLASS[mode.severity],
+                    : mode.issueCount === 0
+                      ? QUIET_COUNT_CLASS
+                      : SEVERITY_CLASS[mode.severity],
                 )}
                 title={`${mode.issueCount} issues; ${mode.severity}`}
               >

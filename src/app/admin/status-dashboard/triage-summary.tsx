@@ -1,14 +1,18 @@
-import { useState } from "react";
-import type { HealthResponse, StatusResponse, StatusTransition } from "@shared/types";
-import { formatElapsedSeconds } from "@shared/lib/format";
+import { useState, type ReactNode } from "react";
+import type { HealthResponse, StatusResponse } from "@shared/types";
 import { hasReserveScoreInputHold } from "@shared/lib/status-thresholds";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { RecommendedActionStrip } from "@/components/status/recommended-action-strip";
-import { STATUS_PANEL_SHELL_CLASS, SummaryBadge } from "@/components/status/page-primitives";
+import {
+  CountValue,
+  STATUS_PANEL_SHELL_CLASS,
+  StatusSection,
+  SummaryBadge,
+  Timestamp,
+  VerdictPill,
+} from "@/components/status/page-primitives";
 import { SystemDiagnostics } from "@/components/status/system-diagnostics";
-import { getTopFoldCopy, isRecoveryHold as isRecoveryHoldState } from "@/components/status/top-fold-copy";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   buildActionReadinessChecks,
   buildReserveRecoveryForecast,
@@ -18,47 +22,100 @@ import type { StatusActionRecommendation } from "@/lib/status/action-recommendat
 import { getAdminWorkspacePathForLegacyHash } from "@/lib/admin-workspaces";
 import {
   type BrowserProbeSummary,
-  type DashboardDecision,
   type DashboardEvidence,
   type DashboardIssueGroups,
   type DashboardQuerySync,
   type DashboardSection,
   STATUS_DASHBOARD_FRESHNESS_POLICY,
-  buildDashboardDecision,
   buildDashboardEvidence,
   buildPublicHealthStatusCauses,
-  formatTransitionLabel,
-  formatTimestampSeconds,
-  getIssueKindBadgeClass,
-  getStatusTone,
-  groupDashboardIssues,
   normalizeStatusIssues,
 } from "@/lib/status-dashboard-model";
+import {
+  buildTriageHeadline,
+  buildTriageInbox,
+  describeRecoveryHold,
+  formatRecurrence,
+  readSlowestProbePath,
+  type TriageInboxItem,
+} from "@/lib/status/triage-inbox";
+import { describePublicHeadline } from "@/lib/status/public-status";
+import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
-import { STATUS_OK_PILL_CLASS } from "@/lib/status-dashboard-model";
 
 function formatReserveCoverage(value: number | null): string {
   return value == null ? "Unknown" : `${(value * 100).toFixed(1)}%`;
 }
 
-function getEvidenceBadgeClass(state: DashboardEvidence["state"]): string {
-  if (state === "current") return STATUS_OK_PILL_CLASS;
-  if (state === "stale" || state === "unavailable") {
-    return SEVERITY_TONE_CLASS.alert.pill;
-  }
-  return SEVERITY_TONE_CLASS.watch.pill;
+function CountChip({ label, value, tone }: { label: string; value: number | null | undefined; tone: string }) {
+  return (
+    <div className="rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs dark:bg-background/45">
+      <span className="text-muted-foreground">{label}</span>
+      <CountValue value={value} tone={tone} className="ml-1.5" />
+    </div>
+  );
+}
+
+function InboxRow({ item, nowSec }: { item: TriageInboxItem; nowSec: number }) {
+  const { issue } = item;
+  const recurrence = formatRecurrence(item.recurrence);
+  return (
+    <li className="py-3 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <VerdictPill verdict={item.verdict} />
+        <span className="text-xs text-muted-foreground">{issue.affectedSurface}</span>
+        {issue.publicImpacting ? <span className="text-xs font-medium text-state-danger">Public impact</span> : null}
+        {recurrence ? (
+          <span
+            className="rounded-full border border-border/60 px-2 py-0.5 text-xs font-medium text-foreground"
+            title="Admin degrade transitions carrying this cause in the loaded status timeline"
+          >
+            {recurrence}
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-1.5 break-words text-sm leading-relaxed text-foreground">{issue.message}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {item.sinceSec != null ? (
+          <span>
+            For <Timestamp epochSec={item.sinceSec} nowSec={nowSec} variant="duration" />
+          </span>
+        ) : item.lastSuccessSec != null ? (
+          <span>
+            No successful run for <Timestamp epochSec={item.lastSuccessSec} nowSec={nowSec} variant="duration" />
+          </span>
+        ) : null}
+        {item.timing ? <span>{item.timing}</span> : null}
+        <span className="break-all font-mono">{issue.code}</span>
+        {item.link ? (
+          <a
+            href={item.link.href}
+            {...(item.link.external ? { target: "_blank", rel: "noreferrer noopener" } : {})}
+            className="pharos-focus-ring inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-2 sm:min-h-0"
+          >
+            {item.link.label}
+          </a>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function ClockRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-foreground">{children}</dd>
+    </div>
+  );
 }
 
 export interface TriageSummaryProps {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
-  overallTone: ReturnType<typeof getStatusTone>;
-  statusHoldingAge: number;
   issueGroups?: DashboardIssueGroups;
   evidence?: DashboardEvidence;
-  decision?: DashboardDecision;
-  latestTransition: StatusTransition | null;
   attentionSections: DashboardSection[];
   recommendedActions: StatusActionRecommendation[];
   isDiagnosticsOpen: boolean;
@@ -71,19 +128,13 @@ export interface TriageSummaryProps {
   clientDataStale: boolean;
   lastUpdated: number;
   handleRefresh: () => void;
-  onSignOut?: () => void;
-  showSignOut?: boolean;
 }
 
 export function TriageSummary({
   data,
   healthData,
-  overallTone,
-  statusHoldingAge,
   issueGroups,
   evidence,
-  decision,
-  latestTransition,
   attentionSections,
   recommendedActions,
   isDiagnosticsOpen,
@@ -96,36 +147,20 @@ export function TriageSummary({
   clientDataStale,
   lastUpdated,
   handleRefresh,
-  onSignOut,
-  showSignOut = true,
 }: TriageSummaryProps) {
-  const [areIssuesExpanded, setAreIssuesExpanded] = useState(false);
-  const topFoldCopy = getTopFoldCopy(data.overallStatus, data.rawOverallStatus);
-  const isRecoveryHold = isRecoveryHoldState(data.overallStatus, data.rawOverallStatus);
-  const resolvedIssueGroups =
-    issueGroups ?? groupDashboardIssues(normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData)));
+  const [isWatchingOpen, setIsWatchingOpen] = useState(false);
+  const issues = issueGroups
+    ? [...issueGroups.impacting, ...issueGroups.warnings, ...issueGroups.maintenance, ...issueGroups.watches]
+    : normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData));
   const resolvedEvidence = evidence ?? buildDashboardEvidence(querySyncs);
-  const resolvedDecision =
-    decision ??
-    buildDashboardDecision({
-      data,
-      healthData,
-      evidence: resolvedEvidence,
-      issueGroups: resolvedIssueGroups,
-      recommendedActions,
-    });
-  const activeIssues = [
-    ...resolvedIssueGroups.impacting,
-    ...resolvedIssueGroups.warnings,
-    ...resolvedIssueGroups.maintenance,
-    ...resolvedIssueGroups.watches,
-  ];
-  const evidenceNeedsRefresh =
-    resolvedDecision.nextStep === "refresh-evidence" || resolvedDecision.nextStep === "action-blocked";
+  const inbox = buildTriageInbox(issues, data);
+  const headline = buildTriageHeadline(inbox, resolvedEvidence);
+  const recoveryHold = describeRecoveryHold(data);
+  const primaryItems = [...inbox.act, ...inbox.watch];
+  const latestTransition = data.timeline[0] ?? null;
   const statusSync = querySyncs.find((s) => s.key === "status");
   const healthSync = querySyncs.find((s) => s.key === "health");
   const probeSync = querySyncs.find((s) => s.key === "probes");
-  const requestSourceSync = querySyncs.find((s) => s.key === "requestSource");
   const reserveScoreInputHold = hasReserveScoreInputHold(data.reserveComposition);
   const reserveForecast = buildReserveRecoveryForecast(data);
   const actionReadinessChecks = buildActionReadinessChecks({
@@ -140,256 +175,150 @@ export function TriageSummary({
       : reserveForecast.state === "clear"
         ? "border-state-positive bg-state-positive-subtle text-state-positive-strong"
         : cn(SEVERITY_TONE_CLASS.watch.banner, "text-state-warn-ink");
+  const publicHeadline = describePublicHeadline(healthData, Boolean(healthSync?.errorMessage));
 
   return (
-    <section
+    <StatusSection
       id="overview"
-      aria-labelledby="triage-title"
-      className={cn("scroll-mt-36 rounded-xl border px-4 py-4 sm:px-5 lg:px-6", topFoldCopy.shell)}
+      kicker="Operator overview"
+      title="Triage"
+      headingLevel="h1"
+      variant="workspace"
+      description="Open issues from the admin status model, what to do about them, and the evidence behind the verdict."
+      summary={
+        <>
+          <CountChip label="Act now" value={inbox.act.length} tone="text-state-danger" />
+          <CountChip label="Watching" value={inbox.watch.length + inbox.informational.length} tone="text-state-warn" />
+          <CountChip label="Cron last-run errors" value={data.summary.cronErrors} tone="text-state-warn" />
+          <SummaryBadge
+            label="Public status"
+            value={publicHeadline.label}
+            className={
+              publicHeadline.state && publicHeadline.state !== "operational"
+                ? PUBLIC_HEADLINE_TONE[publicHeadline.state].pill
+                : undefined
+            }
+          />
+          <FreshnessIndicator
+            updatedAtMs={lastUpdated}
+            staleAfterMs={STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs}
+            labelPrefix="Dashboard fetch"
+          />
+          <Button variant="outline" size="sm" className="min-h-11" onClick={handleRefresh}>
+            Refresh now
+          </Button>
+        </>
+      }
     >
-      <div className="space-y-4">
-        {/* Triage header: status + key metrics + controls */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 id="triage-title" className="mr-1 text-lg font-semibold text-foreground">
-              Triage
-            </h1>
-            <span
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em]",
-                overallTone.badgeClassName,
-              )}
-            >
-              <span
-                className={cn(
-                  "h-2 w-2 rounded-full",
-                  resolvedDecision.systemState === "stale" || resolvedDecision.systemState === "unknown"
-                    ? "bg-[var(--severity-severe)]"
-                    : resolvedDecision.systemState === "degraded"
-                      ? "bg-[var(--severity-mild)]"
-                      : "bg-[var(--severity-healthy)]",
-                )}
-                aria-hidden="true"
-              />
-              {resolvedDecision.systemLabel}
-            </span>
-            <span
-              className={cn(
-                "inline-flex items-center rounded-full border px-2.5 py-1 text-2xs font-medium",
-                getEvidenceBadgeClass(resolvedEvidence.state),
-              )}
-            >
-              Evidence: {resolvedEvidence.label}
-            </span>
-            {isRecoveryHold && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={cn("cursor-help rounded-full border px-2.5 py-1 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
-                      recovery hold — raw {data.rawOverallStatus}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    The state machine is holding at a higher severity than the raw signal so that improvements must hold
-                    for {data.state.minDwellSec}s before the overall status is downgraded. Prevents flap.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            <span className="text-sm text-muted-foreground">
-              Admin state holding {formatElapsedSeconds(statusHoldingAge)}
-            </span>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <FreshnessIndicator
-              updatedAtMs={lastUpdated}
-              staleAfterMs={STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs}
-              labelPrefix="Dashboard fetch"
-            />
-            <Button variant="outline" size="sm" className="min-h-11" onClick={handleRefresh}>
-              Refresh now
-            </Button>
-            {showSignOut && onSignOut ? (
-              <Button variant="outline" size="sm" className="min-h-11" onClick={onSignOut}>
-                Sign out
-              </Button>
-            ) : null}
-          </div>
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <VerdictPill verdict={headline.verdict} />
+          <p className="text-base font-semibold leading-snug text-foreground">{headline.text}</p>
         </div>
+        <p className="text-sm text-muted-foreground">
+          {publicHeadline.title
+            ? `Public status page: ${publicHeadline.title}.`
+            : `Public status ${publicHeadline.label.toLowerCase()}.`}{" "}
+          Evidence {resolvedEvidence.label.toLowerCase()}.
+        </p>
+        {recoveryHold ? <p className="text-sm text-muted-foreground">{recoveryHold}</p> : null}
+      </div>
 
-        <h2 className="sr-only">Operational overview</h2>
-        <p className="max-w-4xl text-sm font-medium leading-relaxed text-foreground">{resolvedDecision.summary}</p>
-
-        {/* Tier 1: the numbers that decide "do I act?" */}
-        <div className="flex flex-wrap gap-2">
-          <SummaryBadge
-            label="Impacting"
-            value={String(resolvedIssueGroups.impacting.length)}
-            className={
-              resolvedIssueGroups.impacting.length > 0
-                ? SEVERITY_TONE_CLASS.alert.pill
-                : undefined
-            }
-          />
-          <SummaryBadge label="Warnings" value={String(resolvedIssueGroups.warnings.length)} />
-          <SummaryBadge label="Maintenance" value={String(resolvedIssueGroups.maintenance.length)} />
-          <SummaryBadge label="Watches" value={String(resolvedIssueGroups.watches.length)} />
-          <SummaryBadge
-            label="Cron last-run errors"
-            value={data.summary.cronErrors == null ? "Unavailable" : String(data.summary.cronErrors)}
-            className={
-              data.summary.availabilityImpactingCronErrors != null && data.summary.availabilityImpactingCronErrors > 0
-                ? SEVERITY_TONE_CLASS.watch.pill
-                : undefined
-            }
-          />
-          <SummaryBadge
-            label="Public health"
-            value={healthData?.status ?? "unknown"}
-            className={healthData ? getStatusTone(healthData.status).badgeClassName : undefined}
-          />
-          <span className="mx-1 hidden self-center border-l border-border/40 py-2 sm:block" />
-          <SummaryBadge label="Reserve drift" value={data.sectionErrors.reserveDrift || !data.reserveDrift ? "Unknown" : String(data.reserveDrift.length)} />
-        </div>
-
-        {reserveScoreInputHold ? (
-          <div className={cn("rounded-xl border px-4 py-3 text-sm", reserveForecastTone)}>
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold uppercase tracking-[0.14em] opacity-80">
-                  Reserve recovery forecast
-                </div>
-                <p className="mt-1 max-w-3xl leading-relaxed">
-                  {reserveForecast.headline}. Live reserve evidence is degraded, so report cards can use conservative
-                  reserve inputs until a clean reserve run catches up.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <SummaryBadge
-                  label="Reserve"
-                  value={data.reserveComposition.status}
-                  className="border-state-warn bg-background/60 text-state-warn-strong"
-                />
-                <SummaryBadge
-                  label="Next"
-                  value={formatNextRunWindow(reserveForecast.nextRunAt, data.timestamp)}
-                  className="border-state-warn bg-background/60 text-state-warn-strong"
-                />
-                <SummaryBadge
-                  label="Runs"
-                  value={
-                    reserveForecast.estimatedRunsToClear == null ? "—" : String(reserveForecast.estimatedRunsToClear)
-                  }
-                  className="border-state-warn bg-background/60 text-state-warn-strong"
-                />
-                <SummaryBadge
-                  label="Score-grade"
-                  value={formatReserveCoverage(data.reserveComposition.authoritativeFreshCoverageRatio)}
-                  className="border-state-warn bg-background/60 text-state-warn-strong"
-                />
-              </div>
+      {reserveScoreInputHold ? (
+        <div className={cn("rounded-xl border px-4 py-3 text-sm", reserveForecastTone)}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold">Reserve recovery forecast</h3>
+              <p className="mt-1 max-w-3xl leading-relaxed">
+                {reserveForecast.headline}. Live reserve evidence is degraded, so report cards can use conservative
+                reserve inputs until a clean reserve run catches up.
+              </p>
             </div>
-            <div className="mt-2 text-xs leading-relaxed opacity-90">
-              {reserveForecast.detail}{" "}
-              {data.reserveComposition.runBudgetTruncated ? (
-                <>
-                  The cursor should resume at{" "}
-                  <span className="font-mono">
-                    {data.reserveComposition.nextCursorStablecoinId ?? "the next configured coin"}
-                  </span>
-                  .
-                </>
-              ) : (
-                "The reserve lane is reporting degraded evidence; wait for the next scheduled run unless coverage falls further."
-              )}{" "}
-              Manual intervention is only needed if truncation repeats or the deferred queue stops shrinking.
-            </div>
-          </div>
-        ) : null}
-
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(18rem,0.7fr)_minmax(18rem,0.7fr)]">
-          <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Current issues</h3>
-              <span className="text-2xs text-muted-foreground">
-                {activeIssues.length > 0
-                  ? areIssuesExpanded
-                    ? `${activeIssues.length} shown`
-                    : `${Math.min(activeIssues.length, 4)} of ${activeIssues.length}`
-                  : "clear"}
-              </span>
-            </div>
-
-            <div id="triage-issue-list" className="mt-3 divide-y divide-border/60">
-              {activeIssues.length > 0 ? (
-                (areIssuesExpanded ? activeIssues : activeIssues.slice(0, 4)).map((issue) => (
-                  <div key={issue.id} className="py-3 first:pt-0 last:pb-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-2xs font-medium",
-                          getIssueKindBadgeClass(issue.kind),
-                        )}
-                      >
-                        {issue.impactLabel}
-                      </span>
-                      <span className="text-2xs text-muted-foreground">{issue.affectedSurface}</span>
-                      <span className="font-mono tabular-nums text-2xs text-muted-foreground">{issue.code}</span>
-                    </div>
-                    <div className="mt-1.5 text-sm leading-relaxed text-foreground">{issue.message}</div>
-                    {issue.runbookUrl && (
-                      <a
-                        href={issue.runbookUrl}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="pharos-focus-ring mt-2 inline-flex items-center gap-1 text-2xs font-medium text-primary underline underline-offset-2"
-                      >
-                        Runbook →
-                      </a>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <div className="border-y border-border/60 py-3 text-sm text-muted-foreground">
-                  No active incidents, warnings, maintenance debt, or informational watches.
-                </div>
-              )}
-              {activeIssues.length > 4 && (
-                <button
-                  type="button"
-                  onClick={() => setAreIssuesExpanded((value) => !value)}
-                  aria-expanded={areIssuesExpanded}
-                  aria-controls="triage-issue-list"
-                  className="pharos-focus-ring mt-1 inline-flex min-h-11 items-center gap-1 rounded-md px-3 text-xs font-medium text-muted-foreground hover:text-foreground"
-                >
-                  {areIssuesExpanded ? "Show top 4" : `+${activeIssues.length - 4} more`}
-                </button>
-              )}
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2 border-t border-border/60 pt-3">
-              <SummaryBadge label="Last transition" value={formatTransitionLabel(latestTransition)} />
+            <div className="flex flex-wrap gap-2">
+              <SummaryBadge label="Reserve" value={data.reserveComposition.status} />
+              <SummaryBadge label="Next" value={formatNextRunWindow(reserveForecast.nextRunAt, data.timestamp)} />
               <SummaryBadge
-                label="Changed"
-                value={
-                  latestTransition
-                    ? `${formatElapsedSeconds(Math.max(0, data.timestamp - latestTransition.at))} ago`
-                    : "—"
-                }
+                label="Runs"
+                value={reserveForecast.estimatedRunsToClear == null ? "—" : String(reserveForecast.estimatedRunsToClear)}
+              />
+              <SummaryBadge
+                label="Score-grade"
+                value={formatReserveCoverage(data.reserveComposition.authoritativeFreshCoverageRatio)}
               />
             </div>
           </div>
+          <div className="mt-2 text-xs leading-relaxed opacity-90">
+            {reserveForecast.detail}{" "}
+            {data.reserveComposition.runBudgetTruncated ? (
+              <>
+                The cursor should resume at{" "}
+                <span className="font-mono">
+                  {data.reserveComposition.nextCursorStablecoinId ?? "the next configured coin"}
+                </span>
+                .
+              </>
+            ) : (
+              "The reserve lane is reporting degraded evidence; the next scheduled run should catch up unless coverage falls further."
+            )}{" "}
+            Manual intervention is only needed if truncation repeats or the deferred queue stops shrinking.
+          </div>
+        </div>
+      ) : null}
 
-          <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-foreground">Needs attention</h3>
-              <span className="text-2xs text-muted-foreground">
-                {attentionSections.length > 0 ? `${attentionSections.length} lanes` : "clear"}
-              </span>
-            </div>
-            <div className="mt-3 divide-y divide-border/60">
-              {attentionSections.length > 0 ? (
-                attentionSections.slice(0, 4).map((section) => (
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(18rem,1fr)]">
+        <section aria-labelledby="triage-issues-title" className={cn("min-w-0 rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 id="triage-issues-title" className="text-sm font-semibold text-foreground">
+              Issues
+            </h3>
+            <span className="text-xs text-muted-foreground">Sorted by verdict, then age</span>
+          </div>
+          {primaryItems.length > 0 ? (
+            <ul className="mt-3 divide-y divide-border/60">
+              {primaryItems.map((item) => (
+                <InboxRow key={item.issue.id} item={item} nowSec={data.timestamp} />
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {inbox.informational.length > 0 ? "No issue needs action or close watching." : "No open issues."}
+            </p>
+          )}
+          {inbox.informational.length > 0 ? (
+            <details
+              open={isWatchingOpen}
+              onToggle={(event) => setIsWatchingOpen(event.currentTarget.open)}
+              className="mt-3 border-t border-border/60 pt-1"
+            >
+              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-foreground">
+                Informational ({inbox.informational.length})
+              </summary>
+              {isWatchingOpen ? (
+                <ul className="mt-2 divide-y divide-border/60 pb-1">
+                  {inbox.informational.map((item) => (
+                    <InboxRow key={item.issue.id} item={item} nowSec={data.timestamp} />
+                  ))}
+                </ul>
+              ) : null}
+            </details>
+          ) : null}
+        </section>
+
+        <div className="min-w-0 space-y-4">
+          {recommendedActions.length > 0 ? (
+            <RecommendedActionStrip
+              recommendations={recommendedActions}
+              readinessChecks={actionReadinessChecks}
+              onActionFinished={handleRefresh}
+            />
+          ) : null}
+          <section aria-labelledby="triage-lanes-title" className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
+            <h3 id="triage-lanes-title" className="text-sm font-semibold text-foreground">
+              Workspaces with findings
+            </h3>
+            {attentionSections.length > 0 ? (
+              <div className="mt-2 divide-y divide-border/60">
+                {attentionSections.slice(0, 4).map((section) => (
                   <a
                     key={section.id}
                     href={getAdminWorkspacePathForLegacyHash(section.id) ?? "/admin/"}
@@ -405,90 +334,81 @@ export function TriageSummary({
                       {section.value}
                     </span>
                   </a>
-                ))
-              ) : (
-                <div className="rounded-lg border border-border/60 bg-background/45 p-3 text-sm text-muted-foreground">
-                  No operator lanes need attention.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {evidenceNeedsRefresh ? (
-            <div className={cn("rounded-xl border p-4", SEVERITY_TONE_CLASS.watch.banner)}>
-              <p className="pharos-kicker">Recommended now</p>
-              <h3 className="mt-2 text-lg font-semibold text-foreground">{resolvedDecision.nextStepLabel}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Required status evidence is {resolvedEvidence.state}. Current operational actions remain secondary until
-                the missing or delayed signals refresh.
-              </p>
-              <Button variant="outline" size="sm" className="mt-4 min-h-11" onClick={handleRefresh}>
-                Refresh evidence
-              </Button>
-            </div>
-          ) : resolvedDecision.nextStep === "manual-action" ? (
-            <RecommendedActionStrip
-              recommendations={recommendedActions}
-              readinessChecks={actionReadinessChecks}
-              onActionFinished={handleRefresh}
-            />
-          ) : (
-            <div className={cn("rounded-xl p-4", STATUS_PANEL_SHELL_CLASS)}>
-              <p className="pharos-kicker">Recommended now</p>
-              <h3 className="mt-2 text-lg font-semibold text-foreground">{resolvedDecision.nextStepLabel}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {resolvedDecision.nextStep === "observe-next-run"
-                  ? "Keep the current schedule in place and confirm whether the warning clears on the next producer run."
-                  : resolvedDecision.nextStep === "investigate"
-                    ? "Inspect the highest-severity source lane before promoting a production mutation."
-                    : "No production mutation is promoted from the current state and evidence."}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <details
-          open={isDiagnosticsOpen}
-          onToggle={(event) => setIsDiagnosticsOpen(event.currentTarget.open)}
-          className="border-y border-border/60 py-1"
-        >
-          <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center gap-2 rounded-md text-sm font-medium text-foreground">
-            State machine, probe, and discrepancy diagnostics
-            {diagnosticsHasNewSignal && !isDiagnosticsOpen ? (
-              <span className={cn("rounded-full border px-2 py-0.5 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
-                New signal
-              </span>
-            ) : null}
-          </summary>
-          {isDiagnosticsOpen ? (
-            <div className="mt-3 space-y-4 pb-3">
-              <div className="flex flex-wrap gap-2">
-                <SummaryBadge label="State eval" value={formatTimestampSeconds(data.state.lastEvaluatedAt)} />
-                <SummaryBadge label="Status payload" value={formatTimestampSeconds(data.timestamp)} />
-                <SummaryBadge label="Status fetch" value={formatTimestampSeconds(statusSync?.updatedAtSec)} />
-                <SummaryBadge label="Health fetch" value={formatTimestampSeconds(healthSync?.updatedAtSec)} />
-                <SummaryBadge label="Probe fetch" value={formatTimestampSeconds(probeSync?.updatedAtSec)} />
-                <SummaryBadge label="API Mix Fetch" value={formatTimestampSeconds(requestSourceSync?.updatedAtSec)} />
-                <FreshnessIndicator
-                  updatedAtMs={freshnessFloorMs ?? 0}
-                  staleAfterMs={STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs}
-                  labelPrefix="Sync floor"
-                />
+                ))}
               </div>
-              <SystemDiagnostics
-                state={data.state}
-                staleness={data.staleness}
-                probe={data.probe}
-                discrepancy={data.discrepancy}
-                browserProbe={browserProbeSummary}
-                browserProbeLabel={probeCoverageLabel}
-                error={data.sectionErrors.statusState}
-                nowSeconds={data.timestamp}
-              />
-            </div>
-          ) : null}
-        </details>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">No workspace has open findings.</p>
+            )}
+          </section>
+        </div>
       </div>
-    </section>
+
+      <details
+        open={isDiagnosticsOpen}
+        onToggle={(event) => setIsDiagnosticsOpen(event.currentTarget.open)}
+        className="border-y border-border/60 py-1"
+      >
+        <summary className="pharos-focus-ring flex min-h-11 cursor-pointer flex-wrap items-center gap-x-2 rounded-md text-sm font-medium text-foreground">
+          Diagnostics
+          <span className="text-xs font-normal text-muted-foreground">State machine, fetch clocks, divergence</span>
+          {diagnosticsHasNewSignal && !isDiagnosticsOpen ? (
+            <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
+              New signal
+            </span>
+          ) : null}
+        </summary>
+        {isDiagnosticsOpen ? (
+          <div className="mt-3 space-y-4 pb-3">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3 xl:grid-cols-6">
+              <ClockRow label="State evaluated">
+                <Timestamp epochSec={data.state.lastEvaluatedAt} />
+              </ClockRow>
+              <ClockRow label="Status payload">
+                <Timestamp epochSec={data.timestamp} />
+              </ClockRow>
+              <ClockRow label="Status fetch">
+                <Timestamp epochSec={statusSync?.updatedAtSec} />
+              </ClockRow>
+              <ClockRow label="Health fetch">
+                <Timestamp epochSec={healthSync?.updatedAtSec} />
+              </ClockRow>
+              <ClockRow label="Probe fetch">
+                <Timestamp epochSec={probeSync?.updatedAtSec} />
+              </ClockRow>
+              <ClockRow label="Admin state">
+                Held {data.overallStatus}, raw {data.rawOverallStatus}
+                {healthData ? `, /api/health ${healthData.status}` : ""}
+              </ClockRow>
+              <ClockRow label="Last transition">
+                {latestTransition ? (
+                  <>
+                    {latestTransition.from ?? "init"} to {latestTransition.to},{" "}
+                    <Timestamp epochSec={latestTransition.at} />
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">None recorded</span>
+                )}
+              </ClockRow>
+            </dl>
+            <FreshnessIndicator
+              updatedAtMs={freshnessFloorMs ?? 0}
+              staleAfterMs={STATUS_DASHBOARD_FRESHNESS_POLICY.staleAfterMs}
+              labelPrefix="Sync floor"
+            />
+            <SystemDiagnostics
+              state={data.state}
+              staleness={data.staleness}
+              probe={data.probe}
+              slowestProbePath={readSlowestProbePath(data.crons)}
+              discrepancy={data.discrepancy}
+              browserProbe={browserProbeSummary}
+              browserProbeLabel={probeCoverageLabel}
+              error={data.sectionErrors.statusState}
+              nowSeconds={data.timestamp}
+            />
+          </div>
+        ) : null}
+      </details>
+    </StatusSection>
   );
 }

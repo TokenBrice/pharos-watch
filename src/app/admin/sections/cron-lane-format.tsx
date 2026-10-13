@@ -1,61 +1,21 @@
 import type React from "react";
 import { CRON_STATUS_COLORS } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import type {
-  CronWorkbenchRow,
-  CronWorkbenchState,
-  FormattedCronDuration,
-} from "@/lib/cron-workbench-model";
+import type { CronWorkbenchRow, FormattedCronDuration } from "@/lib/cron-workbench-model";
 import { getLastSuccessfulRun } from "@/lib/status/cron-run-utils";
 import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
 
 /**
- * Presentation vocabulary shared by the cron workbench surfaces: state labels,
- * tone classes, and the timestamp/duration/metadata formatters. Pure — no JSX
- * beyond the duration span, no React state.
+ * Presentation helpers shared by the cron workbench surfaces: run-status tone
+ * classes and the timestamp/duration/metadata formatters. Row severity uses
+ * `OPERATOR_VERDICT_TONE`; nothing here defines a second state vocabulary.
  */
 export const CRON_DETAIL_ID = "cron-selected-job-detail";
-export const CRON_COLUMN_COUNT = 9;
-
-export const FILTER_FIELD_CLASS_NAME =
-  "h-9 min-w-0 rounded-md border border-input bg-background px-2.5 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
-
-export const CRON_STATE_LABELS: Readonly<Record<CronWorkbenchState, string>> = {
-  unhealthy: "Unavailable",
-  degraded: "Run warning",
-  unknown: "Unknown",
-  skipped: "Skipped",
-  running: "Running",
-  healthy: "Healthy",
-};
+export const CRON_COLUMN_COUNT = 6;
 
 export function getCronStatusColor(status: string | undefined): string {
   const statusColors: Readonly<Record<string, string>> = CRON_STATUS_COLORS;
   return status == null ? OPERATIONAL_PILL_CLASS.unknown : (statusColors[status] ?? OPERATIONAL_PILL_CLASS.unknown);
-}
-
-export function getStateBadgeClass(state: CronWorkbenchState): string {
-  if (state === "unhealthy") return "bg-state-danger-solid/15 text-state-danger-strong";
-  if (state === "degraded") return "bg-state-warn-solid/15 text-state-warn-strong";
-  if (state === "skipped") return OPERATIONAL_PILL_CLASS.unknown;
-  if (state === "running") return "bg-state-info-solid/15 text-state-info-strong";
-  // raw: neutral grey pill, no state token
-  if (state === "unknown") return "bg-slate-500/15 text-slate-800 dark:text-slate-300";
-  return "bg-state-positive-solid/15 text-state-positive-strong";
-}
-
-export function getRowTone(state: CronWorkbenchState): string {
-  if (state === "unhealthy") return "border-l-state-danger-solid/70";
-  if (state === "degraded") return "border-l-state-warn-solid/70";
-  if (state === "skipped") return "border-l-muted-foreground/40";
-  if (state === "running") return "border-l-state-info-solid/70";
-  if (state === "unknown") return "border-l-slate-500/60";
-  return "border-l-state-positive-solid/60";
-}
-
-export function formatLastRun(row: CronWorkbenchRow, nowSeconds: number): string {
-  if (!row.cron.lastRun) return row.cron.telemetryUnknown ? "Unknown" : "No runs";
-  return `${formatElapsedSeconds(Math.max(0, nowSeconds - row.cron.lastRun.startedAt))} ago`;
 }
 
 export function formatLastGood(row: CronWorkbenchRow, nowSeconds: number): string {

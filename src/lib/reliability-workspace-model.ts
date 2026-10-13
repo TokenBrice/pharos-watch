@@ -4,6 +4,7 @@ import type {
   HealthResponse,
   StatusResponse,
 } from "@shared/types";
+import type { OperatorVerdict } from "@shared/lib/classification";
 import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
 import { pickInitialMode, type WorkspaceSeverity } from "@/lib/status/workspace-mode";
 
@@ -26,6 +27,24 @@ export const RELIABILITY_ISSUE_KIND_RANK: Readonly<Record<ReliabilityIssueKind, 
   unknown: 3,
   critical: 4,
 };
+
+/** Reliability issue kinds in the operator verdict vocabulary (critical acts; info-only watches). */
+export const RELIABILITY_KIND_VERDICT: Readonly<Record<ReliabilityIssueKind, OperatorVerdict>> = {
+  critical: "act",
+  warning: "watch",
+  maintenance: "watch",
+  informational: "watch",
+  unknown: "unavailable",
+};
+
+/** Raw dependency, circuit and canary state words in the operator verdict vocabulary. */
+export function getReliabilityStateVerdict(state: string): OperatorVerdict {
+  if (state === "ok" || state === "healthy" || state === "closed" || state === "verified") return "ok";
+  if (state === "degraded" || state === "half-open") return "watch";
+  if (state === "stale" || state === "open" || state === "error" || state === "failed") return "act";
+  if (state === "running") return "running";
+  return "unavailable";
+}
 
 export interface ReliabilityIssue {
   id: string;
@@ -79,8 +98,22 @@ export interface ReliabilityDependencyRoot {
   consumers: string[];
 }
 
+/** One row per tripped circuit key, merging provider and public-health views of the same breaker. */
+export interface ReliabilityCircuitRow {
+  key: string;
+  /** Provider family when the provider-circuit view knows it. */
+  family: string | null;
+  state: "open" | "half-open" | "closed";
+  consecutiveFailures: number;
+  openedAt: number | null;
+  lastFailureAt: number | null;
+  /** Source-wide registry scope: an open breaker degrades the public surface. */
+  publicImpact: boolean;
+}
+
 export interface ReliabilityDependenciesModel {
   roots: ReliabilityDependencyRoot[];
+  circuits: ReliabilityCircuitRow[];
   dependencySummary: NonNullable<StatusResponse["dependencyHealth"]>["summary"] | null;
   providerCircuits: NonNullable<StatusResponse["providerCircuitHealth"]>["openProviders"];
   providerSummary: StatusResponse["providerCircuitHealth"];

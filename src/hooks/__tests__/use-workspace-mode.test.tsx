@@ -16,19 +16,15 @@ afterEach(() => {
 });
 
 describe("useWorkspaceMode", () => {
-  it("hydrates from the default mode and canonicalizes a missing view with replaceState", async () => {
+  it("hydrates from the default mode without pinning a missing view into the URL", async () => {
     const replaceState = vi.spyOn(window.history, "replaceState");
     const pushState = vi.spyOn(window.history, "pushState");
     const { result } = renderHook(() => useWorkspaceMode({ modes: MODES, defaultMode: "second" }));
 
-    expect(result.current.activeMode).toBe("second");
-    await waitFor(() => expect(window.location.search).toBe("?scope=all&view=second"));
+    await waitFor(() => expect(result.current.activeMode).toBe("second"));
+    expect(window.location.search).toBe("?scope=all");
     expect(window.location.hash).toBe("#signals");
-    expect(replaceState).toHaveBeenCalledWith(
-      { preserved: true },
-      "",
-      "/admin/test/?scope=all&view=second#signals",
-    );
+    expect(replaceState).not.toHaveBeenCalled();
     expect(pushState).not.toHaveBeenCalled();
   });
 

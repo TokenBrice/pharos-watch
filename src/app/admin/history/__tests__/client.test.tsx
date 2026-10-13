@@ -284,4 +284,21 @@ describe("HistoryClient", () => {
       ).toBe("unknown"),
     );
   });
+
+  it("treats an empty transition list without a completeness marker as a failed read (B3)", async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    useStatusHistoryMock.mockReturnValue({
+      data: { transitions: [], hasMore: null },
+      error: null,
+      isLoading: false,
+      isFetching: false,
+      refetch,
+    });
+    render(<HistoryClient />);
+    await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
+    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as ComponentProps<typeof HistorySection>;
+    expect(props.historyEvidence).toMatchObject({ source: "history", state: "error", completeness: "unknown" });
+    props.onRetryHistory?.();
+    expect(refetch).toHaveBeenCalledOnce();
+  });
 });

@@ -25,7 +25,10 @@ function MetricCard({ label, value, pct, severity }: { label: string; value: num
   return (
     <div className="rounded-lg border border-border/50 p-3">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`pharos-numeric text-2xl font-bold ${colors[severity] ?? ""}`}>{value}</div>
+      {/* Zero is muted unless the zero itself is the alarm (no high-confidence prices). */}
+      <div className={`pharos-numeric text-2xl font-bold ${value === 0 && severity !== "red" ? "text-muted-foreground" : (colors[severity] ?? "")}`}>
+        {value}
+      </div>
       <div className="text-xs text-muted-foreground">{pct}</div>
     </div>
   );

@@ -82,6 +82,9 @@ describe("OperationalActivity", () => {
 
     expect(screen.getByText("action log offline")).toBeTruthy();
     expect(screen.getByText("credential audit offline")).toBeTruthy();
+    // R2: failed reads never render as an empty activity history.
+    expect(screen.getByText(/does not mean no activity happened/i)).toBeTruthy();
+    expect(screen.queryByText(/No persisted operational activity in the returned/i)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Retry admin action log" }));
     expect(retryActions).toHaveBeenCalledOnce();
     expect(retryCredentials).not.toHaveBeenCalled();
@@ -108,7 +111,30 @@ describe("OperationalActivity", () => {
         nowSeconds={1_700_000_100}
       />,
     );
-    expect(screen.getByText(/No persisted operational activity is available/i)).toBeTruthy();
+    expect(screen.getByText(/No persisted operational activity in the returned audit rows/i)).toBeTruthy();
     expect(screen.getByText(/Coverage reflects audit rows emitted by the deployed backend/i)).toBeTruthy();
+  });
+
+  it("collapses identical consecutive admin actions into one row with a count and time range", () => {
+    const debug = (id: number, at: number): AdminActionAuditEntry => ({
+      id,
+      at,
+      actor: "operator@example.invalid",
+      action: "debug_sync_state",
+      target: "sync-mint-burn",
+      result: "ok",
+      httpStatus: 200,
+      details: null,
+    });
+    render(
+      <OperationalActivity
+        adminActions={state([debug(1, 1_700_000_000), debug(2, 1_700_000_030), debug(3, 1_700_000_060), debug(4, 1_700_000_090)])}
+        credentialAudit={state<ApiKeyAuditEntry>([])}
+        nowSeconds={1_700_000_100}
+      />,
+    );
+
+    expect(screen.getAllByText("Debug sync state")).toHaveLength(1);
+    expect(screen.getByLabelText("4 identical consecutive events").textContent).toBe("×4");
   });
 });

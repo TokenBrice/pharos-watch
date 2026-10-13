@@ -4,6 +4,7 @@ import { getCacheImpactStatus } from "@shared/lib/cache-health";
 import type { HealthResponse, StatusCause, StatusResponse } from "@shared/types";
 import {
   buildReliabilityWorkspaceModel,
+  deriveInitialReliabilityMode,
   type ReliabilityWorkspaceInput,
 } from "@/lib/reliability-workspace-model";
 import {
@@ -301,5 +302,74 @@ describe("reliability issue model", () => {
     expect(model.endpoints.diagnosticText).not.toContain("should-never-copy");
     expect(model.endpoints.workerPlane.sampledAt).toBe(data.probe.timestamp);
     expect(model.endpoints.browserPlane?.updatedAt).toBe(data.timestamp);
+  });
+});
+
+describe("reliability circuits and default view", () => {
+  it("merges a provider circuit and its public breaker into one row with a public-impact marker", () => {
+    const base = completeStatus();
+    const data = degraded(base, {
+      providerCircuitHealth: {
+        checkedAt: base.timestamp,
+        status: "stale",
+        totalTracked: 1,
+        closedCount: 0,
+        halfOpenCount: 0,
+        openCount: 1,
+        openProviders: [
+          {
+            providerId: "dexscreener-prices",
+            family: "dex-prices",
+            state: "open",
+            consecutiveFailures: 12,
+            openedAt: base.timestamp - 3_600,
+            openAgeSec: 3_600,
+            lastFailureAt: base.timestamp - 30,
+            lastSuccessAt: base.timestamp - 7_200,
+          },
+        ],
+        byFamily: { "dex-prices": { total: 1, closed: 0, halfOpen: 0, open: 1 } },
+      },
+    });
+    const healthData: HealthResponse = {
+      ...makeHealthyHealthResponse(),
+      circuits: {
+        "dexscreener-prices": {
+          state: "open",
+          consecutiveFailures: 12,
+          lastFailureAt: base.timestamp - 30,
+          lastSuccessAt: base.timestamp - 7_200,
+          openedAt: base.timestamp - 3_600,
+        },
+      },
+    };
+
+    const model = buildReliabilityWorkspaceModel(input({ data, healthData }));
+
+    expect(model.dependencies.circuits).toEqual([
+      {
+        key: "dexscreener-prices",
+        family: "dex-prices",
+        state: "open",
+        consecutiveFailures: 12,
+        openedAt: base.timestamp - 3_600,
+        lastFailureAt: base.timestamp - 30,
+        publicImpact: true,
+      },
+    ]);
+  });
+
+  it("lands on the first view with issues in declaration order, not the worst-ranked one (B7)", () => {
+    const summaries = (severities: Record<string, "healthy" | "watch" | "critical" | "unknown">) => ({
+      modeSummaries: (["impact", "endpoints", "dependencies", "demand", "cache"] as const).map((id) => ({
+        id,
+        label: id,
+        issueCount: severities[id] === "healthy" || severities[id] == null ? 0 : 1,
+        severity: severities[id] ?? "healthy",
+      })),
+    });
+    expect(deriveInitialReliabilityMode(summaries({ endpoints: "watch", dependencies: "critical" }))).toBe("endpoints");
+    expect(deriveInitialReliabilityMode(summaries({ demand: "unknown" }))).toBe("impact");
+    expect(deriveInitialReliabilityMode(summaries({}))).toBe("impact");
   });
 });

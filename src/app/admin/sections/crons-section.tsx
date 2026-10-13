@@ -1,5 +1,5 @@
 import type { StatusResponse } from "@shared/types";
-import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
+import { StatusSection } from "@/components/status/page-primitives";
 import { CronLaneTable } from "./cron-lane-table";
 import type { CronGroup } from "./cron-lane-types";
 
@@ -7,28 +7,25 @@ export type { CronGroup } from "./cron-lane-types";
 
 export interface CronsSectionProps {
   data: StatusResponse;
-  runningCrons: number;
   cronGroups: CronGroup[];
 }
 
-export function CronsSection({ data, runningCrons, cronGroups }: CronsSectionProps) {
+/** Verdict counts live on the filter chips; the header carries no duplicate counters. */
+export function CronsSection({ data, cronGroups }: CronsSectionProps) {
   return (
     <StatusSection
       id="crons"
       kicker="Schedulers"
-      title="Cron Lanes"
+      title="Crons"
       headingLevel="h1"
       variant="workspace"
-      summary={
-        <>
-          <SummaryBadge label="Impacting" value={data.summary.availabilityImpactingUnhealthyCrons == null ? "Unavailable" : String(data.summary.availabilityImpactingUnhealthyCrons)} />
-          <SummaryBadge label="Watch" value={data.summary.watchUnhealthyCrons == null ? "Unavailable" : String(data.summary.watchUnhealthyCrons)} />
-          <SummaryBadge label="Warnings" value={data.summary.degradedCrons == null ? "Unavailable" : String(data.summary.degradedCrons)} />
-          <SummaryBadge label="Running" value={String(runningCrons)} />
-        </>
-      }
     >
-      <CronLaneTable groups={cronGroups} budgetOnlySurfaces={data.budgetOnlySurfaces} nowSeconds={data.timestamp} />
+      <CronLaneTable
+        groups={cronGroups}
+        budgetOnlySurfaces={data.budgetOnlySurfaces}
+        causes={data.causes.overall}
+        nowSeconds={data.timestamp}
+      />
     </StatusSection>
   );
 }

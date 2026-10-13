@@ -1,37 +1,60 @@
 import type { HealthResponse, StatusResponse } from "@shared/types";
-import type { ReliabilityIssue, ReliabilityIssueKind } from "@/lib/reliability-workspace-model";
-import { getPublicHealthWarningPresentation } from "@/lib/status/public-status";
+import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
+import { TechnicalDetail, VerdictPill } from "@/components/status/page-primitives";
+import { RELIABILITY_KIND_VERDICT, type ReliabilityIssue } from "@/lib/reliability-workspace-model";
+import { describePublicHeadline, getPublicHealthWarningPresentation } from "@/lib/status/public-status";
 import { cn } from "@/lib/utils";
-import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
-const KIND_CLASS: Record<ReliabilityIssueKind, string> = {
-  critical: SEVERITY_TONE_CLASS.alert.pill,
-  warning: SEVERITY_TONE_CLASS.watch.pill,
-  maintenance: SEVERITY_TONE_CLASS.info.pill,
-  informational: "border-border bg-muted text-muted-foreground",
-  unknown: "border-border bg-muted text-muted-foreground",
-};
+const AVAILABILITY_VERDICT = { healthy: "ok", degraded: "watch", stale: "act" } as const;
+
+/** Neutral by default; a left accent only when the state is not OK. */
+const ACCENT = {
+  neutral: "border-l-2 border-border/60",
+  info: "border-l-2 border-state-info-solid bg-state-info-solid/[0.05]",
+  warn: "border-l-2 border-state-warn-solid bg-state-warn-solid/[0.05]",
+  danger: "border-l-2 border-state-danger-solid bg-state-danger-solid/[0.05]",
+} as const;
 
 export function ReliabilityImpactPanel({
   data,
   healthData,
+  healthLoadFailed = false,
   issues,
 }: {
   data: StatusResponse;
   healthData: HealthResponse | null | undefined;
+  /** The health read failed: a missing payload reads "Unavailable", not "Loading" (R2). */
+  healthLoadFailed?: boolean;
   issues: ReliabilityIssue[];
 }) {
+  const publicHeadline = describePublicHeadline(healthData, healthLoadFailed);
+  const publicAccent =
+    publicHeadline.state == null || publicHeadline.state === "operational"
+      ? ACCENT.neutral
+      : publicHeadline.state === "delayed"
+        ? ACCENT.info
+        : publicHeadline.state === "degraded"
+          ? ACCENT.warn
+          : ACCENT.danger;
+  const availabilityVerdict = AVAILABILITY_VERDICT[data.availabilityStatus];
+  const availabilityAccent =
+    availabilityVerdict === "ok" ? ACCENT.neutral : availabilityVerdict === "watch" ? ACCENT.warn : ACCENT.danger;
   return (
     <div className="space-y-5">
       <div className="grid items-start gap-3 md:grid-cols-2">
-        <section
-          className="border-l-2 border-state-info-solid bg-state-info-solid/[0.05] px-4 py-3"
-          aria-labelledby="public-impact-title"
-        >
+        <section className={cn("px-4 py-3", publicAccent)} aria-labelledby="public-impact-title">
           <h3 id="public-impact-title" className="text-sm font-semibold text-foreground">
             Public service impact
           </h3>
-          <div className="mt-1 font-mono text-lg font-semibold text-foreground">{healthData?.status ?? "Unknown"}</div>
+          <div
+            className={cn(
+              "mt-1 text-lg font-semibold",
+              publicHeadline.state ? PUBLIC_HEADLINE_TONE[publicHeadline.state].text : "text-muted-foreground",
+            )}
+          >
+            {publicHeadline.label}
+          </div>
+          {publicHeadline.title ? <p className="text-sm text-foreground">{publicHeadline.title}</p> : null}
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {healthData
               ? healthData.warnings.length > 0
@@ -39,21 +62,25 @@ export function ReliabilityImpactPanel({
                     .map((warning) => getPublicHealthWarningPresentation(warning, healthData).detail)
                     .join(" ")
                 : "No public health warning is active."
-              : "Public health evidence has not loaded; no healthy state is inferred."}
+              : healthLoadFailed
+                ? "Public health could not be read; no healthy state is inferred."
+                : "Public health is loading; no healthy state is inferred."}
           </p>
+          {healthData ? <TechnicalDetail className="mt-1">/api/health status: {healthData.status}</TechnicalDetail> : null}
         </section>
-        <section
-          className="border-l-2 border-state-warn-solid bg-state-warn-solid/[0.05] px-4 py-3"
-          aria-labelledby="operator-impact-title"
-        >
+        <section className={cn("px-4 py-3", availabilityAccent)} aria-labelledby="operator-impact-title">
           <h3 id="operator-impact-title" className="text-sm font-semibold text-foreground">
             Operator availability
           </h3>
-          <div className="mt-1 font-mono text-lg font-semibold text-foreground">{data.availabilityStatus}</div>
+          <div className="mt-1">
+            <VerdictPill verdict={availabilityVerdict} />
+          </div>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Raw overall state {data.rawOverallStatus}; held state {data.overallStatus}. Probe and cache detail remain in
-            their focused views.
+            Probe and cache detail remain in their focused views.
           </p>
+          <TechnicalDetail className="mt-1">
+            availability {data.availabilityStatus} · raw overall {data.rawOverallStatus} · held {data.overallStatus}
+          </TechnicalDetail>
         </section>
       </div>
 
@@ -73,13 +100,9 @@ export function ReliabilityImpactPanel({
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-foreground">{issue.label}</div>
                   <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{issue.detail}</div>
-                  <code className="mt-1 block break-all text-3xs text-muted-foreground">{issue.rawCode}</code>
+                  <TechnicalDetail className="mt-1">{issue.rawCode} · {issue.kind}</TechnicalDetail>
                 </div>
-                <span
-                  className={cn("shrink-0 rounded-sm border px-2 py-1 text-2xs font-medium", KIND_CLASS[issue.kind])}
-                >
-                  {issue.kind}
-                </span>
+                <VerdictPill verdict={RELIABILITY_KIND_VERDICT[issue.kind]} className="shrink-0 self-start" />
               </li>
             ))}
           </ul>

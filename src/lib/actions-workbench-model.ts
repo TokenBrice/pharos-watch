@@ -344,3 +344,37 @@ export function getSafeActionFollowUpHref(value: string): string | null {
     return null;
   }
 }
+
+export interface ActionActivityGroup {
+  /** Newest activity in the run; carries the label, status, and source shown. */
+  latest: ActionActivity;
+  count: number;
+  /** Oldest activity time in the run (ms). Equals `latest.at` for a single row. */
+  oldestAt: number;
+}
+
+function activityGroupKey(activity: ActionActivity): string {
+  return [normalize(activity.actionPath ?? activity.actionLabel), activity.target ?? "", activity.status].join("|");
+}
+
+/**
+ * Collapses consecutive history rows with the same action, target, and outcome
+ * into one row with a count and time range. Input is newest first, as returned
+ * by `reconcileActionActivity`; non-adjacent repeats stay separate rows.
+ */
+export function groupConsecutiveActivity(activities: readonly ActionActivity[]): ActionActivityGroup[] {
+  const groups: ActionActivityGroup[] = [];
+  let previousKey: string | null = null;
+  for (const activity of activities) {
+    const key = activityGroupKey(activity);
+    const last = groups.at(-1);
+    if (last && key === previousKey) {
+      last.count += 1;
+      last.oldestAt = Math.min(last.oldestAt, activity.at);
+    } else {
+      groups.push({ latest: activity, count: 1, oldestAt: activity.at });
+    }
+    previousKey = key;
+  }
+  return groups;
+}

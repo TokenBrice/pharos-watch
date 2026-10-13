@@ -1,8 +1,7 @@
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
 import { AdminActionButton } from "@/components/status/admin-action-button";
-import { SeverityPill } from "@/components/status/severity-pill";
-import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { STATUS_PANEL_SHELL_CLASS, VerdictPill } from "@/components/status/page-primitives";
 
 const RECOMMENDED_ACTION_STRIP_CLASS = `rounded-xl p-4 ${STATUS_PANEL_SHELL_CLASS}`;
 
@@ -15,28 +14,21 @@ export function RecommendedActionStrip({
   readinessChecks: readonly ActionReadinessCheck[];
   onActionFinished: () => void;
 }) {
-  if (recommendations.length === 0) {
-    return (
-      <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
-        <div className="space-y-2">
-          <p className="pharos-label">Recommended now</p>
-          <h3 className="text-lg font-semibold tracking-tight text-foreground">No in-dashboard repair recommended; investigate active blockers.</h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            An empty action list is not a health verdict. Review active causes and their runbooks before taking external action.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  // Same source as the Actions workspace (`deriveStatusActionRecommendations`):
+  // nothing recommended renders nothing, never a generic "investigate" card.
+  if (recommendations.length === 0) return null;
 
   return (
     <div className={RECOMMENDED_ACTION_STRIP_CLASS}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <p className="pharos-label">Recommended now</p>
-          <h3 className="text-lg font-semibold tracking-tight text-foreground">Take the shortest path in.</h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            These actions are derived from the current blockers and unhealthy cron lanes.
+          <h3 className="text-sm font-semibold text-foreground">
+            {recommendations.length === 1 ? "1 recommended action" : `${recommendations.length} recommended actions`}
+          </h3>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Derived from active causes and unhealthy cron lanes, the same list as the Actions workspace.
+            {recommendations.length > 3 ? ` Showing 3 of ${recommendations.length}.` : ""}
           </p>
         </div>
       </div>
@@ -46,9 +38,9 @@ export function RecommendedActionStrip({
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <SeverityPill severity={recommendation.severity} />
+                  <VerdictPill verdict={recommendation.severity === "critical" ? "act" : "watch"} />
                   <span className="text-xs text-muted-foreground">
-                    {recommendation.source === "cause" ? "cause" : "cron lane"}
+                    {recommendation.source === "cause" ? "From a status cause" : "From a cron lane"}
                   </span>
                 </div>
                 <div className="text-sm font-medium text-foreground">{recommendation.action.label}</div>

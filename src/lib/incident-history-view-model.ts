@@ -2,6 +2,7 @@ import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import type { StatusCause, StatusTransition } from "@shared/types";
 import type { StatusHistoryWindow } from "@/lib/admin-api-query-descriptors";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
+import { getCausesVerdict } from "@/lib/status/triage-inbox";
 
 export const INCIDENT_HISTORY_WINDOWS: readonly StatusHistoryWindow[] = ["6h", "24h", "7d", "30d"];
 export const INCIDENT_FLAPPING_TRANSITION_THRESHOLD = 2;
@@ -194,6 +195,140 @@ export function buildIncidentHistoryView(
     transitionsLast24h,
     isFlapping: transitionsLast24h == null ? null : transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD,
   };
+}
+
+/**
+ * Named subjects behind a cause (cron job ids). Prefers the structured
+ * `subjects` field; older persisted causes only carry the trailing
+ * "Jobs: a, b." message suffix, so that is parsed as a fallback.
+ */
+export function getCauseSubjects(cause: Pick<StatusCause, "subjects" | "message">): string[] {
+  if (cause.subjects && cause.subjects.length > 0) return [...cause.subjects];
+  const match = /Jobs?:\s*([^.]+)\.?\s*$/u.exec(cause.message);
+  if (!match?.[1]) return [];
+  return match[1]
+    .split(",")
+    // "a, b and 3 more" names b; the remainder is only counted.
+    .map((subject) => subject.replace(/\s+and \d+ more$/u, "").trim())
+    .filter(Boolean);
+}
+
+export interface IncidentEpisode {
+  id: string;
+  /** null when the incident started before the loaded window. */
+  startedAt: number | null;
+  endedAt: number | null;
+  ongoing: boolean;
+  /** null when the start is outside the loaded window. */
+  durationSec: number | null;
+  worstState: StatusTransition["to"];
+  causeCodes: string[];
+  /** Triage verdict for the episode's causes (`getCausesVerdict`); recovered episodes still carry it. */
+  verdict: "act" | "watch";
+  transitionCount: number;
+}
+
+/**
+ * Folds the transition stream into incidents: a non-healthy transition opens
+ * one, further non-healthy transitions extend it, and a transition back to
+ * `healthy` closes it. Newest first.
+ */
+export function foldIncidentEpisodes(
+  transitions: readonly StatusTransition[],
+  nowSeconds: number,
+): IncidentEpisode[] {
+  const ascending = [...transitions].sort((left, right) => left.at - right.at || left.id - right.id);
+  const episodes: IncidentEpisode[] = [];
+  let open: { first: StatusTransition; startKnown: boolean; members: StatusTransition[] } | null = null;
+
+  const close = (endedAt: number | null) => {
+    if (!open) return;
+    const startedAt = open.startKnown ? open.first.at : null;
+    const end = endedAt ?? nowSeconds;
+    episodes.push({
+      id: `incident-${open.first.id}`,
+      startedAt,
+      endedAt,
+      ongoing: endedAt == null,
+      durationSec: startedAt == null ? null : Math.max(0, end - startedAt),
+      worstState: open.members.some((member) => member.to === "stale") ? "stale" : "degraded",
+      causeCodes: [...new Set(open.members.flatMap((member) => member.causes.map((cause) => cause.code)))].sort(),
+      verdict: getCausesVerdict(open.members.flatMap((member) => member.causes)),
+      transitionCount: open.members.length,
+    });
+    open = null;
+  };
+
+  for (const [index, transition] of ascending.entries()) {
+    if (transition.to === "healthy") {
+      // A recovery as the oldest loaded row means the incident began before the window.
+      if (!open && index === 0 && transition.from != null && transition.from !== "healthy") {
+        open = { first: transition, startKnown: false, members: [] };
+      }
+      if (open) open.members.push(transition);
+      close(transition.at);
+      continue;
+    }
+    // An escalation as the oldest loaded row also began before the window (R7).
+    if (!open) {
+      open = { first: transition, startKnown: !(index === 0 && transition.from != null && transition.from !== "healthy"), members: [] };
+    }
+    open.members.push(transition);
+  }
+  close(null);
+  return episodes.reverse();
+}
+
+export interface IncidentRecurrenceGroup {
+  key: string;
+  causeCode: string;
+  subjects: string[];
+  count: number;
+  firstAt: number;
+  lastAt: number;
+  /** Mean gap between occurrences, null below two occurrences. */
+  meanIntervalSec: number | null;
+}
+
+/**
+ * Groups incident starts (degrade/init into a non-healthy state) by cause
+ * code plus named subjects. Only groups seen at least twice are returned.
+ */
+export function buildIncidentRecurrence(transitions: readonly StatusTransition[]): IncidentRecurrenceGroup[] {
+  const groups = new Map<string, { causeCode: string; subjects: string[]; times: number[] }>();
+  for (const transition of transitions) {
+    // Only incident starts count; escalations inside one incident do not recur.
+    if (transition.to === "healthy" || (transition.from != null && transition.from !== "healthy")) continue;
+    const seen = new Set<string>();
+    for (const cause of transition.causes) {
+      // Info causes ride along on every snapshot; only warning/critical causes open incidents.
+      if (cause.severity === "info") continue;
+      const subjects = getCauseSubjects(cause).sort();
+      const key = `${cause.code}|${subjects.join(",")}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const group = groups.get(key) ?? { causeCode: cause.code, subjects, times: [] };
+      group.times.push(transition.at);
+      groups.set(key, group);
+    }
+  }
+  return [...groups.entries()]
+    .filter(([, group]) => group.times.length >= 2)
+    .map(([key, group]) => {
+      const times = [...group.times].sort((left, right) => left - right);
+      const firstAt = times[0] ?? 0;
+      const lastAt = times[times.length - 1] ?? 0;
+      return {
+        key,
+        causeCode: group.causeCode,
+        subjects: group.subjects,
+        count: times.length,
+        firstAt,
+        lastAt,
+        meanIntervalSec: Math.round((lastAt - firstAt) / (times.length - 1)),
+      };
+    })
+    .sort((left, right) => right.count - left.count || right.lastAt - left.lastAt);
 }
 
 export function findFirstDegradationAfter(

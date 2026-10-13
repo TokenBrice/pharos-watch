@@ -1,16 +1,21 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CircleCheck, CircleHelp, CircleX, ExternalLink } from "lucide-react";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Button } from "@/components/ui/button";
-import type {
-  CommsDeliveryHealth,
-  CommsPerAlertDeliveryRow,
-  CommsPriorityMetric,
-  CommsWorkbenchModel,
+import {
+  allMeasuredZero,
+  formatFirstSendLatency,
+  formatOldestBacklogAge,
+  type CommsDeliveryHealth,
+  type CommsPerAlertDeliveryRow,
+  type CommsPriorityMetric,
+  type CommsWorkbenchModel,
 } from "@/lib/comms-workbench-model";
 import { cn } from "@/lib/utils";
 import { formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
+import { Timestamp } from "./page-primitives";
 
 interface TelegramBotStatsProps {
   model: CommsWorkbenchModel;
@@ -55,8 +60,7 @@ function formatMilliseconds(value: number | null): string {
 type PerAlertMetricDescriptor = {
   key: "sent" | "enqueued" | "failed" | "blocked" | "firstSendLatencyMs";
   label: string;
-  accessor: (row: CommsPerAlertDeliveryRow) => number | null;
-  formatter: (value: number | null) => string;
+  render: (row: CommsPerAlertDeliveryRow) => string;
   desktop: {
     width: string;
     alignment: "text-left" | "text-right";
@@ -67,36 +71,31 @@ const PER_ALERT_METRICS = [
   {
     key: "sent",
     label: "Sent",
-    accessor: (row) => row.sent,
-    formatter: formatCount,
+    render: (row) => formatCount(row.sent),
     desktop: { width: "w-[12%]", alignment: "text-right" },
   },
   {
     key: "enqueued",
     label: "Enqueued",
-    accessor: (row) => row.enqueued,
-    formatter: formatCount,
+    render: (row) => formatCount(row.enqueued),
     desktop: { width: "w-[14%]", alignment: "text-right" },
   },
   {
     key: "failed",
     label: "Failed",
-    accessor: (row) => row.failed,
-    formatter: formatCount,
+    render: (row) => formatCount(row.failed),
     desktop: { width: "w-[12%]", alignment: "text-right" },
   },
   {
     key: "blocked",
     label: "Blocked",
-    accessor: (row) => row.blocked,
-    formatter: formatCount,
+    render: (row) => formatCount(row.blocked),
     desktop: { width: "w-[12%]", alignment: "text-right" },
   },
   {
     key: "firstSendLatencyMs",
     label: "First send latency",
-    accessor: (row) => row.firstSendLatencyMs,
-    formatter: formatMilliseconds,
+    render: (row) => formatFirstSendLatency(row.firstSendLatencyMs, row.sent),
     desktop: { width: "w-[26%]", alignment: "text-right" },
   },
 ] as const satisfies readonly PerAlertMetricDescriptor[];
@@ -123,6 +122,19 @@ function MetricRow({ label, value, valueClassName }: { label: string; value: str
         {value}
       </dd>
     </div>
+  );
+}
+
+/** All-zero metric lists fold to one line; a missing value keeps them open (R1). */
+function ZeroCollapsible({ allZero, summary, children }: { allZero: boolean; summary: string; children: ReactNode }) {
+  if (!allZero) return <>{children}</>;
+  return (
+    <details className="mt-2 text-sm">
+      <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
+        {summary}
+      </summary>
+      {children}
+    </details>
   );
 }
 
@@ -165,7 +177,7 @@ function PriorityValue({ metric, model }: { metric: CommsPriorityMetric; model: 
     case "oldest-backlog":
       return (
         <span className="font-mono text-lg font-semibold tabular-nums">
-          {formatDuration(delivery.oldestBacklogAgeSec)}
+          {formatOldestBacklogAge(delivery.oldestBacklogAgeSec, delivery.pendingDeliveries)}
         </span>
       );
     case "permanent-failures":
@@ -305,6 +317,10 @@ function BacklogTelemetry({ model }: { model: CommsWorkbenchModel }) {
       <h3 id="comms-backlog-title" className="text-sm font-semibold text-foreground">
         Queue state
       </h3>
+      <ZeroCollapsible
+        allZero={allMeasuredZero(Object.values(delivery.backlog))}
+        summary="All queue counters are zero."
+      >
       <dl className="mt-2 min-w-0 divide-y divide-border/40">
         <MetricRow label="Claimable now" value={formatCount(delivery.backlog.claimable)} />
         <MetricRow label="Due" value={formatCount(delivery.backlog.due)} />
@@ -322,6 +338,7 @@ function BacklogTelemetry({ model }: { model: CommsWorkbenchModel }) {
         <MetricRow label="Sent cleanup" value={formatCount(delivery.backlog.sentCleanup)} />
         <MetricRow label="Estimated drain" value={formatDuration(delivery.estimatedDrainTimeSec)} />
       </dl>
+      </ZeroCollapsible>
       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Attention uses the shared {formatDuration(delivery.backlogPolicy.oldestAgeSec)} age and{" "}
         {formatDuration(delivery.backlogPolicy.estimatedDrainTimeSec)} drain policies plus near-TTL risk. Queue size is
@@ -338,6 +355,18 @@ function RetryTelemetry({ model }: { model: CommsWorkbenchModel }) {
       <h3 id="comms-retry-title" className="text-sm font-semibold text-foreground">
         Failure and retry classes
       </h3>
+      <ZeroCollapsible
+        allZero={
+          allMeasuredZero([
+            permanentFailures.fresh,
+            permanentFailures.pendingNonRetryable,
+            permanentFailures.maxAttempts,
+            retries.freshQueued,
+            retries.pendingQueued,
+          ]) && retries.rateLimited === false
+        }
+        summary="No permanent failures, queued retries, or rate limiting."
+      >
       <dl className="mt-2 min-w-0 divide-y divide-border/40">
         <MetricRow label="Fresh permanent" value={formatCount(permanentFailures.fresh)} />
         <MetricRow label="Pending non-retryable" value={formatCount(permanentFailures.pendingNonRetryable)} />
@@ -347,6 +376,7 @@ function RetryTelemetry({ model }: { model: CommsWorkbenchModel }) {
         <MetricRow label="Rate limited" value={formatBoolean(retries.rateLimited)} />
         <MetricRow label="Retry after" value={formatDuration(retries.retryAfterSec)} />
       </dl>
+      </ZeroCollapsible>
       {retries.errorClasses == null ? (
         <p className="mt-3 text-xs text-muted-foreground">Pending retry-class telemetry is Unknown.</p>
       ) : retries.errorClasses.length === 0 ? (
@@ -402,7 +432,12 @@ function LatestDispatch({ model }: { model: CommsWorkbenchModel }) {
       </h3>
       <dl className="mt-2 min-w-0 divide-y divide-border/40">
         <MetricRow label="Outcome" value={formatStatus(dispatch.status)} valueClassName="capitalize" />
-        <MetricRow label="Started" value={formatStatusTimestamp(dispatch.startedAt, { fallback: "Unknown" })} />
+        <div className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-0.5 py-1.5 text-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <dt className="min-w-0 text-muted-foreground">Started</dt>
+          <dd className="min-w-0 font-mono tabular-nums sm:text-right">
+            <Timestamp epochSec={dispatch.startedAt} fallback="Unknown" />
+          </dd>
+        </div>
         <MetricRow label="Run age" value={formatDuration(dispatch.ageSec)} />
         <MetricRow label="Duration" value={formatMilliseconds(dispatch.durationMs)} />
         <MetricRow label="Messages sent" value={formatCount(dispatch.messagesSent)} />
@@ -459,7 +494,7 @@ function MobilePerAlertRow({ row }: { row: CommsPerAlertDeliveryRow }) {
                 metric.key === "firstSendLatencyMs" && "min-w-0 break-words [overflow-wrap:anywhere]",
               )}
             >
-              {metric.formatter(metric.accessor(row))}
+              {metric.render(row)}
             </dd>
           </div>
         ))}
@@ -537,7 +572,7 @@ function PerAlertDelivery({ model }: { model: CommsWorkbenchModel }) {
                           metric.key === "firstSendLatencyMs" && "min-w-0 [overflow-wrap:anywhere]",
                         )}
                       >
-                        {metric.formatter(metric.accessor(row))}
+                        {metric.render(row)}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -680,6 +715,17 @@ export function TelegramBotStats({ model }: TelegramBotStatsProps) {
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Current Telegram dispatch outcome, queue pressure, and failure evidence.
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground" data-testid="telegram-watchdog-note">
+            The{" "}
+            <Link
+              href="/admin/crons/?job=telegram-degradation-watchdog"
+              className="pharos-focus-ring rounded-sm text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground"
+            >
+              Telegram degradation watchdog cron
+            </Link>{" "}
+            reports on its own runs. A run warning there is a separate signal from delivery health here, which comes
+            from the latest dispatch and queue telemetry.
           </p>
         </div>
 

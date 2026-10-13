@@ -3,7 +3,8 @@
 import { Fragment, useMemo, useState } from "react";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { StatusCause, StatusTransition } from "@shared/types";
-import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronUp, RefreshCw, RotateCcw } from "lucide-react";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Button } from "@/components/ui/button";
 import type { StatusHistoryWindow } from "@/hooks/admin-api-hooks";
@@ -12,17 +13,22 @@ import {
   INCIDENT_FLAPPING_TRANSITION_THRESHOLD,
   INCIDENT_HISTORY_WINDOWS,
   buildIncidentHistoryView,
+  buildIncidentRecurrence,
+  foldIncidentEpisodes,
+  getCauseSubjects,
   type IncidentHistoryFilters,
   type IncidentPublicImpact,
   type IncidentPublicImpactFilter,
   type IncidentSeverity,
   type IncidentSeverityFilter,
   type IncidentSurfaceFilter,
+  type IncidentEpisode,
+  type IncidentRecurrenceGroup,
   type IncidentTransitionView,
 } from "@/lib/incident-history-view-model";
 import { cn } from "@/lib/utils";
-import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
-import { FilterSelect } from "@/components/status/page-primitives";
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+import { FilterSelect, Timestamp, VerdictPill } from "@/components/status/page-primitives";
 import { SeverityPill, StatusPill } from "./severity-pill";
 
 const SURFACE_LABELS: Record<StatusCause["layer"], string> = {
@@ -47,11 +53,106 @@ interface TransitionTimelineProps {
   onFiltersChange: (patch: Partial<IncidentHistoryFilters>) => void;
   isLoading: boolean;
   evidenceScope?: "loaded-window" | "recent-status-fallback";
+  /** The transition read failed or returned no completeness marker: an empty list is not "nothing happened" (R2). */
+  readFailed?: boolean;
+  onRetry?: () => void;
+  isRetrying?: boolean;
+}
+
+function cronJobHref(jobId: string): string {
+  return `/admin/crons/?job=${encodeURIComponent(jobId)}`;
+}
+
+function SubjectLinks({ subjects }: { subjects: readonly string[] }) {
+  if (subjects.length === 0) return null;
+  return (
+    <span className="inline-flex flex-wrap gap-x-2 gap-y-1">
+      {subjects.map((subject) => (
+        <Link
+          key={subject}
+          href={cronJobHref(subject)}
+          className="pharos-focus-ring rounded-sm font-mono text-xs text-foreground underline decoration-border underline-offset-2 hover:decoration-foreground"
+        >
+          {subject}
+        </Link>
+      ))}
+    </span>
+  );
+}
+
+function RecurrenceSummary({ groups, window }: { groups: readonly IncidentRecurrenceGroup[]; window: StatusHistoryWindow }) {
+  if (groups.length === 0) return null;
+  return (
+    <div className="space-y-2 rounded-md border border-state-warn bg-state-warn-subtle px-3 py-2.5">
+      <h4 className="text-sm font-medium text-state-warn">Recurring causes in the loaded {window} window</h4>
+      <ul className="space-y-1.5 text-xs text-foreground">
+        {groups.map((group) => (
+          <li key={group.key} className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
+            <span className="pharos-numeric font-medium">{group.count}×</span>
+            <span className="font-mono">{group.causeCode}</span>
+            {group.subjects.length > 0 ? (
+              <>
+                <span className="text-muted-foreground">on</span>
+                <SubjectLinks subjects={group.subjects} />
+              </>
+            ) : null}
+            {group.meanIntervalSec != null && group.meanIntervalSec > 0 ? (
+              <span className="text-muted-foreground">
+                about every {formatElapsedSeconds(group.meanIntervalSec)}, last <Timestamp epochSec={group.lastAt} />
+              </span>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function IncidentList({ episodes, nowSeconds }: { episodes: readonly IncidentEpisode[]; nowSeconds: number }) {
+  if (episodes.length === 0) return null;
+  return (
+    <section aria-labelledby="incident-episodes-title" className="space-y-2">
+      <h4 id="incident-episodes-title" className="text-sm font-semibold text-foreground">
+        Incidents <span className="pharos-numeric font-normal text-muted-foreground">({episodes.length})</span>
+      </h4>
+      <ol className="divide-y divide-border/60 border-y border-border/60">
+        {episodes.map((episode) => (
+          <li key={episode.id} className="flex flex-col gap-1 py-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <VerdictPill verdict={episode.ongoing ? episode.verdict : "ok"} label={episode.ongoing ? "Ongoing" : "Recovered"} />
+              <span className="text-foreground" title={`Worst admin state: ${episode.worstState}`}>
+                {episode.durationSec == null
+                  ? episode.ongoing ? "Held since before the loaded window" : "Started before the loaded window"
+                  : `${episode.ongoing ? "Held for" : "Lasted"} ${formatElapsedSeconds(episode.durationSec)}`}
+              </span>
+              <span className="min-w-0 break-words font-mono text-muted-foreground">
+                {episode.causeCodes.join(", ") || "No persisted causes"}
+              </span>
+            </div>
+            <div className="shrink-0 text-muted-foreground">
+              {episode.startedAt == null ? (
+                "Started before the loaded window"
+              ) : (
+                <>
+                  Started <Timestamp epochSec={episode.startedAt} nowSec={nowSeconds} />
+                </>
+              )}
+              {episode.endedAt != null ? (
+                <>
+                  {" "}· recovered <Timestamp epochSec={episode.endedAt} nowSec={nowSeconds} />
+                </>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
 }
 
 function severityPill(severity: IncidentSeverity) {
   return severity === "unknown" ? (
-    <StatusPill className={OPERATIONAL_PILL_CLASS.unknown}>unknown</StatusPill>
+    <StatusPill className={OPERATIONAL_PILL_CLASS.unknown}>Unknown</StatusPill>
   ) : (
     <SeverityPill severity={severity} />
   );
@@ -71,7 +172,7 @@ function publicImpactPill(publicImpact: IncidentPublicImpact) {
   );
 }
 
-function TransitionDuration({ row }: { row: IncidentTransitionView }) {
+function TransitionDuration({ row, nowSeconds }: { row: IncidentTransitionView; nowSeconds: number }) {
   const transition = row.transition;
   return (
     <div className="min-w-[13rem] space-y-1 text-xs">
@@ -80,7 +181,7 @@ function TransitionDuration({ row }: { row: IncidentTransitionView }) {
       </p>
       {row.resolution === "resolved" && row.resolvedAt != null ? (
         <p className="whitespace-normal text-muted-foreground">
-          Resolved at {formatStatusTimestamp(row.resolvedAt)}
+          Resolved <Timestamp epochSec={row.resolvedAt} nowSec={nowSeconds} />
         </p>
       ) : row.resolution === "unresolved" ? (
         <p className="whitespace-normal text-state-warn-bright">Resolution not present in loaded history</p>
@@ -108,8 +209,14 @@ function CauseDetails({ transition }: { transition: StatusTransition }) {
             <span className="text-xs text-muted-foreground">{SURFACE_LABELS[cause.layer]}</span>
           </div>
           <p className="mt-1 whitespace-normal break-words text-xs text-muted-foreground">{cause.message}</p>
+          {getCauseSubjects(cause).length > 0 ? (
+            <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-xs text-muted-foreground">
+              <span>Jobs:</span>
+              <SubjectLinks subjects={getCauseSubjects(cause)} />
+            </p>
+          ) : null}
           {cause.metric ? (
-            <p className="mt-1 whitespace-normal break-all font-mono text-2xs text-muted-foreground">
+            <p className="mt-1 whitespace-normal break-all font-mono text-xs text-muted-foreground">
               {cause.metric}
               {cause.value != null ? `=${cause.value}` : ""}
               {cause.threshold != null ? ` (threshold ${cause.threshold})` : ""}
@@ -119,7 +226,7 @@ function CauseDetails({ transition }: { transition: StatusTransition }) {
             <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
               Raw cause data
             </summary>
-            <pre className="mt-2 max-h-48 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-2xs text-foreground">
+            <pre className="mt-2 max-h-48 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-xs text-foreground">
               {JSON.stringify(cause, null, 2)}
             </pre>
           </details>
@@ -139,12 +246,17 @@ export function TransitionTimeline({
   onFiltersChange,
   isLoading,
   evidenceScope = "loaded-window",
+  readFailed = false,
+  onRetry,
+  isRetrying = false,
 }: TransitionTimelineProps) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const view = useMemo(
     () => buildIncidentHistoryView(transitions, nowSeconds, transitionsLast24h, filters),
     [filters, nowSeconds, transitions, transitionsLast24h],
   );
+  const episodes = useMemo(() => foldIncidentEpisodes(transitions, nowSeconds), [transitions, nowSeconds]);
+  const recurrence = useMemo(() => buildIncidentRecurrence(transitions), [transitions]);
   const hasActiveFilters =
     filters.severity !== "all" ||
     filters.surface !== "all" ||
@@ -202,12 +314,16 @@ export function TransitionTimeline({
         <p className="text-sm text-muted-foreground">Recent transition count unavailable; flapping cannot be assessed.</p>
       )}
 
+      <RecurrenceSummary groups={recurrence} window={window} />
+
       {view.isFlapping ? (
         <div className="rounded-md border border-state-warn-solid/40 bg-state-warn-solid/[0.06] px-3 py-2.5 text-sm text-state-warn-ink">
           <span className="font-medium">Flapping detected.</span> {view.transitionsLast24h} transitions were recorded in
           the last 24 hours; the stable baseline is at most {INCIDENT_FLAPPING_TRANSITION_THRESHOLD}.
         </div>
       ) : null}
+
+      <IncidentList episodes={episodes} nowSeconds={nowSeconds} />
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(4,minmax(0,1fr))_auto]">
         <FilterSelect
@@ -277,6 +393,20 @@ export function TransitionTimeline({
         >
           Loading status history...
         </p>
+      ) : transitions.length === 0 && readFailed ? (
+        <div role="alert" className="flex flex-col items-center gap-3 border-y border-border/60 py-8 text-center">
+          <p className="text-sm text-foreground">Status transitions could not be loaded for this window.</p>
+          <p className="max-w-xl text-xs text-muted-foreground">
+            The read failed or returned no completeness marker, so this empty list does not mean no transitions
+            happened.
+          </p>
+          {onRetry ? (
+            <Button type="button" size="sm" variant="outline" className="min-h-11" disabled={isRetrying} onClick={onRetry}>
+              <RefreshCw className={isRetrying ? "animate-spin" : ""} aria-hidden="true" />
+              Retry history
+            </Button>
+          ) : null}
+        </div>
       ) : transitions.length === 0 ? (
         <p className="border-y border-border/60 py-8 text-center text-sm text-muted-foreground">
           {evidenceScope === "loaded-window"
@@ -341,15 +471,13 @@ export function TransitionTimeline({
                       scope="row"
                       className="whitespace-normal py-2 text-left text-xs font-normal text-muted-foreground"
                     >
-                      <time dateTime={new Date(transition.at * 1000).toISOString()}>
-                        {formatStatusTimestamp(transition.at)}
-                      </time>
+                      <Timestamp epochSec={transition.at} nowSec={nowSeconds} />
                     </TableHead>
                     <TableCell className="py-2 align-top text-xs">
                       <div className="font-mono tabular-nums text-foreground">
                         {transition.from ?? "init"} -&gt; {transition.to}
                       </div>
-                      <div className="mt-1 font-mono text-2xs text-muted-foreground">
+                      <div className="mt-1 font-mono text-xs text-muted-foreground">
                         raw {transition.rawStatus} · {transition.transitionType}
                       </div>
                     </TableCell>
@@ -361,11 +489,11 @@ export function TransitionTimeline({
                     </TableCell>
                     <TableCell className="py-2 align-top">{publicImpactPill(row.publicImpact)}</TableCell>
                     <TableCell className="whitespace-normal py-2 align-top">
-                      <TransitionDuration row={row} />
+                      <TransitionDuration row={row} nowSeconds={nowSeconds} />
                     </TableCell>
                     <TableCell className="max-w-[22rem] whitespace-normal py-2 align-top text-xs text-muted-foreground">
                       <p className="break-words">{transition.reason}</p>
-                      <p className="mt-1 font-mono text-2xs tabular-nums">
+                      <p className="mt-1 font-mono text-xs tabular-nums">
                         confidence {(transition.confidence * 100).toFixed(1)}%
                       </p>
                     </TableCell>

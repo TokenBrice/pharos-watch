@@ -37,6 +37,13 @@ function getAction(path: string): StatusPageAction | null {
   return ACTION_BY_PATH.get(path) ?? null;
 }
 
+/** Catalog actions that repair a cron job's output, regardless of its impact tier. */
+export function getActionsForCronJob(job: string): StatusPageAction[] {
+  return (CRON_ACTION_PATHS[job] ?? [])
+    .map((path) => getAction(path))
+    .filter((action): action is StatusPageAction => action != null);
+}
+
 export function getRecommendedActionsForCause(cause: StatusCause): StatusPageAction[] {
   return (CAUSE_ACTION_PATHS[cause.code] ?? [])
     .map((path) => getAction(path))

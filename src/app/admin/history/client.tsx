@@ -79,7 +79,19 @@ export default function HistoryClient() {
                 ? ("truncated" as const)
                 : ("unknown" as const)
             : ("unknown" as const);
-        const historyEvidence = hasHistoryData
+        // The Worker answers 200 with `transitions: []` and `hasMore: null` when its
+        // transition read fails, so an empty list without a completeness marker is a
+        // failed read, never an empty history (R2).
+        const historyReadSwallowed =
+          hasHistoryData && historyQuery.data.hasMore == null && historyQuery.data.transitions.length === 0;
+        const historyEvidence = historyReadSwallowed
+          ? {
+              source: "history" as const,
+              state: "error" as const,
+              completeness: "unknown" as const,
+              message: "The history API returned no transitions and no completeness marker, so the transition read is treated as failed.",
+            }
+          : hasHistoryData
           ? historyError
             ? {
                 source: "history" as const,
@@ -139,6 +151,8 @@ export default function HistoryClient() {
             setHistoryWindow={setHistoryWindow}
             setHistoryFilters={setHistoryFilters}
             historyLoading={historyQuery.isLoading}
+            onRetryHistory={() => void historyQuery.refetch()}
+            historyRetrying={historyQuery.isFetching}
             historyEvidence={historyEvidence}
           />
         );

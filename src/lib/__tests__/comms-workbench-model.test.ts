@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { CronStatus } from "@shared/types";
 import { makeCompleteTelegramBotStatus, makeDispatchMetadata } from "@/test-utils/status-fixtures";
-import { buildCommsWorkbenchModel } from "../comms-workbench-model";
+import {
+  allMeasuredZero,
+  buildCommsWorkbenchModel,
+  formatFirstSendLatency,
+  formatOldestBacklogAge,
+} from "../comms-workbench-model";
 
 const NOW_SECONDS = 1_700_001_000;
 
@@ -235,5 +240,23 @@ describe("buildCommsWorkbenchModel", () => {
       enqueued: null,
       failed: null,
     });
+  });
+});
+
+describe("comms not-applicable formatting (A4)", () => {
+  it("separates not-applicable from missing telemetry", () => {
+    expect(formatOldestBacklogAge(null, 0)).toBe("No backlog");
+    expect(formatOldestBacklogAge(null, null)).toBe("Unknown");
+    expect(formatOldestBacklogAge(null, 3)).toBe("Unknown");
+    expect(formatOldestBacklogAge(120, 3)).toBe("2m");
+    expect(formatFirstSendLatency(null, 0)).toBe("None sent");
+    expect(formatFirstSendLatency(null, null)).toBe("Unknown");
+    expect(formatFirstSendLatency(1500, 2)).toBe("1,500ms");
+  });
+
+  it("collapses only when every value is a measured zero", () => {
+    expect(allMeasuredZero([0, 0])).toBe(true);
+    expect(allMeasuredZero([0, null])).toBe(false);
+    expect(allMeasuredZero([0, 1])).toBe(false);
   });
 });

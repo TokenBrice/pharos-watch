@@ -59,7 +59,7 @@ describe("PipelineSection", () => {
     const qualityTab = screen.getByRole("tab", { name: /^Quality/ });
     const marketsTab = screen.getByRole("tab", { name: /^Markets/ });
     expect(screen.getByText("Quality panel mounted")).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1, name: "Pipeline Health" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Pipeline" })).toBeTruthy();
     expect(screen.getByRole("heading", { level: 2, name: "Quality pipeline view" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("Pipeline view: Quality");
     expect(screen.queryByText("Price source panel mounted")).toBeNull();

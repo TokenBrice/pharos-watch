@@ -10,10 +10,8 @@ import { SchedulerLivenessCard } from "@/components/status/scheduler-liveness";
 
 export default function TriageClient() {
   const { data, handleRefresh, healthData, initialLoadError, isLoading, lastUpdated, model } = useCriticalOpsModel();
-  const diagnosticsSignal =
-    data == null || model == null
-      ? null
-      : data.overallStatus !== "healthy" || model.notices.length > 0 || model.healthDiffersFromStatus;
+  // Diagnostics stay collapsed; only a probe/status divergence badges the summary.
+  const diagnosticsSignal = data == null || model == null ? null : data.discrepancy.hasDivergence;
   const diagnostics = useAutoExpand(diagnosticsSignal);
 
   return (
@@ -26,12 +24,8 @@ export default function TriageClient() {
             <TriageSummary
               data={status}
               healthData={healthData}
-              overallTone={model.overallTone}
-              statusHoldingAge={model.statusHoldingAge}
               issueGroups={model.issueGroups}
               evidence={model.evidence}
-              decision={model.decision}
-              latestTransition={model.latestTransition}
               attentionSections={model.attentionSections}
               recommendedActions={model.recommendedActions}
               isDiagnosticsOpen={diagnostics.isOpen}
@@ -44,7 +38,6 @@ export default function TriageClient() {
               clientDataStale={model.clientDataStale}
               lastUpdated={lastUpdated}
               handleRefresh={handleRefresh}
-              showSignOut={false}
             />
             <NoticeRail notices={model.notices} />
             <SchedulerLivenessCard observation={status.schedulerLiveness} />

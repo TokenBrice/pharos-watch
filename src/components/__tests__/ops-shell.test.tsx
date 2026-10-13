@@ -67,7 +67,8 @@ describe("OpsShell", () => {
     );
 
     const productionBadge = screen.getByText("Production").parentElement;
-    expect(productionBadge?.className).toContain("text-state-positive-strong");
+    // Environment label is neutral: color is reserved for non-OK state.
+    expect(productionBadge?.className).toContain("text-muted-foreground");
     expect(screen.getByRole("link", { name: "Reliability" }).getAttribute("aria-current")).toBe("page");
     expect(screen.getByRole("link", { name: "Triage" }).getAttribute("aria-current")).toBeNull();
     expect(screen.getByText("Reliability body")).toBeTruthy();

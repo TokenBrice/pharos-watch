@@ -9,7 +9,9 @@ import {
   filterActionCatalog,
   getSafeActionFollowUpHref,
   getActionIntentCategory,
+  groupConsecutiveActivity,
   reconcileActionActivity,
+  type ActionActivity,
   type AdminActionAuditEntry,
   type SessionActionExecutionLike,
 } from "@/lib/actions-workbench-model";
@@ -206,5 +208,26 @@ describe("actions workbench model", () => {
     expect(getSafeActionFollowUpHref("//evil.example/jobs/42")).toBeNull();
     expect(getSafeActionFollowUpHref("/\\evil.example/jobs/42")).toBeNull();
     expect(getSafeActionFollowUpHref("javascript:alert(1)")).toBeNull();
+  });
+});
+
+describe("groupConsecutiveActivity", () => {
+  function activity(id: string, at: number, status: ActionActivity["status"] = "succeeded"): ActionActivity {
+    return { id, actionPath: "/api/debug-sync-state", actionLabel: "Debug Sync State", at, actor: "ops", target: "global", status, httpStatus: 200, source: "persisted" };
+  }
+
+  it("collapses identical consecutive rows into one row with a count and range", () => {
+    const groups = groupConsecutiveActivity([
+      activity("a", 4_000),
+      activity("b", 3_000),
+      activity("c", 2_000),
+      activity("d", 1_500, "error"),
+      activity("e", 1_000),
+    ]);
+    expect(groups.map((group) => [group.latest.id, group.count, group.oldestAt])).toEqual([
+      ["a", 3, 2_000],
+      ["d", 1, 1_500],
+      ["e", 1, 1_000],
+    ]);
   });
 });

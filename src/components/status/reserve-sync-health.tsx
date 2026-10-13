@@ -6,15 +6,20 @@ import { hasReserveScoreInputHold } from "@shared/lib/status-thresholds";
 import { getStatusTone } from "@/lib/status-dashboard-model";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
+import { CountValue, Timestamp } from "@/components/status/page-primitives";
 
 interface ReserveSyncHealthCardProps {
   health: StatusResponse["reserveComposition"];
   nowSeconds: number;
 }
 
-function formatLastSuccess(lastSuccessAt: number | null, nowSeconds: number): string {
-  if (!lastSuccessAt) return "No successful live sync yet";
-  return `${new Date(lastSuccessAt * 1000).toLocaleString()} (${formatElapsedSeconds(Math.max(0, nowSeconds - lastSuccessAt))} ago)`;
+function CountTile({ label, value, tone }: { label: string; value: number; tone?: string }) {
+  return (
+    <div>
+      <div className="text-muted-foreground">{label}</div>
+      <CountValue value={value} tone={tone} className="block font-mono text-lg" />
+    </div>
+  );
 }
 
 function formatPersistentStaleIndependentFeeds(
@@ -57,7 +62,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CardTitle as="h3" className="text-base">Live Reserve Sync</CardTitle>
-          <span className={`rounded-full border px-2.5 py-1 text-2xs font-medium ${statusTone}`}>
+          <span className={cn("rounded-full border px-2.5 py-1 text-xs font-medium", statusTone)}>
             {health.status}
           </span>
         </div>
@@ -72,7 +77,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
               Safety scoring only trusts score-grade reserve evidence. While this lane is degraded or deferred, affected
               report cards can show lower reserve scores until a clean run completes.
             </p>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-2xs">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs">
               <span>{formatRatioPct(health.freshCoverageRatio)} fresh</span>
               <span>{formatRatioPct(health.authoritativeFreshCoverageRatio)} score-grade</span>
               {health.deferredCoins > 0 ? <span>{health.deferredCoins} deferred</span> : null}
@@ -81,43 +86,22 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           </div>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
-          <div>
-            <div className="text-muted-foreground">Configured</div>
-            <div className="font-mono text-lg">{health.configuredCoins}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Fresh</div>
-            <div className="font-mono text-lg text-state-positive">{health.freshCoins}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Error</div>
-            <div className="font-mono text-lg text-state-danger">{health.errorCoins}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Corrupt</div>
-            <div className="font-mono text-lg text-state-danger">{health.corruptCoins}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Degraded</div>
-            <div className="font-mono text-lg text-state-warn">{health.degradedCoins}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Stale</div>
-            <div className="font-mono text-lg text-orange-600 dark:text-orange-400">{health.staleCoins}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Missing</div>
-            <div className="font-mono text-lg text-state-danger">{health.missingCoins}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Deferred</div>
-            <div className="font-mono text-lg text-state-warn">{health.deferredCoins}</div>
-          </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-8">
+          <CountTile label="Configured" value={health.configuredCoins} />
+          <CountTile label="Fresh" value={health.freshCoins} tone="text-state-positive" />
+          <CountTile label="Error" value={health.errorCoins} tone="text-state-danger" />
+          <CountTile label="Corrupt" value={health.corruptCoins} tone="text-state-danger" />
+          <CountTile label="Degraded" value={health.degradedCoins} tone="text-state-warn" />
+          <CountTile label="Stale" value={health.staleCoins} tone="text-state-warn" />
+          <CountTile label="Missing" value={health.missingCoins} tone="text-state-danger" />
+          <CountTile label="Deferred" value={health.deferredCoins} tone="text-state-warn" />
         </div>
 
         <div className="space-y-1 text-xs text-muted-foreground">
-          <div>Last success: {formatLastSuccess(health.lastSuccessAt, nowSeconds)}</div>
+          <div>
+            Last success:{" "}
+            <Timestamp epochSec={health.lastSuccessAt} nowSec={nowSeconds} fallback="no successful live sync yet" />
+          </div>
           <div>
             Oldest fresh snapshot age:{" "}
             {health.oldestFreshAgeSec != null ? formatElapsedSeconds(health.oldestFreshAgeSec) : "—"}
@@ -128,14 +112,38 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           </div>
           <div>Raw evidence coverage: {formatRatioPct(health.configuredCoins > 0 ? health.freshCoins / health.configuredCoins : 0)} fresh across {health.configuredCoins} configured feeds.</div>
           <div>Health cohort: {health.healthConfiguredCoins ?? health.configuredCoins} feeds; {health.acknowledgedFeedIds?.length ?? 0} reviewed exclusions. Exclusions do not admit evidence for scoring.</div>
-          {health.acknowledgedFeeds?.map((review) => <div key={review.stablecoinId}>{review.stablecoinId}: {review.reason} Review expires {new Date(review.expiresAt * 1000).toISOString()}.</div>)}
           {health.expiredFeedReviewIds?.length ? <div>Expired reviews (gates re-armed): {health.expiredFeedReviewIds.join(", ")}</div> : null}
           {health.invalidFeedReviewIds?.length ? <div>Invalid reviews (gates re-armed): {health.invalidFeedReviewIds.join(", ")}</div> : null}
+          {health.acknowledgedFeeds?.length ? (
+            <details>
+              <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md">
+                Notes: {health.acknowledgedFeeds.length} reviewed exclusion {health.acknowledgedFeeds.length === 1 ? "note" : "notes"}
+              </summary>
+              <ul className="mt-1 space-y-2 border-l-2 border-border/60 pl-3">
+                {health.acknowledgedFeeds.map((review) => (
+                  <li key={review.stablecoinId}>
+                    <span className="font-mono text-foreground">{review.stablecoinId}</span>: {review.reason} Review expires{" "}
+                    {new Date(review.expiresAt * 1000).toISOString().slice(0, 10)}.
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
           {health.nextCursorStablecoinId && <div>Next deferred cursor: {health.nextCursorStablecoinId}</div>}
           <div>
             Queue pressure:{" "}
             {health.runBudgetTruncated
-              ? `run budget truncated${health.deferredAt ? ` at ${new Date(health.deferredAt * 1000).toLocaleString()}` : ""}`
+              ? (
+                <>
+                  run budget truncated
+                  {health.deferredAt ? (
+                    <>
+                      {" "}
+                      <Timestamp epochSec={health.deferredAt} nowSec={nowSeconds} />
+                    </>
+                  ) : null}
+                </>
+              )
               : "run budget clear"}
           </div>
         </div>
@@ -145,27 +153,23 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div>
               <div className="text-muted-foreground">Independent eligible</div>
-              <div className="font-mono text-base text-state-positive">
-                {health.independentFreshEligible}
-              </div>
+              <CountValue value={health.independentFreshEligible} tone="text-state-positive" className="block font-mono text-base" />
             </div>
             <div>
               <div className="text-muted-foreground">Independent unverified</div>
-              <div className="font-mono text-base text-state-warn">
-                {health.independentFreshUnverified}
-              </div>
+              <CountValue value={health.independentFreshUnverified} tone="text-state-warn" className="block font-mono text-base" />
             </div>
             <div>
               <div className="text-muted-foreground">Static validated</div>
-              <div className="font-mono text-base">{health.staticValidatedFresh}</div>
+              <CountValue value={health.staticValidatedFresh} className="block font-mono text-base" />
             </div>
             <div>
               <div className="text-muted-foreground">Weak probe</div>
-              <div className="font-mono text-base">{health.weakProbeFresh}</div>
+              <CountValue value={health.weakProbeFresh} className="block font-mono text-base" />
             </div>
             <div>
               <div className="text-muted-foreground">Write-timeout uncertain</div>
-              <div className="font-mono text-base text-state-danger">{health.writeTimeoutUncertain}</div>
+              <CountValue value={health.writeTimeoutUncertain} tone="text-state-danger" className="block font-mono text-base" />
             </div>
           </div>
           {health.persistentlyStaleIndependentCoins.length > 0 ? (
@@ -201,10 +205,10 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
                   <TableRow key={row.adapterKey}>
                     <TableCell className="font-mono">{row.adapterKey}</TableCell>
                     <TableCell className="text-right font-mono">{row.attempts}</TableCell>
-                    <TableCell className="text-right font-mono text-state-positive">{row.ok}</TableCell>
-                    <TableCell className="text-right font-mono text-state-warn">{row.degraded}</TableCell>
-                    <TableCell className="text-right font-mono text-state-danger">{row.error}</TableCell>
-                    <TableCell className="text-right font-mono">{row.skipped}</TableCell>
+                    <TableCell className="text-right font-mono"><CountValue value={row.ok} /></TableCell>
+                    <TableCell className="text-right font-mono"><CountValue value={row.degraded} tone="text-state-warn" /></TableCell>
+                    <TableCell className="text-right font-mono"><CountValue value={row.error} tone="text-state-danger" /></TableCell>
+                    <TableCell className="text-right font-mono"><CountValue value={row.skipped} /></TableCell>
                     <TableCell className="text-right font-mono">
                       {row.successRate != null ? formatRatioPct(row.successRate) : "—"}
                     </TableCell>
