@@ -11,9 +11,9 @@ import { STATUS_PRIORITY } from "@/lib/status/dashboard-presentation";
 import type { DashboardEvidence, DashboardIssue } from "@/lib/status/dashboard-types";
 
 /** Window for the recurrence chip ("5× in 48h"). */
-export const TRIAGE_RECURRENCE_WINDOW_SEC = 48 * 3600;
+const TRIAGE_RECURRENCE_WINDOW_SEC = 48 * 3600;
 /** A non-informational cause that degraded the admin state this often in the window is "failing repeatedly". */
-export const TRIAGE_RECURRING_ACT_THRESHOLD = 3;
+const TRIAGE_RECURRING_ACT_THRESHOLD = 3;
 
 const SELF_CHECK_JOB = "status-self-check";
 

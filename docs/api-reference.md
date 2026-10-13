@@ -736,7 +736,7 @@ Returns one stablecoin projection from a dated public snapshot.
 
 ### `GET /api/health`
 
-Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts carry nullable `generationId` / `publishedAt` from the served-generation sentinel; `cache-quality-degraded: yield-data:safety-snapshot-coverage` fires only below 0.75 coverage, held safety is `yield-safety-publish-time-fallback:safety-snapshot-held` inside both 24h clocks and `yield-safety-unrated-serving:safety-snapshot-held` beyond them, and unreadable or mismatched publication health fails closed as `yield-safety-availability-unknown`. Since 2026-10-13 the body adds `headline` and `components`: the reader-facing projection of the same inputs onto nine components (`operational`/`delayed`/`degraded`/`outage`, each with `summary`, machine-readable `reasons`, age `budget` and `since`). `status` remains the worst raw input for compatibility; age-graded components reach `outage` only past twice their stale band, and only a database failure or a core-component outage makes the headline a major outage.
+Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts carry nullable `generationId` / `publishedAt` from the served-generation sentinel; `cache-quality-degraded: yield-data:safety-snapshot-coverage` fires only below 0.75 coverage, held safety is `yield-safety-publish-time-fallback:safety-snapshot-held` inside both 24h clocks and `yield-safety-unrated-serving:safety-snapshot-held` beyond them, and unreadable or mismatched publication health fails closed as `yield-safety-availability-unknown`. Adds `headline`/`components`.
 
 - **Operation ID:** `health`
 - **Path:** `/api/health`
@@ -795,7 +795,7 @@ Provides the unauthenticated availability canary; it is not the operator status 
 
 ### `GET /api/public-status-history`
 
-Returns a bounded, public-safe status timeline. Since 2026-10-13 rows with `source: "public"` are persisted public-projection changes carrying the `headline` and every non-operational `component`; `legacy` rows are operator transitions filtered to public-impact causes, served only before `publicHistoryStartedAt`. `hasMore` marks a page that did not hold the whole window.
+Returns a bounded, public-safe status timeline.
 
 - **Operation ID:** `publicStatusHistory`
 - **Path:** `/api/public-status-history`

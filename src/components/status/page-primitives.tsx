@@ -2,7 +2,6 @@ import type { ChangeEvent, ReactNode } from "react";
 import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import {
   getNoticeTone,
-  getStatusTone,
   type DashboardNotice,
   type DashboardSectionId,
 } from "@/lib/status-dashboard-model";
@@ -94,22 +93,6 @@ export function SummaryBadge({ label, value, className }: { label: string; value
       <span className={cn("ml-1.5 pharos-numeric", value === "0" ? "text-muted-foreground" : "text-foreground")}>{value}</span>
     </div>
   );
-}
-
-export function StatusSummaryBadge({
-  label,
-  status,
-  value,
-  className,
-}: {
-  label: string;
-  status: "healthy" | "degraded" | "stale";
-  value?: string;
-  className?: string;
-}) {
-  const tone = getStatusTone(status);
-
-  return <SummaryBadge label={label} value={value ?? tone.label} className={cn(tone.badgeClassName, className)} />;
 }
 
 export function StatusSection({

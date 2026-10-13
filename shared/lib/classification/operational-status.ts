@@ -114,8 +114,7 @@ export const PUBLIC_HEADLINE_TONE = {
  * admin workspace. `act` = public impact past budget or repeated failure;
  * `watch` = known, bounded, or admin-only; `unavailable` = evidence missing.
  */
-export const OPERATOR_VERDICTS = ["act", "watch", "ok", "running", "unavailable"] as const;
-export type OperatorVerdict = (typeof OPERATOR_VERDICTS)[number];
+export type OperatorVerdict = "act" | "watch" | "ok" | "running" | "unavailable";
 
 export const OPERATOR_VERDICT_TONE = {
   act: {

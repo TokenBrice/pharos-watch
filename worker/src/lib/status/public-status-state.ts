@@ -30,7 +30,7 @@ import {
  * `status_state` / `status_transitions` under their own scope; every operator
  * reader filters on scope `global`, so the two streams never mix.
  */
-export const PUBLIC_STATUS_SCOPE = "public";
+const PUBLIC_STATUS_SCOPE = "public";
 
 const PersistedComponentSchema = z.object({
   id: z.enum(PUBLIC_STATUS_COMPONENT_IDS),

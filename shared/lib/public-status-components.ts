@@ -43,7 +43,7 @@ import {
  * - a failed database sentinel is the only outage that needs no grace.
  */
 
-export const PUBLIC_CORE_COMPONENT_IDS: readonly PublicStatusComponentId[] = ["website-api", "stablecoin-data"];
+const PUBLIC_CORE_COMPONENT_IDS: readonly PublicStatusComponentId[] = ["website-api", "stablecoin-data"];
 
 /**
  * Every cache lane in the availability registry belongs to exactly one
