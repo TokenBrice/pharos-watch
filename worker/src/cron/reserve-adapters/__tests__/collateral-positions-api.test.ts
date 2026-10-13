@@ -169,6 +169,20 @@ describe("adaptCollateralPositions", () => {
     });
   });
 
+  it("identifies Swissgrams gold without assigning an unrelated tracked gold dependency", () => {
+    const address = "0x2bd214946806dbee88dd3b44b26a21759723d8a2";
+    const result = adaptCollateralPositions({
+      [address]: {
+        address, name: "SWISSGRAMS GOLD", symbol: "SGG", decimals: 6,
+        positions: [{ collateralBalance: "1000000", minted: "0", zchfDecimals: 18 }],
+      },
+    }, { [address]: { price: { usd: 4_000 } } }, 0);
+    expect(result.slices).toContainEqual({
+      sourceKey: "collateral-positions-api:sgg", name: "SGG (SWISSGRAMS GOLD)", pct: 100, risk: "high",
+    });
+    expect(result.warnings?.some((warning) => warning.code === "unknown-asset")).not.toBe(true);
+  });
+
   it("maps tracked gold collateral to active dependency targets", () => {
     const result = adaptCollateralPositions(
       {

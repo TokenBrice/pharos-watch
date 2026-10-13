@@ -74,6 +74,53 @@ describe("Tron event-balance replay", () => {
   it("subtracts post-freeze inbound transfers instead of copying current balance", async () => {
     expect(await validateTronReplayEvidence(fixture(), now)).toMatchObject([{ rawAmount: "14591200000", amount: 14591.2 }]);
   });
+  function boundaryFixture() {
+    const evidence = fixture();
+    const entry = evidence.entries[0];
+    const transfer = entry.history.pages[0].response.data[1];
+    transfer.block_timestamp = entry.event.timestamp * 1000;
+    transfer.from = token;
+    return { ...evidence, entries: [{ ...entry,
+      freezeBlock: {
+        blockID: "e".repeat(64),
+        block_header: { raw_data: { number: entry.event.block_number, timestamp: transfer.block_timestamp } },
+        transactions: [{ txID: tx }, { txID: transfer.transaction_id }],
+      },
+      boundaryReceipts: [{ id: transfer.transaction_id, blockNumber: entry.event.block_number,
+        blockTimeStamp: transfer.block_timestamp, receipt: { result: "SUCCESS" },
+        log: [{ address: "a614f803b6fd780986a42c78ec9c7f77e6ded13c", topics: [
+          "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+          "a614f803b6fd780986a42c78ec9c7f77e6ded13c".padStart(64, "0"), address.slice(2).padStart(64, "0"),
+        ], data: BigInt(transfer.value).toString(16).padStart(64, "0") }],
+      }],
+    }] };
+  }
+  it("orders a receipt-proven same-block transfer before or after the freeze", async () => {
+    const evidence = boundaryFixture();
+    expect(await validateTronReplayEvidence(evidence, now)).toMatchObject([{ amount: 14591.2 }]);
+    evidence.entries[0].freezeBlock.transactions.reverse();
+    expect(await validateTronReplayEvidence(evidence, now)).toMatchObject([{ amount: 25529.2 }]);
+  });
+  it.each([
+    ["wrong block", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].freezeBlock.block_header.raw_data.number++; }],
+    ["wrong block timestamp", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].freezeBlock.block_header.raw_data.timestamp++; }],
+    ["duplicate transaction", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].freezeBlock.transactions.push({ txID: tx }); }],
+    ["case-aliased transaction", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].freezeBlock.transactions.push({ txID: tx.toUpperCase() }); }],
+    ["missing freeze", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].freezeBlock.transactions.shift(); }],
+    ["missing transfer", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].freezeBlock.transactions.pop(); }],
+    ["missing receipt", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts = []; }],
+    ["duplicate receipt", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts.push(e.entries[0].boundaryReceipts[0]); }],
+    ["wrong receipt block", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts[0].blockNumber++; }],
+    ["failed receipt", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts[0].receipt.result = "REVERT"; }],
+    ["wrong token", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts[0].log[0].address = "f".repeat(40); }],
+    ["wrong sender", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts[0].log[0].topics[1] = "f".repeat(64); }],
+    ["wrong amount", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts[0].log[0].data = "0".repeat(64); }],
+    ["duplicate log", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].boundaryReceipts[0].log.push(e.entries[0].boundaryReceipts[0].log[0]); }],
+    ["same transaction", (e: ReturnType<typeof boundaryFixture>) => { e.entries[0].history.pages[0].response.data[1].transaction_id = tx; }],
+  ] as const)("rejects unproved boundary ordering: %s", async (_name, mutate) => {
+    const evidence = boundaryFixture(); mutate(evidence);
+    await expect(validateTronReplayEvidence(evidence, now)).rejects.toThrow();
+  });
   it.each([
     ["different block", (e: ReturnType<typeof fixture>) => { e.entries[0].anchor.after.blockID = "f".repeat(64); }],
     ["caller mismatch", (e: ReturnType<typeof fixture>) => { e.entries[0].anchor.balance.request.owner_address = "41" + "0".repeat(40); }],

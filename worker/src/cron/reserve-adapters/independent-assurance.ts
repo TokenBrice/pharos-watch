@@ -185,6 +185,10 @@ export const BRLV_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
 
 function audmReportDate(href: string, text: string): string | null {
   const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
+  const datedReport = fileName.match(/^reserve-verification-report-(\d{4})-(\d{2})-(\d{2})\.pdf$/i);
+  const fileDate = datedReport
+    ? formatDate(Number(datedReport[1]), Number(datedReport[2]), Number(datedReport[3]))
+    : null;
   const value = `${fileName} ${text}`;
   // The prefix can be the document creation date, not the reserve period end.
   const asAt = [...value.matchAll(/\bas\s+at\s+(\d{1,2})(?:st|nd|rd|th)?\s+(January|Jan|February|Feb|March|Mar|April|Apr|May|June|Jun|July|Jul|August|Aug|September|Sept|Sep|October|Oct|November|Nov|December|Dec)\.?\s+(\d{4})\b/gi)];
@@ -193,8 +197,9 @@ function audmReportDate(href: string, text: string): string | null {
     if (asAt.length !== asAtMarkers.length) return null;
     const dates = asAt.map((match) =>
       formatDate(Number(match[3]), monthNumberFromLabel(match[2])!, Number(match[1])));
-    return dates.every((date) => date != null && date === dates[0]) ? dates[0]! : null;
+    return dates.every((date) => date != null && date === dates[0] && (!datedReport || date === fileDate)) ? dates[0]! : null;
   }
+  if (datedReport) return fileDate;
   const yymmdd = fileName.match(/[_-](\d{2})(\d{2})(\d{2})\s+Catena/i);
   if (yymmdd) {
     return formatDate(2000 + Number(yymmdd[1]), Number(yymmdd[2]), Number(yymmdd[3]));
@@ -214,7 +219,7 @@ export const AUDM_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   classifications: {
     cash: { name: "AUD cash held at Westpac Banking Corporation in the AUDM Trust Class A Reserve", risk: "very-low", assetClass: "bank-deposit", issuerOrObligor: "Westpac Banking Corporation", riskFactors: ["counterparty", "custody", "concentration"], liquidityHorizon: "immediate" },
   },
-  isReportCandidate: (href) => /Reserve Verification Report|Agreed-Upon Procedures Report/i.test(decodeURIComponent(href)),
+  isReportCandidate: (href) => /Reserve[ -]Verification[ -]Report|Agreed-Upon Procedures Report/i.test(decodeURIComponent(href)),
   reportDateFromCandidate: audmReportDate,
 };
 

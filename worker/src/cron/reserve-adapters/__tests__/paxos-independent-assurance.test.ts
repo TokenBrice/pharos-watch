@@ -51,22 +51,22 @@ describe("Paxos reviewed Framer discovery", () => {
     await expect(verifyPaxosDiscovery(html + html, pin, AbortSignal.timeout(1000))).rejects.toThrow("changed or ambiguous main module");
   });
 
-  it("accepts the October 9 redeploy only with its newly reviewed exact module pins", async () => {
+  it("accepts the October 13 redeploy only with its newly reviewed exact module pins", async () => {
     const fixture = (name: string) => readFileSync(new NodeURL(`./fixtures/paxos/${name}`, import.meta.url), "utf8")
       .replace(/^<!--[^]*?-->\s*/, "");
-    const html = fixture("index-2026-10-09.html");
-    const main = fixture("main-2026-10-09.mjs.txt");
-    const page = fixture("paxg-2026-10-09.mjs.txt");
+    const html = fixture("index-2026-10-13.html");
+    const main = fixture("main-2026-10-13.mjs.txt");
+    const page = fixture("paxg-2026-10-13.mjs.txt");
     const pin: PaxosDiscoveryPin = {
-      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.Dqj4xIMw.mjs",
-      mainSha256: "935fe139f26e366df456d4ee8443db234943ec239141c7ae902ac0c57e0f69d2",
-      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU.BF3DOMQp.mjs",
-      pageSha256: "5d6e6e7f6153ec5b7c9280ce25d45011ddac5e9e84d6f2fe94f41d72196c35f2",
+      mainUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.DZqMDh2_.mjs",
+      mainSha256: "0dc7d49c276343e5b721362a348ee66f8f82a0bddd1bd7aecbaabfa19345929c",
+      pageUrl: "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/9XsTDCj88fcSkvOKlIugorJnpRlJ-sQBU3zcghHZAGU.Cm5Lb3KG.mjs",
+      pageSha256: "cc505dc4eafcf862c1a9adda08da12c9864cda8ba52ffb4b22a4f9468d37e53a",
     };
     installAdapterNetwork({ html: { [pin.mainUrl]: main, [pin.pageUrl]: page } });
     await expect(verifyPaxosDiscovery(html, pin, AbortSignal.timeout(1000))).resolves.toBe(page);
     await expect(verifyPaxosDiscovery(html + html, pin, AbortSignal.timeout(1000))).rejects.toThrow("ambiguous main module");
-    await expect(verifyPaxosDiscovery(html.replace("Dqj4xIMw", "D_i7a3kT"), pin, AbortSignal.timeout(1000)))
+    await expect(verifyPaxosDiscovery(html.replace("DZqMDh2_", "Dqj4xIMw"), pin, AbortSignal.timeout(1000)))
       .rejects.toThrow("changed or ambiguous main module");
   });
 

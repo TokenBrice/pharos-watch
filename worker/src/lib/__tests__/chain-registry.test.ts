@@ -190,7 +190,7 @@ describe("buildChainRpcs", () => {
     });
   });
 
-  it.each(["ink", "berachain"])("uses admitted %s Dwellir for CCIP only and rolls back to incumbents", (chainId) => {
+  it.each(["ink", "berachain", "plasma"])("uses admitted %s Dwellir for CCIP only and rolls back to incumbents", (chainId) => {
     const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
     const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId)!;
     expect(ccipRpcEndpoints(admitted)[0]).toMatchObject({

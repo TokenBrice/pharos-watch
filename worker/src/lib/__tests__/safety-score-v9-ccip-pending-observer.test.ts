@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
+import { decodeAbiParameters, encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { CcipPendingReadSchema, type CcipPendingCheckpoint, type CcipPendingRead, type EconomicSupplyObservation, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
@@ -182,7 +182,7 @@ describe("authenticated CCIP pending quantities", () => {
     const log = sent[0]!;
     if (branch === "schema") log.removed = true;
     if (branch === "topics") log.topics.push(word(999));
-    if (branch === "payload") log.data = `0x${"ab".repeat(16385)}`;
+    if (branch === "payload") log.data = `0x${"ab".repeat(65537)}`;
     const onDiagnostic = vi.fn();
     expect(await observeCcipPending({ ...input(), onDiagnostic })).toEqual({ status: "rejected", reason: "log-invalid" });
     expect(onDiagnostic).toHaveBeenLastCalledWith(expect.objectContaining({ observer: "ccip", chainId: "ethereum", hardEvidenceFailure: true, failurePredicate: branch === "schema" ? "asLog-schema" : branch === "topics" ? "topic-count" : "matched-payload-cap", operands: expect.objectContaining({ address: log.address, topicCount: log.topics.length, dataLength: log.data.length, transactionHash: log.transactionHash, logIndex: log.logIndex }) }));
@@ -223,7 +223,7 @@ describe("authenticated CCIP pending quantities", () => {
     expect(result.amount).toBe("10"); expect(result.proof.lanes[0]).toMatchObject({ pendingCount: 1, failedCount: 0, lastSequence: "1" });
   });
   it.each(["1.6", "2.0.0"] as const)("excludes a large foreign %s message on the shared ramp without blocking our census", async version => {
-    const data = `0x${"ab".repeat(20000)}` as `0x${string}`;
+    const data = `0x${"ab".repeat(65535)}` as `0x${string}`;
     const own = version === "1.6" ? send(1) : send20(1);
     const foreign = version === "1.6" ? send(1, 90n, 100, version, data, 3n) : send20(1, 90n, 100, 30, 31, data, 3n);
     foreign.logIndex = "0x2";
@@ -231,8 +231,22 @@ describe("authenticated CCIP pending quantities", () => {
     const result = await observeCcipPending(input(source(version)));
     expect(result).toMatchObject({ status: "accepted", amount: "10", proof: { lanes: [{ pendingCount: 1, lastSequence: "1" }] } });
   });
+  it("counts a 30,000-byte v1.5 foreign-token message in the lane sequence without adding its liability", async () => {
+    const foreign = send(1, 1n, 100, "1.5", `0x${"ab".repeat(30000)}`);
+    const [message] = decodeAbiParameters(parseAbiParameters(MESSAGE_15), foreign.data);
+    foreign.data = encodeAbiParameters(parseAbiParameters(MESSAGE_15), [{ ...message, tokenAmounts: [{ token: addr(99), amount: 1n }] }]);
+    sent = [foreign, send(2, 10n, 100, "1.5")]; expectedNext = 3;
+    expect(await observeCcipPending(input(source("1.5")))).toMatchObject({
+      status: "accepted", amount: "10", proof: { lanes: [{ pendingCount: 1, lastSequence: "2" }] },
+    });
+  });
+  it.each(["1.6", "2.0.0"] as const)("admits the bounded ABI envelope around a 32 KiB %s application payload", async version => {
+    const data = `0x${"ab".repeat(32768)}` as `0x${string}`;
+    sent = [version === "2.0.0" ? send20(1, 10n, 100, 30, 31, data) : send(1, 10n, 100, version, data)];
+    expect(await observeCcipPending(input(source(version)))).toMatchObject({ status: "accepted", amount: "10" });
+  });
   it.each(["1.5", "1.6", "2.0.0"] as const)("rejects an oversized matched %s message rather than skipping its liability", async version => {
-    const data = `0x${"ab".repeat(20000)}` as `0x${string}`;
+    const data = `0x${"ab".repeat(65535)}` as `0x${string}`;
     sent = [version === "2.0.0" ? send20(1, 10n, 100, 30, 31, data) : send(1, 10n, 100, version, data)];
     const result = await observeCcipPending(input(source(version)));
     expect(logRanges.length).toBeGreaterThan(0);

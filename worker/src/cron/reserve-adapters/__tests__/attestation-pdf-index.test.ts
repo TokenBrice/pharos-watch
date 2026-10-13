@@ -310,7 +310,7 @@ describe("adaptAttestationPdfIndex", () => {
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
   });
 
-  it.each([zarp, usdu, zarsc])("keeps $id's reviewed reserve clock without fabricated redemption", (coin) => {
+  it.each([usdu, zarsc])("keeps $id's reviewed reserve clock without fabricated redemption", (coin) => {
     const config = coin.liveReservesConfig as LiveReservesConfig;
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
     const report = params.reviewedReport!;
@@ -323,6 +323,20 @@ describe("adaptAttestationPdfIndex", () => {
     const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 8) / 1000 });
     expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
+  });
+
+  it("uses ZARP's reviewed September balances rather than the October report date", () => {
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", zarp.liveReservesConfig.params);
+    const result = adaptAttestationPdfIndex(`<a href="${params.reviewedReport!.url}">October 2026 report</a>`, params);
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.UTC(2026, 8, 30) / 1000,
+      reportBalanceDate: "2026-09-30",
+      reportDate: "2026-10-01",
+      freshnessMode: "verified",
+    });
+    const validation = expectValidAdapterOutput("attestation-pdf-index", result, { now: Date.UTC(2026, 9, 13) / 1000 });
+    expect(validation.warnings).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("redemption");
   });
 
   it("preserves day-first interpretation for ambiguous numeric filenames", () => {

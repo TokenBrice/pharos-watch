@@ -23,25 +23,19 @@
     "attestorJurisdiction": "South Africa",
     "attestorLicense": "IRBA-registered auditors",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-21",
-      "publishedAtBasis": "explicit",
+      "periodEnd": "2026-09-30",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Sol decision-wave verification 2026-10-02 (VDwZarp)",
+      "reviewer": "Pharos production health reserve review 2026-10-13; October 1 report date is not an independently established publication date",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Kempen ZARP agreed-upon procedures report - September 1, 2026 (published with the site filename suffix for a signed draft)",
-          "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf"
+          "label": "Kempen ZARP agreed-upon procedures report dated October 1, 2026, covering September 30 reserve balances",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/10/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-10-01-signed.pdf"
         },
         {
-          "label": "Kempen ZARP September 2026 report publication page (published September 21, 2026; links this exact report)",
-          "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-september-2026/"
-        },
-        {
-          "label": "ZARP transparency page (report index)",
+          "label": "ZARP transparency report index",
           "url": "https://www.zarpstablecoin.com/transparency/"
         }
       ]
@@ -127,8 +121,8 @@
         }
       ],
       "reviewedReport": {
-        "url": "https://kempengroup.co.za/wp-content/uploads/2026/09/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-09-01-signed-draft.pdf",
-        "balanceDate": "2026-08-31"
+        "url": "https://kempengroup.co.za/wp-content/uploads/2026/10/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-10-01-signed.pdf",
+        "balanceDate": "2026-09-30"
       }
     }
   },

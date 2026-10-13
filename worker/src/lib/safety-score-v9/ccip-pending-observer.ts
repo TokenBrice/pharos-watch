@@ -28,7 +28,8 @@ const HEX = /^0x[0-9a-f]*$/;
 const PAGE_BLOCKS = 2000;
 const PAGES_PER_ATTEMPT = 8;
 const MAX_CHECKPOINT_BYTES = 128 * 1024;
-const MAX_LOG_DATA_LENGTH = 32770;
+// CCIP permits 30/32 KiB application data before ABI overhead: https://docs.chain.link/ccip/evm/service-limits
+const MAX_LOG_DATA_LENGTH = 2 + 2 * 64 * 1024;
 const DISCOVERY_LIMIT = 1;
 const API_BASE = "https://api.ccip.chain.link/v2";
 type Lane = CcipPendingRead["lanes"][number];
