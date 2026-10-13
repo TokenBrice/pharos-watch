@@ -59,14 +59,15 @@ export async function getReserveProducerPriority(
   const current = getCronSlotStartedAtForSchedule(scheduleKey, observedAt * 1000);
   const next = current + CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec;
   const lookaheadSec = getReserveRecoveryLookaheadSec();
-  if (next - observedAt <= lookaheadSec) {
-    return { reason: "producer-slot-priority", scheduleKey, slotStartedAt: next, observedAt, lookaheadSec, condition: "next-slot-lookahead" };
-  }
   const row = await runWithOverloadRetry(() => db.prepare(
     "SELECT state, finished_at FROM cron_slot_executions WHERE slot_key = ? AND slot_started_at = ?",
   ).bind(scheduleKey, current).first<{ state: string; finished_at: number | null }>());
   if (!row || row.state !== "finished" || row.finished_at == null) {
     return { reason: "producer-slot-priority", scheduleKey, slotStartedAt: current, observedAt, lookaheadSec, condition: "current-slot-unfinished" };
+  }
+  // Upcoming-slot protection must not hide missing delivery of the current slot.
+  if (next - observedAt <= lookaheadSec) {
+    return { reason: "producer-slot-priority", scheduleKey, slotStartedAt: next, observedAt, lookaheadSec, condition: "next-slot-lookahead" };
   }
   const heavy = await runWithOverloadRetry(() => db.prepare(
     `SELECT slot_key, slot_started_at FROM cron_slot_executions
