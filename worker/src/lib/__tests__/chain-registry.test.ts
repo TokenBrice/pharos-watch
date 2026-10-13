@@ -276,6 +276,18 @@ describe("buildChainRpcs", () => {
     }
   });
 
+  it("keeps Ethereum's new archive host supplemental-last without log admission", () => {
+    const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get("ethereum")!;
+    const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get("ethereum")!;
+    expect(primaryRpcUrl(admitted)).toBe(primaryRpcUrl(baseline));
+    expect(registryRpcUrls(admitted)).toEqual(registryRpcUrls(baseline));
+    expect(admitted.endpoints[admitted.endpoints.length - 1]).toMatchObject({
+      url: "https://api-ethereum-mainnet.n.dwellir.com", operator: "dwellir", position: "supplemental",
+      stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-13",
+    });
+    expect(logScanRpcEndpoints(admitted)).toEqual(logScanRpcEndpoints(baseline));
+  });
+
   it.each(["linea", "scroll", "unichain", "worldchain", "megaeth", "stable"])(
     "orders %s Dwellir before census Alchemy without adding registry or log eligibility", (chainId) => {
       const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
@@ -380,6 +392,12 @@ describe("buildChainRpcs", () => {
     expect(supplementalRpcEndpoints(arc).map((endpoint) => endpoint.url)).toEqual([
       "https://api-arc-mainnet.n.dwellir.com",
     ]);
+    expect(primaryRpcUrl(arc)).toBe("https://rpc.mainnet.arc.io");
+    expect(supplementalRpcEndpoints(arc, { historicalBlock: true })).toEqual(supplementalRpcEndpoints(arc));
+    expect(supplementalRpcEndpoints(arc)[0]).toMatchObject({
+      stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-13",
+    });
+    expect(logScanRpcEndpoints(arc).some((endpoint) => endpoint.operator === "dwellir")).toBe(false);
   });
 
   it("pairs every Dwellir entry with the CHAIN_META key and EVM chain id it reads", () => {

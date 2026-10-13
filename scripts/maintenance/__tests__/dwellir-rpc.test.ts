@@ -142,7 +142,7 @@ describe("pinned supplemental research RPC", () => {
     const record = await invoke(["--block", "1000"]);
     expect(record).toMatchObject({
       chain: "ethereum", state: "ok", reason: null,
-      endpoint: "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+      endpoint: "https://api-ethereum-mainnet.n.dwellir.com",
       block: { number: "1000", hash: HASH, timestamp: "2023-11-14T22:13:20.000Z" },
       result: { echo: "[REDACTED]" },
     });
@@ -242,10 +242,11 @@ describe("pinned supplemental research RPC", () => {
   });
 
   it.each([
-    { chain: "ethereum", span: 1_000, provider: "dwellir" },
+    { chain: "ethereum", span: 10_000, provider: "dwellir" },
     { chain: "monad", span: 1_000, provider: "dwellir" },
     { chain: "astar", span: 1_024, provider: "dwellir" },
     { chain: "base", span: 10_000, provider: "dwellir" },
+    { chain: "arc", span: 10_000, provider: "dwellir" },
     { chain: "ethereum", span: 500, provider: "public" },
     { chain: "zksync", span: 500, provider: "dwellir" },
   ])("splits $provider $chain log ranges at its inclusive $span-block span", async ({ chain, span, provider }) => {
@@ -277,7 +278,7 @@ describe("pinned supplemental research RPC", () => {
       if (logCalls === 2) return new Response(JSON.stringify({ jsonrpc: "2.0", id: body.id, error: { code: -32005, message: KEY } }));
       return rpcResponse(body.id, [{ blockNumber: "0x3e8", blockHash: HASH, logIndex: "0x0" }]);
     });
-    const record = await invoke(["--block", "2000"], "ethereum", "eth_getLogs", '[{"fromBlock":"1000","toBlock":"2000"}]');
+    const record = await invoke(["--block", "11000"], "ethereum", "eth_getLogs", '[{"fromBlock":"1000","toBlock":"11000"}]');
     expect(record).toMatchObject({ state: "error", reason: "rpc-error", result: null, error: { rpcCode: -32005 } });
     expect(record.chunks).toHaveLength(1);
     expect(stdout.join("")).not.toContain(KEY);
