@@ -134,6 +134,7 @@ const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   REALU: { risk: "high" },
   DQTS: { risk: "high" },
   ESC: { risk: "high" },
+  SGG: { risk: "high" },
 };
 
 function getProtocolAssetConfig(symbol: string): ProtocolAssetConfig | null {

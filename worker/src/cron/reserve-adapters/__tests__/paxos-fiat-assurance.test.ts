@@ -4,12 +4,12 @@ import * as assurance from "@shared/lib/independent-assurance";
 import * as hashing from "../../../lib/hash";
 import { runAdapter, installAdapterNetwork } from "./reserve-adapter.test-support";
 
-const MAIN_URL = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.Dqj4xIMw.mjs";
-const MAIN_HASH = "935fe139f26e366df456d4ee8443db234943ec239141c7ae902ac0c57e0f69d2";
+const MAIN_URL = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.DZqMDh2_.mjs";
+const MAIN_HASH = "0dc7d49c276343e5b721362a348ee66f8f82a0bddd1bd7aecbaabfa19345929c";
 const CASES = [
-  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.DczhKAwI.mjs", hash: "c1c89a0f938029835577261a3564a8332145730c69481adaf58dfddc216539be", assets: 2893935877, liabilities: 2886948845, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
-  { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.DgZ5PRKp.mjs", hash: "df4971f85fffad41a1819c5d02c53263bfa36efdef73af06104bf105184171bc", assets: 3350462467, liabilities: 3340650602, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
-  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.DsxIJrQO.mjs", hash: "bd27e5973cf8f92bf3d56dc981ef7a9e1fd23ffe18b5d5e8863d6aa5f5520fa2", assets: 29189905, liabilities: 29168261, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
+  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.BCm9jGCp.mjs", hash: "ee68ebb1cbfee024d2e40c4d39f121b9f3c4380e0bed3b2c04cca2a213fe3a5e", assets: 2893935877, liabilities: 2886948845, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
+  { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.DBmYnQbz.mjs", hash: "bbd62029d8cb0f280869d6c7104d6365b648ac1e8b59c2385b93808249294828", assets: 3350462467, liabilities: 3340650602, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
+  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.BLSMgw0g.mjs", hash: "f68141e0ca591cb1083f43b3ff71a04b607643d423b6ead7a6974a7097e07be9", assets: 29189905, liabilities: 29168261, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
 ] as const;
 
 describe("Paxos fiat product assurance", () => {

@@ -149,6 +149,17 @@ describe("bucketForAsset", () => {
 });
 
 describe("adaptFirmMarkets", () => {
+  it("maps the identified staked yBOLD collateral while preserving unknown collateral", () => {
+    const payload = { markets: [makeMarket("ysyBOLD", 80), makeMarket("UNKNOWN", 20)], timestamp: 1_776_330_494 };
+    const result = adaptFirmMarkets(payload, 100);
+    expect(result.slices).toContainEqual({
+      sourceKey: "dola-inverse:ysybold", name: "ysyBOLD collateral", pct: 80,
+      risk: "medium", coinId: "ybold-yearn", depType: "collateral",
+    });
+    expect(result.metadata?.unknownExposurePct).toBe(20);
+    expect(listUnexpectedDolaAssets(payload)).toEqual(["UNKNOWN"]);
+  });
+
   it("recognizes sinvUSD without treating its governance backing as generic stable collateral", () => {
     const payload = {
       markets: [makeMarket("sinvUSD", 80), makeMarket("UNKNOWN", 20)],

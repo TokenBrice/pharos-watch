@@ -467,7 +467,7 @@ export function logScanRpcEndpoints(config: ChainRpcConfig | undefined): readonl
 /** CCIP's reviewed hash-pinned state and historical-ramp-log routes, not a global log promotion. */
 export function ccipRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
   const incumbents = registryRpcEndpoints(config).filter((endpoint) => endpoint.operator !== "dwellir");
-  if (config?.chainId !== "ink" && config?.chainId !== "berachain") return incumbents;
+  if (config?.chainId !== "ink" && config?.chainId !== "berachain" && config?.chainId !== "plasma") return incumbents;
   const dwellir = config.endpoints.find((endpoint) => endpoint.operator === "dwellir"
     && !endpoint.routingDisabled && endpoint.stateHistory === "archive" && endpoint.logsHistory === "full");
   return dwellir ? [dwellir, ...incumbents] : incumbents;

@@ -5,6 +5,7 @@ import { encodeAbiParameters } from "viem/utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 import { installAdapterNetwork, runAdapter, type AdapterNetwork } from "./reserve-adapter.test-support";
+import eusd from "@shared/data/stablecoins/coins/eusd-electronic-usd.json";
 
 const coin = {
   id: "usd3-reserve-protocol",
@@ -235,6 +236,47 @@ beforeEach(() => {
 });
 
 describe("reserve-protocol-dtf adapter", () => {
+  it("identifies eUSD's replacement basket without hiding undercollateralization or bypassing vault claims", async () => {
+    const components = [
+      ["0x7133ebcb1a23e3d8be7ff09362b02b2a2e4c3da4", "0xd317b21d37b171f7821420cbe59ebfd3c1248200", "usdt-tether"],
+      [WCUSDCV3, WCUSDCV3_ASSET, "usdc-circle"],
+      ["0x9a1d6bd5b8642c41f25e0958129b85f8e1176f3e", "0xa16b5f3d3b449d6b486af69672f2e311569bdbc4", undefined],
+      ["0x8c106eedad96553e64287a5a6839c3cc78afa3d0", "0xd07fbabd47ebe5cb7cee8f6ea63d7b2e061e719b", "gtusdcp-gauntlet"],
+      ["0xb576765fb15505433af24fee2c0325895c559fb2", "0x798d102cb206b81b0c789c35ff3744c8400a4c80", "senpyusdmain-sentora"],
+    ] as const;
+    activeNetwork = installAdapterNetwork({
+      block: { number: 26185893, timestamp: 1791922487 },
+      rpc: {
+        [`${EUSD_RTOKEN}:${MAIN_SELECTOR}`]: encodeAddressResult(EUSD_MAIN),
+        [`${EUSD_MAIN}:${ASSET_REGISTRY_SELECTOR}`]: encodeAddressResult(EUSD_ASSET_REGISTRY),
+        [`${EUSD_MAIN}:${BASKET_HANDLER_SELECTOR}`]: encodeAddressResult(EUSD_BASKET_HANDLER),
+        [`${EUSD_BASKET_HANDLER}:${FULLY_COLLATERALIZED_SELECTOR}`]: encodeBoolResult(false),
+        [`${EUSD_BASKET_HANDLER}:${COLLATERAL_STATUS_SELECTOR}`]: 0n,
+        [`${EUSD_BASKET_HANDLER}:${QUOTE_SELECTOR}`]: encodeAbiParameters(
+          [{ type: "address[]" }, { type: "uint256[]" }],
+          [components.map(([address]) => address), components.map(() => 20n * ONE)],
+        ),
+        [`${EUSD_RTOKEN}:${BASKETS_NEEDED_SELECTOR}`]: 100n * ONE,
+        [`${EUSD_RTOKEN}:${DECIMALS_SELECTOR}`]: 18n,
+        [`${EUSD_RTOKEN}:${REDEMPTION_AVAILABLE_SELECTOR}`]: null,
+        [`${EUSD_RTOKEN}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * ONE,
+        ...Object.fromEntries(components.flatMap(([address, plugin]) => [
+          [`${EUSD_ASSET_REGISTRY}:${TO_ASSET_SELECTOR}${encodeAddress(address)}`, encodeAddressResult(plugin)],
+          [`${address}:${DECIMALS_SELECTOR}`, 18n],
+          [`${plugin}:${PRICE_SELECTOR}`, encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE])],
+          [`${plugin}:${COLLATERAL_STATUS_SELECTOR}`, 0n],
+        ])),
+      },
+    });
+    const result = await fetchReserveProtocolDtfReserves(eusd as never, eusd.liveReservesConfig as LiveReservesConfig, signal);
+    for (const [address, , coinId] of components) {
+      const slice = result.slices.find((row) => row.sourceKey === `reserve-protocol-dtf:${address}`);
+      expect(slice?.coinId).toBe(coinId);
+      expect(slice?.pct).toBe(20);
+    }
+    expect(result.warnings?.map((warning) => warning.code)).toEqual(["reserve-protocol-dtf-undercollateralized"]);
+  });
+
   it("reads Reserve Protocol quote and asset plugin prices directly onchain", async () => {
     const config = createOnchainConfig(true);
     mockReserveProtocolOnchain({

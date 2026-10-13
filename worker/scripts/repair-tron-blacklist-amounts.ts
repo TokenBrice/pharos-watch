@@ -16,11 +16,12 @@ const SCRIPT = "repair-tron-blacklist-amounts";
 const TOKEN = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 const TOKEN_HEX = "a614f803b6fd780986a42c78ec9c7f77e6ded13c";
 const FREEZE_TOPIC = "42e160154868087d6bfdc0ca23d96a1c1cfa32f1b72ba9ba27b69b98a0d819dc";
+const TRANSFER_TOPIC = "ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 const integer = z.number().int().nonnegative().safe();
 const hex = z.string().regex(/^[0-9a-f]{64}$/i);
 const block = z.object({ blockID: hex, block_header: z.object({ raw_data: z.object({ number: integer, timestamp: integer }) }) });
 const event = z.object({ id: z.string(), address: z.string().regex(/^0x[0-9a-f]{40}$/), base58: z.string(), tx_hash: hex, block_number: integer, timestamp: integer, configKey: z.string().min(1) });
-const receipt = z.object({ id: hex, blockNumber: integer, blockTimeStamp: integer, receipt: z.object({ result: z.literal("SUCCESS") }), log: z.array(z.object({ address: z.string(), topics: z.array(z.string()) })) });
+const receipt = z.object({ id: hex, blockNumber: integer, blockTimeStamp: integer, receipt: z.object({ result: z.literal("SUCCESS") }), log: z.array(z.object({ address: z.string(), topics: z.array(z.string()), data: z.string().optional() })) });
 const transfer = z.object({ transaction_id: hex, token_info: z.object({ address: z.literal(TOKEN), decimals: z.literal(6) }), block_timestamp: integer, from: z.string(), to: z.string(), type: z.string(), value: z.string().regex(/^\d+$/) });
 const schema = z.object({
   version: z.literal(1), provider: z.literal("https://api.trongrid.io"), capturedAtMs: integer,
@@ -34,6 +35,8 @@ const schema = z.object({
       }),
     }),
     freezeReceipt: receipt,
+    freezeBlock: block.extend({ transactions: z.array(z.object({ txID: hex })).min(1) }).optional(),
+    boundaryReceipts: z.array(receipt).optional(),
     history: z.object({ initialUrl: z.string(), complete: z.literal(true), pages: z.array(z.object({ requestUrl: z.string(), response: z.object({ success: z.literal(true), data: z.array(transfer), meta: z.object({ at: integer, links: z.object({ next: z.string().optional() }).optional() }) }) })).min(1).max(100) }),
   })).min(1).max(8),
 });
@@ -70,6 +73,15 @@ export async function validateTronReplayEvidence(input: unknown, nowMs = Date.no
     assert(r.id === e.tx_hash && r.blockNumber === e.block_number && r.blockTimeStamp === e.timestamp * 1000, "Freeze receipt identity mismatch");
     const logIndex = r.log.findIndex((l) => l.address.toLowerCase() === TOKEN_HEX && l.topics[0]?.toLowerCase() === FREEZE_TOPIC && l.topics[1]?.toLowerCase() === e.address.slice(2).padStart(64, "0"));
     assert(logIndex >= 0 && r.log.filter((l) => l.address.toLowerCase() === TOKEN_HEX && l.topics[0]?.toLowerCase() === FREEZE_TOPIC && l.topics[1]?.toLowerCase() === e.address.slice(2).padStart(64, "0")).length === 1, "Freeze event not uniquely proved");
+    let freezePosition = -1;
+    if (entry.freezeBlock) {
+      const b = entry.freezeBlock;
+      assert(b.block_header.raw_data.number === e.block_number && b.block_header.raw_data.timestamp === e.timestamp * 1000, "Freeze block identity mismatch");
+      const transactionIds = b.transactions.map((t) => t.txID.toLowerCase());
+      assert(new Set(transactionIds).size === transactionIds.length, "Duplicate block transaction");
+      freezePosition = transactionIds.indexOf(e.tx_hash.toLowerCase());
+      assert(freezePosition >= 0, "Freeze transaction missing from block");
+    }
     // Tron event_index is provider-owned, so the DB event identity is checked separately;
     // do not assume it equals the receipt-wide log index.
     const initial = new URL(entry.history.initialUrl);
@@ -94,15 +106,33 @@ export async function validateTronReplayEvidence(input: unknown, nowMs = Date.no
         assert(t.type === "Transfer" || t.type === "Approval", "Unsupported token history event");
         if (t.type === "Approval") continue;
         assert(t.from === e.base58 || t.to === e.base58, "Unrelated transfer");
-        assert(t.block_timestamp !== e.timestamp * 1000, "Ambiguous same-timestamp transfer");
+        let afterFreeze = t.block_timestamp > e.timestamp * 1000;
+        if (t.block_timestamp === e.timestamp * 1000) {
+          assert(entry.freezeBlock && freezePosition >= 0 && t.transaction_id.toLowerCase() !== e.tx_hash.toLowerCase(), "Ambiguous same-timestamp transfer");
+          const position = entry.freezeBlock.transactions.findIndex((tx) => tx.txID.toLowerCase() === t.transaction_id.toLowerCase());
+          assert(position >= 0, "Boundary transfer missing from freeze block");
+          const receipts = entry.boundaryReceipts?.filter((receipt) => receipt.id === t.transaction_id) ?? [];
+          assert(receipts.length === 1, "Boundary transfer receipt not unique");
+          const receipt = receipts[0];
+          assert(receipt.blockNumber === e.block_number && receipt.blockTimeStamp === e.timestamp * 1000, "Boundary receipt identity mismatch");
+          const from = await tronBase58ToHex(t.from), to = await tronBase58ToHex(t.to);
+          assert(from && to, "Invalid boundary transfer address");
+          const matchingLogs = receipt.log.filter((log) => log.address.toLowerCase() === TOKEN_HEX
+            && log.topics.length === 3 && log.topics[0].toLowerCase() === TRANSFER_TOPIC
+            && log.topics[1].toLowerCase() === from.slice(2).padStart(64, "0")
+            && log.topics[2].toLowerCase() === to.slice(2).padStart(64, "0")
+            && log.data != null && /^[0-9a-f]{64}$/i.test(log.data) && BigInt(`0x${log.data}`) === BigInt(t.value));
+          assert(matchingLogs.length === 1, "Boundary transfer not uniquely proved by receipt");
+          afterFreeze = position > freezePosition;
+        }
         const identity = JSON.stringify([t.transaction_id, t.block_timestamp, t.from, t.to, t.value]);
         assert(!records.has(identity), "Duplicate transfer record requires receipt-level review"); records.add(identity);
         const value = BigInt(t.value);
-        if (value > 0n && t.block_timestamp < e.timestamp * 1000) nonTrivialPreFreezeHistory = true;
+        if (value > 0n && !afterFreeze) nonTrivialPreFreezeHistory = true;
         const delta = (t.to === e.base58 ? value : 0n) - (t.from === e.base58 ? value : 0n);
         net += delta;
         assert(net >= 0n, "Incomplete history has a negative running balance");
-        if (t.block_timestamp > e.timestamp * 1000) postFreeze += delta;
+        if (afterFreeze) postFreeze += delta;
       }
       next = page.response.meta.links?.next;
     }

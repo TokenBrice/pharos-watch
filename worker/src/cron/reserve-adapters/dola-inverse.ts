@@ -38,7 +38,7 @@ interface FirmMarketsResponse {
 
 type DolaBucket = "stablecoin" | "eth-lst" | "btc" | "governance" | "sinvusd" | "other";
 
-const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD", "USR", "wstUSR", "reUSD", "FraxPyUSD lp", "DOLA-FRAXBP"]);
+const STABLECOIN_ASSETS = new Set(["sUSDe", "sUSDS", "DAI", "USDC", "USDT", "crvUSD", "scrvUSD", "FRAX", "PYUSD", "USR", "wstUSR", "reUSD", "ysyBOLD", "FraxPyUSD lp", "DOLA-FRAXBP"]);
 const ETH_LST_ASSETS = new Set(["WETH", "wstETH", "stETH", "rETH", "weETH", "cbETH"]);
 const BTC_ASSETS = new Set(["WBTC", "cbBTC", "tBTC"]);
 const GOVERNANCE_ASSETS = new Set(["INV", "CRV", "CVX", "cvxCRV", "st-yCRV", "cvxFXS"]);
@@ -54,6 +54,7 @@ const TRACKED_STABLECOIN_ASSETS: Partial<Record<string, { coinId: string; risk: 
   PYUSD: { coinId: "pyusd-paypal", risk: "low" },
   USR: { coinId: "usr-resolv", risk: "high" },
   reUSD: { coinId: "reusd-resupply", risk: "high" },
+  ysyBOLD: { coinId: "ybold-yearn", risk: "medium" },
 };
 
 function getTrackedStablecoinAsset(symbol: string): { coinId: string; risk: ReserveSlice["risk"] } | undefined {

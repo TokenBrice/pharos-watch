@@ -6,7 +6,7 @@ export const PROFILE: CompilerProfile = {
   product: "AUDM",
   profile: "audm-v1",
   officialIndexUrl: "https://www.macropod.com/transparency",
-  reportUrl: "https://cdn.prod.website-files.com/69df87da28d300c1b443a0d6/6abf4aae214c978251192bb2_261001%20Catena%20Digital%20Pty%20Ltd%20Reserve%20Verification%20Report%20as%20at%2030th%20Sept%202026.pdf",
+  reportUrl: "https://docs.macropod.com/legal/reserve-verification-report-2026-09-30.pdf",
   reportDate: "2026-09-30",
   reportAsOf: "2026-09-30T23:59:59+10:00",
   reportTimeZone: "Australian Eastern Standard Time (AEST, UTC+10)",

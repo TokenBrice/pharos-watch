@@ -66,6 +66,32 @@
       "fallbackRpcUrl": "https://eth.llamarpc.com",
       "assets": [
         {
+          "address": "0x7133ebcb1a23e3d8be7ff09362b02b2a2e4c3da4",
+          "name": "Static Aave USDT (saEthUSDT)",
+          "risk": "medium",
+          "coinId": "usdt-tether",
+          "depType": "collateral"
+        },
+        {
+          "address": "0x9a1d6bd5b8642c41f25e0958129b85f8e1176f3e",
+          "name": "Gauntlet USDC Frontier vault (gtusdcf)",
+          "risk": "high"
+        },
+        {
+          "address": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+          "name": "Gauntlet USDC Prime vault (gtusdcp)",
+          "risk": "medium",
+          "coinId": "gtusdcp-gauntlet",
+          "depType": "collateral"
+        },
+        {
+          "address": "0xb576765fb15505433af24fee2c0325895c559fb2",
+          "name": "Sentora PYUSD Main vault (senPYUSDmain)",
+          "risk": "medium",
+          "coinId": "senpyusdmain-sentora",
+          "depType": "collateral"
+        },
+        {
           "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
           "name": "Static Aave USDC (saEthUSDC)",
           "risk": "low",

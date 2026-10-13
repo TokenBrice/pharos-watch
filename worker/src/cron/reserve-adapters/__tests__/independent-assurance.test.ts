@@ -719,6 +719,9 @@ describe("independent-assurance manifest framework", () => {
   });
 
   it.each([
+    ["reserve-verification-report-2026-09-30.pdf", "Supply Reporting (Monthly)", "2026-09-30"],
+    ["reserve-verification-report-2026-09-31.pdf", "Supply Reporting (Monthly)", null],
+    ["reserve-verification-report-2026-09-30.pdf", "as at 1st October 2026", null],
     ["261001 Catena Reserve Verification Report as at 30th Sept 2026.pdf", "", "2026-09-30"],
     ["261001 Catena Reserve Verification Report.pdf", "Verification of AUDM Reserves as at 30th September 2026", "2026-09-30"],
     ["260901 Catena Reserve Verification Report as at 1st September 2026.pdf", "", "2026-09-01"],
@@ -730,6 +733,26 @@ describe("independent-assurance manifest framework", () => {
     expect(AUDM_INDEPENDENT_ASSURANCE_PROFILE.reportDateFromCandidate(
       `https://cdn.prod.website-files.com/${encodeURIComponent(fileName)}`, text,
     )).toBe(expected);
+  });
+
+  it("recognizes the migrated AUDM monthly report without treating the quarterly AUP as that report", () => {
+    expect(AUDM_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(
+      "https://docs.macropod.com/legal/reserve-verification-report-2026-09-30.pdf", "Supply Reporting (Monthly)",
+    )).toBe(true);
+    expect(AUDM_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(
+      "https://docs.macropod.com/legal/agreed-upon-procedures-report-2026-06.pdf", "Independent Quarterly Reconciliation",
+    )).toBe(false);
+  });
+
+  it("verifies the migrated AUDM monthly index before checking exact report bytes", async () => {
+    const reviewed = getIndependentAssuranceManifest("AUDM");
+    const html = `<a href="${reviewed.reportUrl}">Supply Reporting (Monthly)</a>
+      <a href="https://docs.macropod.com/legal/agreed-upon-procedures-report-2026-06.pdf">Independent Quarterly Reconciliation</a>`;
+    await expect(verifyFixtureIndex("AUDM", AUDM_INDEPENDENT_ASSURANCE_PROFILE, "", html))
+      .rejects.toThrow("PDF byte length");
+    await expect(verifyFixtureIndex("AUDM", AUDM_INDEPENDENT_ASSURANCE_PROFILE, "",
+      `${html}<a href="https://docs.macropod.com/legal/reserve-verification-report-2026-10-31.pdf">Monthly report</a>`))
+      .rejects.toThrow("newer unreviewed report");
   });
 
   it.each([
