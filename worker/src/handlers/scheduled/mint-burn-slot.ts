@@ -73,6 +73,7 @@ export async function runMintBurnSlot(
         lane: options.lane,
         jobName: options.jobName,
         onProgress: reportProgress,
+        chainRpcs: runtime.chainRpcs,
       });
       if (!options.runSidecar || (primary.status !== undefined && primary.status !== "ok" && primary.status !== "degraded")) {
         return primary;

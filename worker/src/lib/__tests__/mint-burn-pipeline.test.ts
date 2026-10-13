@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mintBurnAlchemyEndpoint } from "../mint-burn-pipeline/rpc";
 
 vi.mock("../db", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../db")>();
@@ -222,7 +223,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
       }),
-      "https://eth-mainnet.g.alchemy.com/v2/",
+      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -270,7 +271,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
       }),
-      "https://eth-mainnet.g.alchemy.com/v2/",
+      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -301,7 +302,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
       }),
-      "https://eth-mainnet.g.alchemy.com/v2/",
+      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       { count: 0, limit: 200 },
       new Map(),
     );
@@ -344,7 +345,7 @@ describe("mint-burn shared pipeline modules", () => {
           bridgeSignalSelectors: ["0x96f4e9f9"],
         },
       }),
-      "https://eth-mainnet.g.alchemy.com/v2/",
+      [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
       { count: 0, limit: 200 },
       new Map(),
     );

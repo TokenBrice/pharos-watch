@@ -160,7 +160,7 @@ describe("scheduled runtime Dwellir enablement", () => {
       expect(dwellir.length).toBeLessThanOrEqual(1);
       expect(endpoints.filter((endpoint) => endpoint.operator !== "dwellir")).toEqual(registryConfig.endpoints);
     }
-    for (const chain of ["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche"]) {
+    for (const chain of ["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche", "polygon"]) {
       expect(runtime.chainRpcs.get(chain)?.endpoints[0]).toMatchObject({ operator: "dwellir", position: "registry" });
     }
     expect(runtime.chainRpcs.get("base")?.endpoints.slice(0, 2).map((endpoint) => endpoint.operator))

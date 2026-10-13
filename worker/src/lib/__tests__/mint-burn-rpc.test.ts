@@ -1,0 +1,196 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buildChainRpcs, type RpcEndpoint } from "../chain-registry";
+import { createBudget } from "../evm-logs";
+import { fetchMintBurnLogs, getMintBurnBlockNumber, mintBurnRpcEndpoints, resolveMintBurnBlockTimestamps } from "../mint-burn-pipeline/rpc";
+import { fetchConservationBoundaries, getMintBurnConservationRuntimeEntry } from "../mint-burn-conservation";
+import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { classifyBridgeBurnRows } from "../mint-burn-pipeline/classification";
+import type { MintBurnRow } from "../mint-burn-pipeline/types";
+import * as credits from "../rpc-provider-budget";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { syncMintBurnConfig } from "../../cron/mint-burn/sync-config";
+
+type Call = { id: number; method: string; params: unknown[] };
+const word = (value: number) => `0x${value.toString(16).padStart(64, "0")}`;
+const unavailable = { error: { code: -32602, message: "provider unavailable" } };
+function logRange(call: Call): { fromBlock: string; toBlock: string } {
+  const range = call.params[0];
+  if (!range || typeof range !== "object" || !("fromBlock" in range) || typeof range.fromBlock !== "string"
+    || !("toBlock" in range) || typeof range.toBlock !== "string") throw new Error("invalid-test-log-range");
+  return { fromBlock: range.fromBlock, toBlock: range.toBlock };
+}
+function recorder(answer: (url: string, call: Call) => object) {
+  const fetcher = vi.fn(async (url: string, options: RequestInit) => {
+    const payload = JSON.parse(String(options.body)) as Call | Call[];
+    const respond = (call: Call) => ({ jsonrpc: "2.0", id: call.id, ...answer(url, call) });
+    return new Response(JSON.stringify(Array.isArray(payload) ? payload.map(respond) : respond(payload)));
+  });
+  vi.stubGlobal("fetch", fetcher);
+  return fetcher;
+}
+function admitted(chainId = "base"): readonly RpcEndpoint[] {
+  return mintBurnRpcEndpoints(chainId, "alchemy-test", buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test" }));
+}
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+describe("mint/burn ordered RPC fallback", () => {
+  it("keeps unadmitted contexts and 50k windows byte-identical", async () => {
+    const endpoint = mintBurnRpcEndpoints("base", "alchemy-test");
+    const registry = mintBurnRpcEndpoints("base", "alchemy-test", buildChainRpcs("alchemy-test"));
+    expect(JSON.stringify(registry)).toBe(JSON.stringify(endpoint));
+    const fetcher = recorder(() => ({ result: [] }));
+    const budget = createBudget(20);
+    expect(await fetchMintBurnLogs(endpoint, "0xabc", [], 1, 50_000, budget)).toMatchObject({ complete: true, calls: 1 });
+    expect(budget.count).toBe(1);
+    expect(JSON.parse(String(fetcher.mock.calls[0][1].body)).params[0]).toMatchObject({ fromBlock: "0x1", toBlock: "0xc350" });
+  });
+
+  it.each(["base", "arbitrum"])("falls back from Alchemy to metered 10k pages on %s", async (chain) => {
+    const endpoints = admitted(chain);
+    expect(endpoints.map((endpoint) => endpoint.operator)).toEqual(["alchemy", "dwellir"]);
+    const meter = vi.spyOn(credits, "recordDwellirCredits");
+    const fetcher = recorder((url, call) => call.method === "eth_blockNumber" ? { result: "0xc350" }
+      : url === endpoints[0].url ? unavailable : { result: [] });
+    const budget = createBudget(20);
+    expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, budget)).toMatchObject({ complete: true, scannedToBlock: 50_000, calls: 6 });
+    const pages = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call)
+      .filter((call) => call.method === "eth_getLogs").slice(1).map((call) => call.params[0] as { fromBlock: string; toBlock: string });
+    expect(pages).toHaveLength(5);
+    expect(pages.map((page) => Number(page.toBlock) - Number(page.fromBlock) + 1)).toEqual([10_000, 10_000, 10_000, 10_000, 10_000]);
+    expect(budget.count).toBe(8);
+    expect(meter.mock.calls).toEqual([[1], [1], [1], [1], [1], [1]]);
+    expect(new Headers(fetcher.mock.calls[2][1].headers).get("X-Api-Key")).toBe("dwellir-test");
+  });
+
+  it("preserves the contiguous frontier when a provider switch fails mid-scan", async () => {
+    const endpoints = admitted();
+    const fetcher = recorder((url, call) => {
+      if (call.method === "eth_blockNumber") return { result: "0xc350" };
+      const range = call.params[0] as { fromBlock: string; toBlock: string };
+      if (url === endpoints[0].url) {
+        if (Number(range.toBlock) - Number(range.fromBlock) > 25_000) return { error: { code: -32005, message: "block range limit exceeded" } };
+        return Number(range.fromBlock) === 1 ? { result: [] } : unavailable;
+      }
+      return Number(range.fromBlock) === 25_001 ? { result: [] } : unavailable;
+    });
+    expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, createBudget(20)))
+      .toMatchObject({ complete: false, scannedToBlock: 35_000 });
+    expect(fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call)
+      .filter((call) => call.method === "eth_getLogs").slice(3)
+      .map((call) => Number(logRange(call).fromBlock))).toEqual([25_001, 35_001]);
+  });
+
+  it("does not advance an empty-scan cursor past a fallback head lagging by more than the safety margin", async () => {
+    const endpoints = admitted();
+    const fallbackHead = 49_900; // Primary head is 100 blocks ahead; the lane safety margin is only 75.
+    const fetcher = recorder((url, call) => {
+      if (call.method === "eth_blockNumber") {
+        return { result: `0x${(url === endpoints[0].url ? 50_000 : fallbackHead).toString(16)}` };
+      }
+      // This provider would silently accept a future toBlock and return empty logs.
+      return url === endpoints[0].url ? unavailable : { result: [] };
+    });
+    const config = MINT_BURN_CONFIGS.find((config) => config.chain.chainId === "base")!;
+    const result = await syncMintBurnConfig({
+      db: mockD1([{ match: "INSERT INTO cache", rows: [] }]), config, key: "base-fixture", tier: "critical", fromBlock: 1, scanTo: 50_000,
+      chainHead: 50_000, rpcEndpoints: endpoints, configBudgetLimit: 60, runTimestamp: 1100,
+      priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
+      txContextCache: new Map(), affectedHours: new Map(), safetyMarginBlocks: 75,
+    });
+    expect(result.newLastBlock).toBe(fallbackHead);
+    expect(result.summary.advanceReason).toBe("partial-frontier");
+    expect(result.summary.eventCoverage.every((coverage) => !coverage.complete && coverage.scannedToBlock === fallbackHead)).toBe(true);
+    const fallbackPages = fetcher.mock.calls.filter(([url]) => url === endpoints[1].url)
+      .map(([, options]) => JSON.parse(String(options.body)) as Call).filter((call) => call.method === "eth_getLogs");
+    expect(fallbackPages.every((call) => Number(logRange(call).toBlock) <= fallbackHead)).toBe(true);
+  });
+
+  it.each(["ethereum", "base"])("never reaches disabled/unreviewed %s Dwellir", async (chain) => {
+    const map = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test", dwellirRoutingDisabledChains: new Set(["base"]) });
+    const endpoints = mintBurnRpcEndpoints(chain, "alchemy-test", map);
+    expect(endpoints).toHaveLength(1);
+    const fetcher = recorder(() => unavailable);
+    expect(await getMintBurnBlockNumber(endpoints, createBudget(20))).toBeNull();
+    await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, createBudget(20));
+    expect(fetcher.mock.calls.every(([url]) => !url.includes("dwellir"))).toBe(true);
+  });
+
+  it("falls back for heads and hash-bound timestamps, rejecting a mismatching fork", async () => {
+    const endpoints = admitted();
+    const meter = vi.spyOn(credits, "recordDwellirCredits");
+    recorder((url, call) => {
+      if (url === endpoints[0].url) return unavailable;
+      return { result: call.method === "eth_blockNumber" ? "0x66" : { number: "0x66", timestamp: "0x400", hash: word(12) } };
+    });
+    expect(await getMintBurnBlockNumber(endpoints, createBudget(20))).toBe(102);
+    expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(12)]]) })).toEqual(new Map([[102, 1024]]));
+    expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(13)]]) })).toEqual(new Map());
+    expect(meter).toHaveBeenCalled();
+  });
+
+  it("uses the ordered fallback for pinned conservation boundaries", async () => {
+    const endpoints = admitted();
+    const original = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "gusd-gemini")!;
+    const config = { ...original, chain: { ...original.chain, chainId: "base" } };
+    const entry = { ...getMintBurnConservationRuntimeEntry(original)!, chainId: "base" };
+    const meter = vi.spyOn(credits, "recordDwellirCredits");
+    const fetcher = recorder((url, call) => {
+      if (url === endpoints[0].url) return unavailable;
+      if (call.method === "eth_getBlockByNumber") {
+        const opening = call.params[0] === "0x64";
+        return { result: { number: opening ? "0x64" : "0x66", timestamp: opening ? "0x3e8" : "0x400", hash: word(opening ? 10 : 12) } };
+      }
+      return { result: word(100) };
+    });
+    const budget = createBudget(20);
+    const result = await fetchConservationBoundaries({ requests: [{ key: "one", config, fromBlock: 101, toBlock: 102 }],
+      rpcEndpointsByChain: new Map([["base", endpoints]]), budget, checkedAt: 1100, lawFor: () => entry });
+    expect(result.get("one")).toMatchObject({ status: "ready", fromBlockHash: word(10), toBlockHash: word(12) });
+    expect(fetcher.mock.calls.map(([url]) => url)).toEqual([endpoints[0].url, endpoints[1].url, endpoints[0].url, endpoints[1].url, endpoints[0].url, endpoints[1].url]);
+    expect(budget.count).toBe(6);
+    expect(meter.mock.calls).toEqual([[2], [2], [2]]);
+  });
+
+  it.each(["budget", "deadline"])("preserves the conservation %s reason when fallback cannot start", async (kind) => {
+    const endpoints = admitted();
+    const original = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "gusd-gemini")!;
+    const config = { ...original, chain: { ...original.chain, chainId: "base" } };
+    const entry = { ...getMintBurnConservationRuntimeEntry(original)!, chainId: "base" };
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
+    const fetcher = recorder(() => {
+      if (kind === "deadline") clock.mockReturnValue(1100);
+      return unavailable;
+    });
+    const result = await fetchConservationBoundaries({ requests: [{ key: "one", config, fromBlock: 101, toBlock: 102 }],
+      rpcEndpointsByChain: new Map([["base", endpoints]]), budget: createBudget(kind === "budget" ? 1 : 20),
+      checkedAt: 1100, deadlineMs: kind === "deadline" ? 1100 : undefined, lawFor: () => entry });
+    expect(result.get("one")).toEqual({ status: "unavailable", reason: "audit-budget-or-deadline" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { logHash: 12, receiptHash: 12, shortfalls: 0 },
+    { logHash: 13, receiptHash: 12, shortfalls: 1 },
+    { logHash: 12, receiptHash: 13, shortfalls: 1 },
+  ])("accepts only hash-consistent fallback receipts: $logHash/$receiptHash", async ({ logHash, receiptHash, shortfalls }) => {
+    const endpoints = admitted();
+    const config = MINT_BURN_CONFIGS.find((config) => config.bridgeDetection)!;
+    const txHash = word(20);
+    const row: MintBurnRow = {
+      id: "event", stablecoin_id: config.stablecoinId, symbol: config.symbol, chain_id: "base",
+      tx_hash: txHash, direction: "burn", counterparty: null, amount: 1, amount_usd: null,
+      price_used: null, price_timestamp: null, price_source: null, burn_type: null,
+      burn_review_reason: null, flow_type: "standard", block_number: 102, timestamp: 1024,
+      explorer_tx_url: "https://basescan.org/tx/" + txHash,
+    };
+    const fetcher = recorder((url, call) => {
+      if (url === endpoints[0].url) return unavailable;
+      return { result: call.method === "eth_getTransactionByHash" ? { hash: txHash, to: null, input: "0x" }
+        : { transactionHash: txHash, to: null, blockHash: word(receiptHash), logs: [{ address: config.contractAddress, topics: [], data: word(1),
+          blockNumber: "0x66", transactionHash: txHash, transactionIndex: "0x0", logIndex: "0x0", blockHash: word(logHash), removed: false }] } };
+    });
+    expect(await classifyBridgeBurnRows([row], config, endpoints, createBudget(20), new Map(), undefined,
+      { blockHashesByTx: new Map([[txHash, word(12)]]) })).toMatchObject({ txContextShortfalls: shortfalls, deferredTxHashes: shortfalls ? [txHash] : [] });
+    expect(fetcher.mock.calls.some(([url]) => url === endpoints[1].url)).toBe(true);
+  });
+});

@@ -17,6 +17,7 @@ import {
 } from "../mint-burn-bridge-classifier";
 import type { MintBurnContractConfig } from "../mint-burn-contracts";
 import { budgetExhausted } from "../evm-logs";
+import type { RpcEndpoint } from "../chain-registry";
 import type {
   BurnClassificationCounters,
   MintBurnRequestBudget,
@@ -31,6 +32,7 @@ const TX_CONTEXT_MIN_REMAINING_MS = 2_000;
 
 interface BridgeClassificationOptions {
   deadlineMs?: number;
+  blockHashesByTx?: ReadonlyMap<string, string>;
 }
 
 interface TxContextResolution {
@@ -95,7 +97,7 @@ function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution
 }
 
 async function resolveTxContextBatch(
-  alchemyUrl: string,
+  rpcEndpoints: readonly RpcEndpoint[],
   txHashes: string[],
   budget: MintBurnRequestBudget,
   txContextCache: Map<string, MintBurnTxContext | null>,
@@ -106,7 +108,8 @@ async function resolveTxContextBatch(
   const uncached: string[] = [];
 
   for (const txHash of txHashes) {
-    const cached = txContextCache.get(txHash);
+    const cacheKey = `${txHash}:${options?.blockHashesByTx?.get(txHash) ?? "unverified"}`;
+    const cached = txContextCache.get(cacheKey);
     if (cached !== undefined) {
       resolutions.set(txHash, { context: cached, shortfall: false });
     } else {
@@ -122,17 +125,34 @@ async function resolveTxContextBatch(
     return resolutions;
   }
 
-  const timeoutMs = options?.deadlineMs != null
-    ? Math.max(1, options.deadlineMs - Date.now())
-    : undefined;
-  const fetched = await getAlchemyTransactionContextBatchMany(alchemyUrl, uncached, budget, signal, timeoutMs, options?.deadlineMs);
-
-  for (const txHash of uncached) {
-    const resolution = toTxContext(fetched.get(txHash) ?? { tx: null, receipt: null });
-    if (!resolution.shortfall) {
-      txContextCache.set(txHash, resolution.context);
+  let pending = uncached;
+  for (const endpoint of rpcEndpoints) {
+    if (pending.length === 0 || budgetExhausted(budget) || !hasRuntimeWindow(options)) break;
+    const timeoutMs = options?.deadlineMs != null
+      ? Math.max(1, options.deadlineMs - Date.now())
+      : undefined;
+    const fetched = await getAlchemyTransactionContextBatchMany(endpoint.url, pending, budget, signal, timeoutMs, options?.deadlineMs);
+    const unresolved: string[] = [];
+    for (const txHash of pending) {
+      const batch = fetched.get(txHash) ?? { tx: null, receipt: null };
+      const expectedHash = options?.blockHashesByTx?.get(txHash);
+      const hashMatches = expectedHash == null || (batch.receipt != null
+        && (batch.receipt.blockHash == null || (typeof batch.receipt.blockHash === "string" && batch.receipt.blockHash.toLowerCase() === expectedHash))
+        && (batch.tx?.blockHash == null || (typeof batch.tx.blockHash === "string" && batch.tx.blockHash.toLowerCase() === expectedHash))
+        && batch.receipt.logs.length > 0
+        && batch.receipt.logs.every((log) => log.blockHash?.toLowerCase() === expectedHash));
+      const resolution = hashMatches ? toTxContext(batch) : { context: null, shortfall: true };
+      if (!resolution.shortfall) {
+        txContextCache.set(`${txHash}:${expectedHash ?? "unverified"}`, resolution.context);
+      } else {
+        unresolved.push(txHash);
+      }
+      resolutions.set(txHash, resolution);
     }
-    resolutions.set(txHash, resolution);
+    pending = unresolved;
+  }
+  for (const txHash of pending) {
+    if (!resolutions.has(txHash)) resolutions.set(txHash, { context: null, shortfall: true });
   }
 
   return resolutions;
@@ -145,7 +165,7 @@ function chunkTxHashes(txHashes: string[]): string[][] {
 export async function classifyBridgeBurnRows(
   rows: MintBurnRow[],
   config: MintBurnContractConfig,
-  alchemyUrl: string,
+  rpcEndpoints: readonly RpcEndpoint[],
   budget: MintBurnRequestBudget,
   txContextCache: Map<string, MintBurnTxContext | null>,
   signal?: AbortSignal,
@@ -172,7 +192,7 @@ export async function classifyBridgeBurnRows(
   const batchResults = await mapWithConcurrency(
     chunkTxHashes(txHashes),
     TX_CONTEXT_BATCH_CONCURRENCY,
-    (txHashBatch) => resolveTxContextBatch(alchemyUrl, txHashBatch, budget, txContextCache, signal, options),
+    (txHashBatch) => resolveTxContextBatch(rpcEndpoints, txHashBatch, budget, txContextCache, signal, options),
   );
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
   let txContextShortfalls = 0;

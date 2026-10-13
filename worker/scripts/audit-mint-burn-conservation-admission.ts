@@ -31,6 +31,7 @@ import type { MintBurnContractConfig, MintBurnEventDef } from "../src/lib/mint-b
 import { buildAlchemyUrl, fetchAlchemyLogs, getAlchemyBlockNumber } from "../src/lib/alchemy-logs";
 import type { AlchemyLogEntry } from "../src/lib/alchemy-logs";
 import { eventDefTopicFilters } from "../src/cron/mint-burn/sync-config";
+import { mintBurnAlchemyEndpoint } from "../src/lib/mint-burn-pipeline/rpc";
 import { renderMintBurnConservationRuntime } from "../../scripts/maintenance/generate-mint-burn-conservation-runtime";
 import { fetchEvmRpcBatchDetailed } from "../src/lib/evm-rpc";
 import {
@@ -549,7 +550,11 @@ export async function runAdmissionAuditCli(
       boundaryRequests.push({ key: boundaryKey(config, window), config, fromBlock: window.fromBlock, toBlock: window.toBlock });
     }
   }
-  const boundaries = await fetchConservationBoundaries({ requests: boundaryRequests, rpcUrlByChain, budget, checkedAt, lawFor });
+  const boundaries = await fetchConservationBoundaries({
+    requests: boundaryRequests,
+    rpcEndpointsByChain: new Map([...rpcUrlByChain].map(([chainId, url]) => [chainId, [mintBurnAlchemyEndpoint(url)]])),
+    budget, checkedAt, lawFor,
+  });
 
   const audits: ConfigAudit[] = [];
   for (const config of configs) {

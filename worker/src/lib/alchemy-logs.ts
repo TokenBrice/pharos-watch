@@ -32,12 +32,14 @@ export interface AlchemyTransactionEntry {
   hash: string;
   to: string | null;
   input: string;
+  blockHash?: string | null;
 }
 
 export interface AlchemyTransactionReceipt {
   transactionHash: string;
   to: string | null;
   logs: AlchemyLogEntry[];
+  blockHash?: string;
 }
 
 export interface AlchemyTransactionContextBatch {
@@ -612,6 +614,10 @@ async function fetchAlchemyLogsRange(
       options?.deadlineMs != null ? Math.max(1, options.deadlineMs - Date.now()) : ALCHEMY_RPC_TIMEOUT_MS;
     const rpc = await jsonRpcCall<AlchemyLogEntry[]>(alchemyUrl, "eth_getLogs", params, signal, timeoutMs);
     if (Array.isArray(rpc.result)) {
+      if (!rpc.result.every((log) => isAlchemyLogEntry(log) && log.blockHash.length > 0)) {
+        return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth,
+          failureReason: "invalid-log-payload" };
+      }
       return { logs: rpc.result, complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
     }
 
