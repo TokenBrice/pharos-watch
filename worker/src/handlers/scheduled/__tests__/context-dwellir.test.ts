@@ -160,11 +160,11 @@ describe("scheduled runtime Dwellir enablement", () => {
       expect(dwellir.length).toBeLessThanOrEqual(1);
       expect(endpoints.filter((endpoint) => endpoint.operator !== "dwellir")).toEqual(registryConfig.endpoints);
     }
-    for (const chain of ["mantle", "sonic", "gnosis", "tempo", "plasma"]) {
+    for (const chain of ["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche"]) {
       expect(runtime.chainRpcs.get(chain)?.endpoints[0]).toMatchObject({ operator: "dwellir", position: "registry" });
     }
     expect(runtime.chainRpcs.get("base")?.endpoints.slice(0, 2).map((endpoint) => endpoint.operator))
-      .toEqual(["alchemy", "dwellir"]);
+      .toEqual(["dwellir", "alchemy"]);
 
     const ethereumEndpoints = runtime.chainRpcs.get("ethereum")?.endpoints ?? [];
     expect(ethereumEndpoints[ethereumEndpoints.length - 1]).toMatchObject({
@@ -180,7 +180,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     expect(hasRegistryRpc(registryOnly.get("megaeth"))).toBe(false);
     const megaeth = runtime.chainRpcs.get("megaeth");
     expect(hasRegistryRpc(megaeth)).toBe(false);
-    expect(supplementalRpcEndpoints(megaeth).map((endpoint) => endpoint.operator)).toEqual(["alchemy", "dwellir"]);
+    expect(supplementalRpcEndpoints(megaeth).map((endpoint) => endpoint.operator)).toEqual(["dwellir", "alchemy"]);
 
     for (const chainId of ["cronos", "flow", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko"]) {
       expect(registryOnly.has(chainId), chainId).toBe(false);
@@ -199,14 +199,15 @@ describe("scheduled runtime Dwellir enablement", () => {
     const before = [...runtime.chainRpcs];
     await runJob(runtime);
     expect([...runtime.chainRpcs]).toEqual(before);
+    expect(JSON.stringify([...runtime.chainRpcs])).toBe(JSON.stringify(before));
     expect(runtime.dwellirNative).toBeUndefined();
   });
 
   it("parses the runtime rollback CSV without withholding supplemental fallback", async () => {
     const { db } = makeContextDb();
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY, disabledChains: " MANTLE, Base,GNOSIS ,Sonic, typo,TYPO " });
+    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY, disabledChains: " MANTLE, Base,GNOSIS ,Sonic, Linea, typo,TYPO " });
     await runJob(runtime);
-    for (const chain of ["mantle", "base", "gnosis", "sonic"]) {
+    for (const chain of ["mantle", "base", "gnosis", "sonic", "linea"]) {
       const endpoints = runtime.chainRpcs.get(chain)!.endpoints;
       expect(endpoints[endpoints.length - 1]).toMatchObject({
         operator: "dwellir", position: "supplemental", routingDisabled: true,
@@ -223,6 +224,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(JSON.stringify([...runtime.chainRpcs])).toBe(JSON.stringify([...registryOnly]));
     expect(runtime.dwellirNative).toBeUndefined();
     expect([...runtime.chainRpcs.keys()].sort()).toEqual([...registryOnly.keys()].sort());
     expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(0);
@@ -234,10 +236,12 @@ describe("scheduled runtime Dwellir enablement", () => {
       cacheRows: { [ledgerCacheKey()]: ledgerRow(1_000) },
     });
     const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY, maxCreditsPerMonth: "1000" });
+    const before = JSON.stringify([...runtime.chainRpcs]);
 
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(JSON.stringify([...runtime.chainRpcs])).toBe(before);
     expect(runtime.dwellirNative).toBeUndefined();
     expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(1);
     // The circuit is never probed when the budget already forbids Dwellir.
@@ -247,10 +251,12 @@ describe("scheduled runtime Dwellir enablement", () => {
   it("withholds Dwellir when the credit ledger cannot be read", async () => {
     const { db } = makeContextDb({ cacheRows: { [ledgerCacheKey()]: "not-json" } });
     const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const before = JSON.stringify([...runtime.chainRpcs]);
 
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(JSON.stringify([...runtime.chainRpcs])).toBe(before);
     expect(runtime.dwellirNative).toBeUndefined();
   });
 
@@ -269,11 +275,13 @@ describe("scheduled runtime Dwellir enablement", () => {
       },
     });
     const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY });
+    const before = JSON.stringify([...runtime.chainRpcs]);
 
     await runJob(runtime);
     await runJob(runtime);
 
     expect(dwellirUrls(runtime.chainRpcs)).toEqual([]);
+    expect(JSON.stringify([...runtime.chainRpcs])).toBe(before);
     expect(runtime.dwellirNative).toBeUndefined();
     expect(cacheReadsFor(LEDGER_KEY_PREFIX)).toBe(1);
     expect(cacheReadsFor(CIRCUIT_CACHE_KEY)).toBe(1);

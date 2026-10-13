@@ -6,12 +6,17 @@ import { CcipPendingReadSchema, type CcipPendingCheckpoint, type CcipPendingRead
 import { observeCcipPending } from "../safety-score-v9/ccip-pending-observer";
 import { authenticateCcipPendingObservation } from "../safety-score-v9/supply-attribution-ccip-proof";
 import { fetchEvmBlockHeader, fetchEvmRpcBatch } from "../evm-rpc";
+import type * as EvmRpcModule from "../evm-rpc";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { getCache, setCache } from "../db-cache";
 import type { StablecoinMeta } from "@shared/types/core";
 import { deriveReviewedEconomicDeploymentPartition } from "../safety-score-v9/supply-attribution-contract";
+import { buildChainRpcs } from "../chain-registry";
 
-vi.mock("../evm-rpc", () => ({ fetchEvmBlockHeader: vi.fn(), fetchEvmRpcBatch: vi.fn() }));
+vi.mock("../evm-rpc", async importOriginal => ({
+  ...await importOriginal<typeof EvmRpcModule>(),
+  fetchEvmBlockHeader: vi.fn(), fetchEvmRpcBatch: vi.fn(),
+}));
 vi.mock("../fetch-retry", () => ({ fetchJsonWithRetry: vi.fn() }));
 vi.mock("../db-cache", () => ({ getCache: vi.fn(), setCache: vi.fn() }));
 type SendLog = { address: string; topics: string[]; data: `0x${string}`; blockNumber: string; blockHash: string; transactionHash: string; logIndex: string; removed: boolean };
@@ -449,6 +454,80 @@ describe("authenticated CCIP pending quantities", () => {
       { chain: "ethereum", from: 100, to: 2_000_099 },
       { chain: "ethereum", from: 2_000_100, to: 2_000_105 },
     ]);
+  });
+  it.each(["ink", "berachain"])("uses the admitted Dwellir 10,000-block span for CCIP on %s", async chain => {
+    const read = source(); read.lanes[0]!.destination.chainId = chain;
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const first = await observeCcipPending({ ...input(read), chainRpcs });
+    if (first.status !== "accepted") throw new Error(first.reason);
+    pinNumber = 12106; logRanges = [];
+    expect(await observeCcipPending({ ...input(read, first.checkpoint), chainRpcs })).toMatchObject({ status: "accepted", amount: "10" });
+    expect(logRanges.filter(range => range.chain === chain)).toEqual([
+      { chain, from: 106, to: 10105 }, { chain, from: 10106, to: 12106 },
+    ]);
+    for (const [, , options] of vi.mocked(fetchEvmRpcBatch).mock.calls) expect(options).toMatchObject({ chainRpcs, ccipArchiveRpc: true });
+    for (const [, , options] of vi.mocked(fetchEvmBlockHeader).mock.calls) expect(options).toMatchObject({ chainRpcs, ccipArchiveRpc: true });
+  });
+  it.each(["unadmitted", "disabled"])("retains the existing Ink CCIP 1,000-block span when Dwellir is %s", async admission => {
+    const read = source(); read.lanes[0]!.destination.chainId = "ink";
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, admission === "unadmitted" ? undefined : {
+      dwellirApiKey: "dwellir-key", dwellirRoutingDisabledChains: new Set([read.lanes[0]!.destination.chainId]),
+    });
+    const first = await observeCcipPending({ ...input(read), chainRpcs });
+    if (first.status !== "accepted") throw new Error(first.reason);
+    pinNumber = 2106; logRanges = [];
+    expect(await observeCcipPending({ ...input(read, first.checkpoint), chainRpcs })).toMatchObject({ status: "accepted", amount: "10" });
+    expect(logRanges.filter(range => range.chain === "ink")).toEqual([
+      { chain: "ink", from: 106, to: 1105 }, { chain: "ink", from: 1106, to: 2105 }, { chain: "ink", from: 2106, to: 2106 },
+    ]);
+  });
+  it("completes eight Ink history pages after earlier run-local Dwellir demotion", async () => {
+    const read = source(); read.lanes[0]!.destination.chainId = "ink";
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const first = await observeCcipPending({ ...input(read), chainRpcs });
+    if (first.status !== "accepted") throw new Error(first.reason);
+    const actualRpc = await vi.importActual<typeof EvmRpcModule>("../evm-rpc");
+    const config = chainRpcs.get("ink")!;
+    const dwellir = config.endpoints.find(endpoint => endpoint.operator === "dwellir")!;
+    const alchemy = config.endpoints.find(endpoint => endpoint.operator === "alchemy")!;
+    const originalFetch = vi.mocked(fetchJsonWithRetry).getMockImplementation()!;
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async url => {
+      if (url === dwellir.url) return null;
+      if (url === alchemy.url) return { response: new Response("[]"), body: [{ jsonrpc: "2.0", id: 1, result: CODE }] };
+      throw new Error("Unexpected demotion fixture RPC");
+    });
+    expect(await actualRpc.fetchEvmRpcBatch("ink", [
+      { method: "eth_getCode", params: [addr(21), { blockHash: word(105), requireCanonical: true }] },
+    ], { chainRpcs, ccipArchiveRpc: true, maxRetries: 0 })).toEqual([CODE]);
+    expect(actualRpc.usableCcipRpcEndpoints("ink", chainRpcs)).toEqual([alchemy]);
+    vi.mocked(fetchJsonWithRetry).mockImplementation(originalFetch);
+    const originalBatch = vi.mocked(fetchEvmRpcBatch).getMockImplementation()!;
+    vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain, requests, options) => {
+      for (const request of requests) {
+        if (chain !== "ink" || request.method !== "eth_getLogs") continue;
+        const filter = request.params[0] as { fromBlock: string; toBlock: string };
+        if (BigInt(filter.toBlock) - BigInt(filter.fromBlock) + 1n > 1000n) return null;
+      }
+      return originalBatch(chain, requests, options);
+    });
+    pinNumber = 8105; logRanges = [];
+    const args = { ...input(read, first.checkpoint), chainRpcs };
+    args.headers.set("ethereum", { number: 105, timestamp: 1000, hash: word(105) });
+    expect(await observeCcipPending(args)).toMatchObject({ status: "accepted", amount: "10" });
+    expect(logRanges).toEqual(Array.from({ length: 8 }, (_, i) => ({
+      chain: "ink", from: 106 + i * 1000, to: 1105 + i * 1000,
+    })));
+  });
+  it.each(["ink", "berachain"])("rejects an unauthenticated CCIP log hash with Dwellir admitted on %s", async chain => {
+    const read = source(); read.lanes[0]!.destination.chainId = chain;
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const first = await observeCcipPending({ ...input(read), chainRpcs });
+    if (first.status !== "accepted") throw new Error(first.reason);
+    pinNumber = 106; states["1"] = 2;
+    executed = [{ address: addr(31), topics: [EXECUTION_16, word(1), word(1), word(1001)],
+      data: encodeAbiParameters(parseAbiParameters("bytes32,uint8,bytes,uint256"), [word(70), 2, "0x", 100n]),
+      blockNumber: "0x6a", blockHash: word(9999), transactionHash: word(80), logIndex: "0x1", removed: false }];
+    expect(await observeCcipPending({ ...input(read, first.checkpoint), chainRpcs })).toEqual({ status: "rejected", reason: "event-anchor-mismatch" });
   });
   it("subdivides unavailable wide pages without admitting an unproved prefix", async () => {
     pinNumber = 4105;

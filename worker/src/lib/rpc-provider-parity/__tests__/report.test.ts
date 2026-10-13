@@ -713,11 +713,23 @@ describe("rpc provider trial report", () => {
     const { db } = fixtures.open();
     const env = { DWELLIR_API_KEY: "parity-test-key" };
     const report = await loadRpcProviderTrialReport(db, env, PARITY_NOW_SEC);
-    expect(report.observation?.chains.find((chain) => chain.chainId === "mantle")?.routing.statePlacement).toBe("primary");
-    expect(report.observation?.chains.find((chain) => chain.chainId === "base")?.routing.statePlacement).toBe("after-alchemy");
-    const disabled = await loadRpcProviderTrialReport(db, { ...env, DWELLIR_ROUTING_DISABLED_CHAINS: "MANTLE, Base" }, PARITY_NOW_SEC);
-    expect(disabled.observation?.chains.find((chain) => chain.chainId === "mantle")?.routing)
+    for (const chainId of ["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche"]) {
+      expect(report.observation?.chains.find((chain) => chain.chainId === chainId)?.routing.statePlacement, chainId).toBe("primary");
+    }
+    for (const chainId of ["linea", "scroll", "unichain", "worldchain", "megaeth", "stable"]) {
+      expect(report.observation?.chains.find((chain) => chain.chainId === chainId)?.routing)
+        .toEqual({ statePlacement: "supplemental-first", logScan: false });
+    }
+    for (const chainId of ["gnosis", "base", "optimism", "avalanche"]) {
+      expect(report.observation?.chains.find((chain) => chain.chainId === chainId)?.routing.logScan, chainId).toBe(true);
+    }
+    expect(report.observation?.chains.find((chain) => chain.chainId === "bsc")?.routing)
       .toEqual({ statePlacement: "supplemental", logScan: false });
+    const disabled = await loadRpcProviderTrialReport(db, { ...env, DWELLIR_ROUTING_DISABLED_CHAINS: "MANTLE, Base, Linea" }, PARITY_NOW_SEC);
+    for (const chainId of ["mantle", "base", "linea"]) {
+      expect(disabled.observation?.chains.find((chain) => chain.chainId === chainId)?.routing)
+        .toEqual({ statePlacement: "supplemental", logScan: false });
+    }
     const absent = await loadRpcProviderTrialReport(db, {}, PARITY_NOW_SEC);
     expect(absent.observation?.chains.every((chain) => chain.routing.statePlacement === "unavailable" && !chain.routing.logScan)).toBe(true);
   });

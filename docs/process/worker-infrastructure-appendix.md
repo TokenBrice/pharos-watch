@@ -35,8 +35,8 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `TRONGRID_API_KEY` | `string` | optional | - | - | TronGrid API credential used by Tron blacklist sync and Tron live-reserve reads. |
 | `DRPC_API_KEY` | `string` | optional | - | - | dRPC credential used for L2 archive-node balance lookups. |
 | `ALCHEMY_API_KEY` | `string` | optional | - | - | Alchemy credential used for primary chain RPC endpoints. |
-| `DWELLIR_API_KEY` | `string` | optional | - | - | Scheduled-only Dwellir credential for reviewed primary/after-Alchemy EVM routing, supplemental fallback elsewhere, and native state reads; sent only as the X-Api-Key header. |
-| `DWELLIR_ROUTING_DISABLED_CHAINS` | `string` | optional | - | - | Optional CSV of chain IDs that revert Dwellir to supplemental-last state fallback and exclude it from log scans. Applied after scheduled key, budget, and circuit admission. |
+| `DWELLIR_API_KEY` | `string` | optional | - | - | Scheduled-only Dwellir credential for reviewed primary and supplemental-first EVM state routing, supplemental-last elsewhere, allowlisted logs-first and CCIP observer reads, and native state reads; sent only as the X-Api-Key header. |
+| `DWELLIR_ROUTING_DISABLED_CHAINS` | `string` | optional | - | - | Optional CSV of chain IDs that revert Dwellir to supplemental-last state fallback and exclude it from global log scans and CCIP observer routes. Applied after scheduled key, budget, and circuit admission. |
 | `DWELLIR_MAX_CREDITS_PER_MONTH` | `string` | optional | - | - | Optional positive integer local cap for conservative Dwellir attempt credit units per UTC month (JSON-RPC items and native requests), distinct from vendor successful-response billing; unset or invalid values use the built-in 100,000,000 credit default. |
 | `ADDRESS_PRICE_PROVIDERS_ENABLED` | `string` | optional | - | - | Optional exact-address price-provider allowlist for the hourly corroboration step. Only `coingecko-onchain-address` is available, and an unset value enables no provider. |
 | `GRAPH_API_KEY` | `string` | optional | - | - | The Graph credential used by DEX liquidity subgraph reads. |

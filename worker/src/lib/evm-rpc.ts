@@ -1,10 +1,12 @@
 import { logWorkerEventArgs } from "./structured-log";
 import {
+  ccipRpcEndpoints,
   getChainRpc,
   getRpcAuth,
   getRpcAuthHeaders,
   logScanRpcEndpoints,
   type ChainRpcConfig,
+  type RpcEndpoint,
 } from "./chain-registry";
 import { recordDwellirCredits } from "./rpc-provider-budget";
 import { ETHERSCAN_V2_BASE } from "./constants";
@@ -37,6 +39,8 @@ export interface EvmRpcOptions {
   beforeRequest?: (url: string) => boolean;
   /** Exclude supplemental endpoints AND the metered Dwellir operator at every position. */
   excludeSupplementalRpc?: boolean;
+  /** Reviewed CCIP archive profile, including admitted Ink/Berachain Dwellir first. */
+  ccipArchiveRpc?: boolean;
   maxRetries?: number;
   /** Gas limit for eth_call (hex string, e.g. "0x7A120"). Needed for cross-contract calls. */
   gas?: string;
@@ -245,6 +249,7 @@ interface BuildRpcUrlsOptions {
   historicalBlock?: boolean;
   /** Exclude supplemental endpoints and Dwellir regardless of placement. */
   excludeSupplementalRpc?: boolean;
+  ccipArchiveRpc?: boolean;
 }
 
 /**
@@ -314,6 +319,7 @@ function buildRpcUrls(
   const historicalBlock = options?.historicalBlock ?? isHistoricalBlockTag(blockTag);
   const chainRpc = chainId && chainRpcs ? getChainRpc(chainRpcs, chainId) : undefined;
   const demoted = chainRpcs == null ? undefined : demotedSupplementalRpcOriginsByRun.get(chainRpcs);
+  const endpoints = options?.ccipArchiveRpc ? ccipRpcEndpoints(chainRpc) : chainRpc?.endpoints ?? [];
 
   const eligible = (url: string): boolean => {
     const endpoint = chainRpc?.endpoints.find((row) => row.url === url);
@@ -322,19 +328,32 @@ function buildRpcUrls(
       && !(historicalBlock && endpoint?.stateHistory === "recent")
       && !demoted?.has(endpointOrigin(url) ?? url);
   };
-  for (const endpoint of chainRpc?.endpoints ?? []) {
-    if (endpoint.position === "registry" && eligible(endpoint.url)) urls.push(endpoint.url);
+  for (const endpoint of endpoints) {
+    if ((options?.ccipArchiveRpc || endpoint.position === "registry") && eligible(endpoint.url)) urls.push(endpoint.url);
   }
   for (const url of extraRpcUrls ?? []) {
     if (eligible(url)) urls.push(url);
   }
-  if (!options?.excludeSupplementalRpc) {
-    for (const endpoint of chainRpc?.endpoints ?? []) {
+  if (!options?.excludeSupplementalRpc && !options?.ccipArchiveRpc) {
+    for (const endpoint of endpoints) {
       if (endpoint.position === "supplemental" && eligible(endpoint.url)) urls.push(endpoint.url);
     }
   }
 
   return Array.from(new Set(urls.filter((url) => typeof url === "string" && url.length > 0)));
+}
+
+/** CCIP page sizing shares the transport's historical eligibility and run-local demotion. */
+export function usableCcipRpcEndpoints(
+  chainId: string,
+  chainRpcs: Map<string, ChainRpcConfig>,
+): readonly RpcEndpoint[] {
+  const config = chainRpcs.get(chainId);
+  if (!config) return [];
+  return buildRpcUrls(chainId, undefined, chainRpcs, undefined, {
+    historicalBlock: true,
+    ccipArchiveRpc: true,
+  }).map(url => config.endpoints.find(endpoint => endpoint.url === url)!);
 }
 
 /** Url resolution for a read that already knows its block tag. */
@@ -345,6 +364,7 @@ function requestRpcUrls(
 ): string[] {
   return buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs, blockTag, {
     excludeSupplementalRpc: options?.excludeSupplementalRpc,
+    ccipArchiveRpc: options?.ccipArchiveRpc,
   });
 }
 
@@ -530,10 +550,11 @@ async function runEvmRpcBatch<Value>(
     // must never be allowed to answer one.
     historicalBlock: true,
     excludeSupplementalRpc: options?.excludeSupplementalRpc,
+    ccipArchiveRpc: options?.ccipArchiveRpc,
   });
   if (urls.length === 0 || calls.length === 0) return null;
   const logEndpoints = calls.some((call) => call.method === "eth_getLogs")
-    ? logScanRpcEndpoints(chainId ? options?.chainRpcs?.get(chainId) : undefined)
+    ? (options?.ccipArchiveRpc ? ccipRpcEndpoints : logScanRpcEndpoints)(chainId ? options?.chainRpcs?.get(chainId) : undefined)
     : undefined;
 
   const configuredTimeoutMs = options?.timeoutMs ?? 10_000;

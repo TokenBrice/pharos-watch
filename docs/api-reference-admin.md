@@ -941,7 +941,7 @@ Returns current blacklist sync state for all configured chains. Useful for diagn
 
 Operator-only report for Dwellir RPC parity and the scoped primary/log-routing canary. It answers three questions from one read:
 
-- credit ledger — this UTC month's metered Dwellir JSON-RPC response items against the configured cap (`budget`)
+- credit ledger — this UTC month's local Dwellir credits against the configured cap (`budget`): attempted EVM JSON-RPC members (including retries, errors and no-response attempts) plus received native HTTP responses. This is conservative admission accounting, not the vendor's billed responses, which exclude error members; see [Metered supplemental provider budgets](./worker-and-api-limits.md#metered-supplemental-provider-budgets)
 - `dwellir-evm` circuit state, so an operator can see whether the trial is currently demoted or held open (`circuit`)
 - per-chain parity against an independent incumbent: retained runs, per-method availability, head lag, pinned state/log parity, first-touch and warm latency per method, latest-tag freshness, diagnostics, and pass/fail gates (`observation.chains[]`)
 
@@ -975,7 +975,7 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
         "dwellirHost": "api-base-mainnet-archive.n.dwellir.com",
         "comparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
         "logsComparator": { "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" },
-        "routing": { "statePlacement": "after-alchemy", "logScan": false },
+        "routing": { "statePlacement": "primary", "logScan": true },
         "lastFailures": [],
         "comparatorsByStep": {
           "head": [{ "operator": "alchemy", "host": "base-mainnet.g.alchemy.com", "source": "registry" }],
@@ -1091,7 +1091,7 @@ Diagnostic only: it never feeds scoring, public health, or the public API, and n
 
 `comparator` names the newest primary head/lag/state baseline, or the planned baseline when no samples exist. `logsComparator` names its separate logs baseline (the same reference on ordinary targets); explicit `null` records an unavailable reviewed logs pin. `comparatorsByStep` lists the actual references behind each method's retained observations, including failed calls and legacy recorded comparisons, so a window spanning a comparator change is not attributed solely to the newest host. State `lastMismatch` and `lastComparatorFailure` also carry the reference actually read. A split target's comparator latency is a composite of its step-specific baselines, not a single provider measurement.
 
-`routing.statePlacement` is a read-only scheduled-routing readiness snapshot: `primary`, `after-alchemy`, `supplemental`, or `unavailable` when the key/budget is unusable or the circuit is not closed/half-open. Placement and log eligibility come from `DWELLIR_STATE_PLACEMENT` / `DWELLIR_LOG_SCAN_CHAINS`; `routing.logScan` additionally requires full log history. `DWELLIR_ROUTING_DISABLED_CHAINS` demotes listed chains to supplemental and removes log eligibility. This is configured policy plus observed admission readiness, not proof that a consumer used Dwellir or a request-path RPC map. The read does not advance an open circuit to half-open; a cooled open circuit may be admitted by the next scheduled run.
+`routing.statePlacement` is a read-only scheduled-routing readiness snapshot: `primary`, `supplemental-first`, `supplemental`, or `unavailable` when the key/budget is unusable or the circuit is not closed/half-open. `supplemental-first` puts Dwellir ahead of census-state Alchemy without creating registry eligibility. Placement and global log eligibility come from `DWELLIR_STATE_PLACEMENT` / `DWELLIR_LOG_SCAN_CHAINS`; `routing.logScan` additionally requires full log history and orders Dwellir first independently of state placement. CCIP's observer-specific Ink/Berachain route is not global log eligibility. `DWELLIR_ROUTING_DISABLED_CHAINS` demotes listed chains to supplemental-last and removes Dwellir log eligibility. This is configured policy plus observed admission readiness, not proof that a consumer used Dwellir or a request-path RPC map. The read does not advance an open circuit to half-open; a cooled open circuit may be admitted by the next scheduled run.
 
 `lastFailures` retains the newest five failed-call diagnostics per chain across both operators, newest first: `operator`, `step`, `method`, `blockParam` (tag/hex quantity/number, `fromBlock-toBlock` for `eth_getLogs`, or null; strings at most 64 characters), `httpStatus`, `rpcCode`, `message`, `errorClass`, and call clock `atSec`. Messages are sanitized with the safe-error helper, redact the actual configured header and URL-query authentication material before truncation, and are at most 160 characters. No URLs, keys, headers or full request/body payloads are retained. Older rows have no fabricated failure detail.
 

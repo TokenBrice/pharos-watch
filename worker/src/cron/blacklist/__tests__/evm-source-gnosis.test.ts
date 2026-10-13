@@ -13,14 +13,14 @@ describe("RPC_LOG_SCAN_WINDOWS.gnosis", () => {
 });
 
 describe("Gnosis Dwellir log admission", () => {
-  it("includes only Gnosis with admission and restores incumbents on rollback", () => {
+  it("includes Gnosis with admission and restores incumbents on rollback", () => {
     const baseline = buildChainRpcs("alchemy", "drpc");
     const admitted = buildChainRpcs("alchemy", "drpc", { dwellirApiKey: "test" });
     const disabled = buildChainRpcs("alchemy", "drpc", {
       dwellirApiKey: "test", dwellirRoutingDisabledChains: new Set(["gnosis"]),
     });
     expect(logScanRpcEndpoints(admitted.get("gnosis"))[0]?.operator).toBe("dwellir");
-    expect(logScanRpcEndpoints(admitted.get("base")).some((row) => row.operator === "dwellir")).toBe(false);
+    expect(logScanRpcEndpoints(admitted.get("base"))[0]?.operator).toBe("dwellir");
     expect(logScanRpcEndpoints(disabled.get("gnosis"))).toEqual(logScanRpcEndpoints(baseline.get("gnosis")));
     expect(logScanRpcEndpoints(baseline.get("gnosis")).some((row) => row.operator === "dwellir")).toBe(false);
   });
