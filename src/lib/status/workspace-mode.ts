@@ -20,7 +20,7 @@ export const SEVERITY_RANK: Readonly<Record<WorkspaceSeverity, number>> = {
   critical: 3,
 };
 
-const WORKSPACE_MODE_QUERY_PARAM = "view";
+export const WORKSPACE_MODE_QUERY_PARAM = "view";
 
 export function worstSeverity(states: readonly WorkspaceSeverity[]): WorkspaceSeverity {
   return states.reduce<WorkspaceSeverity>(
@@ -65,21 +65,21 @@ export function buildWorkspaceModeUrl(
 }
 
 /**
- * Worst severity first, then most issues, then declaration order. `fallback`
- * covers the empty-summary case only.
+ * Landing view when the URL has no `?view=` (B7): the first view, in
+ * declaration order, with a watch or critical finding; otherwise the first
+ * (overview) view. `unknown` does not pull the landing because it is mostly
+ * "still loading", and ranking by worst severity made the landing jump
+ * between views as evidence arrived.
  */
 export function pickInitialMode<TMode extends string>(
   summaries: readonly WorkspaceModeSummary<TMode>[],
   modes: readonly WorkspaceModeOption<TMode>[],
   fallback: TMode,
 ): TMode {
-  return (
-    [...summaries].sort((left, right) => {
-      const severityDelta = SEVERITY_RANK[right.severity] - SEVERITY_RANK[left.severity];
-      if (severityDelta !== 0) return severityDelta;
-      const countDelta = right.issueCount - left.issueCount;
-      if (countDelta !== 0) return countDelta;
-      return modes.findIndex((mode) => mode.id === left.id) - modes.findIndex((mode) => mode.id === right.id);
-    })[0]?.id ?? fallback
+  const withIssue = new Set(
+    summaries
+      .filter((summary) => summary.severity === "watch" || summary.severity === "critical")
+      .map((summary) => summary.id),
   );
+  return modes.find((mode) => withIssue.has(mode.id))?.id ?? fallback;
 }

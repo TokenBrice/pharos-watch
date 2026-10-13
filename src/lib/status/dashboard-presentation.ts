@@ -1,6 +1,6 @@
 import type { StatusCause, StatusResponse } from "@shared/types";
 import type { StatusPageActionRisk } from "@shared/lib/api-endpoints";
-import type { DashboardIssueKind, DashboardNotice } from "@/lib/status/dashboard-types";
+import type { DashboardNotice } from "@/lib/status/dashboard-types";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { STATUS_TONE } from "@shared/lib/classification";
 
@@ -66,13 +66,6 @@ export const STATUS_OK_PILL_CLASS = STATUS_TONE.healthy.badgeClassName;
 export function getSeverityBadgeClass(severity: StatusCause["severity"]): string {
   if (severity === "critical") return OPERATIONAL_PILL_CLASS.error;
   if (severity === "warning") return OPERATIONAL_PILL_CLASS.warning;
-  return OPERATIONAL_PILL_CLASS.unknown;
-}
-
-export function getIssueKindBadgeClass(kind: DashboardIssueKind): string {
-  if (kind === "impacting") return OPERATIONAL_PILL_CLASS.error;
-  if (kind === "warning") return OPERATIONAL_PILL_CLASS.warning;
-  if (kind === "maintenance") return `bg-state-info-solid/15 ${SEVERITY_TONE_CLASS.info.text}`;
   return OPERATIONAL_PILL_CLASS.unknown;
 }
 

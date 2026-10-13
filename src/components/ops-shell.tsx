@@ -130,8 +130,7 @@ export function OpsShell({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-1">
-            <span className="mr-1 inline-flex items-center gap-1.5 rounded-md border border-state-positive bg-state-positive-subtle px-2 py-1 text-2xs font-medium text-state-positive-strong">
-              <span className="size-1.5 rounded-full bg-state-positive-solid" aria-hidden="true" />
+            <span className="mr-1 inline-flex items-center rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground">
               <span className="sm:hidden">Prod</span>
               <span className="hidden sm:inline">Production</span>
             </span>

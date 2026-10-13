@@ -15,6 +15,8 @@ export const StatusCauseSchema = z.object({
   metric: z.string().optional(),
   value: z.number().optional(),
   threshold: z.number().optional(),
+  /** Named subjects behind a counted cause (for example cron job ids), so the cause says what to inspect. */
+  subjects: z.array(z.string()).optional(),
   /**
    * Optional operator-facing runbook link. Populated only for cause codes
    * that have a documented runbook — UI renders the link only when present.

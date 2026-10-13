@@ -5,9 +5,9 @@ import { DataTableShell } from "@/components/data-table-shell";
 import { TableCell, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatElapsedSeconds } from "@shared/lib/format";
-import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
 import { StatusPill } from "./severity-pill";
-import { defineStatusColumns } from "./page-primitives";
+import { defineStatusColumns, Timestamp } from "./page-primitives";
 
 type DatasetKey = keyof StatusResponse["datasetFreshness"];
 
@@ -142,7 +142,7 @@ export function DatasetFreshnessTable({
               <TableRow key={row.key} className="border-b last:border-0">
                 <TableCell className="py-2">{row.label}</TableCell>
                 <TableCell className="py-2 text-xs text-muted-foreground">
-                  {formatStatusTimestamp(row.updatedAt, { fallback: "—" })}
+                  <Timestamp epochSec={row.updatedAt} nowSec={nowSeconds} />
                 </TableCell>
                 <TableCell className="py-2">
                   {row.ageSeconds != null ? formatElapsedSeconds(row.ageSeconds) : "—"}

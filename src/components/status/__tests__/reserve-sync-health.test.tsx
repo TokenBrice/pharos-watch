@@ -109,4 +109,25 @@ describe("ReserveSyncHealthCard", () => {
     expect(screen.getByText("75.0%")).toBeTruthy();
     expect(screen.getByText("0.0%")).toBeTruthy();
   });
+
+  it("mutes zero problem counts and folds reviewed-exclusion prose into a Notes disclosure (S6)", () => {
+    render(
+      <ReserveSyncHealthCard
+        health={makeReserveHealth({
+          corruptCoins: 0,
+          missingCoins: 2,
+          acknowledgedFeedIds: ["mtbill-midas"],
+          acknowledgedFeeds: [{ stablecoinId: "mtbill-midas", reason: "Public portfolio check pending.", expiresAt: 1_800_000_000 }],
+        } as never)}
+        nowSeconds={1_712_600_120}
+      />,
+    );
+
+    const tile = (label: string) => screen.getByText(label).nextElementSibling?.className ?? "";
+    expect(tile("Corrupt")).toContain("text-muted-foreground");
+    expect(tile("Missing")).toContain("text-state-danger");
+    const notes = screen.getByText(/Notes: 1 reviewed exclusion note/).closest("details");
+    expect(notes?.textContent).toContain("Public portfolio check pending.");
+    expect(notes?.open).toBe(false);
+  });
 });

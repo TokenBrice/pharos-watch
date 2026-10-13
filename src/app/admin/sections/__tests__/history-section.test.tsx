@@ -83,7 +83,7 @@ describe("HistorySection", () => {
   it("renders both verified Worker activations separately from Pages correlation", () => {
     render(<HistorySection {...baseProps()} />);
 
-    const pageHeading = screen.getByRole("heading", { level: 1, name: "Incident History" });
+    const pageHeading = screen.getByRole("heading", { level: 1, name: "History" });
     expect(pageHeading).toBeTruthy();
     expect(pageHeading.className).not.toContain("pharos-display");
     expect(screen.getByRole("heading", { name: "Pages deployment" })).toBeTruthy();
@@ -97,7 +97,8 @@ describe("HistorySection", () => {
     expect(screen.getByText("heavy-v3")).toBeTruthy();
     expect(screen.getAllByText("Activated at")).toHaveLength(2);
     expect(screen.getByText(/Activation does not attribute a transition/i)).toBeTruthy();
-    expect(screen.getByText("Flapping")).toBeTruthy();
+    // Flapping is stated once, by the timeline banner, not repeated as a header chip.
+    expect(screen.queryByText("Stability")).toBeNull();
     expect(screen.getAllByText("4").length).toBeGreaterThan(0);
   });
 
@@ -140,9 +141,13 @@ describe("HistorySection", () => {
       />,
     );
 
-    expect(screen.getByRole("alert").textContent).toContain("History query failed");
+    const alerts = screen.getAllByRole("alert").map((alert) => alert.textContent ?? "");
+    expect(alerts.some((text) => text.includes("History query failed"))).toBe(true);
     expect(screen.getByText("Recent fallback")).toBeTruthy();
-    expect(screen.getByText(/selected history window is unavailable/i)).toBeTruthy();
+    // B3/R2: a failed read never reads as "nothing happened".
+    expect(screen.getByText("Status transitions could not be loaded for this window.")).toBeTruthy();
+    expect(screen.queryByText(/No status transitions recorded/i)).toBeNull();
+    expect(screen.getByText("Unavailable")).toBeTruthy();
     expect(screen.getByText(/correlation is Unknown because only recent status fallback/i)).toBeTruthy();
     expect(screen.queryByText(/No degradation transition appears/i)).toBeNull();
   });

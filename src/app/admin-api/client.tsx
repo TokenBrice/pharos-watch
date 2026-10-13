@@ -7,8 +7,9 @@ export default function AdminApiClient() {
   return (
     <OpsShell>
       <section aria-labelledby="api-management-title" className="min-w-0 max-w-full space-y-5">
-        <div className="space-y-1">
-          <h1 id="api-management-title" className="text-xl font-semibold text-foreground">
+        <div className="space-y-1 border-b border-border/70 pb-4">
+          <p className="pharos-label">Credentials</p>
+          <h1 id="api-management-title" className="text-2xl font-bold leading-tight text-foreground">
             API Management
           </h1>
           <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">

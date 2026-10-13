@@ -75,7 +75,10 @@ describe("TransitionTimeline", () => {
     expect(screen.getByRole("table", { name: /status transition history/i })).toBeTruthy();
     expect(screen.getByText("healthy -> degraded")).toBeTruthy();
     expect(screen.getByText(/State duration: 10m/i)).toBeTruthy();
-    expect(screen.getAllByText(/Resolved at/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Resolved/i).length).toBeGreaterThan(0);
+    // Folded into one recovered incident with its duration.
+    expect(screen.getByText("Recovered")).toBeTruthy();
+    expect(screen.getByText("Lasted 10m")).toBeTruthy();
     expect(screen.getByText(/Flapping detected/i)).toBeTruthy();
 
     const selectedWindow = screen.getByRole("button", { name: "24h" });
@@ -161,5 +164,91 @@ describe("TransitionTimeline", () => {
       causeCode: null,
       publicImpact: "all",
     });
+  });
+
+  it("renders a failed read as an error with retry, never as an empty history", () => {
+    const onRetry = vi.fn();
+    render(
+      <TransitionTimeline
+        transitions={[]}
+        nowSeconds={1_700_001_000}
+        transitionsLast24h={null}
+        window="24h"
+        filters={DEFAULT_INCIDENT_HISTORY_QUERY}
+        onWindowChange={vi.fn()}
+        onFiltersChange={vi.fn()}
+        isLoading={false}
+        readFailed
+        onRetry={onRetry}
+      />,
+    );
+
+    expect(screen.queryByText(/No status transitions recorded/i)).toBeNull();
+    expect(screen.getByRole("alert").textContent).toContain("could not be loaded");
+    fireEvent.click(screen.getByRole("button", { name: "Retry history" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("only claims an empty window after a successful read", () => {
+    render(
+      <TransitionTimeline
+        transitions={[]}
+        nowSeconds={1_700_001_000}
+        transitionsLast24h={0}
+        window="24h"
+        filters={DEFAULT_INCIDENT_HISTORY_QUERY}
+        onWindowChange={vi.fn()}
+        onFiltersChange={vi.fn()}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByText("No status transitions recorded in this window.")).toBeTruthy();
+  });
+
+  it("summarizes recurring causes and links named jobs to the cron workbench", () => {
+    const degrade = (id: number, at: number): StatusTransition => ({
+      id,
+      scope: "global",
+      from: "healthy",
+      to: "degraded",
+      rawStatus: "degraded",
+      transitionType: "degrade",
+      reason: "cron",
+      confidence: 1,
+      at,
+      causes: [
+        {
+          code: "unhealthy_crons_present",
+          layer: "availability",
+          severity: "warning",
+          message: "1 availability-impacting cron job is unavailable/stale. Jobs: sync-mint-burn.",
+        },
+      ],
+    });
+    const recover = (id: number, at: number): StatusTransition => ({
+      ...degrade(id, at),
+      from: "degraded",
+      to: "healthy",
+      rawStatus: "healthy",
+      transitionType: "recover",
+      causes: [],
+    });
+    render(
+      <TransitionTimeline
+        transitions={[degrade(1, 1_699_980_000), recover(2, 1_699_982_700), degrade(3, 1_699_994_400)]}
+        nowSeconds={1_700_000_000}
+        transitionsLast24h={3}
+        window="24h"
+        filters={DEFAULT_INCIDENT_HISTORY_QUERY}
+        onWindowChange={vi.fn()}
+        onFiltersChange={vi.fn()}
+        isLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("2×")).toBeTruthy();
+    expect(screen.getByText("Ongoing")).toBeTruthy();
+    const links = screen.getAllByRole("link", { name: "sync-mint-burn" });
+    expect(links[0]?.getAttribute("href")).toMatch(/^\/admin\/crons\/?\?job=sync-mint-burn$/);
   });
 });

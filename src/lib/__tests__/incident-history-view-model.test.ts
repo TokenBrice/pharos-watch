@@ -4,7 +4,10 @@ import {
   DEFAULT_INCIDENT_HISTORY_QUERY,
   buildIncidentHistoryUrl,
   buildIncidentHistoryView,
+  buildIncidentRecurrence,
   findFirstDegradationAfter,
+  foldIncidentEpisodes,
+  getCauseSubjects,
   parseIncidentHistoryQuery,
 } from "@/lib/incident-history-view-model";
 
@@ -198,5 +201,109 @@ describe("incident history view model", () => {
     expect(findFirstDegradationAfter(transitions(), 1_500)?.id).toBe(2);
     expect(findFirstDegradationAfter(transitions(), 3_100)).toBeNull();
     expect(findFirstDegradationAfter(transitions(), null)).toBeNull();
+  });
+});
+
+function flap(id: number, at: number, to: StatusTransition["to"], subjects?: string[]): StatusTransition {
+  const from: StatusTransition["from"] = to === "healthy" ? "degraded" : "healthy";
+  return {
+    id,
+    scope: "global",
+    from,
+    to,
+    rawStatus: to,
+    transitionType: to === "healthy" ? "recover" : "degrade",
+    reason: "fixture",
+    confidence: 1,
+    causes:
+      to === "healthy"
+        ? []
+        : [
+            {
+              code: "unhealthy_crons_present",
+              layer: "availability",
+              severity: "warning",
+              message: subjects ? "1 availability-impacting cron job(s) are unavailable/stale." : "1 cron job is stale. Jobs: sync-mint-burn.",
+              ...(subjects ? { subjects } : {}),
+            },
+          ],
+    at,
+  };
+}
+
+describe("incident folding and recurrence", () => {
+  it("reads subjects from the structured field, falling back to the message suffix", () => {
+    expect(getCauseSubjects({ subjects: ["a"], message: "x. Jobs: b." })).toEqual(["a"]);
+    expect(getCauseSubjects({ message: "2 stale. Jobs: sync-a, sync-b." })).toEqual(["sync-a", "sync-b"]);
+    expect(getCauseSubjects({ message: "No jobs named." })).toEqual([]);
+  });
+
+  it("folds degrade/recover pairs into incidents with duration and an ongoing tail", () => {
+    const episodes = foldIncidentEpisodes(
+      [flap(1, 1_000, "degraded"), flap(2, 1_600, "healthy"), flap(3, 3_000, "degraded"), flap(4, 3_100, "stale")],
+      4_000,
+    );
+    expect(episodes).toHaveLength(2);
+    expect(episodes[0]).toMatchObject({ ongoing: true, startedAt: 3_000, durationSec: 1_000, worstState: "stale", transitionCount: 2 });
+    expect(episodes[1]).toMatchObject({ ongoing: false, startedAt: 1_000, endedAt: 1_600, durationSec: 600 });
+  });
+
+  it("derives the episode verdict from its causes with the triage rule", () => {
+    // Public-impacting warning cause: act.
+    expect(foldIncidentEpisodes([flap(1, 1_000, "degraded")], 4_000)[0]?.verdict).toBe("act");
+    // Info-only causes never open an act-now episode, even while ongoing.
+    const infoOnly = { ...flap(2, 1_000, "degraded"), causes: [
+      { code: "watch_unhealthy_crons_present", layer: "availability" as const, severity: "info" as const, message: "watch tier" },
+    ] };
+    expect(foldIncidentEpisodes([infoOnly], 4_000)[0]?.verdict).toBe("watch");
+    // Admin-only warning (not in the public-impact allowlist): watch.
+    const adminWarning = { ...flap(3, 1_000, "degraded"), causes: [
+      { code: "reserve_sync_degraded", layer: "data-quality" as const, severity: "warning" as const, message: "reserve" },
+    ] };
+    expect(foldIncidentEpisodes([adminWarning], 4_000)[0]?.verdict).toBe("watch");
+  });
+
+  it("keeps an incident that began before the loaded window with an unknown duration", () => {
+    const [episode] = foldIncidentEpisodes([flap(9, 500, "healthy")], 4_000);
+    expect(episode).toMatchObject({ startedAt: null, durationSec: null, endedAt: 500, ongoing: false });
+  });
+
+  it("treats an escalation as the oldest loaded row as an incident that began earlier", () => {
+    const [episode] = foldIncidentEpisodes([{ ...flap(1, 3_000, "stale"), from: "degraded" }], 4_000);
+    expect(episode).toMatchObject({ startedAt: null, durationSec: null, ongoing: true });
+  });
+
+  it("drops the overflow count from parsed subjects", () => {
+    expect(getCauseSubjects({ message: "9 stale. Jobs: a, b, c, d, e, f and 3 more." })).toEqual(["a", "b", "c", "d", "e", "f"]);
+  });
+
+  it("groups repeated incident starts by cause code and named subjects", () => {
+    const groups = buildIncidentRecurrence([
+      flap(1, 0, "degraded"),
+      flap(2, 2_700, "healthy"),
+      flap(3, 14_400, "degraded", ["sync-mint-burn"]),
+      flap(4, 17_100, "healthy"),
+      flap(5, 28_800, "degraded", ["sync-mint-burn"]),
+      flap(6, 30_000, "degraded", ["other-job"]),
+    ]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      causeCode: "unhealthy_crons_present",
+      subjects: ["sync-mint-burn"],
+      count: 3,
+      meanIntervalSec: 14_400,
+    });
+  });
+
+  it("ignores info causes that ride along on every incident", () => {
+    const withInfo = (id: number, at: number) => ({
+      ...flap(id, at, "degraded", ["sync-mint-burn"]),
+      causes: [
+        ...flap(id, at, "degraded", ["sync-mint-burn"]).causes,
+        { code: "degraded_cron_warning", layer: "availability" as const, severity: "info" as const, message: "2 cron job(s) report warnings." },
+      ],
+    });
+    const groups = buildIncidentRecurrence([withInfo(1, 0), flap(2, 100, "healthy"), withInfo(3, 200)]);
+    expect(groups.map((group) => group.causeCode)).toEqual(["unhealthy_crons_present"]);
   });
 });

@@ -1,34 +1,33 @@
 "use client";
 
+import Link from "next/link";
+import { useState } from "react";
+import { Copy, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { OPERATOR_VERDICT_TONE } from "@shared/lib/classification";
+import type { StatusCause } from "@shared/types";
 import { ResourcePressureSchema } from "@shared/types/status/cron";
 import { CronInFlightProgress } from "@/components/status/cron-in-flight-progress";
-import { formatInterval } from "@/components/status/format";
 import { summarizeCronMetadata } from "@/components/status/cron-metadata-summary";
-import { formatCronRunTiming, type CronWorkbenchRow } from "@/lib/cron-workbench-model";
+import { VerdictPill } from "@/components/status/page-primitives";
+import { copyText } from "@/lib/clipboard";
 import {
-  CRON_DETAIL_ID,
-  CRON_STATE_LABELS,
-  formatDurationValue,
-  formatLastGood,
-  formatLastRun,
-  formatTimestamp,
-  getStateBadgeClass,
-} from "./cron-lane-format";
+  formatCronRunTiming,
+  getCronCauses,
+  getCronNextExpected,
+  getCronRunbooks,
+  getCronTailCommand,
+  type CronWorkbenchRow,
+} from "@/lib/cron-workbench-model";
+import { getActionsForCronJob, getRecommendedActionsForCause } from "@/lib/status/action-recommendations";
+import { CRON_DETAIL_ID, formatLastGood, formatTimestamp } from "./cron-lane-format";
 import { CronRunHistoryPanel, StaleArtifactEvidence } from "./cron-run-history";
 
 function ResourcePressureEvidence({ metadata, label }: { metadata: Record<string, unknown> | undefined; label: string }) {
   const parsed = ResourcePressureSchema.safeParse(metadata?.resourcePressure);
-  if (!parsed.success) {
-    return (
-      <section aria-label={label} className="mt-4 text-xs text-muted-foreground">
-        <h4 className="font-medium text-foreground">{label}</h4>
-        <p className="mt-1">Resource evidence unavailable (legacy or unmeasured attempt).</p>
-      </section>
-    );
-  }
+  if (!parsed.success) return null;
   const pressure = parsed.data;
   const bytes = (value: number | null) => value == null ? "Unavailable" : `${value.toLocaleString()} bytes`;
   const evidence = [
@@ -59,79 +58,133 @@ function ResourcePressureEvidence({ metadata, label }: { metadata: Record<string
   );
 }
 
-export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; nowSeconds: number }) {
+function hasResourcePressure(metadata: Record<string, unknown> | undefined): boolean {
+  return ResourcePressureSchema.safeParse(metadata?.resourcePressure).success;
+}
+
+function CopyTailCommand({ command }: { command: string }) {
+  const [copied, setCopied] = useState<"idle" | "copied" | "failed">("idle");
+  return (
+    <div className="min-w-0">
+      <div className="flex min-w-0 items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1.5 font-mono text-xs text-foreground" title={command}>
+          {command}
+        </code>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={async () => setCopied((await copyText(command)).ok ? "copied" : "failed")}
+        >
+          <Copy className="size-4" aria-hidden="true" />
+          Copy
+        </Button>
+      </div>
+      <span role="status" className="text-xs text-muted-foreground">
+        {copied === "copied" ? "Copied." : copied === "failed" ? "Copy failed; select the command instead." : ""}
+      </span>
+    </div>
+  );
+}
+
+function getCronActions(row: CronWorkbenchRow, causes: readonly StatusCause[]) {
+  const fromCauses = getCronCauses(row.job, causes).flatMap((cause) => getRecommendedActionsForCause(cause));
+  const fromCron = getActionsForCronJob(row.job);
+  return [...new Map([...fromCauses, ...fromCron].map((action) => [action.path, action])).values()];
+}
+
+export function CronDetailPanel({
+  row,
+  causes = [],
+  nowSeconds,
+}: {
+  row: CronWorkbenchRow;
+  causes?: readonly StatusCause[];
+  nowSeconds: number;
+}) {
   const lastRun = row.cron.lastRun;
   const lastRunTiming = lastRun ? formatCronRunTiming(lastRun) : null;
   const metadataSummary = summarizeCronMetadata(row.job, lastRun?.metadata, lastRun?.degradedReason);
+  const next = getCronNextExpected(row.cron, nowSeconds);
+  const jobCauses = getCronCauses(row.job, causes);
+  const runbooks = getCronRunbooks(row, causes);
+  const actions = getCronActions(row, causes);
+  const historyHref = jobCauses[0] ? `/admin/history/?cause=${encodeURIComponent(jobCauses[0].code)}` : "/admin/history/";
+  const resourceMeasured = hasResourcePressure(row.cron.inFlight?.metadata) || hasResourcePressure(lastRun?.metadata);
 
   return (
     <aside
       id={CRON_DETAIL_ID}
       aria-label={`Details for ${row.display.label}`}
-      className="min-w-0 rounded-xl border border-border/60 bg-background/45 p-4 xl:sticky xl:top-[calc(var(--ops-sticky-offset)+0.75rem)] xl:max-h-[calc(100vh-var(--ops-sticky-offset)-1.5rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain"
+      className="min-w-0 scroll-mt-[var(--ops-sticky-offset)] rounded-xl border border-border/60 bg-background/45 p-4 2xl:sticky 2xl:top-[calc(var(--ops-sticky-offset)+0.75rem)] 2xl:max-h-[calc(100vh-var(--ops-sticky-offset)-1.5rem)] 2xl:self-start 2xl:overflow-y-auto 2xl:overscroll-contain"
     >
       <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="break-words text-sm font-semibold text-foreground">{row.display.label}</h3>
           <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{row.job}</p>
         </div>
-        <Badge className={`max-w-full text-xs ${getStateBadgeClass(row.state)}`}>{CRON_STATE_LABELS[row.state]}</Badge>
+        <VerdictPill verdict={row.verdict} />
       </div>
 
-      <dl className="mt-4 grid min-w-0 grid-cols-2 gap-3 text-xs">
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Trigger group</dt>
-          <dd className="mt-1 break-words font-medium text-foreground">{row.group.title}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Impact class</dt>
-          <dd className="mt-1 font-medium text-foreground">{row.impactLabel}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Trigger mode</dt>
-          <dd className="mt-1 text-foreground">{row.display.triggerMode === "isolated" ? "Isolated" : "Shared"}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Cadence</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">
-            {formatInterval(row.cron.expectedIntervalSec)}
-          </dd>
-        </div>
-        <div className="min-w-0 col-span-2">
-          <dt className="text-muted-foreground">Schedule</dt>
-          <dd className="mt-1 break-all font-mono text-foreground">{row.display.schedule ?? "Unknown"}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Last run</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">{formatLastRun(row, nowSeconds)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Last completed</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">{formatLastGood(row, nowSeconds)}</dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Latest outcome</dt>
-          <dd className="mt-1 text-foreground">{row.statusLabel}</dd>
-          <dd className="mt-0.5 break-all font-mono text-3xs text-muted-foreground">
-            Raw: {row.rawStatus ?? "none"}
-          </dd>
-        </div>
-        <div className="min-w-0">
-          <dt className="text-muted-foreground">Latest runtime</dt>
-          <dd className="mt-1 font-mono tabular-nums text-foreground">
-            {formatDurationValue(
-              lastRunTiming?.duration ?? null,
-              lastRunTiming?.unavailableLabel ?? "Unknown",
-            )}
-          </dd>
-        </div>
-        {lastRunTiming?.note ? (
-          <div className="col-span-2 min-w-0">
-            <dt className="text-muted-foreground">Reconciliation timing</dt>
-            <dd className="mt-1 text-foreground">{lastRunTiming.note}</dd>
-          </div>
-        ) : null}
-      </dl>
+      <section aria-label="Why this state" className="mt-4 space-y-1.5 text-xs">
+        <h4 className="font-semibold text-foreground">Why this state</h4>
+        <p className={cn("text-sm", row.verdict === "ok" ? "text-foreground" : OPERATOR_VERDICT_TONE[row.verdict].text)}>
+          {row.verdictReason.sentence}
+        </p>
+        <p className="text-muted-foreground">
+          Reason <code className="font-mono text-foreground">{row.verdictReason.code}</code> · raw status{" "}
+          <code className="font-mono text-foreground">{row.rawStatus ?? "none"}</code>
+        </p>
+        <p className="text-muted-foreground">{next.budget} Next run: {next.label}.</p>
+        <p className="text-muted-foreground">
+          {row.impactLabel} · {row.group.title} · {row.display.triggerMode === "isolated" ? "isolated" : "shared"} trigger
+          {row.display.schedule ? (
+            <>
+              {" "}· <code className="font-mono">{row.display.schedule}</code>
+            </>
+          ) : null}
+        </p>
+        <p className="text-muted-foreground">Last success: {formatLastGood(row, nowSeconds)}</p>
+        {lastRunTiming?.note ? <p className="text-muted-foreground">{lastRunTiming.note}</p> : null}
+        {jobCauses.map((cause) => (
+          <p key={cause.code} className="text-muted-foreground">
+            Status cause <code className="font-mono text-foreground">{cause.code}</code>: {cause.message}
+          </p>
+        ))}
+      </section>
+
+      <section aria-label="Actions" className="mt-4 space-y-2 border-t border-border/55 pt-3 text-xs">
+        <h4 className="font-semibold text-foreground">Actions</h4>
+        <ul className="space-y-1.5">
+          {runbooks.map((runbook) => (
+            <li key={runbook.href}>
+              <a
+                href={runbook.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-foreground underline underline-offset-2"
+              >
+                {runbook.label}
+                <ExternalLink className="size-3" aria-hidden="true" />
+              </a>
+            </li>
+          ))}
+          {actions.map((action) => (
+            <li key={action.path}>
+              <Link href="/admin/actions/" className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-2">
+                {action.label}
+              </Link>{" "}
+              <span className="text-muted-foreground">in Actions ({action.risk})</span>
+            </li>
+          ))}
+          <li>
+            <Link href={historyHref} className="pharos-focus-ring rounded-sm text-foreground underline underline-offset-2">
+              View status history
+            </Link>
+          </li>
+        </ul>
+        <CopyTailCommand command={getCronTailCommand(row.job)} />
+      </section>
 
       {row.cron.inFlight ? (
         <section
@@ -144,16 +197,7 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
           aria-label={row.cron.inFlight.stale ? "Stale running progress" : "Current running progress"}
         >
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <Badge
-              className={cn(
-                "text-xs",
-                row.cron.inFlight.stale
-                  ? "bg-state-danger-solid/15 text-state-danger-strong"
-                  : "bg-state-info-solid/15 text-state-info-strong",
-              )}
-            >
-              {row.cron.inFlight.stale ? "Stale heartbeat" : "Running now"}
-            </Badge>
+            <span className="font-medium">{row.cron.inFlight.stale ? "Stale heartbeat" : "Running now"}</span>
             <span>started {formatElapsedSeconds(Math.max(0, nowSeconds - row.cron.inFlight.startedAt))} ago</span>
             <span>heartbeat {formatElapsedSeconds(Math.max(0, nowSeconds - row.cron.inFlight.updatedAt))} ago</span>
           </div>
@@ -189,11 +233,6 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
           ) : null}
         </section>
       ) : null}
-      {row.cron.inFlight ? (
-        <ResourcePressureEvidence metadata={row.cron.inFlight.metadata} label="Current progress resource evidence" />
-      ) : null}
-      <ResourcePressureEvidence metadata={lastRun?.metadata} label="Last terminal resource evidence" />
-
 
       <StaleArtifactEvidence artifacts={row.cron.staleArtifacts ?? []} />
 
@@ -217,6 +256,21 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
           ))}
         </div>
       ) : null}
+
+      <CronRunHistoryPanel runs={row.cron.recentRuns ?? []} />
+
+      {resourceMeasured ? (
+        <>
+          {row.cron.inFlight ? (
+            <ResourcePressureEvidence metadata={row.cron.inFlight.metadata} label="Current progress resource evidence" />
+          ) : null}
+          <ResourcePressureEvidence metadata={lastRun?.metadata} label="Last terminal resource evidence" />
+        </>
+      ) : (
+        <p className="mt-4 border-t border-border/55 pt-3 text-xs text-muted-foreground">
+          Resource telemetry not measured on this runtime.
+        </p>
+      )}
 
       {lastRun?.metadata && Object.keys(lastRun.metadata).length > 0 ? (
         <details className="mt-4 text-xs">
@@ -243,8 +297,6 @@ export function CronDetailPanel({ row, nowSeconds }: { row: CronWorkbenchRow; no
           </div>
         </details>
       ) : null}
-
-      <CronRunHistoryPanel runs={row.cron.recentRuns ?? []} />
     </aside>
   );
 }

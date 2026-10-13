@@ -1,200 +1,68 @@
 "use client";
 
-import type { HealthResponse } from "@shared/types";
+import type { PublicStatusHeadline } from "@shared/types";
+import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 import { Button } from "@/components/ui/button";
-import { FreshnessIndicator } from "@/components/status/freshness-indicator";
-import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
-import { formatTimestampSeconds, getStatusTone } from "@/lib/status-dashboard-model";
-import { getPublicHealthWarningPresentation, getPublicMintBurnStatus } from "@/lib/status/public-status";
+import { Timestamp } from "@/components/status/page-primitives";
 import { cn } from "@/lib/utils";
-import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+
+/** Accent only when not operational; operational stays a flat neutral card. */
+const HEADLINE_ACCENT: Record<PublicStatusHeadline["state"], string> = {
+  operational: "",
+  delayed: "border-l-[3px] border-l-state-info-solid",
+  degraded: "border-l-[3px] border-l-state-warn-solid",
+  "partial-outage": "border-l-[3px] border-l-state-danger-solid",
+  "major-outage": "border-l-[3px] border-l-state-danger-solid",
+};
 
 interface PublicStatusHeroProps {
-  healthData: HealthResponse;
-  healthUpdatedAt: number;
-  healthStaleAfterMs: number;
-  probesUpdatedAt: number;
-  probesStaleAfterMs: number;
-  probeSummary: BrowserProbeSummary | null;
-  probesLoading: boolean;
-  probesFailed: boolean;
-  worstCacheRatio: number | null;
-  worstCacheStatus: HealthResponse["status"];
-  impactedCacheLanes: number;
-  openCircuits: number | null;
-  halfOpenCircuits: number | null;
+  headline: PublicStatusHeadline;
+  /** When the current headline state began; null when unknown. */
+  since: number | null;
+  /** Server sample time of the health payload (epoch seconds). */
+  checkedAt: number;
+  /** Set when the latest health refetch failed; the shown verdict is the last good read. */
+  fetchError: Error | null;
+  /** True when the last successful fetch is older than its polling budget. */
+  fetchStale: boolean;
   onRefresh: () => void;
 }
 
-const HERO_COPY = {
-  healthy: {
-    headline: "Public surface steady.",
-    /* Flat card; no accent stripe when healthy. */
-    shell: "",
-    accentDot: "bg-state-positive-solid",
-  },
-  degraded: {
-    headline: "Public surface under pressure.",
-    /* Data-driven severity accent for a real degraded state. */
-    shell: "border-l-[3px] border-l-state-warn-solid",
-    accentDot: "bg-state-warn-solid",
-  },
-  stale: {
-    headline: "Public surface compromised.",
-    shell: "border-l-[3px] border-l-state-danger-solid",
-    accentDot: "bg-state-danger-solid",
-  },
-} as const;
-
-function SignalTile({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: HealthResponse["status"] | "loading" | "unknown";
-}) {
-  const presentation = tone === "loading" || tone === "unknown"
-    ? { label: tone === "loading" ? "Loading" : "Unknown", badgeClassName: OPERATIONAL_PILL_CLASS.unknown }
-    : getStatusTone(tone);
-
+export function PublicStatusHero({ headline, since, checkedAt, fetchError, fetchStale, onRefresh }: PublicStatusHeroProps) {
+  const tone = PUBLIC_HEADLINE_TONE[headline.state];
   return (
-    <div>
-      <p className="pharos-label">{label}</p>
-      <div className="mt-1.5 flex items-baseline justify-between gap-2">
-        <span className="pharos-numeric text-lg font-semibold tracking-tight text-foreground">{value}</span>
-        <span className={cn("rounded-full border px-2 py-0.5 text-2xs font-medium", presentation.badgeClassName)}>
-          {presentation.label}
-        </span>
+    <section
+      aria-labelledby="status-verdict-title"
+      className={cn("pharos-card-shell flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5", HEADLINE_ACCENT[headline.state])}
+    >
+      <div className="min-w-0 space-y-1">
+        <h2 id="status-verdict-title" className="flex items-center gap-2 text-2xl font-bold leading-tight text-foreground">
+          <span aria-hidden="true" className={cn("size-2 shrink-0 rounded-full", tone.dot)} />
+          {headline.title}
+        </h2>
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {since != null ? (
+            <span>
+              For <Timestamp epochSec={since} variant="duration" />
+            </span>
+          ) : null}
+          <span>
+            Checked <Timestamp epochSec={checkedAt} />
+          </span>
+        </p>
+        {fetchError ? (
+          <p className="text-xs text-state-warn" title={fetchError.message}>
+            The status check could not be reached. Showing the last good reading.
+          </p>
+        ) : fetchStale ? (
+          <p className="text-xs text-state-warn">This verdict is older than the expected refresh interval.</p>
+        ) : null}
       </div>
-    </div>
-  );
-}
-
-function MetaRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="pharos-label">{label}</span>
-      <span className="pharos-numeric text-xs text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function getHeroLeadWarning(healthData: HealthResponse): string {
-  const { status, warnings } = healthData;
-  const firstWarning = warnings[0];
-  if (firstWarning) return getPublicHealthWarningPresentation(firstWarning, healthData).detail;
-  if (status === "healthy") return "No public warnings are active right now.";
-  if (status === "degraded") return "Some data pipelines are experiencing delays. Check the sections below for details.";
-  return "System health data is outdated. Check the sections below for current status.";
-}
-
-export function PublicStatusHero({
-  healthData,
-  healthUpdatedAt,
-  healthStaleAfterMs,
-  probesUpdatedAt,
-  probesStaleAfterMs,
-  probeSummary,
-  probesLoading,
-  probesFailed,
-  worstCacheRatio,
-  worstCacheStatus,
-  impactedCacheLanes,
-  openCircuits,
-  halfOpenCircuits,
-  onRefresh,
-}: PublicStatusHeroProps) {
-  const hero = HERO_COPY[healthData.status];
-  const statusTone = getStatusTone(healthData.status);
-  const warningLine = getHeroLeadWarning(healthData);
-  const probeValue = probeSummary ? `${probeSummary.passCount}/${probeSummary.sampleCount}` : "—";
-  const circuitValue = openCircuits == null || halfOpenCircuits == null ? "Unavailable" :
-    openCircuits > 0 ? `${openCircuits} open` : halfOpenCircuits > 0 ? `${halfOpenCircuits} half-open` : "All closed";
-  const mintBurnTone = getPublicMintBurnStatus(healthData.mintBurn.sync);
-
-  return (
-    <section className={cn("pharos-card-shell px-4 py-5 sm:px-5 lg:px-6", hero.shell)}>
-      <div className="space-y-4">
-        {/* ── Headline row ── */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className={cn("rounded-full border px-3 py-1 text-2xs font-medium", statusTone.badgeClassName)}>
-                {statusTone.label}
-              </span>
-              <FreshnessIndicator
-                updatedAtMs={healthUpdatedAt}
-                staleAfterMs={healthStaleAfterMs}
-                labelPrefix="Health fetch"
-              />
-              <FreshnessIndicator
-                updatedAtMs={probesUpdatedAt}
-                staleAfterMs={probesStaleAfterMs}
-                labelPrefix="Probe fetch"
-              />
-              {healthData.warnings.length > 0 && (
-                <span className="flex items-center gap-1.5 text-2xs text-muted-foreground">
-                  <span className={cn("h-2 w-2 rounded-full", hero.accentDot)} />
-                  {healthData.warnings.length} warning{healthData.warnings.length !== 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
-            <h2 className="pharos-page-title max-w-3xl text-balance text-foreground">
-              {hero.headline}
-            </h2>
-          </div>
-          <div className="flex items-center">
-            <Button variant="outline" size="sm" className="min-h-11" onClick={onRefresh}>
-              Refresh now
-            </Button>
-          </div>
-        </div>
-
-        {/* ── Watch note (only when warnings or non-healthy) ── */}
-        {(healthData.status !== "healthy" || healthData.warnings.length > 0) && (
-          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">{warningLine}</p>
-        )}
-
-        {/* ── 4-metric strip ── */}
-        <div className="grid gap-x-6 gap-y-3 border-t border-border/60 pt-4 sm:grid-cols-2 lg:grid-cols-4">
-          <SignalTile
-            label="Cache pressure"
-            value={worstCacheRatio != null ? `${worstCacheRatio.toFixed(2)}x` : worstCacheStatus === "healthy" ? "—" : "missing"}
-            tone={worstCacheStatus}
-          />
-          <SignalTile
-            label="Browser probes"
-            value={probeValue}
-            tone={probeSummary?.status ?? (probesLoading && !probesFailed ? "loading" : "unknown")}
-          />
-          <SignalTile
-            label="Circuit breakers"
-            value={circuitValue}
-            tone={openCircuits == null || halfOpenCircuits == null ? "unknown" : openCircuits > 0 ? "stale" : halfOpenCircuits > 0 ? "degraded" : "healthy"}
-          />
-          <SignalTile
-            label="Mint/Burn Writer"
-            value={mintBurnTone}
-            tone={mintBurnTone}
-          />
-        </div>
-
-        {/* ── Compact metadata footer ── */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-border/60 pt-3">
-          <MetaRow label="Health sample" value={formatTimestampSeconds(healthData.timestamp)} />
-          {impactedCacheLanes > 0 && (
-            <MetaRow label="Impacted lanes" value={String(impactedCacheLanes)} />
-          )}
-        </div>
-      </div>
+      {fetchError || fetchStale ? (
+        <Button variant="outline" size="sm" className="min-h-11" onClick={onRefresh}>
+          Refresh
+        </Button>
+      ) : null}
     </section>
   );
 }

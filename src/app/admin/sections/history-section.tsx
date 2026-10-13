@@ -6,7 +6,6 @@ import { StatusSection, SummaryBadge } from "@/components/status/page-primitives
 import type { ReleaseMetadataState } from "@/hooks/use-release-metadata";
 import type { StatusHistoryWindow } from "@/hooks/admin-api-hooks";
 import {
-  INCIDENT_FLAPPING_TRANSITION_THRESHOLD,
   findFirstDegradationAfter,
   type IncidentHistoryFilters,
 } from "@/lib/incident-history-view-model";
@@ -28,6 +27,8 @@ export interface HistorySectionProps {
   setHistoryWindow: (window: StatusHistoryWindow) => void;
   setHistoryFilters: (patch: Partial<IncidentHistoryFilters>) => void;
   historyLoading: boolean;
+  onRetryHistory?: () => void;
+  historyRetrying?: boolean;
   historyEvidence: {
     source: "history" | "status-fallback";
     state: "loading" | "ready" | "stale" | "error";
@@ -219,9 +220,11 @@ export function HistorySection({
   setHistoryWindow,
   setHistoryFilters,
   historyLoading,
+  onRetryHistory,
+  historyRetrying = false,
   historyEvidence,
 }: HistorySectionProps) {
-  const isFlapping = transitionsLast24h == null ? null : transitionsLast24h > INCIDENT_FLAPPING_TRANSITION_THRESHOLD;
+  const historyReadFailed = historyEvidence.state === "error";
   const historyComplete = historyEvidence.source === "history" && historyEvidence.completeness === "complete";
   const historyCoverage =
     historyEvidence.source === "status-fallback" ? "status-fallback" : historyEvidence.completeness;
@@ -230,14 +233,16 @@ export function HistorySection({
     <StatusSection
       id="history"
       kicker="Incident log"
-      title="Incident History"
+      title="History"
       headingLevel="h1"
       variant="workspace"
       description="Status transitions, persisted causes, resolution timing, and deployment evidence."
       summary={
         <>
-          <SummaryBadge label="Window" value={historyWindow} />
-          <SummaryBadge label="Loaded" value={String(allTransitions.length)} />
+          <SummaryBadge
+            label="Loaded"
+            value={historyReadFailed && allTransitions.length === 0 ? "Unavailable" : String(allTransitions.length)}
+          />
           <SummaryBadge
             label="Evidence"
             value={
@@ -262,16 +267,6 @@ export function HistorySection({
           <SummaryBadge
             label="Transitions 24h"
             value={transitionsLast24h == null ? "Unavailable" : String(transitionsLast24h)}
-            className={
-              isFlapping ? SEVERITY_TONE_CLASS.watch.pill : undefined
-            }
-          />
-          <SummaryBadge
-            label="Stability"
-            value={isFlapping ? "Flapping" : "Stable"}
-            className={
-              isFlapping ? SEVERITY_TONE_CLASS.watch.pill : undefined
-            }
           />
           <SummaryBadge label="Latest" value={latestTransition ? formatTransitionLabel(latestTransition) : "Unknown"} />
         </>
@@ -285,6 +280,8 @@ export function HistorySection({
           <p className="font-medium">
             {historyEvidence.source === "status-fallback"
               ? "Partial history evidence"
+              : historyReadFailed
+                ? "History read failed"
               : historyEvidence.completeness === "truncated"
                 ? "Bounded history evidence"
                 : historyEvidence.state === "stale"
@@ -304,6 +301,9 @@ export function HistorySection({
         onFiltersChange={setHistoryFilters}
         isLoading={historyLoading}
         evidenceScope={historyEvidence.source === "history" ? "loaded-window" : "recent-status-fallback"}
+        readFailed={historyReadFailed}
+        onRetry={onRetryHistory}
+        isRetrying={historyRetrying}
       />
       <OperationalActivity adminActions={adminActionLog} credentialAudit={credentialAudit} nowSeconds={nowSeconds} />
       <ReleaseCorrelationPanel

@@ -23,7 +23,7 @@ describe("CacheFreshnessTable", () => {
 
     render(<CacheFreshnessTable caches={{ "dex-liquidity": dexCache }} />);
 
-    expect(screen.getByText(/Availability uses ratio thresholds/i)).toBeTruthy();
+    expect(screen.getByText(/Each lane is Delayed past/i)).toBeTruthy();
     expect(screen.getByText("1 healthy cache").className).toContain("min-h-11");
     // Collapsed healthy detail is not mounted until the operator opens it.
     expect(screen.queryByTestId("cache-freshness-healthy-table")).toBeNull();
@@ -59,11 +59,11 @@ describe("CacheFreshnessTable", () => {
     expect(screen.getByTestId("cache-freshness-unhealthy-table")).toBeTruthy();
     const row = screen.getByText("yield-data").closest("tr");
     expect(row).not.toBeNull();
-    expect(within(row as HTMLTableRowElement).getByText("degraded (>2.00x)")).toBeTruthy();
+    expect(within(row as HTMLTableRowElement).getByText("Delayed")).toBeTruthy();
     expect(within(row as HTMLTableRowElement).getByText("warning after 2h")).toBeTruthy();
     expect(within(row as HTMLTableRowElement).queryByText("warning after 8h")).toBeNull();
     expect(
-      within(row as HTMLTableRowElement).getByText("degraded >2.00x · stale >4.00x"),
+      within(row as HTMLTableRowElement).getByText("Delayed >2.00x · degraded >4.00x · outage >8.00x"),
     ).toBeTruthy();
   });
 

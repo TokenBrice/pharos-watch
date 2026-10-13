@@ -1,9 +1,9 @@
-import { formatElapsedSeconds } from "@shared/lib/format";
 import type { StatusResponse } from "@shared/types";
 import { TelegramBotStats } from "@/components/status/telegram-bot-stats";
 import { TelegramBroadcastPanel } from "@/components/status/telegram-broadcast-panel";
 import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
-import { buildCommsWorkbenchModel } from "@/lib/comms-workbench-model";
+import { buildCommsWorkbenchModel, formatOldestBacklogAge } from "@/lib/comms-workbench-model";
+import { formatCronRunStatus } from "@/lib/cron-workbench-model";
 
 export interface CommsSectionProps {
   data: StatusResponse;
@@ -26,17 +26,13 @@ export function CommsSection({ data }: CommsSectionProps) {
       title="Comms"
       headingLevel="h1"
       variant="workspace"
-      description="Telegram delivery operations and audience coverage, with missing evidence kept explicitly Unknown."
+      description="Telegram delivery operations and audience coverage."
       summary={
         <>
           <SummaryBadge label="Delivery" value={healthLabel} />
           <SummaryBadge
             label="Oldest backlog"
-            value={
-              model.delivery.oldestBacklogAgeSec == null
-                ? "Unknown"
-                : formatElapsedSeconds(model.delivery.oldestBacklogAgeSec)
-            }
+            value={formatOldestBacklogAge(model.delivery.oldestBacklogAgeSec, model.delivery.pendingDeliveries)}
           />
           <SummaryBadge
             label="Permanent failures"
@@ -44,7 +40,11 @@ export function CommsSection({ data }: CommsSectionProps) {
           />
           <SummaryBadge
             label="Latest dispatch"
-            value={model.delivery.latestDispatch.status?.replaceAll("_", " ") ?? "Unknown"}
+            value={
+              model.delivery.latestDispatch.status
+                ? formatCronRunStatus(model.delivery.latestDispatch.status, dispatchCron?.lastRun?.metadata)
+                : "Unknown"
+            }
           />
         </>
       }

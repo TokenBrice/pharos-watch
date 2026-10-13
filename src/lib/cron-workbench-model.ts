@@ -1,35 +1,59 @@
 import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
+import type { OperatorVerdict } from "@shared/lib/classification";
+import { formatElapsedSeconds } from "@shared/lib/format";
 import type {
   BudgetOnlySurfaceStatus,
   CronRun,
   CronRunStatus,
   CronStatus,
+  StatusCause,
   StatusResponse,
 } from "@shared/types";
 import { getStatusCronDisplay } from "@/lib/status/cron-config";
 
 export type CronWorkbenchState = "unhealthy" | "degraded" | "unknown" | "skipped" | "running" | "healthy";
-export type CronWorkbenchStateFilter = "all" | "attention" | CronWorkbenchState;
+/** `attention` is every non-OK verdict (act, watch, running, unavailable). */
+export type CronVerdictFilter = "all" | "attention" | OperatorVerdict;
 export type CronImpactClass = "public-critical" | "admin-watch";
 export type CronImpactFilter = "all" | CronImpactClass;
-export type CronRunningFilter = "all" | "running" | "stale" | "idle";
+export type CronRunningState = "running" | "stale" | "idle";
 
 export interface CronWorkbenchFilters {
   search: string;
-  state: CronWorkbenchStateFilter;
+  verdict: CronVerdictFilter;
   impact: CronImpactFilter;
   triggerGroup: string;
-  running: CronRunningFilter;
 }
 
 export const DEFAULT_CRON_WORKBENCH_FILTERS: Readonly<CronWorkbenchFilters> = Object.freeze({
   search: "",
-  state: "attention",
+  verdict: "attention",
   impact: "all",
   triggerGroup: "all",
-  running: "all",
 });
+
+/**
+ * Cron-health availability treats a job as stale once its latest run is older
+ * than this multiple of its cadence (`worker/src/lib/status/cron-health.ts`
+ * `staleAt: { multiplier: 2 }`).
+ */
+export const CRON_STALE_BUDGET_MULTIPLIER = 2;
+
+export interface CronVerdictReason {
+  verdict: OperatorVerdict;
+  /** Machine-readable reason (R4). */
+  code: string;
+  /** One plain sentence. */
+  sentence: string;
+}
+
+export interface CronNextExpected {
+  kind: "scheduled" | "due" | "overdue" | "running" | "unknown";
+  label: string;
+  /** Names the cadence and stale budget (R3). */
+  budget: string;
+}
 
 export interface CronWorkbenchGroupInput {
   key: string;
@@ -46,29 +70,26 @@ export interface CronWorkbenchRow {
   display: ReturnType<typeof getStatusCronDisplay>;
   group: Omit<CronWorkbenchGroupInput, "entries">;
   state: CronWorkbenchState;
+  verdict: OperatorVerdict;
+  verdictReason: CronVerdictReason;
   severity: number;
   impactClass: CronImpactClass;
   impactLabel: "Public critical" | "Admin watch";
-  runningState: Exclude<CronRunningFilter, "all">;
+  runningState: CronRunningState;
   rawStatus: CronRunStatus | null;
+  /** Latest run outcome. Never carries findings; those are `qualityReasons`. */
   statusLabel: string;
   qualityReasons: string[];
+  /** Consecutive failed required runs, newest first. */
+  errorStreak: number;
   registryIndex: number;
   sourceIndex: number;
 }
 
-export interface CronWorkbenchGroupSummary {
+/** `total` covers the whole group; verdict counts cover only the visible rows. */
+export interface CronWorkbenchGroupSummary extends Record<OperatorVerdict, number> {
   total: number;
   visible: number;
-  unhealthy: number;
-  degraded: number;
-  unknown: number;
-  skipped: number;
-  running: number;
-  healthy: number;
-  publicCritical: number;
-  adminWatch: number;
-  staleRunning: number;
 }
 
 export interface CronWorkbenchGroup {
@@ -92,6 +113,8 @@ export interface CronWorkbenchModel {
   rows: CronWorkbenchRow[];
   totalCount: number;
   filteredCount: number;
+  /** Verdict counts over every job, independent of filters. */
+  verdictCounts: Record<OperatorVerdict, number>;
   triggerGroups: CronWorkbenchTriggerGroupOption[];
   hasActiveFilters: boolean;
 }
@@ -149,6 +172,14 @@ const CRON_STATE_SEVERITY: Readonly<Record<CronWorkbenchState, number>> = {
   healthy: 0,
 };
 
+const VERDICT_SEVERITY: Readonly<Record<OperatorVerdict, number>> = {
+  act: 4,
+  watch: 3,
+  unavailable: 2,
+  running: 1,
+  ok: 0,
+};
+
 const RUN_STATUS_LABELS: Readonly<Record<CronRunStatus, string>> = {
   ok: "Succeeded",
   degraded: "Completed with warnings",
@@ -201,17 +232,13 @@ function compareStableRegistryOrder(
   return registryDelta || a.sourceIndex - b.sourceIndex;
 }
 
-function isAttentionState(state: CronWorkbenchState): boolean {
-  return state === "unhealthy" || state === "degraded" || state === "unknown";
-}
-
 function isFreshNeutralSkip(cron: CronStatus, nowSeconds?: number): boolean {
   if (cron.lastRun?.status !== "skipped_neutral") return false;
   if (nowSeconds == null) return true;
   return nowSeconds - cron.lastRun.startedAt <= cron.expectedIntervalSec * 2;
 }
 
-function getRunningState(cron: CronStatus): Exclude<CronRunningFilter, "all"> {
+function getRunningState(cron: CronStatus): CronRunningState {
   if (!cron.inFlight) return "idle";
   return cron.inFlight.stale ? "stale" : "running";
 }
@@ -265,6 +292,8 @@ function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean
     row.group.title,
     row.group.badge,
     row.state,
+    row.verdict,
+    row.verdictReason.code,
     row.rawStatus,
     row.statusLabel,
     row.impactClass,
@@ -279,31 +308,148 @@ function matchesSearch(row: CronWorkbenchRow, normalizedSearch: string): boolean
 
 function matchesFilters(row: CronWorkbenchRow, filters: CronWorkbenchFilters): boolean {
   if (!matchesSearch(row, normalizeSearch(filters.search))) return false;
-  if (filters.state === "attention") {
-    if (!isAttentionState(row.state) && row.qualityReasons.length === 0 && !(row.state === "skipped" && !row.cron.healthy)) return false;
-  } else if (filters.state !== "all" && row.state !== filters.state) {
+  if (filters.verdict === "attention") {
+    if (row.verdict === "ok") return false;
+  } else if (filters.verdict !== "all" && row.verdict !== filters.verdict) {
     return false;
   }
   if (filters.impact !== "all" && row.impactClass !== filters.impact) return false;
   if (filters.triggerGroup !== "all" && row.group.key !== filters.triggerGroup) return false;
-  if (filters.running !== "all" && row.runningState !== filters.running) return false;
   return true;
 }
 
+function countVerdicts(rows: readonly CronWorkbenchRow[]): Record<OperatorVerdict, number> {
+  const counts: Record<OperatorVerdict, number> = { act: 0, watch: 0, ok: 0, running: 0, unavailable: 0 };
+  for (const row of rows) counts[row.verdict] += 1;
+  return counts;
+}
+
 function summarizeGroup(allRows: CronWorkbenchRow[], visibleRows: CronWorkbenchRow[]): CronWorkbenchGroupSummary {
-  return {
-    total: allRows.length,
-    visible: visibleRows.length,
-    unhealthy: allRows.filter((row) => row.state === "unhealthy").length,
-    degraded: allRows.filter((row) => row.state === "degraded").length,
-    unknown: allRows.filter((row) => row.state === "unknown").length,
-    skipped: allRows.filter((row) => row.state === "skipped").length,
-    running: allRows.filter((row) => row.runningState === "running").length,
-    healthy: allRows.filter((row) => row.state === "healthy").length,
-    publicCritical: allRows.filter((row) => row.impactClass === "public-critical").length,
-    adminWatch: allRows.filter((row) => row.impactClass === "admin-watch").length,
-    staleRunning: allRows.filter((row) => row.runningState === "stale").length,
-  };
+  return { total: allRows.length, visible: visibleRows.length, ...countVerdicts(visibleRows) };
+}
+
+/** Consecutive failed required runs; generic neutral skips are not required attempts. */
+function countRequiredErrorStreak(cron: CronStatus): number {
+  if (cron.lastRun?.status !== "error" && getInheritedRequiredOutcome(cron) !== "error") return 0;
+  let streak = 0;
+  for (const run of cron.recentRuns) {
+    if (run.status === "skipped_neutral") continue;
+    if (run.status !== "error") break;
+    streak += 1;
+  }
+  return Math.max(streak, 1);
+}
+
+function describeBudget(cron: CronStatus): string {
+  return `Expected every ${formatElapsedSeconds(cron.expectedIntervalSec)}, stale after ${formatElapsedSeconds(
+    cron.expectedIntervalSec * CRON_STALE_BUDGET_MULTIPLIER,
+  )} without a usable run.`;
+}
+
+/**
+ * Next expected start from the last start plus cadence. Client-side estimate:
+ * the scheduler slot itself is not served, so this can lead or trail the real
+ * trigger by up to one slot.
+ */
+export function getCronNextExpected(cron: CronStatus, nowSeconds: number): CronNextExpected {
+  const budget = describeBudget(cron);
+  if (cron.inFlight && !cron.inFlight.stale) return { kind: "running", label: "Running now", budget };
+  const lastStart = cron.lastRun?.startedAt;
+  if (lastStart == null) {
+    return { kind: "unknown", label: cron.telemetryUnknown ? "Unknown" : "No runs", budget };
+  }
+  const late = nowSeconds - (lastStart + cron.expectedIntervalSec);
+  if (late <= 0) return { kind: "scheduled", label: `in ${formatElapsedSeconds(-late)}`, budget };
+  if (nowSeconds - lastStart < cron.expectedIntervalSec * CRON_STALE_BUDGET_MULTIPLIER) {
+    return { kind: "due", label: `Due ${formatElapsedSeconds(late)} ago`, budget };
+  }
+  return { kind: "overdue", label: `Overdue by ${formatElapsedSeconds(late)}`, budget };
+}
+
+/**
+ * The single operator verdict for a cron row (plan 3b). A fresh in-flight
+ * attempt outranks the previous terminal result, so a row never reads as
+ * failed and running at once; the previous outcome stays in `statusLabel`.
+ */
+export function deriveCronVerdict(
+  cron: CronStatus,
+  impactClass: CronImpactClass,
+  state: CronWorkbenchState,
+  qualityReasons: readonly string[],
+  nowSeconds?: number,
+): CronVerdictReason {
+  const ago = (epochSec: number) =>
+    nowSeconds == null ? "" : ` ${formatElapsedSeconds(Math.max(0, nowSeconds - epochSec))} ago`;
+  const budget = formatElapsedSeconds(cron.expectedIntervalSec * CRON_STALE_BUDGET_MULTIPLIER);
+  const critical = impactClass === "public-critical";
+
+  if (cron.telemetryUnknown) {
+    return {
+      verdict: "unavailable",
+      code: cron.telemetryUnknownReason ?? "telemetry-unknown",
+      sentence: "Cron history could not be read, so this job's state is unknown.",
+    };
+  }
+  if (cron.inFlight && !cron.inFlight.stale) {
+    return {
+      verdict: "running",
+      code: "in-flight",
+      sentence: `A run started${ago(cron.inFlight.startedAt)} and sent its last heartbeat${ago(cron.inFlight.updatedAt)}.`,
+    };
+  }
+  if (cron.inFlight?.stale) {
+    return {
+      verdict: critical ? "act" : "watch",
+      code: "stale-heartbeat",
+      sentence: `The running attempt stopped sending heartbeats${ago(cron.inFlight.updatedAt)}.`,
+    };
+  }
+  const errorStreak = countRequiredErrorStreak(cron);
+  if (errorStreak >= 2) {
+    return { verdict: "act", code: "repeated-failures", sentence: `The last ${errorStreak} required runs failed.` };
+  }
+  const publicSuffix = critical ? " Public data depends on this job." : "";
+  if (cron.healthy === false) {
+    return errorStreak === 1
+      ? { verdict: critical ? "act" : "watch", code: "latest-run-failed", sentence: `The latest required run failed.${publicSuffix}` }
+      : {
+        verdict: critical ? "act" : "watch",
+        code: "no-fresh-run",
+        sentence: `No usable run within the ${budget} budget.${publicSuffix}`,
+      };
+  }
+  if (cron.healthy == null) {
+    return {
+      verdict: "unavailable",
+      code: "health-unknown",
+      sentence: "The status read did not report availability for this job.",
+    };
+  }
+  if (state === "degraded") {
+    return { verdict: "watch", code: "run-warnings", sentence: "The latest required run completed with warnings." };
+  }
+  if (errorStreak === 1) {
+    return { verdict: "watch", code: "latest-run-failed", sentence: "The latest required run failed." };
+  }
+  const staleArtifacts = cron.staleArtifacts?.length ?? 0;
+  if (staleArtifacts > 0) {
+    return {
+      verdict: "watch",
+      code: "stale-artifacts",
+      sentence: `${staleArtifacts} expired lease or orphaned progress record${staleArtifacts === 1 ? "" : "s"} remain${staleArtifacts === 1 ? "s" : ""}.`,
+    };
+  }
+  if (qualityReasons.length > 0) {
+    return {
+      verdict: critical ? "watch" : "ok",
+      code: "findings",
+      sentence: `The latest run succeeded with findings: ${qualityReasons.join(", ")}.`,
+    };
+  }
+  if (state === "skipped") {
+    return { verdict: "ok", code: "skipped", sentence: "The latest run was skipped and no required run is outstanding." };
+  }
+  return { verdict: "ok", code: "ok", sentence: `The latest run succeeded within the ${budget} budget.` };
 }
 
 export function classifyCronWorkbenchState(cron: CronStatus, nowSeconds?: number): CronWorkbenchState {
@@ -465,6 +611,8 @@ export function buildCronWorkbenchModel(
   groups: readonly CronWorkbenchGroupInput[],
   filters: CronWorkbenchFilters = DEFAULT_CRON_WORKBENCH_FILTERS,
   nowSeconds?: number,
+  /** A selected or deep-linked job stays visible whatever the filters say. */
+  pinnedJob?: string | null,
 ): CronWorkbenchModel {
   let sourceIndex = 0;
   const rowsByGroup = groups.map((group) => {
@@ -480,6 +628,7 @@ export function buildCronWorkbenchModel(
       const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
       const rawStatus = cron.lastRun?.status ?? null;
       const qualityReasons = getWorkbenchQualityReasons(cron, nowSeconds);
+      const verdictReason = deriveCronVerdict(cron, impactClass, state, qualityReasons, nowSeconds);
       const row: CronWorkbenchRow = {
         key: `${group.key}:${job}`,
         job,
@@ -487,7 +636,9 @@ export function buildCronWorkbenchModel(
         display: getStatusCronDisplay(job),
         group: groupMeta,
         state,
-        severity: CRON_STATE_SEVERITY[state],
+        verdict: verdictReason.verdict,
+        verdictReason,
+        severity: VERDICT_SEVERITY[verdictReason.verdict] * 10 + CRON_STATE_SEVERITY[state],
         impactClass,
         impactLabel: impactClass === "public-critical" ? "Public critical" : "Admin watch",
         runningState: getRunningState(cron),
@@ -498,10 +649,11 @@ export function buildCronWorkbenchModel(
             ? "Failed (latest required run)"
             : inheritedRequiredOutcome === "degraded"
               ? "Completed with warnings (latest required run)"
-              : qualityReasons.length > 0 && (rawStatus === "ok" || rawStatus === "skipped_neutral")
-                ? "Succeeded with findings"
+              : rawStatus === "ok" && qualityReasons.length > 0
+                ? RUN_STATUS_LABELS.ok
                 : formatCronRunStatus(rawStatus, cron.lastRun?.metadata),
         qualityReasons,
+        errorStreak: countRequiredErrorStreak(cron),
         registryIndex: getRegistryIndex(job),
         sourceIndex,
       };
@@ -512,7 +664,9 @@ export function buildCronWorkbenchModel(
   });
 
   const allRows = rowsByGroup.flatMap(({ rows }) => rows);
-  const visibleRowKeys = new Set(allRows.filter((row) => matchesFilters(row, filters)).map((row) => row.key));
+  const visibleRowKeys = new Set(
+    allRows.filter((row) => row.job === pinnedJob || matchesFilters(row, filters)).map((row) => row.key),
+  );
   const visibleGroups = rowsByGroup.flatMap(({ group, rows }) => {
     const visibleRows = rows
       .filter((row) => visibleRowKeys.has(row.key))
@@ -537,6 +691,7 @@ export function buildCronWorkbenchModel(
     rows,
     totalCount: allRows.length,
     filteredCount: rows.length,
+    verdictCounts: countVerdicts(allRows),
     triggerGroups: groups.map((group) => ({
       value: group.key,
       label: group.title,
@@ -544,10 +699,9 @@ export function buildCronWorkbenchModel(
     })),
     hasActiveFilters:
       filters.search.trim().length > 0 ||
-      filters.state !== DEFAULT_CRON_WORKBENCH_FILTERS.state ||
+      filters.verdict !== DEFAULT_CRON_WORKBENCH_FILTERS.verdict ||
       filters.impact !== DEFAULT_CRON_WORKBENCH_FILTERS.impact ||
-      filters.triggerGroup !== DEFAULT_CRON_WORKBENCH_FILTERS.triggerGroup ||
-      filters.running !== DEFAULT_CRON_WORKBENCH_FILTERS.running,
+      filters.triggerGroup !== DEFAULT_CRON_WORKBENCH_FILTERS.triggerGroup,
   };
 }
 
@@ -598,4 +752,86 @@ export function buildBudgetOnlySurfaceGroups(
       },
     };
   });
+}
+
+/** Group header counts: scope first, then only the non-zero verdicts of the visible rows. */
+export function formatCronGroupSummary(summary: CronWorkbenchGroupSummary): string {
+  const scope = summary.visible < summary.total
+    ? `${summary.visible} of ${summary.total} shown`
+    : `${summary.total} job${summary.total === 1 ? "" : "s"}`;
+  const counts = [
+    summary.act > 0 ? `${summary.act} act now` : null,
+    summary.watch > 0 ? `${summary.watch} watch` : null,
+    summary.running > 0 ? `${summary.running} running` : null,
+    summary.unavailable > 0 ? `${summary.unavailable} unavailable` : null,
+    summary.ok > 0 ? `${summary.ok} OK` : null,
+  ].filter((part): part is string => part != null);
+  return [scope, ...counts].join(" · ");
+}
+
+const RUNBOOK_BLOB_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks";
+
+/** Job-owned runbooks: the doc that names the job as its primary subject. */
+const CRON_JOB_RUNBOOKS: Readonly<Record<string, string>> = {
+  "sync-blacklist": "blacklist-sync.md",
+  "sync-stablecoins": "stablecoins-cache.md",
+  "sync-mint-burn": "mint-burn-integrity.md",
+  "daily-digest": "blocked-digest-edition.md",
+  "weekly-recap": "blocked-digest-edition.md",
+  "digest-trigger-poll": "blocked-digest-edition.md",
+  "sync-yield-data": "yield-health.md",
+  "sync-yield-supplemental": "yield-health.md",
+  "yield-coverage-audit": "yield-health.md",
+  "fetch-tbill-rate": "yield-benchmark-fallback-stale.md",
+  "dispatch-telegram-alerts": "telegram-backlog-expiration.md",
+  "telegram-digest-outbox-drain": "telegram-digest-outbox.md",
+  "telegram-degradation-watchdog": "telegram-rate-limit-storm.md",
+};
+
+export interface CronRunbookLink {
+  label: string;
+  href: string;
+}
+
+function runbookLabel(href: string): string {
+  const file = href.split("/").pop()?.replace(/\.md$/, "") ?? href;
+  const words = file.replace(/-/g, " ");
+  return `${words.charAt(0).toUpperCase()}${words.slice(1)} runbook`;
+}
+
+/**
+ * Runbooks for a cron row, most specific first: a status cause that names
+ * this job and carries a runbook, then the runbook for the row's failure
+ * mode (abandoned slot, stale lease, missed delivery), then the job's own.
+ */
+export function getCronRunbooks(
+  row: Pick<CronWorkbenchRow, "job" | "cron" | "verdictReason">,
+  causes: readonly StatusCause[] = [],
+): CronRunbookLink[] {
+  const hrefs: string[] = [];
+  for (const cause of causes) {
+    if (cause.runbookUrl && cause.subjects?.includes(row.job)) hrefs.push(cause.runbookUrl);
+  }
+  const lastRun = row.cron.lastRun;
+  if (lastRun && isCronRunPlatformAbandoned(lastRun)) hrefs.push(`${RUNBOOK_BLOB_URL}/cron-slot-abandonment.md`);
+  if (
+    row.cron.inFlight?.stale
+    || (row.cron.staleArtifacts?.length ?? 0) > 0
+    || lastRun?.status === "skipped_locked"
+  ) {
+    hrefs.push(`${RUNBOOK_BLOB_URL}/lease-and-breaker-recovery.md`);
+  }
+  if (row.verdictReason.code === "no-fresh-run") hrefs.push(`${RUNBOOK_BLOB_URL}/cron-delivery-stall.md`);
+  const owned = CRON_JOB_RUNBOOKS[row.job];
+  if (owned) hrefs.push(`${RUNBOOK_BLOB_URL}/${owned}`);
+  return [...new Set(hrefs)].map((href) => ({ href, label: runbookLabel(href) }));
+}
+
+/** Status causes whose `subjects` name this job. */
+export function getCronCauses(job: string, causes: readonly StatusCause[] = []): StatusCause[] {
+  return causes.filter((cause) => cause.subjects?.includes(job));
+}
+
+export function getCronTailCommand(job: string): string {
+  return `wrangler tail stablecoin-api --format pretty --search ${job}`;
 }

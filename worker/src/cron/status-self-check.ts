@@ -12,6 +12,7 @@ import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import { computeRawStatus } from "../lib/status-evaluation";
 import { assessPublicHealth, buildPublicHealthResponse, getPublicHealthEvidenceReadFailures } from "../lib/public-health-assessment";
+import { reconcilePublicStatusState } from "../lib/status/public-status-state";
 import { writeStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { loadStatusSupplements } from "../lib/status/supplements";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
@@ -797,8 +798,12 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     ),
   ]);
   await options.reportProgress?.({ stage: "snapshot-publication" });
+  const publicHealthBody = buildPublicHealthResponse(publicHealthAssessment, now);
+  const publicStatus = await reconcilePublicStatusState(db, now, publicHealthBody,
+    () => failedOutputs.add("status_state:public"));
+  if (!publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
   const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw, {
-    publicHealth: buildPublicHealthResponse(publicHealthAssessment, now),
+    publicHealth: { ...publicHealthBody, ...publicStatus.projection },
     supplements,
   });
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);

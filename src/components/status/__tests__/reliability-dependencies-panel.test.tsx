@@ -28,9 +28,9 @@ describe("ReliabilityDependenciesPanel", () => {
 
     expect(screen.getByRole("table", { name: "Dependency root causes" })).toBeTruthy();
     expect(screen.getByText("Fixture market cache")).toBeTruthy();
-    expect(screen.getByText("fixture-market-cache")).toBeTruthy();
+    expect(screen.getByText(/^fixture-market-cache · /)).toBeTruthy();
     expect(screen.getByText("fixture-provider-a")).toBeTruthy();
     expect(screen.getByText("Fixture publication invariant")).toBeTruthy();
-    expect(screen.getByText("fixture-publication-check")).toBeTruthy();
+    expect(screen.getByText(/^fixture-publication-check · /)).toBeTruthy();
   });
 });

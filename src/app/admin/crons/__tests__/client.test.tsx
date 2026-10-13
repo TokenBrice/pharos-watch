@@ -48,16 +48,14 @@ afterEach(() => {
 });
 
 describe("CronsClient", () => {
-  it("passes the full registry-grouped cron payload and running count to the routed workbench", () => {
+  it("passes the full registry-grouped cron payload to the routed workbench", () => {
     render(<CronsClient />);
 
     expect(screen.getByTestId("crons-section")).toBeTruthy();
     const props = sectionPropsMock.mock.calls.at(-1)?.[0] as {
-      runningCrons: number;
       cronGroups: Array<{ key: string; entries: Array<[string, unknown]> }>;
       data: ReturnType<typeof makeHealthyStatusResponse>;
     };
-    expect(props.runningCrons).toBe(1);
     expect(props.cronGroups).toHaveLength(1);
     expect(props.cronGroups[0]?.key).toBe("five-minute");
     expect(props.cronGroups[0]?.entries.map(([job]) => job)).toEqual(["dispatch-telegram-alerts"]);

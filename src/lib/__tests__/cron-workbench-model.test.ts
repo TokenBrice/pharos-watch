@@ -5,6 +5,10 @@ import {
   buildCronWorkbenchModel,
   classifyCronWorkbenchState,
   DEFAULT_CRON_WORKBENCH_FILTERS,
+  deriveCronVerdict,
+  formatCronGroupSummary,
+  getCronNextExpected,
+  getCronRunbooks,
   formatCronDuration,
   formatCronRunStatus,
   formatCronRunTiming,
@@ -23,7 +27,7 @@ function makeCron(overrides: Partial<CronStatus> = {}): CronStatus {
 }
 
 function makeFilters(overrides: Partial<CronWorkbenchFilters> = {}): CronWorkbenchFilters {
-  return { ...DEFAULT_CRON_WORKBENCH_FILTERS, state: "all", ...overrides };
+  return { ...DEFAULT_CRON_WORKBENCH_FILTERS, verdict: "all", ...overrides };
 }
 
 function makeGroups(): CronWorkbenchGroupInput[] {
@@ -79,28 +83,29 @@ describe("cron workbench model", () => {
     const model = buildCronWorkbenchModel(makeGroups(), makeFilters());
 
     expect(model.groups.map((group) => group.key)).toEqual(["quarter-hourly", "five-minute"]);
-    expect(model.groups[0]?.summary).toMatchObject({
-      total: 3,
-      visible: 3,
-      unhealthy: 1,
-      degraded: 1,
-      skipped: 0,
-      healthy: 1,
-    });
+    // sync-stablecoins is public critical and unhealthy; sync-fx-rates ran with warnings.
+    expect(model.groups[0]?.summary).toEqual({ total: 3, visible: 3, act: 1, watch: 1, ok: 1, running: 0, unavailable: 0 });
+    expect(model.verdictCounts).toEqual({ act: 1, watch: 1, ok: 1, running: 1, unavailable: 1 });
     expect(model.triggerGroups).toEqual([
       { value: "quarter-hourly", label: "15-minute slot", count: 3 },
       { value: "five-minute", label: "5-minute slot", count: 2 },
     ]);
   });
 
-  it("keeps successful findings in attention without counting them as degraded", () => {
+  it("shows findings on a successful watch-tier run as OK with a findings chip, not a warning", () => {
     const groups = makeGroups();
     groups[0]!.entries = [["status-self-check", makeCron({
       lastRun: { startedAt: 1_700_000_000, durationMs: 500, status: "ok", metadata: { quality: { reason: "probe-plane-degraded" } } },
     })]];
-    const model = buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, 1_700_000_100);
-    expect(model.rows[0]).toMatchObject({ state: "healthy", statusLabel: "Succeeded with findings", qualityReasons: ["probe-plane-degraded"] });
-    expect(model.groups[0]?.summary).toMatchObject({ healthy: 1, degraded: 0, visible: 1 });
+    const model = buildCronWorkbenchModel([groups[0]!], makeFilters(), 1_700_000_100);
+    expect(model.rows[0]).toMatchObject({
+      state: "healthy",
+      verdict: "ok",
+      statusLabel: "Succeeded",
+      qualityReasons: ["probe-plane-degraded"],
+      verdictReason: { code: "findings" },
+    });
+    expect(buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, 1_700_000_100).rows).toHaveLength(0);
     expect(formatCronRunStatus("ok", { quality: { reason: "producer-output-stale" } })).toBe("Succeeded with findings");
   });
 
@@ -109,10 +114,9 @@ describe("cron workbench model", () => {
     const skip = { startedAt: 1_700_000_100, durationMs: 0, status: "skipped_neutral" as const };
     const groups = makeGroups();
     groups[0]!.entries = [["cron-sentinel", makeCron({ lastRun: skip, recentRuns: [skip, run] })]];
-    const fresh = buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 1_800);
-    expect(fresh.rows[0]).toMatchObject({ state: "skipped", statusLabel: "Succeeded with findings" });
-    expect(fresh.groups[0]?.summary.degraded).toBe(0);
-    expect(buildCronWorkbenchModel([groups[0]!], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 1_801).rows).toHaveLength(0);
+    const fresh = buildCronWorkbenchModel([groups[0]!], makeFilters(), run.startedAt + 1_800);
+    expect(fresh.rows[0]).toMatchObject({ state: "skipped", qualityReasons: ["producer-output-stale"], verdictReason: { code: "findings" } });
+    expect(buildCronWorkbenchModel([groups[0]!], makeFilters(), run.startedAt + 1_801).rows[0]?.qualityReasons).toEqual([]);
   });
 
   it("sorts severity within a group and uses canonical registry order for ties", () => {
@@ -146,13 +150,18 @@ describe("cron workbench model", () => {
     ]);
   });
 
-  it("combines search, state, impact, group, and running filters", () => {
+  it("combines search, verdict, impact, and group filters", () => {
     const groups = makeGroups();
     const searched = buildCronWorkbenchModel(groups, makeFilters({ search: "stablecoin sync" }));
     expect(searched.rows.map((row) => row.job)).toEqual(["sync-stablecoins"]);
 
     const attention = buildCronWorkbenchModel(groups, { ...DEFAULT_CRON_WORKBENCH_FILTERS });
-    expect(attention.rows.map((row) => row.job)).toEqual(["sync-stablecoins", "sync-fx-rates", "reserve-recovery"]);
+    expect(attention.rows.map((row) => row.job)).toEqual([
+      "sync-stablecoins",
+      "sync-fx-rates",
+      "reserve-recovery",
+      "dispatch-telegram-alerts",
+    ]);
 
     const critical = buildCronWorkbenchModel(groups, makeFilters({ impact: "public-critical" }));
     expect(critical.rows.map((row) => row.job)).toEqual(["sync-stablecoins", "sync-fx-rates", "reserve-recovery"]);
@@ -160,8 +169,17 @@ describe("cron workbench model", () => {
     const group = buildCronWorkbenchModel(groups, makeFilters({ triggerGroup: "five-minute" }));
     expect(group.rows.map((row) => row.job)).toEqual(["reserve-recovery", "dispatch-telegram-alerts"]);
 
-    const running = buildCronWorkbenchModel(groups, makeFilters({ running: "running" }));
+    const running = buildCronWorkbenchModel(groups, makeFilters({ verdict: "running" }));
     expect(running.rows.map((row) => row.job)).toEqual(["dispatch-telegram-alerts"]);
+
+    const act = buildCronWorkbenchModel(groups, makeFilters({ verdict: "act" }));
+    expect(act.rows.map((row) => row.job)).toEqual(["sync-stablecoins"]);
+  });
+
+  it("keeps a deep-linked job visible whatever the filters say", () => {
+    const model = buildCronWorkbenchModel(makeGroups(), { ...DEFAULT_CRON_WORKBENCH_FILTERS }, undefined, "snapshot-chain-supply");
+    expect(model.rows.map((row) => row.job)).toContain("snapshot-chain-supply");
+    expect(model.groups[0]?.summary).toMatchObject({ total: 3, visible: 3, ok: 1 });
   });
 
   it("intersects all filters and drops any row failing a single predicate", () => {
@@ -175,7 +193,7 @@ describe("cron workbench model", () => {
           ["sync-stablecoins", makeCron({ healthy: false })],
           ["reserve-recovery", makeCron()],
           ["custom-side-job", makeCron({ healthy: false })],
-          ["sync-blacklist", makeCron({ healthy: false, inFlight: { startedAt: 1, updatedAt: 2, stale: true } })],
+          ["sync-blacklist", makeCron({ healthy: false, inFlight: { startedAt: 1, updatedAt: 2, stale: false } })],
         ],
       },
       {
@@ -191,10 +209,9 @@ describe("cron workbench model", () => {
       groups,
       makeFilters({
         search: "delivery",
-        state: "attention",
+        verdict: "act",
         impact: "public-critical",
         triggerGroup: "five-minute",
-        running: "idle",
       }),
     );
 
@@ -203,7 +220,7 @@ describe("cron workbench model", () => {
     expect(model.groups.map((group) => group.key)).toEqual(["five-minute"]);
   });
 
-  it("sorts rows by state severity before registry and source order", () => {
+  it("sorts rows by verdict, then state severity, before registry and source order", () => {
     const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
     const group: CronWorkbenchGroupInput = {
       key: "mixed",
@@ -228,18 +245,19 @@ describe("cron workbench model", () => {
     expect(rows.map((row) => row.job)).toEqual([
       "custom-f-unhealthy",
       "custom-e-degraded",
-      "custom-d-unknown",
       "custom-c-skipped",
+      "custom-d-unknown",
       "custom-b-running",
       "custom-a-healthy",
     ]);
   });
 
-  it("keeps complete group totals while a filter narrows visible rows", () => {
-    const model = buildCronWorkbenchModel(makeGroups(), makeFilters({ running: "running" }));
+  it("scopes group verdict counts to visible rows while keeping the group total", () => {
+    const model = buildCronWorkbenchModel(makeGroups(), makeFilters({ verdict: "running" }));
 
     expect(model.groups.map((group) => group.key)).toEqual(["five-minute"]);
-    expect(model.groups[0]?.summary).toMatchObject({ total: 2, visible: 1, running: 1 });
+    expect(model.groups[0]?.summary).toEqual({ total: 2, visible: 1, running: 1, act: 0, watch: 0, ok: 0, unavailable: 0 });
+    expect(formatCronGroupSummary(model.groups[0]!.summary)).toBe("1 of 2 shown · 1 running");
     expect(model.totalCount).toBe(5);
     expect(model.filteredCount).toBe(1);
     expect(model.rows.map((row) => row.job)).toEqual(["dispatch-telegram-alerts"]);
@@ -286,10 +304,8 @@ describe("cron workbench model", () => {
       rawStatus: "skipped_neutral",
       statusLabel: "Skipped: no work required",
     });
-    expect(model.groups[0]?.summary).toMatchObject({
-      unhealthy: 0,
-      skipped: 1,
-    });
+    // Backend availability still lacks success evidence, so the watch job stays in view.
+    expect(model.rows[0]).toMatchObject({ verdict: "watch", verdictReason: { code: "no-fresh-run" } });
   });
 
   it("keeps a stale neutral skip unhealthy", () => {
@@ -389,7 +405,7 @@ describe("cron workbench model", () => {
       job: "snapshot-public-dataset",
       state: "skipped",
     });
-    expect(model.groups[0]?.summary).toMatchObject({ unhealthy: 0, skipped: 1 });
+    expect(model.rows[0]).toMatchObject({ verdict: "ok", verdictReason: { code: "skipped" } });
   });
 
   it.each([
@@ -631,5 +647,84 @@ describe("cron workbench model", () => {
       filteredCount: 0,
     });
     expect(buildBudgetOnlySurfaceGroups([])).toEqual([]);
+  });
+});
+
+describe("cron operator verdict", () => {
+  const error = (startedAt: number) => ({ startedAt, durationMs: 100, status: "error" as const });
+
+  it.each([
+    { name: "public-critical job without a usable run", cron: makeCron({ healthy: false }), impact: "public-critical", verdict: "act", code: "no-fresh-run" },
+    { name: "watch job without a usable run", cron: makeCron({ healthy: false }), impact: "admin-watch", verdict: "watch", code: "no-fresh-run" },
+    {
+      name: "watch job failing twice in a row",
+      cron: makeCron({ healthy: false, lastRun: error(2), recentRuns: [error(2), { startedAt: 1, durationMs: 0, status: "skipped_neutral" as const }, error(0)] }),
+      impact: "admin-watch",
+      verdict: "act",
+      code: "repeated-failures",
+    },
+    { name: "single failure on a watch job", cron: makeCron({ healthy: false, lastRun: error(2), recentRuns: [error(2)] }), impact: "admin-watch", verdict: "watch", code: "latest-run-failed" },
+    {
+      name: "run warnings",
+      cron: makeCron({ lastRun: { startedAt: 1, durationMs: 1, status: "degraded" as const } }),
+      impact: "public-critical",
+      verdict: "watch",
+      code: "run-warnings",
+    },
+    { name: "telemetry unknown", cron: makeCron({ telemetryUnknown: true, telemetryUnknownReason: "cron-history-read-failed" }), impact: "public-critical", verdict: "unavailable", code: "cron-history-read-failed" },
+    {
+      name: "a fresh in-flight retry after an abandoned failure",
+      cron: makeCron({
+        healthy: false,
+        lastRun: { ...error(1), metadata: { reason: "stale-slot-reconciled" } },
+        recentRuns: [{ ...error(1), metadata: { reason: "stale-slot-reconciled" } }, error(0)],
+        inFlight: { startedAt: 10, updatedAt: 20, stale: false },
+      }),
+      impact: "public-critical",
+      verdict: "running",
+      code: "in-flight",
+    },
+    { name: "stale heartbeat on a critical job", cron: makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: true } }), impact: "public-critical", verdict: "act", code: "stale-heartbeat" },
+    {
+      name: "findings on a critical job",
+      cron: makeCron({ lastRun: { startedAt: 1, durationMs: 1, status: "ok" as const, metadata: { quality: { reason: "x" } } } }),
+      impact: "public-critical",
+      verdict: "watch",
+      code: "findings",
+    },
+    { name: "healthy job", cron: makeCron(), impact: "public-critical", verdict: "ok", code: "ok" },
+  ] as const)("$name -> $verdict", ({ cron, impact, verdict, code }) => {
+    const state = classifyCronWorkbenchState(cron);
+    const quality = cron.lastRun?.metadata?.quality ? ["x"] : [];
+    expect(deriveCronVerdict(cron, impact, state, quality, 100)).toMatchObject({ verdict, code });
+  });
+
+  it("estimates the next run from the last start and cadence, naming the stale budget", () => {
+    const cron = makeCron({ expectedIntervalSec: 900 });
+    const start = 1_700_000_000;
+    expect(getCronNextExpected(cron, start + 300)).toMatchObject({ kind: "scheduled", label: "in 10m" });
+    expect(getCronNextExpected(cron, start + 1_200)).toMatchObject({ kind: "due", label: "Due 5m ago" });
+    expect(getCronNextExpected(cron, start + 2_700)).toMatchObject({ kind: "overdue", label: "Overdue by 30m" });
+    expect(getCronNextExpected(cron, start).budget).toBe("Expected every 15m, stale after 30m without a usable run.");
+    expect(getCronNextExpected(makeCron({ inFlight: { startedAt: 1, updatedAt: 2, stale: false } }), start).kind).toBe("running");
+    expect(getCronNextExpected(makeCron({ lastRun: null, recentRuns: [], telemetryUnknown: true }), start).label).toBe("Unknown");
+  });
+
+  it("formats group headers with scope and only non-zero counts", () => {
+    expect(formatCronGroupSummary({ total: 6, visible: 6, act: 0, watch: 0, running: 0, unavailable: 0, ok: 6 })).toBe("6 jobs · 6 OK");
+    expect(formatCronGroupSummary({ total: 6, visible: 1, act: 0, watch: 1, running: 0, unavailable: 0, ok: 0 })).toBe("1 of 6 shown · 1 watch");
+  });
+
+  it("orders runbooks from a naming status cause, then failure mode, then the job's own", () => {
+    const [row] = buildCronWorkbenchModel(
+      [{ key: "q", title: "Q", badge: "q", description: "q", entries: [["sync-stablecoins", makeCron({ healthy: false, inFlight: { startedAt: 1, updatedAt: 2, stale: true } })]] }],
+      makeFilters(),
+    ).rows;
+    const links = getCronRunbooks(row!, [
+      { layer: "availability", code: "x", severity: "warning", message: "m", subjects: ["sync-stablecoins"], runbookUrl: "https://example.test/x.md" },
+      { layer: "availability", code: "y", severity: "warning", message: "m", subjects: ["other-job"], runbookUrl: "https://example.test/y.md" },
+    ]);
+    expect(links.map((link) => link.href.split("/").pop())).toEqual(["x.md", "lease-and-breaker-recovery.md", "stablecoins-cache.md"]);
+    expect(links[1]?.label).toBe("Lease and breaker recovery runbook");
   });
 });

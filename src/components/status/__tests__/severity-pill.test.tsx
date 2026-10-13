@@ -15,7 +15,7 @@ describe("SeverityPill", () => {
       </div>,
     );
 
-    const tones = ["critical", "warning", "info"].map((severity) => screen.getByText(severity).className);
+    const tones = ["Critical", "Warning", "Informational"].map((label) => screen.getByText(label).className);
     expect(new Set(tones).size).toBe(3);
   });
 });

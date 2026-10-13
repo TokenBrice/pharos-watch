@@ -41,7 +41,10 @@ export function TableViewport({
           "relative",
           scrollShadow && "scroll-shadow",
           horizontal && "overflow-x-auto",
-          vertical && "overflow-y-auto",
+          // A vertically scrolling viewport is the sticky header's scroll
+          // container, so the page-level `--table-header-top` offset (sized
+          // for the site header) would float the thead mid-viewport.
+          vertical && "overflow-y-auto [--table-header-top:0px]",
           overscrollX && "overscroll-x-contain",
           compactBottomPadding && "pb-3 sm:pb-0",
           className,

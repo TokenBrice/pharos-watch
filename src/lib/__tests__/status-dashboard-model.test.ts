@@ -503,12 +503,12 @@ describe("status dashboard model", () => {
     expect(model.attentionSections.some((section) => section.id === "comms")).toBe(false);
   });
 
-  it("surfaces missing Comms telemetry as Unknown attention", () => {
+  it("surfaces missing Comms telemetry as Unavailable attention", () => {
     const data = { ...makeHealthyStatusResponse(), telegramBot: null };
     const model = buildModel(data);
     const comms = model.attentionSections.find((section) => section.id === "comms");
 
-    expect(comms).toMatchObject({ value: "Unknown", valueClassName: "text-muted-foreground" });
+    expect(comms).toMatchObject({ value: "Unavailable", valueClassName: "text-muted-foreground" });
     expect(comms?.summary).toContain("Telegram delivery telemetry is unavailable");
   });
 

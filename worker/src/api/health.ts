@@ -5,6 +5,7 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { loadStatusRawSnapshot } from "../lib/status/raw-snapshot";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus, schedulerLivenessWarnings } from "../lib/status/scheduler-liveness";
 import { maxPublicStatus } from "@shared/lib/public-health";
+import { projectPublicStatus } from "@shared/lib/public-status-components";
 
 export const handleHealth = async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -20,13 +21,19 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
   if (snapshot.kind === "fresh" && snapshot.publicHealth && !cachedSchedulerUnhealthy) {
     const status = maxPublicStatus(snapshot.publicHealth.status,
       schedulerLivenessImpactStatus(schedulerLiveness));
-    return jsonResponse({
+    const body: HealthResponse = {
       ...snapshot.publicHealth, timestamp: now, status, schedulerLiveness,
       warnings: [...snapshot.publicHealth.warnings.filter((warning) =>
         warning !== "scheduled_delivery_stalled" && warning !== "scheduler_liveness_unavailable"
         && warning !== "heavy_scheduled_delivery_stalled" && warning !== "heavy_scheduler_liveness_unavailable"),
       ...schedulerLivenessWarnings(schedulerLiveness)],
-    }, { headers: { "Cache-Control": CACHE_PROFILES.realtime } });
+    };
+    // Re-project over the live scheduler overlay; persisted `since` survives
+    // only for components whose state the overlay did not change.
+    const since = Object.fromEntries((snapshot.publicHealth.components ?? [])
+      .map((component) => [component.id, { state: component.state, since: component.since }]));
+    return jsonResponse({ ...body, ...projectPublicStatus(body, since) },
+      { headers: { "Cache-Control": CACHE_PROFILES.realtime } });
   }
 
   const assessment = await assessPublicHealth(db, now, { logPrefix: "health", schedulerLiveness });

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   buildWorkspaceModeUrl,
   parseWorkspaceMode,
+  WORKSPACE_MODE_QUERY_PARAM,
   type WorkspaceModeOption,
 } from "@/lib/status/workspace-mode";
 
@@ -30,7 +31,11 @@ export function useWorkspaceMode<TMode extends string>({
         setActiveMode(urlMode);
         return;
       }
-      window.history.replaceState(window.history.state, "", buildWorkspaceModeUrl(window.location, defaultMode));
+      // A missing view stays bare so the default (first view with findings)
+      // is re-derived on every landing; only an invalid view is canonicalized.
+      if (new URLSearchParams(window.location.search).has(WORKSPACE_MODE_QUERY_PARAM)) {
+        window.history.replaceState(window.history.state, "", buildWorkspaceModeUrl(window.location, defaultMode));
+      }
       setActiveMode(defaultMode);
     };
 

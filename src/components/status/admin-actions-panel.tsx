@@ -17,8 +17,10 @@ import {
   filterActionCatalog,
   getActionIntentCategory,
   getLastActionActivity,
+  groupConsecutiveActivity,
   reconcileActionActivity,
   type ActionActivity,
+  type ActionActivityGroup,
   type ActionIntentCategory,
 } from "@/lib/actions-workbench-model";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
@@ -238,14 +240,18 @@ function ActionCatalogRow({
   );
 }
 
-function RecentActivity({ activity, nowSeconds }: { activity: ActionActivity; nowSeconds: number }) {
+function RecentActivity({ group, nowSeconds }: { group: ActionActivityGroup; nowSeconds: number }) {
+  const activity = group.latest;
   return (
     <li className="flex flex-col gap-2 border-t border-border/60 py-3 first:border-t-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-foreground">{activity.actionLabel}</span>
+          {group.count > 1 ? (
+            <span className="pharos-numeric text-xs font-medium text-muted-foreground">×{group.count}</span>
+          ) : null}
           <StatusPill className={ACTIVITY_CLASS[activity.status]}>{activity.status}</StatusPill>
-          <span className="text-2xs text-muted-foreground">{activity.source}</span>
+          <span className="text-xs text-muted-foreground">{activity.source}</span>
         </div>
         <p className="mt-1 truncate text-xs text-muted-foreground">
           {activity.target ?? "No target recorded"}
@@ -253,7 +259,11 @@ function RecentActivity({ activity, nowSeconds }: { activity: ActionActivity; no
         </p>
       </div>
       <div className="shrink-0 text-xs text-muted-foreground">
-        <span className="pharos-numeric">{elapsedLabel(activity.at, nowSeconds)}</span>
+        <span className="pharos-numeric">
+          {group.count > 1
+            ? `${elapsedLabel(group.oldestAt, nowSeconds).replace(/ ago$/u, "")} to ${elapsedLabel(activity.at, nowSeconds)}`
+            : elapsedLabel(activity.at, nowSeconds)}
+        </span>
         {activity.httpStatus != null ? ` · HTTP ${activity.httpStatus}` : ""}
       </div>
     </li>
@@ -283,6 +293,7 @@ export function AdminActionsPanel({
     () => reconcileActionActivity(ADMIN_ACTIONS, executions, actionLog.data?.entries ?? []),
     [actionLog.data?.entries, executions],
   );
+  const activityGroups = useMemo(() => groupConsecutiveActivity(activities), [activities]);
   const filteredActions = useMemo(
     () => filterActionCatalog(ADMIN_ACTIONS, { query, intent, risk }),
     [intent, query, risk],
@@ -403,10 +414,10 @@ export function AdminActionsPanel({
             Persisted history could not be loaded: {actionLog.error?.message ?? "Unknown error"}
           </p>
         )}
-        {activities.length > 0 ? (
+        {activityGroups.length > 0 ? (
           <ul className="mt-3">
-            {activities.slice(0, 8).map((activity) => (
-              <RecentActivity key={activity.id} activity={activity} nowSeconds={nowSeconds} />
+            {activityGroups.slice(0, 8).map((group) => (
+              <RecentActivity key={group.latest.id} group={group} nowSeconds={nowSeconds} />
             ))}
           </ul>
         ) : (

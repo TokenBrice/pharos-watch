@@ -1045,6 +1045,26 @@ describe("availability cron-error semantics", () => {
 });
 
 describe("status rule-set behavior at policy boundaries", () => {
+  it("names the jobs behind counted cron causes", () => {
+    const combined = evaluateAvailabilityStatus({
+      ...makeAvailabilityCauseInput(makePublicHealth()),
+      availabilityImpactingCronErrors: 0,
+      availabilityImpactingUnhealthyCrons: 1,
+      availabilityImpactingConsecutiveCronErrors: 0,
+      watchUnhealthyCrons: 0,
+      degradedCronRuns: 0,
+      cronErrorCount: 0,
+      cronHistoryQueryFailed: false,
+      cronProgressQueryFailed: false,
+      cronLeaseQueryFailed: false,
+      cronFindingJobs: { availabilityImpactingUnhealthy: ["sync-mint-burn"] },
+    });
+    expect(combined.causes.find((cause) => cause.code === "unhealthy_crons_present")).toMatchObject({
+      message: "1 availability-impacting cron job(s) are unavailable/stale. Jobs: sync-mint-burn.",
+      subjects: ["sync-mint-burn"],
+    });
+  });
+
   it("preserves availability diagnostic cause ordering", () => {
     const input: AvailabilityEvaluationInput = {
       ...makeAvailabilityCauseInput(makePublicHealth()),

@@ -1,3 +1,4 @@
+import { TechnicalDetail } from "@/components/status/page-primitives";
 import { RELIABILITY_MODES, type ReliabilityEvidenceGap } from "@/lib/reliability-workspace-model";
 
 export function ReliabilityEvidenceSummary({ gaps }: { gaps: ReliabilityEvidenceGap[] }) {
@@ -23,9 +24,9 @@ export function ReliabilityEvidenceSummary({ gaps }: { gaps: ReliabilityEvidence
             <span className="opacity-85">
               ({RELIABILITY_MODES.find((mode) => mode.id === gap.mode)?.label ?? gap.mode}): {gap.message}
             </span>
-            <span className="mt-0.5 block break-all font-mono text-3xs opacity-70">
+            <TechnicalDetail className="mt-0.5 text-current opacity-80">
               {gap.rawCode} · {gap.code}
-            </span>
+            </TechnicalDetail>
           </li>
         ))}
       </ul>

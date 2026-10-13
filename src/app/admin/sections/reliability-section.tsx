@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import type { ApiRequestAttributionResponse, EndpointProbeResult, HealthResponse, StatusResponse } from "@shared/types";
 import { ApiKeyLoadTable } from "@/components/status/api-key-load-table";
 import { CacheFreshnessTable } from "@/components/status/cache-freshness-table";
-import { SummaryBadge } from "@/components/status/page-primitives";
+import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { ReliabilityDependenciesPanel } from "@/components/status/reliability-dependencies-panel";
 import { ReliabilityEndpointsPanel } from "@/components/status/reliability-endpoints-panel";
 import { ReliabilityEvidenceSummary } from "@/components/status/reliability-evidence-summary";
@@ -17,7 +17,9 @@ import {
   deriveInitialReliabilityMode,
   RELIABILITY_MODES,
 } from "@/lib/reliability-workspace-model";
-import { getStatusTone, type BrowserProbeSummary } from "@/lib/status-dashboard-model";
+import type { BrowserProbeSummary } from "@/lib/status-dashboard-model";
+import { describePublicHeadline } from "@/lib/status/public-status";
+import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification";
 
 export interface ReliabilitySectionProps {
   data: StatusResponse;
@@ -87,6 +89,7 @@ export function ReliabilitySection({
           <ReliabilityImpactPanel
             data={data}
             healthData={healthData}
+            healthLoadFailed={Boolean(healthError)}
             issues={model.issues.filter((issue) => issue.mode === "impact")}
           />
         );
@@ -133,38 +136,31 @@ export function ReliabilitySection({
     }
   };
 
-  const publicTone = healthData ? getStatusTone(healthData.status) : null;
+  const publicHeadline = describePublicHeadline(healthData, Boolean(healthError));
 
   return (
-    <section
+    <StatusSection
       id="reliability"
-      aria-labelledby="reliability-title"
-      className="space-y-5 scroll-mt-[var(--ops-sticky-offset)]"
-    >
-      <div className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="pharos-kicker">Service health</p>
-          <h1 id="reliability-title" className="text-2xl font-bold leading-tight text-foreground">
-            Reliability Workbench
-          </h1>
-          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Public impact, endpoint planes, dependency root causes, demand, and cache freshness in focused views.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 lg:justify-end">
+      kicker="Service health"
+      title="Reliability"
+      headingLevel="h1"
+      variant="workspace"
+      description="Public impact, endpoint planes, dependency root causes, demand, and cache freshness in focused views."
+      summary={
+        <>
           <SummaryBadge
-            label="Public health"
-            value={healthData?.status ?? "Unknown"}
-            className={publicTone?.badgeClassName}
+            label="Public status"
+            value={publicHeadline.label}
+            className={
+              publicHeadline.state && publicHeadline.state !== "operational"
+                ? PUBLIC_HEADLINE_TONE[publicHeadline.state].pill
+                : undefined
+            }
           />
           <SummaryBadge label="Evidence gaps" value={String(model.evidenceGaps.length)} />
-          <SummaryBadge
-            label="Selected view"
-            value={model.modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Impact"}
-          />
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <ReliabilityEvidenceSummary gaps={model.evidenceGaps} />
       <WorkspaceModeTabs
         activeMode={activeMode}
@@ -189,6 +185,6 @@ export function ReliabilitySection({
         </h2>
         {renderActiveMode()}
       </div>
-    </section>
+    </StatusSection>
   );
 }

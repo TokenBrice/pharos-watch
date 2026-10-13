@@ -1,6 +1,7 @@
 import { safeJsonParse } from "../lib/api-cache-read";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEventArgs } from "../lib/structured-log";
+import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 
 export interface AdminAuditPageDescriptor<TRow, TEntry> {
   unfilteredSql: string;
@@ -46,6 +47,8 @@ export async function loadAdminAuditPage<TRow, TEntry>(
   const statement = filterValue == null
     ? db.prepare(descriptor.unfilteredSql).bind(limit)
     : db.prepare(descriptor.filteredSql!).bind(filterValue, limit);
-  const result = await statement.all<TRow>();
+  // Admin pages load several D1 reads in parallel; retry transient overloads
+  // instead of surfacing them as a generic 500.
+  const result = await runWithOverloadRetry(() => statement.all<TRow>());
   return (result.results ?? []).map((row) => descriptor.mapRow(row, parseDetail(row, descriptor)));
 }

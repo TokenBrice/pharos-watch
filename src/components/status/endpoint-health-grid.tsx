@@ -1,12 +1,7 @@
 import { ENDPOINT_GROUPS } from "@/hooks/use-endpoint-probes";
 import type { EndpointProbeResult } from "@shared/types";
 import { Badge } from "@/components/ui/badge";
-import {
-  getProbeDisplayStatus,
-  getProbeStatusDetail,
-  getProbeStatusLabel,
-  isProbePassing,
-} from "@/lib/status-dashboard-model";
+import { getProbeDisplayStatus, isProbePassing } from "@/lib/status-dashboard-model";
 import { PublicSignalCard } from "./public-signal-card";
 
 const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> = [
@@ -15,9 +10,23 @@ const GROUP_LABELS: Array<{ key: keyof typeof ENDPOINT_GROUPS; label: string }> 
   { key: "manual", label: "Manual actions" },
 ];
 
+/** Probe words, not raw status-machine words: "Stale" never labels a probe. */
+const PROBE_SEMANTIC_LABEL = { healthy: "OK", degraded: "Slow data", stale: "Failed" } as const;
+
+/** One status word per probe; the HTTP code is printed once, beside it. */
+function probeBadgeLabel(probe: EndpointProbeResult): string {
+  if (probe.status == null) return "Unreachable";
+  // An HTTP failure counts as failed in the summary, so the badge says so too.
+  if (probe.status >= 400) return "Failed";
+  if (probe.semanticStatus) return PROBE_SEMANTIC_LABEL[probe.semanticStatus];
+  return probe.status < 300 ? "OK" : "Failed";
+}
+
 interface EndpointHealthGridProps {
   probes: EndpointProbeResult[] | undefined;
   isLoading: boolean;
+  /** A failed probe run is not "no samples yet" (R2). */
+  error?: Error | null;
   groups?: readonly (keyof typeof ENDPOINT_GROUPS)[];
   description?: string;
   footnote?: string;
@@ -26,6 +35,7 @@ interface EndpointHealthGridProps {
 export function EndpointHealthGrid({
   probes,
   isLoading,
+  error = null,
   groups = ["public", "admin"],
   description,
   footnote,
@@ -33,7 +43,14 @@ export function EndpointHealthGrid({
   if (isLoading && !probes) {
     return (
       <PublicSignalCard title="Browser endpoint probes" contentClassName="mt-3">
-        <p className="text-sm text-muted-foreground">Probing endpoints...</p>
+        <p className="text-sm text-muted-foreground">Probing endpoints</p>
+      </PublicSignalCard>
+    );
+  }
+  if (error && !probes) {
+    return (
+      <PublicSignalCard title="Browser endpoint probes" contentClassName="mt-3">
+        <p className="text-sm text-muted-foreground">Browser probes could not run: {error.message}</p>
       </PublicSignalCard>
     );
   }
@@ -68,12 +85,12 @@ export function EndpointHealthGrid({
         <p className="text-xs text-muted-foreground">
           {description ??
             (isAdminView
-              ? "Browser-origin probe loop from this admin session. `/api/health`, `/api/status`, and freshness Warning headers are interpreted semantically; other 2xx probes are transport checks."
+              ? "Browser-origin probe loop from this admin session. /api/health, /api/status, and freshness Warning headers are interpreted semantically; other 2xx probes are transport checks."
               : "Browser-origin probe loop from this session against the public API surface. Freshness Warning headers are interpreted as data-health signals; other 2xx probes are transport checks.")}
         </p>
         <p className="text-xs text-muted-foreground">
           {probeList.length > 0
-            ? `${passCount}/${probeList.length} healthy or reachable, ${degradedCount} degraded, ${staleCount} stale or unreachable.`
+            ? `${passCount} of ${probeList.length} passing${degradedCount > 0 ? `, ${degradedCount} with slow data` : ""}${staleCount > 0 ? `, ${staleCount} failed or unreachable` : ""}.`
             : "No browser probe samples yet."}{" "}
           {summaryText}
         </p>
@@ -117,15 +134,15 @@ export function EndpointHealthGrid({
                   const isOk = displayStatus === "healthy";
                   const isSemanticDegraded = displayStatus === "degraded";
                   const isError = displayStatus === "stale";
-                  const statusLabel = probe ? getProbeStatusLabel(probe) : "—";
-                  const statusDetail = probe ? getProbeStatusDetail(probe) : null;
+                  const statusLabel = probe ? probeBadgeLabel(probe) : "—";
+                  const statusDetail = probe ? probe.error ?? probe.semanticDetail ?? null : null;
 
                   return (
                     <div key={path} className="flex items-start justify-between gap-3 py-1">
                       <div className="min-w-0">
                         <div className="font-mono text-xs">{display}</div>
                         {statusDetail ? (
-                          <div className="mt-1 text-2xs leading-relaxed text-muted-foreground">
+                          <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
                             {statusDetail}
                           </div>
                         ) : null}

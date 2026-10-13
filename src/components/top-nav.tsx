@@ -23,27 +23,13 @@ import {
   type NavItem,
 } from "@/lib/nav-config";
 import { useHealth } from "@/hooks/api-hooks";
+import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification/operational-status";
 import { cn } from "@/lib/utils";
 
 const TOP_MENUS: readonly NavGroup[] = NAV_GROUPS;
 const MORE_MENU_KEY = "more";
 const APPEARANCE_MENU_KEY = "appearance";
 const STATUS_HREF = "/status/";
-
-const HEALTH_STATUS_MENU = {
-  healthy: {
-    state: "Healthy",
-    dotClassName: "bg-[var(--severity-healthy)]",
-  },
-  degraded: {
-    state: "Degraded",
-    dotClassName: "bg-[var(--severity-mild)]",
-  },
-  stale: {
-    state: "Stale",
-    dotClassName: "bg-[var(--severity-severe)]",
-  },
-} as const;
 
 const CHECKING_STATUS_MENU = {
   state: "Checking",
@@ -149,10 +135,16 @@ export function TopNav() {
   // /api/health polling to every desktop page view.
   const moreMenuOpen = openMenu === MORE_MENU_KEY;
   const { data: healthData, isError: healthError } = useHealth({ enabled: moreMenuOpen });
+  // The global nav reads the server headline only; it must not pull the
+  // projection into every page's shared client chunk. A pre-projection
+  // payload (Worker rollback) maps its worst raw level conservatively.
+  const healthTone = healthData && !healthError
+    ? PUBLIC_HEADLINE_TONE[healthData.headline?.state ?? (healthData.status === "healthy" ? "operational" : "degraded")]
+    : null;
   const healthMenu = healthError
     ? UNAVAILABLE_STATUS_MENU
-    : healthData
-      ? HEALTH_STATUS_MENU[healthData.status]
+    : healthTone
+      ? { state: healthTone.label, dotClassName: healthTone.dot }
       : CHECKING_STATUS_MENU;
 
   useEffect(() => {

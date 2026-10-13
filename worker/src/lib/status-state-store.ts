@@ -22,6 +22,7 @@ import {
   type StatusTransitionRow,
 } from "./status-reliability-shared";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 
 const STATUS_STATE_SELECT_COLUMNS =
   "scope, current_status, raw_status, last_evaluated_at, last_changed_at, consecutive_healthy, consecutive_degraded, consecutive_stale, confidence, causes_json";
@@ -348,10 +349,10 @@ export async function listRecentStatusTransitions(
     sql += " ORDER BY created_at DESC LIMIT ?";
     binds.push(bounded);
 
-    const rows = await db
+    const rows = await runWithOverloadRetry(() => db
       .prepare(sql)
       .bind(...binds)
-      .all<StatusTransitionRow>();
+      .all<StatusTransitionRow>());
     return (rows.results ?? []).map((row) => ({
       id: row.id,
       scope: "global",

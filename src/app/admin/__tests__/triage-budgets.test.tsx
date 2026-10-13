@@ -58,7 +58,7 @@ describe("default Triage workspace performance budgets", () => {
     const { container } = render(<TriageClient />);
 
     const diagnostics = screen
-      .getByText("State machine, probe, and discrepancy diagnostics")
+      .getByText("Diagnostics")
       .closest("details") as HTMLDetailsElement;
     expect(diagnostics.open).toBe(false);
     // Closed disclosure must not keep its deep diagnostics subtree mounted.

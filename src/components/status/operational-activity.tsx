@@ -1,18 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { formatElapsedSeconds } from "@shared/lib/format";
 import type { ApiKeyAuditEntry } from "@shared/types";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { AdminActionAuditEntry } from "@/lib/actions-workbench-model";
 import {
   buildOperationalActivityView,
+  groupConsecutiveActivity,
   type OperationalActivityEntry,
+  type OperationalActivityGroup,
   type OperationalActivitySource,
 } from "@/lib/operational-history-model";
 import { cn } from "@/lib/utils";
-import { OPERATIONAL_PILL_CLASS, formatStatusTimestamp } from "@/lib/status/dashboard-presentation";
+import { OPERATIONAL_PILL_CLASS } from "@/lib/status/dashboard-presentation";
+import { Timestamp } from "./page-primitives";
 import { StatusPill } from "./severity-pill";
 
 export interface OperationalActivitySourceState<TEntry> {
@@ -84,13 +86,19 @@ function SourceStatus<TEntry>({ label, state }: { label: string; state: Operatio
   );
 }
 
-function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; nowSeconds: number }) {
+function ActivityRow({ group, nowSeconds }: { group: OperationalActivityGroup; nowSeconds: number }) {
+  const { entry, count } = group;
   return (
     <li className="min-w-0 py-4 first:pt-0 last:pb-0">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm font-semibold text-foreground">{entry.actionLabel}</span>
+            {count > 1 ? (
+              <span className="pharos-numeric text-xs font-medium text-muted-foreground" aria-label={`${count} identical consecutive events`}>
+                ×{count}
+              </span>
+            ) : null}
             <StatusPill className={outcomeClassName(entry.outcome)}>
               {entry.outcome === "unknown" ? "Unknown" : entry.outcome}
             </StatusPill>
@@ -119,22 +127,26 @@ function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; n
           {entry.detail != null ? (
             <details className="text-xs">
               <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-muted-foreground">
-                Safe structured detail
+                {count > 1 ? "Safe structured detail (latest event)" : "Safe structured detail"}
               </summary>
-              <p className="mt-2 text-2xs text-muted-foreground">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Sensitive fields, assignments, and token-shaped values are redacted.
               </p>
-              <pre className="mt-2 max-h-56 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-2xs text-foreground">
+              <pre className="mt-2 max-h-56 min-w-0 overflow-auto whitespace-pre-wrap break-all bg-muted/50 p-2 font-mono text-xs text-foreground">
                 {JSON.stringify(entry.detail, null, 2)}
               </pre>
             </details>
           ) : null}
         </div>
         <div className="shrink-0 text-left text-xs text-muted-foreground lg:text-right">
-          <p>{formatElapsedSeconds(Math.max(0, nowSeconds - entry.at))} ago</p>
-          <time dateTime={new Date(entry.at * 1000).toISOString()} className="mt-1 block font-mono tabular-nums">
-            {formatStatusTimestamp(entry.at)}
-          </time>
+          {count > 1 ? (
+            <p>
+              <Timestamp epochSec={group.firstAt} nowSec={nowSeconds} /> to{" "}
+              <Timestamp epochSec={group.lastAt} nowSec={nowSeconds} />
+            </p>
+          ) : (
+            <Timestamp epochSec={entry.at} nowSec={nowSeconds} />
+          )}
         </div>
       </div>
     </li>
@@ -143,7 +155,9 @@ function ActivityRow({ entry, nowSeconds }: { entry: OperationalActivityEntry; n
 
 export function OperationalActivity({ adminActions, credentialAudit, nowSeconds }: OperationalActivityProps) {
   const view = buildOperationalActivityView(adminActions.entries, credentialAudit.entries);
+  const groups = groupConsecutiveActivity(view.entries);
   const awaitingAnySource = view.entries.length === 0 && (adminActions.isLoading || credentialAudit.isLoading);
+  const anySourceFailed = adminActions.error != null || credentialAudit.error != null;
   const noAvailableEntries = view.entries.length === 0 && !awaitingAnySource;
 
   return (
@@ -190,9 +204,14 @@ export function OperationalActivity({ adminActions, credentialAudit, nowSeconds 
         <p role="status" aria-live="polite" className="py-6 text-center text-sm text-muted-foreground">
           Loading operational activity...
         </p>
+      ) : noAvailableEntries && anySourceFailed ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Operational activity is unavailable because a source read failed. Retry the failed log above; this empty
+          list does not mean no activity happened.
+        </p>
       ) : noAvailableEntries ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          No persisted operational activity is available from the current source responses.
+          No persisted operational activity in the returned audit rows.
         </p>
       ) : (
         <ol
@@ -201,8 +220,8 @@ export function OperationalActivity({ adminActions, credentialAudit, nowSeconds 
             (adminActions.isFetching || credentialAudit.isFetching) && "opacity-80",
           )}
         >
-          {view.entries.map((entry) => (
-            <ActivityRow key={entry.id} entry={entry} nowSeconds={nowSeconds} />
+          {groups.map((group) => (
+            <ActivityRow key={group.entry.id} group={group} nowSeconds={nowSeconds} />
           ))}
         </ol>
       )}

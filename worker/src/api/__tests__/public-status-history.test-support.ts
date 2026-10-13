@@ -1,5 +1,5 @@
 import { expect } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { mockD1, sqlMarker } from "@shared/test-utils/mock-d1";
 import type { StatusCause } from "@shared/types/status";
 import { handlePublicStatusHistory } from "../public-status-history";
 
@@ -18,6 +18,8 @@ export function makeDb(params: {
   transitions: TransitionSeed[];
   stateStatus?: "healthy" | "degraded" | "stale";
   stateLastChangedAt?: number | null;
+  publicRows?: Record<string, unknown>[];
+  publicStartedAt?: number | null;
 }) {
   const stateRow = params.stateStatus
     ? {
@@ -34,6 +36,17 @@ export function makeDb(params: {
       }
     : null;
   return mockD1([
+    {
+      match: sqlMarker("public-status-transitions"),
+      rows: params.publicRows ?? [],
+      allowUnused: true,
+    },
+    {
+      match: sqlMarker("public-status-started-at"),
+      rows: [],
+      first: { started_at: params.publicStartedAt ?? null },
+      allowUnused: true,
+    },
     {
       match: "FROM status_state",
       rows: stateRow ? [stateRow] : [],

@@ -20,12 +20,12 @@ const WORKSPACES = {
     Client: CommsClient,
   },
   crons: {
-    title: "Operator Cron Lanes",
+    title: "Operator Crons",
     description: "Access-protected scheduled-job health and execution workspace for Pharos operators.",
     Client: CronsClient,
   },
   history: {
-    title: "Operator Incident History",
+    title: "Operator History",
     description: "Access-protected status transitions and release-correlation workspace for Pharos operators.",
     Client: HistoryClient,
   },

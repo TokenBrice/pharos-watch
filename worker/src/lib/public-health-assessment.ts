@@ -12,6 +12,7 @@ import {
   maxPublicStatus,
 } from "@shared/lib/public-health";
 import { CACHE_UPSTREAM_PROVIDER } from "@shared/lib/status-metadata";
+import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { isYieldSafetyFallbackWithinWindow } from "@shared/lib/yield-safety-fallback";
@@ -153,7 +154,7 @@ export function buildPublicHealthResponse(
   assessment: PublicHealthAssessment,
   timestamp: number,
 ): HealthResponse {
-  return {
+  const body: HealthResponse = {
     status: assessment.overallStatus,
     timestamp,
     warnings: assessment.warnings,
@@ -166,6 +167,7 @@ export function buildPublicHealthResponse(
     activePriceCoverage: assessment.activePriceCoverage,
     schedulerLiveness: assessment.schedulerLiveness,
   };
+  return { ...body, ...projectPublicStatus(body) };
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "db" | "mint-burn"): string {

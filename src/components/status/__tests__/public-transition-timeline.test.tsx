@@ -1,57 +1,62 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { PublicStatusTransition } from "@shared/types";
-import { PublicTransitionTimeline } from "../public-transition-timeline";
+import { PublicIncidentList } from "../public-transition-timeline";
 
+const NOW = 1_790_000_000;
 
-describe("PublicTransitionTimeline", () => {
-  it("renders the public transition log as a shared table and keeps window controls", () => {
-    const onWindowChange = vi.fn();
+describe("PublicIncidentList", () => {
+  it("shows folded incidents with component labels and hides machine reasons behind a disclosure", () => {
     const transitions: PublicStatusTransition[] = [
-      {
-        id: 3,
-        from: "healthy",
-        to: "degraded",
-        transitionType: "degrade",
-        reason: "Public status degraded after repeated stale probes.",
-        at: 1_700_000_000,
-      },
+      { id: 2, at: NOW - 600, source: "public", from: "degraded", to: "healthy", transitionType: "recover",
+        reason: "public-projection-changed", components: [] },
+      { id: 1, at: NOW - 3600, source: "public", from: "healthy", to: "degraded", transitionType: "degrade",
+        reason: "public-projection-changed",
+        components: [{ id: "mint-burn", state: "degraded", reasons: ["mint-burn-sync-age:degraded"] }] },
     ];
+    render(<PublicIncidentList transitions={transitions} nowSec={NOW} historyDays={30} hasMore={false} />);
 
-    render(
-      <PublicTransitionTimeline
-        transitions={transitions}
-        window="7d"
-        onWindowChange={onWindowChange}
-        isLoading={false}
-      />,
-    );
-
-    const tableShell = screen.getByTestId("public-status-transition-timeline-table");
-    expect(tableShell.getAttribute("data-table-id")).toBe("public-status-transition-timeline");
-    expect(screen.getByRole("table", { name: /public status transition history/i })).toBeTruthy();
-    expect(screen.getByText("healthy → degraded")).toBeTruthy();
-    expect(screen.getByText("Degradation")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "30d" }));
-
-    expect(onWindowChange).toHaveBeenCalledWith("30d");
+    expect(screen.getByText("Mint and burn flows")).toBeTruthy();
+    expect(screen.getByText("Degraded")).toBeTruthy();
+    expect(screen.getByText("50m")).toBeTruthy();
+    const detail = screen.getByText("mint-burn-sync-age:degraded").closest("details");
+    expect(detail?.open).toBe(false);
+    expect(screen.queryByText(/older changes in this window were not loaded/)).toBeNull();
   });
 
-  it("reports a failed history read instead of an empty incident log", () => {
-    render(
-      <PublicTransitionTimeline
-        transitions={[]}
-        window="7d"
-        onWindowChange={vi.fn()}
-        isLoading={false}
-        error={new Error("history query rejected")}
-      />,
-    );
+  it("labels legacy operator rows honestly and states the load bound (R7)", () => {
+    const transitions: PublicStatusTransition[] = [
+      { id: 1, at: NOW - 7200, source: "legacy", from: "healthy", to: "degraded", transitionType: "degrade",
+        reason: "raw-degraded-consecutive-threshold" },
+    ];
+    render(<PublicIncidentList transitions={transitions} nowSec={NOW} historyDays={30} hasMore />);
 
-    expect(screen.getByText("Status history is unavailable: history query rejected")).toBeTruthy();
-    expect(screen.queryByText("No status changes recorded in this window.")).toBeNull();
+    expect(screen.getByText("Earlier incidents")).toBeTruthy();
+    expect(screen.getByText("Earlier incident (overall state only)")).toBeTruthy();
+    // Legacy degraded maps onto the component vocabulary, never a raw "Stale".
+    expect(screen.getByText("Degraded")).toBeTruthy();
+    expect(screen.getByText("Ongoing")).toBeTruthy();
+    expect(screen.getByText("No incidents recorded in the last 30 days.")).toBeTruthy();
+    expect(screen.getByText("Showing the latest 1 status changes; older changes in this window were not loaded.")).toBeTruthy();
+  });
+
+  it("bounds a long incident list and expands on request", () => {
+    const transitions: PublicStatusTransition[] = Array.from({ length: 24 }, (_, index) => ({
+      id: index + 1,
+      at: NOW - 100_000 + index * 1000,
+      source: "public" as const,
+      from: index % 2 === 0 ? "healthy" as const : "degraded" as const,
+      to: index % 2 === 0 ? "degraded" as const : "healthy" as const,
+      transitionType: index % 2 === 0 ? "degrade" as const : "recover" as const,
+      reason: "public-projection-changed",
+      components: index % 2 === 0 ? [{ id: "yield" as const, state: "delayed" as const, reasons: [] }] : [],
+    }));
+    render(<PublicIncidentList transitions={transitions} nowSec={NOW} historyDays={30} hasMore={false} />);
+
+    expect(screen.getAllByText("Yield")).toHaveLength(10);
+    fireEvent.click(screen.getByRole("button", { name: "Show all 12 incidents" }));
+    expect(screen.getAllByText("Yield")).toHaveLength(12);
   });
 });

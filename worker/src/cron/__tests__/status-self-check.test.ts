@@ -4,6 +4,8 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeExecutionContext } from "../../test-helpers/__shared/auth";
 import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
 import type * as PublicHealthModule from "../../lib/public-health-assessment";
+import type { HealthResponse } from "@shared/types/status";
+import { projectPublicStatus } from "@shared/lib/public-status-components";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
@@ -95,6 +97,13 @@ vi.mock("../../lib/status-reliability", () => ({
   reconcileStatusState: reconcileStatusStateMock,
   updateDiscrepancyObservation: updateDiscrepancyObservationMock,
   writeStatusProbeRun: writeStatusProbeRunMock,
+}));
+const reconcilePublicStatusStateMock = vi.fn(async (_db: unknown, _now: number, health: HealthResponse) => ({
+  projection: projectPublicStatus(health),
+  persistenceSucceeded: true,
+}));
+vi.mock("../../lib/status/public-status-state", () => ({
+  reconcilePublicStatusState: reconcilePublicStatusStateMock,
 }));
 vi.mock("../../lib/public-health-assessment", async (importOriginal) => ({
   ...(await importOriginal<typeof PublicHealthModule>()),

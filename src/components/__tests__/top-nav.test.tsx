@@ -266,15 +266,14 @@ describe("TopNav", () => {
     fireEvent.click(screen.getByRole("button", { name: "Resources" }));
 
     const statusLabel = screen.getByText("Status", { selector: "span" });
-    const state = screen.getByText("Healthy", { selector: "span" });
+    const state = screen.getByText("Operational", { selector: "span" });
     const statusLink = statusLabel.closest("a");
     expect(state.closest("a")).toBe(statusLink);
-    expect(statusLink?.querySelector("span.rounded-full")?.classList.contains("bg-[var(--severity-healthy)]")).toBe(true);
-    expect(screen.queryByText("Pharos is Healthy")).toBeNull();
+    expect(statusLink?.querySelector("span.rounded-full")?.classList.contains("bg-state-positive-solid")).toBe(true);
     expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: true });
   });
 
-  it("reports degraded health with text and the mild-severity dot", () => {
+  it("reports a degraded headline with text and the warning dot", () => {
     installMatchMediaMock(true);
     useHealthMock.mockReturnValue({
       data: { ...makeHealthyHealthResponse(), status: "degraded" },
@@ -286,7 +285,7 @@ describe("TopNav", () => {
 
     const state = screen.getByText("Degraded", { selector: "span" });
     const dot = state.closest("a")?.querySelector("span.rounded-full");
-    expect(dot?.classList.contains("bg-[var(--severity-mild)]")).toBe(true);
+    expect(dot?.classList.contains("bg-state-warn-solid")).toBe(true);
   });
 
   it("does not publish retained healthy data after a failed health refetch", () => {
@@ -295,7 +294,7 @@ describe("TopNav", () => {
     render(<TopNav />);
     fireEvent.click(screen.getByRole("button", { name: "Resources" }));
     expect(screen.getByText("Unavailable", { selector: "span" })).not.toBeNull();
-    expect(screen.queryByText("Healthy", { selector: "span" })).toBeNull();
+    expect(screen.queryByText("Operational", { selector: "span" })).toBeNull();
   });
 
   it("keeps the initial health read neutral while checking", () => {
@@ -304,15 +303,23 @@ describe("TopNav", () => {
     render(<TopNav />);
     fireEvent.click(screen.getByRole("button", { name: "Resources" }));
     expect(screen.getByText("Checking", { selector: "span" })).not.toBeNull();
-    expect(screen.queryByText("Healthy", { selector: "span" })).toBeNull();
+    expect(screen.queryByText("Operational", { selector: "span" })).toBeNull();
   });
 
-  it("reports a successful stale health verdict", () => {
+  it("shows the worker headline label when the payload carries one", () => {
     installMatchMediaMock(true);
-    useHealthMock.mockReturnValue({ data: { ...makeHealthyHealthResponse(), status: "stale" }, isError: false });
+    useHealthMock.mockReturnValue({
+      data: {
+        ...makeHealthyHealthResponse(),
+        status: "stale",
+        headline: { state: "partial-outage", title: "Partial outage: Yield", affected: ["yield"] },
+        components: [],
+      },
+      isError: false,
+    });
     render(<TopNav />);
     fireEvent.click(screen.getByRole("button", { name: "Resources" }));
-    expect(screen.getByText("Stale", { selector: "span" })).not.toBeNull();
+    expect(screen.getByText("Partial outage", { selector: "span" })).not.toBeNull();
   });
 
   it("uses readable unavailable metadata when public health cannot be loaded", () => {

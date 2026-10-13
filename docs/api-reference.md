@@ -736,7 +736,7 @@ Returns one stablecoin projection from a dated public snapshot.
 
 ### `GET /api/health`
 
-Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts carry nullable `generationId` / `publishedAt` from the served-generation sentinel; `cache-quality-degraded: yield-data:safety-snapshot-coverage` fires only below 0.75 coverage, held safety is `yield-safety-publish-time-fallback:safety-snapshot-held` inside both 24h clocks and `yield-safety-unrated-serving:safety-snapshot-held` beyond them, and unreadable or mismatched publication health fails closed as `yield-safety-availability-unknown`.
+Provides the unauthenticated availability canary; it is not the operator status dashboard. Since 2026-09-27 dedicated asset-scoped circuit outages no longer count as source-wide degradation; the shared `protocol-redeem` circuit remains source-wide. Yield cache verdicts carry nullable `generationId` / `publishedAt` from the served-generation sentinel; `cache-quality-degraded: yield-data:safety-snapshot-coverage` fires only below 0.75 coverage, held safety is `yield-safety-publish-time-fallback:safety-snapshot-held` inside both 24h clocks and `yield-safety-unrated-serving:safety-snapshot-held` beyond them, and unreadable or mismatched publication health fails closed as `yield-safety-availability-unknown`. Adds `headline`/`components`.
 
 - **Operation ID:** `health`
 - **Path:** `/api/health`

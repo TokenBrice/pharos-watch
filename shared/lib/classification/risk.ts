@@ -119,11 +119,11 @@ export const CRON_STATUS_COLORS: Record<
   "ok" | "degraded" | "skipped_locked" | "skipped_neutral" | "error",
   string
 > = {
-  ok: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-  degraded: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  ok: "bg-state-positive-solid/15 text-state-positive-strong",
+  degraded: "bg-state-warn-solid/15 text-state-warn-strong",
   skipped_locked: "bg-muted text-muted-foreground",
   skipped_neutral: "bg-muted text-muted-foreground",
-  error: "bg-red-500/15 text-red-700 dark:text-red-400",
+  error: "bg-state-danger-solid/15 text-state-danger-strong",
 };
 
 // ---------------------------------------------------------------------------

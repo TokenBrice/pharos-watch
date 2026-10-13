@@ -14,7 +14,7 @@ import { PipelineQualityTable } from "@/components/status/pipeline-quality-table
 import { PriceSourceHealthCard } from "@/components/status/price-source-health";
 import { ReserveSyncHealthCard } from "@/components/status/reserve-sync-health";
 import { ScoreImpactPanel } from "@/components/status/score-impact-panel";
-import { SummaryBadge } from "@/components/status/page-primitives";
+import { StatusSection, SummaryBadge } from "@/components/status/page-primitives";
 import { YieldHealthCard } from "@/components/status/yield-health";
 import { createWorkspaceModeIds, WorkspaceModeTabs } from "@/components/status/workspace-mode-tabs";
 import { useWorkspaceMode } from "@/hooks/use-workspace-mode";
@@ -102,31 +102,20 @@ export function PipelineSection({ data }: PipelineSectionProps) {
   const qualityTone = getStatusTone(data.dataQualityStatus);
 
   return (
-    <section
+    <StatusSection
       id="pipeline"
-      aria-labelledby="pipeline-title"
-      className="min-w-0 max-w-full space-y-5 scroll-mt-[var(--ops-sticky-offset)]"
-    >
-      <div className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-1">
-          <p className="pharos-kicker">Data pipeline</p>
-          <h1 id="pipeline-title" className="text-2xl font-bold leading-tight text-foreground">
-            Pipeline Health
-          </h1>
-          <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Thresholds, publication integrity, and source coverage organized by operator workflow.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 lg:justify-end">
+      kicker="Data pipeline"
+      title="Pipeline"
+      headingLevel="h1"
+      variant="workspace"
+      description="Thresholds, publication integrity, and source coverage organized by operator workflow."
+      summary={
+        <>
           <SummaryBadge label="Data quality" value={qualityTone.label} className={qualityTone.badgeClassName} />
           <SummaryBadge label="Loader issues" value={String(loaderErrors.length)} />
-          <SummaryBadge
-            label="Selected view"
-            value={modeSummaries.find((mode) => mode.id === activeMode)?.label ?? "Quality"}
-          />
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <PipelineLoaderSummary errors={loaderErrors} />
       <WorkspaceModeTabs
         activeMode={activeMode}
@@ -153,6 +142,6 @@ export function PipelineSection({ data }: PipelineSectionProps) {
         </h2>
         {renderActiveMode()}
       </div>
-    </section>
+    </StatusSection>
   );
 }

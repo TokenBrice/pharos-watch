@@ -7,6 +7,10 @@ export function makeCronHealth(
 ): CronHealthSnapshot {
   return {
     crons: {},
+    cronFindingJobs: {
+      availabilityImpactingUnhealthy: [], watchUnhealthy: [], degraded: [],
+      availabilityImpactingErrors: [], availabilityImpactingConsecutiveErrors: [], watchErrors: [],
+    },
     unhealthyCrons: 0,
     availabilityImpactingUnhealthyCrons: 0,
     watchUnhealthyCrons: 0,
