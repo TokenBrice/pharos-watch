@@ -760,9 +760,9 @@ export async function hydrateLatestPsiScore(ctx: HydrationContext): Promise<{
     diagnostics.reason = age.reason != null ? age.reason
       : age.ageSeconds > DEWS_PSI_FRESHNESS_BUDGET_SEC ? "stale-sample"
       : !Number.isFinite(psiRow.score) ? "invalid-score" : null;
-    if (diagnostics.reason) {
-      ctx.registerSourceFailure("stability-index-samples", diagnostics.reason);
-    }
+    // An inadmissible sample only omits the optional amplifier. It must not hold
+    // publication: PSI fails closed without a fresh DEWS generation, so holding
+    // here deadlocks both producers after a single missed slot.
     return {
       latestPsiScore: diagnostics.reason ? null : psiRow.score,
       dependencyDiagnostics: diagnostics,

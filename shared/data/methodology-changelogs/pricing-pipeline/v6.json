@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.50",
+    "title": "Reviewed BRLV low-volume price recovery",
+    "date": "2026-10-13",
+    "effectiveAt": 1791936000,
+    "summary": "Crown BRLV joins the existing scoped CoinGecko low-volume fallback after a production audit found its sparse crown-brlv quote inside the seven-day budget while CG-only intake withheld the stale market cap and the carried row lost its native-implied price.",
+    "impact": [
+      "Only a missing BRLV price can use the reviewed crown-brlv CoinGecko identity after earlier fallback passes fail. Admitted quotes retain fallback confidence, the original upstream observation clock and BRL peg validation; carried supply is unchanged.",
+      "The seven-day age limit, 120-second future-skew limit, primary consensus, native-implied freshness and address-provider liquidity floors remain unchanged. Expired or invalid observations remain unavailable.",
+      "Historical version lookup activates at the next UTC midnight (2026-10-14), preserving earlier publications. Recovery requires a fresh production publication; local source evidence and tests do not establish production recovery."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.49",
     "title": "Reviewed NXUSD and Hermetica USDh low-volume price recovery",
     "date": "2026-10-12",

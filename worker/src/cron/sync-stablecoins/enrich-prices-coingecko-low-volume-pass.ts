@@ -49,6 +49,10 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   // seven-day budget, while primary consensus requires 15-minute freshness.
   "nxusd-nereus",
   "usdh-hermetica",
+  // 2026-10-13: BRLV's CG-only intake drops its stale market cap and its three
+  // deployments block single-contract supply, so the carried row loses its
+  // native-implied price minutes after each sparse CoinGecko update.
+  "brlv-crown",
 ]);
 
 export async function runCoingeckoLowVolumePass(

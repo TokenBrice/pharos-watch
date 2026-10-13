@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
-import { describe, expect, it } from "vitest";
-import { adaptFrntLedgerlens } from "../frnt-ledgerlens";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { ReserveAdapterCoin } from "@shared/types/core";
+import { adaptFrntLedgerlens, fetchFrntLedgerlensReserves, FRNT_LEDGERLENS_URL } from "../frnt-ledgerlens";
 import reserveSidecar from "@shared/data/stablecoins/domains/reserves/frnt-wyoming.json";
 
 type WireNode = { t: number; s?: unknown; a?: WireNode[]; p?: { k: string[]; v: WireNode[] } };
@@ -22,6 +24,16 @@ function buckets(payload: WireNode): WireNode {
 }
 
 describe("frnt-ledgerlens", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("sends the same-origin fetch metadata the upstream server-function guard requires", async () => {
+    const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => Response.json(capture));
+    vi.stubGlobal("fetch", fetcher);
+    const config = { inputs: { primary: { kind: "http-json", url: FRNT_LEDGERLENS_URL } } } as unknown as LiveReservesConfig;
+    await fetchFrntLedgerlensReserves({ id: "frnt-wyoming" } as ReserveAdapterCoin, config, new AbortController().signal);
+    expect(new Headers(fetcher.mock.calls[0]?.[1]?.headers).get("sec-fetch-site")).toBe("same-origin");
+  });
+
   it("keeps gross composition distinct from net holder coverage and source time", () => {
     const result = adaptFrntLedgerlens(capture);
     const weights = Object.fromEntries(result.slices.map(({ sourceKey, pct }) => [sourceKey, pct]));

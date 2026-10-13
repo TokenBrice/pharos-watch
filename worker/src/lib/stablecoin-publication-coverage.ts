@@ -217,6 +217,23 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 14, 14, 18, 5) / 1000,
   },
   {
+    stablecoinId: "usdkg-gold-dollar",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-13 UTC: the issuer has terminated USDKG operations, including on-chain activity, under Kyrgyz Cabinet Order 639-t and directs holders to email-based fiat/USDT exchange. CoinGecko's last USDKG observation is 2026-10-05 17:42:50 UTC with an empty ticker list, so it has aged out of the reviewed seven-day low-volume budget; CMC marks the asset inactive with zero market pairs; DefiLlama publishes supply but no price; DexScreener returns no Ethereum or Tron pairs, and GeckoTerminal's only Ethereum pools hold under $200 with zero daily volume. The email exchange offer is not an observed market or machine-read redemption price. Renew for seven days to decide a wind-down or freeze disposition, without extending the low-volume budget or admitting the empty pools.",
+    sources: [
+      "https://www.usdkg.com/",
+      "https://api.coingecko.com/api/v3/simple/price?ids=usdkg&vs_currencies=usd&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/usdkg/tickers",
+      "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/market-pairs/latest?slug=usdkg&start=1&limit=10",
+      "https://stablecoins.llama.fi/stablecoin/409",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0xe820c06321e60d36257c666643fa5436643445e3",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xe820c06321e60d36257c666643fa5436643445e3/pools",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 13, 10) / 1000,
+    expiresAt: Date.UTC(2026, 9, 20, 10) / 1000,
+  },
+  {
     stablecoinId: "bnusd-balanced",
     owner: "ops",
     reason:

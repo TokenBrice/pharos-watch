@@ -26,10 +26,12 @@ Supplemental on-chain supply failures identify the asset, chain, contract and ma
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.49`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.50`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
+
+The 2026-10-13 `v6.50` release adds Crown BRLV to the CoinGecko low-volume fallback on the v6.49 terms below, effective October 14.
 
 The 2026-10-12 `v6.49` release admits NXUSD and Hermetica USDh to the existing CoinGecko low-volume fallback cohort. Only missing prices can recover, with fallback confidence and their original upstream clock; the seven-day age budget, future-skew gate, peg validation and supply rules are unchanged. Historical lookup activates at the next UTC midnight (October 13), preserving earlier publications. Fresh production publication remains required to establish recovery.
 

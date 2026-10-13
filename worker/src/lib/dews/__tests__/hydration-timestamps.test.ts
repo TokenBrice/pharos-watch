@@ -26,7 +26,7 @@ describe("DEWS hydration timestamp admission", () => {
     expect(hydrated.dependencyDiagnostics).toMatchObject({
       updatedAt: storedAt != null && Number.isFinite(storedAt) ? storedAt : null, freshnessBudgetSec: DEWS_PSI_FRESHNESS_BUDGET_SEC, reason,
     });
-    expect(registerSourceFailure).toHaveBeenCalledTimes(reason != null && storedAt != null ? 1 : 0);
+    expect(registerSourceFailure).not.toHaveBeenCalled();
     const scored = computeDEWS(makeDewsInput({ dexPriceUsd: 0.99, psiScore: hydrated.latestPsiScore }));
     expect(scored?.amplifiers.psi).toBe(reason == null ? 1.3 : 1);
   });
