@@ -128,6 +128,22 @@ describe("rpc parity store merging", () => {
     expect(merged.row.runs[0].samples).toHaveLength(RPC_PARITY_TARGETS.length - 1);
     expect(prior.runs[0].samples).toHaveLength(RPC_PARITY_TARGETS.length);
   });
+
+  it("resets only Ethereum's old-host window and retains Arc's near-head evidence", () => {
+    const prior = buildParityRow([NOW_SEC - 3600]);
+    const ethereum = prior.runs[0].samples.find((sample) => sample.chainId === "ethereum")!;
+    ethereum.dwellirHost = "api-ethereum-mainnet-erigon.n.dwellir.com";
+    const arc = prior.runs[0].samples.find((sample) => sample.chainId === "arc")!;
+    const merged = mergeRpcParityRun(prior, fullParityRun(NOW_SEC), { nowSec: NOW_SEC });
+    expect(merged.reset).toBe(false);
+    expect(merged.row.runs[0].samples).toEqual(
+      prior.runs[0].samples.filter((sample) => sample.chainId !== "ethereum"),
+    );
+    expect(merged.row.runs[0].samples).toContainEqual(arc);
+    expect(merged.row.runs[1].samples.find((sample) => sample.chainId === "ethereum")?.dwellirHost)
+      .toBe("api-ethereum-mainnet.n.dwellir.com");
+    expect(prior.runs[0].samples).toHaveLength(RPC_PARITY_TARGETS.length);
+  });
 });
 
 describe("rpc parity store wire form", () => {

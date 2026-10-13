@@ -1096,7 +1096,7 @@ describe("evm-rpc helpers", () => {
     const chainRpcs = chainRpcsWith("ethereum", [
       registryEndpoint("https://eth-mainnet.g.alchemy.com/v2/", "alchemy"),
       registryEndpoint("https://ethereum-public-a.example"),
-      dwellirEndpoint("https://api-ethereum-mainnet-erigon.n.dwellir.com"),
+      dwellirEndpoint("https://api-ethereum-mainnet.n.dwellir.com"),
     ]);
     fetchWithRetryMock.mockResolvedValue(null);
 
@@ -1112,7 +1112,7 @@ describe("evm-rpc helpers", () => {
       "https://eth-mainnet.g.alchemy.com/v2/",
       "https://ethereum-public-a.example",
       "https://pinned.example",
-      "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+      "https://api-ethereum-mainnet.n.dwellir.com",
     ]);
   });
 

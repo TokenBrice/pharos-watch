@@ -110,7 +110,7 @@ describe("resolveRpcUrls", () => {
       endpoints: [
         registryRpcEndpoint("https://rpc.example.com"),
         registryRpcEndpoint("https://fallback.example.com"),
-        supplementalEndpoint("https://api-ethereum-mainnet-erigon.n.dwellir.com"),
+        supplementalEndpoint("https://api-ethereum-mainnet.n.dwellir.com"),
       ],
     });
 
@@ -123,7 +123,7 @@ describe("resolveRpcUrls", () => {
       "https://rpc.example.com",
       "https://fallback.example.com",
     ]);
-    expect(resolveRpcUrls(withDwellir)).not.toContain("https://api-ethereum-mainnet-erigon.n.dwellir.com");
+    expect(resolveRpcUrls(withDwellir)).not.toContain("https://api-ethereum-mainnet.n.dwellir.com");
     // A supplemental-only config (pin-only chain + Dwellir key) has no readable
     // registry URL at all.
     expect(

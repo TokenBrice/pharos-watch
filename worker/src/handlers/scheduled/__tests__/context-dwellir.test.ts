@@ -168,7 +168,7 @@ describe("scheduled runtime Dwellir enablement", () => {
 
     const ethereumEndpoints = runtime.chainRpcs.get("ethereum")?.endpoints ?? [];
     expect(ethereumEndpoints[ethereumEndpoints.length - 1]).toMatchObject({
-      url: "https://api-ethereum-mainnet-erigon.n.dwellir.com",
+      url: "https://api-ethereum-mainnet.n.dwellir.com",
       operator: "dwellir",
       keyed: true,
       position: "supplemental",

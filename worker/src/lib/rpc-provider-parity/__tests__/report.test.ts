@@ -734,14 +734,18 @@ describe("rpc provider trial report", () => {
     expect(absent.observation?.chains.every((chain) => chain.routing.statePlacement === "unavailable" && !chain.routing.logScan)).toBe(true);
   });
 
-  it("excludes changed-host evidence on read before the next parity write", async () => {
+  it.each([
+    { chainId: "polygon", oldHost: "api-polygon-mainnet-full.n.dwellir.com" },
+    { chainId: "ethereum", oldHost: "api-ethereum-mainnet-erigon.n.dwellir.com" },
+  ])("excludes $chainId changed-host evidence on read while retaining Arc", async ({ chainId, oldHost }) => {
     const { db } = fixtures.open();
-    await recordRpcParityRun(db, fullParityRun(PARITY_NOW_SEC, (chainId) => chainId === "polygon"
-      ? { dwellirHost: "api-polygon-mainnet-full.n.dwellir.com" } : {}));
+    await recordRpcParityRun(db, fullParityRun(PARITY_NOW_SEC, (sampleChainId) => sampleChainId === chainId
+      ? { dwellirHost: oldHost } : {}));
     const report = await loadRpcProviderTrialReport(db, {}, PARITY_NOW_SEC);
-    expect(report.observation?.chains.find((chain) => chain.chainId === "polygon"))
+    expect(report.observation?.chains.find((chain) => chain.chainId === chainId))
       .toMatchObject({ runs: 0, last: null });
     expect(report.observation?.chains.find((chain) => chain.chainId === "base")?.runs).toBe(1);
+    expect(report.observation?.chains.find((chain) => chain.chainId === "arc")?.runs).toBe(1);
   });
   it("expires stored evidence at report time without requiring another run", async () => {
     const { db } = fixtures.open();
