@@ -57,7 +57,7 @@ describe("reserve recovery admission", () => {
     });
   });
 
-  it.each(["missing", "running", "reconciling", "null-finished-at"])("protects an unfinished due producer: %s", async (state) => {
+  it.each(["missing", "running", "reconciling", "null-finished-at"])("protects an unfinished due producer even during next-slot lookahead: %s", async (state) => {
     const fixture = admittedFixture();
     if (state === "missing") fixture.sqlite.prepare("DELETE FROM cron_slot_executions").run();
     else if (state === "null-finished-at") fixture.sqlite.prepare("UPDATE cron_slot_executions SET finished_at = NULL").run();
@@ -65,6 +65,12 @@ describe("reserve recovery admission", () => {
     expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
       reason: "producer-slot-priority", condition: "current-slot-unfinished", slotStartedAt: fixture.current,
     });
+    vi.setSystemTime(new Date("2026-10-07T03:47:00Z"));
+    expect(await getReserveProducerPriority(fixture.db)).toMatchObject({
+      reason: "producer-slot-priority", condition: "current-slot-unfinished", slotStartedAt: fixture.current,
+    });
+    const admission = reserveRecoveryAdmissionSql();
+    expect(fixture.sqlite.prepare(`SELECT (${admission.sql}) AS admitted`).get(...admission.binds)).toEqual({ admitted: 0 });
   });
 
   it.each(["degraded", "error"])("releases producer priority after a finished %s slot", async (status) => {
@@ -93,6 +99,8 @@ describe("reserve recovery admission", () => {
   it("propagates failed slot reads instead of admitting work", async () => {
     const fixture = admittedFixture();
     fixture.sqlite.exec("DROP TABLE cron_slot_executions");
+    await expect(getReserveProducerPriority(fixture.db)).rejects.toThrow("no such table");
+    vi.setSystemTime(new Date("2026-10-07T03:47:00Z"));
     await expect(getReserveProducerPriority(fixture.db)).rejects.toThrow("no such table");
   });
 

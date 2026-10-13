@@ -15,6 +15,7 @@ import type { CronMetadataRecord } from "../../lib/cron-result";
 import {
   getReserveProducerPriority,
   RESERVE_RECOVERY_CLAIM_SEC,
+  type ReserveProducerPriority,
 } from "../../lib/reserve-producer-priority";
 import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 
@@ -23,6 +24,12 @@ type ReserveRecoveryMode = "off" | "recover";
 function normalizeReserveRecoveryMode(value: string | null | undefined): ReserveRecoveryMode {
   const normalized = value?.trim().toLowerCase();
   return normalized === "recover" ? "recover" : "off";
+}
+
+function priorityPollStatus(priority: ReserveProducerPriority | null): "ok" | "skipped_neutral" {
+  // Expected waiting completes the poll, but an unfinished producer still needs attention.
+  return priority?.condition === "next-slot-lookahead" || priority?.condition === "heavy-slot-running"
+    ? "ok" : "skipped_neutral";
 }
 
 function createReserveRecoveryResult(
@@ -59,7 +66,7 @@ async function runReserveRecovery(
   }
   const priority = await getReserveProducerPriority(runtime.db);
   if (priority) return createCronResult({
-    status: "skipped_neutral", itemCount: 0,
+    status: priorityPollStatus(priority), itemCount: 0,
     metadata: { mode, reason: priority.reason, producerPriority: { ...priority }, attemptedCount: 0, checkpointsClaimed: 0 },
   });
 
@@ -83,7 +90,7 @@ async function runReserveRecovery(
   const beforeReplayPriority = "producerPriority" in configRecovery && configRecovery.producerPriority
     ? configRecovery.producerPriority : await getReserveProducerPriority(runtime.db);
   if (beforeReplayPriority) return createReserveRecoveryResult({
-    status: configReasons.length > 0 ? "degraded" : "skipped_neutral", itemCount: configRecovery.healed.length,
+    status: configReasons.length > 0 ? "degraded" : priorityPollStatus(beforeReplayPriority), itemCount: configRecovery.healed.length,
     metadata: { mode, configRecovery, checkpointsClaimed: 0, producerPriority: beforeReplayPriority,
       reasons: [...configReasons, beforeReplayPriority.reason],
       reason: configReasons[0] ?? beforeReplayPriority.reason } as CronMetadataRecord,
@@ -111,7 +118,7 @@ async function runReserveRecovery(
       && preparation.inspection.readyCheckpointCount === 0;
     const priority = claim.disposition === "priority" ? claim.producerPriority : null;
     return createReserveRecoveryResult({
-      status: configReasons.length > 0 ? "degraded" : priority ? "skipped_neutral" : "ok",
+      status: configReasons.length > 0 ? "degraded" : priority ? priorityPollStatus(priority) : "ok",
       itemCount: configRecovery.healed.length,
       metadata: {
         disposition: priority ? "recovery-priority" : "no-recovery-due",
@@ -133,7 +140,7 @@ async function runReserveRecovery(
   if (replayPriority) {
     const recoveryClaimRelease = await releaseUnstartedLiveReserveRecoveryClaim(runtime.db, checkpoint);
     return createReserveRecoveryResult({
-      status: configReasons.length > 0 ? "degraded" : "skipped_neutral", itemCount: configRecovery.healed.length,
+      status: configReasons.length > 0 ? "degraded" : priorityPollStatus(replayPriority), itemCount: configRecovery.healed.length,
       metadata: { mode, configRecovery, checkpointsClaimed: 1, reason: configReasons[0] ?? replayPriority.reason,
         reasons: [...configReasons, replayPriority.reason], producerPriority: replayPriority,
         recoveryClaimRelease } as CronMetadataRecord,
@@ -159,6 +166,8 @@ async function runReserveRecovery(
   const summary = await runFourHourlyReserveSyncSlot(recoveryRuntime);
   const admissionReason = summary.jobs?.find((job) =>
     job.reason === "producer-slot-priority" || job.reason === "heavy-slot-co-tenancy")?.reason;
+  const admissionPriority = admissionReason && summary.jobsErrored === 0 && summary.jobsDegraded === 0 && configReasons.length === 0
+    ? await getReserveProducerPriority(runtime.db) : null;
   const recoveryDeferred = summary.jobsSkipped > 0;
   const reasons = [
     ...(summary.jobsErrored > 0 ? ["reserve-replay-child-error"] : []),
@@ -170,8 +179,8 @@ async function runReserveRecovery(
   return createReserveRecoveryResult({
     status: summary.jobsErrored > 0 ? "error"
       : summary.jobsDegraded > 0 || configReasons.length > 0 || (recoveryDeferred && !admissionReason)
-        ? "degraded" : admissionReason ? "skipped_neutral" : "ok",
-    itemCount: 1 + configRecovery.healed.length,
+        ? "degraded" : admissionReason ? priorityPollStatus(admissionPriority) : "ok",
+    itemCount: (recoveryDeferred ? 0 : 1) + configRecovery.healed.length,
     error: summary.jobsErrored > 0 ? "reserve recovery child failed" : undefined,
     metadata: {
       disposition: recoveryDeferred ? "recovery-deferred" : "recovery-executed",
@@ -188,6 +197,7 @@ async function runReserveRecovery(
       preparation,
       retiredCheckpoints,
       summary: { ...summary },
+      ...(admissionPriority ? { producerPriority: admissionPriority } : {}),
       reasons,
       ...(reasons[0] ? { reason: reasons[0] } : {}),
     } as CronMetadataRecord,

@@ -326,7 +326,10 @@ markers still override this legacy evidence.
 Canary and DEWS budgets remain separate named policies; they do not call this producer fact loader.
 Status uses a `2x` window; the watchdog retains its `2x`/`3x` policy. Watchdog stale observations preserve `publishedAt`, nullable `generationId`, `assessedAt`, and all budgets in cron metadata through status projections.
 Canonical control-plane jobs with `freshnessSurface: "none"` require a completed observation rather than a
-consumer publication. Subject to a successful history read, cron availability is healthy when:
+consumer publication. Reserve recovery reports an `ok` poll when a verified finished producer allows normal
+next-slot lookahead or heavy-slot deferral; its priority metadata remains visible and proves no publication.
+A missing or unfinished current producer stays `skipped_neutral` and cannot renew availability.
+Subject to a successful history read, cron availability is healthy when:
 
 - A fresh non-stale `crons[*].inFlight` heartbeat exists (without advancing the output clock), or
 - The latest attempt is fresh and `ok`/`degraded`, and its latest confirmed output is within

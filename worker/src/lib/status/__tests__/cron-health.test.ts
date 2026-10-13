@@ -57,6 +57,23 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
   // (Math.floor(Date.now() / 1000)).
   const NOW = 1_775_890_000;
   it.each([
+    { status: "ok", ageSec: 30, condition: "next-slot-lookahead", healthy: true },
+    { status: "ok", ageSec: 30, condition: "heavy-slot-running", healthy: true },
+    { status: "ok", ageSec: 601, condition: "next-slot-lookahead", healthy: false },
+    { status: "skipped_neutral", ageSec: 30, condition: "current-slot-unfinished", healthy: false },
+    { status: "error", ageSec: 30, condition: null, healthy: false },
+  ] as const)("keeps reserve poll availability separate from output ($status, $condition, $ageSec)", async ({ status, ageSec, condition, healthy }) => {
+    const job = "reserve-recovery";
+    const rows = seedWithOverrides(NOW, [{ job, status, ageSec }]);
+    const row = rows.find((run) => run.job === job)!;
+    row.item_count = 0;
+    row.metadata = JSON.stringify({ outputPublishedAt: null, producerPriority: { condition } });
+    const snapshot = await loadCronHealth(makeDb(NOW, rows), NOW);
+    expect(snapshot.crons[job].healthy).toBe(healthy);
+    expect(snapshot.cronFindingJobs.availabilityImpactingUnhealthy.includes(job)).toBe(!healthy);
+  });
+
+  it.each([
     { older: "error", latest: "error", proven: false, expected: 1 },
     { older: "error", latest: "ok", proven: false, expected: 0 },
     { older: "error", latest: "error", proven: true, expected: 0 },
