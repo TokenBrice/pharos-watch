@@ -52,6 +52,23 @@ describe("buildDataCoverageModel", () => {
     expect(buildDataCoverageModel(undefined)).toBeNull();
   });
 
+  it("labels unresearched responsibility Unresolved and explains inconclusive research", () => {
+    const response = makeReportCardsV9Response({
+      cards: [
+        withGaps(makeV9Card(), [
+          { responsibility: "unresearched", factCount: 1, criticalFactCount: 0, reasonCodes: [] },
+        ]),
+      ],
+    });
+
+    expect(buildDataCoverageModel(response)!.gapOwners).toContainEqual(expect.objectContaining({
+      responsibility: "unresearched",
+      label: "Unresolved",
+      detail: "No admissible evidence settles this input yet: it is unresearched or was researched without a conclusive source. This is not a claim of issuer silence.",
+      count: 1,
+    }));
+  });
+
   it("reconciles completeness, inputs, and open gaps across cards", () => {
     const response = makeReportCardsV9Response({
       cards: [

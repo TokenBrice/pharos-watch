@@ -32,7 +32,7 @@ describe("SafetyScoreV9PillarRow", () => {
     }} />);
     const label = screen.getByText("Evidence: limited (selected route) · current");
     expect(label.getAttribute("title")).toBe(
-      "Evidence: limited — the pillar score relies on undisclosed or not-yet-researched inputs.",
+      "Evidence: limited — the pillar score relies on undisclosed or unresolved inputs.",
     );
   });
 

@@ -21,7 +21,7 @@ const RESPONSIBILITY_LABELS = {
   "method-unsupported": "The method cannot evaluate this shape",
   "measured-adverse": "Measured and adverse",
   "published-evidence-expired": "This was published, but our copy is out of date",
-  "unresearched": "Not yet researched",
+  "unresearched": "Unresolved",
   "public-data-uncurated": "Awaiting curation",
 } satisfies Record<V9EvidenceResponsibility, string>;
 
@@ -42,5 +42,5 @@ export const SAFETY_SCORE_V9_RESPONSIBILITY_ORDER: readonly string[] = [
 
 /** Meaning of limited pillar evidence, not authored oracle-review confidence. */
 export const SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS: Readonly<Partial<Record<V9EvidenceLevel, string>>> = {
-  limited: "Evidence: limited — the pillar score relies on undisclosed or not-yet-researched inputs.",
+  limited: "Evidence: limited — the pillar score relies on undisclosed or unresolved inputs.",
 };
