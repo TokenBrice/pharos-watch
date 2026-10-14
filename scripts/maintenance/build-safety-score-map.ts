@@ -5,12 +5,12 @@
  * Composition (orbital map): every graded coin appears in one of five discrete
  * grade bands around an A-tier core. Bubble area is proportional to circulating
  * supply only above a per-tier legibility floor; smaller assets use a fixed
- * presence marker. A reserved chart key explains grade, score range, guide
- * pattern, and the dominant A-tier supply share. Both size floors remain in
- * the footer.
+ * presence marker. Each band is labelled in place at top centre; the largest
+ * coins carry name chips; the title, headline A-tier share, supply key and
+ * provenance sit in the four corners the inscribed ellipse leaves empty.
  *
  * Two editions share one composition:
- *   --edition=daily    stable output name with the capture date in the footer
+ *   --edition=daily    stable output name with the capture date in the masthead
  *                      and no issue furniture. Regenerated unattended and
  *                      published to /safety-scores/map.
  *   --edition=monthly  month-stamped archive name plus the monthly issue
@@ -83,13 +83,15 @@ const OUT_DIR = resolve(REPO_ROOT, "agents/safety-score-map");
 const WIDTH = 1600;
 const HEIGHT = 900;
 const DEVICE_SCALE = 2;
-const MARGIN_X = 64;
-const FOOTER_RULE_Y = 880;
-const HEADER_RULE_Y = 86;
-const HEADER_BODY_GAP = 12;
-const BODY_TOP = HEADER_RULE_Y + HEADER_BODY_GAP;
+const MARGIN_X = 48;
+// No header or footer strip: the chrome lives in the four corners the
+// inscribed ellipse leaves empty, so the orbital field may run to this edge
+// clearance at the top and bottom of the canvas.
+const EDGE_CLEARANCE = 14;
+const BODY_TOP = EDGE_CLEARANCE;
+const BODY_BOTTOM = HEIGHT - EDGE_CLEARANCE;
 const GALAXY_CX = 800;
-const GALAXY_CY = 482;
+const GALAXY_CY = 450;
 
 // Below this share of graded cards joining a list row with real supply, the
 // map is drawing floors instead of data.
@@ -99,8 +101,9 @@ const MIN_JOIN_COVERAGE = 0.95;
 // orbital signals instead of spreadsheet rules.
 const INK = "#f5f7fb";
 const INK_SECONDARY = "#9aa6ba";
-const RULE = "#263044";
-const FROST_BLUE = "#4bc4de";
+const INK_DECK = "#c3ccda";
+const FIELD = "#0a1220";
+const NAME_CHIP = "#e8eef6";
 
 // Letter-tier hex tokens come from the shared classification palette.
 const TIER_ORDER = ["A", "B", "C", "D", "F"] as const;
@@ -114,29 +117,41 @@ interface OrbitZone {
   outerRy: number;
 }
 
-// The A core is deliberately compact. B begins immediately outside it, while
-// the demand-derived B-F stack consumes the remaining radial budget outward.
+// The A core is sized from what it holds (see `layoutCore`); this is the
+// default used when no core has been laid out yet. B begins just outside the
+// core, and the demand-derived B-F stack consumes the remaining radial budget
+// out to the fixed outer bound. The B-F baselines only seed perimeter
+// estimates for the thickness model.
+export const DEFAULT_CORE_ZONE: OrbitZone = { innerRx: 0, innerRy: 0, outerRx: 184, outerRy: 116 };
+const CORE_ASPECT = 1.62;
+const CORE_MIN_RY = 64;
+const CORE_MAX_ZONE: OrbitZone = { innerRx: 0, innerRy: 0, outerRx: 330, outerRy: 204 };
+const CORE_PADDING = 8;
+const CORE_BAND_GAP_X = 16;
+const CORE_BAND_GAP_Y = 10;
 const BASE_ORBIT_ZONES: Record<Tier, OrbitZone> = {
-  A: { innerRx: 0, innerRy: 0, outerRx: 246, outerRy: 164 },
-  B: { innerRx: 262, innerRy: 172, outerRx: 396, outerRy: 231 },
-  C: { innerRx: 410, innerRy: 239, outerRx: 604, outerRy: 324 },
-  D: { innerRx: 618, innerRy: 332, outerRx: 672, outerRy: 356 },
-  F: { innerRx: 686, innerRy: 364, outerRx: 744, outerRy: 384 },
+  A: DEFAULT_CORE_ZONE,
+  B: { innerRx: 200, innerRy: 126, outerRx: 340, outerRy: 200 },
+  C: { innerRx: 354, innerRy: 208, outerRx: 540, outerRy: 300 },
+  D: { innerRx: 554, innerRy: 308, outerRx: 626, outerRy: 346 },
+  F: { innerRx: 640, innerRy: 354, outerRx: 724, outerRy: 396 },
 };
 const OUTER_TIERS = ["B", "C", "D", "F"] as const;
-const OUTER_INNER_RX = BASE_ORBIT_ZONES.B.innerRx;
-const OUTER_INNER_RY = BASE_ORBIT_ZONES.B.innerRy;
+type OuterTier = (typeof OUTER_TIERS)[number];
 const OUTER_RX = BASE_ORBIT_ZONES.F.outerRx;
 const OUTER_RY = BASE_ORBIT_ZONES.F.outerRy;
 // Each outer band's largest mark sits on a long-axis vertex, the widest point
 // of its annulus. Adjacent bands alternate sides so stacked supply giants
 // balance across the centre instead of piling up on one flank.
-const OUTER_ANCHOR_PHASE: Readonly<Record<(typeof OUTER_TIERS)[number], number>> = {
+const OUTER_ANCHOR_PHASE: Readonly<Record<OuterTier, number>> = {
   B: 0,
   C: Math.PI,
   D: 0,
   F: Math.PI,
 };
+// Every grade's label sits at top centre, so the five pills read as one
+// vertical A-to-F scale running out from the core.
+const GRADE_LABEL_THETA = Math.PI * 1.5;
 const BAND_GAP_X = 14;
 const BAND_GAP_Y = 8;
 const BAND_SEMANTIC_MIN = 8;
@@ -145,14 +160,57 @@ const SUBGRADE_LANE_TARGET_Y = 15;
 const SUBGRADE_LANE_DEGRADE_STEPS = 16;
 const SUBGRADE_LANE_REFERENCE_POPULATION = 40;
 const SUBGRADE_LANE_MAX_DEMAND_FACTOR = 2;
-const SUBGRADE_LANE_PACK_PHASES = 24;
 const MAX_EMPTY_ARC_MEAN_MULTIPLE = 3;
+const RING_ARC_SAFETY = 1;
+const MAX_GUIDES_PER_GRADE = 5;
+const MAX_GUIDE_SPLITS = 12;
 
-// The compact header keeps only the visual grammar needed to decode the map.
-export const CHART_KEY_PANEL: Rect = { x: 800, y: 18, w: 736, h: 48 };
-const MASTHEAD_LOCKUP: Rect = { x: MARGIN_X, y: 4, w: 714, h: 78 };
-const FOOTER_PANEL: Rect = { x: MARGIN_X - 4, y: FOOTER_RULE_Y + 2, w: WIDTH - (MARGIN_X - 4) * 2, h: 16 };
-const ANNOTATION_FRAME: Rect = { x: MARGIN_X - 8, y: 4, w: WIDTH - (MARGIN_X - 8) * 2, h: HEIGHT - 5 };
+// Corner chrome. Each block is a reserved region (or masthead obstacle)
+// inflated toward the map by CORNER_CLEARANCE so no mark crowds the type.
+const CORNER_CLEARANCE = 18;
+const CORNER_BLOCK_W = 300;
+export const CHART_KEY_PANEL: Rect = { x: WIDTH - MARGIN_X - 282, y: 16, w: 282, h: 106 };
+const SUPPLY_KEY_PANEL: Rect = { x: MARGIN_X, y: 790, w: CORNER_BLOCK_W, h: 94 };
+const FOOTER_PANEL: Rect = { x: WIDTH - MARGIN_X - CORNER_BLOCK_W, y: 790, w: CORNER_BLOCK_W, h: 94 };
+// The two-line title steps in with the ellipse curve: the long first line
+// sits above the shorter second line and deck.
+const MASTHEAD_EYEBROW: Rect = { x: MARGIN_X - 2, y: 16, w: 500, h: 30 };
+const MASTHEAD_LOCKUP: Rect = { x: MARGIN_X - 2, y: 46, w: 352, h: 50 };
+const MASTHEAD_TAIL: Rect = { x: MARGIN_X - 2, y: 96, w: 214, h: 66 };
+const ANNOTATION_FRAME: Rect = { x: MARGIN_X - 16, y: 4, w: WIDTH - (MARGIN_X - 16) * 2, h: HEIGHT - 8 };
+
+/**
+ * Every corner block as the scene sees it: obstacles and reserved regions,
+ * inflated toward the map. All of them lie outside the outer ellipse, and
+ * every mark lies inside it, so no layout can ever crowd the corner type.
+ */
+export function chromeKeepOuts(): Array<Rect & { id: string }> {
+  return [
+    { id: "masthead-eyebrow", ...MASTHEAD_EYEBROW, w: MASTHEAD_EYEBROW.w + CORNER_CLEARANCE },
+    { id: "masthead-lockup", ...MASTHEAD_LOCKUP, w: MASTHEAD_LOCKUP.w + CORNER_CLEARANCE },
+    // The deck sits well above the field, so the tail keeps less clearance below.
+    { id: "masthead-tail", ...MASTHEAD_TAIL, w: MASTHEAD_TAIL.w + CORNER_CLEARANCE, h: MASTHEAD_TAIL.h + CORNER_CLEARANCE / 2 },
+    { id: "chart-key-panel", ...inflateTowardMap(CHART_KEY_PANEL, CORNER_CLEARANCE) },
+    { id: "supply-key-panel", ...inflateTowardMap(SUPPLY_KEY_PANEL, CORNER_CLEARANCE) },
+    { id: "footer-panel", ...inflateTowardMap(FOOTER_PANEL, CORNER_CLEARANCE) },
+  ];
+}
+
+/** True when no part of the rectangle lies inside the bounded outer ellipse. */
+export function rectClearsOuterField(rect: Rect): boolean {
+  return rectFitsOrbit({ innerRx: OUTER_RX, innerRy: OUTER_RY, outerRx: Number.POSITIVE_INFINITY, outerRy: Number.POSITIVE_INFINITY }, rect);
+}
+
+function inflateTowardMap(rect: Rect, clearance: number): Rect {
+  const left = rect.x + rect.w / 2 > GALAXY_CX;
+  const top = rect.y + rect.h / 2 < GALAXY_CY;
+  return {
+    x: left ? rect.x - clearance : rect.x,
+    y: top ? rect.y : rect.y - clearance,
+    w: rect.w + clearance,
+    h: rect.h + clearance,
+  };
+}
 
 export const BAND_GUIDE_DASHARRAY: Readonly<Record<Tier, string | null>> = {
   A: "1 3",
@@ -164,12 +222,30 @@ export const BAND_GUIDE_DASHARRAY: Readonly<Record<Tier, string | null>> = {
 
 // Bubble sizing: area tracks circulating supply, floored for presence. The
 // largest coin anchors the scale; the fit loop shrinks it until the strata
-// stack above the footer.
+// fit the bounded field.
 const R_MAX_TARGET = 68;
-const MIN_LOGO_SCALE = 1.25 * 1.25;
-const R_MIN_A = 7 * MIN_LOGO_SCALE;
-const GRAVEL_FLOORS = [5 * MIN_LOGO_SCALE] as const;
+const MIN_LOGO_SCALE = 1.8;
+export const R_MIN_A = 7 * MIN_LOGO_SCALE;
+// The fitter prefers the readable floor and steps down to the previous
+// publication floor only when the census outgrows it; the floor in use is
+// always computed into the disclosed size threshold.
+const FALLBACK_LOGO_SCALE = 1.25 * 1.25;
+export const GRAVEL_FLOORS = [5 * MIN_LOGO_SCALE, 5 * FALLBACK_LOGO_SCALE] as const;
 const BUBBLE_GAP = 2.5;
+
+// In-map type. Pills and chips are sized from deterministic advance
+// estimates before render, then measured in the browser: rendered text that
+// escapes its pill fails the build.
+const GRADE_PILL_H = 26;
+const LEADER_TAG_H = 16;
+const HERO_CHIP_H = 24;
+const HERO_CHIP_MIN_R = 30;
+const HERO_CHIP_GAP = 5;
+const SLOT_GAP = 3;
+const CORE_LABEL_CLEARANCE = 6;
+// Clearance kept between a label pill and its guide's edges.
+const LABEL_GUIDE_MARGIN = 6;
+const MONO_ADVANCE = 0.6;
 
 // Logo plate decisions are made from the transcoded RGBA raster, never from
 // source markup. The annulus avoids transparent square corners while still
@@ -181,8 +257,9 @@ const LOGO_FULL_BLEED_OPAQUE_RATIO = 0.9;
 const LOGO_VISIBLE_ALPHA_FLOOR = 0.1;
 const LOGO_LIGHT_LUMINANCE_FLOOR = 0.82;
 const LOGO_LIGHT_INK_RATIO = 0.7;
+const LOGO_DARK_INK_LUMINANCE_CEILING = 0.25;
+const LOGO_DARK_INK_RATIO = 0.5;
 const LOGO_LIGHT_PLATE = "#d9e2ec";
-const LOGO_DARK_PLATE = "#111a29";
 
 // Only these codepoints are covered by all four embedded faces. Anything else
 // falls through to a machine-dependent glyph and can visibly change the map.
@@ -430,6 +507,7 @@ export function classifyLogoPlate(rgba: Uint8Array, width: number, height: numbe
   let opaqueAnnulusPixels = 0;
   let visibleWeight = 0;
   let lightInkWeight = 0;
+  let darkInkWeight = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = (y * width + x) * 4;
@@ -445,13 +523,18 @@ export function classifyLogoPlate(rgba: Uint8Array, width: number, height: numbe
       const luminance = (0.2126 * rgba[index] + 0.7152 * rgba[index + 1] + 0.0722 * rgba[index + 2]) / 255;
       visibleWeight += alpha;
       if (luminance >= LOGO_LIGHT_LUMINANCE_FLOOR) lightInkWeight += alpha;
+      if (luminance < LOGO_DARK_INK_LUMINANCE_CEILING) darkInkWeight += alpha;
     }
   }
 
   const opaqueAnnulusRatio = annulusPixels > 0 ? opaqueAnnulusPixels / annulusPixels : 0;
   if (opaqueAnnulusRatio >= LOGO_FULL_BLEED_OPAQUE_RATIO) return "light";
   const lightInkRatio = visibleWeight > 0 ? lightInkWeight / visibleWeight : 0;
-  return lightInkRatio >= LOGO_LIGHT_INK_RATIO ? "dark" : "none";
+  if (lightInkRatio >= LOGO_LIGHT_INK_RATIO) return "dark";
+  // A shaped mark drawn mostly in dark ink vanishes on the midnight field, so
+  // it gets the light plate a full-bleed tile already carries.
+  const darkInkRatio = visibleWeight > 0 ? darkInkWeight / visibleWeight : 0;
+  return darkInkRatio >= LOGO_DARK_INK_RATIO ? "light" : "none";
 }
 
 export async function loadLogoDataUri(publicLogoPath: string, sizePx: number): Promise<LogoRenderData | null> {
@@ -508,16 +591,44 @@ interface Bubble {
   r: number;
 }
 
+export type MapSlotKind = "grade-label" | "leader-tag" | "hero-chip";
+
+/**
+ * In-map type that owns geometry: a grade label or leader tag reserves its
+ * own arc on a guide, and a hero chip reserves room below its coin in the
+ * core. Every slot is an obstacle in the annotation scene, so no mark or
+ * other label may touch it.
+ */
+export interface MapSlot {
+  id: string;
+  kind: MapSlotKind;
+  tier: Tier;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Arc half-extent along its guide, so the bare-arc linter counts it as occupied. */
+  arcHalf?: number;
+  /** Where on the guide that arc was reserved; a hung tag may sit just off it. */
+  arcCenter?: { x: number; y: number };
+  /** Grade labels: score range and census. Tags and chips: symbol and score. */
+  primary: string;
+  secondary: string;
+}
+
 interface BandLayout {
   tier: Tier;
   zone: OrbitZone;
   bubbles: Bubble[];
+  slots: MapSlot[];
   laneOffsetY: number;
   totalCount: number;
   totalMcap: number;
 }
 
 interface FitDiagnostic {
+  /** The outer grade whose guide ran out of room, when a split could help. */
+  openTier?: OuterTier;
   tier: string;
   count: number;
   placed: number;
@@ -541,7 +652,7 @@ export function radiusForMcap(tier: Tier, mcap: number | null, k: number, gravel
 
 export type DemandOrbitZoneResult =
   | { ok: true; zones: Record<Tier, OrbitZone>; ringZones: Record<Tier, OrbitZone[]>; requiredThickness: Record<Tier, number> }
-  | { ok: false; detail: string; requiredThickness: Record<Tier, number> };
+  | { ok: false; detail: string; requiredThickness: Record<Tier, number>; openTier?: OuterTier };
 
 function splitPopulation<T>(items: readonly T[], count: number): T[][] {
   const groups = Array.from({ length: count }, () => [] as T[]);
@@ -583,13 +694,24 @@ function splitBandZone(zone: OrbitZone, thicknesses: readonly number[]): OrbitZo
  * guide retains its own complete census and is linted independently; the
  * grade-band stack still stays inside the fixed poster body.
  */
+export interface GuideSlotDemand {
+  /** Width of the grade label pill carried, flat, at top centre of the first guide. */
+  labelWidth?: number;
+  /** Per guide, the arc half-extents of its leader tags, packed exactly like marks. */
+  tagArcHalves?: readonly (readonly number[])[];
+}
+
 export function computeDemandOrbitZones(
   radiiByTier: Readonly<Record<Tier, readonly number[]>>,
   modifierLanesByTier: Readonly<Partial<Record<Tier, boolean>>> = {},
   ringCounts: Readonly<Partial<Record<Tier, number>>> = {},
+  core: OrbitZone = DEFAULT_CORE_ZONE,
+  slotDemand: Readonly<Partial<Record<Tier, GuideSlotDemand>>> = {},
 ): DemandOrbitZoneResult {
-  const availableThickness = OUTER_RY - OUTER_INNER_RY - BAND_GAP_Y * (OUTER_TIERS.length - 1);
-  const availableThicknessX = OUTER_RX - OUTER_INNER_RX - BAND_GAP_X * (OUTER_TIERS.length - 1);
+  const outerInnerRx = core.outerRx + CORE_BAND_GAP_X;
+  const outerInnerRy = core.outerRy + CORE_BAND_GAP_Y;
+  const availableThickness = OUTER_RY - outerInnerRy - BAND_GAP_Y * (OUTER_TIERS.length - 1);
+  const availableThicknessX = OUTER_RX - outerInnerRx - BAND_GAP_X * (OUTER_TIERS.length - 1);
   const longAxisRatio = availableThicknessX / availableThickness;
   const baseThickness = Object.fromEntries(TIER_ORDER.map((tier) => [tier, 0])) as Record<Tier, number>;
   const rings = {} as Record<(typeof OUTER_TIERS)[number], { radii: number[][]; thicknesses: number[] }>;
@@ -619,6 +741,24 @@ export function computeDemandOrbitZones(
     rings[tier] = { radii: groups, thicknesses };
   }
 
+  // A flat pill at top centre of a curved guide needs the guide's outer edge
+  // to clear its corners, which sag by the guide's curvature across the
+  // pill's width. Measured at the innermost position the stack could give the
+  // guide: surplus only moves guides outward, where the sag is smaller.
+  let stackRx = outerInnerRx;
+  let stackRy = outerInnerRy;
+  for (const tier of OUTER_TIERS) {
+    const labelWidth = slotDemand[tier]?.labelWidth;
+    if (labelWidth !== undefined && rings[tier].thicknesses.length > 0) {
+      const reach = labelWidth / 2 / stackRx;
+      const sag = reach >= 1 ? Number.POSITIVE_INFINITY : stackRy * (1 - Math.sqrt(1 - reach ** 2));
+      rings[tier].thicknesses[0] = Math.max(rings[tier].thicknesses[0], GRADE_PILL_H + 2 * sag + LABEL_GUIDE_MARGIN);
+      baseThickness[tier] = rings[tier].thicknesses.reduce((sum, value) => sum + value, 0);
+    }
+    stackRx += baseThickness[tier] * longAxisRatio + BAND_GAP_X;
+    stackRy += baseThickness[tier] + BAND_GAP_Y;
+  }
+
   const baseTotal = OUTER_TIERS.reduce((sum, tier) => sum + baseThickness[tier], 0);
   if (baseTotal > availableThickness + 1e-9) {
     return {
@@ -631,9 +771,9 @@ export function computeDemandOrbitZones(
   // Spending the whole short-axis budget is what makes every band exactly
   // `longAxisRatio` times thicker on its long axis than on its short axis.
   const stack = (thickness: Readonly<Record<Tier, number>>): Record<Tier, OrbitZone> => {
-    const zones = { A: { ...BASE_ORBIT_ZONES.A } } as Record<Tier, OrbitZone>;
-    let innerRx = OUTER_INNER_RX;
-    let innerRy = OUTER_INNER_RY;
+    const zones = { A: { ...core } } as Record<Tier, OrbitZone>;
+    let innerRx = outerInnerRx;
+    let innerRy = outerInnerRy;
     for (const [index, tier] of OUTER_TIERS.entries()) {
       const thicknessY = thickness[tier];
       const thicknessX = thicknessY * longAxisRatio;
@@ -653,18 +793,19 @@ export function computeDemandOrbitZones(
   // correction is convex in pair distance, so Jensen bounds every cyclic
   // order by the sum of arcs for (2 * radius + gap). A single supply giant
   // must not charge its curvature correction to hundreds of small markers.
-  const ringShortfall = (radii: readonly number[], zone: OrbitZone): number => {
-    if (radii.length < 2) return 0;
+  const ringShortfall = (entries: readonly number[], zone: OrbitZone, flatArcHalves: readonly number[] = []): number => {
+    if (entries.length + flatArcHalves.length < 2) return 0;
     const guideRx = (zone.innerRx + zone.outerRx) / 2;
     const guideRy = (zone.innerRy + zone.outerRy) / 2;
     const tightestRadius = Math.min(guideRx, guideRy) ** 2 / Math.max(guideRx, guideRy);
     let demand = 0;
-    for (const radius of radii) {
-      const distance = radius * 2 + BUBBLE_GAP;
-      if (distance >= 2 * tightestRadius) return Number.POSITIVE_INFINITY;
-      demand += 2 * tightestRadius * Math.asin(distance / (2 * tightestRadius));
-    }
-    return demand - approximateEllipsePerimeter(guideRx, guideRy);
+    for (const radius of entries) demand += pairArc(radius * 2 + BUBBLE_GAP, tightestRadius, false);
+    // A flat entry's pairs cost their straight extent, which never exceeds
+    // the curved bound its neighbour already carries.
+    for (const half of flatArcHalves) demand += half * 2 + BUBBLE_GAP;
+    // The packer walks a sampled polyline a hair shorter than the analytic
+    // perimeter, so a guide closed exactly at the limit would not pack.
+    return demand + RING_ARC_SAFETY - approximateEllipsePerimeter(guideRx, guideRy);
   };
   const ringZonesFor = (zones: Readonly<Record<Tier, OrbitZone>>): Record<Tier, OrbitZone[]> => ({
     A: [zones.A],
@@ -674,11 +815,17 @@ export function computeDemandOrbitZones(
     const ringZones = ringZonesFor(zones);
     return OUTER_TIERS.flatMap((tier) => rings[tier].radii.map((radii, index) => ({
       tier,
-      shortfall: ringShortfall(radii, ringZones[tier][index]),
+      // Labels and tags are entries of their guide, under the same bound.
+      shortfall: ringShortfall(
+        [...radii, ...(slotDemand[tier]?.tagArcHalves?.[index] ?? [])],
+        ringZones[tier][index],
+        index === 0 && slotDemand[tier]?.labelWidth !== undefined ? [slotDemand[tier]!.labelWidth! / 2 + SLOT_GAP] : [],
+      ),
     }))).find(({ shortfall }) => shortfall > 0);
   };
 
   let ringFailure: string | null = null;
+  let openTier: OuterTier | undefined;
   for (let laneStep = SUBGRADE_LANE_DEGRADE_STEPS; laneStep >= 0; laneStep--) {
     const laneScale = laneStep / SUBGRADE_LANE_DEGRADE_STEPS;
     const requiredThickness = { ...baseThickness };
@@ -706,6 +853,7 @@ export function computeDemandOrbitZones(
     const widestOpen = firstOpenRing(withBShare(surplus));
     if (widestOpen) {
       ringFailure = `Band ${widestOpen.tier} needs ${widestOpen.shortfall.toFixed(1)}px more guide circumference than the bounded map can give its census`;
+      openTier = widestOpen.tier;
       continue;
     }
     let closed = surplus;
@@ -726,6 +874,7 @@ export function computeDemandOrbitZones(
     ok: false,
     detail: ringFailure ?? "Outer bands cannot retain their bounded extents and semantic gaps",
     requiredThickness: baseThickness,
+    ...(openTier ? { openTier } : {}),
   };
 }
 
@@ -768,37 +917,164 @@ export function centerHeroPair(leftRadius: number, rightRadius: number): readonl
   ];
 }
 
-function snailCandidates(
-  zone: OrbitZone,
-  r: number,
-  index: number,
-  count: number,
-): Array<{ x: number; y: number }> {
-  const candidates: Array<{ x: number; y: number }> = [];
-  if (index === 0) return [{ x: GALAXY_CX, y: GALAXY_CY }];
-  const maxRx = zone.outerRx - r;
-  const maxRy = zone.outerRy - r;
+// --- In-map type ----------------------------------------------------------
 
-  // After the two central anchors, give every A asset a stable "district" on
-  // one clockwise Paris-style escargot. Local alternates only rescue changes
-  // in bubble size; they never restart the search from an arbitrary location.
-  const progress = (index - 2) / Math.max(count - 3, 1);
-  const baseRx = 105 + progress * 95;
-  const baseRy = 85 + progress * 55;
-  const baseAngle = 0.95 + progress * Math.PI * 2;
-  for (let expansion = 0; expansion <= 18; expansion++) {
-    for (let offsetStep = 0; offsetStep <= 14; offsetStep++) {
-      const offsets = offsetStep === 0 ? [0] : [offsetStep * 0.008, -offsetStep * 0.008];
-      for (const offset of offsets) {
-        const theta = baseAngle + offset;
-        candidates.push({
-          x: GALAXY_CX + Math.min(maxRx, baseRx + expansion * 2) * Math.cos(theta),
-          y: GALAXY_CY + Math.min(maxRy, baseRy + expansion * 1.4) * Math.sin(theta),
-        });
-      }
+// Deterministic advance estimates; the browser measures the real glyphs and
+// fails the build if any text escapes its pill (`validateRenderedAnnotations`).
+function monoWidth(text: string, size: number): number {
+  return text.length * size * MONO_ADVANCE;
+}
+
+function sansBoldWidth(text: string, size: number): number {
+  let width = 0;
+  for (const char of text) width += size * (/[A-Z0-9$]/.test(char) ? 0.66 : char === " " ? 0.3 : 0.56);
+  return width;
+}
+
+// The bare census keeps pills narrow (curvature sag grows with the square of
+// pill width); the headline's "n of N graded stablecoins" teaches the unit.
+function censusText(count: number): string {
+  return `${count}`;
+}
+
+export function gradeLabelSlot(tier: Tier, count: number, cx: number, cy: number): MapSlot {
+  const primary = tierRange(tier);
+  const secondary = censusText(count);
+  const w = Math.ceil(14 + 13 + 9 + monoWidth(primary, 13) + 12 + monoWidth(secondary, 11.5) + 14);
+  return { id: `grade-label:${tier}`, kind: "grade-label", tier, x: cx - w / 2, y: cy - GRADE_PILL_H / 2, w, h: GRADE_PILL_H, primary, secondary };
+}
+
+function nameSlot(kind: "leader-tag" | "hero-chip", coin: MapCoin, cx: number, cy: number): MapSlot {
+  const primary = mapLabel(coin.symbol);
+  const secondary = formatScore(coin.score, { trimInteger: true });
+  const size = kind === "hero-chip" ? 15 : 11;
+  const h = kind === "hero-chip" ? HERO_CHIP_H : LEADER_TAG_H;
+  const w = Math.ceil(sansBoldWidth(`${primary} ${secondary}`, size) + size * 0.5 + h);
+  return { id: `${kind}:${coin.id}`, kind, tier: coin.tier, x: cx - w / 2, y: cy - h / 2, w, h, primary, secondary };
+}
+
+function rectCircleOverlap(rect: Rect, circle: Pick<Bubble, "cx" | "cy" | "r">, gap = 0): boolean {
+  const nearestX = Math.max(rect.x, Math.min(circle.cx, rect.x + rect.w));
+  const nearestY = Math.max(rect.y, Math.min(circle.cy, rect.y + rect.h));
+  return Math.hypot(circle.cx - nearestX, circle.cy - nearestY) < circle.r + gap;
+}
+
+function rectsOverlap(a: Rect, b: Rect, gap = 0): boolean {
+  return a.x < b.x + b.w + gap && b.x < a.x + a.w + gap && a.y < b.y + b.h + gap && b.y < a.y + a.h + gap;
+}
+
+/** A rectangle lies in an annulus when its whole outline does. */
+function rectFitsOrbit(zone: OrbitZone, rect: Rect): boolean {
+  const samples = 6;
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    for (const [x, y] of [
+      [rect.x + rect.w * t, rect.y],
+      [rect.x + rect.w * t, rect.y + rect.h],
+      [rect.x, rect.y + rect.h * t],
+      [rect.x + rect.w, rect.y + rect.h * t],
+    ] as const) {
+      const dx = x - GALAXY_CX;
+      const dy = y - GALAXY_CY;
+      if (ellipseValue(dx, dy, zone.outerRx, zone.outerRy) > 1) return false;
+      if (zone.innerRx > 0 && ellipseValue(dx, dy, zone.innerRx, zone.innerRy) < 1) return false;
     }
   }
-  return candidates;
+  return true;
+}
+
+// --- The A core -----------------------------------------------------------
+
+interface CoreLayout {
+  zone: OrbitZone;
+  bubbles: Bubble[];
+  slots: MapSlot[];
+}
+
+function coreZoneOfSize(ry: number): OrbitZone {
+  return { innerRx: 0, innerRy: 0, outerRx: ry * CORE_ASPECT, outerRy: ry };
+}
+
+/**
+ * The A core is one body, not a district map: the two supply leaders sit as
+ * a tangent hero pair across an area-weighted centre, each large coin carries
+ * a name chip just below it, the A label tops the pair, and every other A
+ * coin walks straight out from the pair along its own fixed bearing until it
+ * clears everything placed before it. Bearings alternate either side of the
+ * label, largest first, so the cluster stays balanced. The core is then
+ * sized to hold exactly what it holds, which is where B begins.
+ */
+export function layoutCore(coins: readonly MapCoin[], radii: readonly number[]): CoreLayout | null {
+  const bubbles: Bubble[] = [];
+  const slots: MapSlot[] = [];
+  const clear = (bubble: Pick<Bubble, "cx" | "cy" | "r">, chip: MapSlot | null) =>
+    circleFitsOrbit(CORE_MAX_ZONE, bubble.cx, bubble.cy, bubble.r) &&
+    !bubbles.some((other) => bubblesOverlap(bubble, other)) &&
+    !slots.some((slot) => rectCircleOverlap(slot, bubble, CORE_LABEL_CLEARANCE)) &&
+    (!chip || (
+      rectFitsOrbit(CORE_MAX_ZONE, chip) &&
+      !bubbles.some((other) => rectCircleOverlap(chip, other, CORE_LABEL_CLEARANCE)) &&
+      !slots.some((slot) => rectsOverlap(slot, chip, SLOT_GAP))
+    ));
+  const chipFor = (coin: MapCoin, cx: number, cy: number, r: number) =>
+    r >= HERO_CHIP_MIN_R ? nameSlot("hero-chip", coin, cx, cy + r + HERO_CHIP_GAP + HERO_CHIP_H / 2) : null;
+  const place = (coin: MapCoin, cx: number, cy: number, r: number): boolean => {
+    const chip = chipFor(coin, cx, cy, r);
+    if (!clear({ cx, cy, r }, chip)) return false;
+    bubbles.push({ coin, cx, cy, r });
+    if (chip) slots.push(chip);
+    return true;
+  };
+
+  const heroCount = Math.min(2, coins.length);
+  const heroX = heroCount === 2 ? centerHeroPair(radii[0], radii[1]) : [GALAXY_CX];
+  for (let i = 0; i < heroCount; i++) {
+    if (!place(coins[i], heroX[i], GALAXY_CY, radii[i])) return null;
+  }
+  const heroTop = heroCount > 0 ? Math.min(...bubbles.map((bubble) => bubble.cy - bubble.r)) : GALAXY_CY;
+  const label = gradeLabelSlot("A", coins.length, GALAXY_CX, heroCount > 0 ? heroTop - SLOT_GAP * 3 - GRADE_PILL_H / 2 : GALAXY_CY);
+  if (bubbles.some((bubble) => rectCircleOverlap(label, bubble, CORE_LABEL_CLEARANCE))) return null;
+  slots.push(label);
+
+  const satellites = coins.length - heroCount;
+  const cone = 0.5;
+  const span = Math.PI * 2 - cone * 2;
+  for (let i = 0; i < satellites; i++) {
+    // Rank 0 just right of the label, rank 1 just left, and so on round.
+    const step = Math.floor(i / 2);
+    const fromRight = i % 2 === 0;
+    const pairs = Math.ceil(satellites / 2);
+    const offset = span * ((step + 0.5) / (pairs * 2));
+    const theta = -Math.PI / 2 + (fromRight ? cone + offset : -cone - offset);
+    const index = heroCount + i;
+    let placed = false;
+    for (let distance = 0; distance <= CORE_MAX_ZONE.outerRy && !placed; distance += 0.5) {
+      placed = place(
+        coins[index],
+        GALAXY_CX + distance * CORE_ASPECT * Math.cos(theta),
+        GALAXY_CY + distance * Math.sin(theta),
+        radii[index],
+      );
+    }
+    if (!placed) return null;
+  }
+
+  // Smallest core of the fixed aspect that holds every mark and slot.
+  const holds = (zone: OrbitZone) =>
+    bubbles.every((bubble) => circleFitsOrbit(zone, bubble.cx, bubble.cy, bubble.r)) &&
+    slots.every((slot) => rectFitsOrbit(zone, slot));
+  let low = CORE_MIN_RY;
+  let high = CORE_MAX_ZONE.outerRy;
+  if (!holds(coreZoneOfSize(high))) return null;
+  if (!holds(coreZoneOfSize(low))) {
+    while (high - low > 0.25) {
+      const middle = (low + high) / 2;
+      if (holds(coreZoneOfSize(middle))) high = middle;
+      else low = middle;
+    }
+    low = high;
+  }
+  return { zone: coreZoneOfSize(Math.min(CORE_MAX_ZONE.outerRy, low + CORE_PADDING)), bubbles, slots };
 }
 
 interface EllipseArcSampler {
@@ -865,33 +1141,122 @@ export function packEllipticalOrbit(
   orbitRy: number,
   phase: number,
 ): Array<{ x: number; y: number }> | null {
-  if (radii.length === 0) return [];
-  if (radii.length === 1) {
-    return [{ x: GALAXY_CX + orbitRx * Math.cos(phase), y: GALAXY_CY + orbitRy * Math.sin(phase) }];
-  }
+  return packAnchoredOrbit(radii, orbitRx, orbitRy, [{ index: 0, theta: phase }]);
+}
 
-  // Equal surplus arc lengths avoid bare arcs; each neighbour gets its own
-  // curvature allowance instead of the largest pair's allowance everywhere.
-  const { perimeter, pointAtArc } = createEllipseArcSampler(orbitRx, orbitRy);
-  const required = radii.map((radius, index) => radius + radii[(index + 1) % radii.length]! + BUBBLE_GAP);
+/**
+ * Guide arc a neighbouring pair needs. Marks get the chord-to-arc allowance of
+ * the guide's tightest bend. A flat entry (a grade label, pinned at top centre
+ * where the guide is at its flattest) is charged its straight extent; its
+ * exact rectangle is checked against every mark once placed.
+ */
+function pairArc(distance: number, tightestRadius: number, flat: boolean): number {
+  if (flat) return distance;
+  return distance >= 2 * tightestRadius ? Number.POSITIVE_INFINITY : 2 * tightestRadius * Math.asin(distance / (2 * tightestRadius));
+}
+
+export interface OrbitAnchor {
+  /** Entry index pinned to this angle. */
+  index: number;
+  theta: number;
+}
+
+/**
+ * Pack a cyclic sequence of entries round an ellipse with some entries pinned
+ * to fixed angles: the supply leader on a long-axis vertex and, on a grade's
+ * first guide, its label at top centre. Between consecutive anchors the
+ * entries share that segment's surplus arc equally, so no segment pools slack
+ * into a bare arc. Each neighbour gets its own chord-to-arc curvature
+ * allowance instead of the largest pair's allowance everywhere.
+ */
+export function packAnchoredOrbit(
+  radii: readonly number[],
+  orbitRx: number,
+  orbitRy: number,
+  anchors: readonly OrbitAnchor[],
+  flat: ReadonlySet<number> = new Set(),
+): Array<{ x: number; y: number }> | null {
+  const count = radii.length;
+  if (count === 0) return [];
+  const sampler = createEllipseArcSampler(orbitRx, orbitRy);
+  const sorted = [...anchors].sort((left, right) => left.index - right.index);
+  if (sorted.length === 0 || sorted.some((anchor, index) => anchor.index < 0 || anchor.index >= count || anchor.index === sorted[index - 1]?.index)) return null;
+  if (count === 1) return [sampler.pointAtArc(sampler.arcAtTheta(sorted[0].theta))];
+
+  const required = radii.map((radius, index) => radius + radii[(index + 1) % count]! + BUBBLE_GAP);
   const tightestRadius = Math.min(orbitRx, orbitRy) ** 2 / Math.max(orbitRx, orbitRy);
-  if (required.some((distance) => distance >= 2 * tightestRadius)) return null;
-  const requiredArcs = required.map((distance) => 2 * tightestRadius * Math.asin(distance / (2 * tightestRadius)));
-  const requiredLength = requiredArcs.reduce((sum, distance) => sum + distance, 0);
-  if (!Number.isFinite(perimeter) || requiredLength > perimeter) return null;
-  const slack = (perimeter - requiredLength) / radii.length;
+  const requiredArcs = required.map((distance, index) => pairArc(distance, tightestRadius, flat.has(index) || flat.has((index + 1) % count)));
+  if (requiredArcs.some((arc) => !Number.isFinite(arc)) || !Number.isFinite(sampler.perimeter)) return null;
 
-  const centers: Array<{ x: number; y: number }> = [];
-  let arc = (((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) / (Math.PI * 2)) * perimeter;
-  for (let i = 0; i < radii.length; i++) {
-    centers.push(pointAtArc(arc));
-    arc += requiredArcs[i]! + slack;
+  const arcs = new Array<number>(count);
+  for (const [position, from] of sorted.entries()) {
+    const to = sorted[(position + 1) % sorted.length]!;
+    const startArc = sampler.arcAtTheta(from.theta);
+    const steps = sorted.length === 1 ? count : (to.index - from.index + count) % count;
+    const span = sorted.length === 1
+      ? sampler.perimeter
+      : (sampler.arcAtTheta(to.theta) - startArc + sampler.perimeter) % sampler.perimeter;
+    let needed = 0;
+    for (let step = 0; step < steps; step++) needed += requiredArcs[(from.index + step) % count]!;
+    if (needed > span) return null;
+    const slack = (span - needed) / steps;
+    let arc = startArc;
+    for (let step = 0; step < steps; step++) {
+      const index = (from.index + step) % count;
+      arcs[index] = arc;
+      arc += requiredArcs[index]! + slack;
+    }
   }
-  for (let i = 0; i < centers.length; i++) {
-    const next = centers[(i + 1) % centers.length]!;
-    if (Math.hypot(centers[i]!.x - next.x, centers[i]!.y - next.y) < required[i]!) return null;
+  const centers = arcs.map((arc) => sampler.pointAtArc(arc));
+  for (let i = 0; i < count; i++) {
+    const next = centers[(i + 1) % count]!;
+    if (Math.hypot(centers[i]!.x - next.x, centers[i]!.y - next.y) < required[i]! * (1 - 1e-9)) return null;
   }
   return centers;
+}
+
+/**
+ * Choose where a fixed-angle entry (the grade label) joins a sequence whose
+ * entry 0 is already pinned: the insertion that leaves the two segments'
+ * per-gap slack most nearly equal, so the label does not crowd one side of
+ * the ring and strand the other. `blocked` positions are never chosen. The
+ * inserted entry is flat (see `pairArc`).
+ */
+export function chooseAnchorInsertion(
+  radii: readonly number[],
+  insertRadius: number,
+  orbitRx: number,
+  orbitRy: number,
+  leaderTheta: number,
+  insertTheta: number,
+  blocked: ReadonlySet<number> = new Set(),
+): number | null {
+  const count = radii.length;
+  const sampler = createEllipseArcSampler(orbitRx, orbitRy);
+  const tightestRadius = Math.min(orbitRx, orbitRy) ** 2 / Math.max(orbitRx, orbitRy);
+  const arcFor = (a: number, b: number, flat = false) => pairArc(a + b + BUBBLE_GAP, tightestRadius, flat);
+  const leaderArc = sampler.arcAtTheta(leaderTheta);
+  const firstSpan = (sampler.arcAtTheta(insertTheta) - leaderArc + sampler.perimeter) % sampler.perimeter;
+  const secondSpan = sampler.perimeter - firstSpan;
+  const pairArcs = radii.map((radius, index) => arcFor(radius, radii[(index + 1) % count]!));
+  const prefix = [0];
+  for (const arc of pairArcs) prefix.push(prefix[prefix.length - 1]! + arc);
+  let best: { position: number; imbalance: number } | null = null;
+  // Inserting at `position` puts the entry between radii[position - 1] and
+  // radii[position % count]; positions run 1..count.
+  for (let position = 1; position <= count; position++) {
+    if (blocked.has(position)) continue;
+    const before = radii[position - 1]!;
+    const after = radii[position % count]!;
+    const firstNeed = prefix[position - 1]! + arcFor(before, insertRadius, true);
+    const secondNeed = prefix[count]! - prefix[position]! + arcFor(insertRadius, after, true);
+    const firstSlack = (firstSpan - firstNeed) / position;
+    const secondSlack = (secondSpan - secondNeed) / (count - position + 1);
+    if (!(firstSlack >= 0 && secondSlack >= 0)) continue;
+    const imbalance = Math.abs(firstSlack - secondSlack);
+    if (!best || imbalance < best.imbalance) best = { position, imbalance };
+  }
+  return best?.position ?? null;
 }
 
 export function subgradeLaneForGrade(grade: string): SubgradeLane {
@@ -939,61 +1304,28 @@ export interface SubgradeLanePlacement {
   offsetY: number;
 }
 
-function packSubgradeLaneOrbit(
-  radii: readonly number[],
+/**
+ * Radial lanes displace each mark along its own parametric angle, so the
+ * packed arc positions - including every pinned anchor and the equal
+ * edge-to-edge slack between them - survive the lane offset unchanged.
+ */
+function displaceSubgradeLanes(
+  centers: readonly { x: number; y: number }[],
   directions: readonly (-1 | 0 | 1)[],
   orbitRx: number,
   orbitRy: number,
   offsetX: number,
   offsetY: number,
-  referencePhase: number,
-): Array<{ x: number; y: number }> | null {
-  const sampler = createEllipseArcSampler(orbitRx, orbitRy);
-  const required = radii.map((radius, index) => radius + radii[(index + 1) % radii.length]! + BUBBLE_GAP);
-  const requiredLength = required.reduce((sum, distance) => sum + distance, 0);
-  if (requiredLength > sampler.perimeter) return null;
-  const slack = (sampler.perimeter - requiredLength) / radii.length;
-  const point = (index: number, arc: number) => {
-    const projectedTheta = sampler.thetaAtArc(arc);
-    const laneRx = orbitRx + directions[index] * offsetX;
-    const laneRy = orbitRy + directions[index] * offsetY;
-    const theta = Math.atan2(
-      (orbitRy / laneRy) * Math.sin(projectedTheta),
-      (orbitRx / laneRx) * Math.cos(projectedTheta),
-    );
+): Array<{ x: number; y: number }> {
+  return centers.map((center, index) => {
+    const direction = directions[index]!;
+    if (direction === 0) return { ...center };
+    const theta = Math.atan2((center.y - GALAXY_CY) / orbitRy, (center.x - GALAXY_CX) / orbitRx);
     return {
-      x: GALAXY_CX + laneRx * Math.cos(theta),
-      y: GALAXY_CY + laneRy * Math.sin(theta),
+      x: GALAXY_CX + (orbitRx + direction * offsetX) * Math.cos(theta),
+      y: GALAXY_CY + (orbitRy + direction * offsetY) * Math.sin(theta),
     };
-  };
-
-  for (let phaseStep = 0; phaseStep < SUBGRADE_LANE_PACK_PHASES; phaseStep++) {
-    const phase = referencePhase + (phaseStep / SUBGRADE_LANE_PACK_PHASES) * Math.PI * 2;
-    let arc = sampler.arcAtTheta(phase);
-    const placed: Array<{ x: number; y: number }> = [];
-    for (let index = 0; index < radii.length; index++) {
-      placed.push(point(index, arc));
-      arc += required[index]! + slack;
-    }
-
-    // Radial lanes must preserve the centerline packer's equal edge-to-edge
-    // guide-arc slack. Repacking in angle space pooled slack beside an ellipse's
-    // long-axis ends, opening a fillable bare arc after lane displacement.
-    let overlaps = false;
-    for (let i = 0; i < placed.length && !overlaps; i++) {
-      for (let j = 0; j < i; j++) {
-        if (bubblesOverlap(
-          { cx: placed[i].x, cy: placed[i].y, r: radii[i] },
-          { cx: placed[j].x, cy: placed[j].y, r: radii[j] },
-        )) {
-          overlaps = true;
-          break;
-        }
-      }
-    }
-    if (!overlaps) return placed;
-  }
-  return null;
+  });
 }
 
 export function placeSubgradeRadialLanes(
@@ -1002,14 +1334,28 @@ export function placeSubgradeRadialLanes(
   grades: readonly string[],
   zone: OrbitZone,
   occupied: readonly Pick<Bubble, "cx" | "cy" | "r">[] = [],
+  fitRadii: readonly number[] = radii,
 ): SubgradeLanePlacement | null {
-  if (centers.length !== radii.length || centers.length !== grades.length) return null;
+  if (centers.length !== radii.length || centers.length !== grades.length || fitRadii.length !== radii.length) return null;
   const orbitRx = (zone.innerRx + zone.outerRx) / 2;
   const orbitRy = (zone.innerRy + zone.outerRy) / 2;
   const halfX = (zone.outerRx - zone.innerRx) / 2;
   const halfY = (zone.outerRy - zone.innerRy) / 2;
   const directions = grades.map(subgradeLaneDirection);
-  if (directions.every((direction) => direction === 0)) return { centers: [...centers], offsetY: 0 };
+  const valid = (placed: readonly { x: number; y: number }[]) => {
+    for (let i = 0; i < placed.length; i++) {
+      if (!circleFitsOrbit(zone, placed[i].x, placed[i].y, fitRadii[i])) return false;
+      // Slots report their radial half-extent here; the caller checks their
+      // exact rectangles once placed.
+      const bubble = { cx: placed[i].x, cy: placed[i].y, r: fitRadii[i] };
+      if (occupied.some((other) => bubblesOverlap(bubble, other))) return false;
+      for (let j = 0; j < i; j++) {
+        if (bubblesOverlap(bubble, { cx: placed[j].x, cy: placed[j].y, r: fitRadii[j] })) return false;
+      }
+    }
+    return true;
+  };
+  if (directions.every((direction) => direction === 0)) return valid(centers) ? { centers: [...centers], offsetY: 0 } : null;
 
   // Lane offsets scale with the band's local half-thickness, which grows from
   // halfY on the short axis to halfX on the long axis. Measure each modifier
@@ -1022,167 +1368,238 @@ export function placeSubgradeRadialLanes(
     return localHalf > 0 ? (halfY * (localHalf - radius - BUBBLE_GAP / 2)) / localHalf : 0;
   });
   const boundedTarget = Math.max(0, Math.min(SUBGRADE_LANE_TARGET_Y, ...modifierClearances));
-  const first = centers[0];
-  const referencePhase = Math.atan2((first.y - GALAXY_CY) / orbitRy, (first.x - GALAXY_CX) / orbitRx);
   for (let step = SUBGRADE_LANE_DEGRADE_STEPS; step > 0; step--) {
     const offsetY = boundedTarget * (step / SUBGRADE_LANE_DEGRADE_STEPS);
     const offsetX = halfY > 0 ? offsetY * (halfX / halfY) : 0;
-    const placed = packSubgradeLaneOrbit(radii, directions, orbitRx, orbitRy, offsetX, offsetY, referencePhase);
-    if (!placed) continue;
-    let valid = true;
-    for (let i = 0; i < placed.length && valid; i++) {
-      if (!circleFitsOrbit(zone, placed[i].x, placed[i].y, radii[i])) {
-        valid = false;
-        break;
-      }
-      const bubble = { cx: placed[i].x, cy: placed[i].y, r: radii[i] };
-      if (occupied.some((other) => bubblesOverlap(bubble, other))) {
-        valid = false;
-        break;
-      }
-      for (let j = 0; j < i; j++) {
-        if (bubblesOverlap(bubble, { cx: placed[j].x, cy: placed[j].y, r: radii[j] })) {
-          valid = false;
-          break;
-        }
-      }
-    }
-    if (valid) return { centers: placed, offsetY };
+    const placed = displaceSubgradeLanes(centers, directions, orbitRx, orbitRy, offsetX, offsetY);
+    if (valid(placed)) return { centers: placed, offsetY };
   }
 
   // Angular coverage is invariant. If no separated radial-lane arrangement
-  // fits, collapse the band onto the already-even centerline rather than
-  // consuming its distributed slack and leaving a bare arc.
-  for (let i = 0; i < centers.length; i++) {
-    if (!circleFitsOrbit(zone, centers[i].x, centers[i].y, radii[i])) return null;
-    const bubble = { cx: centers[i].x, cy: centers[i].y, r: radii[i] };
-    if (occupied.some((other) => bubblesOverlap(bubble, other))) return null;
-    for (let j = 0; j < i; j++) {
-      if (bubblesOverlap(bubble, { cx: centers[j].x, cy: centers[j].y, r: radii[j] })) return null;
-    }
-  }
-  return { centers: [...centers], offsetY: 0 };
+  // fits, collapse the band onto the already-even centerline.
+  return valid(centers) ? { centers: [...centers], offsetY: 0 } : null;
 }
+
+/**
+ * A grade's supply leader earns a name tag when it is drawn above the size
+ * floor. The tag reserves arc just past the leader on the long-axis vertex,
+ * where the guide runs vertically and the band is widest, so the tag reads
+ * horizontally across the band below its coin.
+ */
+function leaderTagSlot(leader: MapCoin, radius: number): MapSlot {
+  // A supply giant outside A is named like the core's heroes.
+  return nameSlot(radius >= HERO_CHIP_MIN_R ? "hero-chip" : "leader-tag", leader, 0, 0);
+}
+
+/** The allocator reserves a tag's full width of arc: safe at any packed angle. */
+function leaderTagArcHalf(tag: MapSlot): number {
+  return tag.w / 2 + SLOT_GAP;
+}
+
+/**
+ * The packer reserves what the tag actually spans along its guide where it
+ * sits: just past a leader pinned on the long-axis vertex, where the guide
+ * runs nearly vertically, so a horizontal tag spans little more than its
+ * height. The tangent tilt is found from the tag's arc distance off the
+ * vertex (arc length there is ry per radian), refined once.
+ */
+function projectedTagArcHalf(tag: MapSlot, leaderRadius: number, orbitRx: number, orbitRy: number): number {
+  let half = tag.h / 2 + SLOT_GAP;
+  for (let pass = 0; pass < 2; pass++) {
+    const t = Math.min(Math.PI / 2, (leaderRadius + BUBBLE_GAP + half) / orbitRy);
+    const tx = orbitRx * Math.sin(t);
+    const ty = orbitRy * Math.cos(t);
+    const norm = Math.hypot(tx, ty);
+    half = (tag.w / 2) * (tx / norm) + (tag.h / 2) * (ty / norm) + SLOT_GAP;
+  }
+  return Math.min(half, leaderTagArcHalf(tag));
+}
+
+function leaderTagFor(leader: MapCoin, radius: number, floor: number, zone: OrbitZone): MapSlot | null {
+  if (radius <= floor + 1e-6) return null;
+  const tag = leaderTagSlot(leader, radius);
+  // The vertex has (outerRx - innerRx) of radial room; the tag spans its width.
+  return tag.w + SLOT_GAP * 2 <= zone.outerRx - zone.innerRx ? tag : null;
+}
+
+type RingEntry = { kind: "mark"; coin: MapCoin; radius: number } | { kind: "slot"; slot: MapSlot; arcHalf: number };
 
 function layoutBands(
   graded: readonly MapCoin[],
   scale: number,
   gravelFloor: number,
   diag?: FitDiagnostic[],
-  maxPerRing = Number.POSITIVE_INFINITY,
+  guideCounts: Readonly<Partial<Record<OuterTier, number>>> = {},
 ): { bands: BandLayout[]; k: number; gravelFloor: number } | null {
   const maxMcap = Math.max(...graded.flatMap((coin) => coin.mcap === null ? [] : [coin.mcap]));
   const k = (R_MAX_TARGET * scale) / Math.sqrt(maxMcap);
   // maxMcap = 0 (an empty or unjoined list endpoint) yields k = Infinity and
   // NaN radii; every NaN comparison downstream is false, so the layout would
-  // "fit" and a header-only poster would ship with exit code 0.
+  // "fit" and a chrome-only poster would ship with exit code 0.
   if (!Number.isFinite(k) || k <= 0) {
     throw new Error(`Bubble scale is not finite (k=${k}, maxMcap=${maxMcap}) — the supply join produced no usable values`);
   }
   const radiusOf = (coin: MapCoin) => radiusForMcap(coin.tier, coin.mcap, k, gravelFloor);
-  const radiiByTier = Object.fromEntries(TIER_ORDER.map((tier) => [
+  for (const coin of graded) {
+    if (!Number.isFinite(radiusOf(coin))) throw new Error(`Non-finite radius for ${coin.id} (mcap=${coin.mcap})`);
+  }
+  const byTier = Object.fromEntries(TIER_ORDER.map((tier) => [
     tier,
-    graded.filter((coin) => coin.tier === tier).map(radiusOf),
-  ])) as Record<Tier, number[]>;
-  const modifierLanesByTier = Object.fromEntries(TIER_ORDER.map((tier) => [
-    tier,
-    graded.some((coin) => coin.tier === tier && subgradeLaneForGrade(coin.grade) !== "base"),
-  ])) as Record<Tier, boolean>;
-  const ringCounts = Object.fromEntries(TIER_ORDER.map((tier) => [
-    tier, tier === "A" ? 1 : Math.max(1, Math.ceil(radiiByTier[tier].length / maxPerRing)),
-  ])) as Record<Tier, number>;
-  const zoneResult = computeDemandOrbitZones(radiiByTier, modifierLanesByTier, ringCounts);
-  if (!zoneResult.ok) {
-    diag?.push({ tier: "B-F", count: OUTER_TIERS.reduce((sum, tier) => sum + radiiByTier[tier].length, 0), placed: 0, radius: Math.max(...OUTER_TIERS.flatMap((tier) => radiiByTier[tier]), 0), reason: zoneResult.detail });
+    graded.filter((coin) => coin.tier === tier).sort(compareMapCoinSupply),
+  ])) as Record<Tier, MapCoin[]>;
+
+  // The core goes first: what it holds decides where B begins.
+  const core = layoutCore(byTier.A, byTier.A.map(radiusOf));
+  if (!core) {
+    diag?.push({ tier: "A", count: byTier.A.length, placed: 0, radius: Math.max(0, ...byTier.A.map(radiusOf)), reason: "A core cannot hold its coins, chips and label" });
     return null;
   }
 
-  const bands: BandLayout[] = [];
-  const placedAcrossTiers: Bubble[] = [];
-  const ringPopulations = TIER_ORDER.flatMap((tier) => {
-    const supplySorted = graded
-      .filter((coin) => coin.tier === tier)
-      .sort(compareMapCoinSupply);
-    return splitPopulation(supplySorted, ringCounts[tier]).map((population, ringIndex) => ({
-      tier, population, zone: zoneResult.ringZones[tier][ringIndex],
-    }));
-  });
-  for (const { tier, population, zone } of ringPopulations) {
-    // Within each guide, interleave published subgrades and anchor its supply
-    // leader on the long axis where the demand model reserved room for it.
-    let coins = population;
-    if (tier !== "A" && population.length > 0) {
-      const interleaved = interleaveSubgradeLanes(population);
-      const leader = interleaved.indexOf(population[0]);
-      coins = [...interleaved.slice(leader), ...interleaved.slice(0, leader)];
-    }
-    if (coins.length === 0) continue;
-    const bubbles: Bubble[] = [];
-    let laneOffsetY = 0;
-    const radii = coins.map(radiusOf);
-    if (radii.some((radius) => !Number.isFinite(radius))) {
-      const index = radii.findIndex((radius) => !Number.isFinite(radius));
-      throw new Error(`Non-finite radius for ${coins[index].id} (mcap=${coins[index].mcap})`);
-    }
-    if (tier === "A") {
-      const heroPairX = radii.length >= 2 ? centerHeroPair(radii[0], radii[1]) : null;
-      for (let i = 0; i < coins.length; i++) {
-        const coin = coins[i];
-        const r = radii[i];
-        // The two supply leaders are tangent across an area-weighted centre,
-        // so their unequal circles read as one balanced hero cluster. The
-        // remaining assets keep their explicit outward escargot districts.
-        const candidates = heroPairX && i < 2
-          ? [{ x: heroPairX[i], y: GALAXY_CY }]
-          : snailCandidates(zone, r, i, coins.length);
-        const point = candidates.find(({ x, y }) => {
-          if (!circleFitsOrbit(zone, x, y, r)) return false;
-          const candidate = { cx: x, cy: y, r };
-          return !placedAcrossTiers.some((other) => bubblesOverlap(candidate, other));
-        });
-        if (!point) {
-          diag?.push({ tier, count: coins.length, placed: bubbles.length, radius: r });
-          return null;
-        }
-        const bubble = { coin, cx: point.x, cy: point.y, r };
-        bubbles.push(bubble);
-        placedAcrossTiers.push(bubble);
-      }
-    } else {
+  const radiiByTier = Object.fromEntries(TIER_ORDER.map((tier) => [tier, byTier[tier].map(radiusOf)])) as Record<Tier, number[]>;
+  const modifierLanesByTier = Object.fromEntries(TIER_ORDER.map((tier) => [
+    tier,
+    byTier[tier].some((coin) => subgradeLaneForGrade(coin.grade) !== "base"),
+  ])) as Record<Tier, boolean>;
+  const ringCounts = Object.fromEntries(TIER_ORDER.map((tier) => [
+    tier, tier === "A" ? 1 : Math.max(1, Math.min(guideCounts[tier as OuterTier] ?? 1, radiiByTier[tier].length)),
+  ])) as Record<Tier, number>;
+  // Reserve every label and every possible leader tag up front, guide by
+  // guide, so the allocator and the packer agree on what each guide holds.
+  const slotDemand = Object.fromEntries(OUTER_TIERS.map((tier) => {
+    if (byTier[tier].length === 0) return [tier, {}];
+    const label = gradeLabelSlot(tier, byTier[tier].length, 0, 0);
+    const tagArcHalves = splitPopulation(byTier[tier], ringCounts[tier]).map((group) => {
+      const leader = group[0];
+      return leader && radiusOf(leader) > gravelFloor + 1e-6 ? [leaderTagArcHalf(leaderTagSlot(leader, radiusOf(leader)))] : [];
+    });
+    return [tier, { labelWidth: label.w, tagArcHalves }];
+  })) as Record<OuterTier, GuideSlotDemand>;
+  const zoneResult = computeDemandOrbitZones(radiiByTier, modifierLanesByTier, ringCounts, core.zone, slotDemand);
+  if (!zoneResult.ok) {
+    diag?.push({ openTier: zoneResult.openTier, tier: "B-F", count: OUTER_TIERS.reduce((sum, tier) => sum + radiiByTier[tier].length, 0), placed: 0, radius: Math.max(...OUTER_TIERS.flatMap((tier) => radiiByTier[tier]), 0), reason: zoneResult.detail });
+    return null;
+  }
+
+  const bands: BandLayout[] = [{
+    tier: "A",
+    zone: core.zone,
+    bubbles: core.bubbles,
+    slots: core.slots,
+    laneOffsetY: 0,
+    totalCount: byTier.A.length,
+    totalMcap: knownMapSupply(byTier.A),
+  }];
+  const placedMarks: Bubble[] = [...core.bubbles];
+  const placedSlots: MapSlot[] = [...core.slots];
+  for (const tier of OUTER_TIERS) {
+    const phase = OUTER_ANCHOR_PHASE[tier];
+    const rings = splitPopulation(byTier[tier], ringCounts[tier]);
+    for (const [ringIndex, population] of rings.entries()) {
+      if (population.length === 0) continue;
+      const zone = zoneResult.ringZones[tier][ringIndex]!;
       const orbitRx = (zone.innerRx + zone.outerRx) / 2;
       const orbitRy = (zone.innerRy + zone.outerRy) / 2;
-      const packedCenters = packEllipticalOrbit(radii, orbitRx, orbitRy, OUTER_ANCHOR_PHASE[tier]);
-      const lanePlacement = packedCenters
-        ? placeSubgradeRadialLanes(packedCenters, radii, coins.map((coin) => coin.grade), zone, placedAcrossTiers)
+      // Interleave published subgrades, then rotate so the guide's supply
+      // leader is entry 0, anchored on its long-axis vertex.
+      const interleaved = interleaveSubgradeLanes(population);
+      const leaderIndex = interleaved.indexOf(population[0]);
+      const coins = [...interleaved.slice(leaderIndex), ...interleaved.slice(0, leaderIndex)];
+      const entries: RingEntry[] = coins.map((coin) => ({ kind: "mark", coin, radius: radiusOf(coin) }));
+
+      // The tag follows the leader down the page: increasing angle from the
+      // right vertex, decreasing angle from the left one.
+      const tag = leaderTagFor(coins[0], radiusOf(coins[0]), gravelFloor, zone);
+      if (tag) {
+        const tagEntry: RingEntry = { kind: "slot", slot: tag, arcHalf: projectedTagArcHalf(tag, radiusOf(coins[0]), orbitRx, orbitRy) };
+        if (phase === 0) entries.splice(1, 0, tagEntry);
+        else entries.push(tagEntry);
+      }
+      const entryRadius = (entry: RingEntry) => entry.kind === "mark" ? entry.radius : entry.arcHalf;
+      const anchors: OrbitAnchor[] = [{ index: 0, theta: phase }];
+      const flat = new Set<number>();
+      if (ringIndex === 0) {
+        const label = gradeLabelSlot(tier, byTier[tier].length, 0, 0);
+        const arcHalf = label.w / 2 + SLOT_GAP;
+        const blocked = new Set<number>();
+        if (tag) blocked.add(phase === 0 ? 1 : entries.length);
+        const position = chooseAnchorInsertion(entries.map(entryRadius), arcHalf, orbitRx, orbitRy, phase, GRADE_LABEL_THETA, blocked);
+        if (position === null) {
+          diag?.push({ openTier: tier, tier, count: coins.length, placed: 0, radius: arcHalf, reason: `Band ${tier} has no arc left for its grade label` });
+          return null;
+        }
+        entries.splice(position, 0, { kind: "slot", slot: label, arcHalf });
+        anchors.push({ index: position, theta: GRADE_LABEL_THETA });
+        flat.add(position);
+      }
+
+      const radii = entries.map(entryRadius);
+      const packed = packAnchoredOrbit(radii, orbitRx, orbitRy, anchors, flat);
+      // Slots stay on the guide; their radial half-extent is what must fit.
+      const grades = entries.map((entry) => entry.kind === "mark" ? entry.coin.grade : entry.slot.tier);
+      const fitRadii = entries.map((entry) => entry.kind === "mark" ? entry.radius : Math.min(entry.slot.w, entry.slot.h) / 2);
+      const lanePlacement = packed
+        ? placeSubgradeRadialLanes(packed, radii, grades, zone, placedMarks, fitRadii)
         : null;
       if (!lanePlacement) {
-        diag?.push({ tier, count: coins.length, placed: 0, radius: Math.max(...radii) });
+        diag?.push({ openTier: tier, tier, count: coins.length, placed: 0, radius: Math.max(...radii) });
         return null;
       }
-      const centers = lanePlacement.centers;
-      laneOffsetY = lanePlacement.offsetY;
-      for (let i = 0; i < coins.length; i++) {
-        const bubble = { coin: coins[i], cx: centers[i].x, cy: centers[i].y, r: radii[i] };
-        if (!circleFitsOrbit(zone, bubble.cx, bubble.cy, bubble.r)) {
-          diag?.push({ tier, count: coins.length, placed: i, radius: bubble.r });
+
+      const bubbles: Bubble[] = [];
+      const slots: MapSlot[] = [];
+      for (const [index, entry] of entries.entries()) {
+        const center = lanePlacement.centers[index]!;
+        if (entry.kind === "mark") {
+          const bubble = { coin: entry.coin, cx: center.x, cy: center.y, r: entry.radius };
+          if (!circleFitsOrbit(zone, bubble.cx, bubble.cy, bubble.r) || placedMarks.some((other) => bubblesOverlap(bubble, other))) {
+            diag?.push({ tier, count: coins.length, placed: index, radius: bubble.r });
+            return null;
+          }
+          bubbles.push(bubble);
+          continue;
+        }
+        const slot: MapSlot = { ...entry.slot, x: center.x - entry.slot.w / 2, y: center.y - entry.slot.h / 2, arcHalf: entry.arcHalf, arcCenter: center };
+        if (!rectFitsOrbit(zone, slot)) {
+          diag?.push({ tier, count: coins.length, placed: index, radius: entry.arcHalf, reason: `${slot.id} does not fit band ${tier}` });
           return null;
         }
-        if (placedAcrossTiers.some((other) => bubblesOverlap(bubble, other))) {
-          diag?.push({ tier, count: coins.length, placed: i, radius: bubble.r });
-          return null;
-        }
-        bubbles.push(bubble);
-        placedAcrossTiers.push(bubble);
+        slots.push(slot);
       }
+      // Lanes may have moved the leader across the band: hang its name just
+      // beneath it, else just above it, else keep the packed position.
+      for (const [index, slot] of slots.entries()) {
+        const leader = bubbles[0];
+        if (slot.kind === "grade-label" || !leader) continue;
+        // Below, else above, each nudged sideways a little at most.
+        const sides = [leader.cy + leader.r + SLOT_GAP, leader.cy - leader.r - SLOT_GAP - slot.h];
+        const nudges = [0, -8, 8, -16, 16, -24, 24];
+        const hung = sides
+          .flatMap((y) => nudges.map((dx) => ({ ...slot, x: leader.cx - slot.w / 2 + dx, y })))
+          .find((candidate) => rectFitsOrbit(zone, candidate) &&
+            ![...placedMarks, ...bubbles].some((bubble) => rectCircleOverlap(candidate, bubble, SLOT_GAP / 2)) &&
+            ![...placedSlots, ...slots].some((other) => other !== slot && rectsOverlap(candidate, other, SLOT_GAP)));
+        if (hung) slots[index] = hung;
+      }
+      // Slots against every mark and slot placed so far, this guide included.
+      for (const slot of slots) {
+        if ([...placedMarks, ...bubbles].some((bubble) => rectCircleOverlap(slot, bubble, SLOT_GAP / 2)) ||
+          [...placedSlots, ...slots].some((other) => other !== slot && rectsOverlap(slot, other, SLOT_GAP))) {
+          diag?.push({ tier, count: coins.length, placed: 0, radius: 0, reason: `${slot.id} collides with a neighbouring mark` });
+          return null;
+        }
+      }
+      placedMarks.push(...bubbles);
+      placedSlots.push(...slots);
+      bands.push({
+        tier,
+        zone,
+        bubbles,
+        slots,
+        laneOffsetY: lanePlacement.offsetY,
+        totalCount: coins.length,
+        totalMcap: knownMapSupply(coins),
+      });
     }
-    bands.push({
-      tier,
-      zone,
-      bubbles,
-      laneOffsetY,
-      totalCount: coins.length,
-      totalMcap: knownMapSupply(coins),
-    });
   }
   return { bands, k, gravelFloor };
 }
@@ -1205,6 +1622,8 @@ export interface CompositionOrbit {
   tier: string;
   zone: OrbitZone;
   bubbles: ReadonlyArray<{ id: string; cx: number; cy: number; r: number }>;
+  /** Labels that reserve guide arc; they occupy their arc half-extent. */
+  slots?: ReadonlyArray<{ id: string; cx: number; cy: number; arcHalf: number }>;
 }
 
 export interface AngularDistribution {
@@ -1228,14 +1647,17 @@ export interface AngularDistribution {
  * is left between their edges.
  */
 export function measureAngularDistribution(orbit: CompositionOrbit): AngularDistribution | null {
-  if (orbit.zone.innerRx <= 0 || orbit.bubbles.length < 2) return null;
+  if (orbit.zone.innerRx <= 0 || orbit.bubbles.length + (orbit.slots?.length ?? 0) < 2 || orbit.bubbles.length === 0) return null;
   const guideRx = (orbit.zone.innerRx + orbit.zone.outerRx) / 2;
   const guideRy = (orbit.zone.innerRy + orbit.zone.outerRy) / 2;
   if (![guideRx, guideRy].every((value) => Number.isFinite(value) && value > 0)) return null;
-  const marks = orbit.bubbles
-    .map((bubble) => ({
-      r: bubble.r,
-      theta: Math.atan2((bubble.cy - GALAXY_CY) / guideRy, (bubble.cx - GALAXY_CX) / guideRx),
+  const marks = [
+    ...orbit.bubbles.map((bubble) => ({ r: bubble.r, cx: bubble.cx, cy: bubble.cy })),
+    ...(orbit.slots ?? []).map((slot) => ({ r: slot.arcHalf, cx: slot.cx, cy: slot.cy })),
+  ]
+    .map((mark) => ({
+      r: mark.r,
+      theta: Math.atan2((mark.cy - GALAXY_CY) / guideRy, (mark.cx - GALAXY_CX) / guideRx),
     }))
     .sort((left, right) => left.theta - right.theta);
   if (!marks.every((mark) => Number.isFinite(mark.theta))) return null;
@@ -1249,7 +1671,7 @@ export function measureAngularDistribution(orbit: CompositionOrbit): AngularDist
     const sweep = (arcAtTheta(next.theta) - arcAtTheta(mark.theta) + perimeter) % perimeter;
     return sweep - mark.r - next.r;
   });
-  const diameters = marks.map((mark) => mark.r * 2).sort((left, right) => left - right);
+  const diameters = orbit.bubbles.map((bubble) => bubble.r * 2).sort((left, right) => left - right);
   const median = diameters[Math.floor(diameters.length / 2)]!;
   return {
     count: marks.length,
@@ -1261,17 +1683,17 @@ export function measureAngularDistribution(orbit: CompositionOrbit): AngularDist
 
 /**
  * Pure-geometry validation of a laid-out scene: chip-vs-chip overlap, chips
- * crossing the footer rule or poster bounds, bubbles escaping their assigned
+ * crossing the body or poster bounds, bubbles escaping their assigned
  * orbit, bubble collisions, and any non-finite coordinate. Returns one string
  * per violation; an empty array means the composition is sound.
  */
 export function validateComposition(input: {
   orbits: readonly CompositionOrbit[];
   chips: readonly CompositionRect[];
-  footerRuleY?: number;
+  bodyBottom?: number;
   bodyTop?: number;
 }): string[] {
-  const footerRuleY = input.footerRuleY ?? FOOTER_RULE_Y;
+  const bodyBottom = input.bodyBottom ?? BODY_BOTTOM;
   const bodyTop = input.bodyTop ?? BODY_TOP;
   const violations: string[] = [];
 
@@ -1291,8 +1713,8 @@ export function validateComposition(input: {
     if (
       GALAXY_CX - orbit.zone.outerRx < MARGIN_X - 8 ||
       GALAXY_CX + orbit.zone.outerRx > WIDTH - MARGIN_X + 8 ||
-      GALAXY_CY - orbit.zone.outerRy < bodyTop - 8 ||
-      GALAXY_CY + orbit.zone.outerRy > footerRuleY - 10
+      GALAXY_CY - orbit.zone.outerRy < bodyTop ||
+      GALAXY_CY + orbit.zone.outerRy > bodyBottom
     ) {
       violations.push(`orbit ${orbit.tier}: crosses the body bounds`);
     }
@@ -1304,8 +1726,8 @@ export function validateComposition(input: {
       if (!circleFitsOrbit(orbit.zone, bubble.cx, bubble.cy, bubble.r)) {
         violations.push(`bubble ${bubble.id}: escapes orbit ${orbit.tier}`);
       }
-      if (bubble.cy - bubble.r < bodyTop) {
-        violations.push(`bubble ${bubble.id}: crosses the ${HEADER_BODY_GAP}px header clearance`);
+      if (bubble.cy - bubble.r < bodyTop || bubble.cy + bubble.r > bodyBottom) {
+        violations.push(`bubble ${bubble.id}: crosses the ${EDGE_CLEARANCE}px edge clearance`);
       }
       allBubbles.push(bubble);
     }
@@ -1339,7 +1761,7 @@ export function validateComposition(input: {
       violations.push(`chip ${chip.id}: non-finite geometry`);
       continue;
     }
-    if (chip.y + chip.h > footerRuleY - 4 || chip.y < bodyTop - 8) {
+    if (chip.y + chip.h > bodyBottom || chip.y < bodyTop) {
       violations.push(`chip ${chip.id}: crosses the body bounds (y ${chip.y.toFixed(1)}..${(chip.y + chip.h).toFixed(1)})`);
     }
     if (chip.x < MARGIN_X - 8 || chip.x + chip.w > WIDTH - MARGIN_X + 8) {
@@ -1364,14 +1786,25 @@ function annotationSceneForBands(bands: readonly BandLayout[], annotations: read
     r: bubble.r,
     role: "bubble" as const,
   })));
+  // In-map type is an obstacle like any other: nothing may touch a label.
+  const slotRects = bands.flatMap((band) => band.slots.map((slot) => ({
+    id: slot.id,
+    x: slot.x,
+    y: slot.y,
+    w: slot.w,
+    h: slot.h,
+    role: "obstacle" as const,
+  })));
   return {
     frame: ANNOTATION_FRAME,
     circles,
-    rectangles: [{ id: "masthead-lockup", ...MASTHEAD_LOCKUP, role: "obstacle" }],
-    lines: [
-      { id: "header-rule", x1: MARGIN_X, y1: HEADER_RULE_Y, x2: WIDTH - MARGIN_X, y2: HEADER_RULE_Y, role: "decoration" },
-      { id: "footer-rule", x1: MARGIN_X, y1: FOOTER_RULE_Y, x2: WIDTH - MARGIN_X, y2: FOOTER_RULE_Y, role: "decoration" },
+    rectangles: [
+      // The stepped title: each block clears the map to its right, and the
+      // shorter tail also clears it below.
+      ...chromeKeepOuts().filter((rect) => rect.id.startsWith("masthead-")).map((rect) => ({ ...rect, role: "obstacle" as const })),
+      ...slotRects,
     ],
+    lines: [],
     orbits: bands.map((band, index) => ({
       id: `band-${band.tier}-${index}`,
       cx: GALAXY_CX,
@@ -1379,10 +1812,9 @@ function annotationSceneForBands(bands: readonly BandLayout[], annotations: read
       ...band.zone,
       circleIds: band.bubbles.map((bubble) => bubble.coin.id),
     })),
-    reservedRegions: [
-      { id: "chart-key-panel", ...CHART_KEY_PANEL, allowedClassIds: ["chart-key"] },
-      { id: "footer-panel", ...FOOTER_PANEL, allowedClassIds: ["footer"] },
-    ],
+    reservedRegions: chromeKeepOuts()
+      .filter((rect) => rect.id.endsWith("-panel"))
+      .map((rect) => ({ ...rect, allowedClassIds: [rect.id === "footer-panel" ? "footer" : "chart-key"] })),
     annotations,
   };
 }
@@ -1425,21 +1857,20 @@ function svgText(opts: {
   return `<text ${attrs.join(" ")}>${escapeXml(opts.text)}</text>`;
 }
 
-export function renderPsiStatus(psi: MapPsi, x: number, baselineY: number): string {
+/** Right-aligned PSI line; the band marker trails the text so no width estimate is needed. */
+export function renderPsiStatus(psi: MapPsi, rightX: number, baselineY: number): string {
   const color = PSI_HEX_COLORS[psi.band];
   const score = formatScore(psi.score);
   return [
     `<g data-psi-status="true" data-psi-band="${psi.band}" data-psi-score="${score}" data-psi-basis="${psi.basis}" data-psi-color="${color}" data-psi-computed-at="${psi.computedAt}">`,
-    `<circle data-psi-band-marker="true" cx="${x + 4}" cy="${baselineY - 3.5}" r="3.5" fill="${color}"/>`,
-    svgText({ x: x + 14, y: baselineY, size: 10.5, text: buildPsiSubtitle(psi), weight: 750, fill: INK, spacing: "0.25" }),
+    svgText({ x: rightX - 14, y: baselineY, size: 13, text: buildPsiSubtitle(psi), font: "sans", weight: 600, fill: INK, anchor: "end" }),
+    `<circle data-psi-band-marker="true" cx="${rightX - 4}" cy="${baselineY - 4.5}" r="4" fill="${color}"/>`,
     `</g>`,
   ].join("");
 }
 
 interface StampCopy {
   eyebrow: string;
-  headline: string;
-  issue: string | null;
 }
 
 interface FloorMcapByTier {
@@ -1459,7 +1890,6 @@ interface ChartKeyData {
   tiers: readonly ChartKeyTier[];
   totalMcap: number;
   floorMcapByTier: FloorMcapByTier;
-  floorRadiusByTier: { a: number; other: number };
   lanes: SubgradeLaneSummary;
 }
 
@@ -1474,37 +1904,18 @@ export function supplyMassBarWidth(tierMcap: number, totalMcap: number, trackWid
 }
 
 function publicationAnnotationRequests(): Annotation[] {
-  const candidate = (id: string, x: number, y: number) => [{
-    id: `${id}:fixed`,
-    anchor: { x, y },
-    horizontal: "start" as const,
-    vertical: "top" as const,
-  }];
+  const fixed = (id: string, classId: string, priority: number, rect: Rect): Annotation => ({
+    id,
+    classId,
+    priority,
+    required: true,
+    bounds: { w: rect.w, h: rect.h },
+    candidates: [{ id: `${id}:fixed`, anchor: { x: rect.x, y: rect.y }, horizontal: "start" as const, vertical: "top" as const }],
+  });
   return [
-    {
-      id: "grade-key",
-      classId: "chart-key",
-      priority: 300,
-      required: true,
-      bounds: { w: CHART_KEY_PANEL.w - 8, h: 20 },
-      candidates: candidate("grade-key", CHART_KEY_PANEL.x + 4, CHART_KEY_PANEL.y + 2),
-    },
-    {
-      id: "supply-mass-rail",
-      classId: "chart-key",
-      priority: 290,
-      required: true,
-      bounds: { w: CHART_KEY_PANEL.w - 8, h: 15 },
-      candidates: candidate("supply-mass-rail", CHART_KEY_PANEL.x + 4, CHART_KEY_PANEL.y + 26),
-    },
-    {
-      id: "footer-encoding",
-      classId: "footer",
-      priority: 270,
-      required: true,
-      bounds: { w: FOOTER_PANEL.w, h: 16 },
-      candidates: candidate("footer-encoding", FOOTER_PANEL.x, FOOTER_PANEL.y),
-    },
+    fixed("grade-key", "chart-key", 300, CHART_KEY_PANEL),
+    fixed("supply-mass-rail", "chart-key", 290, SUPPLY_KEY_PANEL),
+    fixed("footer-encoding", "footer", 270, FOOTER_PANEL),
   ];
 }
 
@@ -1519,57 +1930,181 @@ function annotationGroup(annotation: PlacedAnnotation, body: string): string {
   return `<g data-annotation-id="${annotation.id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none"/>${body}</g>`;
 }
 
-function renderChartKey(annotations: readonly PlacedAnnotation[], data: ChartKeyData): string {
-  const parts: string[] = [];
-  parts.push(`<rect x="${CHART_KEY_PANEL.x}" y="${CHART_KEY_PANEL.y}" width="${CHART_KEY_PANEL.w}" height="${CHART_KEY_PANEL.h}" rx="5" fill="#08101d" fill-opacity="0.94" stroke="${RULE}" stroke-width="1"/>`);
-
-  const grade = annotationById(annotations, "grade-key");
-  const gradeParts: string[] = [];
-  const gradeX = grade.bounds.x + 4;
-  const gradeY = grade.bounds.y;
-  const gradeStartX = gradeX + 108;
-  const gradeCellWidth = 123;
-  gradeParts.push(svgText({ x: gradeX, y: gradeY + 14, size: 10.5, text: "inner -> safer", weight: 700, fill: FROST_BLUE, spacing: "0.4" }));
-  for (const [index, tier] of data.tiers.entries()) {
-    const x = gradeStartX + index * gradeCellWidth;
-    const dasharray = BAND_GUIDE_DASHARRAY[tier.tier];
-    gradeParts.push(`<line x1="${x}" y1="${gradeY + 7}" x2="${x + 14}" y2="${gradeY + 7}" stroke="${TIER_COLORS[tier.tier]}" stroke-width="2"${dasharray ? ` stroke-dasharray="${dasharray}" stroke-linecap="round"` : ""}/>`);
-    gradeParts.push(svgText({ x: x + 20, y: gradeY + 14, size: 11, text: tier.tier, weight: 750, fill: TIER_COLORS[tier.tier] }));
-    gradeParts.push(svgText({ x: x + 38, y: gradeY + 14, size: 10.5, text: tier.range, weight: 650, fill: INK }));
-  }
-  parts.push(annotationGroup(grade, gradeParts.join("")));
-
-  const rail = annotationById(annotations, "supply-mass-rail");
-  const railParts: string[] = [];
-  const railX = rail.bounds.x + 4;
-  const railY = rail.bounds.y;
+/** Top-right: the one finding a feed reader should leave with. */
+function renderHeadline(annotations: readonly PlacedAnnotation[], data: ChartKeyData): string {
   const aTier = data.tiers.find((tier) => tier.tier === "A");
   if (!aTier) throw new Error("Chart key is missing its A tier");
-  const trackX = railX + 218;
-  const trackWidth = 494;
-  railParts.push(svgText({ x: railX, y: railY + 11, size: 10.5, text: `A: ${aTier.count} / ${aTier.share.toFixed(1)}% KNOWN SUPPLY`, weight: 700, fill: INK_SECONDARY, spacing: "0.2" }));
-  railParts.push(`<rect x="${trackX}" y="${railY + 3}" width="${trackWidth}" height="7" rx="3.5" fill="#202a3b"/>`);
-  let segmentX = trackX;
+  const gradedCount = data.tiers.reduce((sum, tier) => sum + tier.count, 0);
+  const block = annotationById(annotations, "grade-key");
+  const right = block.bounds.x + block.bounds.w - 3;
+  const y = block.bounds.y;
+  return annotationGroup(block, [
+    svgText({ x: right, y: y + 62, size: 60, text: `${aTier.share.toFixed(1)}%`, font: "serif", weight: 500, fill: TIER_COLORS.A, anchor: "end", spacing: "-1.2" }),
+    svgText({ x: right, y: y + 84, size: 15, text: "of known supply sits in A-grade coins", font: "sans", weight: 600, fill: INK, anchor: "end" }),
+    svgText({ x: right, y: y + 101, size: 13, text: `${aTier.count} of ${gradedCount} graded stablecoins`, font: "sans", weight: 500, fill: INK_SECONDARY, anchor: "end" }),
+  ].join(""));
+}
+
+/** Bottom-left: the supply split by grade, plus how marker size reads. */
+function renderSupplyKey(annotations: readonly PlacedAnnotation[], data: ChartKeyData): string {
+  const block = annotationById(annotations, "supply-mass-rail");
+  const x = block.bounds.x;
+  const y = block.bounds.y;
+  const parts: string[] = [];
+  parts.push(svgText({ x, y: y + 12, size: 10.5, text: "SHARE OF KNOWN SUPPLY BY GRADE", weight: 700, fill: INK_SECONDARY, spacing: "1.2" }));
+  // Segments keep exact proportional widths (no minimum, no gaps taken out of
+  // them); separators are drawn over the joins instead.
+  const trackWidth = block.bounds.w;
+  const barY = y + 22;
+  const barH = 12;
+  parts.push(`<clipPath id="mass-track"><rect x="${x}" y="${barY}" width="${trackWidth}" height="${barH}" rx="3"/></clipPath>`);
+  parts.push(`<g clip-path="url(#mass-track)"><rect x="${x}" y="${barY}" width="${trackWidth}" height="${barH}" fill="#1b2435"/>`);
+  let segmentX = x;
+  const joins: number[] = [];
   for (const tier of data.tiers) {
     const barWidth = supplyMassBarWidth(tier.mcap, data.totalMcap, trackWidth);
-    railParts.push(`<rect data-mass-tier="${tier.tier}" data-track-width="${trackWidth}" data-tier-mcap="${tier.mcap}" data-total-mcap="${data.totalMcap}" x="${segmentX}" y="${railY + 3}" width="${barWidth}" height="7" fill="${TIER_COLORS[tier.tier]}"/>`);
+    parts.push(`<rect data-mass-tier="${tier.tier}" data-track-width="${trackWidth}" data-tier-mcap="${tier.mcap}" data-total-mcap="${data.totalMcap}" x="${segmentX}" y="${barY}" width="${barWidth}" height="${barH}" fill="${TIER_COLORS[tier.tier]}"/>`);
     segmentX += barWidth;
+    if (barWidth > 0) joins.push(segmentX);
   }
-  parts.push(annotationGroup(rail, railParts.join("")));
+  for (const join of joins.slice(0, -1)) {
+    parts.push(`<line x1="${join.toFixed(2)}" y1="${barY}" x2="${join.toFixed(2)}" y2="${barY + barH}" stroke="${FIELD}" stroke-width="1.5"/>`);
+  }
+  parts.push(`</g>`);
+  let cellX = x;
+  for (const tier of data.tiers) {
+    const share = `${tier.share.toFixed(1)}%`;
+    parts.push(svgText({ x: cellX, y: y + 52, size: 13, text: tier.tier, font: "sans", weight: 800, fill: TIER_COLORS[tier.tier] }));
+    parts.push(svgText({ x: cellX + 13, y: y + 52, size: 13, text: share, font: "sans", weight: 600, fill: INK }));
+    cellX += 13 + sansBoldWidth(share, 13) + 11;
+  }
+  parts.push(svgText({ x, y: y + 74, size: 11.5, text: `Area tracks supply above ${formatUsdCompact(data.floorMcapByTier.other)} (${formatUsdCompact(data.floorMcapByTier.a)} in A).`, font: "sans", weight: 500, fill: INK_SECONDARY }));
+  parts.push(svgText({ x, y: y + 89, size: 11.5, text: "Smaller coins share one marker size.", font: "sans", weight: 500, fill: INK_SECONDARY }));
+  return annotationGroup(block, parts.join(""));
+}
 
-  return parts.join("\n");
+/** Bottom-right: market condition, publication state and provenance. */
+function renderProvenance(
+  annotations: readonly PlacedAnnotation[],
+  psi: MapPsi,
+  asOf: Date,
+  methodologyVersion: string,
+  gradedCount: number,
+  publicationHealth: MapPublicationHealth,
+  edition: Edition,
+): string {
+  const block = annotationById(annotations, "footer-encoding");
+  const right = block.bounds.x + block.bounds.w - 2;
+  const y = block.bounds.y;
+  // The daily eyebrow already names the capture day; the monthly one names
+  // only the month, so its footer carries the full date.
+  const captureTime = edition === "daily"
+    ? asOf.toISOString().slice(11, 16)
+    : asOf.toISOString().slice(0, 16).replace("T", " ");
+  const parts: string[] = [];
+  if (publicationHealth.status === "held") {
+    // A held publication still renders, but never as if it were current.
+    const since = publicationHealth.heldSinceSec === null
+      ? "SCORES HELD"
+      : `SCORES HELD SINCE ${new Date(publicationHealth.heldSinceSec * 1000).toISOString().slice(0, 10)}`;
+    const w = Math.ceil(monoWidth(since, 10.5) + 18);
+    parts.push(`<g data-publication-held="true"><rect x="${right - w}" y="${y + 2}" width="${w}" height="18" rx="9" fill="none" stroke="${INK}" stroke-opacity="0.7" stroke-width="1"/>`);
+    parts.push(svgText({ x: right - w / 2, y: y + 14.6, size: 10.5, text: since, weight: 700, fill: INK, anchor: "middle", spacing: "0.4" }), `</g>`);
+  }
+  parts.push(renderPsiStatus(psi, right, y + 40));
+  parts.push(svgText({ x: right, y: y + 58, size: 11, text: "PSI = Pharos stablecoin stress index", fill: INK_SECONDARY, anchor: "end" }));
+  parts.push(svgText({ x: right, y: y + 74, size: 11, text: `pharos.watch · Methodology v${methodologyVersion}`, fill: INK_SECONDARY, anchor: "end" }));
+  parts.push(svgText({ x: right, y: y + 90, size: 11, text: `Captured ${captureTime} UTC · ${gradedCount} graded`, fill: INK_SECONDARY, anchor: "end" }));
+  return annotationGroup(block, parts.join(""));
 }
 
 // Daily and monthly diverge here and nowhere else in the composition.
 function stampCopy(edition: Edition, issue: number | null, asOf: Date): StampCopy {
   if (edition === "monthly") {
-    return {
-      eyebrow: asOf.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" }).toUpperCase(),
-      headline: asOf.toISOString().slice(0, 4),
-      issue: issue == null ? "PHAROS MONTHLY" : `PHAROS MONTHLY · NO. ${issue}`,
-    };
+    const month = asOf.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).toUpperCase();
+    return { eyebrow: issue == null ? `${month} · MONTHLY` : `${month} · MONTHLY NO. ${issue}` };
   }
-  return { eyebrow: "DATA AS OF", headline: asOf.toISOString().slice(0, 10), issue: null };
+  return { eyebrow: asOf.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).toUpperCase() };
+}
+
+function ellipsePath(rx: number, ry: number): string {
+  const x = (GALAXY_CX - rx).toFixed(2);
+  return `M ${x} ${GALAXY_CY} a ${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 0 ${(rx * 2).toFixed(2)} 0 a ${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 0 ${(-rx * 2).toFixed(2)} 0 Z`;
+}
+
+// One tint strength for every grade, so the largest band never reads as the
+// least coloured one.
+const GRADE_FIELD_OPACITY = 0.1;
+const GRADE_EDGE_OPACITY = 0.36;
+
+function renderGradeFields(bands: readonly BandLayout[]): string {
+  const parts: string[] = [];
+  for (const tier of TIER_ORDER) {
+    const tierBands = bands.filter((band) => band.tier === tier);
+    if (tierBands.length === 0) continue;
+    const inner = tierBands[0].zone;
+    const outer = tierBands[tierBands.length - 1].zone;
+    const color = TIER_COLORS[tier];
+    const dasharray = BAND_GUIDE_DASHARRAY[tier];
+    const pattern = dasharray ? ` stroke-dasharray="${dasharray}" stroke-linecap="round"` : "";
+    const zoneData = `data-inner-rx="${inner.innerRx.toFixed(2)}" data-inner-ry="${inner.innerRy.toFixed(2)}" data-outer-rx="${outer.outerRx.toFixed(2)}" data-outer-ry="${outer.outerRy.toFixed(2)}" data-guides="${tierBands.length}"`;
+    const field = tier === "A" ? ellipsePath(outer.outerRx, outer.outerRy) : `${ellipsePath(outer.outerRx, outer.outerRy)} ${ellipsePath(inner.innerRx, inner.innerRy)}`;
+    parts.push(`<path data-grade-field="${tier}" ${zoneData} d="${field}" fill="${color}" fill-opacity="${GRADE_FIELD_OPACITY}" fill-rule="evenodd"/>`);
+    // One edge per grade, on its outer boundary: guides within a dense grade
+    // are layout, not another score boundary, so they are never drawn.
+    parts.push(`<ellipse data-band-guide="${tier}" cx="${GALAXY_CX}" cy="${GALAXY_CY}" rx="${outer.outerRx.toFixed(2)}" ry="${outer.outerRy.toFixed(2)}" fill="none" stroke="${color}" stroke-opacity="${GRADE_EDGE_OPACITY}" stroke-width="1"${pattern}/>`);
+  }
+  return parts.join("\n");
+}
+
+/** One badge grammar for every coin: dark disc, grade ring, a hair of dark gap, then the logo. */
+function renderMark(bubble: Bubble, logo: LogoRenderData | null): string {
+  const { coin, cx, cy, r } = bubble;
+  const color = TIER_COLORS[coin.tier];
+  const ring = r >= 14 ? Math.min(3.2, r * 0.05 + 1.6) : 1.5;
+  const gap = r >= 14 ? Math.min(2.6, r * 0.035 + 0.9) : 0.8;
+  const innerR = r - ring - gap;
+  const x = cx.toFixed(2);
+  const y = cy.toFixed(2);
+  const parts = [`<circle cx="${x}" cy="${y}" r="${r.toFixed(2)}" fill="${FIELD}"/>`];
+  if (logo) {
+    if (logo.plate === "light") parts.push(`<circle data-logo-plate="${coin.id}" cx="${x}" cy="${y}" r="${innerR.toFixed(2)}" fill="${LOGO_LIGHT_PLATE}"/>`);
+    const size = (innerR * 2).toFixed(2);
+    parts.push(`<g transform="translate(${(cx - innerR).toFixed(2)} ${(cy - innerR).toFixed(2)})"><image data-logo-id="${coin.id}" data-plate="${logo.plate}" href="${logo.dataUri}" width="${size}" height="${size}" clip-path="url(#bubble-clip)"/></g>`);
+  } else {
+    parts.push(svgText({ x: cx, y: cy + innerR * 0.4, size: Math.max(Math.round(innerR * 1.15), 8), text: asciiInitial(coin.symbol), font: "sans", fill: INK, anchor: "middle", weight: 750 }));
+  }
+  parts.push(`<circle data-grade-rim="${coin.id}" data-grade="${coin.grade}" cx="${x}" cy="${y}" r="${(r - ring / 2).toFixed(2)}" fill="none" stroke="${color}" stroke-width="${ring.toFixed(2)}"/>`);
+  return parts.join("");
+}
+
+function renderSlot(slot: MapSlot): string {
+  const color = TIER_COLORS[slot.tier];
+  const midY = slot.y + slot.h / 2;
+  const open = `<g data-map-label="${slot.id}" data-slot-kind="${slot.kind}">`;
+  if (slot.kind === "grade-label") {
+    return [
+      open,
+      `<rect data-label-box="true" x="${slot.x.toFixed(2)}" y="${slot.y.toFixed(2)}" width="${slot.w}" height="${slot.h}" rx="${slot.h / 2}" fill="${FIELD}" stroke="${color}" stroke-opacity="0.9" stroke-width="1.2"/>`,
+      svgText({ x: slot.x + 14, y: midY + 6.4, size: 18, text: slot.tier, font: "sans", weight: 800, fill: color }),
+      svgText({ x: slot.x + 36, y: midY + 4.7, size: 13, text: slot.primary, weight: 600, fill: INK }),
+      svgText({ x: slot.x + slot.w - 14, y: midY + 4.2, size: 11.5, text: slot.secondary, weight: 500, fill: INK_SECONDARY, anchor: "end" }),
+      `</g>`,
+    ].join("");
+  }
+  // Names are light chips, deliberately unlike the dark grade pills.
+  const size = slot.kind === "hero-chip" ? 15 : 11;
+  return [
+    open,
+    `<rect data-label-box="true" x="${slot.x.toFixed(2)}" y="${slot.y.toFixed(2)}" width="${slot.w}" height="${slot.h}" rx="${slot.h / 2}" fill="${NAME_CHIP}"/>`,
+    `<text x="${(slot.x + slot.w / 2).toFixed(2)}" y="${(midY + size * 0.35).toFixed(2)}" text-anchor="middle" font-family="'Bricolage Grotesque', system-ui, sans-serif" font-size="${size}" font-weight="650" fill="${FIELD}">${escapeXml(slot.primary)}<tspan dx="${(size * 0.42).toFixed(1)}" font-weight="800">${escapeXml(slot.secondary)}</tspan></text>`,
+    `</g>`,
+  ].join("");
+}
+
+interface MapPublicationHealth {
+  status: "current" | "held";
+  heldSinceSec: number | null;
 }
 
 function buildSvg({
@@ -1582,9 +2117,9 @@ function buildSvg({
   asOfSec,
   edition,
   issue,
-  floorMcapByTier,
   chartKey,
   annotations,
+  publicationHealth,
 }: {
   bands: readonly BandLayout[];
   logos: ReadonlyMap<string, LogoRenderData | null>;
@@ -1595,130 +2130,71 @@ function buildSvg({
   asOfSec: number;
   edition: Edition;
   issue: number | null;
-  floorMcapByTier: FloorMcapByTier;
   chartKey: ChartKeyData;
   annotations: readonly PlacedAnnotation[];
+  publicationHealth: MapPublicationHealth;
 }): string {
   const asOf = new Date(asOfSec * 1000);
   const stamp = stampCopy(edition, issue, asOf);
+  const core = bands.find((band) => band.tier === "A")?.zone ?? DEFAULT_CORE_ZONE;
 
   const parts: string[] = [];
   parts.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${WIDTH} ${HEIGHT}" width="${WIDTH}" height="${HEIGHT}">`);
   parts.push(`<defs><style>text { font-kerning: normal; font-variant-numeric: tabular-nums; }</style>`);
-  parts.push(`<radialGradient id="space" cx="50%" cy="54%" r="76%"><stop offset="0" stop-color="#18243a"/><stop offset="0.46" stop-color="#0c1220"/><stop offset="1" stop-color="#05070d"/></radialGradient>`);
+  parts.push(`<radialGradient id="space" cx="50%" cy="50%" r="76%"><stop offset="0" stop-color="#18243a"/><stop offset="0.46" stop-color="#0c1220"/><stop offset="1" stop-color="#05070d"/></radialGradient>`);
+  parts.push(`<radialGradient id="vignette" cx="50%" cy="50%" r="72%"><stop offset="0.62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.42"/></radialGradient>`);
+  // The core glow is an ellipse of the core's own aspect, so the safe centre
+  // reads as one lit body rather than a circle pasted on an oval.
+  parts.push(`<radialGradient id="core-glow" gradientUnits="userSpaceOnUse" cx="${GALAXY_CX}" cy="${GALAXY_CY}" r="${(core.outerRy * 2.4).toFixed(1)}" gradientTransform="translate(${GALAXY_CX} ${GALAXY_CY}) scale(${CORE_ASPECT} 1) translate(${-GALAXY_CX} ${-GALAXY_CY})"><stop offset="0" stop-color="${TIER_COLORS.A}" stop-opacity="0.16"/><stop offset="0.5" stop-color="${TIER_COLORS.A}" stop-opacity="0.05"/><stop offset="1" stop-color="${TIER_COLORS.A}" stop-opacity="0"/></radialGradient>`);
   // CSS circle() clip-paths silently no-op on SVG images in Firefox; a real
   // clipPath in objectBoundingBox units crops every bubble regardless of size.
   parts.push(`<clipPath id="bubble-clip" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5"/></clipPath></defs>`);
 
   parts.push(`<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#space)"/>`);
-  parts.push(`<rect width="${WIDTH}" height="4" fill="${FROST_BLUE}"/>`);
+  parts.push(`<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#vignette)"/>`);
+  parts.push(`<ellipse cx="${GALAXY_CX}" cy="${GALAXY_CY}" rx="${(core.outerRx * 2.4).toFixed(1)}" ry="${(core.outerRy * 2.4).toFixed(1)}" fill="url(#core-glow)"/>`);
+  parts.push(renderGradeFields(bands));
 
-  // A deterministic star field gives the orbital metaphor texture without
-  // introducing random daily churn into a publication artifact.
-  let starSeed = 0x50484152;
-  for (let i = 0; i < 112; i++) {
-    starSeed = (Math.imul(starSeed, 1664525) + 1013904223) >>> 0;
-    const x = 42 + (starSeed % 1516);
-    starSeed = (Math.imul(starSeed, 1664525) + 1013904223) >>> 0;
-    const y = BODY_TOP + (starSeed % (FOOTER_RULE_Y - BODY_TOP - 8));
-    starSeed = (Math.imul(starSeed, 1664525) + 1013904223) >>> 0;
-    const radius = 0.45 + (starSeed % 14) / 10;
-    const opacity = 0.12 + (starSeed % 32) / 100;
-    parts.push(`<circle cx="${x}" cy="${y}" r="${radius.toFixed(1)}" fill="#dbeafe" fill-opacity="${opacity.toFixed(2)}"/>`);
-  }
-
-  // The enlarged brand mark, wordmark, divider and title form one measured
-  // lockup; the 48px chart grammar rail remains clear.
-  const markSize = 72;
-  const markX = MARGIN_X;
-  const markY = 8;
-  const markCx = markX + markSize / 2;
-  const beaconHalfWidth = markSize * 0.0625;
-  const wordmarkX = markX + markSize + 12;
-  const dividerX = 244;
-  const titleX = 268;
-  const titleBaselineY = 50;
-  const kickerX = 270;
-  const kickerBaselineY = 72;
-  parts.push(`<g data-masthead-lockup="true" data-lockup-x="${MASTHEAD_LOCKUP.x}" data-lockup-y="${MASTHEAD_LOCKUP.y}" data-lockup-w="${MASTHEAD_LOCKUP.w}" data-lockup-h="${MASTHEAD_LOCKUP.h}" data-mark-size="${markSize}" data-mark-x="${markX}" data-mark-y="${markY}" data-wordmark-x="${wordmarkX}" data-divider-x="${dividerX}" data-title-x="${titleX}" data-title-baseline-y="${titleBaselineY}" data-kicker-x="${kickerX}" data-kicker-baseline-y="${kickerBaselineY}" data-header-rule-y="${HEADER_RULE_Y}">`);
-  parts.push(`<polygon points="${markCx - beaconHalfWidth},${markY + 1} ${markCx + beaconHalfWidth},${markY + 1} ${markCx + markSize * 0.025},4 ${markCx - markSize * 0.025},4" fill="${FROST_BLUE}"/>`);
-  parts.push(`<image href="${brandMark}" x="${markX}" y="${markY}" width="${markSize}" height="${markSize}"/>`);
-  parts.push(svgText({ x: wordmarkX, y: 50, size: 22, text: "Pharos", font: "sans", weight: 700, spacing: "-0.3" }));
-  parts.push(`<line x1="${dividerX}" y1="12" x2="${dividerX}" y2="76" stroke="${RULE}" stroke-width="1"/>`);
-  parts.push(svgText({ x: titleX, y: titleBaselineY, size: 34, text: "The Stablecoin Safety Map", font: "serif", weight: 500, spacing: "-0.5" }));
-  if (stamp.issue) {
-    parts.push(svgText({ x: 735, y: kickerBaselineY, size: 10.5, text: stamp.issue, weight: 700, fill: INK_SECONDARY, anchor: "end", spacing: "1.6" }));
-  }
-  parts.push(`</g>`);
-  parts.push(renderChartKey(annotations, chartKey));
-  parts.push(`<line x1="${MARGIN_X}" y1="${HEADER_RULE_Y}" x2="${WIDTH - MARGIN_X}" y2="${HEADER_RULE_Y}" stroke="${RULE}" stroke-width="1"/>`);
-
-  // B–F get a quiet band guide from the zone centerline. The guide carries no
-  // data-point or rank order, and A remains intentionally line-free.
-  for (const band of bands) {
-    if (band.tier === "A") continue;
-    const rx = (band.zone.innerRx + band.zone.outerRx) / 2;
-    const ry = (band.zone.innerRy + band.zone.outerRy) / 2;
-    const color = TIER_COLORS[band.tier];
-    const dasharray = BAND_GUIDE_DASHARRAY[band.tier];
-    const pattern = dasharray ? ` stroke-dasharray="${dasharray}" stroke-linecap="round"` : "";
-    parts.push(`<ellipse data-band-guide="${band.tier}" data-inner-rx="${band.zone.innerRx.toFixed(2)}" data-inner-ry="${band.zone.innerRy.toFixed(2)}" data-outer-rx="${band.zone.outerRx.toFixed(2)}" data-outer-ry="${band.zone.outerRy.toFixed(2)}" data-lane-offset-y="${band.laneOffsetY.toFixed(2)}" cx="${GALAXY_CX}" cy="${GALAXY_CY}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${color}" stroke-width="7" stroke-opacity="0.045"${pattern}/>`);
-    parts.push(`<ellipse cx="${GALAXY_CX}" cy="${GALAXY_CY}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="none" stroke="${color}" stroke-width="1.15" stroke-opacity="0.24"${pattern}/>`);
-  }
-
-  // Bubbles: rasterized, circle-clipped logos. Recognizable transparent marks
-  // sit bare on the field; plates and floor-sized marks retain the grade rim.
-  for (const band of bands) {
-    const color = TIER_COLORS[band.tier];
-    parts.push(`<g data-band-zone="${band.tier}" data-inner-rx="${band.zone.innerRx.toFixed(2)}" data-inner-ry="${band.zone.innerRy.toFixed(2)}" data-outer-rx="${band.zone.outerRx.toFixed(2)}" data-outer-ry="${band.zone.outerRy.toFixed(2)}" data-lane-offset-y="${band.laneOffsetY.toFixed(2)}">`);
-    for (const bubble of band.bubbles) {
-      const { coin, cx, cy, r } = bubble;
-      const logo = logos.get(coin.id) ?? null;
-      const floorRadius = band.tier === "A" ? chartKey.floorRadiusByTier.a : chartKey.floorRadiusByTier.other;
-      const showGradeRim = logo?.plate !== "none" || r <= floorRadius + 1e-6;
-      const ringWidth = showGradeRim ? (r >= 10 ? 2.2 : 1.3) : 0;
-      const innerR = ringWidth > 0 ? Math.max(r - ringWidth, r * 0.68) : r;
-      if (logo) {
-        const size = innerR * 2;
-        if (logo.plate !== "none") {
-          const plateColor = logo.plate === "dark" ? LOGO_DARK_PLATE : LOGO_LIGHT_PLATE;
-          parts.push(`<circle data-logo-plate="${coin.id}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${innerR.toFixed(1)}" fill="${plateColor}"/>`);
-        }
-        parts.push(
-          `<g transform="translate(${(cx - innerR).toFixed(1)} ${(cy - innerR).toFixed(1)})"><image data-logo-id="${coin.id}" data-plate="${logo.plate}" href="${logo.dataUri}" width="${size.toFixed(1)}" height="${size.toFixed(1)}" clip-path="url(#bubble-clip)"/></g>`,
-        );
-      } else {
-        parts.push(`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${innerR.toFixed(1)}" fill="#07111f"/>`);
-        parts.push(svgText({ x: cx, y: cy + r * 0.36, size: Math.max(Math.round(r * 0.9), 10.5), text: asciiInitial(coin.symbol), fill: INK, anchor: "middle", weight: 750 }));
-      }
-      if (showGradeRim) {
-        parts.push(`<circle data-grade-rim="${coin.id}" data-grade="${coin.grade}" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r - ringWidth / 2).toFixed(1)}" fill="none" stroke="${color}" stroke-width="${ringWidth.toFixed(1)}"/>`);
-      }
+  // Marks are grouped per grade; slots are drawn last so type sits on top.
+  for (const tier of TIER_ORDER) {
+    const tierBands = bands.filter((band) => band.tier === tier);
+    if (tierBands.length === 0) continue;
+    const zone = { inner: tierBands[0].zone, outer: tierBands[tierBands.length - 1].zone };
+    parts.push(`<g data-band-zone="${tier}" data-inner-rx="${zone.inner.innerRx.toFixed(2)}" data-inner-ry="${zone.inner.innerRy.toFixed(2)}" data-outer-rx="${zone.outer.outerRx.toFixed(2)}" data-outer-ry="${zone.outer.outerRy.toFixed(2)}" data-lane-offset-y="${Math.max(...tierBands.map((band) => band.laneOffsetY)).toFixed(2)}">`);
+    for (const band of tierBands) {
+      for (const bubble of band.bubbles) parts.push(renderMark(bubble, logos.get(bubble.coin.id) ?? null));
     }
     parts.push(`</g>`);
   }
+  parts.push(bands.flatMap((band) => band.slots).map(renderSlot).join(""));
 
-  // Footer: PSI, encoding disclosure and screenshot-contestable provenance
-  // share one compact baseline. The masthead remains the publication signature.
-  parts.push(`<line x1="${MARGIN_X}" y1="${FOOTER_RULE_Y}" x2="${WIDTH - MARGIN_X}" y2="${FOOTER_RULE_Y}" stroke="${RULE}" stroke-width="1"/>`);
-  const encoding = annotationById(annotations, "footer-encoding");
-  const captureTime = asOf.toISOString().slice(0, 16).replace("T", " ");
-  const provenanceText = [
-    `Captured ${captureTime} UTC`,
-    `Methodology v${methodologyVersion}`,
-    `${gradedCount} graded`,
-  ].join(" · ");
-  parts.push(annotationGroup(encoding, [
-    renderPsiStatus(psi, encoding.bounds.x + 4, encoding.bounds.y + 12),
-    svgText({
-      x: encoding.bounds.x + 208,
-      y: encoding.bounds.y + 12,
-      size: 11.5,
-      text: `· Area tracks supply above ~${formatUsdCompact(floorMcapByTier.a)} (A) / ~${formatUsdCompact(floorMcapByTier.other)} (B-F); below = marker`,
-      fill: INK,
-    }),
-    svgText({ x: encoding.bounds.x + encoding.bounds.w - 4, y: encoding.bounds.y + 12, size: 10.5, text: provenanceText, fill: INK_SECONDARY, anchor: "end" }),
-  ].join("")));
+  // Top-left masthead: brand eyebrow, then a two-line serif title stepped to
+  // the ellipse curve, then the deck.
+  parts.push(`<g data-masthead-eyebrow="true">`);
+  parts.push(`<image href="${brandMark}" x="${MARGIN_X}" y="18" width="26" height="26"/>`);
+  parts.push(svgText({ x: MARGIN_X + 34, y: 37, size: 14, text: "PHAROS", font: "sans", weight: 700, spacing: "2.4" }));
+  parts.push(svgText({ x: MARGIN_X + 122, y: 37, size: 11, text: stamp.eyebrow, weight: 600, fill: INK_SECONDARY, spacing: "1.2" }));
+  if (publicationHealth.status === "held") {
+    // Beside the date, where a feed reader looks: a held publication must
+    // never be mistaken for today's scores.
+    const x = MARGIN_X + 122 + stamp.eyebrow.length * (11 * MONO_ADVANCE + 1.2) + 10;
+    const text = "SCORES HELD";
+    const w = Math.ceil(text.length * (10.5 * MONO_ADVANCE + 0.6) + 16);
+    parts.push(`<g data-publication-held-eyebrow="true"><rect x="${x.toFixed(1)}" y="23" width="${w}" height="19" rx="9.5" fill="${NAME_CHIP}"/>`);
+    parts.push(svgText({ x: x + w / 2, y: 36.4, size: 10.5, text, weight: 800, fill: FIELD, anchor: "middle", spacing: "0.6" }), `</g>`);
+  }
+  parts.push(`</g>`);
+  parts.push(`<g data-masthead-lockup="true">`);
+  parts.push(svgText({ x: MARGIN_X - 2, y: 82, size: 44, text: "The Stablecoin", font: "serif", weight: 500, spacing: "-0.8" }));
+  parts.push(`</g>`);
+  parts.push(`<g data-masthead-tail="true">`);
+  parts.push(svgText({ x: MARGIN_X - 2, y: 126, size: 44, text: "Safety Map", font: "serif", weight: 500, spacing: "-0.8" }));
+  parts.push(svgText({ x: MARGIN_X, y: 154, size: 15, text: "Safer toward the centre", font: "sans", weight: 500, fill: INK_DECK }));
+  parts.push(`</g>`);
+
+  parts.push(renderHeadline(annotations, chartKey));
+  parts.push(renderSupplyKey(annotations, chartKey));
+  parts.push(renderProvenance(annotations, psi, asOf, methodologyVersion, gradedCount, publicationHealth, edition));
   parts.push(`</svg>`);
   return parts.join("\n");
 }
@@ -1737,41 +2213,31 @@ async function validateRenderedAnnotations(
     throw new Error(`Rendered annotation count ${renderedById.size} does not match planned count ${planned.length}`);
   }
   const tolerance = 0.5;
-  const masthead = await page.evaluate(() => {
-    const node = document.querySelector<SVGGElement>("g[data-masthead-lockup]");
+  const within = (box: Rect, bounds: Rect) =>
+    box.x >= bounds.x - tolerance && box.y >= bounds.y - tolerance &&
+    box.x + box.w <= bounds.x + bounds.w + tolerance && box.y + box.h <= bounds.y + bounds.h + tolerance;
+  const describe = (box: Rect) => `${box.x.toFixed(1)},${box.y.toFixed(1)} ${box.w.toFixed(1)}x${box.h.toFixed(1)}`;
+  const masthead = await page.evaluate(() => ["eyebrow", "lockup", "tail"].map((part) => {
+    const node = document.querySelector<SVGGElement>(`g[data-masthead-${part}]`);
     if (!node) return null;
     const box = node.getBBox();
     return { x: box.x, y: box.y, w: box.width, h: box.height };
-  });
-  if (!masthead) throw new Error("Rendered masthead lockup is missing");
-  if (
-    masthead.x < MASTHEAD_LOCKUP.x - tolerance || masthead.y < MASTHEAD_LOCKUP.y - tolerance ||
-    masthead.x + masthead.w > MASTHEAD_LOCKUP.x + MASTHEAD_LOCKUP.w + tolerance ||
-    masthead.y + masthead.h > MASTHEAD_LOCKUP.y + MASTHEAD_LOCKUP.h + tolerance
-  ) {
-    throw new Error(
-      `Rendered masthead escaped its reserved bounds (${masthead.x.toFixed(1)},${masthead.y.toFixed(1)} ` +
-      `${masthead.w.toFixed(1)}x${masthead.h.toFixed(1)} vs ${MASTHEAD_LOCKUP.x},${MASTHEAD_LOCKUP.y} ` +
-      `${MASTHEAD_LOCKUP.w}x${MASTHEAD_LOCKUP.h})`,
-    );
-  }
-  if (intersects(masthead, CHART_KEY_PANEL)) {
-    throw new Error("Rendered masthead collides with the compact chart-key rail");
+  }));
+  // A title line's glyph box may rise into the block above it, never past
+  // its own block's width or bottom.
+  const risesTo = (rect: Rect) => ({ ...rect, y: MASTHEAD_EYEBROW.y, h: rect.y + rect.h - MASTHEAD_EYEBROW.y });
+  for (const [index, bounds] of [MASTHEAD_EYEBROW, risesTo(MASTHEAD_LOCKUP), risesTo(MASTHEAD_TAIL)].entries()) {
+    const box = masthead[index];
+    if (!box) throw new Error("Rendered masthead lockup is missing");
+    if (!within(box, bounds)) {
+      throw new Error(`Rendered masthead escaped its reserved bounds (${describe(box)} vs ${describe(bounds)})`);
+    }
   }
   const measured = planned.map((annotation) => {
     const box = renderedById.get(annotation.id);
     if (!box) throw new Error(`Rendered annotation ${annotation.id} is missing`);
-    const expected = annotation.bounds;
-    if (
-      box.x < expected.x - tolerance || box.y < expected.y - tolerance ||
-      box.x + box.w > expected.x + expected.w + tolerance ||
-      box.y + box.h > expected.y + expected.h + tolerance
-    ) {
-      throw new Error(
-        `Rendered annotation ${annotation.id} escaped its planned bounds ` +
-        `(${box.x.toFixed(1)},${box.y.toFixed(1)} ${box.w.toFixed(1)}x${box.h.toFixed(1)} vs ` +
-        `${expected.x.toFixed(1)},${expected.y.toFixed(1)} ${expected.w.toFixed(1)}x${expected.h.toFixed(1)})`,
-      );
+    if (!within(box, annotation.bounds)) {
+      throw new Error(`Rendered annotation ${annotation.id} escaped its planned bounds (${describe(box)} vs ${describe(annotation.bounds)})`);
     }
     return { ...annotation, bounds: { x: box.x, y: box.y, w: box.w, h: box.h } };
   });
@@ -1782,6 +2248,24 @@ async function validateRenderedAnnotations(
   });
   if (violations.length > 0) {
     throw new Error(`Rendered annotation validation failed:\n  ${violations.slice(0, 20).map((item) => item.message).join("\n  ")}`);
+  }
+  // In-map type was sized from advance estimates; real glyphs must fit.
+  const labels = await page.evaluate(() => Array.from(document.querySelectorAll<SVGGElement>("g[data-map-label]")).map((node) => {
+    const box = node.querySelector<SVGRectElement>("rect[data-label-box]")!.getBBox();
+    const texts = Array.from(node.querySelectorAll<SVGTextElement>("text")).map((text) => {
+      const bbox = text.getBBox();
+      return { x: bbox.x, y: bbox.y, w: bbox.width, h: bbox.height };
+    });
+    return { id: node.dataset.mapLabel ?? "", box: { x: box.x, y: box.y, w: box.width, h: box.height }, texts };
+  }));
+  for (const label of labels) {
+    const inset = { x: label.box.x + 4, y: label.box.y, w: label.box.w - 8, h: label.box.h };
+    for (const text of label.texts) {
+      if (text.x < inset.x - tolerance || text.x + text.w > inset.x + inset.w + tolerance ||
+        text.y + text.h / 2 < label.box.y || text.y + text.h / 2 > label.box.y + label.box.h) {
+        throw new Error(`Rendered map label ${label.id} text (${describe(text)}) overflows its pill (${describe(label.box)})`);
+      }
+    }
   }
 }
 
@@ -2025,6 +2509,9 @@ async function fetchAndValidateMapData(
   const lanes = summarizeSubgradeLanes(graded);
 
   const { bands, k, gravelFloor } = fitLayout(graded);
+  if (gravelFloor !== GRAVEL_FLOORS[0]) {
+    io.warn(`[safety-score-map] Census outgrew the ${GRAVEL_FLOORS[0]}px marker floor; rendered at the ${gravelFloor}px fallback`);
+  }
   const logos = new Map<string, LogoRenderData | null>();
   const logosById = JSON.parse(readFileSync(LOGOS_JSON, "utf8")) as Record<string, string>;
   const allBubbles = bands.flatMap((band) => band.bubbles);
@@ -2043,23 +2530,41 @@ export class SafetyMapCapacityError extends Error {
   readonly code = "layout-capacity-exhausted";
 
   constructor(detail: string) {
-    super(`layout-capacity-exhausted: Could not fit the orbital map above the footer with readable markers and adaptive guide rings (tried floors ${GRAVEL_FLOORS.join("/")}). ${detail || "no diagnostics captured"}`);
+    super(`layout-capacity-exhausted: Could not fit the orbital map inside its bounded field with readable markers and adaptive guide rings (tried floors ${GRAVEL_FLOORS.join("/")}). ${detail || "no diagnostics captured"}`);
     this.name = "SafetyMapCapacityError";
   }
 }
 
+/** The linter's view of a layout: marks plus the guide arc each label reserves. */
+export function compositionOrbitsFor(bands: readonly BandLayout[]): CompositionOrbit[] {
+  return bands.map((band) => ({
+    tier: band.tier,
+    zone: band.zone,
+    bubbles: band.bubbles.map((bubble) => ({ id: bubble.coin.id, cx: bubble.cx, cy: bubble.cy, r: bubble.r })),
+    slots: band.slots.flatMap((slot) => slot.arcHalf === undefined ? [] : [{
+      id: slot.id,
+      cx: slot.arcCenter?.x ?? slot.x + slot.w / 2,
+      cy: slot.arcCenter?.y ?? slot.y + slot.h / 2,
+      arcHalf: slot.arcHalf,
+    }]),
+  }));
+}
+
 export function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k: number; gravelFloor: number } {
   let diag: FitDiagnostic[] = [];
-  // Large bubbles may shrink to protect the composition, but the publication
-  // floor is fixed: recognizability must not silently degrade to make it fit.
-  const configurations = [Number.POSITIVE_INFINITY, 120, 90, 60].flatMap((maxPerRing) =>
-    GRAVEL_FLOORS.map((gravelFloor) => ({ maxPerRing, gravelFloor })),
-  );
-  for (const { maxPerRing, gravelFloor } of configurations) {
+  // A grade whose guide runs out of room first gains one more guide; only
+  // when no split can help do the large bubbles shrink, and only after every
+  // scale has failed does the marker floor step down. Splits are kept as the
+  // scale shrinks, and only the grade that overflowed is split, so capacity
+  // is monotonic: one more coin never forces every grade apart at once, and
+  // supply giants keep their size whenever another guide can make room.
+  for (const gravelFloor of GRAVEL_FLOORS) {
     const minScale = Math.min(R_MIN_A, gravelFloor) / R_MAX_TARGET;
-    for (let scale = 1; ; scale = Math.max(minScale, scale * 0.96)) {
+    const guideCounts: Record<OuterTier, number> = { B: 1, C: 1, D: 1, F: 1 };
+    let splits = 0;
+    for (let scale = 1; ;) {
       diag = [];
-      const layout = layoutBands(graded, scale, gravelFloor, diag, maxPerRing);
+      const layout = layoutBands(graded, scale, gravelFloor, diag, guideCounts);
       if (layout) {
         const annotationViolations = validateAnnotationScene(annotationSceneForBands(layout.bands), {
           bubbleGap: BUBBLE_GAP,
@@ -2067,20 +2572,22 @@ export function fitLayout(graded: readonly MapCoin[]): { bands: BandLayout[]; k:
           leaderGap: 1,
         });
         const compositionViolations = validateComposition({
-          orbits: layout.bands.map((band) => ({
-            tier: band.tier,
-            zone: band.zone,
-            bubbles: band.bubbles.map((bubble) => ({ id: bubble.coin.id, cx: bubble.cx, cy: bubble.cy, r: bubble.r })),
-          })),
-          // Header/footer reservations are owned by the annotation scene; the
-          // body has no detached panel left for the orbital layout to dodge.
+          orbits: compositionOrbitsFor(layout.bands),
+          // Corner chrome and in-map type are owned by the annotation scene.
           chips: [],
         });
         if (annotationViolations.length === 0 && compositionViolations.length === 0) return layout;
         const details = [...annotationViolations.map((item) => `${item.code}: ${item.ids.join(" / ")}`), ...compositionViolations];
         diag.push({ tier: "scene", count: graded.length, placed: 0, radius: 0, reason: details.slice(0, 3).join(", ") });
       }
+      const openTier = diag.find((item) => item.openTier)?.openTier;
+      if (openTier && guideCounts[openTier] < MAX_GUIDES_PER_GRADE && splits < MAX_GUIDE_SPLITS) {
+        guideCounts[openTier] += 1;
+        splits += 1;
+        continue;
+      }
       if (scale === minScale) break;
+      scale = Math.max(minScale, scale * 0.96);
     }
   }
   const detail = diag
@@ -2118,10 +2625,6 @@ async function buildMap(options: {
     tiers,
     totalMcap,
     floorMcapByTier,
-    floorRadiusByTier: {
-      a: radiusForMcap("A", floorMcapByTier.a, k, gravelFloor),
-      other: radiusForMcap("F", floorMcapByTier.other, k, gravelFloor),
-    },
     lanes,
   };
   const annotationScene = annotationSceneForBands(bands);
@@ -2145,12 +2648,13 @@ async function buildMap(options: {
 
   const asOf = new Date(reportCards.asOfSec * 1000);
   const dateLabel = asOf.toISOString().slice(0, 10);
-  const stamp = stampCopy(edition, issue, asOf);
   const altText = buildAltText({
     tiers,
     lanes,
     psi,
-    stampLabel: edition === "monthly" ? `${stamp.eyebrow} ${stamp.headline}`.toLowerCase() : `data as of ${dateLabel}`,
+    stampLabel: edition === "monthly"
+      ? asOf.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).toLowerCase()
+      : `data as of ${dateLabel}`,
     gradedCount: graded.length,
     notRatedCount,
     totalMcap,
@@ -2170,9 +2674,9 @@ async function buildMap(options: {
     asOfSec: reportCards.asOfSec,
     edition,
     issue,
-    floorMcapByTier,
     chartKey,
     annotations,
+    publicationHealth: reportCards.publicationHealth,
   });
   if (unsupportedGlyphs.size > 0) {
     throw new Error(`[safety-score-map] Text uses codepoints missing from the embedded fonts: ${[...unsupportedGlyphs].join(" ")} — refusing to render an unsupported glyph`);
