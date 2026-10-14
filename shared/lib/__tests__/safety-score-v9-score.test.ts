@@ -85,6 +85,73 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(trace.partialEvidence === null).toBe(cause === "C" || cause === "U");
     expect(trace.limitingPillars).toEqual([]);
   });
+  it.each(["A", "B"] as const)("preserves whole-pillar partial evidence exclusions (%s)", (cause) => {
+    const gapId = "gap:excluded-exit";
+    const trace = scoreV9EvaluatedAsset(input({ pillars: {
+      backing: pillar(95), control: pillar(95), exit: pillar(null, {
+        aggregationDisposition: "excluded-a-b", supportedComponentKeys: [], causeGapIds: [gapId],
+        excludedCauseGapIds: [gapId], excludedCauses: [cause], excludedComponentKeys: [],
+      }),
+    } }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.ratingStatus).toBe("rated");
+    expect(trace.partialEvidence).toMatchObject({
+      excludedPillars: ["exit"], causeGapIds: [gapId], causes: [cause],
+    });
+    expect(trace.limitingPillars).toEqual([]);
+  });
+
+  it.each(["A", "B"] as const)("preserves both peg and methodology A/B constraint triggers (%s)", (cause) => {
+    const responsibility = cause === "A" ? "producer-failed" as const : "public-data-uncurated" as const;
+    const trace = scoreV9EvaluatedAsset(input({
+      peg: { applicable: true, score: 100, activeDepegBps: null, reasons: [{
+        code: "missing-peg-input", path: "peg:input", message: "Peg input is unavailable.",
+        responsibility, cause, causeGapIds: ["gap:peg"],
+      }] },
+      methodologyReasons: [{
+        code: "missing-implementation-date", path: "implementation:launch-date", message: "Launch date is unavailable.",
+        responsibility, cause, sourceGapId: "gap:methodology",
+      }],
+    }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.partialEvidence).toEqual({
+      reasonCode: "partial-evidence-pipeline-gap", excludedPillars: [],
+      excludedComponentKeys: ["implementation:launch-date", "peg:input"],
+      causeGapIds: ["gap:methodology", "gap:peg"], causes: [cause],
+    });
+    expect(trace.limitingPillars).toEqual([]);
+  });
+
+  it.each(["A", "B"] as const)("preserves wrapper-local partial exclusions (%s)", (cause) => {
+    const scoringDisposition = cause === "A" ? "excluded-pipeline" as const : "excluded-uncurated" as const;
+    const trace = scoreV9EvaluatedAsset(input({ parent: {
+      required: true, score: 95, propagatedReasons: [], wrapperParentLimit: {
+        schemaVersion: 1, parentScore: 95, form: "pure", treatment: "local-facts",
+        localRiskDiscount: 0, fallbackDiscount: 0, appliedDiscount: 0, limit: 95, factsComplete: false,
+        riskTransfer: { disposition: "not-applicable", mechanism: "none", requestedCredit: 0, appliedCredit: 0 },
+        missingFacts: [{ factClass: "measuredUnwind", disposition: cause === "A" ? "producer-failed" : "public-data-uncurated",
+          cause, causeGapIds: ["gap:wrapper"], scoringDisposition }],
+        adjustments: [],
+      },
+    } }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.partialEvidence).toMatchObject({
+      excludedPillars: [], excludedComponentKeys: ["wrapper-local:measuredUnwind"],
+      causeGapIds: ["gap:wrapper"], causes: [cause],
+    });
+    expect(trace.limitingPillars).toEqual([]);
+  });
+
+  it.each(["A", "B"] as const)("preserves inherited parent partial exclusions (%s)", (cause) => {
+    const trace = scoreV9EvaluatedAsset(input({ parent: {
+      required: true, score: 95, ratingStatus: "rated", propagatedReasons: [],
+      partialEvidence: { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"],
+        excludedComponentKeys: [], causeGapIds: ["parent:gap:exit"], causes: [cause] },
+    } }), V9_CANDIDATE_POLICY_V1);
+    expect(trace.partialEvidence).toMatchObject({
+      excludedPillars: [], excludedComponentKeys: ["dependency:parent"],
+      causeGapIds: ["parent:gap:exit"], causes: [cause],
+    });
+    expect(trace.limitingPillars).toEqual([]);
+  });
+
 
   it("does not let a raw insufficient-evidence label manufacture NR", () => {
     const trace = scoreV9EvaluatedAsset(input({ pillars: {

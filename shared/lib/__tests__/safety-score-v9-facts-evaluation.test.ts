@@ -71,7 +71,158 @@ function certifyGap(asset: V9AssetFactsV3, gap: V9AssetFactsV3["gaps"][number], 
     causeBinding: { assetId: asset.assetId, scope, adverseFactId: null, producerState: "producer-failed", rejectionCode: "fixture-reader-failure" },
   }, AS_OF_SEC));
 }
+function exitFactorGap(asset: V9AssetFactsV3, route: V9AssetFactsV3["exitRoutes"][number], cause: "A" | "B", factorKey: "cost" | "settlement" | "observationConfidence" = "cost") {
+  const gap = createV9FactGapV3({
+    gapId: `alpha:gap:${route.routeKey}:${factorKey}`, reasonCode: "missing-same-notional-route", ownerDomain: "exit",
+    policyRuleId: "v9.exit.route-factors", observationState: "missing",
+    path: { kind: "local-component", componentKey: "exit-route" },
+    message: `The route ${factorKey} factor is not admitted.`, responsibility: "unresearched",
+  });
+  const scope = { pillar: "exit" as const, componentKey: "exit-route", factorKey,
+    routeKey: route.routeKey, exposureId: null, requiredDatum: factorKey };
+  if (cause === "A") {
+    certifyGap(asset, gap, cause);
+    asset.evidence.find((ref) => ref.evidenceId === gap.evidenceRefIds[0])!.causeBinding!.scope = scope;
+  } else {
+    const reviewedAt = new Date(AS_OF_SEC * 1_000).toISOString().replace(".000Z", "Z");
+    const resolved = resolveV9EvidenceCause({
+      assetId: asset.assetId, scope, asOfSec: AS_OF_SEC,
+      sourceGenerationId: SOURCE_FINGERPRINTS.researchOverlays.generationId, evidenceReferences: asset.evidence,
+      classification: { id: `classification:${gap.gapId}`, assetId: asset.assetId, scope,
+        cause, assertion: "required-data-public", reviewedAt, reviewer: "fixture-reviewer",
+        sources: [{ url: "https://issuer.example/route-evidence", observedAt: reviewedAt, datumAsOf: null,
+          location: `Route ${factorKey} evidence`, excerpt: `The route ${factorKey} datum is published.`,
+          assertion: `The required route ${factorKey} datum is public but uncurated.` }] },
+    });
+    gap.causeProof = resolved.causeProof;
+    gap.evidenceRefIds = resolved.causeProof.evidenceRefIds;
+    gap.responsibility = resolved.responsibility;
+    asset.evidence = [...resolved.evidenceReferences];
+  }
+  expect(gap.causeProof.cause).toBe(cause);
+  gap.path = { kind: "optional-exit", routeKey: route.routeKey };
+  gap.causeScope = scope;
+  asset.gaps.push(gap);
+  route.factorStatuses = { ...route.factorStatuses, [factorKey]: createV9FactStatus({
+    applicability: requiredV9Applicability(gap.policyRuleId), observationState: "missing",
+    gapIds: [gap.gapId], evidenceRefIds: gap.evidenceRefIds,
+  }) };
+  return gap;
+}
+
+function exitPromotionFixture() {
+  const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
+  const asset = core.assets.find((row) => row.assetId === "alpha")!;
+  asset.dependencies.edges = [];
+  asset.gaps = asset.gaps.filter((gap) => gap.ownerDomain !== "exit");
+  asset.exitRoutes = asset.exitRoutes.filter((route) => route.scoreEligible);
+  asset.evidence = asset.evidence.filter((ref) => ref.evidenceId !== "evidence:rejected-route");
+  return { core, asset };
+}
+
 describe("Safety Score v9 fact evaluation", () => {
+  it.each(["A", "B"] as const)("publishes no partial flag for a diagnostic-only optional Exit factor (%s)", (cause) => {
+    const { core, asset } = exitPromotionFixture();
+    const primary = asset.exitRoutes.find((route) => route.lane === "dex")!;
+    const alternative = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    alternative.scoreEligible = false;
+    alternative.coverageClass = "diagnostic";
+    const baseline = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const gap = exitFactorGap(asset, alternative, cause);
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(evaluated.exit.primaryRouteKey).toBe(primary.routeKey);
+    expect(evaluated.exit.routes.find((route) => route.routeKey === alternative.routeKey)).toMatchObject({
+      included: false, score: null, components: null,
+    });
+    expect(evaluated.exit.causeGapIds).toContain(gap.gapId);
+    expect(evaluated.scoreInput.pillars.exit.causeGapIds).toContain(gap.gapId);
+    expect(evaluated.scoreInput.pillars.exit.excludedCauseGapIds).toEqual([]);
+    expect(evaluated.scoreInput.pillars.exit.excludedComponentKeys).toEqual([]);
+    expect(evaluated.trace.partialEvidence).toBeNull();
+    expect(evaluated.trace.limitingPillars).toEqual(baseline.trace.limitingPillars);
+    expect(evaluated.trace.nrReasons).toEqual(baseline.trace.nrReasons);
+    expect(evaluated.trace.finalScore).toBe(baseline.trace.finalScore);
+    expect(evaluated.trace.finalGrade).toBe(baseline.trace.finalGrade);
+  });
+
+  it.each(["A", "B"] as const)("keeps a diagnostic-only Exit factor out of partial evidence when no route is admitted (%s)", (cause) => {
+    const { core, asset } = exitPromotionFixture();
+    const alternative = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    asset.exitRoutes = [alternative];
+    alternative.scoreEligible = false;
+    alternative.coverageClass = "diagnostic";
+    const capacityGap = createV9FactGapV3({
+      gapId: "alpha:gap:exit:capacity", reasonCode: "missing-same-notional-route", ownerDomain: "exit",
+      policyRuleId: "v9.exit.route-factors", observationState: "missing",
+      path: { kind: "optional-exit", routeKey: alternative.routeKey },
+      causeScope: { pillar: "exit", componentKey: "exit-route", factorKey: "capacity",
+        routeKey: alternative.routeKey, exposureId: null, requiredDatum: "capacity" },
+      message: "Executable capacity has not been researched.", responsibility: "unresearched",
+    });
+    asset.gaps.push(capacityGap);
+    alternative.factorStatuses = { capacity: createV9FactStatus({
+      applicability: requiredV9Applicability(capacityGap.policyRuleId), observationState: "missing",
+      gapIds: [capacityGap.gapId], evidenceRefIds: [],
+    }) };
+    const baseline = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    const gap = exitFactorGap(asset, alternative, cause);
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(evaluated.exit).toMatchObject({ primaryRouteKey: null, diversificationRouteKey: null, score: 35 });
+    expect(evaluated.exit.routes.every((route) => !route.included && route.score === null && route.components === null)).toBe(true);
+    expect(evaluated.scoreInput.pillars.exit.causeGapIds).toEqual(expect.arrayContaining([gap.gapId, capacityGap.gapId]));
+    expect(evaluated.trace.partialEvidence).toBeNull();
+    expect(evaluated.trace.limitingPillars).toEqual(baseline.trace.limitingPillars);
+    expect(evaluated.trace.limitingPillars).toContainEqual({
+      pillar: "exit", causes: ["U"], causeGapIds: [capacityGap.gapId],
+    });
+    expect(evaluated.trace.nrReasons).toEqual(baseline.trace.nrReasons);
+    expect(evaluated.trace.finalScore).toBe(baseline.trace.finalScore);
+    expect(evaluated.trace.finalGrade).toBe(baseline.trace.finalGrade);
+  });
+
+  it.each(["A", "B"] as const)("retains a no-primary admission gap without an independent blocker (%s)", (cause) => {
+    const { core, asset } = exitPromotionFixture();
+    const candidate = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    asset.exitRoutes = [candidate];
+    candidate.scoreEligible = false;
+    candidate.coverageClass = "diagnostic";
+    candidate.settlementModel = "bounded-delay";
+    candidate.settlementSlaSec = null;
+    const gap = exitFactorGap(asset, candidate, cause, "settlement");
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(evaluated.exit.primaryRouteKey).toBeNull();
+    expect(evaluated.trace.partialEvidence).toMatchObject({
+      excludedPillars: [], excludedComponentKeys: [], causes: [cause], causeGapIds: [gap.gapId],
+    });
+    expect(evaluated.scoreInput.pillars.exit.limitingCauseGapIds).not.toContain(gap.gapId);
+  });
+
+  it.each(["A", "B"] as const)("preserves a selected primary Exit route's factor exclusion (%s)", (cause) => {
+    const { core, asset } = exitPromotionFixture();
+    const primary = asset.exitRoutes.find((route) => route.lane === "dex")!;
+    asset.exitRoutes = [primary];
+    const gap = exitFactorGap(asset, primary, cause, "observationConfidence");
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(evaluated.exit.primaryRouteKey).toBe(primary.routeKey);
+    expect(evaluated.trace.partialEvidence).toMatchObject({
+      excludedPillars: [], excludedComponentKeys: [],
+      causes: [cause], causeGapIds: [gap.gapId],
+    });
+  });
+
+  it.each(["A", "B"] as const)("preserves excluded factors on an admitted alternative inside an included Exit pillar (%s)", (cause) => {
+    const { core, asset } = exitPromotionFixture();
+    const alternative = asset.exitRoutes.find((route) => route.lane === "redemption")!;
+    const gap = exitFactorGap(asset, alternative, cause);
+    const evaluated = evaluateV9FactSet(compileV9FactSetV3(core), V9_CANDIDATE_POLICY_V1).assets.find((row) => row.assetId === asset.assetId)!;
+    expect(evaluated.exit.routes.find((route) => route.routeKey === alternative.routeKey)?.included).toBe(true);
+    expect(evaluated.scoreInput.pillars.exit.aggregationDisposition).toBe("included");
+    expect(evaluated.trace.partialEvidence).toMatchObject({
+      excludedPillars: [], excludedComponentKeys: [`${alternative.routeKey}:cost`],
+      causes: [cause], causeGapIds: [gap.gapId],
+    });
+  });
+
   it.each(["protocol-position", "shared-reserve", "ucits-trs-fund"] as const)(
     "admits %s oracle tier gaps without relaxing path binding", (archetype) => {
     const { v9FactSetDigest: _digest, ...core } = mutableNativeFactSet();
