@@ -889,6 +889,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "usda-avalon": defineReviewedStablecoinRedeemConfig("2026-10-07", {
+    capacityModel: { kind: "unquantified" },
+    holderEligibility: "unknown",
     outputAssets: ["usdt-tether"],
     settlementModel: "days",
     executionModel: "rules-based-nav",
@@ -898,8 +900,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     v9RouteReviewTerms: {
       settlementModel: "days",
       scoringDisposition: "bounded-terms-gap",
-      missingScoringFields: ["cost", "settlement"],
-      rationale: "One-business-day claim availability after bridging to Ethereum and depositing in the conversion vault is not an initial-request-to-final-USDT-transfer maximum. A 1:1 conversion ratio does not disclose a numeric fee schedule or price bridge/network charges.",
+      missingScoringFields: ["capacity", "cost", "settlement"],
+      rationale: "The conversion procedure does not quantify funded USDT capacity or establish a full-supply holder entitlement. One-business-day claim availability after bridging to Ethereum and depositing in the conversion vault is not an initial-request-to-final-USDT-transfer maximum. A 1:1 conversion ratio does not disclose a numeric fee schedule or price bridge/network charges.",
       reviewedAt: "2026-10-07",
       docs: [
         sourceRef("Avalon USDa conversion terms (reviewed 2026-10-07)", "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda", ["route", "fees", "settlement"]),
@@ -1257,11 +1259,24 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "susd-solayer": defineReviewedStablecoinRedeemConfig(REVIEWED_MAY_BATCH_AT, {
+    capacityModel: { kind: "unquantified" },
+    settlementModel: "queued",
+    holderEligibility: "unknown",
     outputAssets: ["usdc-circle"],
     executionModel: "rules-based-nav",
     costModel: undisclosedReviewedFee(
       "Solayer docs describe sUSD mint and redemption through protocol rails; public docs reviewed do not publish a fixed redemption fee",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "The holder returns sUSD, the protocol routes wrapped T-Bills to RFQ, and a qualified liquidity provider must fulfill the USDC payout. This multi-stage process is not an atomic holder exit and establishes neither funded same-notional capacity nor a completed-payout maximum. Geographic eligibility restrictions apply; quote commission and network charges have no complete published bound.",
+      reviewedAt: "2026-10-14",
+      docs: [
+        sourceRef("Solayer sUSD withdrawal RFQ process (reviewed 2026-10-14; undated primary page)", "https://docs.solayer.org/susd/decentralized-rfq-protocol/process", ["route", "capacity", "settlement"]),
+        sourceRef("Solayer sUSD eligibility and risks (reviewed 2026-10-14; undated primary page)", "https://docs.solayer.org/susd/protocol-info/eligibility%26risks", ["access"]),
+      ],
+    },
     docs: [
       sourceRef("Solayer sUSD RFQ process", "https://docs.solayer.org/susd/decentralized-rfq-protocol/process", [
         "route",
@@ -1271,6 +1286,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Solayer sUSD eligibility", "https://docs.solayer.org/susd/protocol-info/eligibility%26risks", [
         "access",
       ]),
+    ],
+    notes: [
+      "The configured holder endpoint is USDC after QLP fulfillment, not redemption of the reserve token directly. No static full-supply, atomic completion, zero commission or unrestricted global eligibility is inferred.",
+      "The issuer eligibility page excludes persons located, organized or resident in the United States, Cuba, Iran, North Korea, South Korea or Syria; citizens of the listed countries other than the United States are excluded regardless of residence.",
     ],
   }),
   "usx-dforce": defineReviewedStablecoinRedeemConfig(REVIEWED_MAY_BATCH_AT, {

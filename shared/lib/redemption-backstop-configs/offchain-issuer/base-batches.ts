@@ -270,6 +270,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
         : entry.id === "wars-argentine-peso"
           ? {
               ...entry.config,
+              capacityModel: { kind: "unquantified" as const },
               v9RouteReviewTerms: WARS_BOUNDED_TERMS_GAP,
             }
           : entry.id === "eusd-telcoin"

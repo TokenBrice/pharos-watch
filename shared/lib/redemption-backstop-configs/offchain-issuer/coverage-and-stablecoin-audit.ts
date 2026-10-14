@@ -526,11 +526,21 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
     outputAssets: ["usdc-circle"],
-    settlementModel: "same-day",
+    settlementModel: "days",
     routeStatus: "open",
     costModel: undisclosedReviewedFee(
       "Bridge-supported pathUSD exchange/redemption uses Bridge rails; public materials reviewed do not publish one fixed pathUSD redemption fee",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "settlement", "cost"],
+      rationale: "Eligible Bridge users have a documented USDC redemption route, but no funded same-notional amount or complete cost ceiling is established. Bridge's two-business-day processing term starts after compliance determination and does not guarantee completed USDC receipt. Neither same-day settlement nor a two-business-day completed-payout SLA is inferred.",
+      reviewedAt: "2026-10-14",
+      docs: [
+        sourceRef("Bridge stablecoin terms, redemption processing after compliance (reviewed 2026-10-14; undated primary page)", "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc", ["route", "access", "settlement"]),
+        sourceRef("Tempo pathUSD USDC redemption endpoint", "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens", ["route"]),
+      ],
+    },
     docs: [
       sourceRef("Tempo mainnet pathUSD payout (reviewed 2026-09-30)", "https://tempo.xyz/developers/docs/protocol/exchange/quote-tokens", ["route"]),
       sourceRef("Tempo pathUSD docs", "https://docs.tempo.xyz/protocol/exchange/pathUSD", ["route", "access", "fees"]),
