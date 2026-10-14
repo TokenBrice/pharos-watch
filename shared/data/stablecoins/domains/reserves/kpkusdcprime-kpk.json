@@ -23,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R82 exact historical denominator and adapter-source review",
+    "reviewedAt": "2026-10-14",
+    "reviewer": "Sol KPK review 2026-10-14 (S1AllocationCensus)",
     "confidence": "verified",
     "sources": [
       {
@@ -58,11 +58,15 @@
       {
         "label": "Issuer exact Prime vault, adapter and strategy documentation",
         "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+      },
+      {
+        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "rationale": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights.",
+    "rationale": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28719959401678804018293507 raw 18-decimal shares and totalAssets()=29787716153634 raw 6-decimal USDC (29,787,716.153634 USDC). One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 positive positions; summed expectedSupplyAssets=29787716153634, idle underlying=0; their sum equals totalAssets. Lender-claim allocation shares are cbBTC 43.086%, WBTC 25.393%, rETH 10.505%, wstETH 10.160%, OETH 8.062%, WETH 1.811% and LsETH 0.981%; weETH retains 1 raw USDC unit with market caps 0/0. All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights. Weights are lender-claim allocation shares, not holdings of pledged collateral. Superseded 2026-10-02 review at block 26107704: totalSupply()=28097145082426439535141891, totalAssets()=29100078912490, 8 markets with summed expectedSupplyAssets=29100078910236 and idle underlying=2254.",
     "compositionBasis": "Pinned full adapter census and underlying-asset denomination",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-14",
     "scope": "full-composition",
     "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
     "knownUnknownExposurePct": 0
@@ -85,8 +89,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-14",
+    "reviewer": "Sol KPK review 2026-10-14 (S1AllocationCensus)",
     "confidence": "probable",
     "sources": [
       {
@@ -112,8 +116,12 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+      },
+      {
+        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "uncertainty": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification."
+    "uncertainty": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28719959401678804018293507 raw 18-decimal shares and totalAssets()=29787716153634 raw 6-decimal USDC (29,787,716.153634 USDC). One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 positive positions; summed expectedSupplyAssets=29787716153634, idle underlying=0; their sum equals totalAssets. Lender-claim allocation shares are cbBTC 43.086%, WBTC 25.393%, rETH 10.505%, wstETH 10.160%, OETH 8.062%, WETH 1.811% and LsETH 0.981%; weETH retains 1 raw USDC unit with market caps 0/0. All current positions have zero borrow shares and zero posted collateral. 68.479% of lender allocation is to cbBTC/WBTC-collateral markets (custodial wrapped BTC); this is not a custodian reserve share. Weights are lender-claim allocation shares, not holdings of pledged collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Superseded 2026-10-02 review at block 26107704: totalSupply()=28097145082426439535141891, totalAssets()=29100078912490, 8 markets with summed expectedSupplyAssets=29100078910236 and idle underlying=2254."
   }
 }

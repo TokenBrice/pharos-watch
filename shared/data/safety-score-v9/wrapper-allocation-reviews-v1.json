@@ -2591,76 +2591,83 @@
     {
       "assetId": "kpkusdcprime-kpk",
       "scopeKind": "whole-allocation",
-      "reviewedAt": "2026-10-02",
-      "expiresAt": "2026-11-01",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-14",
+      "expiresAt": "2026-11-13",
+      "reviewer": "Sol KPK review 2026-10-14 (S1AllocationCensus)",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
       "capitalReuse": "mixed-overcollateralized-lending",
-      "rationale": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Current adapter code supplies/withdraws lending positions without a borrowing, supplyCollateral or setAuthorization surface. This scopes immediate wrapper custody and local leverage, not underlying parent/borrower custody, legal segregation or future admin allocations. Complete current market params and positions are attached; complex collateral receives conservative reuse treatment, not blanket blue-chip credit.",
+      "rationale": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28719959401678804018293507 raw 18-decimal shares and totalAssets()=29787716153634 raw 6-decimal USDC (29,787,716.153634 USDC). One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 positive positions; summed expectedSupplyAssets=29787716153634, idle underlying=0; their sum equals totalAssets. Lender-claim allocation shares are cbBTC 43.086%, WBTC 25.393%, rETH 10.505%, wstETH 10.160%, OETH 8.062%, WETH 1.811% and LsETH 0.981%; weETH retains 1 raw USDC unit with market caps 0/0. All current positions have zero borrow shares and zero posted collateral. Current adapter code supplies/withdraws lending positions without a borrowing, supplyCollateral or setAuthorization surface. This scopes immediate wrapper custody and local leverage, not underlying parent/borrower custody, legal segregation or future admin allocations. Complete current market params and positions are attached; complex collateral receives conservative reuse treatment, not blanket blue-chip credit. Weights are lender-claim allocation shares, not holdings of pledged collateral. VaultV2 market/collateral/adapter caps for all current IDs are uint128-max absolute / 100% relative, except the retained weETH market ID at 0/0; KPK's published 90/45/30/10% Prime targets are not VaultV2-enforced caps. forceDeallocatePenalty(adapter)=1e14 (0.01%), setter timelock 0. Superseded 2026-10-02 review at block 26107704: totalSupply()=28097145082426439535141891, totalAssets()=29100078912490, 8 markets with summed expectedSupplyAssets=29100078910236 and idle underlying=2254.",
       "observations": [
         {
           "chain": "ethereum",
           "address": "0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
           "function": "asset()/totalSupply()/totalAssets()/underlying.balanceOf(vault)",
-          "value": "{\"asset\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"shares\": \"28097145082426439535141891\", \"assets\": \"29100078912490\", \"idle\": \"2254\"}",
-          "block": 26107704
+          "value": "{\"asset\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"shares\": \"28719959401678804018293507\", \"assets\": \"29787716153634\", \"idle\": \"0\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0x0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf\", \"supplyShares\": \"3058110530962368382\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 3116284327742, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xae78736cd615f374d3085123a210448e74fc6393\", \"oracle\": \"0x36cb058364a811636685ef15a71e8ea99043f815\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0x0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf\", \"supplyShares\": \"3066922906134260971\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 3129335529826, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xae78736cd615f374d3085123a210448e74fc6393\", \"oracle\": \"0x36cb058364a811636685ef15a71e8ea99043f815\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0xb8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e\", \"supplyShares\": \"2300567250589257234\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 2400455935093, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x856c4efb76c1d1ae02e20ceb03a2a6a08b0b8dc3\", \"oracle\": \"0xe8adff9117151fb5ad7313873780b87cc56eedb0\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0xb8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e\", \"supplyShares\": \"2296618323023697461\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 2401512502632, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x856c4efb76c1d1ae02e20ceb03a2a6a08b0b8dc3\", \"oracle\": \"0xe8adff9117151fb5ad7313873780b87cc56eedb0\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64\", \"supplyShares\": \"11668596004890872946\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 12770295399249, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf\", \"oracle\": \"0xa6d6950c9f177f1de7f7757fb33539e3ec60182a\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64\", \"supplyShares\": \"11711023056322378946\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 12834378526082, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf\", \"oracle\": \"0xa6d6950c9f177f1de7f7757fb33539e3ec60182a\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49\", \"supplyShares\": \"6352455180647735379\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 7275566463285, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599\", \"oracle\": \"0xdddd770badd886df3864029e4b377b5f6a2b6b83\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49\", \"supplyShares\": \"6595169747712917158\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 7564078214138, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x2260fac5e5542a773aa44fbcfedf7c193bc2c599\", \"oracle\": \"0xdddd770badd886df3864029e4b377b5f6a2b6b83\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc\", \"supplyShares\": \"2537835359477938622\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 2907912297987, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0\", \"oracle\": \"0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc\", \"supplyShares\": \"2637686432234552355\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 3026509767996, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0\", \"oracle\": \"0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd\", \"supplyShares\": \"326574924206135275\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 336739304439, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2\", \"oracle\": \"0x0f948cba8231db7898ef36a4212581ad7b1b4580\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd\", \"supplyShares\": \"522541227297906298\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 539585442002, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2\", \"oracle\": \"0x0f948cba8231db7898ef36a4212581ad7b1b4580\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
           "value": "{\"marketId\": \"0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd\", \"supplyShares\": \"1701250\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee\", \"oracle\": \"0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411\", \"lltv\": \"770000000000000000\"}",
-          "block": 26107704
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x1d511811aca9d8817a3e50f29cadff6243a02902",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0xfb7d54e0ce71efc8fffd3f4e1db0afa9265882da5cc76604b62adfac64501e80\", \"supplyShares\": \"290125354507842690\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 292825182440, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x8c1bed5b9a0928467c9b1341da1d7bd5e10b6549\", \"oracle\": \"0x377f722043bb5d021f4366127d49c772e1c01c7b\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0xfb7d54e0ce71efc8fffd3f4e1db0afa9265882da5cc76604b62adfac64501e80\", \"supplyShares\": \"289354572133680476\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 292316170957, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x8c1bed5b9a0928467c9b1341da1d7bd5e10b6549\", \"oracle\": \"0x377f722043bb5d021f4366127d49c772e1c01c7b\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
+          "function": "allocation/absoluteCap/relativeCap(capId) for all configured cap IDs",
+          "value": "{\"configuredCapIds\": 17, \"summary\": \"17 configured cap IDs; weETH market caps 0/0; all others uint128-max/100%.\", \"caps\": [{\"capId\": \"0x2424113bfe3c06f78b258b35ce691dc3d8260e298338cef37c34f4fb3b22ad85\", \"scope\": \"adapter\", \"allocation\": \"29784011311098\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x47090b0670bf41ebc3e9a1d24a5bb1dbe417077a5d772e22225777e84104bc31\", \"scope\": \"rETH collateral\", \"allocation\": \"3126697081257\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xc47993ac195bdd453b19c8cbe66e13ed9785cabd2db716c8c821956c66a3a151\", \"scope\": \"rETH market\", \"allocation\": \"3126697081257\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xd450f6e4ece2aca3684058f7ecb6308a5db1cdc8e3d64b282ea6aa2ef684c86e\", \"scope\": \"OETH collateral\", \"allocation\": \"2400966214370\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xb210b28df8c42937b63f3261b6a02beaa886086cbae0d12da8658a1780953c5b\", \"scope\": \"OETH market\", \"allocation\": \"2400966214370\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x13ff47043c4f28ff9eb52ff2a760b64b77707c842acabb83558f6415c9cb4797\", \"scope\": \"cbBTC collateral\", \"allocation\": \"12834272758595\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x295c62dc9782b03bcecd5f61ed58bdd64ac92e2db659e8051a7f8a85aa8553df\", \"scope\": \"cbBTC market\", \"allocation\": \"12834272758595\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x7e50b2d1a555e26ad34679567e2d319a7fdafeabb38b0957566156a1c9369ae4\", \"scope\": \"WBTC collateral\", \"allocation\": \"7563914208641\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xb83e8f2505b0a10572207aec1610617ba5e8b659fae29f1ab0d42ff0c03286bb\", \"scope\": \"WBTC market\", \"allocation\": \"7563914208641\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x7fec14a26d24d99916f8800202b21d034d3b543349fc0e6632a4bd78a2891a20\", \"scope\": \"wstETH collateral\", \"allocation\": \"3026442771478\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x974f5d9feb1ecc103cc2a9fe90a324ad7022c6142bfe90bff3d999f26bed2d3d\", \"scope\": \"wstETH market\", \"allocation\": \"3026442771478\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xf0ddb417e582871da18d79b79974e52d1762a5d092c92b9e44d2c9932bb0c73a\", \"scope\": \"WETH collateral\", \"allocation\": \"539571838465\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xb843c5edeb8593340c19725cad42a1cb8f5381123e8f0e9f1a3856621e46c853\", \"scope\": \"WETH market\", \"allocation\": \"539571838465\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x97f908e31d4c9f287ed715d1626929c439829e5cd7a4a62f093069edec30ed61\", \"scope\": \"weETH collateral\", \"allocation\": \"1\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xd9d8308bd150a622ea3f066ecaf274be8f2eddb05d4950ba479442f2778f859d\", \"scope\": \"weETH market\", \"allocation\": \"1\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x14e8316d1ca215293901de5d85fc3dc4bf2e39d6f44e38d4fb2f1c5d499ddace\", \"scope\": \"LsETH collateral\", \"allocation\": \"292146438291\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x42a198419275225d667373f64de5f5bc85d443a8cdf053b44b2bf165f34975b1\", \"scope\": \"LsETH market\", \"allocation\": \"292146438291\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}]}",
+          "block": 26191269
         }
       ],
       "sources": [
@@ -2673,12 +2680,12 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
         },
         {
-          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
-          "url": "https://eth-mainnet.g.alchemy.com"
+          "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         },
         {
-          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
-          "url": "https://api.morpho.org/graphql"
+          "label": "Issuer exact Prime strategy mandate context; published targets are not measured VaultV2-enforced caps",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
         },
         {
           "label": "Morpho gate semantics and irreversible abdication",
@@ -2693,55 +2700,83 @@
     {
       "assetId": "kpkusdcyield-kpk",
       "scopeKind": "whole-allocation",
-      "reviewedAt": "2026-10-02",
-      "expiresAt": "2026-11-01",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-14",
+      "expiresAt": "2026-11-13",
+      "reviewer": "Sol KPK review 2026-10-14 (S1AllocationCensus)",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
       "capitalReuse": "long-tail-overcollateralized-lending",
-      "rationale": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Current adapter code supplies/withdraws lending positions without a borrowing, supplyCollateral or setAuthorization surface. This scopes immediate wrapper custody and local leverage, not underlying parent/borrower custody, legal segregation or future admin allocations. Complete current market params and positions are attached; complex collateral receives conservative reuse treatment, not blanket blue-chip credit.",
+      "rationale": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=12583798852158679851432343 raw 18-decimal shares and totalAssets()=13255106628776 raw 6-decimal USDC (13,255,106.628776 USDC). One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 7 current markets; summed expectedSupplyAssets=13255106628776, idle underlying=0; their sum equals totalAssets() and adapter.realAssets(). Lender-claim allocation shares are savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437% and weETH 0.0004%. Four off-list residuals retain 1 raw USDC unit each (srNUSD, YFI, matured PT-cUSD-23JUL2026 and ssftUSD), with allocation 0 and excluded from realAssets(). All current positions have zero borrow shares and zero posted collateral. Current adapter code supplies/withdraws lending positions without a borrowing, supplyCollateral or setAuthorization surface. This scopes immediate wrapper custody and local leverage, not underlying parent/borrower custody, legal segregation or future admin allocations. Complete current market params and positions are attached; complex collateral receives conservative reuse treatment, not blanket blue-chip credit. Weights are lender-claim allocation shares, not holdings of pledged collateral. VaultV2 market/collateral/adapter caps for all current-allocation IDs are uint128-max absolute / 100% relative; KPK's published 15-90% Yield targets are not VaultV2-enforced caps. forceDeallocatePenalty(adapter)=1e14 (0.01%), setter timelock 0. Superseded 2026-10-02 review at block 26107704: totalSupply()=9792630120840452584390720, totalAssets()=10295065635649, 5 markets with summed expectedSupplyAssets=9983200606668 and idle underlying=311865028981.",
       "observations": [
         {
           "chain": "ethereum",
           "address": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
           "function": "asset()/totalSupply()/totalAssets()/underlying.balanceOf(vault)",
-          "value": "{\"asset\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"shares\": \"9792630120840452584390720\", \"assets\": \"10295065635649\", \"idle\": \"311865028981\"}",
-          "block": 26107704
+          "value": "{\"asset\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"shares\": \"12583798852158679851432343\", \"assets\": \"13255106628776\", \"idle\": \"0\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd\", \"supplyShares\": \"101237087635048041\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 102969276535, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee\", \"oracle\": \"0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411\", \"lltv\": \"770000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd\", \"supplyShares\": \"54482065962669\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 55489558, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee\", \"oracle\": \"0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411\", \"lltv\": \"770000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0x88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf\", \"supplyShares\": \"520514845111731282\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 530480562953, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xf7d85ec4e7710f71992752eac2111312e73e9c9c\", \"oracle\": \"0x7887afbe7581eb01b3d91d80c198b0275feab779\", \"lltv\": \"860000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0x88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf\", \"supplyShares\": \"446173075889811059\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 455553278361, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xf7d85ec4e7710f71992752eac2111312e73e9c9c\", \"oracle\": \"0x7887afbe7581eb01b3d91d80c198b0275feab779\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0xe07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9\", \"supplyShares\": \"5617218756883855187\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 5911353318751, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xb8d89678e75a973e74698c976716308abb8a46a4\", \"oracle\": \"0x839940de5043e7c6edaf063714afe7f20de5ff12\", \"lltv\": \"915000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0xe07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9\", \"supplyShares\": \"5878226045241710483\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 6198058117175, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xb8d89678e75a973e74698c976716308abb8a46a4\", \"oracle\": \"0x839940de5043e7c6edaf063714afe7f20de5ff12\", \"lltv\": \"915000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0xacc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67\", \"supplyShares\": \"974862092544722431\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1027801923580, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcd9f5907f92818bc06c9ad70217f089e190d2a32\", \"oracle\": \"0x86a807dc5e689f78e280b18413001ca0c2426ab0\", \"lltv\": \"915000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0xacc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67\", \"supplyShares\": \"852271543036335098\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 900750407987, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xcd9f5907f92818bc06c9ad70217f089e190d2a32\", \"oracle\": \"0x86a807dc5e689f78e280b18413001ca0c2426ab0\", \"lltv\": \"915000000000000000\"}",
+          "block": 26191269
         },
         {
           "chain": "ethereum",
           "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
           "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
-          "value": "{\"marketId\": \"0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99\", \"supplyShares\": \"2241298876294545852\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 2410595524849, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xdbdc1ef57537e34680b898e1febd3d68c7389bcb\", \"oracle\": \"0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d\", \"lltv\": \"915000000000000000\"}",
-          "block": 26107704
+          "value": "{\"marketId\": \"0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99\", \"supplyShares\": \"1217812045357424693\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1312328375771, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0xdbdc1ef57537e34680b898e1febd3d68c7389bcb\", \"oracle\": \"0xd2cc46b9b2d761502ef933320ecf0268ec0dfa6d\", \"lltv\": \"915000000000000000\"}",
+          "block": 26191269
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
+          "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
+          "value": "{\"marketId\": \"0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7\", \"supplyShares\": \"3205769946399552735\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 3387753291335, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc\", \"oracle\": \"0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06\", \"lltv\": \"915000000000000000\"}",
+          "block": 26191269
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
+          "function": "marketIds()/Morpho.idToMarketParams()/position()/expectedSupplyAssets()",
+          "value": "{\"marketId\": \"0x0c93c623fd2a78a2ffa36b019f74c400c3f3d81fcb22851c88e0c96e510f9689\", \"supplyShares\": \"999019092128941020\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1000607668589, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x76543ac61ba84c6feeee76c6a918127bf0ca5fd1\", \"oracle\": \"0xf9c1d6954eb6c59731cd277bc27bbc5239c67570\", \"lltv\": \"860000000000000000\"}",
+          "block": 26191269
+        },
+        {
+          "chain": "ethereum",
+          "address": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
+          "function": "allocation/absoluteCap/relativeCap(capId) for all configured cap IDs",
+          "value": "{\"configuredCapIds\": 42, \"summary\": \"42 historical configured cap IDs; all current-allocation IDs uint128-max/100%; off-list market/collateral IDs 0/0 except ssftUSD (uint128-max/100%) and stcUSD/DUSD collateral IDs (uint128-max/100%); removed former adapter caps 0/0.\", \"caps\": [{\"capId\": \"0x9e45d132b7839f97a0649c94439cab9fd0ed07f2b5643258fe8d0ce9fe87b89e\", \"scope\": \"removed former adapter 0x494495f8575b4acdfc6ef4b8c7c490475cc70cdc\", \"allocation\": \"1731\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x9e6db6cbaceaa8946a86cf8d688574746d10ffe2b6633a44843d07209f4e705e\", \"scope\": \"current adapter\", \"allocation\": \"13254069475499\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x8802857a068f6d731f24b5484bae9063725b0b6dba376d8565e8e07eb9856601\", \"scope\": \"collateral sNUSD\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x390f8d520d7b4690be438ce08f4358671ae7e0fabb4021e011b1560140e92153\", \"scope\": \"market sNUSD\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x7f5c369ca57833e09388c8604bb3e15dae1f9d39dae0ac464090c67604e79d60\", \"scope\": \"collateral PT-srNUSD-28MAY2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xc53bfaf40cec30783307554c5934ff1b1044d29170e14a813c6d29a135801b3c\", \"scope\": \"market PT-srNUSD-28MAY2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x8bd333aded6fc82a5a3c66585e0520bc0a2fc5917319fd2ac878d65e52154861\", \"scope\": \"collateral stcUSD\", \"allocation\": \"0\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x85522bfdf0aeac6dcff29ca67579e4fbd44121283e88e83039e0a30dff959b49\", \"scope\": \"market stcUSD\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xe1e8bc1bb1d8d9676133a02550fc18ffa61728e436c3591d646ef0ac1dcca9c3\", \"scope\": \"collateral PT-USDG-28MAY2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x67325cbcbf98f70bf5af41551a61068c3a00afbf7740eb02a68a9a9becba8542\", \"scope\": \"market PT-USDG-28MAY2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xbbc1b727e5dea9bcb2c9ef308a6aaf439efc01b7bb369aaea659824a5a9ac79f\", \"scope\": \"collateral PT-sNUSD-4JUN2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xe711f50d88c961e8be8bd848e350eab98d0b08813d5edcabff15b88936ed1c8d\", \"scope\": \"market PT-sNUSD-4JUN2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xa60613b7155958a1979e73053f59b87f8f08682bb8153313ac6d5e5210969fe1\", \"scope\": \"collateral PT-cUSD-23JUL2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xedf4bc71b5196a5a239395fde11ffd93e4374f3029c02665d1560c9882ed69c7\", \"scope\": \"market PT-cUSD-23JUL2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xe406788938c77ef9a90a9d3f3ee4cd7129dc1f1038bdfd89438e554ff8b34dc1\", \"scope\": \"collateral YFI\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x2713e3f3397ed61cbf6823faaff9d85d56c15a6b29b17a232792ee337ca914a1\", \"scope\": \"market YFI\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xe84966d8ee09a1326751b82d24ac510acc5b5df474a69cfa5898a0e055fb3af1\", \"scope\": \"collateral jrUSDe\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x9c23fceded00436a9427aa51fa5037c8f614158177d2b5297c7c2b30a9c870f1\", \"scope\": \"market jrUSDe\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x0b91def96379b602b2a779ccc0d9c921e3ad6a28eb9e4ae59d1036ff643daf1b\", \"scope\": \"collateral MORPHO\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x6168cd459c0f1612433ddd455d1a237c22a1d503a3af26a4c06f2392607de40d\", \"scope\": \"market MORPHO\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x14d4ceaf5eded55ef2730cc29947025df08e35568bf59a546946766166b639be\", \"scope\": \"collateral srNUSD\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0xefc48a1aeb86b0acfcd0e9e89da8d6ad0da165ce73371a3b18848eb172495bb7\", \"scope\": \"market srNUSD\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x220bbd38a116e8b2b53ab2dfa1b3f013c162c96eb70ed202acaec8439d7696df\", \"scope\": \"collateral siUSD\", \"allocation\": \"1312166096995\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xdba767f746decd1ea5ce2ea099db9021d7478ab550008dcae63c880766c758f5\", \"scope\": \"market siUSD\", \"allocation\": \"1312166096995\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xfbef7bb967f29b4c5fd3c31f5ee1652be360c3e9d45ca24a3adb0c221ca1a57e\", \"scope\": \"collateral savUSD\", \"allocation\": \"6197897825139\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x30a0c465b3399aa59ce14d6e01580145af09c983b3baa93dccef38283fa2cd95\", \"scope\": \"market savUSD\", \"allocation\": \"6197897825139\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x2990b7a8a5121963f50851e9c9a5f4efc46b6587e5793469cc6f5cdc5a2c9935\", \"scope\": \"collateral PT-savUSD-14MAY2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x4924328b730c84c768c81306ed24c420f214d3c230e0e97569dcb71f5ab7159e\", \"scope\": \"market PT-savUSD-14MAY2026\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x758c8ec6d8dfd09f4d8fb0d0cfcff0b5fc36a59fe7b7f12afa81f0ce90375747\", \"scope\": \"collateral srRoyUSDC\", \"allocation\": \"900603990853\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xe7a3aacf4ef2a3d6aae88236420d3ed99c5cdb50165e63d5471931232df1d70b\", \"scope\": \"market srRoyUSDC\", \"allocation\": \"900603990853\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x51e1dbad5fffc96143eda1ccb1a189863c0eeb11df3640a8ab0a70218b6fd788\", \"scope\": \"collateral DUSD\", \"allocation\": \"0\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xa1b4f8d9c4a8a5919250e0f991a8be5d513a2b63ef273a38138051848cd4da72\", \"scope\": \"market DUSD\", \"allocation\": \"0\", \"absoluteCap\": \"0\", \"relativeCap\": \"0\"}, {\"capId\": \"0x97f908e31d4c9f287ed715d1626929c439829e5cd7a4a62f093069edec30ed61\", \"scope\": \"collateral weETH\", \"allocation\": \"55486095\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x673ff14ef0e6834b2cbb9c142cf8b8772f5839250b8893ffb8c8da07e406db14\", \"scope\": \"market weETH\", \"allocation\": \"55486095\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x6e2225aadd9020eab0a0ea0a0ebf8d23419cb32ee3c945aa612804a7ace25b5f\", \"scope\": \"collateral ftUSD\", \"allocation\": \"455490858952\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x5c7805deaf2a576754f1c502bac60c7bb3d055754b6bf663b7a4a0ce8fd75037\", \"scope\": \"market ftUSD\", \"allocation\": \"455490858952\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x84fee13da8d331c11cd3f13b3e77dc802fa9acaa6fea1b7ab4eebe05829192e6\", \"scope\": \"market USD3\", \"allocation\": \"3387365911788\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xcc1e28b10ed0040ec780c19f17ccf8d09ce0bb5ca10608b5bfd8138560fb6e78\", \"scope\": \"collateral USD3\", \"allocation\": \"3387365911788\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xe26e673b624038716572ec28a238a78d9be68e783c11b41bfc178352457d6b06\", \"scope\": \"market ssftUSD\", \"allocation\": \"0\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x323438197c097703fcc787ec2b11863c4472d7d886e71dad2a543115ddd09685\", \"scope\": \"collateral ssftUSD\", \"allocation\": \"0\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0x461e26656d256af756ffc4f245681cf81b30076b237a38569497da2fe35f6567\", \"scope\": \"market PT-siUSD-7JAN2027\", \"allocation\": \"1000489305677\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}, {\"capId\": \"0xe114aae7534a2ece95d9ae553707b2227892787573b5b42fd9f0bba9e8f9deba\", \"scope\": \"collateral PT-siUSD-7JAN2027\", \"allocation\": \"1000489305677\", \"absoluteCap\": \"340282366920938463463374607431768211455\", \"relativeCap\": \"1000000000000000000\"}]}",
+          "block": 26191269
+        },
+        {
+          "chain": "ethereum",
+          "address": "0x4f74895557bea2de5d51d8c06e944da92dbc8550",
+          "function": "historical market union/Morpho.idToMarketParams()/position()/expectedSupplyAssets()/allocation(capId)",
+          "value": "{\"residuals\": [{\"label\": \"PT-cUSD-23JUL2026\", \"marketId\": \"0x702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642\", \"supplyShares\": \"857604\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x928fb6ed39100a92b2480f5cbb93453f98d9f4ce\", \"oracle\": \"0x25b30502467639e8fa118451105269e9b9813dd2\", \"lltv\": \"915000000000000000\", \"allocation\": \"0\", \"includedInRealAssets\": false}, {\"label\": \"YFI\", \"marketId\": \"0x973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83\", \"supplyShares\": \"939721\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e\", \"oracle\": \"0x637060c43e0bf6ab68ab59e7ad72cee45ce84ad5\", \"lltv\": \"770000000000000000\", \"allocation\": \"0\", \"includedInRealAssets\": false}, {\"label\": \"srNUSD\", \"marketId\": \"0x0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789\", \"supplyShares\": \"601530\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x65a44528e8868166401ea08b549e19552af589db\", \"oracle\": \"0x9e1031d287416b45c89d62780768d35df24df4be\", \"lltv\": \"915000000000000000\", \"allocation\": \"0\", \"includedInRealAssets\": false}, {\"label\": \"ssftUSD\", \"marketId\": \"0xfdf78c1ecec460f0d54bbf1b2475227e36eb25ee7692562f5d433df2bf80259d\", \"supplyShares\": \"997379\", \"borrowShares\": \"0\", \"postedCollateral\": \"0\", \"expectedSupplyAssets\": 1, \"loanToken\": \"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48\", \"collateralToken\": \"0x232128844e5af56fd4b3f8bf97e08ab477282ab5\", \"oracle\": \"0x9c22bd82d82b6d71cc8c63254f6661532186d050\", \"lltv\": \"860000000000000000\", \"allocation\": \"0\", \"includedInRealAssets\": false}], \"summary\": \"Four off-list residuals retain 1 raw USDC unit each and allocation 0; excluded from realAssets(). PT-cUSD-23JUL2026 matured 2026-07-23 (expiry 1784764800).\"}",
+          "block": 26191269
         }
       ],
       "sources": [
@@ -2754,12 +2789,12 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
         },
         {
-          "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
-          "url": "https://eth-mainnet.g.alchemy.com"
+          "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         },
         {
-          "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
-          "url": "https://api.morpho.org/graphql"
+          "label": "Issuer exact Yield strategy mandate context; published targets are not measured VaultV2-enforced caps",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
         },
         {
           "label": "Morpho gate semantics and irreversible abdication",

@@ -14,6 +14,14 @@
       {
         "label": "MiCA Article 3: EMT/ART stable-value definitions",
         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1114"
+      },
+      {
+        "label": "KPK USDC Prime product page; issuer disclosure accessed 2026-10-14",
+        "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md"
+      },
+      {
+        "label": "KPK Morpho disclaimer; issuer disclosure accessed 2026-10-14",
+        "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
       }
     ]
   },
@@ -46,6 +54,18 @@
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
           "accessedAt": "2026-10-07"
+        },
+        {
+          "label": "KPK USDC Prime product page",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-14"
+        },
+        {
+          "label": "KPK Morpho disclaimer",
+          "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-14"
         }
       ]
     },
@@ -53,7 +73,7 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Strategy-vault shares are assessed separately from parent USDC. Circle's MiCA authorization or U.S. issuer intent does not authorize this vault share. KPK is identified as curator, not treated as a verified legal payment-stablecoin issuer. The assessment concerns the tracker's EMT/ART and GENIUS payment-stablecoin models; it does not decide whether the shares are securities/financial instruments or otherwise subject to financial-services rules. Explorer-hosted Morpho source is partially verified; the exact Morpho product page and protocol documentation independently corroborate the variable-share structure.",
+    "notes": "Strategy-vault shares are assessed separately from parent USDC. Circle's MiCA authorization or U.S. issuer intent does not authorize this vault share. KPK is identified as curator, not treated as a verified legal payment-stablecoin issuer. The assessment concerns the tracker's EMT/ART and GENIUS payment-stablecoin models; it does not decide whether the shares are securities/financial instruments or otherwise subject to financial-services rules. Explorer-hosted Morpho source is partially verified; the exact Morpho product page and protocol documentation independently corroborate the variable-share structure. KPK's Morpho disclaimer identifies KPK Digital Assets Inc. as curator and states that the vaults are not registered with or approved by a financial regulatory authority. Website terms separately name Karpatkey Foundation; neither disclosure establishes a payment-stablecoin authorization for these shares.",
     "references": [
       {
         "label": "KPK USDC Prime exact Ethereum Morpho Vault V2",
@@ -79,9 +99,21 @@
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "KPK USDC Prime product page",
+        "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-14"
+      },
+      {
+        "label": "KPK Morpho disclaimer",
+        "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-14"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Sol KPK review 2026-10-14 (S5BaseCompliance)",
+    "reviewedAt": "2026-10-14"
   }
 }
