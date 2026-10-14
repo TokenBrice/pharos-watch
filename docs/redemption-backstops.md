@@ -8,14 +8,14 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.49`<!-- GENERATED-END: methodology-version-redemption-backstop -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.5`<!-- GENERATED-END: methodology-version-redemption-backstop -->
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/registry.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.49` update: fractional live fees remain unrounded through the existing cost thresholds and scenario evaluation. Rejected payout identities cannot supply favorable live fees, openness, holder eligibility or settlement; independently reviewed static fees and sourced adverse status remain distinct. sBOLD requires readable collateral-health evidence for open status, Mento capacity requires same-block execution predicates plus a bounded quote, and dEURO basket valuation retains complete bounded member/FX evidence at its oldest clock. Physical commodity outputs stay distinct from fiat and require source-timed USD valuation without bypassing V9 admission. These repairs can move route scores; fixed-clock scenario comparison, owner review and fresh admitted producer evidence remain release prerequisites. Component weights and ladders are unchanged.
+Latest `v4.5` update: withdraw unsupported capacity, settlement and eligibility assumptions rather than promoting route-family defaults to evidence. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Avalon keeps USDT output and Youves keeps its haircut. Solayer's holder path is queued QLP fulfillment to USDC, not atomic reserve-token redemption, with unresolved eligibility and completion/cost evidence. pathUSD's processing target is not same-day completed payout. The [existing-route bound review](#existing-route-bound-review-2026-10-14) establishes no new admissible config-only upgrade. Weights, ladders and request grids are unchanged.
 
-**Release obligations recorded 2026-10-10:** for v4.49, production resource evidence remains a separate gate from fixed-clock route comparison and owner review; fresh producer observations, not rewritten history, establish producer-dependent capacity/status. No production-health result is asserted here.
+Safety `v10.18` separately scopes reviewed ERC-4626 NAV references and smaller-probe receipts to actual executed input, retaining the unfunded canonical attempt; it does not establish static full-supply capacity or canonical-request completion. Redemption needs its own version because the withdrawn configured assumptions change route-score inputs, not merely prose. Activation is provisionally **2026-10-15 00:00 UTC (`1792022400`)**; re-date at release. Safety's final accepted-pair current-redemption scenario shows zero movers, not standalone redemption equivalence or production-health proof. Route-level fixed-clock comparison and fresh producer-dependent observations remain separate prerequisites.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 

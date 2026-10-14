@@ -65,6 +65,30 @@ function SafetyScoresVersionNotes() {
   return (
     <>
       <p>
+        Methodology v10.18 keeps route-exclusive A/B gaps on unscored optional Exit alternatives diagnostic,
+        rather than marking the card partial. Selected or scored routes and genuine whole-pillar,
+        peg/methodology, wrapper-local and inherited-parent exclusions still count; HBD retains its flag.
+        No obligation is removed by this narrowing. Reviewed unpriced ERC-4626 shares can use same-block NAV
+        with fresh observed underlying prices. An unfunded canonical request stays diagnostic; a smaller
+        successful receipt proves only its executed lower bound and settlement, not canonical completion
+        or exhaustion. DEX and redemption corrections are separately recorded as v6.95 and v4.5.
+      </p>
+      <p>
+        W1 applies six operations: three scoped incident-negative reviews, two ONED wrapper reviews and
+        PAXG&apos;s structural maturity fact. The proposed bbqUSDC oracle refresh was deferred on evidence-lineage
+        review and is not applied. The 833 ledger decisions are 3 promote, 72 reject and 758 defer,
+        not 833 closed gaps. Final replay uses distinct qualified accepted publications A′ (7dea3b5d…,
+        clock 1791967608) and B′ (a9afef4d…, clock 1791973073), 5,465 seconds apart against a 5,400-second
+        minimum. Base main code and curation versus this branch, using both the embedded captured registry
+        and current curation through attributed registry mismatch, shows zero score, grade or rating-status
+        movers and zero grade flips on both. Partial-evidence cards fall 55→47 on each; open obligations
+        fall 3,613→3,606 on A′ and 3,607→3,600 on B′, with unresearched obligations down seven on each.
+        The current-redemption scenario incorporating config corrections also shows zero movers.
+        Activation is provisionally October 15, 2026 00:00 UTC and must be re-dated at release.
+        Track M is excluded: missing-data scoring, comparison policy, weights, grade gates and the USDT
+        premium remain unchanged. Fixed-input replay is not producer-dependent closure or production-health proof.
+      </p>
+      <p>
         Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
         fiat projection. Reviewed USDC payouts cover pathUSD, USYC Teller, pUSD and USDO; USDC/USDT payouts cover
         thBILL, MXNB&apos;s conversion rail and StandX DUSD, alongside HLUSD&apos;s existing basket. Unreviewed issuers
@@ -119,7 +143,8 @@ function SafetyScoresVersionNotes() {
         U is never labelled issuer silence. Unknown values do not prove safety, failure or zero loss.
       </p>
       <p>
-        Proven A/B components do not score and carry a visible “Partial evidence: pipeline gap” flag.
+        Contributing A/B component exclusions carry a visible “Partial evidence: pipeline gap” flag;
+        route-exclusive gaps on unscored optional Exit alternatives remain diagnostic only.
         If one whole pillar is excluded, the other two weights are renormalized. If two or three are excluded,
         we show Pipeline gap with no score or grade—not NR and not a one-pillar rating. Known restrictions and
         measured problems remain charged even beside a gap. Measuring a formerly excluded weak pillar can lower

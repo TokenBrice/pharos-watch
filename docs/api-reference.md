@@ -897,10 +897,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.49",
-    "versionLabel": "v4.49",
-    "currentVersion": "4.49",
-    "currentVersionLabel": "v4.49",
+    "version": "4.5",
+    "versionLabel": "v4.5",
+    "currentVersion": "4.5",
+    "currentVersionLabel": "v4.5",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -959,7 +959,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.48",
-  "methodologyVersion": "10.17"
+  "methodologyVersion": "10.18"
 }
 ```
 

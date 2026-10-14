@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.95",
+    "title": "Reviewed retained-pool targets and missing-row discovery",
+    "date": "2026-10-14",
+    "effectiveAt": 1792022400,
+    "summary": "Liquidity v6.95 expands the active reviewed exact-target cohort on existing venue families and repairs missing-row discovery scheduling and CHFSAFO Aquarius identity. Component weights, request budgets, cadence, connection limits and retained-TVL measurement semantics are unchanged; no TVL-basis break is added.",
+    "impact": [
+      "Eight pinned-identity retained pools provide nine directed reviewed targets for USDF, asUSDF, GGBR, mRe7YIELD, rUSD, EUR0 and ZARm on already-active Pancake V3 and Uniswap V3 families. Active reviewed policies join the pinned-reviewed target path; factory, token, fee, freshness and exact execution checks remain mandatory at quote time.",
+      "Shadow reviewed pools remain score-ineligible. Static enrollment is not a measured quote, capacity claim or guarantee of a score increase; the changed active reviewed target cohort requires this domain's own version entry even though its arithmetic is unchanged.",
+      "CHFSAFO's exact Stellar Soroban identity joins Aquarius as supplemental, non-exhaustive coverage. A missing published liquidity row schedules discovery maintenance, not a zero-liquidity observation; coverage remains unknown until a genuine provider result lands.",
+      "The additional reviewed quote subcalls stay inside existing per-run budgets, with no new source request, venue family or fan-out. Final Safety accepted-pair neutrality is not a standalone liquidity equivalence result; changed route outcomes and producer-dependent closures still require route-level fixed-clock comparison and fresh admitted observations.",
+      "Activation is provisionally 2026-10-15 00:00 UTC (1792022400); re-date effectiveAt at release."
+    ],
+    "commits": ["a6b01c251", "47e87ecc7"],
+    "reconstructed": false
+  },
+  {
     "version": "6.94",
     "title": "Scope-matched pool quality and source-timed execution evidence",
     "date": "2026-10-10",

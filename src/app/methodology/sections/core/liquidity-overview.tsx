@@ -31,6 +31,15 @@ export function LiquidityOverview() {
         QuoterV2, Uniswap V4 and Curve CryptoSwap enforce the existing three-hour source-age ceiling. Malformed or
         incomplete pool censuses cannot certify deployment-wide absence or erase independently valid pools.
       </p>
+      <p>
+        Methodology v6.95 adds pinned reviewed targets on already-active Pancake V3 and Uniswap V3 families.
+        Active targets still need quote-time identity, freshness and execution checks; shadow pools remain
+        score-ineligible. CHFSAFO&apos;s exact Aquarius identity supplies supplemental non-exhaustive coverage.
+        A missing liquidity row schedules maintenance, not a zero-liquidity observation. Component weights,
+        budgets, cadence and retained-TVL basis are unchanged. Fresh producer observations and final
+        fixed-clock comparison remain required; activation is provisionally October 15, 2026 00:00 UTC
+        and must be re-dated at release.
+      </p>
     </>
   );
 }
