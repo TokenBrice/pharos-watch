@@ -16,6 +16,7 @@ import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from 
 import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema, type V9MechanismFactV1 } from "./safety-score-v9-backing";
 import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
 import { V9AllocationScopeFactSchema } from "./safety-score-v9-allocation";
+import { LenderBookObservationSchema, LenderCollateralResolutionSchema } from "./safety-score-v9-lender-book";
 import {
   V9WrapperLocalFactsSchema,
   type V9ApplicableWrapperLocalFacts,
@@ -1650,6 +1651,34 @@ const V9MechanismExitFactV1Schema = z
   });
 export type V9MechanismExitFactV1 = z.infer<typeof V9MechanismExitFactV1Schema>;
 
+export const V1019LenderBookFactSchema = z.strictObject({
+  status: V9FactStatusV2Schema,
+  acceptedSourceStatus: V9FactStatusV2Schema.optional(),
+  observation: LenderBookObservationSchema.nullable(),
+  collaterals: z.array(LenderCollateralResolutionSchema),
+}).superRefine((fact, ctx) => {
+  const keys = fact.collaterals.map((collateral) => collateral.marketKey);
+  if (keys.some((key, index) => index > 0 && keys[index - 1]! >= key)) {
+    addIssue(ctx, ["collaterals"], "Collateral resolutions must have unique sorted market/account keys");
+  }
+  const admitted = fact.status.observationState === "known" || fact.status.observationState === "bounded-unknown";
+  if (admitted) {
+    if (fact.observation?.status !== "ok") {
+      addIssue(ctx, ["observation"], "Admitted lender quality requires a complete successful observation");
+      return;
+    }
+    const marketKeys = fact.observation.deployments.flatMap((deployment) => deployment.markets.map(
+      (market) => `${deployment.chain}:${market.morpho}:${market.marketId}:${market.account}`,
+    )).sort();
+    if (marketKeys.length !== keys.length || keys.some((key, index) => key !== marketKeys[index])) {
+      addIssue(ctx, ["collaterals"], "Every included lender claim must have exactly one collateral resolution");
+    }
+  } else if (fact.collaterals.length !== 0) {
+    addIssue(ctx, ["collaterals"], "Unavailable lender facts cannot carry partial scoring resolutions");
+  }
+});
+export type V1019LenderBookFact = z.output<typeof V1019LenderBookFactSchema>;
+
 const V9AssetFactsBaseFields = {
   assetId: CanonicalTextSchema,
   assetIssuerKey: CanonicalTextSchema.nullable().optional(),
@@ -1666,6 +1695,7 @@ const V9AssetFactsBaseFields = {
   ).optional(),
   cdpStressCoverage: V9CdpStressCoverageFactSchema.optional(),
   allocationScopeFacts: canonicalArrayBy(V9AllocationScopeFactSchema, (fact) => fact.claimKey).optional(),
+  lenderBook: V1019LenderBookFactSchema.optional(),
   // Retained V2 facts carry only serial/basket dependency roles. V3 overrides
   // this field with the role-aware edge contract below.
   dependencies: V9EffectiveDependenciesV2Schema,
@@ -1868,6 +1898,21 @@ export const V9AssetFactsV3Schema = V9AssetFactsV3ObjectSchema.superRefine((asse
   // The wire schema checks bound-reference structure only. Shared compilation
   // and serialized readers enforce the selected bound at the fact-set clock.
   validateReserveFactorStatuses(asset, ctx, []);
+  if (asset.lenderBook?.observation && asset.lenderBook.observation.assetId !== asset.assetId) {
+    addIssue(ctx, ["lenderBook", "observation", "assetId"], "Lender observation must name its receiving asset");
+  }
+  for (const [index, collateral] of (asset.lenderBook?.collaterals ?? []).entries()) {
+    if (collateral.trackedAssetId === asset.assetId) {
+      addIssue(ctx, ["lenderBook", "collaterals", index, "trackedAssetId"], "Self-collateral must use class fallback without a tracked ID");
+    }
+    if (collateral.qualitySource !== "previous-accepted-backing") {
+      for (const id of collateral.sourceGapIds) {
+        if (!asset.gaps.some((gap) => gap.gapId === id) || !asset.lenderBook!.status.gapIds.includes(id)) {
+          addIssue(ctx, ["lenderBook", "collaterals", index, "sourceGapIds"], "Class-fallback source gaps must resolve locally through lender status");
+        }
+      }
+    }
+  }
   if (asset.wrapperLocalFacts.applicability === "wrapper") {
     const wrapper = asset.wrapperLocalFacts;
     if (!["reviewed", "not-applicable"].includes(wrapper.formDisposition) && (!wrapper.formStatus || wrapper.formStatus.gapIds.length === 0)) {
@@ -2059,6 +2104,8 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
     ...mechanismStatuses,
     { label: "dependencies", status: asset.dependencies.status },
     { label: "reserve-envelope", status: asset.reserveStatus },
+    ...(asset.lenderBook ? [{ label: "lenderBook", status: asset.lenderBook.status }] : []),
+    ...(asset.lenderBook?.acceptedSourceStatus ? [{ label: "lenderBook:accepted-source", status: asset.lenderBook.acceptedSourceStatus }] : []),
     ...asset.reserveExposures.map((fact) => ({ label: `reserve:${fact.exposureKey}`, status: fact.status })),
     ...asset.reserveExposures.flatMap((fact) => Object.entries(fact.factorStatuses ?? {}).map(([key, status]) => ({ label: `reserve:${fact.exposureKey}:${key}`, status }))),
     ...("reserveResiduals" in asset ? (asset.reserveResiduals as z.infer<typeof V9ReserveResidualFactSchema>[]).map((fact) => ({ label: `residual:${fact.residualId}`, status: fact.status })) : []),

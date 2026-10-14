@@ -16,6 +16,12 @@ import type {
   V9FactGapV3,
   V9ReserveExposureFactV2,
 } from "../../types/safety-score-v9-facts";
+import type { V1019LenderBookFact } from "../../types/safety-score-v9-facts";
+import type {
+  LenderCollateralClass, LenderDeploymentObservation,
+} from "../../types/safety-score-v9-lender-book";
+import { evaluateV1019LenderBook } from "../safety-score-v9/lender-book";
+import { lenderMarketKey } from "../safety-score-v9/lender-book-registry";
 
 import { asset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
@@ -1108,4 +1114,334 @@ describe("Safety Score v9 wrapper backing inheritance", () => {
       expect(result.unresolved).toContainEqual(expect.objectContaining({ code: "partial-reserve-review" }));
     }
   });
+});
+
+describe("v10.19 allocation-weighted Morpho lender Backing", () => {
+  const parentBacking = 90.28629025;
+  const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
+  const word = (n: number) => `0x${n.toString(16).padStart(64, "0")}`;
+  type Claim = readonly [amount: string, quality: number, lltv: string, collateralClass: LenderCollateralClass];
+  // Raw NAV-accounted claims from block 26191269, not rounded display percentages.
+  const primeClaims: readonly Claim[] = [
+    ["3129335529826", 85, "860000000000000000", "eth-lst"],
+    ["2401512502632", 80, "860000000000000000", "eth-yield-or-restaked"],
+    ["12834378526082", 85, "860000000000000000", "btc-wrapper"],
+    ["7564078214138", 85, "860000000000000000", "btc-wrapper"],
+    ["3026509767996", 85, "860000000000000000", "eth-lst"],
+    ["539585442002", 95, "860000000000000000", "native-eth"],
+    ["1", 80, "770000000000000000", "eth-yield-or-restaked"],
+    ["292316170957", 85, "860000000000000000", "eth-lst"],
+  ];
+  const yieldClaims: readonly Claim[] = [
+    ["55489558", 80, "770000000000000000", "eth-yield-or-restaked"],
+    ["455553278361", 59.61669994438998, "860000000000000000", "yield-bearing-stable"],
+    ["6198058117175", 52.5, "915000000000000000", "yield-bearing-stable"],
+    ["900750407987", 35, "915000000000000000", "structured-credit"],
+    ["1312328375771", 55, "915000000000000000", "yield-bearing-stable"],
+    ["3387753291335", 64.53752, "915000000000000000", "structured-credit"],
+    ["1000607668589", 55, "860000000000000000", "principal-token"],
+  ];
+  function book(
+    claims: readonly Claim[],
+    idle = "0",
+    assetId = "kpkusdcprime-kpk",
+    chain = "ethereum",
+    kind: LenderDeploymentObservation["kind"] = "vault-v2",
+  ): V1019LenderBookFact {
+    const total = (BigInt(idle) + claims.reduce((sum, row) => sum + BigInt(row[0]), 0n)).toString();
+    const markets = claims.map(([amount, , lltv], index) => ({
+      account: address(2), adapter: address(2), morpho: address(3), marketId: word(index + 1),
+      loanToken: address(4), collateralToken: address(index + 10), oracle: address(5), irm: address(6),
+      lltvRaw: lltv, supplySharesRaw: amount, positionBorrowSharesRaw: "0", positionCollateralRaw: "0",
+      marketSupplyAssetsRaw: amount, marketSupplySharesRaw: amount, marketBorrowAssetsRaw: amount,
+      marketBorrowSharesRaw: amount, marketLastUpdateSec: 1791987287, marketFeeRaw: "0",
+      includedAssetsRaw: amount, accruedMethod: "adapter-expected-supply-assets" as const,
+      collateralMode: "collateralized" as const,
+    }));
+    return {
+      status: knownStatus("lender-book:pin"),
+      observation: {
+        schemaVersion: 1, assetId, sourceGenerationId: "lender-book:fixture",
+        acquiredAtSec: 1791987287, maxAgeSec: 28800, contentSha256: "a".repeat(64),
+        status: "ok", censusScope: "complete-nav-accounted-current-book",
+        deployments: [{
+          chain, vault: address(1), kind,
+          pin: { chain, number: 26191269, hash: word(7), timestampSec: 1791987287, finality: "finalized" },
+          loanToken: address(4), loanDecimals: 6, totalAssetsRaw: total, totalSupplyRaw: total,
+          idleAssetsRaw: idle, reconciledAssetsRaw: total, reconciliationResidualRaw: "0",
+          codeHashes: { [address(1)]: word(8) }, selectorsRead: ["totalAssets"], markets,
+        }],
+      },
+      collaterals: markets.map((market, index) => ({
+        marketKey: lenderMarketKey(chain, market.morpho, market.marketId, market.account),
+        collateralClass: claims[index]![3], trackedAssetId: null, quality: claims[index]![1],
+        qualitySource: "authored-class", fallbackReason: null, acceptedPublicationGenerationId: null,
+        sourceCause: null, sourceGapIds: [],
+      })),
+    };
+  }
+  function inherited(fact?: V1019LenderBookFact, parent = parentBacking): V9BackingAssetInput {
+    return {
+      ...asset([exposure({ key: "parent", weight: 1, assetClass: "stablecoin", trackedAssetId: "parent", provenance: "live" })]),
+      assetId: fact?.observation?.assetId ?? "kpkusdcprime-kpk",
+      inheritedStablecoinBacking: {
+        parentAssetId: "parent", parentBackingScore: parent, weight: 1, tier: "wrapped",
+        failureDomains: [{ kind: "reserve-issuer", key: "asset:parent" }],
+      },
+      ...(fact === undefined ? {} : { lenderBook: fact }),
+    };
+  }
+  function hybridYield(): V1019LenderBookFact {
+    const fact = book(yieldClaims, "0", "kpkusdcyield-kpk");
+    const ids: Record<number, string> = { 1: "ftusd-flying-tulip", 2: "savusd-avant", 5: "usd3-3jane" };
+    fact.collaterals = fact.collaterals.map((row, index) => ids[index] === undefined ? row : ({
+      ...row, trackedAssetId: ids[index]!, qualitySource: "previous-accepted-backing",
+      acceptedPublicationGenerationId: "accepted:1791989210",
+    }));
+    return fact;
+  }
+  function arithmetic(fact: V1019LenderBookFact, parent = parentBacking) {
+    const result = evaluateV1019LenderBook(fact, parent, V9_CANDIDATE_POLICY_V1);
+    expect(result).not.toBeNull();
+    return result!;
+  }
+
+  it("reproduces the exact raw-weighted Prime counterfactual including one-raw-unit weETH", () => {
+    const fact = book(primeClaims);
+    const result = arithmetic(fact);
+    expect(result.deploymentQualities[0]!.bookQuality).toBeCloseTo(88.7418377232, 8);
+    expect(result.reserveQuality).toBeCloseTo(80.1217131799, 8);
+    const backing = 33.5 + 0.4 * result.reserveQuality;
+    expect(backing).toBeCloseTo(65.5486852720, 8);
+    const mean = backing * 0.4 + 72 * 0.35 + 45 * 0.25;
+    const final = 45 + 20 * Math.tanh((mean - 45) / 20);
+    expect(final).toBeCloseTo(59.1631056365, 8);
+    expect(Math.round(final)).toBe(59);
+    const reserve = evaluateV9ReserveExposures(inherited(fact), V9_CANDIDATE_POLICY_V1);
+    expect(reserve.score).toBeCloseTo(result.reserveQuality, 8);
+    const factors = reserve.contributions[0]!.factors!;
+    expect(factors).toHaveLength(9);
+    expect(factors.find(row => row.componentKey.includes(fact.collaterals[6]!.marketKey))!.effectiveScoringWeight)
+      .toBeGreaterThan(0);
+  });
+
+  it("reproduces hybrid Yield and keeps exact tracked Backing rather than intermediary iUSD", () => {
+    const fact = hybridYield();
+    const result = arithmetic(fact);
+    expect(result.deploymentQualities[0]!.bookQuality).toBeCloseTo(62.8491909074, 8);
+    expect(result.reserveQuality).toBeCloseTo(56.7442029224, 8);
+    const backing = 33.5 + 0.4 * result.reserveQuality;
+    expect(backing).toBeCloseTo(56.1976811690, 8);
+    const mean = backing * 0.4 + 70.24 * 0.35 + 45 * 0.25;
+    const final = 45 + 20 * Math.tanh((mean - 45) / 20);
+    expect(final).toBeCloseTo(56.6422714607, 8);
+    expect(Math.round(final)).toBe(57);
+    expect(fact.collaterals[4]!.trackedAssetId).toBeNull();
+    expect(fact.collaterals[6]!.trackedAssetId).toBeNull();
+  });
+
+  it("reproduces the separately labelled accepted-source fallback Yield scenario", () => {
+    const fallback = book(yieldClaims.map((row, index): Claim =>
+      [row[0], index === 1 || index === 2 ? 55 : index === 5 ? 35 : row[1], row[2], row[3]]),
+    "0", "kpkusdcyield-kpk");
+    const result = arithmetic(fallback);
+    expect(result.deploymentQualities[0]!.bookQuality).toBeCloseTo(57.3901489066, 8);
+    expect(result.reserveQuality).toBeCloseTo(51.8154364167, 8);
+    const backing = 33.5 + 0.4 * result.reserveQuality;
+    expect(backing).toBeCloseTo(54.2261745667, 8);
+    const final = 45 + 20 * Math.tanh((backing * 0.4 + 70.24 * 0.35 + 45 * 0.25 - 45) / 20);
+    expect(final).toBeCloseTo(56.1089263260, 8);
+    expect(Math.round(final)).toBe(56);
+  });
+
+  it("preserves 20% idle parent inheritance and all-idle null book quality", () => {
+    // Multiply claims by four and use their original sum as idle: exact 20% idle.
+    const deployed = book(yieldClaims.map((row): Claim => [(BigInt(row[0]) * 4n).toString(), row[1], row[2], row[3]]),
+      "13255106628776", "kpkusdcyield-kpk");
+    expect(arithmetic(deployed).reserveQuality).toBeCloseTo(63.4526203879, 8);
+    const allIdle = book([], "100");
+    expect(arithmetic(allIdle)).toMatchObject({
+      reserveQuality: parentBacking,
+      deploymentQualities: [{ bookQuality: null, bookAdjusted: null, reserveQuality: parentBacking }],
+    });
+    const factors = evaluateV9ReserveExposures(inherited(allIdle), V9_CANDIDATE_POLICY_V1).contributions[0]!.factors!;
+    expect(factors).toHaveLength(1);
+    expect(factors[0]).toMatchObject({ score: parentBacking, normalizedWeight: 1, effectiveScoringWeight: 1 });
+  });
+
+  it("weights capped VaultV2 NAV against measured real assets without discarding its buffer", () => {
+    const fact = book([["80", 35, "1000000000000000000", "structured-credit"]], "20");
+    if (fact.observation?.status !== "ok") throw new Error("Expected measured fixture");
+    const deployment = fact.observation.deployments[0]!;
+    deployment.totalAssetsRaw = "90";
+    deployment.realAssetsRaw = "100";
+    deployment.undistributedAssetsRaw = "10";
+    const factors = evaluateV9ReserveExposures(inherited(fact, 100), V9_CANDIDATE_POLICY_V1).contributions[0]!.factors!;
+    expect(factors.map(row => row.effectiveScoringWeight)).toEqual([0.2, 0.8]);
+    expect(factors.reduce((sum, row) => sum + row.effectiveScoringWeight, 0)).toBe(1);
+    expect(arithmetic(fact, 100).reserveQuality).toBeCloseTo(48, 10);
+    deployment.undistributedAssetsRaw = "9";
+    expect(evaluateV1019LenderBook(fact, 100, V9_CANDIDATE_POLICY_V1)).toBeNull();
+    deployment.undistributedAssetsRaw = "0";
+    deployment.totalAssetsRaw = "101";
+    expect(evaluateV1019LenderBook(fact, 100, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  });
+
+  it.each([
+    ["0", 100], ["770000000000000000", 73.3195], ["860000000000000000", 66.718],
+    ["915000000000000000", 62.324875], ["1000000000000000000", 55],
+  ])("uses LLTV squared at %s", (lltv, expected) => {
+    expect(arithmetic(book([["100", 55, lltv, "yield-bearing-stable"]]), 100).reserveQuality)
+      .toBeCloseTo(expected, 10);
+  });
+
+  it("uses full transmission for genuine unsecured lending, not zero-LLTV liquidation credit", () => {
+    const fact = book([["100", 35, "0", "structured-credit"]]);
+    if (fact.observation?.status !== "ok") throw new Error("fixture");
+    fact.observation.deployments[0]!.markets[0]!.collateralMode = "unsecured";
+    fact.observation.deployments[0]!.markets[0]!.collateralToken = address(0);
+    expect(arithmetic(fact, 100).reserveQuality).toBe(35);
+  });
+
+  it("is monotone in collateral quality and inverse-monotone in LLTV, with no parent uplift", () => {
+    for (const parent of [0, 1, 20, 35, 90, 100]) {
+      let previous = -1;
+      for (const quality of [0, 35, 55, 85, 100]) {
+        const result = arithmetic(book([["100", quality, "860000000000000000", "other-unknown"]]), parent);
+        expect(result.reserveQuality).toBeGreaterThanOrEqual(previous);
+        expect(result.reserveQuality).toBeLessThanOrEqual(parent);
+        previous = result.reserveQuality;
+      }
+      previous = 101;
+      for (const lltv of ["0", "770000000000000000", "860000000000000000", "915000000000000000", "1000000000000000000"]) {
+        const result = arithmetic(book([["100", 35, lltv, "other-unknown"]]), parent);
+        expect(result.reserveQuality).toBeLessThanOrEqual(previous);
+        previous = result.reserveQuality;
+      }
+    }
+  });
+
+  it.each([0, 1, 20, 35, 90])("retains admitted inherited quality below35 for parent %s", (parent) => {
+    const fact = book([["100", 35, "1000000000000000000", "other-unknown"]]);
+    const result = evaluateV9ReserveExposures(inherited(fact, parent), V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBeCloseTo(parent * 0.35, 10);
+    expect(result.contributions.map(row => row.componentKey)).toEqual([
+      "reserve:inherited-backing:parent", "reserve:concentration",
+    ]);
+  });
+
+  it("weights every claim in Backing even below the independent 1% oracle threshold", () => {
+    const fact = book([
+      ["999", 100, "1000000000000000000", "native-eth"],
+      ["1", 35, "1000000000000000000", "other-unknown"],
+    ]);
+    expect(arithmetic(fact, 100).reserveQuality).toBeCloseTo(99.935, 12);
+  });
+
+  it.each(["missing", "stale", "unsupported"] as const)("retains old inheritance for %s books", (observationState) => {
+    const fact = book(primeClaims);
+    fact.status = { ...fact.status, observationState, gapIds: ["lender-book:unavailable"] };
+    const result = evaluateV9ReserveExposures(inherited(fact), V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(evaluateV9ReserveExposures(inherited(), V9_CANDIDATE_POLICY_V1).score);
+    expect(evaluateV1019LenderBook(fact, parentBacking, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  });
+
+  it("discloses legacy U with no measured credit and never fabricates attempted-producer A proof", () => {
+    const gap = factorGap("lender-book", "U");
+    const fact: V1019LenderBookFact = {
+      status: { ...knownStatus("legacy:lender-book"), observationState: "missing", gapIds: [gap.gapId] },
+      observation: null, collaterals: [],
+    };
+    const result = evaluateV9ReserveExposures({ ...inherited(fact), gaps: [gap] }, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(evaluateV9ReserveExposures(inherited(), V9_CANDIDATE_POLICY_V1).score);
+    const diagnostic = result.contributions[0]!.factors!.find(row => row.componentKey.endsWith(":unavailable"))!;
+    expect(diagnostic).toMatchObject({ cause: "U", score: null, effectiveScoringWeight: 0, scoringDisposition: "not-applicable" });
+    expect(V9CauseContributionSchema.safeParse({
+      score: diagnostic.score, cause: diagnostic.cause, causeGapIds: diagnostic.causeGapIds,
+      effectiveScoringWeight: diagnostic.effectiveScoringWeight, scoringDisposition: diagnostic.scoringDisposition,
+    }).success).toBe(true);
+  });
+
+  it("keeps unavailable inheritance unchanged with diagnostic zero-weight book factors", () => {
+    const gap = factorGap("lender-book", "A");
+    const fact: V1019LenderBookFact = {
+      status: { ...knownStatus("lender-book:attempt"), observationState: "missing", gapIds: [gap.gapId] },
+      observation: null, collaterals: [],
+    };
+    const input = { ...inherited(fact), gaps: [gap] };
+    const result = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
+    const old = evaluateV9ReserveExposures(inherited(), V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBe(old.score);
+    expect(evaluateV1019LenderBook(fact, parentBacking, V9_CANDIDATE_POLICY_V1)).toBeNull();
+    expect(result.contributions[0]!.factors).toContainEqual(expect.objectContaining({
+      componentKey: "reserve:inherited-backing:parent:lender-book:unavailable", score: null,
+      effectiveScoringWeight: 0, cause: "A", scoringDisposition: "excluded-pipeline",
+    }));
+  });
+
+  it("selects the worst of three nonfungible deployments and refuses a missing required deployment", () => {
+    const facts = [
+      book([["100", 85, "860000000000000000", "btc-wrapper"]], "0", "gtusdcp-gauntlet"),
+      book([["100", 55, "860000000000000000", "principal-token"]], "0", "gtusdcp-gauntlet", "base", "metamorpho-v1"),
+      book([["100", 35, "915000000000000000", "structured-credit"]], "0", "gtusdcp-gauntlet", "arbitrum", "metamorpho-v1.1"),
+    ];
+    const fact = facts[0]!;
+    if (fact.observation?.status !== "ok") throw new Error("fixture");
+    fact.observation.deployments = facts.flatMap(row => row.observation?.status === "ok" ? row.observation.deployments : []);
+    fact.collaterals = facts.flatMap(row => row.collaterals);
+    const result = arithmetic(fact);
+    expect(result.deploymentQualities).toHaveLength(3);
+    expect(result.reserveQuality).toBeCloseTo(parentBacking * 0.45580375, 10);
+    const factors = evaluateV9ReserveExposures(inherited(fact), V9_CANDIDATE_POLICY_V1).contributions[0]!.factors!;
+    expect(factors.every(row => row.componentKey.includes("arbitrum:"))).toBe(true);
+    fact.observation.deployments.pop();
+    expect(evaluateV1019LenderBook(fact, parentBacking, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  });
+
+  it("preserves parent causes, upstream identity, concentration normalization and exact factor sums", () => {
+    const fact = hybridYield();
+    const source = fact.collaterals[2]!;
+    fact.collaterals[2] = { ...source, sourceCause: "U", sourceGapIds: ["accepted:savusd:gap"] };
+    const input = inherited(fact);
+    const result = evaluateV9ReserveExposures({
+      ...input,
+      inheritedStablecoinBacking: { ...input.inheritedStablecoinBacking!, cause: "D", causeGapIds: ["parent:adverse"] },
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.structuralReasons).toEqual([]);
+    const concentration = result.contributions.find(row => row.source === "reserve-concentration")!;
+    expect(concentration.normalizedWeight).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.reserve.concentrationWeight);
+    for (const row of result.contributions) {
+      expect(row).toMatchObject({ cause: "D", scoringDisposition: "measured-adverse" });
+      expect(row.causeGapIds).toEqual(["accepted:savusd:gap", "parent:adverse"]);
+      expect(row.factors!.reduce((sum, factor) => sum + factor.effectiveScoringWeight, 0)).toBeCloseTo(1, 12);
+      expect(row.factors!.reduce((sum, factor) => sum + (factor.score ?? 0) * factor.effectiveScoringWeight, 0))
+        .toBeCloseTo(row.score!, 8);
+    }
+    expect(result.contributions.filter(row => row.upstreamAssetId !== null).map(row => row.upstreamAssetId)).toEqual(["parent"]);
+    expect(input.resolvedUpstreamExposures).toEqual([]);
+  });
+
+  it("retains byte-equivalent non-cohort behavior without creating collateral dependencies", () => {
+    const nonLender = { ...inherited(), assetId: "ordinary-wrapper" };
+    const before = JSON.stringify(nonLender);
+    const first = evaluateV9ReserveExposures(nonLender, V9_CANDIDATE_POLICY_V1);
+    expect(JSON.stringify(evaluateV9ReserveExposures({ ...nonLender }, V9_CANDIDATE_POLICY_V1))).toBe(JSON.stringify(first));
+    expect(JSON.stringify(nonLender)).toBe(before);
+    const notAdmitted = book(primeClaims, "0", "ordinary-wrapper");
+    expect(evaluateV1019LenderBook(notAdmitted, parentBacking, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  });
+
+  it.each(["zero-nav", "unreconciled", "malformed", "invalid-quality", "invalid-lltv", "unjoined"] as const)
+    ("returns unavailable rather than clamping or omitting %s", (reason) => {
+      const fact = book([["100", 55, "860000000000000000", "yield-bearing-stable"]]);
+      if (fact.observation?.status !== "ok") throw new Error("fixture");
+      const deployment = fact.observation.deployments[0]!;
+      if (reason === "zero-nav") deployment.totalAssetsRaw = "0";
+      if (reason === "unreconciled") deployment.idleAssetsRaw = "1";
+      if (reason === "malformed") deployment.markets[0]!.includedAssetsRaw = "-1";
+      if (reason === "invalid-quality") fact.collaterals[0]!.quality = Number.NaN;
+      if (reason === "invalid-lltv") deployment.markets[0]!.lltvRaw = "1000000000000000001";
+      if (reason === "unjoined") fact.collaterals = [];
+      expect(evaluateV1019LenderBook(fact, parentBacking, V9_CANDIDATE_POLICY_V1)).toBeNull();
+    });
 });

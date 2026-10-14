@@ -48,6 +48,8 @@ import {
   observeExecutableRedemptionRoute,
   type ExecutableRedemptionObservation,
 } from "./executable-redemption-observers";
+import { observeMorphoLenderBook } from "./morpho-lender-book";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
 const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
 
@@ -441,6 +443,13 @@ export async function fetchErc4626SingleAssetReserves(
     warnings.push(warning("erc4626-redemption-paused", "ERC-4626 redemption route is paused on-chain"));
   }
 
+  // Run only after ordinary reserve and redemption I/O has settled. A failed
+  // lender census is diagnostic and must not revoke independently valid data.
+  const lenderBookObservation = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook
+    .admittedAssets.some(row => row.assetId === coin.id)
+    ? await observeMorphoLenderBook(coin, config, signal, _ctx)
+    : undefined;
+
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
@@ -462,6 +471,7 @@ export async function fetchErc4626SingleAssetReserves(
       }),
       chain: primaryInput.chain,
       contractAddress,
+      ...(lenderBookObservation ? { lenderBookObservation } : {}),
       totalAssetsRaw: totalAssetsRaw.toString(),
       unknownExposurePct,
       ...(reviewedDeployedExposure

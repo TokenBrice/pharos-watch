@@ -2629,7 +2629,10 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         admissionPath = "economicControlReview.mint";
         const mint = adaptMintReview(meta, metaById, prepared.dependency, supplyReview, reviewEvidence, clockSec);
         admissionPath = "economicControlReview.oracle";
-        const oracle = adaptOracleReview(meta, archetype, reviewEvidence, clockSec);
+        const oracle = adaptOracleReview(
+          meta, archetype, reviewEvidence, clockSec,
+          fixedInput.liveReserveProvenanceMap[assetId]?.lenderBookObservation,
+        );
         admissionPath = "economicControlReview.bridge";
         const bridge = adaptBridgeReview(
           meta,

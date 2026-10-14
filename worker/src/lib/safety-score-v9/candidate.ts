@@ -16,6 +16,7 @@ import { DEX_ROUTE_SOURCE_CAPABILITIES } from "@shared/lib/p4-exit-route-capacit
 import {
   assertV9ValidatedPolicyEnvelope,
   loadV9CandidateMethodologyPolicy,
+  V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
@@ -46,6 +47,7 @@ import {
   normalizeSafetyScoreV9CompilerInput,
   type SafetyScoreV9CompilerInput,
 } from "./native-input";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./consumer-freshness";
 
 const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN = "safety-score-v9.compiler-fact-schema.v1";
 const SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN = "safety-score-v9.producer-capability-build.v1";
@@ -77,6 +79,7 @@ const SafetyScoreV9CompilerFactSchemaIdentityV1Schema = z
       z.literal("fact-gap-cause-proofs.v1"),
       z.literal("governed-issuance.v1"),
       z.literal("journaled-cdp-shock-coverage.v1"),
+      z.literal("morpho-lender-collateral-book.v1"),
       z.literal("reviewed-deployment-unit-supply-attribution.v1"),
       z.literal("reviewed-transfer-deployments.v1"),
       z.literal("wrapper-local-facts.v1"),
@@ -106,6 +109,8 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
         peg: z.literal("fixed-input.peg-summary.v1"),
         researchOverlays: z.literal("v9-fact-extension.review-overlays.v4"),
         shockCoverage: z.literal("journal-registry.cdp-shock-coverage.v1"),
+        lenderBook: z.literal("fixed-input.morpho-lender-book.v1"),
+        lenderCollateralBacking: z.literal("fixed-input.previous-accepted-backing.v1"),
       })
       .strict(),
     scoreBearingMethodologyVersions: z
@@ -123,6 +128,8 @@ const SafetyScoreV9ProducerCapabilityIdentityV1Schema = z
         documentedTermsExitRoutes: z.number().int().nonnegative(),
         accessReviews: z.literal(V9_ACCESS_EVIDENCE_MAX_AGE_SEC),
         liveReserves: z.number().int().nonnegative().nullable(),
+        lenderBook: z.literal(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.observationMaxAgeSec),
+        lenderCollateralBacking: z.literal(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC),
         chainSupply: z.number().int().nonnegative().nullable(),
         peg: z.number().int().nonnegative().nullable(),
         researchOverlays: z.number().int().nonnegative().nullable(),
@@ -399,6 +406,7 @@ function compilerFactSchemaIdentity(
       "fact-gap-cause-proofs.v1",
       "governed-issuance.v1",
       "journaled-cdp-shock-coverage.v1",
+      "morpho-lender-collateral-book.v1",
       "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",
@@ -427,6 +435,8 @@ function producerCapabilityIdentity(
       peg: "fixed-input.peg-summary.v1",
       researchOverlays: "v9-fact-extension.review-overlays.v4",
       shockCoverage: "journal-registry.cdp-shock-coverage.v1",
+      lenderBook: "fixed-input.morpho-lender-book.v1",
+      lenderCollateralBacking: "fixed-input.previous-accepted-backing.v1",
     },
     scoreBearingMethodologyVersions: {
       dexExitRoutes: sortedUnique(fixedInput.inputMethodologyVersions.dexLiquidity),
@@ -447,6 +457,8 @@ function producerCapabilityIdentity(
       documentedTermsExitRoutes: extension.routeFreshness.documentedTermsMaxAgeSec,
       accessReviews: V9_ACCESS_EVIDENCE_MAX_AGE_SEC,
       liveReserves: extension.sources.liveReserves.maxAgeSec,
+      lenderBook: V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.observationMaxAgeSec,
+      lenderCollateralBacking: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
       chainSupply: extension.sources.chainSupply.maxAgeSec,
       peg: extension.sources.peg.maxAgeSec,
       researchOverlays: extension.sources.researchOverlays.maxAgeSec,

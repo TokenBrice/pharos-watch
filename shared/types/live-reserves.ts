@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ReserveObservationEnvelopeSchema, ReserveBoundedFactsGenerationSchema } from "./safety-score-v9-reserve-scope";
+import { LenderBookObservationSchema } from "./safety-score-v9-lender-book";
 import { LIVE_RESERVE_ADAPTER_KEYS, type LiveReserveAdapterKey } from "./live-reserve-adapter-declarations";
 import type {
   LiveReserveInput,
@@ -357,6 +358,7 @@ export const LiveReserveSnapshotMetadataSchema = /* @__PURE__ */ (() => z
   .object({
     reserveObservation: ReserveObservationEnvelopeSchema.optional(),
     boundedFactsGeneration: ReserveBoundedFactsGenerationSchema.optional(),
+    lenderBookObservation: LenderBookObservationSchema.optional(),
     sourceTimestamp: z.number().finite().optional(),
     freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
     unknownExposurePct: z.number().finite().optional(),

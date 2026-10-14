@@ -10,6 +10,7 @@ import { V9WrapperAllocationScopePolicySchema } from "./safety-score-v9-allocati
 import { V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
 import { V9AccessLookthroughPolicySchema } from "./safety-score-v9-access-lookthrough";
 import { ReserveScopePolicySchema } from "./safety-score-v9-reserve-scope";
+import { LenderCollateralBookPolicySchema } from "./safety-score-v9-lender-book";
 import { ReserveBoundedFactKindSchema, ReserveBoundedScopeKindSchema, ReserveBoundedTermUnitSchema } from "./reserve-bounded-facts";
 import {
   RedemptionAccessModelSchema,
@@ -683,6 +684,7 @@ const V9BackingArchetypePolicySchema = z
 const V9BackingPolicySchema = z
   .object({
     reserveScope: ReserveScopePolicySchema,
+    lenderCollateralBook: LenderCollateralBookPolicySchema,
     componentQuality: z
       .object({
         strong: ScoreSchema,

@@ -1682,6 +1682,7 @@ export function evaluateV9Asset({
       ? {}
       : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
     ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
+    ...(asset.lenderBook === undefined ? {} : { lenderBook: asset.lenderBook }),
     trackRecordMonths,
     asOfSec: identity.asOfSec,
   };
