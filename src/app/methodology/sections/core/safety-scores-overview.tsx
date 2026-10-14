@@ -84,7 +84,7 @@ function SafetyScoresVersionNotes() {
         movers and zero grade flips on both. Partial-evidence cards fall 55→47 on each; open obligations
         fall 3,613→3,606 on A′ and 3,607→3,600 on B′, with unresearched obligations down seven on each.
         The current-redemption scenario incorporating config corrections also shows zero movers.
-        Activation is provisionally October 15, 2026 00:00 UTC and must be re-dated at release.
+        Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
         Track M is excluded: missing-data scoring, comparison policy, weights, grade gates and the USDT
         premium remain unchanged. Fixed-input replay is not producer-dependent closure or production-health proof.
       </p>

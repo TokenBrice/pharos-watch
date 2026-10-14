@@ -37,8 +37,7 @@ export function LiquidityOverview() {
         score-ineligible. CHFSAFO&apos;s exact Aquarius identity supplies supplemental non-exhaustive coverage.
         A missing liquidity row schedules maintenance, not a zero-liquidity observation. Component weights,
         budgets, cadence and retained-TVL basis are unchanged. Fresh producer observations and final
-        fixed-clock comparison remain required; activation is provisionally October 15, 2026 00:00 UTC
-        and must be re-dated at release.
+        fixed-clock comparison remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
       </p>
     </>
   );

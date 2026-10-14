@@ -45,7 +45,7 @@ export function RedemptionBackstopMethodologySection() {
         not a completed-payout maximum. The existing-route bound review grants no new config-only upgrade.
         Exact smaller-probe receipts under Safety v10.18 prove only executed input, not full-request completion
         or exhaustion. Weights and ladders are unchanged; fresh observations and final fixed-clock comparison
-        remain required. Activation is provisionally October 15, 2026 00:00 UTC and must be re-dated at release.
+        remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
       </p>
       <MethodologyFacts
         facts={[

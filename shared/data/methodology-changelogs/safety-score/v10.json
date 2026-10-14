@@ -3,7 +3,7 @@
     "version": "10.18",
     "title": "Contributing-route partial evidence and reviewed research drain",
     "date": "2026-10-14",
-    "effectiveAt": 1792022400,
+    "effectiveAt": 1791981600,
     "summary": "Safety Score v10.18 narrows partial-evidence flags to contributing exclusions, admits source-bound ERC-4626 NAV references and executed smaller-probe lower bounds, bundles reviewed DEX, redemption and W1 evidence repairs, and records the W2/PKT-5 no-admission decisions. Pillar weights, grade gates, missing-data scoring, comparison policy and the USDT premium are unchanged; Track M is not part of this release.",
     "impact": [
       "Route-exclusive A/B gaps on optional Exit alternatives that contribute neither score nor selected backup credit remain diagnostic without triggering partialEvidence. Gaps on scored or selected routes, whole-pillar exclusions, peg/methodology, wrapper-local and inherited-parent exclusions remain visible. HBD retains its genuine partial-evidence flag; no obligation or evidence fact is deleted by the presentation narrowing.",
@@ -16,7 +16,7 @@
       "PKT-5 owner ruling of 2026-10-14: no shadow DEX family met its documented maturity gates, and none activated. W2 and PKT-5 add no runtime or curation change, so the accepted-pair equivalence numbers below are unchanged. These research outcomes belong to the single v10.18 release, not a new methodology version.",
       "Final accepted-pair impact: A′ is accepted publication report-cards:v9:v1:7dea3b5da499d17cff9357aa5763065c26a00c3bd67dc6d6ee5523f96dc609a8 at clock 1791967608; B′ is the distinct accepted publication report-cards:v9:v1:a9afef4d… at clock 1791973073. These two qualified accepted-publication captures are 5,465 seconds apart, exceeding the required 5,400 seconds. Base main code and curation versus this branch shows zero score, grade or rating-status movers and zero grade flips on both captures, with both the embedded captured registry and current curation through attributed registry mismatch. Partial-evidence cards fall from 55 to 47 on both, clearing ftusd-flying-tulip, gldt-gold-dao, jpysc-sbi-startale, sbc-brale, sfrxusd-frax, usda-anzens, usdso-somnia and usdy-ondo-finance.",
       "Open evidence obligations fall from 3,613 to 3,606 on A′ and from 3,607 to 3,600 on B′; unresearched obligations fall by seven on each. The current-redemption scenario, including the redemption config corrections, also shows zero movers. These fixed-input accepted-pair results do not establish producer-dependent gap closure or production health.",
-      "Activation is provisionally 2026-10-15 00:00 UTC (1792022400); re-date effectiveAt at release."
+      "Activation: 2026-10-14 12:40 UTC (release cut; 1791981600)."
     ],
     "commits": [
       "be1845c05",

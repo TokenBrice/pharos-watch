@@ -283,10 +283,11 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === key)!;
     const release = methodology.entries[0];
     expect(methodology.currentLabel).toBe(`v${version}`);
-    expect(release).toMatchObject({ version, date: "2026-10-14", reconstructed: false });
+    expect(release).toMatchObject({ version, date: "2026-10-14", effectiveAt: 1_791_981_600, reconstructed: false });
     expect(getMethodologyVersionAt(key, release.effectiveAt - 1)).toBe(previousVersion);
     expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
-    expect(release.impact.join(" ")).toMatch(/provisionally.*re-date effectiveAt at release/i);
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-14 12:40 UTC (release cut; 1791981600)");
+    expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
   });
 
   it("keeps the Safety drain policy identity and accepted-pair replay proof explicit", () => {
