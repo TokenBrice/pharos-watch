@@ -603,9 +603,10 @@ export function runGitleaksConfigSelfTest(
       ["gldt-gold-dao", "3892111dfe4"].join("-"),
       ["gldt-launches", "as-the-worl"].join("-"),
     ];
+    const chfsafoContract = ["CAJD2IBSP7VO2VYJQUYJSOGP", "JINTUYV7MQITINXVPTIH3CCLCUENNMW4"].join("");
     const transferIdentifiers = [
       ["0x06723dcb428eddb160c5adfc2d0a5e5", "adc184bf6a7298780c3cbf3fa764f709b"].join(""),
-      ["CAJD2IBSP7VO2VYJQUYJSOGP", "JINTUYV7MQITINXVPTIH3CCLCUENNMW4"].join(""),
+      chfsafoContract,
       ["TN3cfcFhLrdNZhMdHZ", "VZ4z2XFWb7uB9CXg"].join(""),
       ["7bxM8cRFZpzonzZtzmrcW", "HNX1dijrEVU4VkjjtVyBmqE"].join(""),
     ];
@@ -762,6 +763,14 @@ export function runGitleaksConfigSelfTest(
       {
         path: ledgerPath,
         value: { rationale: `Residual U keys: ${["1ef645130f", "da84cf9841"].join("")}; no confirmed incident.` },
+      },
+      ...["senpyusdprimev2-sentora", "senrlusdv2-sentora"].map((id) => ({
+        path: ledgerPath,
+        value: { claimGroupId: `ACCESS_REVIEW:${id}` },
+      })),
+      {
+        path: "worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts",
+        value: { CHFSAFO_TOKEN: chfsafoContract },
       },
     ];
     const awsKey = ["AKIA", "Q7M2V3N4P6R2S3T5"].join("");
