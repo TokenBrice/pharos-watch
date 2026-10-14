@@ -14,7 +14,7 @@ import {
 
 /**
  * Recent-run history for a cron lane: the dot strip (row and detail), the
- * last-5 table, and the stale lease/progress evidence block. Each dot carries
+ * bounded history table, and the stale lease/progress evidence block. Each dot carries
  * its outcome in a title tooltip instead of a separate legend.
  */
 type RecentRunTone = "success" | "warning" | "skipped" | "failed";
@@ -68,7 +68,7 @@ export function CronRunDots({ runs }: { runs: CronRun[] }) {
 }
 
 export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
-  const recentRuns = runs.slice(0, 5);
+  const recentRuns = runs;
   const hasReserveQueueLane = recentRuns.some((run) => {
     const metadata = readRecord(run.metadata);
     return (
@@ -91,7 +91,7 @@ export function CronRunHistoryPanel({ runs }: { runs: CronRun[] }) {
     <section className="mt-4 space-y-2 border-t border-border/60 pt-4" aria-labelledby="cron-recent-run-heading">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 id="cron-recent-run-heading" className="text-xs font-semibold text-foreground">
-          Last 5 runs
+          Recent runs and retained evidence
         </h4>
         <CronRunDots runs={recentRuns} />
       </div>

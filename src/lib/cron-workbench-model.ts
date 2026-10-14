@@ -1,4 +1,4 @@
-import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
+import { CRON_CONNECTION_BUDGET_ENTRIES, CRON_JOB_DEFINITIONS, CRON_SCHEDULE_DEFINITIONS, CRON_TRIGGER_SCHEDULES, getCronJobMeta, getCronStatusImpact, isProvenSatisfiedNeutralSkipReason } from "@shared/lib/cron-jobs";
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import type { OperatorVerdict } from "@shared/lib/classification";
 import { formatElapsedSeconds } from "@shared/lib/format";
@@ -245,10 +245,11 @@ function getRunningState(cron: CronStatus): CronRunningState {
 
 type InheritedRequiredOutcome = Extract<CronRunStatus, "degraded" | "error"> | null;
 
-function getInheritedRequiredOutcome(cron: CronStatus): InheritedRequiredOutcome {
+function getInheritedRequiredOutcome(cron: CronStatus, nowSeconds?: number): InheritedRequiredOutcome {
   if (cron.lastRun?.status !== "skipped_neutral") return null;
   const latestRequiredRun = cron.recentRuns.find((run) => run.status !== "skipped_neutral");
   if (latestRequiredRun?.status !== "degraded" && latestRequiredRun?.status !== "error") return null;
+  if (nowSeconds != null && nowSeconds - latestRequiredRun.startedAt > cron.expectedIntervalSec * 2) return null;
   // The backend supersedes an inherited error when a fresh skip proves the
   // period's write-once artifact exists (it was read and found); the lane
   // must resolve the same way, or one transient precheck failure keeps the
@@ -263,6 +264,7 @@ function getInheritedRequiredOutcome(cron: CronStatus): InheritedRequiredOutcome
   if (
     latestRequiredRun.status === "error"
     && provenSatisfiedRun != null
+    && (nowSeconds == null || nowSeconds - provenSatisfiedRun.startedAt <= cron.expectedIntervalSec * 2)
     && provenSatisfiedRun.startedAt >= latestRequiredRun.startedAt
   ) {
     return null;
@@ -329,8 +331,9 @@ function summarizeGroup(allRows: CronWorkbenchRow[], visibleRows: CronWorkbenchR
 }
 
 /** Consecutive failed required runs; generic neutral skips are not required attempts. */
-function countRequiredErrorStreak(cron: CronStatus): number {
-  if (cron.lastRun?.status !== "error" && getInheritedRequiredOutcome(cron) !== "error") return 0;
+function countRequiredErrorStreak(cron: CronStatus, nowSeconds?: number): number {
+  if (cron.lastRun?.status !== "error" && getInheritedRequiredOutcome(cron, nowSeconds) !== "error") return 0;
+  if (nowSeconds != null && cron.lastRun && nowSeconds - cron.lastRun.startedAt > cron.expectedIntervalSec * 2) return 0;
   let streak = 0;
   for (const run of cron.recentRuns) {
     if (run.status === "skipped_neutral") continue;
@@ -346,14 +349,36 @@ function describeBudget(cron: CronStatus): string {
   )} without a usable run.`;
 }
 
-/**
- * Next expected start from the last start plus cadence. Client-side estimate:
- * the scheduler slot itself is not served, so this can lead or trail the real
- * trigger by up to one slot.
- */
-export function getCronNextExpected(cron: CronStatus, nowSeconds: number): CronNextExpected {
+/** Next primary trigger opportunity; admission and catch-up runs can differ. */
+export function getCronNextRunAt(job: string, nowSeconds: number): number | null {
+  const definition = getCronJobMeta(job);
+  if (!definition) return null;
+  const schedule = CRON_SCHEDULE_DEFINITIONS[definition.scheduleKey];
+  if (definition.scheduleKey === "monthlyYieldAudit") {
+    const date = new Date(nowSeconds * 1000);
+    const thisMonth = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1) / 1000 + schedule.offsetSec;
+    return thisMonth > nowSeconds ? thisMonth
+      : Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) / 1000 + schedule.offsetSec;
+  }
+  // Fixed-minute physical aliases can intentionally dispatch after the logical slot.
+  const firstPhysicalMinute = Number(CRON_TRIGGER_SCHEDULES[definition.scheduleKey][0]?.split(" ")[0]);
+  const dispatchDelay = Number.isFinite(firstPhysicalMinute)
+    ? firstPhysicalMinute * 60 - schedule.offsetSec % 3600 : 0;
+  const offset = schedule.offsetSec + dispatchDelay;
+  return (Math.floor((nowSeconds - offset) / schedule.intervalSec) + 1) * schedule.intervalSec + offset;
+}
+
+export function getCronNextExpected(cron: CronStatus, nowSeconds: number, job?: string): CronNextExpected {
   const budget = describeBudget(cron);
   if (cron.inFlight && !cron.inFlight.stale) return { kind: "running", label: "Running now", budget };
+  const nextTrigger = job ? getCronNextRunAt(job, nowSeconds) : null;
+  if (nextTrigger != null) {
+    return {
+      kind: "scheduled",
+      label: `in ${formatElapsedSeconds(nextTrigger - nowSeconds)}`,
+      budget: `${budget} Next primary trigger opportunity; admission and catch-up runs may differ.`,
+    };
+  }
   const lastStart = cron.lastRun?.startedAt;
   if (lastStart == null) {
     return { kind: "unknown", label: cron.telemetryUnknown ? "Unknown" : "No runs", budget };
@@ -404,7 +429,7 @@ export function deriveCronVerdict(
       sentence: `The running attempt stopped sending heartbeats${ago(cron.inFlight.updatedAt)}.`,
     };
   }
-  const errorStreak = countRequiredErrorStreak(cron);
+  const errorStreak = countRequiredErrorStreak(cron, nowSeconds);
   if (errorStreak >= 2) {
     return { verdict: "act", code: "repeated-failures", sentence: `The last ${errorStreak} required runs failed.` };
   }
@@ -446,7 +471,13 @@ export function deriveCronVerdict(
       sentence: `The latest run succeeded with findings: ${qualityReasons.join(", ")}.`,
     };
   }
-  if (state === "skipped") {
+  if (cron.bootstrap) {
+    return { verdict: "ok", code: "bootstrap", sentence: "This job is in its initial admission window; no required run has completed yet." };
+  }
+  if (!cron.lastRun) {
+    return { verdict: "unavailable", code: "no-runs", sentence: "No run has been recorded for this job." };
+  }
+  if (cron.lastRun.status.startsWith("skipped_")) {
     return { verdict: "ok", code: "skipped", sentence: "The latest run was skipped and no required run is outstanding." };
   }
   return { verdict: "ok", code: "ok", sentence: `The latest run succeeded within the ${budget} budget.` };
@@ -454,7 +485,7 @@ export function deriveCronVerdict(
 
 export function classifyCronWorkbenchState(cron: CronStatus, nowSeconds?: number): CronWorkbenchState {
   if (cron.telemetryUnknown) return "unknown";
-  const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron);
+  const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron, nowSeconds);
   if (
     cron.lastRun?.status === "error" ||
     inheritedRequiredOutcome === "error" ||
@@ -624,7 +655,6 @@ export function buildCronWorkbenchModel(
     };
     const rows = group.entries.map(([job, cron]) => {
       const state = classifyCronWorkbenchState(cron, nowSeconds);
-      const inheritedRequiredOutcome = getInheritedRequiredOutcome(cron);
       const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
       const rawStatus = cron.lastRun?.status ?? null;
       const qualityReasons = getWorkbenchQualityReasons(cron, nowSeconds);
@@ -645,15 +675,11 @@ export function buildCronWorkbenchModel(
         rawStatus,
         statusLabel: cron.telemetryUnknown
           ? "Telemetry unknown"
-          : inheritedRequiredOutcome === "error"
-            ? "Failed (latest required run)"
-            : inheritedRequiredOutcome === "degraded"
-              ? "Completed with warnings (latest required run)"
-              : rawStatus === "ok" && qualityReasons.length > 0
-                ? RUN_STATUS_LABELS.ok
-                : formatCronRunStatus(rawStatus, cron.lastRun?.metadata),
+          : rawStatus === "ok" && qualityReasons.length > 0
+            ? RUN_STATUS_LABELS.ok
+            : formatCronRunStatus(rawStatus, cron.lastRun?.metadata),
         qualityReasons,
-        errorStreak: countRequiredErrorStreak(cron),
+        errorStreak: countRequiredErrorStreak(cron, nowSeconds),
         registryIndex: getRegistryIndex(job),
         sourceIndex,
       };

@@ -175,7 +175,7 @@ function CronRow({
   const lastRun = row.cron.lastRun;
   const timing = lastRun ? formatCronRunTiming(lastRun) : null;
   const prerequisite = formatPrerequisiteEvidence(readString(lastRun?.metadata?.skippedReason));
-  const next = getCronNextExpected(row.cron, nowSeconds);
+  const next = getCronNextExpected(row.cron, nowSeconds, row.job);
   return (
     <TableRow
       data-testid={`cron-row-${row.job}`}
@@ -241,7 +241,7 @@ function CronRow({
         <span title={next.budget}>{next.label}</span>
       </TableCell>
       <TableCell className="px-3 py-2 align-top">
-        <CronRunDots runs={row.cron.recentRuns.slice(0, 10)} />
+        <CronRunDots runs={row.cron.recentRuns} />
       </TableCell>
       <TableCell className="px-3 py-2 text-right align-top text-xs">
         <ItemsValue row={row} />
@@ -329,7 +329,7 @@ export function CronLaneTable({ groups, budgetOnlySurfaces, causes, nowSeconds }
                 <TableHead className="border-b border-border/70 px-3 py-2">Verdict</TableHead>
                 <TableHead className="border-b border-border/70 px-3 py-2">Job</TableHead>
                 <TableHead className="border-b border-border/70 px-3 py-2">Last run</TableHead>
-                <TableHead className="border-b border-border/70 px-3 py-2">Next expected</TableHead>
+                <TableHead className="border-b border-border/70 px-3 py-2">Next opportunity</TableHead>
                 <TableHead className="border-b border-border/70 px-3 py-2">Recent runs</TableHead>
                 <TableHead className="border-b border-border/70 px-3 py-2 text-right">Items</TableHead>
               </TableRow>

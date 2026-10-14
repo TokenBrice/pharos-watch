@@ -42,6 +42,13 @@ function withReservePressure(base: StatusResponse): StatusResponse {
 }
 
 describe("admin ops insights", () => {
+  it("anchors reserve forecasts to the primary trigger instead of a recent admission", () => {
+    const data = withReservePressure(makeHealthyStatusResponse());
+    data.timestamp = Date.parse("2026-10-14T07:17:00Z") / 1000;
+    data.crons["sync-live-reserves"].lastRun = { startedAt: data.timestamp - 1, durationMs: 1, status: "skipped_neutral" };
+    expect(buildReserveRecoveryForecast(data).nextRunAt).toBe(Date.parse("2026-10-14T08:11:00Z") / 1000);
+  });
+
   it("does not claim a clear queue or confirmed writes after a failed reserve read", () => {
     const data = withReservePressure(makeHealthyStatusResponse());
     data.reserveComposition = makeReserveComposition({ status: "unavailable" });

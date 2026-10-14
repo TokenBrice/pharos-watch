@@ -105,7 +105,7 @@ export function CronDetailPanel({
   const lastRun = row.cron.lastRun;
   const lastRunTiming = lastRun ? formatCronRunTiming(lastRun) : null;
   const metadataSummary = summarizeCronMetadata(row.job, lastRun?.metadata, lastRun?.degradedReason);
-  const next = getCronNextExpected(row.cron, nowSeconds);
+  const next = getCronNextExpected(row.cron, nowSeconds, row.job);
   const jobCauses = getCronCauses(row.job, causes);
   const runbooks = getCronRunbooks(row, causes);
   const actions = getCronActions(row, causes);
@@ -135,7 +135,7 @@ export function CronDetailPanel({
           Reason <code className="font-mono text-foreground">{row.verdictReason.code}</code> · raw status{" "}
           <code className="font-mono text-foreground">{row.rawStatus ?? "none"}</code>
         </p>
-        <p className="text-muted-foreground">{next.budget} Next run: {next.label}.</p>
+        <p className="text-muted-foreground">{next.budget} Next opportunity: {next.label}.</p>
         <p className="text-muted-foreground">
           {row.impactLabel} · {row.group.title} · {row.display.triggerMode === "isolated" ? "isolated" : "shared"} trigger
           {row.display.schedule ? (

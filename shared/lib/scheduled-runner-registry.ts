@@ -298,11 +298,25 @@ function descriptorKey(scheduleKey: CronScheduleKey, job: string): string {
   return `${scheduleKey}\u0000${job}`;
 }
 
+/** These retry/poll lanes require admission evidence; a slot occurrence alone never proves work was due. */
+export const CONDITIONALLY_ADMITTED_SCHEDULED_TASKS: readonly { scheduleKey: CronScheduleKey; job: string }[] = [
+  { scheduleKey: "quarterHourly", job: "snapshot-psi" },
+  { scheduleKey: "quarterHourly", job: "snapshot-public-dataset" },
+  { scheduleKey: "hourlyYieldSync", job: "sync-yield-supplemental" },
+  { scheduleKey: "hourlyYieldSync", job: "fetch-tbill-rate" },
+  { scheduleKey: "digestTriggerPoll", job: "daily-digest" },
+  { scheduleKey: "digestTriggerPoll", job: "weekly-recap" },
+];
+
+export function isConditionallyAdmittedScheduledTask(scheduleKey: string | null, job: string): boolean {
+  return CONDITIONALLY_ADMITTED_SCHEDULED_TASKS.some((task) => task.scheduleKey === scheduleKey && task.job === job);
+}
+
 /**
  * Slot members whose occurrence is gated by a cadence inside the slot. A
  * member that was never due on this occurrence was not "abandoned before
  * start", so stale-slot reconciliation must not invent an error row for it
- * (rule R4). Unlisted members are unconditionally due.
+ * (rule R4). Other members, apart from conditional admissions above, are due.
  */
 const SCHEDULED_TASK_DUE_PREDICATES: Readonly<
   Record<string, (slotStartedAtSec: number) => boolean>
@@ -313,14 +327,10 @@ const SCHEDULED_TASK_DUE_PREDICATES: Readonly<
   // UTC day from the same slot clock.
   [descriptorKey("daily0810Utc", "weekly-recap")]: (slotStartedAtSec) =>
     new Date(slotStartedAtSec * 1_000).getUTCDay() === 1,
-  // The five-minute poll runs a digest edition only when a stored request or
-  // a missed-edition resume asks for one; no occurrence is due by the clock.
-  [descriptorKey("digestTriggerPoll", "daily-digest")]: () => false,
-  [descriptorKey("digestTriggerPoll", "weekly-recap")]: () => false,
 };
 
 /**
- * Whether a slot member was due to run on the given occurrence. Unknown
+ * Whether an unstarted slot member was due by the clock on this occurrence. Unknown
  * slot/job pairs are treated as due so an unregistered member is never
  * silently excused.
  */
@@ -329,6 +339,7 @@ export function isScheduledTaskDueAt(
   job: string,
   slotStartedAtSec: number,
 ): boolean {
+  if (isConditionallyAdmittedScheduledTask(scheduleKey, job)) return false;
   const isDue = SCHEDULED_TASK_DUE_PREDICATES[descriptorKey(scheduleKey, job)];
   return isDue ? isDue(slotStartedAtSec) : true;
 }

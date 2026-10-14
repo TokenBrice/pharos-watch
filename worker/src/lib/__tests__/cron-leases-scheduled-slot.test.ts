@@ -181,21 +181,9 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(result.status).toBe("ok");
     expect(fn).toHaveBeenCalledTimes(1);
-    // A4/C16 chains three jobs in `hourlyYieldSync` and the Dwellir parity lane
-    // is a fourth, independent chain member, so reconciling the stale slot
-    // synthesizes a not-started run for each planned member that never wrote
-    // progress, followed by the abandoned child that did.
+    // Catch-up admission was never observed; only parity was required before
+    // the abandoned yield child that wrote progress.
     expect(db.getRuns()).toEqual([
-      expect.objectContaining({
-        job: "sync-yield-supplemental",
-        status: "error",
-        slot_started_at: slotStartedAt,
-      }),
-      expect.objectContaining({
-        job: "fetch-tbill-rate",
-        status: "error",
-        slot_started_at: slotStartedAt,
-      }),
       expect.objectContaining({
         job: "observe-rpc-provider-parity",
         status: "error",
@@ -211,8 +199,6 @@ describe("runScheduledSlotWithFence", () => {
       }),
     ]);
     expect(db.sqlite.prepare("SELECT degraded_reason FROM cron_runs ORDER BY id").all()).toEqual([
-      { degraded_reason: "stale-slot-reconciled" },
-      { degraded_reason: "stale-slot-reconciled" },
       { degraded_reason: "stale-slot-reconciled" },
       { degraded_reason: "stale-slot-reconciled" },
     ]);
@@ -242,7 +228,7 @@ describe("runScheduledSlotWithFence", () => {
         previousStartedAt: slotStartedAt,
         previousUpdatedAt: now - 1800,
         reconciliation: {
-          syntheticCronRuns: 4,
+          syntheticCronRuns: 2,
           progressRowsCleared: 1,
           leasesCleared: 1,
           notStartedCronRuns: 0,
@@ -445,7 +431,7 @@ describe("runScheduledSlotWithFence", () => {
     const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: currentSlotStartedAt, staleAfterSec: 1200 });
 
     expect(summary).toMatchObject({
-      candidateSlots: 1, slotsReconciled: 1, syntheticCronRuns: 4,
+      candidateSlots: 1, slotsReconciled: 1, syntheticCronRuns: 2,
       progressRowsCleared: 1, leasesCleared: 1,
     });
     expect(summary.abandonedSlots).toEqual([
@@ -459,22 +445,6 @@ describe("runScheduledSlotWithFence", () => {
       }),
     ]);
     expect(db.getRuns()).toEqual([
-      expect.objectContaining({
-        job: "sync-yield-supplemental",
-        status: "error",
-        slot_started_at: staleSlotStartedAt,
-        started_at: staleSlotStartedAt,
-        duration_ms: 0,
-        error: "scheduled slot abandoned; child execution unknown [stale-slot-reconciled]",
-      }),
-      expect.objectContaining({
-        job: "fetch-tbill-rate",
-        status: "error",
-        slot_started_at: staleSlotStartedAt,
-        started_at: staleSlotStartedAt,
-        duration_ms: 0,
-        error: "scheduled slot abandoned; child execution unknown [stale-slot-reconciled]",
-      }),
       expect.objectContaining({
         job: "observe-rpc-provider-parity",
         status: "error",
@@ -493,8 +463,6 @@ describe("runScheduledSlotWithFence", () => {
       }),
     ]);
     expect(db.sqlite.prepare("SELECT degraded_reason FROM cron_runs ORDER BY id").all()).toEqual([
-      { degraded_reason: "stale-slot-reconciled" },
-      { degraded_reason: "stale-slot-reconciled" },
       { degraded_reason: "stale-slot-reconciled" },
       { degraded_reason: "stale-slot-reconciled" },
     ]);
@@ -516,7 +484,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
       error: "scheduled slot heartbeat stale; marked expired by later invocation",
       staleSlotReconciliation: {
-        syntheticCronRuns: 4,
+        syntheticCronRuns: 2,
         progressRowsCleared: 1,
         leasesCleared: 1,
         notStartedCronRuns: 0,
@@ -616,28 +584,16 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
-      syntheticCronRuns: 4,
+      syntheticCronRuns: 2,
       notStartedCronRuns: 0,
       progressRowsCleared: 0,
       leasesCleared: 0,
     });
     expect(db.getRuns().map((run) => run.job)).toEqual([
-      "sync-yield-supplemental",
-      "fetch-tbill-rate",
       "sync-yield-data",
       "observe-rpc-provider-parity",
     ]);
     expect(db.getRuns()).toEqual([
-      expect.objectContaining({
-        job: "sync-yield-supplemental",
-        status: "error",
-        slot_started_at: staleSlotStartedAt,
-      }),
-      expect.objectContaining({
-        job: "fetch-tbill-rate",
-        status: "error",
-        slot_started_at: staleSlotStartedAt,
-      }),
       expect.objectContaining({
         job: "sync-yield-data",
         status: "error",
@@ -674,16 +630,14 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(summary).toMatchObject({
       slotsReconciled: 1,
-      syntheticCronRuns: 4,
+      syntheticCronRuns: 2,
       notStartedCronRuns: 0,
       progressRowsCleared: 1,
       leasesCleared: 0,
     });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
-    // The ownerless child is attempted; the three missing legacy children are unknown.
+    // The ownerless child is attempted; parity's execution is unknown and catch-ups were not admitted.
     expect(db.getRuns().map((run) => run.job)).toEqual([
-      "sync-yield-supplemental",
-      "fetch-tbill-rate",
       "observe-rpc-provider-parity",
       "sync-yield-data",
     ]);
@@ -728,7 +682,7 @@ describe("runScheduledSlotWithFence", () => {
     expect(summary).toMatchObject({
       candidateSlots: 1,
       slotsReconciled: 1,
-      syntheticCronRuns: 6,
+      syntheticCronRuns: 4,
       notStartedCronRuns: 0,
       progressRowsCleared: 0,
       leasesCleared: 0,
@@ -740,8 +694,8 @@ describe("runScheduledSlotWithFence", () => {
         abandonedJobs: [],
       }),
     ]);
-    // P2-10 reconciles every registered chain member; P2-03 makes this quarter-hourly fixture six jobs.
-    expect(db.getRuns()).toHaveLength(6);
+    // The four required members remain unknown; neither daily catch-up was admitted.
+    expect(db.getRuns()).toHaveLength(4);
     expect(db.getRuns().every((run) => run.slot_started_at === staleSlotStartedAt)).toBe(true);
     expect(db.getProgress("daily-digest")).toBeDefined();
     expect(db.getLease("daily-digest")).toBeDefined();
@@ -768,29 +722,17 @@ describe("runScheduledSlotWithFence", () => {
     expect(missingLeaseSummary).toMatchObject({
       candidateSlots: 1,
       slotsReconciled: 1,
-      syntheticCronRuns: 4,
+      syntheticCronRuns: 2,
       notStartedCronRuns: 0,
       progressRowsCleared: 1,
       leasesCleared: 0,
     });
     expect(missingLeaseDb.getProgress("sync-yield-data")).toBeUndefined();
     expect(missingLeaseDb.getRuns().map((run) => run.job)).toEqual([
-      "sync-yield-supplemental",
-      "fetch-tbill-rate",
       "observe-rpc-provider-parity",
       "sync-yield-data",
     ]);
     expect(missingLeaseDb.getRuns()).toEqual([
-      expect.objectContaining({
-        job: "sync-yield-supplemental",
-        status: "error",
-        slot_started_at: staleSlotStartedAt,
-      }),
-      expect.objectContaining({
-        job: "fetch-tbill-rate",
-        status: "error",
-        slot_started_at: staleSlotStartedAt,
-      }),
       expect.objectContaining({
         job: "observe-rpc-provider-parity",
         status: "error",
@@ -815,7 +757,7 @@ describe("runScheduledSlotWithFence", () => {
     await expect(
       sweepStaleScheduledSlotExecutions(missingLeaseDb, { nowSec: now + 60, staleAfterSec: 1200 }),
     ).resolves.toMatchObject({ candidateSlots: 0, slotsReconciled: 0, syntheticCronRuns: 0 });
-    expect(missingLeaseDb.getRuns()).toHaveLength(4);
+    expect(missingLeaseDb.getRuns()).toHaveLength(2);
 
     const newerLeaseDb = makeLeaseDb({
       slots: [
@@ -836,7 +778,7 @@ describe("runScheduledSlotWithFence", () => {
 
     expect(newerLeaseSummary).toMatchObject({
       slotsReconciled: 1,
-      syntheticCronRuns: 4,
+      syntheticCronRuns: 2,
       notStartedCronRuns: 0,
       progressRowsCleared: 1,
       leasesCleared: 0,

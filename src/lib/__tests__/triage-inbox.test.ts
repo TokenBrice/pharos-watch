@@ -73,7 +73,7 @@ describe("buildTriageInbox", () => {
     const [watch] = inbox.watch;
     expect(watch!.link).toEqual({ href: "/admin/crons/?job=sync-fx-rates", label: "Open cron", external: false });
     // The fixture cron last started inside its cadence, so it names the next run, not "Runs every".
-    expect(watch!.timing).toMatch(/^Next run in /);
+    expect(watch!.timing).toMatch(/^Next primary opportunity in /);
     expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE)).toEqual({ verdict: "watch", text: "Nothing needs action. Watching 2." });
   });
 
@@ -97,8 +97,8 @@ describe("buildTriageInbox", () => {
       },
     };
     const [item] = buildTriageInbox(normalizeStatusIssues(data.causes), data).watch;
-    // 3600s since start against a 900s cadence: 45m late; stale budget is 2x cadence.
-    expect(item!.timing).toBe("Overdue by 45m (budget 30m)");
+    // Upcoming registry opportunity remains separate from the missed-run budget.
+    expect(item!.timing).toBe("Next primary opportunity in 1m (budget 30m)");
     // No transition carries the cause, so the age comes from the last successful run.
     expect(item!.sinceSec).toBeNull();
     expect(item!.lastSuccessSec).toBe(base.timestamp - 4500);

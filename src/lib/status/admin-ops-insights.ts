@@ -2,8 +2,7 @@ import type { HealthResponse, StatusResponse } from "@shared/types";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { numberValue as readNumber, readRecord } from "@shared/lib/type-guards";
 import type { StatusActionRecommendation } from "@/lib/status/action-recommendations";
-
-type CronStatus = StatusResponse["crons"][string];
+import { getCronNextRunAt } from "@/lib/cron-workbench-model";
 
 export interface ReserveRecoveryForecast {
   state: "clear" | "catching-up" | "watch" | "blocked";
@@ -26,11 +25,6 @@ function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-function getCronNextRunAt(cron: CronStatus | undefined): number | null {
-  if (!cron?.lastRun) return null;
-  return cron.lastRun.startedAt + cron.expectedIntervalSec;
-}
-
 export function buildReserveRecoveryForecast(data: StatusResponse): ReserveRecoveryForecast {
   const reserve = data.reserveComposition;
   const cron = data.crons["sync-live-reserves"];
@@ -39,7 +33,7 @@ export function buildReserveRecoveryForecast(data: StatusResponse): ReserveRecov
       state: cron?.inFlight?.stale ? "blocked" : "watch",
       headline: "Reserve recovery evidence is unavailable",
       detail: "The reserve overview could not be read; queue pressure and write outcomes are unknown.",
-      nextRunAt: getCronNextRunAt(cron),
+      nextRunAt: getCronNextRunAt("sync-live-reserves", data.timestamp),
       resumeCursor: null,
       estimatedRunsToClear: null,
       lastThroughput: null,
@@ -51,7 +45,7 @@ export function buildReserveRecoveryForecast(data: StatusResponse): ReserveRecov
   const throughput = synced != null && synced > 0 ? synced : null;
   const estimatedRunsToClear =
     reserve.deferredCoins > 0 && throughput != null ? Math.max(1, Math.ceil(reserve.deferredCoins / throughput)) : null;
-  const nextRunAt = getCronNextRunAt(cron);
+  const nextRunAt = getCronNextRunAt("sync-live-reserves", data.timestamp);
   const resumeCursor = reserve.nextCursorStablecoinId ?? readString(metadata?.nextCursorStablecoinId);
 
   if (cron?.inFlight?.stale) {

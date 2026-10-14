@@ -6,7 +6,12 @@ import {
   isProvenSatisfiedNeutralSkipReason,
   PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS,
 } from "@shared/lib/cron-jobs";
-import { flattenScheduledSlotPlanJobs, SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
+import {
+  CONDITIONALLY_ADMITTED_SCHEDULED_TASKS,
+  flattenScheduledSlotPlanJobs,
+  isConditionallyAdmittedScheduledTask,
+  SCHEDULED_SLOT_PLANS,
+} from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
@@ -67,9 +72,12 @@ const CRON_HISTORY_QUERY_JOB_BATCH_SIZE = 5;
 
 const CRON_HISTORY_SELECT_COLUMNS =
   "job, started_at, duration_ms, status, error, item_count, metadata, schedule_key, degraded_reason";
-const LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER = `NOT (
-  job = 'daily-digest'
-  AND COALESCE(schedule_key = 'digestTriggerPoll', 0)
+const LEGACY_UNADMITTED_RECONCILIATION_SQL_FILTER = `NOT (
+  status = 'error'
+  AND COALESCE((${
+    CONDITIONALLY_ADMITTED_SCHEDULED_TASKS.map(({ scheduleKey, job }) =>
+      `(schedule_key = '${scheduleKey}' AND job = '${job}')`).join(" OR ")
+  }), 0)
   AND CASE
     WHEN metadata IS NOT NULL AND json_valid(metadata)
       THEN COALESCE(json_extract(metadata, '$.reason') = 'stale-slot-reconciled', 0)
@@ -192,7 +200,7 @@ function buildCronHistoryQuery(jobCount: number, mode: CronHistoryQueryMode = "d
          SELECT ${CRON_HISTORY_SELECT_COLUMNS}
            FROM cron_runs
           WHERE job = ?
-            AND ${LEGACY_IDLE_DIGEST_RECONCILIATION_SQL_FILTER}
+            AND ${LEGACY_UNADMITTED_RECONCILIATION_SQL_FILTER}
             ${CRON_HISTORY_MODE_SQL_FILTER[mode]}
           ORDER BY started_at DESC
           LIMIT ${mode === "display" ? CRON_HISTORY_ROWS_PER_JOB : mode === "latest-required" ? 2 : 1}
@@ -261,7 +269,7 @@ async function fetchCronHistoryRows(
   db: D1Database,
   cronJobs: string[],
   now: number,
-): Promise<{ value: CronHistoryRow[] | null; error: string | null; freshOutputJobs?: Set<string> }> {
+): Promise<{ value: CronHistoryRow[] | null; error: string | null; freshOutputJobs?: Set<string>; freshOkOutputJobs?: Set<string> }> {
   try {
     // Each batch is an independent SELECT, so fire all batches concurrently
     // rather than awaiting them in sequence; D1's HTTP/2 connection is
@@ -329,6 +337,7 @@ async function fetchCronHistoryRows(
       }
     }
     const freshOutputJobs = new Set<string>();
+    const freshOkOutputJobs = new Set<string>();
     for (const row of rows) {
       if (row.status !== "ok" && row.status !== "degraded") continue;
       const outputAt = confirmedCronOutputAt(
@@ -338,6 +347,7 @@ async function fetchCronHistoryRows(
       );
       if (outputAt != null && outputAt <= now && now - outputAt <= CRON_INTERVALS[row.job] * 2) {
         freshOutputJobs.add(row.job);
+        if (row.status === "ok") freshOkOutputJobs.add(row.job);
       }
     }
     // Display history can contain an entire day of successful no-op attempts.
@@ -345,24 +355,27 @@ async function fetchCronHistoryRows(
     // an admission/readback attempt or expanding the UI's ten-row window.
     await Promise.all(cronJobs.filter((job) =>
       (historyCounts.get(job) ?? 0) >= CRON_HISTORY_ROWS_PER_JOB
-      && !freshOutputJobs.has(job)
+      && !freshOkOutputJobs.has(job)
       && getCronJobMeta(job)?.freshnessSurface !== "none",
     ).map(async (job) => {
       // output_at never exceeds the attempt's completion, so attempts that started before
       // the freshness window (less a run-duration slack) cannot contribute; keep an index range scan.
       const windowStart = now - CRON_INTERVALS[job] * 2 - CRON_OUTPUT_LOOKBACK_DURATION_SLACK_SEC;
       const result = await db.prepare(`
-        SELECT MAX(output_at) AS output_at FROM (
-          SELECT ${CONFIRMED_CRON_OUTPUT_AT_SQL} AS output_at
+        SELECT MAX(output_at) AS output_at, MAX(CASE WHEN status = 'ok' THEN output_at END) AS ok_output_at FROM (
+          SELECT status, ${CONFIRMED_CRON_OUTPUT_AT_SQL} AS output_at
           FROM cron_runs WHERE job = ? AND started_at >= ?
         ) WHERE output_at <= ?
-      `).bind(job, windowStart, now).first<{ output_at: number | null }>();
+      `).bind(job, windowStart, now).first<{ output_at: number | null; ok_output_at: number | null }>();
       if (result?.output_at != null && now - result.output_at <= CRON_INTERVALS[job] * 2) {
         freshOutputJobs.add(job);
       }
+      if (result?.ok_output_at != null && now - result.ok_output_at <= CRON_INTERVALS[job] * 2) {
+        freshOkOutputJobs.add(job);
+      }
     }));
     rows.sort((a, b) => b.started_at - a.started_at);
-    return { value: rows, error: null, freshOutputJobs };
+    return { value: rows, error: null, freshOutputJobs, freshOkOutputJobs };
   } catch (err) {
     logWorkerEvent({
       scope: "status",
@@ -658,13 +671,13 @@ export async function loadCronHealth(
   const cronByJob = new Map<string, CronRun[]>();
   for (const row of cronRows.results ?? []) {
     const parsedMeta = parseMetadataObject(row.metadata);
-    // Compatibility for false failures written before idle digest-trigger
-    // polls were excluded from not-started reconciliation. The SQL predicate
+    // Compatibility for false failures written before conditional admissions
+    // were excluded from not-started reconciliation. The SQL predicate
     // preserves the ten useful history rows; this in-memory guard also keeps
     // mocked/adapted D1 implementations honest.
     if (
-      row.job === "daily-digest"
-      && row.schedule_key === "digestTriggerPoll"
+      row.status === "error"
+      && isConditionallyAdmittedScheduledTask(row.schedule_key, row.job)
       && parsedMeta?.reason === "stale-slot-reconciled"
       && parsedMeta.childDisposition === "not_started"
     ) {
@@ -725,7 +738,8 @@ export async function loadCronHealth(
     const requiredRuns = runs.filter((run) => run.status !== NEUTRAL_CRON_RUN_STATUS);
     const latestRequiredRun = requiredRuns[0] ?? null;
     const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
-    const hasFreshOk = runs.some((run) => run.status === "ok" && hasFreshOutput(job, run, now, interval));
+    const hasFreshOk = historyResult.freshOkOutputJobs?.has(job) === true
+      || runs.some((run) => run.status === "ok" && hasFreshOutput(job, run, now, interval));
     // A neutral skip whose machine-readable reason proves the period's
     // write-once artifact exists (PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS) is
     // fresh positive evidence that the period's requirement is satisfied: the
