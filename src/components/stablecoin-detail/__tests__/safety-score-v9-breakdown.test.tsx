@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { StablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
+import { SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS } from "@/lib/safety-score-v9-labels";
 import { SafetyScoreV9PillarRow } from "../safety-score-v9-breakdown";
 
 type Pillar = StablecoinSafetyScoreV9Presentation["pillars"][number];
@@ -13,6 +14,7 @@ function pillar(score: number | null): Pillar {
     label: "Exit",
     score,
     evidenceSummary: "Reviewed coverage",
+    evidenceDescription: null,
     componentCount: 0,
     components: [],
     breakdown: null,
@@ -22,6 +24,18 @@ function pillar(score: number | null): Pillar {
 }
 
 describe("SafetyScoreV9PillarRow", () => {
+  it("keeps limited evidence short while explaining its score-input meaning", () => {
+    render(<SafetyScoreV9PillarRow cardId="card" pillar={{
+      ...pillar(84),
+      evidenceSummary: "Evidence: limited (selected route) · current",
+      evidenceDescription: SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS.limited ?? null,
+    }} />);
+    const label = screen.getByText("Evidence: limited (selected route) · current");
+    expect(label.getAttribute("title")).toBe(
+      "Evidence: limited — the pillar score relies on undisclosed or not-yet-researched inputs.",
+    );
+  });
+
   it("draws an unscored pillar as an unavailable track, never an empty bar that reads as zero", () => {
     render(<SafetyScoreV9PillarRow cardId="card" pillar={pillar(null)} />);
     const bar = screen.getByRole("img", { name: /^Exit:/ });
