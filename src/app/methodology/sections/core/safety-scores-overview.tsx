@@ -25,7 +25,7 @@ export function SafetyScoresOverview() {
         A separate Morpho-only oracle rule keeps branches below 1% of total deployment NAV disclosed without letting
         them set the worst tier or a weak-oracle cap. Exactly 1% still counts, and every position still contributes
         to Backing. Missing or unreconciled books retain the existing score path with an unavailable diagnostic,
-        not measured safe-book credit. v10.19 activation is provisional pending release evidence.
+        not measured safe-book credit. v10.19 activated at the 2026-10-14 22:00 UTC release cut.
       </p>
       <p>
         Exit compares every admissible route alone and every independently usable pair, then takes the best feasible
@@ -150,9 +150,8 @@ function SafetyScoresVersionNotes() {
         standard-external with a disclosed peg assumption. Dropping LsETH below 1% and weETH dust does not
         upgrade Prime&apos;s tier; Control stays 45 in the example. Yield&apos;s material issuer/receipt branches
         also remain. These are not exercised end-to-end replays or observed release movers.
-        Activation is provisionally October 15, 2026 00:00 UTC (1792022400), to be re-dated at the authorized
-        release cut. Fresh full-cohort replay, separately attributed movers and first reserve/prepare/accepted
-        publication evidence are required before any production-acceptance claim.
+        Activation: October 14, 2026 22:00 UTC release cut (1792015200). Live differentiation begins after the first
+        post-deploy four-hour reserve run stores lender books and the next accepted publication consumes them.
       </p>
       <p>
         Methodology v10.18 keeps route-exclusive A/B gaps on unscored optional Exit alternatives diagnostic,

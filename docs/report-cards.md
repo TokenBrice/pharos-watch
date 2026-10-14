@@ -39,7 +39,7 @@ The `v10.15` code-sweep release is score-moving: excluded A/B dependency events 
 
 `v10.18` scopes optional Exit `partialEvidence` without weakening scored-route or other exclusion gates; its W1/W2 research and accepted-pair replay establish no score, grade or rating-status movers, not fresh producer closure or production health. [Release detail, W1/W2 dispositions, equivalence evidence and the 2026-10-14 12:40 UTC activation](./process/report-cards-appendix.md#v1018-release-research-and-equivalence) are retained in the appendix.
 
-`v10.19` adds the Morpho lane below (provisional).
+`v10.19` (cut 2026-10-14 22:00 UTC) adds the Morpho lane.
 
 V10.01 introduces cause-aware scoring after the V10 major release. Internal `safety-score-v9` implementation names and API route paths remain unchanged; public body schemas distinguish technical availability from NR. Digest snapshots label their grade distribution from the captured methodology major version, preserving V9 editions rather than relabelling history.
 

@@ -302,20 +302,21 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("no shadow DEX family met its documented maturity gates");
   });
 
-  it("aligns v10.19 policy identity while keeping activation explicitly provisional", () => {
+  it("aligns v10.19 policy identity with its recorded release cut", () => {
     expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.19");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
     expect(release).toMatchObject({
       version: "10.19",
       date: "2026-10-14",
-      effectiveAt: 1_792_022_400,
+      effectiveAt: 1_792_015_200,
       reconstructed: false,
       commits: [],
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.18");
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.19");
-    expect(release.impact.join(" ")).toMatch(/provisional/i);
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-14 22:00 UTC (release cut; 1792015200)");
+    expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
     expect(release.impact.join(" ")).toMatch(/Morpho/);
   });
 
