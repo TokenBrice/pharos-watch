@@ -6187,6 +6187,124 @@
       },
       "kind": "published-accounting",
       "mechanism": "fixed-face-accounting"
+    },
+    {
+      "assetId": "oned-gennius",
+      "reviewer": "B_w1_s003r / w1-s003 primary-source review",
+      "reviewedAt": "2026-10-14T08:03:09.828Z",
+      "observedAtSec": 1791964989,
+      "expiresAtSec": 1794556989,
+      "rationale": "Coinbase names native ONED on Base at the exact registered token and states that each Custom Stablecoin represents a corresponding USDC reserve asset with fixed-face 1:1 conversion, less separately disclosed fees. This establishes published fixed-face liability accounting only, retaining moderate local accounting risk. It is not a verified NAV oracle, immutable dollar value, current reserve solvency, executable redemption or independent financial assurance. Existing mint, upgrade, blocklist and reserve obligations remain unchanged.",
+      "sources": [
+        {
+          "label": "Coinbase Custom Stablecoins: ONED Base and USDC 1:1 conversion",
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+        },
+        {
+          "label": "Coinbase ONED itemized reserve and exact native deployment dashboard",
+          "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+        },
+        {
+          "label": "Coinbase US User Agreement, July 22 2026, Appendix 4 sections 13.1 and 13.3-13.4",
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "description": "Coinbase identifies ONED/Base and 1:1 USDC backing and conversion. The route is on Coinbase, not a permissionless ERC-4626 redeem."
+        },
+        {
+          "sourceUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+          "description": "Dashboard identifies native Base token 0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd. Its 2026-10-14 07:41 displayed balances are documentary disclosure, not pinned execution capacity."
+        },
+        {
+          "sourceUrl": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "description": "Appendix 4 sections 13.1.1-13.1.3 define ownership of corresponding USDC reserve assets; 13.3.1 specifies conversion to the Coinbase Digital Asset Wallet at 1:1 minus fees. USDC market, custody, fee and shortfall risks remain separate."
+        }
+      ],
+      "identity": {
+        "assetId": "oned-gennius",
+        "deployments": [
+          {
+            "chain": "base",
+            "address": "0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd",
+            "sourceUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+          }
+        ]
+      },
+      "kind": "published-accounting",
+      "mechanism": "fixed-face-accounting"
+    },
+    {
+      "assetId": "oned-gennius",
+      "reviewer": "B_w1_s003r / w1-s003 primary-source review",
+      "reviewedAt": "2026-10-14T08:03:09.828Z",
+      "observedAtSec": 1791964989,
+      "expiresAtSec": 1794556989,
+      "rationale": "Native Base ONED holders have a documented Coinbase customer conversion path to USDC in their Coinbase Digital Asset Wallet. Account good standing, geographic eligibility, discretionary pause/refusal, possible non-immediate processing, fees disclosed at request time and pro-rata reserve-shortfall treatment remain binding. This review records restrictions with no settlement maximum, cooldown inference, fee ceiling, liquidity guarantee or measured-unwind credit; any independent DEX or partner routes remain separately unmeasured. Discretionary execution is intentionally adverse, not a positive fact closure.",
+      "sources": [
+        {
+          "label": "Coinbase Custom Stablecoins: ONED Base and USDC 1:1 conversion",
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins"
+        },
+        {
+          "label": "Coinbase ONED itemized reserve and exact native deployment dashboard",
+          "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+        },
+        {
+          "label": "Coinbase US User Agreement, July 22 2026, Appendix 4 sections 13.1 and 13.3-13.4",
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states"
+        }
+      ],
+      "observations": [
+        {
+          "sourceUrl": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "description": "External native ONED deposits and USDC conversion are supported; Coinbase excludes New York, Canada and EEA platform customers."
+        },
+        {
+          "sourceUrl": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "description": "Section 1.2 requires account verification. Sections 13.3.1-13.3.3 require a Coinbase account in good standing; requests may not process immediately, may be paused/refused under stated conditions, and reserve shortfall liability is pro rata. Section 13.4.1 permits fees disclosed when a request is made; 13.4.2 excludes unsupported third-party copies."
+        },
+        {
+          "sourceUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+          "description": "Exact holder deployment is the native ONED Base token, not USDF Solana or an unregistered bridged copy."
+        }
+      ],
+      "identity": {
+        "assetId": "oned-gennius",
+        "deployments": [
+          {
+            "chain": "base",
+            "address": "0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd",
+            "sourceUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+          }
+        ]
+      },
+      "kind": "published-withdrawal-terms",
+      "terms": [
+        {
+          "routeKey": "redemption:oned-gennius:offchain-issuer",
+          "deploymentKey": "base:0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd",
+          "sourceUrl": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "outputAssetIds": [
+            "usdc-circle"
+          ],
+          "holderAccess": "verified-customer-neutral",
+          "executionModel": "discretionary",
+          "cooldownSec": null,
+          "settlementBoundSec": null,
+          "fee": {
+            "kind": "undisclosed"
+          },
+          "prerequisites": [
+            "Eligible Coinbase account in good standing and completed required verification; geographic platform restrictions apply.",
+            "Deposit native Base ONED and request conversion; USDC is credited to the Coinbase Digital Asset Wallet, not a fiat bank account.",
+            "Discretionary pause/refusal, delayed processing and pro-rata reserve shortfall provisions remain binding.",
+            "Unsupported third-party wrapped or bridged CCS is not admitted as this native rail; platform fees and separate network costs have no authored numeric bound."
+          ]
+        }
+      ]
     }
   ]
 }

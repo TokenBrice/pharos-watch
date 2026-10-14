@@ -1452,6 +1452,34 @@
         "governingInstrument": "Securitize Markets BUIDL distributor STEP terms May 4, 2024, Expected Maturity and Plan Design 2",
         "allInScope": true
       }
+    ],
+    "paxg-paxos": [
+      {
+        "factKey": "paxg-paxos:allocated-gold:maturity-not-applicable:2026-08-31",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:bb342ba2193c0fceb94f272f"
+        },
+        "asOfSec": 1788210000,
+        "publisher": "Paxos Trust Company, N.A.; KPMG LLP examined PAXG Redemption Assets Report",
+        "sourceUrls": [
+          "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
+          "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
+        ],
+        "assertion": "PAXG Redemption Assets Report as of August 31, 2026 17:00 Eastern (21:00 UTC), Exhibit B p.6, identifies the entire 431,313 fine-troy-ounce reserve as London Good Delivery allocated physical gold; Exhibit A p.5 and Exhibit C p.7 reconcile 431,313 redeemable tokens to those ounces. PAX Gold Terms and Conditions last modified December 12, 2025, sections 1.1, 4.2-4.3 and 5.1-5.3 define identifiable allocated bars and fractional beneficial ownership akin to a warehouse receipt. The exact immediate reserve is direct physical inventory, not dated debt with principal payable at maturity. Maturity is structurally not applicable to this entire allocated-gold exposure. This does not establish zero-day maturity, immediate liquidity, custody-provider shares, a redemption-fee cap, or delivery settlement.",
+        "contentDigest": "65fa4148facf8d6256a5bff8db39c969cae329fdf5afc39ce89baddf44ac1b3c",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-10-14",
+          "reviewer": "B_w1_s009r, owner-authorized W1 public-evidence drain",
+          "confidence": "high"
+        },
+        "claimId": "PAXG complete allocated physical-gold reserve / reserve:bb342ba2193c0fceb94f272f / 431,313 fine troy ounces at August 31, 2026 21:00 UTC",
+        "conclusion": "not-applicable",
+        "governingInstrument": "PAX Gold Terms and Conditions, last modified December 12, 2025, sections 1.1, 4.2-4.3, 5.1-5.3; KPMG-examined August 31, 2026 PAXG Redemption Assets Report Exhibit B p.6",
+        "allInScope": true
+      }
     ]
   }
 }

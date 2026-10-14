@@ -68067,6 +68067,462 @@
           "excerpt": "Token proxy paused()=false, active Cngn3 implementation 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd and slot207 AdminOperations 0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d; observed 2026-10-11T12:34:34.123Z. AdminOperations proxy paused()=false, active Admin2 implementation 0x86f1afdf772b85b2034fa06939391b60c4e55003; observed 2026-10-11T12:35:20.430Z. All at Lisk block 38489417, hash 0x82dd934a9b993660d116d76043861267e3aea3ffe284985cd50097ac62f856bc, timestamp 2026-10-11T08:33:45.000Z. Both pinned implementation eth_getCode results exactly equal their exact-chain explorer verified deployed_bytecode; observed 2026-10-11T12:46:44.489Z. These are present-state snapshots, not historical incident absence or individual-holder blacklist absence."
         }
       ]
+    },
+    {
+      "reviewId": "w1-s002-usdc-mantle-6426a3b8c824e442633e-20261014",
+      "assetId": "usdc-circle",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:6426a3b8c824e442633e"
+      },
+      "reviewedAt": "2026-10-14T07:52:01.267710Z",
+      "reviewer": "B_w1_s002; owner-authorized W1 exact-deployment bounded review",
+      "windowStartSec": 1689586668,
+      "windowEndSec": 1791964321,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-status",
+          "url": "https://status.circle.com/api/v2/incidents.json",
+          "finding": "No matched returned entry; bounded current feed, not a complete archive or historical absence proof."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Two Mantle hits concern Minterest reentrancy and BtcTurk CEX hot-wallet compromise; neither identifies this exact USDC token or canonical bridge. Rekt exact Mantle bridge USDC search and retrieved adverse articles are bounded coverage, not proof of absence."
+        },
+        {
+          "kind": "governance",
+          "url": "https://github.com/mantlenetworkio/mantle/security",
+          "finding": "Provider security disclosure overview and original 2023/2024 audits reviewed. Resolved critical history and unrelated ETH/ERC721 low findings retained; no actual scoped USDC incident retrieved."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-mantle-mainnet.n.dwellir.com",
+          "finding": "Exact token window101865538–101915537 inclusive: 4Mint and2Burn, no selected pause/unpause/blacklist/role/minter/upgrade events. Start2026-10-13T03:16:28Z; not lifetime completeness. At block hash 0x68ea1db1867433c0d8432a9f1af6194db4809dd566ff75dd706b29444df20a2f (2026-10-14T07:03:06Z), token paused=false; implementation9aff...; l2Bridge420...10; L2 bridge implementationc0d3...0010. Exact token created at 2023-07-17T09:37:48Z; block hash0x0439ba4741a264862c0f15b16e055792705bbbfa0cfbfb7aef90107079b58216. Linked L1 emergency portal paused=false at exact Ethereum pin; no full creation-to-now log claim. Same-pin exact L2 bridge blacklist flag is false."
+        }
+      ],
+      "sources": [
+        {
+          "label": "mantle-fresh-emergency-state",
+          "url": "https://api-mantle-mainnet.n.dwellir.com",
+          "observedAt": "2026-10-14T07:50:09.346Z",
+          "location": "Mantle numeric pin 101915537 and batch results; retained original agents/ssc-drain/cache/objects/b4/b4d63c16ba15349ab7071813122b380b615157fa35eb4ee211e7cf8079e26f75 | Exact ABI-derived selected event filter, range and chunk diagnostics; retained original agents/ssc-drain/cache/objects/25/2535310d7d60446ea18d4cd60597ba5556b750caee04b30d1c99f9236be510da | Successful creation receipt at Mantle block5972; retained original agents/ssc-drain/cache/objects/84/84c6757c8fb480708710b6f4a73ef0e384c182279e102763297fab269e19aefd | exact isBlacklisted(L2 bridge) call; retained agents/ssc-drain/cache/objects/be/be011e9b36838af929cbd2f52611c5ceb8223a6c175cabd81849c8bd232914c3 | Individual source observation instants: mantle-fresh-emergency-state=2026-10-14T07:37:53.219Z; mantle-recent-control-events=2026-10-14T07:39:52.221Z; mantle-creation-receipt=2026-10-14T07:37:52.921Z; mantle-bridge-blacklisted=2026-10-14T07:50:09.346Z",
+          "excerpt": "At block hash 0x68ea1db1867433c0d8432a9f1af6194db4809dd566ff75dd706b29444df20a2f (2026-10-14T07:03:06Z), token paused=false; implementation9aff...; l2Bridge420...10; L2 bridge implementationc0d3...0010. | Exact token window101865538–101915537 inclusive: 4Mint and2Burn, no selected pause/unpause/blacklist/role/minter/upgrade events. Start2026-10-13T03:16:28Z; not lifetime completeness. | Exact token created at 2023-07-17T09:37:48Z; block hash0x0439ba4741a264862c0f15b16e055792705bbbfa0cfbfb7aef90107079b58216. | Same Mantle pin: exact token isBlacklisted(0x4200000000000000000000000000000000000010)=false."
+        },
+        {
+          "label": "llama-hacks",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-14T07:33:36.007563Z",
+          "location": "Full 1,301-row JSON searched across all fields for Mantle and exact token/controller; retained original agents/ssc-drain/cache/objects/fa/fa4d6db5c09b044eb922bc8e293c90e6d366801dcfd70a93817911ac67457582",
+          "excerpt": "Two Mantle hits concern Minterest reentrancy and BtcTurk CEX hot-wallet compromise; neither identifies this exact USDC token or canonical bridge."
+        },
+        {
+          "label": "mantle-impl-routescan-source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/5000/etherscan/api?module=contract&action=getsourcecode&address=0x9aff718f2a4ed4c310d6d2da0d2fb30a5f6a9ddc",
+          "observedAt": "2026-10-14T07:36:21.232115Z",
+          "location": "Exact implementation result[0].ABI and SourceCode for 0x9aff718f2a4ed4c310d6d2da0d2fb30a5f6a9ddc; retained original agents/ssc-drain/cache/objects/3e/3ec7cee8b61b7184e409da9d5a8dc28ff90740968072628951ccde8af6ab1a82",
+          "excerpt": "FiatTokenV2_1_1 ABI includes paused, l2Bridge and the pause/minter/blacklist/ownership event family used for the exact-token recent events filter."
+        },
+        {
+          "label": "mantle-official-bridge",
+          "url": "https://app.mantle.xyz/bridge/",
+          "observedAt": "2026-10-14T07:41:14.196904Z",
+          "location": "Rendered official bridge landing page; retained original agents/ssc-drain/cache/objects/1d/1d0741d4174bf5afe1b17ae56694ed9987ab20362c87ebeb833605735c242a6b",
+          "excerpt": "Mantle Official Bridge displays Ethereum-to-Mantle token selection; operational interface alone is not incident absence."
+        },
+        {
+          "label": "mantle-portal-paused",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/",
+          "observedAt": "2026-10-14T07:43:11.903Z",
+          "location": "Same Ethereum block26189189/hash4fd2d5001b0dff931878ab502a5ad672ae0b85c8fe0d5cfc1827534552b5d5b0; retained original agents/ssc-drain/cache/objects/54/542d4b93f46ff9ad7d7b0205153a88c89a826c0c9856bf46bc16fecc15d98771",
+          "excerpt": "Exact linked portal0xc54cb22944f2be476e02decfcd7e3e7d3e15a8fb paused=false at2026-10-14T07:17:23Z; first Dwellir slot error retained, Alchemy same-pin result not silent replacement."
+        },
+        {
+          "label": "mantle-provider-security",
+          "url": "https://github.com/mantlenetworkio/mantle/security",
+          "observedAt": "2026-10-14T07:41:14.195357Z",
+          "location": "Provider security overview, including archived-repository banner; retained original agents/ssc-drain/cache/objects/2d/2d1c0affe82d5bf046dbc35aad04edb49b3eb62d735df7ac556ee2fa048f2962",
+          "excerpt": "No published advisories displayed; this is one bounded provider disclosure surface, not proof of no incident."
+        },
+        {
+          "label": "rekt-multichain",
+          "url": "https://rekt.news/multichain-rekt2",
+          "observedAt": "2026-10-14T07:33:36.006738Z",
+          "location": "Multichain REKT 2 article and exact Mantle/USDC indexed search recorded in search-coverage.md; retained original agents/ssc-drain/cache/objects/0f/0f21fc0913dfe895be78b481067b631e25a62512e1e1190993c96cb3ef31c515",
+          "excerpt": "Retrieved adverse article names Fantom/Moonriver Multichain controllers, not the exact Mantle token/L1 bridge. Exact Mantle search returned no relevant incident article; index coverage is incomplete."
+        },
+        {
+          "label": "mantle-l1bridge-implementation-source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xb4133552ba49dfb60da6eb5ca0102d0f94ce071f?fields=all",
+          "observedAt": "2026-10-14T07:38:51.773398Z",
+          "location": "Exact L1StandardBridge ABI and imported StandardBridge source; retained original agents/ssc-drain/cache/objects/fe/fe928ec6bbde8dba353de784e000cf6f46942b5e9bbd598affa0468cbbabb535",
+          "excerpt": "No direct bridge pause/freeze/rate-limit getter in this ABI; MESSENGER identity was followed to the exact portal rather than assuming no emergency path."
+        },
+        {
+          "label": "mantle-portal-implementation-source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xe1399f54ba2597b4eada9e3450c34d393fb131a7?fields=all",
+          "observedAt": "2026-10-14T07:43:04.993791Z",
+          "location": "Exact OptimismPortal implementation ABI at same Ethereum pin; retained original agents/ssc-drain/cache/objects/47/476a330a9375ee72162284d6defbca7125233d620686a6829095f924bdf538f1",
+          "excerpt": "ABI exposes paused; the source-bound proxy slot and paused call are separately retained."
+        },
+        {
+          "label": "circle-incidents",
+          "url": "https://status.circle.com/api/v2/incidents.json",
+          "observedAt": "2026-10-14T07:35:58.969966Z",
+          "location": "Full returned 50-incident JSON searched for Mantle and exact token/controller strings; retained original agents/ssc-drain/cache/objects/62/62d963e06c2062c3367463a03eb8bf26f33c75d74b1cc1dfe7c5a8034fce9207",
+          "excerpt": "No matched returned entry; bounded current feed, not a complete archive or historical absence proof."
+        },
+        {
+          "label": "circle-status",
+          "url": "https://status.circle.com/api/v2/summary.json",
+          "observedAt": "2026-10-14T07:31:45.568746Z",
+          "location": "Current summary status and incident titles; retained original agents/ssc-drain/cache/objects/94/94c62128f57d15ce35f2844112d2e238044509d3e39ab422f0c14bef11f146c9",
+          "excerpt": "Summary includes Noble testnet outage and Noble/TRON transition notices; no Mantle-specific incident claim. These unrelated notices are not inferred D."
+        },
+        {
+          "label": "mantle-v2-audit",
+          "url": "https://www.openzeppelin.com/news/mantle-v2-solidity-contracts-audit",
+          "observedAt": "2026-10-14T07:41:14.195974Z",
+          "location": "Critical issue update and low-severity Assets Might Get Stuck section; retained original agents/ssc-drain/cache/objects/69/69faa3c6a3441264bb156af85d28cb41a6c595a9814e7aad273859d02c0cce8f",
+          "excerpt": "2024 ETH/MNT messenger issue is marked resolved in PR123; remaining stuck-asset examples specifically concern ETH/ERC721. This is audit history, not realized USDC loss or assurance of current code."
+        }
+      ]
+    },
+    {
+      "reviewId": "w1-s006-dai-scroll-incident-20261014",
+      "assetId": "dai-makerdao",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:dai-makerdao:5c8f89581b90fa698415"
+      },
+      "reviewedAt": "2026-10-14T07:57:20Z",
+      "reviewer": "B_w1_s006r independent source review",
+      "windowStartSec": 1696919918,
+      "windowEndSec": 1791964640,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://sky.money/blog",
+          "finding": "Displayed issuer blog reviewed through October 9, 2026; core-no-exploit marketing does not certify bridge history."
+        },
+        {
+          "kind": "governance",
+          "url": "https://forum.sky.money/search.json?q=DAI%20Scroll%20bridge",
+          "finding": "Exact DAI Scroll bridge query returns 12 topics/posts; Spark Lend and external bridge discussions reviewed as discovery. Search coverage is bounded, not a complete archive."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "All1301 original rows serialized and searched using DAI/Maker/Sky/Scroll and named route aliases; 12 unique DAI/Maker/Sky/Scroll hits. Tracker metadata alone does not bind or disprove an exact control incident, and every source field in these rows is empty. Rho Markets and Scroll Token leads were separately researched; no absence inference from zero hits."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/emergency-powers",
+          "finding": "Retrieved governance article concerns Sky governance parameters and borrow limits, not the exact Scroll DAI gateway/token incident."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/near-intents-rekt",
+          "finding": "Retrieved NEAR Intents report identifies BSC USDT HOT/Omni vault withdrawals and eleven affected HOT channels; no automatic attribution to canonical Scroll DAI."
+        },
+        {
+          "kind": "governance",
+          "url": "https://forum.scroll.io/t/report-scroll-mainnet-emergency-upgrade-on-2025-04-25/666.json",
+          "finding": "April22,2025 EnforcedTxGateway message-spoofing could bypass L2ScrollMessenger access controls and mint arbitrary ERC20s. Scroll Security Council reports securing funds before anyone exploited the bugs, emergency patch and gateway unpause April25. Relevant resolved precautionary history, not proof messenger was never at risk or an actual DAI supply-integrity loss."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://scroll.blockscout.com/api/v2/addresses/0xca77eb3fefe3725dc33bccb54edefc3d9f764f97/logs",
+          "finding": "Exact DAI token0xca77eb3fefe3725dc33bccb54edefc3d9f764f97 displays50 decoded Transfer/Approval events; bounded paginated page, not lifetime history."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://scroll.blockscout.com/api/v2/addresses/0xac78dff3a87b5b534e366a93e785a0ce8fa6cc62/logs",
+          "finding": "Exact gateway0xac78dff3a87b5b534e366a93e785a0ce8fa6cc62 displays50 decoded FinalizeDepositERC20/WithdrawERC20 events; bounded paginated page, not lifetime history."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://scroll.blockscout.com/api/v2/addresses/0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc/logs",
+          "finding": "Exact local messenger0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc displays50 decoded RelayedMessage/SentMessage events; bounded paginated page, not lifetime history."
+        },
+        {
+          "kind": "governance",
+          "url": "https://forum.scroll.io/search.json?q=emergency%20upgrade",
+          "finding": "Provider forum emergency-upgrade search reviewed2026-10-14, yielding four relevant Security Council report topics666/810/1089/1412. Retrieved all four; other returned governance topics are not incident certificates. Bounded search, not complete provider archive."
+        }
+      ],
+      "sources": [
+        {
+          "label": "hacks",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-12T22:06:08.803012+00:00",
+          "location": "Full array indices and full serialized rows; exact aliases/hits retained in full-corpus-scan.json",
+          "excerpt": "All1301 original rows serialized and searched using DAI/Maker/Sky/Scroll and named route aliases; 12 unique DAI/Maker/Sky/Scroll hits. Tracker metadata alone does not bind or disprove an exact control incident, and every source field in these rows is empty. Rho Markets and Scroll Token leads were separately researched; no absence inference from zero hits."
+        },
+        {
+          "label": "scroll-token-analysis",
+          "url": "https://blog.verichains.io/p/unveiling-the-scroll-token-attack",
+          "observedAt": "2026-10-14T07:56:13.589439Z",
+          "location": "Overview: Vulnerable Contract and Transaction attack",
+          "excerpt": "Verichains analysis names Ethereum contract0xbc452fdc8f851d7c5b72e1fe74dfb63bb793d511 and tx0x661505c39efe1174da44e0548158db95e8e71ce867d5b7190b9eabc9f314fe91, an unchecked-transfer Scroll Token attack. Those exact named Ethereum identities differ from the reviewed Scroll L2 DAI token/gateway. No generic Scroll-name incident fan-out."
+        },
+        {
+          "label": "rho-auditor-primary",
+          "url": "https://dedaub.com/blog/rho-markets-incident/",
+          "observedAt": "2026-10-14T07:56:13.588909Z",
+          "location": "Technical Details: The misconfiguration; Return of funds",
+          "excerpt": "Dedaub, Rho auditor and SEAL911 participant, documents ETH oracle initialized with WBTC/USD feed, bad debt in Rho CompoundV2-fork markets and return of funds. Exact cited tx0x64c57738b5d9c3993c5df596f0809d04c2e4ff55bb4d86227a52fc3fa82bab91 concerns PriceOracleV2 configuration, not evidence of arbitrary DAI bridge minting. Rho original Medium report HTTP403 retained; no inference from failed fetch."
+        },
+        {
+          "label": "scroll-security-search",
+          "url": "https://forum.scroll.io/search.json?q=emergency%20upgrade",
+          "observedAt": "2026-10-14T07:55:18.079641Z",
+          "location": "JSON topics/posts arrays for query emergency upgrade",
+          "excerpt": "Provider forum emergency-upgrade search reviewed2026-10-14, yielding four relevant Security Council report topics666/810/1089/1412. Retrieved all four; other returned governance topics are not incident certificates. Bounded search, not complete provider archive."
+        },
+        {
+          "label": "scroll-primary",
+          "url": "https://forum.scroll.io/t/report-scroll-mainnet-emergency-upgrade-on-2025-04-25/666.json",
+          "observedAt": "2026-10-14T07:44:12.232584Z",
+          "location": "post_stream.posts[0].cooked: Overview, Issue2, Timeline",
+          "excerpt": "April22,2025 EnforcedTxGateway message-spoofing could bypass L2ScrollMessenger access controls and mint arbitrary ERC20s. Scroll Security Council reports securing funds before anyone exploited the bugs, emergency patch and gateway unpause April25. Relevant resolved precautionary history, not proof messenger was never at risk or an actual DAI supply-integrity loss."
+        },
+        {
+          "label": "scroll-primary-feb2026",
+          "url": "https://forum.scroll.io/t/report-scroll-mainnet-emergency-upgrade-on-2026-02-23/1412.json",
+          "observedAt": "2026-10-14T07:55:18.081458Z",
+          "location": "post_stream.posts[0].cooked: Overview and Summary of the Bug",
+          "excerpt": "Mid-Feb2026 ecPairing subgroup-check bug could diverge sequencer/prover results and cause finalization failure; Council reports fix deployed on mainnet and OpenVM review. No reported exact DAI supply-integrity failure; preserve historical vulnerability, not blanket rail assurance."
+        },
+        {
+          "label": "scroll-primary-may2025",
+          "url": "https://forum.scroll.io/t/security-council-report-scroll-mainnet-emergency-upgrade-on-2025-05-26/810.json",
+          "observedAt": "2026-10-14T07:55:18.080514Z",
+          "location": "post_stream.posts[0].cooked: Overview, Timeline, Retrospective",
+          "excerpt": "May26,2025 verifier upgrade fixed OpenVM/Plonky3 FRI bugs; pending blocks re-proven/finalized. Council states bug could not be meaningfully exploited because sequencer/provers were permissioned. Retain resolved provider vulnerability history, not exact DAI supply-integrity failure."
+        },
+        {
+          "label": "scroll-primary-aug2025",
+          "url": "https://forum.scroll.io/t/security-council-report-scroll-mainnet-emergency-upgrade-on-2025-08-08/1089.json",
+          "observedAt": "2026-10-14T07:55:18.080961Z",
+          "location": "post_stream.posts[0].cooked: Overview and Timeline",
+          "excerpt": "Aug8-9,2025 prover completeness bug stopped finalization and delayed withdrawals; Council explicitly states no user funds at risk. Verifier upgraded and pending bundles finalized. Resolved provider availability history, no invented DAI mint incident."
+        },
+        {
+          "label": "sky-scroll-search",
+          "url": "https://forum.sky.money/search.json?q=DAI%20Scroll%20bridge",
+          "observedAt": "2026-10-14T07:44:12.232850Z",
+          "location": "JSON topics/posts arrays for query DAI Scroll bridge",
+          "excerpt": "Bounded issuer forum query returns12 topics/posts, including Spark Lend on Scroll and external bridge discussions; no complete archive claim."
+        },
+        {
+          "label": "rekt-emergency",
+          "url": "https://rekt.news/emergency-powers",
+          "observedAt": "2026-10-14T07:44:12.234728Z",
+          "location": "Article body: Midnight Maneuvers and The Alleged Official Story",
+          "excerpt": "Article concerns Sky governance parameter changes, borrowing limits and voting power, not a reported exact Scroll DAI token/gateway mint-control failure. Actual bounded query: site:rekt.news (DAI Scroll bridge OR Scroll emergency upgrade OR Maker Sky bridge), reviewed2026-10-14."
+        },
+        {
+          "label": "rekt-near",
+          "url": "https://rekt.news/near-intents-rekt",
+          "observedAt": "2026-10-14T07:44:12.235337Z",
+          "location": "Article body: Paid as Instructed",
+          "excerpt": "Article identifies BSC USDT HOT/Omni treasury0x233c…b4cd and NEAR intents.near callback/refund bug. HOT supports Scroll, but this does not bind canonical Scroll DAI token/gateway to that failure. Same bounded named Rekt query; no archive-wide absence claimed."
+        },
+        {
+          "label": "dai-makerdao-scroll-messenger-emergency",
+          "url": "https://rpc.scroll.io",
+          "observedAt": "2026-10-12T22:12:09.811Z",
+          "location": "Repository helper receipt result[0] and block; implementation-bindings/gateway-linkage receipts at same hash",
+          "excerpt": "Local messenger proxy0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc paused() returns false at Scroll35351900/hash0x8f2514af77a34b59cb0274186216687b10a49c0eb76ddfd51c8fdfdc4b65cffd/time2026-10-12T22:02:56Z. Source-bound token/gateway expose no pause getter; implementation code at same pin is byte-equal to all three verified runtimes."
+        },
+        {
+          "label": "scroll-messenger-events",
+          "url": "https://scroll.blockscout.com/api/v2/addresses/0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc/logs",
+          "observedAt": "2026-10-14T07:55:18.079458Z",
+          "location": "JSON items[0..49], decoded.method_call, next_page_params",
+          "excerpt": "Exact local messenger0x781e90f1c8fc4611c9b7497c3b47f99ef6969cbc displays50 decoded RelayedMessage/SentMessage events; bounded paginated page, not lifetime history."
+        },
+        {
+          "label": "dai-makerdao-scroll-explorer-events",
+          "url": "https://scroll.blockscout.com/api/v2/addresses/0xac78dff3a87b5b534e366a93e785a0ce8fa6cc62/logs",
+          "observedAt": "2026-10-12T22:06:52.464454+00:00",
+          "location": "JSON items[0..49], decoded.method_call, next_page_params",
+          "excerpt": "Exact gateway0xac78dff3a87b5b534e366a93e785a0ce8fa6cc62 displays50 decoded FinalizeDepositERC20/WithdrawERC20 events; bounded paginated page, not lifetime history."
+        },
+        {
+          "label": "dai-scroll-token-events",
+          "url": "https://scroll.blockscout.com/api/v2/addresses/0xca77eb3fefe3725dc33bccb54edefc3d9f764f97/logs",
+          "observedAt": "2026-10-12T22:11:14.000291+00:00",
+          "location": "JSON items[0..49], decoded.method_call, next_page_params",
+          "excerpt": "Exact DAI token0xca77eb3fefe3725dc33bccb54edefc3d9f764f97 displays50 decoded Transfer/Approval events; bounded paginated page, not lifetime history."
+        },
+        {
+          "label": "dai-scroll-messenger-implementation",
+          "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0x6fa66EeD8e8086f4c77204B5484D26F4e9AB7772",
+          "observedAt": "2026-10-12T22:11:13.715432+00:00",
+          "location": "Exact verified deployed_bytecode/ABI/source, source-binding-analysis.json byte equality against Scroll35351900",
+          "excerpt": "L2ScrollMessenger: sendMessage and relayMessage are whenNotPaused; owner can setPause. Exact implementation0x6fa66eed8e8086f4c77204b5484d26f4e9ab7772; local messenger at same pin is unpaused."
+        },
+        {
+          "label": "dai-scroll-token-implementation",
+          "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xC7d86908ccf644Db7C69437D5852CedBC1aD3f69",
+          "observedAt": "2026-10-12T22:10:57.867768+00:00",
+          "location": "Exact verified deployed_bytecode/ABI/source, source-binding-analysis.json byte equality against Scroll35351900",
+          "excerpt": "ScrollStandardERC20: mint/burn require onlyGateway, no emergency getter. Exact implementation0xc7d86908ccf644db7c69437d5852cedbc1ad3f69."
+        },
+        {
+          "label": "scroll-gateway-implementation",
+          "url": "https://scroll.blockscout.com/api/v2/smart-contracts/0xc568B5dcCeBE52073Fa783EAdacDE0a30fA4c2c9",
+          "observedAt": "2026-10-12T22:07:54.397732+00:00",
+          "location": "Exact verified deployed_bytecode/ABI/source, source-binding-analysis.json byte equality against Scroll35351900",
+          "excerpt": "L2CustomERC20Gateway: finalizeDepositERC20 requires messenger+counterpart and tokenMapping; no pause/freeze/rate-limit getter. Exact implementation0xc568b5dccebe52073fa783eadacde0a30fa4c2c9."
+        },
+        {
+          "label": "dai-makerdao-scroll-creation",
+          "url": "https://scroll.blockscout.com/api/v2/transactions/0x71eff9f3755b15fb2e2dd2803ea5a13d7f4e3d680eb1088fa7f7077671f0eb6e",
+          "observedAt": "2026-10-12T22:10:30.989965+00:00",
+          "location": "Exact transaction JSON, created_contract, block_number, timestamp",
+          "excerpt": "Exact token creation transaction0x71eff9f3755b15fb2e2dd2803ea5a13d7f4e3d680eb1088fa7f7077671f0eb6e. Independent original helper receipt binds contract0xca77eb3fefe3725dc33bccb54edefc3d9f764f97 at block105/hash0xed3fd6915f165560cfa804cbb4804bcbeee34817a6b914080c9d180e77f3ccba, timestamp2023-10-10T06:38:38Z."
+        },
+        {
+          "label": "sky-blog",
+          "url": "https://sky.money/blog",
+          "observedAt": "2026-10-14T07:44:12.233713Z",
+          "location": "Displayed blog article titles/dates plus footer FAQ",
+          "excerpt": "Displayed Sky articles through October9,2026 and issuer core-no-exploit FAQ reviewed; core marketing does not certify peripheral Scroll bridge history."
+        }
+      ]
+    },
+    {
+      "reviewId": "scrvusd-curve-etherlink-local-incident-review-20261014",
+      "assetId": "scrvusd-curve",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:scrvusd-curve:49a498f9e8959939ba3b"
+      },
+      "reviewedAt": "2026-10-14T08:14:24.641048Z",
+      "reviewer": "B_w1_s017 independent bounded public-source review",
+      "windowStartSec": 1753812508,
+      "windowEndSec": 1791965008,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://news.curve.finance/llms-full.txt",
+          "finding": "Full 5,220,827-byte Curve publication archive searched independently for scrvUSD, Etherlink, LayerZero and rsETH. April pause history and later CRV-only bridge reopening were retained; CRV restoration is not transposed to scrvUSD. No retrieved issuer claim identifies a supply-integrity failure of this exact token/minter/bridge."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "All 1,301 hacks corpus rows reviewed for Curve/scrvUSD/Etherlink/LayerZero/Kelp/Verus/Conic/UwU aliases. Related protocol and third-party asset losses remain leads, not incidents on this exact Etherlink representation; corpus source fields cannot independently prove a clean history."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/veruscoin-rekt",
+          "finding": "July 29 2026 report identifies Verus Ethereum bridge 0x71518580f36feceffe0721f06ba4703218cd7f63 and theft of 92,784 scrvUSD held in third-party reserves. It does not identify this Etherlink satellite/minter/Curve bridge; the adverse lead is retained, not reassigned or erased."
+        },
+        {
+          "kind": "issuer-announcements",
+          "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+          "finding": "Primary KelpDAO forensic disclosure was retrieved independently. Its other-OApp unaffected statement is event-specific; it is not blanket proof that Curve satellites never suffered any incident."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://explorer.etherlink.com/api/v2/addresses/0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8/logs",
+          "finding": "Exact token explorer JSON displays five logs including two Transfer and two SetMinter events; next_page_params is null. This is the displayed bounded explorer surface, not lifetime completeness or zero incident proof."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://explorer.etherlink.com/api/v2/addresses/0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc/logs",
+          "finding": "Exact MinterProxy explorer JSON displays zero logs and null next_page_params. Empty index is not proof of no minter activity: verified set_minter changes the grant mapping without an event, so mutable authority completeness remains unresolved."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://explorer.etherlink.com/api/v2/addresses/0x2e16150df237f938cc70730895de33eb45594419/logs",
+          "finding": "Exact LayerZeroBridge explorer JSON displays five logs: two Issued, one TransferOwnership, one SetLimit and one SetDelay. No broader lifetime/index completeness is claimed."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-etherlink-mainnet.n.dwellir.com",
+          "finding": "At Etherlink numbered block 55559233, hash 0xa98b20277ef2b4a965914becef620c5ab4becb7efcaa0b021d1903f085d56870, timestamp 2026-10-14T07:58:43.000Z, exact source/runtime-bound bridge is_killed=false, limit=125000 raw-token-scaled shares, delay=86400 seconds; owner and committed future owner are nonzero. This current local emergency state is not global bridge safety or a supply-integrity guarantee."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-etherlink-mainnet.n.dwellir.com",
+          "finding": "Same numbered/hash pin confirms token.minter() equals 0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc and is_minter(0x2e16150df237f938cc70730895de33eb45594419)=true. Exact token runtime equals retrieved verified deployed bytecode. No complete eventless grant history or signer independence asserted."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-etherlink-mainnet.n.dwellir.com",
+          "finding": "At the same numbered/hash pin 55559233, source/runtime-bound local LayerZero endpoint 0x2d61dcdd36f10b22176e0433b86f74567d529aaa has BLOCK_VERSION=65535, exact bridge receiveVersion=3 and sendVersion=2, neither blocking; receive library=0x282b3386571f7f794450d5789911a9804fa346b4 with matching verified runtime and no exposed pause getter. Owners/defaults remain mutable; no validator independence or global library safety is asserted."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-etherlink-mainnet.n.dwellir.com",
+          "finding": "Same pin: hasStoredPayload on exact source chainId 101 and source path formed from the source-defined mirrored bridge address concatenated twice is false. issued(blockTimestamp/86400)=0 under the 125000-unit current limiter. These are actual local channel observations, not inferred zero pending economic liability or lifetime no-failure proof."
+        }
+      ],
+      "sources": [
+        {
+          "label": "etherlink-token-minter-state",
+          "url": "https://api-etherlink-mainnet.n.dwellir.com",
+          "observedAt": "2026-10-14T08:13:57.227Z",
+          "location": "Numbered pin 55559233 and separate token/minter/bridge birth receipts 22192703/22192715/22192741. All originals in operation evidenceIds.",
+          "excerpt": "Same numbered/hash pin confirms token.minter() equals 0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc and is_minter(0x2e16150df237f938cc70730895de33eb45594419)=true. Exact token runtime equals retrieved verified deployed bytecode. No complete eventless grant history or signer independence asserted. At the same numbered/hash pin 55559233, source/runtime-bound local LayerZero endpoint 0x2d61dcdd36f10b22176e0433b86f74567d529aaa has BLOCK_VERSION=65535, exact bridge receiveVersion=3 and sendVersion=2, neither blocking; receive library=0x282b3386571f7f794450d5789911a9804fa346b4 with matching verified runtime and no exposed pause getter. Owners/defaults remain mutable; no validator independence or global library safety is asserted. Same pin: hasStoredPayload on exact source chainId 101 and source path formed from the source-defined mirrored bridge address concatenated twice is false. issued(blockTimestamp/86400)=0 under the 125000-unit current limiter. These are actual local channel observations, not inferred zero pending economic liability or lifetime no-failure proof."
+        },
+        {
+          "label": "hacks-corpus",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-14T07:55:01.040164Z",
+          "location": "Original bytes agents/ssc-drain/cache/objects/fa/fa4d6db5c09b044eb922bc8e293c90e6d366801dcfd70a93817911ac67457582 SHA-256 fa4d6db5c09b044eb922bc8e293c90e6d366801dcfd70a93817911ac67457582",
+          "excerpt": "All 1,301 hacks corpus rows reviewed for Curve/scrvUSD/Etherlink/LayerZero/Kelp/Verus/Conic/UwU aliases. Related protocol and third-party asset losses remain leads, not incidents on this exact Etherlink representation; corpus source fields cannot independently prove a clean history."
+        },
+        {
+          "label": "etherlink-bridge-events",
+          "url": "https://explorer.etherlink.com/api/v2/addresses/0x2e16150df237f938cc70730895de33eb45594419/logs",
+          "observedAt": "2026-10-14T07:58:44.380654Z",
+          "location": "Original bytes agents/ssc-drain/cache/objects/f7/f7776b08996d27565f0c251d4f27758f7d32392c49ec4f99165388b2ba74b666 SHA-256 f7776b08996d27565f0c251d4f27758f7d32392c49ec4f99165388b2ba74b666",
+          "excerpt": "Exact LayerZeroBridge explorer JSON displays five logs: two Issued, one TransferOwnership, one SetLimit and one SetDelay. No broader lifetime/index completeness is claimed."
+        },
+        {
+          "label": "etherlink-minter-events",
+          "url": "https://explorer.etherlink.com/api/v2/addresses/0x5bca7ddf1bcccb2ee8e46c56bfc9d3cdc77262bc/logs",
+          "observedAt": "2026-10-14T07:59:53.961705Z",
+          "location": "Original bytes agents/ssc-drain/cache/objects/99/9977e4f930f374aa0a43f4eec210158912002204f9667d4fb40a72b1fb8fc575 SHA-256 9977e4f930f374aa0a43f4eec210158912002204f9667d4fb40a72b1fb8fc575",
+          "excerpt": "Exact MinterProxy explorer JSON displays zero logs and null next_page_params. Empty index is not proof of no minter activity: verified set_minter changes the grant mapping without an event, so mutable authority completeness remains unresolved."
+        },
+        {
+          "label": "etherlink-token-events",
+          "url": "https://explorer.etherlink.com/api/v2/addresses/0xe35a879e5efb4f1bb7f70dcf3250f2e19f096bd8/logs",
+          "observedAt": "2026-10-14T07:59:53.960458Z",
+          "location": "Original bytes agents/ssc-drain/cache/objects/9f/9f22d2362f817624f3c8dd3d23761a62f4d5c2c2b7b709e1b812f79081f85ea2 SHA-256 9f22d2362f817624f3c8dd3d23761a62f4d5c2c2b7b709e1b812f79081f85ea2",
+          "excerpt": "Exact token explorer JSON displays five logs including two Transfer and two SetMinter events; next_page_params is null. This is the displayed bounded explorer surface, not lifetime completeness or zero incident proof."
+        },
+        {
+          "label": "layerzero-report",
+          "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
+          "observedAt": "2026-10-14T07:55:00.936816Z",
+          "location": "Original bytes agents/ssc-drain/cache/objects/90/90e87cfd81a21c8d6a0f52efd5b6d036812397f484f6d1f53261ebeb7c49cfae SHA-256 90e87cfd81a21c8d6a0f52efd5b6d036812397f484f6d1f53261ebeb7c49cfae",
+          "excerpt": "Primary KelpDAO forensic disclosure was retrieved independently. Its other-OApp unaffected statement is event-specific; it is not blanket proof that Curve satellites never suffered any incident."
+        },
+        {
+          "label": "curve-archive",
+          "url": "https://news.curve.finance/llms-full.txt",
+          "observedAt": "2026-10-14T07:55:00.442914Z",
+          "location": "Original bytes agents/ssc-drain/cache/objects/bf/bf7fee51aeddb2cb019043dcfd13cf90aafd3b940658e9b70b91f67aa5f5328e SHA-256 bf7fee51aeddb2cb019043dcfd13cf90aafd3b940658e9b70b91f67aa5f5328e",
+          "excerpt": "Full 5,220,827-byte Curve publication archive searched independently for scrvUSD, Etherlink, LayerZero and rsETH. April pause history and later CRV-only bridge reopening were retained; CRV restoration is not transposed to scrvUSD. No retrieved issuer claim identifies a supply-integrity failure of this exact token/minter/bridge."
+        },
+        {
+          "label": "verus-lead",
+          "url": "https://rekt.news/veruscoin-rekt",
+          "observedAt": "2026-10-14T07:55:01.102957Z",
+          "location": "Original bytes agents/ssc-drain/cache/objects/14/142c625de208fb400729d1be85fd6c9947f371ea1b7732834f698cfff008b6f5 SHA-256 142c625de208fb400729d1be85fd6c9947f371ea1b7732834f698cfff008b6f5",
+          "excerpt": "July 29 2026 report identifies Verus Ethereum bridge 0x71518580f36feceffe0721f06ba4703218cd7f63 and theft of 92,784 scrvUSD held in third-party reserves. It does not identify this Etherlink satellite/minter/Curve bridge; the adverse lead is retained, not reassigned or erased."
+        }
+      ]
     }
   ]
 }
