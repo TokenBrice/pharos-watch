@@ -4,13 +4,16 @@ import Link from "next/link";
 import { ArrowUpRight, Map as MapIcon } from "lucide-react";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
-import { SafetyGradeDistributionBar } from "@/components/safety-grade-distribution-bar";
+import {
+  SafetyGradeDistributionBar,
+  type SafetyGradeSupplyMix,
+} from "@/components/safety-grade-distribution-bar";
 import { UniverseChip } from "@/components/universe-chip";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import { cn } from "@/lib/utils";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { ReportCardGrade } from "@shared/types/report-card-grade";
-import type { GradeFilter, PegFilter } from "./v9-view-model";
+import type { GradeFilter, PegFilter, V9PillarAverage } from "./v9-view-model";
 
 const SAFETY_MAP_PATH = "/safety-scores/map/";
 const SAFETY_MAP_IMAGE_PATH = "/safety-scores/map.png";
@@ -56,36 +59,71 @@ function SafetyMapPreview() {
   );
 }
 
-function HeroMetricRow({
-  label,
-  value,
-  detail,
-  numeric = true,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  /** Word values (a pillar name) stay in sans; mono is for figures only. */
-  numeric?: boolean;
-}) {
+function HeroMetricRow({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 py-2">
-      <span className="min-w-0 truncate text-sm text-muted-foreground">{label}</span>
-      <span className="shrink-0 text-right">
-        <span className={cn("text-sm font-semibold text-foreground", numeric && "pharos-numeric")}>{value}</span>
+    // Wraps rather than truncates: a partial-coverage detail must never erase the
+    // "Known" qualifier from its label.
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 py-2">
+      <span className="min-w-0 text-sm text-muted-foreground">{label}</span>
+      <span className="ml-auto text-right">
+        <span className="pharos-numeric text-sm font-semibold text-foreground">{value}</span>
         <span className="ml-2 text-2xs text-muted-foreground">{detail}</span>
       </span>
     </div>
   );
 }
 
+/** Three pillar ecosystem means side by side; the weakest is tagged, never only tinted. */
+function PillarAveragesRow({
+  pillarAverages,
+  scoredCount,
+}: {
+  pillarAverages: readonly V9PillarAverage[];
+  scoredCount: number;
+}) {
+  return (
+    <div className="py-2">
+      <p className="text-sm text-muted-foreground">Pillar averages</p>
+      <dl className="mt-2 grid grid-cols-3 gap-3">
+        {pillarAverages.map((entry) => (
+          // A wrapped label ("Economic Control") must not drop its figure below its neighbours'.
+          <div key={entry.pillar} className="flex min-w-0 flex-col">
+            <dt className="text-2xs leading-tight text-muted-foreground">{entry.label}</dt>
+            <dd className="mt-auto flex flex-wrap items-center gap-x-1.5 gap-y-1 pt-1">
+              <span
+                className={cn(
+                  "pharos-numeric text-sm leading-none text-foreground",
+                  entry.isLowest ? "font-bold" : "font-semibold",
+                )}
+              >
+                {entry.average}
+              </span>
+              {entry.isLowest ? (
+                <span className="rounded-sm border border-border px-1 text-3xs font-semibold leading-4 text-foreground">
+                  Weakest
+                </span>
+              ) : null}
+              {/* Partial ratings can exclude a pillar; name the narrower denominator. */}
+              {entry.scoredCount !== scoredCount ? (
+                <span className="pharos-numeric text-3xs text-muted-foreground">n={entry.scoredCount}</span>
+              ) : null}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-2 text-2xs text-muted-foreground">Each asset&apos;s score is anchored to its own weakest pillar.</p>
+    </div>
+  );
+}
+
 /**
  * Split hero for Safety Scores. The answer KPI is the ecosystem average score in
- * neutral ink beside its grade-colored chip; the sub-slot folds the retired headline-stat tiles (supply in A/B,
- * weakest dimension) into compact rows; the right slot stages the semantic
- * grade-distribution bar beside a preview of the full Safety Score Map.
- * `stats` is the `buildSafetyHeadlineStats` array:
- * [ecosystem avg, supply in A/B, weakest dimension].
+ * neutral ink beside its grade-colored chip. The sub-slot keeps supply in A/B
+ * and sets the three pillar ecosystem averages side by side, since each score is
+ * anchored to its own weakest pillar. The right slot stages the grade
+ * distribution by asset count and by rated supply beside a preview of the full
+ * Safety Score Map. `stats` is the `buildV9HeadlineStats` array:
+ * [ecosystem avg, supply in A/B].
  */
 export function SafetyScoresHero({
   stats,
@@ -93,6 +131,8 @@ export function SafetyScoresHero({
   totalCards,
   scoredCount,
   cardCount,
+  supplyMix,
+  pillarAverages = [],
 }: {
   stats: Array<{ label: string; value: string; detail: string }>;
   gradeCounts: Record<string, number>;
@@ -101,8 +141,12 @@ export function SafetyScoresHero({
   scoredCount: number;
   /** Every published card (active coins). */
   cardCount: number;
+  /** `buildV9SupplyMix`: supply-weighted grade mix of rated assets. */
+  supplyMix?: SafetyGradeSupplyMix | null;
+  /** `buildV9PillarAverages`: Backing / Exit / Economic Control ecosystem means. */
+  pillarAverages?: readonly V9PillarAverage[];
 }) {
-  const [avg, abSupply, weakest] = stats;
+  const [avg, abSupply] = stats;
   if (!avg) return null;
   const gradeClass = REPORT_CARD_GRADE_COLORS[avg.detail as ReportCardGrade];
 
@@ -128,13 +172,13 @@ export function SafetyScoresHero({
       expand={{ href: "#data", label: "Jump to the full grade table" }}
       subKicker="Ecosystem read"
       sub={
-        abSupply || weakest ? (
+        abSupply || pillarAverages.length > 0 ? (
           <div className="divide-y divide-border/50">
             {abSupply ? (
               <HeroMetricRow label={abSupply.label} value={abSupply.value} detail={abSupply.detail} />
             ) : null}
-            {weakest ? (
-              <HeroMetricRow label={weakest.label} value={weakest.value} detail={weakest.detail} numeric={false} />
+            {pillarAverages.length > 0 ? (
+              <PillarAveragesRow pillarAverages={pillarAverages} scoredCount={scoredCount} />
             ) : null}
           </div>
         ) : null
@@ -142,7 +186,7 @@ export function SafetyScoresHero({
     >
       <div className="grid h-full gap-4 p-5 sm:p-6 lg:grid-cols-3 lg:p-7">
         <div className="flex min-w-0 flex-col justify-center lg:col-span-2">
-          <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={totalCards} />
+          <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={totalCards} supplyMix={supplyMix} />
         </div>
         <SafetyMapPreview />
       </div>

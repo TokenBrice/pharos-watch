@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -69,6 +69,22 @@ describe("ReportCardsV9Client", () => {
       "/safety-scores/map/",
     );
   });
+
+  it("shows all three pillar averages and the grade mix by asset count beside supply", () => {
+    render(<ReportCardsV9Client />);
+    const hero = within(screen.getByRole("group", { name: "Ecosystem safety overview" }));
+
+    expect(hero.getByText("Pillar averages")).toBeTruthy();
+    expect(hero.getByText("Backing")).toBeTruthy();
+    expect(hero.getByText("Exit")).toBeTruthy();
+    expect(hero.getByText("Economic Control")).toBeTruthy();
+    expect(hero.getAllByText("Weakest")).toHaveLength(1);
+    expect(hero.queryByText("Weakest pillar")).toBeNull();
+    expect(hero.getByText("By asset count")).toBeTruthy();
+    expect(hero.getByRole("img", { name: "Safety grade distribution by asset count" })).toBeTruthy();
+    expect(hero.getByText("By supply")).toBeTruthy();
+  });
+
   it("discloses a fresh successful held publication while keeping accepted ratings visible", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const response = makeReportCardsV9Response({
@@ -149,7 +165,9 @@ describe("ReportCardsV9Client", () => {
     });
     render(<ReportCardsV9Client />);
     expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
-    expect(screen.getByText("Supply unavailable")).toBeTruthy();
+    // Headline detail plus the supply row's dashed strip; never a 0% bar.
+    expect(screen.getAllByText("Supply unavailable")).toHaveLength(2);
+    expect(screen.queryByRole("img", { name: /by supply/ })).toBeNull();
     expect(screen.queryByText("0%")).toBeNull();
     expect(screen.queryByText("$0.00")).toBeNull();
   });
@@ -164,6 +182,9 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByText("Known supply in A/B")).toBeTruthy();
     expect(screen.getByText(/1\/2 rated assets observed/)).toBeTruthy();
     expect(screen.queryByText("Supply in A/B")).toBeNull();
+    expect(screen.getByText("By known supply")).toBeTruthy();
+    expect(screen.getByText("$100.00 · 1 of 2 rated")).toBeTruthy();
+    expect(screen.getByText(/Supply unavailable for 1 rated asset: excluded, not counted as zero/)).toBeTruthy();
   });
 
   it("renders observed zero dollars with an unavailable zero-denominator percentage", () => {
