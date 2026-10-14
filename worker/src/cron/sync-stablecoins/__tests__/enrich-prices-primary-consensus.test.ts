@@ -89,6 +89,25 @@ describe("buildPrimaryConsensusResults", () => {
     });
   });
 
+  it("does not treat two chains of one promoted DEX protocol as independent corroboration", () => {
+    const nowSec = 1_800_000_000;
+    const asset: PeggedAsset = { id: "cgusd-cygnus-finance", name: "Cygnus USD", symbol: "cgUSD", pegType: "peggedUSD" };
+    const results = new Map<string, PrimaryPriceResult>();
+    buildPrimaryConsensusResults({
+      candidates: [asset],
+      quoteMaps: createEmptyPrimaryConsensusQuoteMaps(),
+      dexRows: new Map(),
+      dexPriceSources: new Map([[asset.id, ["ethereum", "base"].map((chain) => ({
+        protocol: "uniswap-v3", chain, price: 0.99, tvl: 50_000, updatedAt: nowSec - 60,
+      }))]]),
+      nowSec,
+      resolveDlListQuote: () => undefined,
+      results,
+      stats: createStats(),
+    });
+    expect(results.size).toBe(0);
+  });
+
   it("attributes RedStone quotes by stablecoin id instead of same-symbol peers", () => {
     const nowSec = 1_780_752_600;
     const candidates: PeggedAsset[] = [
