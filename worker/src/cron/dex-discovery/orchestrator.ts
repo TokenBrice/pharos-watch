@@ -433,7 +433,7 @@ export async function syncDexDiscovery(
         nowSec,
         censusVerifiedEmpty,
         (coverage?.hasSupplementalCoverage === true ||
-        (coverage?.poolCount === 0 && targets.some((target) =>
+        ((coverage?.poolCount ?? 0) === 0 && targets.some((target) =>
           getDexDiscoveryProviders(target.chain, target.address).length > 0)) ||
         hasRemappedUnsupportedCensusRow(targets, censusById.get(coin.id))) &&
           isDiscoveryEvidenceRefreshDue(targets, metaById.get(coin.id), nowSec),

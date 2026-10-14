@@ -107,6 +107,7 @@ import {
   upsertStagedPools,
 } from "../persistence";
 import { stagedPool } from "./discovery.test-support";
+import { classifyDexPlaceholderCoverage } from "../../dex-liquidity/deployment-census-coverage";
 
 const mockValidationReferences = {
   rates: {},
@@ -155,22 +156,90 @@ describe("syncDexDiscovery", () => {
   it("prioritizes due supplemental refresh even when the weekly cohort is ineligible", async () => {
     const refreshDb = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [
       { stablecoin_id: "coin-b", pool_count: 20, chain_count: 4, has_supplemental_coverage: 1 },
+      { stablecoin_id: "coin-a", pool_count: 20, chain_count: 4, has_supplemental_coverage: 0 },
     ] }) }) });
     await syncDexDiscovery(refreshDb, null);
     expect(vi.mocked(crawlCoin).mock.calls[0]?.[1]).toBe("coin-b");
   });
 
-  it("refreshes a zero-pool census before two-day expiry despite weekly miss backoff", async () => {
+  it.each([
+    [false, 6], [true, 6], [false, 10], [true, 10],
+  ] as const)("refreshes an unanswered census at the existing maintenance cadence (missing row: %s, misses: %s)", async (missingRow, misses) => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map([
-      ["coin-a", { stablecoinId: "coin-a", consecutiveMisses: 6,
+      ["coin-a", { stablecoinId: "coin-a", consecutiveMisses: misses,
         lastCrawlAt: nowSec - 36 * 3600, lastHitAt: null }],
     ]));
+    const censusDb = missingRow ? makeNoopD1({
+      prepare: (sql: string) => ({ all: async () => ({
+        results: sql.includes("FROM dex_liquidity")
+          ? [{ stablecoin_id: "coin-b", pool_count: 3, chain_count: 1 }] : [],
+      }) }),
+    }) : db;
 
-    const result = await syncDexDiscovery(db, null);
+    const result = await syncDexDiscovery(censusDb, null);
 
     expect(vi.mocked(crawlCoin).mock.calls.map((call) => call[1])).toEqual(["coin-a"]);
-    expect(JSON.parse(result.metadata ?? "{}").tierBreakdown).toMatchObject({ refresh: 1, t3: 0 });
+    expect(JSON.parse(result.metadata ?? "{}").tierBreakdown).toMatchObject({ refresh: 1, t3: 0, dormant: 0 });
+    expect(vi.mocked(crawlCoin).mock.calls[0]?.[2]).toEqual([
+      { chain: "ethereum", address: "0xaaa", decimals: 18 },
+    ]);
+  });
+
+  it("does not accelerate a missing-liquidity-row census before its existing refresh interval", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map([
+      ["coin-a", { stablecoinId: "coin-a", consecutiveMisses: 10,
+        lastCrawlAt: nowSec - 3600, lastHitAt: null }],
+    ]));
+    const missingRowDb = makeNoopD1({
+      prepare: (sql: string) => ({ all: async () => ({
+        results: sql.includes("FROM dex_liquidity")
+          ? [{ stablecoin_id: "coin-b", pool_count: 3, chain_count: 1 }] : [],
+      }) }),
+    });
+
+    const result = await syncDexDiscovery(missingRowDb, null);
+
+    expect(vi.mocked(crawlCoin)).not.toHaveBeenCalled();
+    expect(JSON.parse(result.metadata ?? "{}").tierBreakdown).toMatchObject({ refresh: 0, skipped: 2 });
+  });
+
+  it("keeps a missing published-liquidity row unavailable when scheduled maintenance produces no evidence", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const prepare = vi.fn((sql: string) => ({ all: async () => ({
+      results: sql.includes("FROM dex_liquidity")
+        ? [{ stablecoin_id: "coin-b", pool_count: 3, chain_count: 1 }] : [],
+    }) }));
+    const missingRowDb = makeNoopD1({ prepare });
+    vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map([
+      ["coin-a", { stablecoinId: "coin-a", consecutiveMisses: 10,
+        lastCrawlAt: nowSec - 36 * 3600, lastHitAt: null }],
+    ]));
+    vi.mocked(crawlCoin).mockResolvedValueOnce({
+      pools: [], unresolvedChains: [], deploymentOutcomes: [], checkedDeploymentKeys: [],
+    });
+
+    const result = await syncDexDiscovery(missingRowDb, null);
+
+    expect(JSON.parse(result.metadata ?? "{}").tierBreakdown).toMatchObject({ refresh: 1 });
+    expect(vi.mocked(upsertStagedPools)).toHaveBeenCalledWith(missingRowDb, [], undefined);
+    expect(vi.mocked(upsertDexDeploymentOutcomes).mock.calls.every((call) => call[1].length === 0)).toBe(true);
+    expect(prepare.mock.calls.some(([sql]) =>
+      /(?:INSERT\s+INTO|UPDATE)\s+dex_liquidity\b/i.test(sql))).toBe(false);
+    // The actual publication classifier still receives missing outcomes, not a
+    // synthetic verified-empty result or zero-liquidity observation.
+    const publicationCoverage = classifyDexPlaceholderCoverage({
+      deployments: [{ chain: "ethereum", address: "0xaaa", decimals: 18 }],
+      outcomeRows: [], nowSec,
+    });
+    expect(publicationCoverage.state).toBe("discovery-deferral");
+    expect(publicationCoverage.coverage).toMatchObject({
+      status: "unknown", unsupportedReasons: { deploymentCensusMissingOutcome: 1 },
+    });
+    expect(publicationCoverage.census.verifiedNoPoolsCount).toBe(0);
+    expect(publicationCoverage.census.oldestObservedAtSec).toBeNull();
+    expect(publicationCoverage.census.newestObservedAtSec).toBeNull();
   });
 
   beforeEach(() => {

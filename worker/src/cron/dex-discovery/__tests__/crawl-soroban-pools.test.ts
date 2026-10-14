@@ -12,6 +12,7 @@ import { discoveryContext } from "./discovery.test-support";
 const EURSAFO_TOKEN = "CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP";
 const EUTBL_TOKEN = "CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF";
 const EUTBL_IDENTITY = `EUTBL-${EUTBL_TOKEN}`;
+const CHFSAFO_TOKEN = "CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4";
 const QUOTE_TOKEN = "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA";
 const POOL_ID = "CCY2PXGMKNQHO7WNYXEWX76L2C5BH3JUW3RCATGUYKY7QQTRILBZIFWV";
 
@@ -98,7 +99,7 @@ describe("Soroban Aquarius pool discovery", () => {
     expect(result).toEqual({ providerChecks: [] });
   });
 
-  it("emits a successful empty census so the deployment can become verified_no_pools", async () => {
+  it("emits a successful Aquarius-only empty check without asserting deployment-wide absence", async () => {
     const fetchMock = mockFetch(
       [{ match: AQUARIUS_TICKERS_URL, body: [] }],
       { requireMatch: true, strictUrl: true },
@@ -124,6 +125,30 @@ describe("Soroban Aquarius pool discovery", () => {
       ],
     });
     expect(stageContext.pools).toEqual([]);
+  });
+
+  it.each([0, 1])("queries CHFSAFO's reviewed Soroban register in the existing single-fetch stage: %s pool", async (count) => {
+    const fetchMock = mockFetch(
+      [{ match: AQUARIUS_TICKERS_URL, body: count === 0 ? [] : [ticker({ base_currency: CHFSAFO_TOKEN })] }],
+      { requireMatch: true, strictUrl: true },
+    );
+    const stage = makeContext("chfsafo-spiko");
+    const result = await crawlSorobanPoolsStage({
+      coinTargets: [{ chain: "stellar", address: CHFSAFO_TOKEN, decimals: 5 }],
+      context: stage.value,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.providerChecks).toEqual([{
+      chain: "stellar", address: CHFSAFO_TOKEN, provider: "aquarius",
+      status: "success", observedPoolCount: count,
+    }]);
+    expect(stage.pools).toHaveLength(count);
+    if (count > 0) {
+      expect(stage.pools[0]).toMatchObject({
+        stablecoinId: "chfsafo-spiko", source: "aquarius", baseToken: CHFSAFO_TOKEN,
+        poolType: "soroban-amm-unclassified", priceUsd: null, volume24h: null,
+      });
+    }
   });
 
   it("uses one bounded ticker fetch for all targets and preserves code-prefixed deployment identity", async () => {
