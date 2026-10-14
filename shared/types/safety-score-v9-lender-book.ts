@@ -22,13 +22,13 @@ function fail(ctx: z.RefinementCtx, path: (string | number)[], message: string):
   ctx.addIssue({ code: "custom", path, message });
 }
 
-export const LenderCollateralClassSchema = z.enum([
+const LenderCollateralClassSchema = z.enum([
   "native-eth", "btc-wrapper", "eth-lst", "eth-yield-or-restaked",
   "major-alt-l1", "precious-metal-receipt", "synthetic-dollar",
   "principal-token", "yield-bearing-stable", "structured-credit", "other-unknown",
 ]);
 export type LenderCollateralClass = z.output<typeof LenderCollateralClassSchema>;
-export const LenderBookReasonSchema = z.enum([
+const LenderBookReasonSchema = z.enum([
   "rpc-unavailable", "aborted", "deadline", "unsupported-chain", "unsupported-adapter",
   "unsupported-irm", "identity-mismatch", "block-changed", "incomplete-census", "census-limit",
   "position-not-lender-only", "unreconciled", "zero-nav", "malformed", "stale", "future-dated",
@@ -37,11 +37,11 @@ export const LenderBookReasonSchema = z.enum([
   "unmapped-collateral",
 ]);
 export type LenderBookReason = z.output<typeof LenderBookReasonSchema>;
-export const LenderBookPinSchema = z.strictObject({
+const LenderBookPinSchema = z.strictObject({
   chain: Text, number: Clock, hash: Word, timestampSec: Clock,
   finality: z.literal("finalized"),
 });
-export const LenderMarketObservationSchema = z.strictObject({
+const LenderMarketObservationSchema = z.strictObject({
   account: Address, adapter: Address.nullable(), morpho: Address, marketId: Word,
   loanToken: Address, collateralToken: Address, oracle: Address, irm: Address, lltvRaw: Raw,
   supplySharesRaw: Raw, positionBorrowSharesRaw: Raw, positionCollateralRaw: Raw,
@@ -65,7 +65,7 @@ export const LenderMarketObservationSchema = z.strictObject({
   }
 });
 export type LenderMarketObservation = z.output<typeof LenderMarketObservationSchema>;
-export const LenderDeploymentObservationSchema = z.strictObject({
+const LenderDeploymentObservationSchema = z.strictObject({
   chain: Text, vault: Address, kind: Kind,
   pin: LenderBookPinSchema, loanToken: Address, loanDecimals: z.number().int().min(0).max(36),
   totalAssetsRaw: Raw, totalSupplyRaw: Raw, idleAssetsRaw: Raw,
@@ -125,7 +125,7 @@ export const LenderBookObservationSchema = z.discriminatedUnion("status", [
   });
 });
 export type LenderBookObservation = z.output<typeof LenderBookObservationSchema>;
-export const AcceptedCollateralBackingRowSchema = z.strictObject({
+const AcceptedCollateralBackingRowSchema = z.strictObject({
   assetId: Text, backingScore: ScoreSchema, cardSha256: Sha256Schema,
   sourceCause: z.enum(["C", "U", "D"]).nullable(), sourceGapIds: z.array(Text),
 }).superRefine((row, ctx) => {
@@ -134,7 +134,6 @@ export const AcceptedCollateralBackingRowSchema = z.strictObject({
     fail(ctx, ["sourceGapIds"], "Accepted C/U quality requires stable source gap attribution");
   }
 });
-export type AcceptedCollateralBackingRow = z.output<typeof AcceptedCollateralBackingRowSchema>;
 export const LenderCollateralBackingSchema = z.strictObject({
   schemaVersion: z.literal(1), status: z.enum(["ok", "unavailable"]),
   reason: LenderBookReasonSchema.nullable(),

@@ -39,7 +39,7 @@ The `v10.15` code-sweep release is score-moving: excluded A/B dependency events 
 
 `v10.18` scopes optional Exit `partialEvidence` without weakening scored-route or other exclusion gates; its W1/W2 research and accepted-pair replay establish no score, grade or rating-status movers, not fresh producer closure or production health. [Release detail, W1/W2 dispositions, equivalence evidence and the 2026-10-14 12:40 UTC activation](./process/report-cards-appendix.md#v1018-release-research-and-equivalence) are retained in the appendix.
 
-`v10.19` adds the Morpho lane below; [activation remains provisional](./process/report-cards-appendix.md#morpho-lender-collateral-book-backing-v1019).
+`v10.19` adds the Morpho lane below (provisional).
 
 V10.01 introduces cause-aware scoring after the V10 major release. Internal `safety-score-v9` implementation names and API route paths remain unchanged; public body schemas distinguish technical availability from NR. Digest snapshots label their grade distribution from the captured methodology major version, preserving V9 editions rather than relabelling history.
 
@@ -83,9 +83,9 @@ Wrapper-local reviews in `wrapper-allocation-reviews-v1.json.localReviews` are a
 
 ### Morpho lender collateral-book Backing (v10.19)
 
-Morpho books weight frozen accepted Backing or class quality by allocation and LLTV². Idle keeps parent quality; the blend cannot exceed it. Complete same-parent multi-slice envelopes retain any lower generic constraints; unavailable books keep prior scoring. Sub-1%-NAV oracle branches remain disclosed and weighted; unmatched claims keep the prior aggregate, never worsened.
+Morpho books weight frozen accepted Backing or class quality by allocation and LLTV². Idle keeps parent quality; the blend cannot exceed it. Same-parent multi-slice books keep lower generic constraints; unavailable books keep prior scoring. Sub-1%-NAV oracle branches stay disclosed, weighted; unmatched claims keep the prior aggregate.
 
-[Formulas, calibration and producer details](./process/report-cards-appendix.md#morpho-lender-collateral-book-backing-v1019) are in the appendix.
+[Formulas and producer details](./process/report-cards-appendix.md#morpho-lender-collateral-book-backing-v1019) are in the appendix.
 
 ### Report schema v8
 
