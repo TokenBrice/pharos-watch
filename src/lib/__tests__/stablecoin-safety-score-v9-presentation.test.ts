@@ -39,6 +39,21 @@ describe("stablecoin V9 safety presentation", () => {
       .toEqual([...V9EvidenceResponsibilitySchema.options].sort());
   });
 
+  it("explains limited score inputs without changing the visible evidence label or API key", () => {
+    const card = makeV9Card();
+    card.pillars.backing.evidenceLevel = "limited";
+    const presentation = buildStablecoinSafetyScoreV9Presentation(card);
+    expect(presentation.pillars[0].evidenceSummary).toBe("Evidence: limited · current");
+    expect(presentation.pillars[0].evidenceDescription).toBe(
+      "Evidence: limited — the pillar score relies on undisclosed or not-yet-researched inputs.",
+    );
+    expect(card.pillars.backing.evidenceLevel).toBe("limited");
+    expect(presentation.pillars[1].evidenceDescription).toBeNull();
+
+    card.pillars.backing.aggregationDisposition = "excluded-a-b";
+    expect(buildStablecoinSafetyScoreV9Presentation(card).pillars[0].evidenceDescription).toBeNull();
+  });
+
   /**
    * Full three-pillar breakdown; tests override the pillar they exercise.
    * Published scores must equal the card's pillar scores (88 / 84 / 86) and

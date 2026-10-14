@@ -6,6 +6,7 @@
  * would let the same key drift to different copy on the same page.
  */
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import type { V9EvidenceLevel } from "@shared/types/safety-score-v9";
 
 /**
  * Who owns an unresolved or adverse fact. Pharos's own gaps are named as ours
@@ -38,3 +39,8 @@ export const SAFETY_SCORE_V9_RESPONSIBILITY_ORDER: readonly string[] = [
   "method-unsupported",
   "measured-adverse",
 ];
+
+/** Meaning of limited pillar evidence, not authored oracle-review confidence. */
+export const SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS: Readonly<Partial<Record<V9EvidenceLevel, string>>> = {
+  limited: "Evidence: limited — the pillar score relies on undisclosed or not-yet-researched inputs.",
+};

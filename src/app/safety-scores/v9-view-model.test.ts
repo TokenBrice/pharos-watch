@@ -6,6 +6,8 @@ import {
   buildSafetyMcapMap,
   buildV9GradeCounts,
   buildV9HeadlineStats,
+  buildV9PillarAverages,
+  buildV9SupplyMix,
   filterAndSortV9Cards,
   groupV9CardsByGrade,
 } from "./v9-view-model";
@@ -77,7 +79,7 @@ describe("Safety Scores V9 view model", () => {
     expect(idsFor("commodities")).toEqual(["asset-c"]);
   });
 
-  it("builds the existing hero metrics from V9 scores and pillars", () => {
+  it("builds the existing hero metrics from V9 scores and supply", () => {
     const stats = buildV9HeadlineStats(cards, new Map([
       ["asset-a", 60],
       ["asset-b", 30],
@@ -86,7 +88,37 @@ describe("Safety Scores V9 view model", () => {
 
     expect(stats[0]).toMatchObject({ label: "Ecosystem avg.", value: "77" });
     expect(stats[1]).toMatchObject({ label: "Supply in A/B", value: "90%" });
-    expect(stats[2]).toMatchObject({ label: "Weakest pillar", value: "Exit" });
+    expect(stats).toHaveLength(2);
+  });
+
+  it("weights the rated grade mix by observed supply, matching the A/B headline", () => {
+    expect(buildV9SupplyMix(cards, new Map([["asset-a", 60], ["asset-b", 30], ["asset-c", 10]]))).toEqual({
+      supplyByGrade: { A: 60, B: 30, C: 10, D: 0, F: 0 },
+      totalSupply: 100,
+      observedCount: 3,
+      ratedCount: 3,
+    });
+  });
+
+  it("excludes unobserved and unrated supply from the supply mix instead of counting zero", () => {
+    const input = [...cards, makeV9Card({ id: "nr", score: null, grade: "NR" })];
+    expect(buildV9SupplyMix(input, new Map([["asset-a", 30], ["asset-c", 70], ["nr", 900]]))).toEqual({
+      supplyByGrade: { A: 30, B: 0, C: 70, D: 0, F: 0 },
+      totalSupply: 100,
+      observedCount: 2,
+      ratedCount: 3,
+    });
+    expect(buildV9SupplyMix(cards, buildSafetyMcapMap())).toMatchObject({ totalSupply: 0, observedCount: 0, ratedCount: 3 });
+    expect(buildV9SupplyMix([makeV9Card({ score: null, grade: "NR" })], new Map())).toBeNull();
+  });
+
+  it("averages all three pillars over rated cards and flags the weakest", () => {
+    expect(buildV9PillarAverages(cards)).toEqual([
+      { pillar: "backing", label: "Backing", average: 77, scoredCount: 3, isLowest: false },
+      { pillar: "exit", label: "Exit", average: 68, scoredCount: 3, isLowest: true },
+      { pillar: "control", label: "Economic Control", average: 76, scoredCount: 3, isLowest: false },
+    ]);
+    expect(buildV9PillarAverages([makeV9Card({ score: null, grade: "NR" })])).toEqual([]);
   });
 
   it("sorts null scores last and breaks equal rated and unrated ties by id", () => {
@@ -123,7 +155,7 @@ describe("Safety Scores V9 view model", () => {
     const stats = buildV9HeadlineStats(cards, buildSafetyMcapMap());
     expect(stats[0].value).toBe("77");
     expect(stats[1]).toMatchObject({ value: "Unavailable", detail: "Supply unavailable" });
-    expect(stats[2].value).toBe("Exit");
+    expect(buildV9PillarAverages(cards).find((entry) => entry.isLowest)?.pillar).toBe("exit");
   });
 
   it.each(NUMERIC_INPUT_STATES)("keeps $state supply distinct in safety headlines", ({ state, value }) => {
@@ -179,7 +211,10 @@ describe("Safety Scores V9 view model", () => {
     expect(filterAndSortV9Cards(input, options).map(card => card.id)).toEqual(["gap"]);
     expect(filterAndSortV9Cards(input, { ...options, gradeFilter: "all", sortKey: "control" }).map(card => card.id)).toEqual(["partial", "gap", "nr"]);
     expect(buildV9HeadlineStats(input, options.mcapMap)[0]).toMatchObject({ value: "75" });
-    expect(buildV9HeadlineStats(input, options.mcapMap)[2].value).not.toBe("Exit");
+    expect(buildV9PillarAverages(input)).toEqual([
+      { pillar: "backing", label: "Backing", average: 80, scoredCount: 1, isLowest: true },
+      { pillar: "control", label: "Economic Control", average: 80, scoredCount: 1, isLowest: true },
+    ]);
     expect(partial.pillars.exit.score).toBeNull();
     expect(gap.score).toBeNull();
   });

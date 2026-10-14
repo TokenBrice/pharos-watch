@@ -6,6 +6,7 @@ import { CONTROL_COMPONENT_ROLE_LABELS, type ControlComponentRole } from "@share
 import type { ControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import {
   dedupeOracleFeeds,
+  ORACLE_REVIEW_COPY,
   type OracleBranchClientRow,
   type OracleRiskClientSummary,
 } from "@/lib/stablecoin-detail-oracle-client";
@@ -167,6 +168,25 @@ describe("oracleModuleSize", () => {
 });
 
 describe("OracleLiquidationSection", () => {
+  it.each(["Verified", "Probable", "Limited", "Unknown"])(
+    "names authored oracle review confidence distinctly (%s)",
+    (confidenceLabel) => {
+      const view = render(<OracleLiquidationSection summary={{ ...PRICE_FEED, confidenceLabel }} />);
+      const chip = view.getByText(`Oracle review: ${confidenceLabel}`);
+      expect(chip.getAttribute("title")).toBe(ORACLE_REVIEW_COPY.description);
+      expect(chip.getAttribute("title")).toBe(
+        "The reviewer's confidence in the oracle-profile evidence, not a count of Safety Score inputs.",
+      );
+      expect(view.queryByText(`Confidence: ${confidenceLabel}`)).toBeNull();
+      view.unmount();
+    },
+  );
+
+  it("omits the oracle-review chip when confidence is absent", () => {
+    const view = render(<OracleLiquidationSection summary={{ ...PRICE_FEED, confidenceLabel: null }} />);
+    expect(view.queryByTitle(ORACLE_REVIEW_COPY.description)).toBeNull();
+  });
+
   it("renders nothing without an oracle summary", () => {
     expect(render(<OracleLiquidationSection summary={null} />).container.innerHTML).toBe("");
     expect(render(<OracleLiquidationSection />).container.innerHTML).toBe("");

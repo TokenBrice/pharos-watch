@@ -1,42 +1,56 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { URL as NodeURL } from "node:url";
+import { gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as assurance from "@shared/lib/independent-assurance";
-import * as hashing from "../../../lib/hash";
 import { runAdapter, installAdapterNetwork } from "./reserve-adapter.test-support";
 
-const MAIN_URL = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl/script_main.DZqMDh2_.mjs";
-const MAIN_HASH = "0dc7d49c276343e5b721362a348ee66f8f82a0bddd1bd7aecbaabfa19345929c";
+const SITE = "https://framerusercontent.com/sites/3XxgTiMfDKU2yZKNfef9sl";
+const MAIN_URL = `${SITE}/script_main.DWSgnPFN.mjs`;
 const CASES = [
-  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.BCm9jGCp.mjs", hash: "ee68ebb1cbfee024d2e40c4d39f121b9f3c4380e0bed3b2c04cca2a213fe3a5e", assets: 2893935877, liabilities: 2886948845, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
-  { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.DBmYnQbz.mjs", hash: "bbd62029d8cb0f280869d6c7104d6365b648ac1e8b59c2385b93808249294828", assets: 3350462467, liabilities: 3340650602, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
-  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.BLSMgw0g.mjs", hash: "f68141e0ca591cb1083f43b3ff71a04b607643d423b6ead7a6974a7097e07be9", assets: 29189905, liabilities: 29168261, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
+  { product: "PYUSD", id: "pyusd-paypal", module: "gaXXeRLPJVU8xNh11dsVtC1bnIYsH9HFFZN3Q7yy4xM.BCm9jGCp.mjs", assets: 2893935877, liabilities: 2886948845, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo", "treasury-bill"] },
+  { product: "USDG", id: "usdg-paxos", module: "Dpx7vvLtZ0_GXJdsd7UXSGLBYctWInqJeDbtf1NUTGo.DBmYnQbz.mjs", assets: 3350462467, liabilities: 3340650602, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "money-market-fund", "treasury-bill"] },
+  { product: "USDP", id: "usdp-paxos", module: "T6xLeGdnaKeagfQVSfjAmjg0_UAsdgPLW9gmBy9jinM.BLSMgw0g.mjs", assets: 29189905, liabilities: 29168261, asOf: "2026-08-31T17:00:00-04:00", classes: ["bank-deposit", "repo"] },
 ] as const;
+const routeTableMain = (row: (typeof CASES)[number]) =>
+  `const routes={R1:{elements:{a:\`${row.product.toLowerCase()}-attestations\`},page:L(()=>import(\`./${row.module}\`)),path:\`/${row.product.toLowerCase()}-transparency\`},`
+  + `R2:{page:L(()=>import(\`./decoyPage.D1coyChunk.mjs\`)),path:\`/blog\`}};`;
+function fixture(product: string): string {
+  const capture: { gzipBase64: string; rawSha256: string; rawByteLength: number } = JSON.parse(
+    readFileSync(new NodeURL(`./fixtures/paxos/${product.toLowerCase()}-2026-10-14.module.json`, import.meta.url), "utf8"),
+  );
+  const bytes = gunzipSync(Buffer.from(capture.gzipBase64, "base64"));
+  expect(bytes.byteLength).toBe(capture.rawByteLength);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(capture.rawSha256);
+  return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+}
 
 describe("Paxos fiat product assurance", () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-  it.each(CASES)("$product selects its reviewed report, reconciles every liability and rejects module drift", async (row) => {
+  it.each(CASES)("$product admits reviewed page bytes, reconciles liabilities and rejects a changed selection", async (row) => {
     const original = assurance.getIndependentAssuranceManifest(row.product);
     const pdf = "%PDF-1.7 scoped assurance fixture";
     const manifest = { ...original, reportByteLength: pdf.length, reportSha256: createHash("sha256").update(pdf).digest("hex") };
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(manifest);
-    const main = "reviewed main route";
-    // Historical base report precedes the reviewed override: first-PDF selection must not win.
-    const page = `file:\`https://framerusercontent.com/assets/U6CdEPIqt3a6rt4lA2aNl149M.pdf\`,variant:{file:\`${manifest.reportUrl}\`}`;
-    const sha256 = hashing.sha256Hex;
-    vi.spyOn(hashing, "sha256Hex").mockImplementation(async (body) => body === main ? MAIN_HASH : body === page ? row.hash : sha256(body));
-    let drift = false;
+    const page = fixture(row.product);
+    const nextModule = row.module.replace(/\.[^.]+\.mjs$/, ".SeptemberChunk.mjs");
+    let changed = false;
+    const newerPage = page.replace("\n//# sourceMappingURL=", "\nconst september={file:`https://framerusercontent.com/assets/September2026Unreviewed.pdf`};\n//# sourceMappingURL=");
+    expect(newerPage).not.toBe(page);
+    expect(newerPage).toContain(manifest.reportUrl);
     const network = installAdapterNetwork({
       html: {
         [manifest.officialIndexUrl]: `<script src="${MAIN_URL}"></script>`,
-        [MAIN_URL]: main,
-        [new URL(row.module, MAIN_URL).href]: () => drift ? `${page} changed` : page,
+        [MAIN_URL]: () => routeTableMain(row).replace(row.module, changed ? nextModule : row.module),
+        [new URL(row.module, MAIN_URL).href]: page,
+        [new URL(nextModule, MAIN_URL).href]: newerPage,
         [manifest.reportUrl]: { body: pdf, headers: { "content-type": "application/pdf" } },
       },
     });
     const { result } = await runAdapter("paxos-independent-assurance", row.id, {
-      network,
-      nowSec: Math.floor(Date.parse("2026-09-25T00:00:00Z") / 1000),
+      network, nowSec: Math.floor(Date.parse("2026-09-25T00:00:00Z") / 1000),
     });
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(row.assets / row.liabilities, 12);
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse(row.asOf) / 1000);
@@ -44,11 +58,33 @@ describe("Paxos fiat product assurance", () => {
     expect(() => assurance.reconcileIndependentAssuranceManifest({
       ...original, liabilities: original.liabilities.map((liability, index) => index === 0 ? { ...liability, amount: String(Number(liability.amount) - 1) } : liability),
     })).toThrow(/liability total/);
-    drift = true;
+    changed = true;
     await expect(runAdapter("paxos-independent-assurance", row.id, {
-      network,
-      nowSec: Math.floor(Date.parse("2026-08-01T00:00:00Z") / 1000),
-      validate: false,
-    })).rejects.toThrow("website module changed");
+      network, nowSec: Math.floor(Date.parse("2026-09-25T00:00:00Z") / 1000), validate: false,
+    })).rejects.toThrow("paxos-independent-assurance: page-module-bytes-drifted");
+  });
+
+  it.each(["length", "SHA-256"] as const)("retains the manifest PDF %s gate after page verification", async (gate) => {
+    const pdf = "%PDF-1.7 scoped assurance fixture";
+    const tampered = `${pdf} `;
+    const original = assurance.getIndependentAssuranceManifest("PYUSD");
+    const manifest = {
+      ...original,
+      reportByteLength: gate === "length" ? pdf.length : tampered.length,
+      reportSha256: createHash("sha256").update(pdf).digest("hex"),
+    };
+    vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(manifest);
+    const row = CASES[0];
+    const network = installAdapterNetwork({
+      html: {
+        [manifest.officialIndexUrl]: `<script src="${MAIN_URL}"></script>`,
+        [MAIN_URL]: routeTableMain(row),
+        [new URL(row.module, MAIN_URL).href]: fixture("PYUSD"),
+        [manifest.reportUrl]: { body: tampered, headers: { "content-type": "application/pdf" } },
+      },
+    });
+    await expect(runAdapter("paxos-independent-assurance", row.id, {
+      network, nowSec: Math.floor(Date.parse("2026-09-25T00:00:00Z") / 1000), validate: false,
+    })).rejects.toThrow(gate === "length" ? "PDF byte length" : "PDF SHA-256");
   });
 });

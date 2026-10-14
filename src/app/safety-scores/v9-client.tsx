@@ -25,6 +25,8 @@ import {
   buildSafetyPegTypeMap,
   buildV9GradeCounts,
   buildV9HeadlineStats,
+  buildV9PillarAverages,
+  buildV9SupplyMix,
   filterAndSortV9Cards,
   groupV9CardsByGrade,
   type GradeFilter,
@@ -254,6 +256,8 @@ export function ReportCardsV9Client() {
   const gradeCounts = useMemo(() => buildV9GradeCounts(cards), [cards]);
   const totalCards = cards.length;
   const headlineStats = useMemo(() => buildV9HeadlineStats(cards, mcapMap), [cards, mcapMap]);
+  const supplyMix = useMemo(() => buildV9SupplyMix(cards, mcapMap), [cards, mcapMap]);
+  const pillarAverages = useMemo(() => buildV9PillarAverages(cards), [cards]);
   // Same predicate as the ecosystem average in buildV9HeadlineStats.
   const scoredCount = useMemo(
     () => cards.filter((card) => card.ratingStatus === "rated" && card.score !== null).length,
@@ -321,6 +325,8 @@ export function ReportCardsV9Client() {
         totalCards={totalCards - gradeCounts["pipeline-gap"]}
         scoredCount={scoredCount}
         cardCount={totalCards}
+        supplyMix={supplyMix}
+        pillarAverages={pillarAverages}
       />
 
       <SafetyPillarExplainer />

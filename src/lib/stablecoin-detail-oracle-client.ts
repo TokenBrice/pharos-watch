@@ -346,6 +346,12 @@ const CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {
   unknown: "Unknown",
 };
 
+/** Authored review confidence, distinct from computed pillar evidence levels. */
+export const ORACLE_REVIEW_COPY = {
+  label: "Oracle review",
+  description: "The reviewer's confidence in the oracle-profile evidence, not a count of Safety Score inputs.",
+} as const;
+
 /** "None" for zero, then the largest whole natural unit: 1d / 4h / 5m / 45s. */
 export function formatOracleDurationSec(seconds: number | null | undefined): string | null {
   if (seconds == null || seconds < 0) return null;

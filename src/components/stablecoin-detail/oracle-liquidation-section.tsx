@@ -16,6 +16,7 @@ import type { ControlComponentRoles, ControlStripComponent, PillarStripTone } fr
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   formatOraclePct,
+  ORACLE_REVIEW_COPY,
   oracleTierLabel,
   resolveOracleTierLadder,
   type OracleBranchClientRow,
@@ -570,9 +571,10 @@ export function OracleLiquidationSection({
           <Badge
             variant="outline"
             className="border-border/60 bg-muted/30 text-2xs font-medium text-muted-foreground"
+            title={ORACLE_REVIEW_COPY.description}
           >
             {confidence === "Verified" ? <CircleCheck aria-hidden="true" /> : <CircleDashed aria-hidden="true" />}
-            Confidence: {confidence}
+            {ORACLE_REVIEW_COPY.label}: {confidence}
           </Badge>
         ) : null
       }

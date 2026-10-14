@@ -359,7 +359,12 @@ export function SafetyScoreV9PillarRow({
         <span className="flex min-w-0 items-center gap-2.5">
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold text-foreground">{pillar.label}</span>
-            <span className="mt-0.5 block text-2xs text-muted-foreground">{pillar.evidenceSummary}</span>
+            <span
+              className="mt-0.5 block text-2xs text-muted-foreground"
+              title={pillar.evidenceDescription ?? undefined}
+            >
+              {pillar.evidenceSummary}
+            </span>
             {pillar.breakdown?.exitHighlight ? (
               <span className="mt-1 block text-2xs text-foreground/85">
                 Best exit: {pillar.breakdown.exitHighlight.venueLabel}

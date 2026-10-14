@@ -17,6 +17,7 @@ import {
   buildSafetyScoreV9Attribution,
   type StablecoinSafetyScoreV9AttributionGroup,
 } from "@/lib/stablecoin-safety-score-v9-presentation-attribution";
+import { SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS } from "@/lib/safety-score-v9-labels";
 
 const PILLARS = [
   ["backing", "Backing"],
@@ -36,6 +37,7 @@ export interface StablecoinSafetyScoreV9Presentation {
     label: string;
     score: number | null;
     evidenceSummary: string;
+    evidenceDescription: string | null;
     componentCount: number;
     components: StablecoinSafetyScoreV9Component[];
     breakdown: StablecoinSafetyScoreV9PillarBreakdown | null;
@@ -75,6 +77,9 @@ export function buildStablecoinSafetyScoreV9Presentation(
         label,
         score: pillar.score,
         evidenceSummary,
+        evidenceDescription: pillar.aggregationDisposition === "excluded-a-b"
+          ? null
+          : SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS[pillar.evidenceLevel] ?? null,
         componentCount: pillar.components.length,
         components: describeSafetyScoreV9Components(pillar.components),
         breakdown: pillarBreakdown(card, key),
