@@ -48,6 +48,8 @@ Midas mTBILL July 2026 Final Terms capability exceptions are now governed by `.g
 
 Safety Score 10.17 incident research adds exact value/path exceptions for the incident registry (`shared/data/safety-score-v9/incident-reviews-v1.json`), its generated runtime projection and the missing-data ledger: the three GLDT bridge-control review-id spans formed by `gldt` plus `-gold-dao-` and a reviewed 11-hex digest prefix (`gitlab-deploy-token`), the EUROT/tGBP control-key digests, the IDRT/wsrUSD ledger control-key digests, and three quoted prose terms from incident findings and excerpts (`generic-api-key`). Each pair has public, AWS and generic-credential self-test controls; no digest, review-id or prose shape is exempted.
 
+Safety Score 10.18 adds exact `generic-api-key` value/path exceptions for the two reviewed Sentora asset ids in the missing-data ledger's `ACCESS_REVIEW` claim groups and CHFSAFO's public Stellar contract in `worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools.test.ts`. `.gitleaks.toml` pins the reviewed values to those paths; each pair has public-only, mixed-line AWS and mixed-line generic-credential self-test controls. No claim-group, asset-id or Stellar contract shape is exempted.
+
 ## Monitoring
 
 ### Google Search Console

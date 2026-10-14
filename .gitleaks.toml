@@ -574,3 +574,23 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^(?:f8213d7cc261751b055f|1ef645130fda84cf9841)\.?$''']
 paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+
+# ACCESS_REVIEW claim groups cite the public asset ids registered in
+# shared/data/stablecoins/coins/{senpyusdprimev2-sentora,senrlusdv2-sentora}.json.
+[[allowlists]]
+description = "Reviewed Sentora public asset ids in missing-data ledger access-review claim groups"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:senpyusdprimev2-sentora|senrlusdv2-sentora)$''']
+paths = ['''(?:^|/)\.github/workflows/artifacts/safety-score-missing-data-reviewed-ledger\.json$''']
+
+# CHFSAFO's public Stellar contract is registered in
+# shared/data/stablecoins/coins/chfsafo-spiko.json and pinned by this fixture.
+[[allowlists]]
+description = "CHFSAFO public Stellar contract id in the Soroban discovery fixture"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4$''']
+paths = ['''(?:^|/)worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools\.test\.ts$''']
