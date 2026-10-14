@@ -385,6 +385,33 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       }
     });
 
+    it("keeps published Backing unchanged for retained books with failed latest attempts", () => {
+      const retainedInput = normalizeNativeV9Input({
+        ...frozen, baseInputGenerationId: undefined,
+        liveReserveProvenanceMap: Object.fromEntries([PRIME, YIELD].map(id => [id, {
+          ...frozen.liveReserveProvenanceMap[id],
+          lenderBookLatestAttemptFailure: unavailableBook(id, input.clockSec, "rpc-unavailable"),
+        }])),
+      });
+      const retained = buildSafetyScoreV9Candidate({ fixedInput: retainedInput, publishedAtSec: input.clockSec });
+      expect(retained.quarantines).toEqual([]);
+      for (const id of [PRIME, YIELD]) {
+        const before = admitted.candidate.cards.find(card => card.id === id)!;
+        const after = retained.candidate.cards.find(card => card.id === id)!;
+        expect(after.pillars.backing.score).toBe(before.pillars.backing.score);
+        expect(after.score).toBe(before.score);
+        expect(after.grade).toBe(before.grade);
+        expect(retained.compiledFacts.assets.find(asset => asset.assetId === id)!.lenderBook!.observation)
+          .toEqual(frozen.liveReserveProvenanceMap[id]!.lenderBookObservation);
+        const diagnostic = after.breakdowns!.backing.components.flatMap(component => component.factors ?? [])
+          .find(factor => factor.componentKey.endsWith(":latest-attempt"))!;
+        expect(diagnostic).toBeDefined();
+        expect(diagnostic.score).toBeNull();
+        expect(diagnostic.cause).toBe("A");
+        expect(resolveV9EffectiveScoringWeight(diagnostic)).toBe(0);
+      }
+    });
+
     it.each([
       ["null", null],
       ["missing rows", {}],
@@ -439,8 +466,10 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
     it("roundtrips stored metadata through the explicit whitelist, frozen source and native codec", async () => {
       const meta = ACTIVE_META_BY_ID.get(YIELD)!;
       const config = meta.liveReservesConfig!;
+      const failedAttempt = unavailableBook(YIELD, input.clockSec, "rpc-unavailable");
       const metadata = LiveReserveSnapshotMetadataSchema.parse({
-        freshnessMode: "not-applicable", lenderBookObservation: observations[YIELD], details: { contextualOnly: true },
+        freshnessMode: "not-applicable", lenderBookObservation: observations[YIELD],
+        lenderBookLatestAttemptFailure: failedAttempt, details: { contextualOnly: true },
       });
       const fetchedAt = input.clockSec - 60;
       const composition = reserveCompositionRow({
@@ -460,6 +489,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       const live = await loadFreshIndependentLiveReserveMap(db, input.clockSec);
       expect(live.get(YIELD)).toEqual(meta.reserves);
       expect(live.provenanceById?.get(YIELD)?.lenderBookObservation).toEqual(observations[YIELD]);
+      expect(live.provenanceById?.get(YIELD)?.lenderBookLatestAttemptFailure).toEqual(failedAttempt);
       expect(live.provenanceById?.get(YIELD)).not.toHaveProperty("details");
       const previous = pipeline.candidate;
       const health: V9PublicationHealth = {
@@ -477,7 +507,12 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         expect(row.cardSha256).toMatch(/^[0-9a-f]{64}$/);
       }
       expect(captured.byAssetId).not.toHaveProperty("usdc-circle");
-      const native = subsetInput(input, { [YIELD]: live.provenanceById!.get(YIELD)!.lenderBookObservation }, captured);
+      const base = subsetInput(input, { [YIELD]: live.provenanceById!.get(YIELD)!.lenderBookObservation }, captured);
+      const native = normalizeNativeV9Input({
+        ...base, baseInputGenerationId: undefined,
+        liveReserveProvenanceMap: { ...base.liveReserveProvenanceMap, [YIELD]: live.provenanceById!.get(YIELD)! },
+      });
+      expect(native.baseInputGenerationId).not.toBe(base.baseInputGenerationId);
       const identity = buildSafetyScoreV9InputIdentity({
         methodologyVersion: native.methodologyVersion, baseInputGenerationId: native.baseInputGenerationId,
         publicationGenerationId: native.sourceGeneration,

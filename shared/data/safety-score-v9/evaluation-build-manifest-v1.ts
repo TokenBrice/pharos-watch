@@ -38,7 +38,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "8cc80ae2567bc24d7f63f2d1d17fc2649ed67a60f6401e2a42887d7e35983dc2"
+      "sha256": "646e790bdc27754029f22ad8fbde132c540e1456689ae9fd39e56e1d6341845d"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -470,7 +470,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/backing-inheritance.ts",
-      "sha256": "ef7d44c041c0584fc8967960e9c070752fe1b4ffe4bd5ea8868d6279ef597af0"
+      "sha256": "bfe72554c188021d8ce9e6b6b004b93ae82b3ef2594a85a0f357121849999ad0"
     },
     {
       "path": "shared/lib/safety-score-v9/backing-primitives.ts",
@@ -770,7 +770,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserves.ts",
-      "sha256": "c0676b095564e3a60b765aea10af5e4fc7d74018960be90213865c5568b46134"
+      "sha256": "4f7d48eb57176937727d2a63fed7745ed5ddce1151b63b97a49736640e2899f3"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -858,7 +858,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-facts.ts",
-      "sha256": "1fada873defbca769a154bdf2ac95dc82bc6e8252e6ff948c9a04916f0a3dad9"
+      "sha256": "929ff4296554d8e53c56c5f25e25045ade16cd59b686aa6862bf48ee34e37f06"
     },
     {
       "path": "shared/types/safety-score-v9-grade.ts",
@@ -878,7 +878,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-lender-book.ts",
-      "sha256": "cf13ee22583d038a807b73c3c6b9cdd1db70b37f4ed753919c60f3e6efa35c27"
+      "sha256": "77013bb4261450366ec6bbf87474e148366f6e827aa3c6cd85fdee72772a6b68"
     },
     {
       "path": "shared/types/safety-score-v9-mechanism-overlays.ts",
@@ -946,7 +946,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-reserve-scope.ts",
-      "sha256": "c2afec0870e887f673352569d1f036f7f03ce63c95b0ff1a71b4192eeefe6f83"
+      "sha256": "7549c1a7f21326027430c1e5ab69039ea0db654b52d95095033fc402bada3d1c"
     },
     {
       "path": "shared/types/safety-score-v9-supply-attribution.ts",
@@ -1058,7 +1058,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-overview.ts",
-      "sha256": "a9e05d2096eb9d0410dfbb013df1358f66e3d51a593ef355bf98b0d29f21dcdc"
+      "sha256": "bf968bfc97a5e2eaa8a9ae69edda0016082d0d0781fdb308a43e53e3c941f684"
     },
     {
       "path": "worker/src/lib/live-reserves/store-read.ts",
@@ -1082,7 +1082,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-write.ts",
-      "sha256": "eedcb6fc68e0f955f1bfc9047ccb160d0c1a11b2a6ba0f18afdaa1e54afdc0e3"
+      "sha256": "0a854a045e264ce1bd60593ade1049ce2dc6d33e186d156e40bed488c28cfa27"
     },
     {
       "path": "worker/src/lib/live-reserves/store.ts",
@@ -1210,7 +1210,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-lender-book.ts",
-      "sha256": "28db3b7456dd7550380a895c83c4bd85d1c35c305f67c3864152c3af3ac8b37c"
+      "sha256": "b5c962cb64804d69bee09b3c1e7613cc6f504d4cde353e6b2e03f633282555af"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-operational-resilience.ts",
@@ -1299,7 +1299,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-13-block-26183079-shock-coverage.json.gz"
     }
   ],
-  "digest": "2c86796eb69d8ad65f74013581655204a74ced594dc8eb71625c4d289acc7d35"
+  "digest": "37d436463319bce686746926762a8b1d63e6f953b70a93c6ed14f1027adfe296"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

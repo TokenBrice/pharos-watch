@@ -16,7 +16,7 @@ import { V9PathKindSchema, V9ReasonCodeSchema, V9ReasonOwnerDomainSchema } from 
 import { V9CdpStressCoverageFactSchema, V9MechanismRiskReviewSchema, type V9MechanismFactV1 } from "./safety-score-v9-backing";
 import { V9OperationalResilienceFactSchema } from "./safety-score-v9-operational-resilience";
 import { V9AllocationScopeFactSchema } from "./safety-score-v9-allocation";
-import { LenderBookObservationSchema, LenderCollateralResolutionSchema } from "./safety-score-v9-lender-book";
+import { LenderBookObservationSchema, LenderCollateralResolutionSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
 import {
   V9WrapperLocalFactsSchema,
   type V9ApplicableWrapperLocalFacts,
@@ -1654,6 +1654,8 @@ export type V9MechanismExitFactV1 = z.infer<typeof V9MechanismExitFactV1Schema>;
 export const V1019LenderBookFactSchema = z.strictObject({
   status: V9FactStatusV2Schema,
   acceptedSourceStatus: V9FactStatusV2Schema.optional(),
+  latestAttemptStatus: V9FactStatusV2Schema.optional(),
+  latestAttemptFailure: LenderBookFailedAttemptSchema.optional(),
   observation: LenderBookObservationSchema.nullable(),
   collaterals: z.array(LenderCollateralResolutionSchema),
 }).superRefine((fact, ctx) => {
@@ -2106,6 +2108,7 @@ function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V
     { label: "reserve-envelope", status: asset.reserveStatus },
     ...(asset.lenderBook ? [{ label: "lenderBook", status: asset.lenderBook.status }] : []),
     ...(asset.lenderBook?.acceptedSourceStatus ? [{ label: "lenderBook:accepted-source", status: asset.lenderBook.acceptedSourceStatus }] : []),
+    ...(asset.lenderBook?.latestAttemptStatus ? [{ label: "lenderBook:latest-attempt", status: asset.lenderBook.latestAttemptStatus }] : []),
     ...asset.reserveExposures.map((fact) => ({ label: `reserve:${fact.exposureKey}`, status: fact.status })),
     ...asset.reserveExposures.flatMap((fact) => Object.entries(fact.factorStatuses ?? {}).map(([key, status]) => ({ label: `reserve:${fact.exposureKey}:${key}`, status }))),
     ...("reserveResiduals" in asset ? (asset.reserveResiduals as z.infer<typeof V9ReserveResidualFactSchema>[]).map((fact) => ({ label: `residual:${fact.residualId}`, status: fact.status })) : []),

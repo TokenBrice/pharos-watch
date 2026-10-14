@@ -101,14 +101,16 @@ const ObservationBase = {
   schemaVersion: z.literal(1), assetId: Text, sourceGenerationId: Text,
   acquiredAtSec: Clock, maxAgeSec: z.number().int().positive(), contentSha256: Sha256Schema,
 };
+export const LenderBookFailedAttemptSchema = z.strictObject({
+  ...ObservationBase, status: z.literal("unavailable"), reason: LenderBookReasonSchema,
+  failedDeploymentKey: Text.nullable(), deployments: z.null(),
+});
 export const LenderBookObservationSchema = z.discriminatedUnion("status", [
   z.strictObject({ ...ObservationBase, status: z.literal("ok"),
     censusScope: z.literal("complete-nav-accounted-current-book"),
     deployments: z.array(LenderDeploymentObservationSchema).min(1),
   }),
-  z.strictObject({ ...ObservationBase, status: z.literal("unavailable"), reason: LenderBookReasonSchema,
-    failedDeploymentKey: Text.nullable(), deployments: z.null(),
-  }),
+  LenderBookFailedAttemptSchema,
 ]).superRefine((observation, ctx) => {
   if (observation.status !== "ok") return;
   if (!sortedUnique(observation.deployments.map((deployment) => `${deployment.chain}:${deployment.vault}`))) {

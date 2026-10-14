@@ -160,13 +160,16 @@ export function inheritedStablecoinReserveEvaluation(
       scoringDisposition: diagnosticCause === "A" ? "excluded-pipeline" : diagnosticCause === "B" ? "excluded-uncurated" : "not-applicable",
     });
   }
-  if (asset.lenderBook?.acceptedSourceStatus) {
-    const status = asset.lenderBook.acceptedSourceStatus;
+  for (const [diagnosticKey, status] of [
+    ["accepted-source", asset.lenderBook?.acceptedSourceStatus],
+    ["latest-attempt", asset.lenderBook?.latestAttemptStatus],
+  ] as const) {
+    if (!status) continue;
     const gaps = gapsForV9Ids(gapIndex, status.gapIds);
     const causes = gaps.map(gap => "causeProof" in gap ? gap.causeProof.cause : "U" as const);
     const diagnosticCause = causes.includes("A") ? "A" : causes.includes("B") ? "B" : status.gapIds.length > 0 ? "U" : null;
     lenderFactors.push({
-      componentKey: `${componentKey}:lender-book:accepted-source`,
+      componentKey: `${componentKey}:lender-book:${diagnosticKey}`,
       score: null, normalizedWeight: 0, effectiveScoringWeight: 0, cause: diagnosticCause,
       causeGapIds: status.gapIds,
       scoringDisposition: diagnosticCause === "A" ? "excluded-pipeline" : diagnosticCause === "B" ? "excluded-uncurated" : "not-applicable",

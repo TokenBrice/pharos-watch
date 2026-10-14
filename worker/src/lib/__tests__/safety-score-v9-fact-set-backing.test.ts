@@ -33,6 +33,14 @@ import { V1019LenderBookFactSchema } from "@shared/types/safety-score-v9-facts";
 import type { AssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { evaluateV1019LenderBook } from "@shared/lib/safety-score-v9/lender-book";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { finalizeReserveSyncSuccess } from "../live-reserves/store-write";
+import { loadFreshIndependentLiveReserveMap } from "../live-reserves/store-overview";
+import { reserveCompositionRow, reserveSyncRow } from "./live-reserves-store.test-support";
+import type { ReserveCompositionRecord, ReserveSyncStateRecord } from "../live-reserves/store-shared";
+import { LiveReserveSnapshotMetadataSchema } from "@shared/types/live-reserves";
 vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () => ({
   default: { schemaVersion: 1, entries: [
     {
@@ -757,9 +765,9 @@ describe("v10.19 frozen lender-book fact admission", () => {
     });
   }
 
-  function context(observation?: LenderBookObservation, bundle?: LenderCollateralBacking): AssetBuildContext {
-    const fixed = makeV9FixedInput({ assetId, clockSec });
-    const result = factBuilderContext(fixed, makeV9Extension({ assetId, clockSec, registryFingerprint: fixed.registryFingerprint }));
+  function context(observation?: LenderBookObservation, bundle?: LenderCollateralBacking, scoringClockSec = clockSec): AssetBuildContext {
+    const fixed = makeV9FixedInput({ assetId, clockSec: scoringClockSec });
+    const result = factBuilderContext(fixed, makeV9Extension({ assetId, clockSec: scoringClockSec, registryFingerprint: fixed.registryFingerprint }));
     return { ...result, fixedInput: { ...result.fixedInput,
       liveReserveProvenanceMap: { [assetId]: { source: "onchain", fetchedAt: clockSec - 100,
         ...(observation ? { lenderBookObservation: observation } : {}) } },
@@ -781,6 +789,122 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(ctx.fixedInput.liveReserveMap[assetId]).toBeDefined();
     expect(fact.status.evidenceRefIds.every((id) => ctx.evidence.has(id))).toBe(true);
   });
+
+  it.each(["rpc-unavailable", "unreconciled", "deadline"] as const)(
+    "retains admitted Backing after %s until the original eight-hour budget expires", async reason => {
+      const meta = ACTIVE_META_BY_ID.get(assetId)!;
+      const config = meta.liveReservesConfig!;
+      const fingerprint = computeLiveReserveConfigFingerprint(config);
+      const measured = book();
+      if (measured.status !== "ok") throw new Error("Expected measured fixture");
+      const payload = { ...measured, deployments: measured.deployments.map(deployment => ({
+        ...deployment, vault: meta.contracts!.find(contract => contract.chain === deployment.chain)!.address.toLowerCase(),
+      })) };
+      const good = LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+      const failurePayload = { ...unavailable(reason), acquiredAtSec: clockSec };
+      const failed = LenderBookObservationSchema.parse({ ...failurePayload, ...deriveLenderBookObservationIdentity(failurePayload) });
+      const originalContext = context(good);
+      const originalFact = buildLenderBookFact(originalContext)!;
+      const originalQuality = evaluateV1019LenderBook(originalFact, 90, V9_CANDIDATE_POLICY_V1)!.reserveQuality;
+      let storedMetadata = JSON.stringify({ lenderBookObservation: good });
+      const composition: ReserveCompositionRecord = {
+        stablecoinId: assetId, slices: meta.reserves!, fetchedAt: clockSec, source: config.adapter,
+        attemptId: "failed-book-successful-reserve", configFingerprint: fingerprint,
+        metadata: { freshnessMode: "not-applicable", lenderBookObservation: failed },
+        warningCount: 0, warnings: [], adapterSourceModel: "dynamic-mix", adapterEvidenceClass: "independent",
+      };
+      const state: ReserveSyncStateRecord = {
+        stablecoinId: assetId, adapterKey: config.adapter, breakerKey: "fixture",
+        lastAttemptedAt: clockSec, lastSuccessAt: clockSec, lastStatus: "ok",
+        warningCount: 0, warnings: [], lastError: null, metadata: composition.metadata,
+        lastAttemptId: composition.attemptId, configFingerprint: fingerprint,
+      };
+      const db = mockD1([
+        { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+          rows: [{ metadata: storedMetadata, config_fingerprint: fingerprint }] },
+        { match: "INSERT INTO reserve_composition", rows: [], runMeta: { changes: 1 } },
+        { match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes: 1 } },
+        { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [], runMeta: { changes: 1 } },
+        { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [], runMeta: { changes: 1 } },
+      ]);
+      expect(await finalizeReserveSyncSuccess(db, composition, state, Number.MAX_SAFE_INTEGER)).toEqual({ finalized: true });
+      storedMetadata = String(db.getHistory().find(entry => entry.sql.includes("INSERT INTO reserve_composition ("))!.binds[5]);
+      const stored = LiveReserveSnapshotMetadataSchema.parse(JSON.parse(storedMetadata));
+      expect(stored.lenderBookObservation).toEqual(good);
+      expect(stored.lenderBookLatestAttemptFailure).toEqual(failed);
+      const sourceDb = mockD1([
+        { match: "FROM reserve_composition", rows: [reserveCompositionRow({
+          stablecoin_id: assetId, slices: JSON.stringify(meta.reserves), metadata: storedMetadata,
+          source: config.adapter, fetched_at: clockSec, attempt_id: composition.attemptId,
+          config_fingerprint: fingerprint, adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent",
+        })] },
+        { match: "FROM reserve_sync_state", rows: [reserveSyncRow({
+          stablecoin_id: assetId, last_success_at: clockSec, last_attempted_at: clockSec,
+          last_success_attempt_id: composition.attemptId, config_fingerprint: fingerprint,
+        })] },
+      ]);
+      const live = await loadFreshIndependentLiveReserveMap(sourceDb, clockSec);
+      const provenance = live.provenanceById.get(assetId)!;
+      expect(provenance.lenderBookObservation).toEqual(good);
+      expect(provenance.lenderBookLatestAttemptFailure).toEqual(failed);
+      const budget = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.observationMaxAgeSec;
+      for (const age of [budget, budget + 1]) {
+        const attemptedAt = measured.acquiredAtSec + age;
+        const retryPayload = { ...failed, acquiredAtSec: attemptedAt };
+        const retry = LenderBookObservationSchema.parse({ ...retryPayload, ...deriveLenderBookObservationIdentity(retryPayload) });
+        const retryDb = mockD1([
+          { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+            rows: [{ metadata: storedMetadata, config_fingerprint: fingerprint }] },
+          { match: "INSERT INTO reserve_composition", rows: [], runMeta: { changes: 1 } },
+          { match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes: 1 } },
+          { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [], runMeta: { changes: 1 } },
+          { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [], runMeta: { changes: 1 } },
+        ]);
+        await finalizeReserveSyncSuccess(retryDb, {
+          ...composition, fetchedAt: attemptedAt, metadata: { ...composition.metadata, lenderBookObservation: retry },
+        }, { ...state, lastAttemptedAt: attemptedAt, lastSuccessAt: attemptedAt }, Number.MAX_SAFE_INTEGER);
+        const retryMetadata = LiveReserveSnapshotMetadataSchema.parse(JSON.parse(String(
+          retryDb.getHistory().find(entry => entry.sql.includes("INSERT INTO reserve_composition ("))!.binds[5],
+        )));
+        expect(retryMetadata.lenderBookObservation).toEqual(age > budget ? retry : good);
+        expect(retryMetadata.lenderBookLatestAttemptFailure).toEqual(age > budget ? undefined : retry);
+      }
+      const readFailedDb = mockD1([
+        { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+          rows: [], throwError: new Error("Prior book read unavailable") },
+      ]);
+      await expect(finalizeReserveSyncSuccess(readFailedDb, composition, state, Number.MAX_SAFE_INTEGER))
+        .rejects.toThrow("Prior book read unavailable");
+      expect(readFailedDb.getHistory().every(entry => !entry.sql.includes("INSERT INTO"))).toBe(true);
+      for (const age of [100, budget, budget + 1]) {
+        const baseContext = context(good, undefined, measured.acquiredAtSec + age);
+        const ctx = { ...baseContext, fixedInput: { ...baseContext.fixedInput,
+          liveReserveProvenanceMap: { [assetId]: provenance } } };
+        const fact = buildLenderBookFact(ctx)!;
+        expect(V1019LenderBookFactSchema.safeParse(fact).success).toBe(true);
+        expect(fact.observation).toEqual(good);
+        expect(fact.latestAttemptFailure).toEqual(failed);
+        const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(ctx.fixedInput, ctx.extension);
+        expect(compiled.quarantines).toEqual([]);
+        const evaluated = evaluateV9ReserveExposures({
+          ...compiled.factSet.assets[0]!, resolvedUpstreamExposures: [],
+          inheritedStablecoinBacking: { parentAssetId: "usdc-circle", parentBackingScore: 90,
+            weight: 1, tier: "wrapped", failureDomains: [] },
+        }, V9_CANDIDATE_POLICY_V1);
+        expect(evaluated.score).toBeCloseTo(age > budget ? 90 : originalQuality, 8);
+        expect(evaluated.contributions[0]!.factors!.find(factor => factor.componentKey.endsWith(":latest-attempt"))).toMatchObject({
+          score: null, effectiveScoringWeight: 0, cause: "A", scoringDisposition: "excluded-pipeline",
+        });
+        expect(ctx.gaps.get(fact.latestAttemptStatus!.gapIds[0]!)!.causeProof).toMatchObject({
+          cause: "A", rejectionCode: reason, sourceGenerationId: failed.sourceGenerationId,
+        });
+        if (age > budget) {
+          expect(fact.status.observationState).toBe("stale");
+          expect(ctx.gaps.get(fact.status.gapIds[0]!)!.causeProof).toMatchObject({ cause: "A", rejectionCode: "stale" });
+        }
+      }
+    },
+  );
 
   it("admits and digest-binds the exact capped-NAV real-assets denominator", () => {
     const observed = book();

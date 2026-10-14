@@ -909,10 +909,10 @@
             ]
           },
           {
-            "chain": "monad", "address": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242", "class": "native-eth",
+            "chain": "monad", "address": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242", "class": "other-unknown",
             "reviewedAt": "2026-10-14",
             "sources": [
-              { "label": "Verified Monad Wormhole Wrapped Ether WETH exact identity; ETH asset-class proxy does not erase separate bridge-control dependencies", "url": "https://monadscan.com/address/0xee8c0e9f1bffb4eb878d8f15f368a02a35481242" },
+              { "label": "Verified Monad Wormhole Wrapped Ether WETH exact identity; third-party bridge receipt, and no bridge-aware collateral class or collateral bridge-control factor exists, so it stays other-unknown rather than a native-ETH proxy", "url": "https://monadscan.com/address/0xee8c0e9f1bffb4eb878d8f15f368a02a35481242" },
               { "label": "Wormhole wrapped token-transfer representation mechanics", "url": "https://wormhole.com/docs/products/token-transfers/overview/" }
             ]
           },

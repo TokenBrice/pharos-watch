@@ -1,5 +1,5 @@
 import { createV9EvidenceReference, createV9FactStatus, requiredV9Applicability } from "@shared/lib/safety-score-v9/evidence";
-import { lenderBookAdmissionReason, lenderMarketKey } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { deriveLenderBookObservationIdentity, lenderBookAdmissionReason, lenderMarketKey } from "@shared/lib/safety-score-v9/lender-book-registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest, uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
@@ -47,7 +47,7 @@ function diagnosticGap(context: AssetBuildContext, args: {
     responsibility: runtime ? "producer-failed" : "unresearched",
     ...(runtime ? { causeProof: runtime.verdict.proof } : {}),
     causeScope, path: { kind: "local-component", componentKey: args.componentKey },
-    message: `Lender-book requiredDatum=${causeScope.requiredDatum}; reason=${args.reason}; source=${args.sourceGenerationId}${args.failedDeploymentKey ? `; deployment=${args.failedDeploymentKey}` : ""}. Existing inherited-parent behavior is retained when the book is unavailable.`,
+    message: `Lender-book requiredDatum=${causeScope.requiredDatum}; reason=${args.reason}; source=${args.sourceGenerationId}${args.failedDeploymentKey ? `; deployment=${args.failedDeploymentKey}` : ""}. ${args.componentKey === "lender-book-latest-attempt" ? "The latest attempt failed; any retained book keeps its original clocks and must independently pass admission." : "Existing inherited-parent behavior is retained when the book is unavailable."}`,
     evidenceRefIds: uniqueSorted([...(args.evidenceRefIds ?? []), ...(runtime ? [runtime.evidence.evidenceId] : [])]),
   }));
 }
@@ -88,6 +88,30 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
       maxAgeSec: policy.observationMaxAgeSec,
     }, context.fixedInput.clockSec)));
   }
+  const latestAttemptFailure = provenance?.lenderBookLatestAttemptFailure;
+  let latestAttemptStatus: V1019LenderBookFact["latestAttemptStatus"];
+  if (latestAttemptFailure) {
+    const identity = deriveLenderBookObservationIdentity(latestAttemptFailure);
+    if (latestAttemptFailure.assetId !== context.asset.assetId ||
+        latestAttemptFailure.contentSha256 !== identity.contentSha256 ||
+        latestAttemptFailure.sourceGenerationId !== identity.sourceGenerationId ||
+        latestAttemptFailure.maxAgeSec !== policy.observationMaxAgeSec ||
+        latestAttemptFailure.acquiredAtSec > context.fixedInput.clockSec ||
+        observation?.status !== "ok" || latestAttemptFailure.acquiredAtSec < observation.acquiredAtSec) {
+      throw new Error(`Invalid retained lender-book attempt for ${context.asset.assetId}`);
+    }
+    const gapId = diagnosticGap(context, {
+      componentKey: "lender-book-latest-attempt", reason: latestAttemptFailure.reason,
+      sourceGenerationId: latestAttemptFailure.sourceGenerationId,
+      contentSha256: latestAttemptFailure.contentSha256,
+      observedAtSec: latestAttemptFailure.acquiredAtSec,
+      failedDeploymentKey: latestAttemptFailure.failedDeploymentKey, attempted: true,
+    });
+    latestAttemptStatus = createV9FactStatus({
+      applicability: requiredV9Applicability(RULE), observationState: "missing",
+      gapIds: [gapId], evidenceRefIds: context.gaps.get(gapId)!.evidenceRefIds,
+    });
+  }
   const reason = failure ? "malformed" : observation
     ? lenderBookAdmissionReason(observation, context.asset.assetId, context.fixedInput.clockSec, policy)
     : bundle === undefined ? "legacy-unobserved" : "missing-observation";
@@ -111,6 +135,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
         observationState: reason === "stale" ? "stale" : "missing",
         evidenceRefIds: gap.evidenceRefIds, gapIds: [gapId] }),
       observation: observation ?? null, collaterals: [],
+      ...(latestAttemptStatus ? { latestAttemptStatus, latestAttemptFailure } : {}),
     };
   }
   if (!observation || observation.status !== "ok") throw new Error("Admitted lender book must have successful deployments");
@@ -205,6 +230,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
       observationState: gapIds.length ? "bounded-unknown" : "known",
       evidenceRefIds: uniqueSorted(evidenceRefIds), gapIds: uniqueSorted(gapIds) }),
     ...(acceptedSourceStatus ? { acceptedSourceStatus } : {}),
+    ...(latestAttemptStatus ? { latestAttemptStatus, latestAttemptFailure } : {}),
     observation, collaterals: collaterals.sort((a, b) => compareText(a.marketKey, b.marketKey)),
   };
 }
