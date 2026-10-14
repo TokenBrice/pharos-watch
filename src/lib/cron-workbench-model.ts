@@ -402,6 +402,7 @@ export function deriveCronVerdict(
   state: CronWorkbenchState,
   qualityReasons: readonly string[],
   nowSeconds?: number,
+  job?: string,
 ): CronVerdictReason {
   const ago = (epochSec: number) =>
     nowSeconds == null ? "" : ` ${formatElapsedSeconds(Math.max(0, nowSeconds - epochSec))} ago`;
@@ -466,7 +467,8 @@ export function deriveCronVerdict(
   }
   if (qualityReasons.length > 0) {
     return {
-      verdict: critical ? "watch" : "ok",
+      // DEX producer findings need attention even when publication completed.
+      verdict: critical || job === "sync-dex-liquidity" || job === "sync-dex-liquidity-stage" ? "watch" : "ok",
       code: "findings",
       sentence: `The latest run succeeded with findings: ${qualityReasons.join(", ")}.`,
     };
@@ -658,7 +660,7 @@ export function buildCronWorkbenchModel(
       const impactClass: CronImpactClass = getCronStatusImpact(job) === "critical" ? "public-critical" : "admin-watch";
       const rawStatus = cron.lastRun?.status ?? null;
       const qualityReasons = getWorkbenchQualityReasons(cron, nowSeconds);
-      const verdictReason = deriveCronVerdict(cron, impactClass, state, qualityReasons, nowSeconds);
+      const verdictReason = deriveCronVerdict(cron, impactClass, state, qualityReasons, nowSeconds, job);
       const row: CronWorkbenchRow = {
         key: `${group.key}:${job}`,
         job,

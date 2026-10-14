@@ -120,6 +120,31 @@ describe("cron workbench model", () => {
     expect(buildCronWorkbenchModel([groups[0]!], makeFilters(), run.startedAt + 1_801).rows[0]?.qualityReasons).toEqual([]);
   });
 
+  it.each(["sync-dex-liquidity", "sync-dex-liquidity-stage"])("keeps fresh %s findings in attention without changing execution or public impact", (job) => {
+    const run = {
+      startedAt: 1_700_000_000, durationMs: 500, status: "ok" as const,
+      metadata: { quality: { reasons: ["source-failed:uniswap-v4-subgraph:ethereum"] } },
+    };
+    const skip = { startedAt: run.startedAt + 100, durationMs: 0, status: "skipped_neutral" as const };
+    const group = makeGroups()[0]!;
+    for (const lastRun of [run, skip]) {
+      group.entries = [[job, makeCron({ lastRun, recentRuns: lastRun === run ? [run] : [skip, run] })]];
+      const model = buildCronWorkbenchModel([group], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 200);
+      expect(model.rows).toHaveLength(1);
+      expect(model.rows[0]).toMatchObject({
+        state: lastRun === run ? "healthy" : "skipped",
+        verdict: "watch",
+        impactClass: "admin-watch",
+        statusLabel: lastRun === run ? "Succeeded" : "Skipped: no work required",
+        qualityReasons: ["source-failed:uniswap-v4-subgraph:ethereum"],
+        verdictReason: { code: "findings" },
+      });
+    }
+    group.entries = [[job, makeCron({ healthy: false, lastRun: skip, recentRuns: [skip, run] })]];
+    const expired = buildCronWorkbenchModel([group], DEFAULT_CRON_WORKBENCH_FILTERS, run.startedAt + 1_801);
+    expect(expired.rows[0]).toMatchObject({ qualityReasons: [], verdictReason: { code: "no-fresh-run" } });
+  });
+
   it("sorts severity within a group and uses canonical registry order for ties", () => {
     const group = makeGroups()[0]!;
     group.entries = [

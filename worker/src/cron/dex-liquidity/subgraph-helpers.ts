@@ -114,6 +114,12 @@ export async function fetchSubgraphEntities<TEntity>(
 
       const json = result.body;
       const entities = config.extractEntities(json.data);
+      if (json.errors?.length && warnOnGraphQlErrors) {
+        logWorkerEventArgs("handler", "warn",
+          `[dex-liquidity] ${config.sourceLabel} GraphQL errors for ${config.chain}:`,
+          json.errors.map((e) => e.message).join("; "),
+        );
+      }
       if (!Array.isArray(entities)) {
         shouldLogIndex = false;
         failed = true;
@@ -123,12 +129,6 @@ export async function fetchSubgraphEntities<TEntity>(
       shouldLogIndex = true;
 
       if (json.errors?.length) {
-        if (warnOnGraphQlErrors) {
-          logWorkerEventArgs("handler", "warn",
-            `[dex-liquidity] ${config.sourceLabel} GraphQL errors for ${config.chain}:`,
-            json.errors.map((e) => e.message).join("; "),
-          );
-        }
         if (entities.length === 0) {
           shouldLogIndex = false;
           failed = true;

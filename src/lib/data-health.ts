@@ -116,7 +116,10 @@ export function deriveDataHealth(input: QueryHealthInput, nowMs = Date.now()): D
   if (input.error && !hasData) {
     state = isUnavailableError(input.error) ? "unavailable" : "error";
     message = state === "unavailable" ? "Data is not yet available." : "Failed to load data.";
-  } else if (input.error && hasData) {
+  } else if (hasData && (
+    input.error || input.meta?.warning?.includes("Latest sync-dex-liquidity run failed; serving last successful dataset")
+  )) {
+    // A successful API read can still report a failed producer refresh.
     state = baseState === "fresh" ? "degraded" : baseState;
     message = "Using last successful data while refresh retries.";
     degradationReason = "refresh";

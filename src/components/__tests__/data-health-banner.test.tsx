@@ -15,6 +15,27 @@ describe("DataHealthBanner", () => {
     expect(render({ dataUpdatedAt: Date.now() - 9 * 3600_000 })).toContain("Live refresh is running behind");
   });
 
+  it("distinguishes failed producer refreshes while retaining advisory details outside the banner body", () => {
+    const nowMs = Date.UTC(2026, 9, 14, 6);
+    const failure = '199 - "Latest sync-dex-liquidity run failed; serving last successful dataset (failedSources=defillama-yields)"';
+    const render = (warning: string, ageHours = 0) => renderToStaticMarkup(<DataHealthBanner entries={[deriveDataHealth({
+      label: "Liquidity", dataUpdatedAt: nowMs, staleTime: 3600_000, hasData: true,
+      meta: { updatedAt: nowMs / 1000 - ageHours * 3600, ageSeconds: ageHours * 3600, status: "fresh", warning },
+    }, nowMs)]} />);
+    const failed = render(failure);
+    expect(failed).toContain("Refresh failed; showing saved data");
+    expect(failed).not.toContain("Data quality warning");
+    expect(failed).toContain('title="Liquidity: 199 - &quot;Latest sync-dex-liquidity run failed;');
+    expect(failed.replace(/title="[^"]*"/g, "")).not.toContain("failedSources=");
+    expect(render(`110 - "Response is stale", ${failure}`, 9)).toContain("Refresh failed; showing saved data");
+    expect(render(failure, 13)).toContain("Showing an older snapshot");
+
+    const quality = render('199 - "Latest sync-dex-liquidity run shows high quality drift (qualityDriftFlags=major-tvl-cliff:usds-sky)"');
+    expect(quality).toContain("Data quality warning");
+    expect(quality).toContain("qualityDriftFlags=major-tvl-cliff:usds-sky");
+    expect(quality.replace(/title="[^"]*"/g, "")).not.toContain("qualityDriftFlags=");
+  });
+
   it("names the lagging source instead of a stall when totals were rebuilt within budget", () => {
     const nowMs = Date.UTC(2026, 9, 12, 20, 0);
     const nowSec = nowMs / 1000;

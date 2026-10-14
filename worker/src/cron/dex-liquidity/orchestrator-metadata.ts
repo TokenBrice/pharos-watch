@@ -10,6 +10,15 @@ import type { LiquidityFallbackCounters } from "./types";
 import type { MeasuredTargetFunnel } from "./route-telemetry";
 import type { DexLiquidityScoringSourceState, DexLiquidityPoolState } from "./scoring-stage-contract";
 
+export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidityScoringSourceState,
+  "failedSources" | "degradedSources" | "directApiSourceSummary">): string[] {
+  return [...new Set([
+    ...sourceState.failedSources.map((source) => `source-failed:${source}`),
+    ...(sourceState.degradedSources ?? []).map((source) => `source-partial:${source}`),
+    ...(sourceState.directApiSourceSummary.sourceWarnings.length > 0 ? ["direct-api-source-warnings"] : []),
+  ])];
+}
+
 export function isDexLiquidityDegraded(params: {
   criticalSourceFailures: string[];
   poolRejections?: PoolProcessingRejection[];
@@ -68,7 +77,12 @@ export function buildDexLiquidityCronMetadata(params: {
   const { persistence, historicalSnapshot, challengerPublication, dexPriceDiagnostics } = params.persistenceState;
   const rejectedPoolCount = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.count, 0);
   const rejectedPoolTvlUsd = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.tvlUsd, 0);
+  const qualityReasons = [...new Set([
+    ...(scoreState.analysis.sourceCoverage.qualityDriftFlags ?? []),
+    ...getDexLiquiditySourceQualityReasons(sourceState),
+  ])];
   return {
+    ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
     rowsRead: sourceState.primaryRawPoolCount,
     rowsWritten: persistence.skipped || persistence.skippedReason === "liquidity-cadence-reuse"
       ? 0 : scoreState.scoreResults.size,

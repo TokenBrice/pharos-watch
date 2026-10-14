@@ -76,6 +76,7 @@ import {
 import { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
 import {
   buildDexLiquidityCronMetadata,
+  getDexLiquiditySourceQualityReasons,
   isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
 import {
@@ -261,6 +262,7 @@ export async function stageDexLiquidityScoring(
   throwIfAborted(signal);
   const cursorPersistence = await acknowledgeDexSourcePagination(db, ctx.pendingPaginationUpdates ?? []);
   const targetEnrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
+  const qualityReasons = getDexLiquiditySourceQualityReasons(scoringSourceState);
 
   return {
     status: scoringSourceState.criticalSourceFailures.length > 0 ||
@@ -271,6 +273,7 @@ export async function stageDexLiquidityScoring(
       : "ok",
     itemCount,
     metadata: JSON.stringify({
+      ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
       d1Cost: d1Cost.snapshot(),
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,

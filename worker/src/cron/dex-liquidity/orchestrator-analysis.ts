@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import type { DexPriceObs, FullScoreResult, GlobalAgg, LiquidityMetrics } from "./types";
@@ -348,6 +348,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
   criticalSourceFailures: string[];
 }): Promise<DexLiquidityPostScoreAnalysis> {
   const currentCoverage = params.scoreResults.size;
+  const activeIdsJson = JSON.stringify([...ACTIVE_IDS]);
   let coinTvlStepBaselineUnavailable = false;
   const [
     previousCoverageRow,
@@ -362,6 +363,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .prepare(
         `SELECT COUNT(*) as cnt FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
+           AND stablecoin_id IN (SELECT value FROM json_each(?))
            AND ${DEX_LIQUIDITY_OBSERVED_ROW_FILTER}
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
            AND NOT (
@@ -370,6 +372,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
              AND total_tvl_usd <= COALESCE(json_extract(source_mix_json, '$.cg_tickers.tvlUsd'), 0)
            )`,
       )
+      .bind(activeIdsJson)
       .first<{ cnt: number }>()
       .catch((e) => {
         logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous coverage count:", e instanceof Error ? e.message : e);
@@ -389,9 +392,11 @@ export async function analyzeDexLiquidityPostScoring(params: {
         `SELECT coverage_class, COUNT(*) as cnt
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
+           AND stablecoin_id IN (SELECT value FROM json_each(?))
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          GROUP BY coverage_class`,
       )
+      .bind(activeIdsJson)
       .all<{ coverage_class: string | null; cnt: number }>()
       .catch((e) => {
         logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous coverage classes:", e);
@@ -402,11 +407,13 @@ export async function analyzeDexLiquidityPostScoring(params: {
         `SELECT stablecoin_id, total_tvl_usd, effective_tvl_usd
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
+           AND stablecoin_id IN (SELECT value FROM json_each(?))
            AND ${DEX_LIQUIDITY_OBSERVED_ROW_FILTER}
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
          ORDER BY total_tvl_usd DESC
          LIMIT 10`,
       )
+      .bind(activeIdsJson)
       .all<TopCoverageRow>()
       .catch((e) => {
         logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous top coverage:", e);
@@ -462,6 +469,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
          FROM dex_liquidity_run_rows r
          JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
          WHERE g.state = 'published' AND r.stablecoin_id != '__global__'
+           AND r.stablecoin_id IN (SELECT value FROM json_each(?))
            AND r.generation_id = (
              SELECT generation_id FROM dex_liquidity_publication_generations
              WHERE state = 'published' AND (? IS NULL OR generation_id != ?)
@@ -469,7 +477,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
              LIMIT 1
            )`,
       )
-      .bind(params.currentGenerationId ?? null, params.currentGenerationId ?? null)
+      .bind(activeIdsJson, params.currentGenerationId ?? null, params.currentGenerationId ?? null)
       .all<PreviousCoinTvlRow>()
       .catch((e) => {
         logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous per-coin TVL:", e);
