@@ -5,7 +5,7 @@ import type { ExitExecutionCertificate, ExitExecutionModelReview } from "@shared
 import { observeErc4626InstantExit } from "../exit-execution/erc4626-instant";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute, selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
-import { admitExitExecutionCertificate, exitExecutionInputGenerationId } from "@shared/lib/safety-score-v9/exit-execution";
+import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest } from "@shared/lib/safety-score-v9/exit-execution";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { getRedemptionBackstopConfig, validateRedemptionOutputIdentity } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
@@ -27,6 +27,7 @@ const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
   feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null as bigint | null,
+  deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
   feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }));
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
@@ -54,8 +55,9 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         const innerCalls = decoded.args![0];
         const redeem = innerCalls.find((entry) => entry.callData.slice(0, 10) === toFunctionSelector("redeem(uint256,address,address)"));
         const executed = redeem ? BigInt("0x" + redeem.callData.slice(10, 74)) : 0n;
-        const succeeds = !state.redeemFails && executed <= state.liquidity && !(state.rejectPartial && executed < shares);
-        const received = executed * (10_000n - state.feeBps) / 10_000n - state.outputDust;
+        const succeeds = !state.redeemFails && (state.deferIlliquid || executed <= state.liquidity) && !(state.rejectPartial && executed < shares);
+        const received = state.deferIlliquid && executed > state.liquidity ? 0n
+          : executed * (10_000n - state.feeBps) / 10_000n - state.outputDust;
         let redeemed = false;
         const receipt = innerCalls.map((entry) => {
           const innerSelector = entry.callData.slice(0, 10);
@@ -71,7 +73,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
             const holder = owner === BigInt("0xca11bde05977b3631167028862be2a173976ca11");
             // eslint-disable-next-line security/detect-possible-timing-attacks -- mock routes by public token address, not a secret.
             if (entry.target.toLowerCase() === TOKEN) return {
-              success: true, returnData: word(7n + (redeemed ? received + (state.realizedMismatch ? 1n : 0n) : 0n)),
+              success: true, returnData: word(7n + (redeemed ? received + (state.realizedMismatch && (!state.corruptOnlyFunded || received > 0n) ? 1n : 0n) : 0n)),
             };
             if (holder) return { success: true, returnData: word(shares - (redeemed ? executed - (state.holderBurnMismatch ? 1n : 0n) : 0n)) };
             return { success: !state.feeBalanceFails, returnData: word(123n + (redeemed ? state.feeRecipientDelta ?? state.feeShares : 0n)) };
@@ -84,7 +86,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         results.push(encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [receipt]));
         continue;
       }
-      const quotedMaximum = (shares < state.liquidity ? shares : state.liquidity) * state.maxBps / 10_000n;
+      const quotedMaximum = (state.optimisticMax || shares < state.liquidity ? shares : state.liquidity) * state.maxBps / 10_000n;
       const values: Record<string, bigint> = {
         [toFunctionSelector("asset()")]: state.identity ? 3n : 2n,
         [toFunctionSelector("decimals()")]: 6n,
@@ -116,6 +118,7 @@ const inputReference: ExitExecutionCertificate["inputReference"] = { assetKey: "
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
 beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
+  deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
   feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null, feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
@@ -278,6 +281,76 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
     expect(points.every(point => point.executableUsd === 0 && point.certification === "diagnostic" && point.reason === "erc4626-redeem-reverted")).toBe(true);
   });
+  it("certifies only the transferred instant lower bound when a larger redeem burns shares into a queue", async () => {
+    state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 10_000_000_000n;
+    const result = await observeErc4626InstantExit(args);
+    expect(result.points[0]).toMatchObject({
+      requestedRawInput: "100000000000", executedRawInput: "9375000000", executableUsd: 9_375,
+      certification: "exact-lower-bound", reason: "erc4626-liquidity-limited",
+      outputs: [{ rawUnits: "9375000000" }],
+      canonicalAttempt: {
+        outcome: "accepted-but-unfunded", requestedRawInput: "100000000000",
+        shareBalanceBefore: "100000000000", shareBalanceAfter: "0",
+        returnedRawOutput: "0", receivedRawOutput: "0",
+        block: { number: 100, hash: HASH, timestamp: CLOCK },
+      },
+    });
+    const admitted = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: 1_000_000, clockSec: CLOCK,
+      reviews: [review], inputReference, outputReference,
+    });
+    expect(admitted.failures).toEqual([]);
+    expect(admitted.observations[0]).toMatchObject({
+      scoreEligible: true, requestedNotionalUsd: 100_000, completionRatio: 0.09375,
+      executionCertificate: { settlement: { maximumCompletionSec: 0, scope: "executed-input-only" },
+        points: [{ certification: "exact-lower-bound", canonicalAttempt: { outcome: "accepted-but-unfunded" } }] },
+    });
+    state.realizedMismatch = true; state.corruptOnlyFunded = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+  });
+  it("never certifies queued share burns when every bounded probe transfers no underlying", async () => {
+    state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 0n;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-realized-output-inconsistent");
+    const result = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: 10_000_000, clockSec: CLOCK,
+      reviews: [review], inputReference, outputReference,
+    });
+    expect(result).toMatchObject({
+      observations: [], failures: [{ reason: "erc4626-realized-output-inconsistent" }],
+    });
+  });
+  it("replays the winning receipt for fee minting when the final probes are queued", async () => {
+    state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 40_000_000_000n;
+    state.feeShares = 10n;
+    const result = await observeErc4626InstantExit(args);
+    // 50% queued, 25% funded, 37.5% funded, 43.75% queued, 40.625% queued.
+    expect(result.points[0]).toMatchObject({
+      executedRawInput: "37500000000", executableUsd: 37_500,
+      certification: "exact-lower-bound", outputs: [{ rawUnits: "37500000000" }],
+      canonicalAttempt: {
+        outcome: "accepted-but-unfunded", requestedRawInput: "100000000000",
+        shareBalanceBefore: "100000000000", shareBalanceAfter: "0",
+        totalSupplyBefore: "1000000000000000", totalSupplyAfter: "999900000000010",
+        returnedRawOutput: "0", receivedRawOutput: "0",
+      },
+    });
+  });
+  it.each(["burn", "return", "supply"])("rejects an inconsistent canonical queue %s receipt before smaller probes", async (fault) => {
+    state.deferIlliquid = true; state.optimisticMax = true; state.liquidity = 10_000_000_000n;
+    if (fault === "burn") state.holderBurnMismatch = true;
+    if (fault === "return") state.grossReturn = true;
+    if (fault === "supply") state.unexplainedSupplyDelta = 1n;
+    const result = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: 1_000_000, clockSec: CLOCK,
+      reviews: [review], inputReference, outputReference,
+    });
+    expect(result.observations).toEqual([]);
+    expect(result.failures[0]).toMatchObject({
+      reason: "erc4626-realized-output-inconsistent",
+      canonicalAttempt: { outcome: "inconsistent-receipt", requestedRawInput: "100000000000",
+        block: { number: 100, hash: HASH, timestamp: CLOCK } },
+    });
+  });
   it("rejects a reorganized source and keeps over-budget observations diagnostic", async () => {
     state.reorg = true;
     await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-source-reorg");
@@ -292,6 +365,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const result = await observeReviewedExitExecutionRoutes({ assetId: "fixture-vault", circulatingUsd, clockSec: CLOCK, reviews: [review], inputReference, outputReference, envelope });
     expect(result.failures).toEqual([]);
     const observation = result.observations[0]!;
+    expect(observation.routeId).toBe(`execution:${exitExecutionReviewDigest(review)}`);
     expect(observation).toMatchObject({ scoreEligible: true, completionRatio: 1, executionModelId: "erc4626-instant", executionCertificate: { settlement: { maximumCompletionSec: 0 } } });
     expect(resolveV9ExitCapacityAtRequest(observation.capacityCurve!.map(point => ({ ...point, executionCostBps: point.executionCostBps! })), request)?.completionRatio).toBe(1);
     expect(observation.executionCertificate!.points.every(point => point.certification === "exact-complete")).toBe(true);
@@ -317,6 +391,36 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-stale", responsibility: "producer-failed" });
     const changedOutput = await observeReviewedExitExecutionRoutes({ ...call, outputReference: { ...freshOutput, sourceGenerationId: "different-output-generation" } });
     expect(changedOutput.observations[0]!.executionCertificate!.inputGenerationId).not.toBe(certificate.inputGenerationId);
+  });
+  it("derives an absent share reference only from reviewed pinned NAV and a fresh underlying price", async () => {
+    const cache: StablecoinsCacheLoadOk = {
+      kind: "ok", updatedAt: CLOCK - 60,
+      payload: { peggedAssets: [
+        makeAsset({ id: "fixture-vault", price: null, priceSource: null, priceObservedAt: null }),
+        makeAsset({ id: "fixture-underlying", price: 0.99, priceSource: "coingecko", priceObservedAt: CLOCK }),
+      ] },
+    };
+    const call = { assetId: "fixture-vault", circulatingUsd: 10_000_000, clockSec: CLOCK,
+      stablecoinsCache: cache, reviews: [review] };
+    const result = await observeReviewedExitExecutionRoutes(call);
+    expect(result.failures).toEqual([]);
+    expect(result.observations[0]).toMatchObject({ scoreEligible: true, completionRatio: 1 });
+    expect(result.observations[0]!.routeId).toBe(`execution:${exitExecutionReviewDigest(review)}`);
+    expect(result.observations[0]!.executionCertificate!.inputReference).toMatchObject({
+      assetKey: "fixture-vault", deployment: review.identity.deployment, decimals: 6,
+      unitValueUsd: 0.99, expectedUnitValueUsd: 0.99, sourceId: "erc4626-nav:coingecko", observedAtSec: CLOCK,
+    });
+    for (const observedAt of [CLOCK - 18_001, CLOCK + 1]) {
+      cache.payload.peggedAssets[1]!.priceObservedAt = observedAt;
+      expect((await observeReviewedExitExecutionRoutes(call))).toMatchObject({
+        observations: [], failures: [{ reason: "execution-price-reference-unavailable" }],
+      });
+    }
+    cache.payload.peggedAssets[1]!.priceObservedAt = CLOCK;
+    state.identity = true;
+    expect((await observeReviewedExitExecutionRoutes(call))).toMatchObject({
+      observations: [], failures: [{ reason: "erc4626-asset-identity-mismatch" }],
+    });
   });
   it("keeps fresh measured execution admitted across supply drift only while the canonical request stays unchanged", async () => {
     const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
@@ -410,7 +514,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(validateRedemptionOutputIdentity("susdc-spark-v1", { kind: "tracked-stablecoin", assetKeys: ["usdc-circle"], trackedAssetIds: ["usdc-circle"] })).toEqual([]);
     expect(validateRedemptionOutputIdentity("susdc-spark-v1", { kind: "tracked-stablecoin", assetKeys: ["susds-sky"], trackedAssetIds: ["susds-sky"] })).toContainEqual({ code: "output-identity-mismatch" });
   });
-  it("admits observed cached prices without another D1 read and rejects a nominal-reference replacement", async () => {
+  it("uses observed prices or independently pinned NAV without admitting a nominal underlying reference", async () => {
     const cache: StablecoinsCacheLoadOk = {
       kind: "ok", updatedAt: CLOCK - 60,
       payload: { peggedAssets: [
@@ -425,6 +529,10 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(admitted.observations[0]).toMatchObject({ scoreEligible: true, completionRatio: 1 });
     expect(admitted.observations[0]!.executionCertificate!.inputReference.sourceGenerationId).toBe(`stablecoins:${CLOCK - 60}`);
     cache.payload.peggedAssets[0]!.priceSource = "protocol-par";
+    const fromNav = await observeReviewedExitExecutionRoutes(call);
+    expect(fromNav.failures).toEqual([]);
+    expect(fromNav.observations[0]!.executionCertificate!.inputReference.sourceId).toBe("erc4626-nav:coingecko");
+    cache.payload.peggedAssets[1]!.priceSource = "protocol-par";
     expect((await observeReviewedExitExecutionRoutes(call)).failures).toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" });
   });
   it("measures EUR-denominated vault exits with observed token prices and a proven fresh FX reference", async () => {

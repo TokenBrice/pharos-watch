@@ -1,4 +1,4 @@
-import type { ExitExecutionCertificate, ExitExecutionModelReview, ExitRouteObservation } from "@shared/types/exit-route";
+import type { ExitExecutionCanonicalAttempt, ExitExecutionCertificate, ExitExecutionModelReview, ExitRouteObservation } from "@shared/types/exit-route";
 import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
@@ -7,11 +7,18 @@ import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExec
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import reviewedModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { observeSecuritizeOffRampExit } from "./securitize-offramp";
-import { observeErc4626InstantExit } from "./erc4626-instant";
+import { Erc4626CanonicalAttemptError, observeErc4626InstantExit } from "./erc4626-instant";
 import type { EvmRpcOptions } from "../evm-rpc";
 import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../stablecoins-cache";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { getFxReferenceTypeFromState, loadFxRateState, type FxRateState } from "../fx-rate-state";
+
+type ExitExecutionRuntimeFailure = {
+  modelId: string;
+  reason: string;
+  responsibility: "producer-failed" | "method-unsupported";
+  canonicalAttempt?: ExitExecutionCanonicalAttempt;
+};
 
 export async function observeReviewedExitExecutionRoutes(args: {
   assetId: string;
@@ -33,12 +40,12 @@ export async function observeReviewedExitExecutionRoutes(args: {
 }) {
   if (!args.reviews && reviewedModels.reviews.length === 0) return {
     observations: [] as ExitRouteObservation[],
-    failures: [] as { modelId: string; reason: string; responsibility: "producer-failed" | "method-unsupported" }[],
+    failures: [] as ExitExecutionRuntimeFailure[],
   };
   const envelope = args.envelope ?? loadV9CandidateMethodologyPolicy(args.clockSec);
   const reviews = (args.reviews ?? validateExitExecutionModelReviews(reviewedModels, envelope)).filter((review) => review.identity.assetId === args.assetId);
   const observations: ExitRouteObservation[] = [];
-  const failures: { modelId: string; reason: string; responsibility: "producer-failed" | "method-unsupported" }[] = [];
+  const failures: ExitExecutionRuntimeFailure[] = [];
   if (reviews.length === 0) return { observations, failures };
   const request = selectV9ExitStressRequest(args.circulatingUsd, envelope);
   if (!request) return { observations, failures: reviews.map((review) => ({ modelId: review.modelId, reason: "canonical-supply-unavailable", responsibility: "producer-failed" as const })) };
@@ -85,31 +92,34 @@ export async function observeReviewedExitExecutionRoutes(args: {
           };
         }
       }
-      if (!inputReference || !outputReference) { failures.push({ modelId: review.modelId, reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue; }
       const isVault = review.producer.kind === "erc4626-instant";
       const externalShares = review.producer.kind === "erc4626-instant" ? review.producer.externalShareToken : undefined;
       const refreshInputFromOutput = isVault && !externalShares &&
-        inputReference.observedAtSec <= args.clockSec &&
-        args.clockSec - inputReference.observedAtSec > policy.priceMaxAgeSec &&
-        outputReference.observedAtSec <= args.clockSec &&
+        (!inputReference || (inputReference.observedAtSec <= args.clockSec &&
+          args.clockSec - inputReference.observedAtSec > policy.priceMaxAgeSec)) &&
+        !!outputReference && outputReference.observedAtSec <= args.clockSec &&
         args.clockSec - outputReference.observedAtSec <= policy.priceMaxAgeSec;
+      if (!outputReference || (!inputReference && !refreshInputFromOutput)) {
+        failures.push({ modelId: review.modelId, reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue;
+      }
       const observed = isVault
         // Only the canonical request is published/admitted. Bounded fallback
         // simulations prove this holder's receipt without probing every grid
         // notional on the shared serial redemption producer.
         ? await observeErc4626InstantExit({ review, inputReference, outputReference, refreshInputFromOutput, requests: [request], blockNumber: args.blockNumber, rpcOptions: { ...args.rpcOptions, signal: args.signal } })
-        : await observeSecuritizeOffRampExit({ review, inputReference, outputReference, nativeReference: args.nativeReference, requests, holderAddress: args.holderAddress, rpcOptions: { ...args.rpcOptions, signal: args.signal } });
+        : await observeSecuritizeOffRampExit({ review, inputReference: inputReference!, outputReference, nativeReference: args.nativeReference, requests, holderAddress: args.holderAddress, rpcOptions: { ...args.rpcOptions, signal: args.signal } });
       if ("inputReference" in observed) inputReference = observed.inputReference;
+      if (!inputReference) throw new Error("execution-price-reference-unavailable");
       const nativeReference = "nativeReference" in observed ? observed.nativeReference : args.nativeReference;
       const observedAtSec = Math.floor(Date.now() / 1000);
       const source = observed.source;
-      const completeExecution = observed.points.some((point) => point.requestedNotionalUsd === request.requestedNotionalUsd && point.executableUsd > 0 && point.certification !== "diagnostic");
+      const provenInstantFraction = observed.points.some((point) => point.requestedNotionalUsd === request.requestedNotionalUsd && point.executableUsd > 0 && point.certification !== "diagnostic");
       const gates = policy.requiredGates.map((gateId) => args.gates?.find((gate) => gate.gateId === gateId) ?? {
-        gateId, verdict: completeExecution ? "passed" as const : "unavailable" as const,
+        gateId, verdict: provenInstantFraction ? "passed" as const : "unavailable" as const,
         evidenceId: `exit-execution:${gateId}`, observedAtSec: source.timestamp,
-        reason: completeExecution ? null : isVault ? observed.points.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd)?.reason ?? "erc4626-execution-unproven" : "live-holder-or-rail-proof-unavailable",
+        reason: provenInstantFraction ? null : isVault ? observed.points.find((point) => point.requestedNotionalUsd === request.requestedNotionalUsd)?.reason ?? "erc4626-execution-unproven" : "live-holder-or-rail-proof-unavailable",
       });
-      const settlementMaximumSec = completeExecution ? 0 : null;
+      const settlementMaximumSec = provenInstantFraction ? 0 : null;
       const certificate: ExitExecutionCertificate = {
         modelId: review.modelId, reviewDigest: exitExecutionReviewDigest(review), identity: review.identity,
         inputGenerationId: exitExecutionInputGenerationId(args.assetId, request, inputReference),
@@ -121,7 +131,8 @@ export async function observeReviewedExitExecutionRoutes(args: {
           : ["eligible-holder", "token-balance", "approved-spender"],
         gates, inputReference, feeReferences: nativeReference ? [nativeReference] : [], points: observed.points,
         capacityBasis: "transaction-simulation",
-        settlement: { endpoint: outputReference.deployment, maximumCompletionSec: settlementMaximumSec, evidenceId: "exit-execution-settlement" },
+        settlement: { endpoint: outputReference.deployment, maximumCompletionSec: settlementMaximumSec, evidenceId: "exit-execution-settlement",
+          ...(isVault ? { scope: "executed-input-only" as const } : {}) },
         resourceKeys: [`exit-resource:${review.identity.endpoint}`, ...(review.producer.kind === "securitize-offramp" ? [`inventory:${review.producer.chain}:${review.producer.provider.toLowerCase()}:${review.producer.outputToken.toLowerCase()}`] : [])],
         failureDomainKeys: [`provider:${review.identity.endpoint}`],
       };
@@ -145,7 +156,8 @@ export async function observeReviewedExitExecutionRoutes(args: {
       if (admission.state === "unavailable") failures.push({ modelId: review.modelId, reason: admission.reason, responsibility: admission.responsibility === "method-unsupported" ? "method-unsupported" : "producer-failed" });
     } catch (error) {
       if (args.signal?.aborted) throw error;
-      failures.push({ modelId: review.modelId, reason: error instanceof Error ? error.message : "execution-producer-failed", responsibility: "producer-failed" });
+      failures.push({ modelId: review.modelId, reason: error instanceof Error ? error.message : "execution-producer-failed", responsibility: "producer-failed",
+        ...(error instanceof Erc4626CanonicalAttemptError ? { canonicalAttempt: error.canonicalAttempt } : {}) });
     }
   }
   return { observations, failures };

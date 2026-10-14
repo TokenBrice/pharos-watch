@@ -253,6 +253,26 @@ export const ExitExecutionOutputLegSchema = z.object({
   sourceGenerationId: z.string().min(1),
   observedAtSec: z.number().int().nonnegative(),
 }).strict();
+/** Diagnostic receipt from the original request; never a capacity estimate. */
+export const ExitExecutionCanonicalAttemptSchema = z.object({
+  outcome: z.enum(["completed", "accepted-but-unfunded", "reverted", "inconsistent-receipt"]),
+  block: z.object({
+    number: z.number().int().nonnegative(),
+    hash: z.string().min(1),
+    timestamp: z.number().int().nonnegative(),
+  }).strict(),
+  requestedRawInput: ExitRawUnitsSchema,
+  shareBalanceBefore: ExitRawUnitsSchema,
+  shareBalanceAfter: ExitRawUnitsSchema,
+  totalSupplyBefore: ExitRawUnitsSchema,
+  totalSupplyAfter: ExitRawUnitsSchema,
+  returnedRawOutput: ExitRawUnitsSchema.nullable(),
+  receivedRawOutput: ExitRawUnitsSchema.nullable(),
+  revertData: z.string().regex(/^0x[0-9a-fA-F]*$/).nullable(),
+  reason: z.string().min(1).nullable(),
+}).strict();
+export type ExitExecutionCanonicalAttempt = z.output<typeof ExitExecutionCanonicalAttemptSchema>;
+
 export const ExitExecutionRequestPointSchema = z.object({
   requestedNotionalUsd: z.number().finite().positive(),
   maxCostBps: z.number().finite().nonnegative(),
@@ -265,6 +285,7 @@ export const ExitExecutionRequestPointSchema = z.object({
   outputs: z.array(ExitExecutionOutputLegSchema).max(16),
   certification: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
   reason: z.string().min(1).nullable(),
+  canonicalAttempt: ExitExecutionCanonicalAttemptSchema.optional(),
 }).strict().superRefine((point, ctx) => {
   // Zod refinements also run after regex failures; never parse rejected units.
   const rawUnits = [point.requestedRawInput, point.executedRawInput,
@@ -313,6 +334,7 @@ export const ExitExecutionCertificateSchema = z.object({
     endpoint: z.string().min(1),
     maximumCompletionSec: z.number().int().nonnegative().nullable(),
     evidenceId: z.string().min(1),
+    scope: z.literal("executed-input-only").optional(),
   }).strict(),
   resourceKeys: z.array(z.string().min(1)).min(1).max(16),
   failureDomainKeys: z.array(z.string().min(1)).min(1).max(16),
@@ -426,12 +448,14 @@ export const ExitExecutionPublicCertificateSchema = z.object(ExitExecutionCertif
   modelId: true, observationGenerationId: true, observedAtSec: true, sourceMaxAgeSec: true,
   priceMaxAgeSec: true, holder: true, capacityBasis: true, source: true,
 }).extend({
-  settlement: ExitExecutionCertificateSchema.shape.settlement.pick({ endpoint: true, maximumCompletionSec: true }),
+  settlement: ExitExecutionCertificateSchema.shape.settlement.pick({ endpoint: true, maximumCompletionSec: true, scope: true }),
   gates: z.array(z.object(ExitExecutionGateSchema.shape).pick({ gateId: true, verdict: true, reason: true, observedAtSec: true })),
   points: z.array(z.object(ExitExecutionRequestPointSchema.shape).pick({
     requestedNotionalUsd: true, requestedRawInput: true, executedRawInput: true, executableUsd: true,
     executionCostBps: true, allInCostBps: true, certification: true, reason: true, fees: true,
-  }).extend({ outputs: z.array(ExitExecutionOutputLegSchema.pick({
+  }).extend({
+    canonicalAttempt: ExitExecutionCanonicalAttemptSchema.omit({ revertData: true }).optional(),
+    outputs: z.array(ExitExecutionOutputLegSchema.pick({
     assetKey: true, rawUnits: true, decimals: true, unitValueUsd: true, expectedUnitValueUsd: true,
     observedAtSec: true, sourceId: true, sourceGenerationId: true,
   })) })),

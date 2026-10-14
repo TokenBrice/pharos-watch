@@ -4,7 +4,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { evaluateV9Exit, selectV9ExitStressRequest } from "../safety-score-v9/exit";
 import { makeExitRoute } from "./safety-score-v9-exit.test-support";
 import { executionClockSec, executionReview, makeExecutionCertificate } from "./safety-score-v9-exit-execution.test-support";
-import type { ExitExecutionCertificate } from "../../types/exit-route";
+import { ExitExecutionPublicCertificateSchema, type ExitExecutionCertificate } from "../../types/exit-route";
 
 function admission(certificate: ExitExecutionCertificate, clockSec = executionClockSec, circulatingUsd = 2_000_000) {
   const request = selectV9ExitStressRequest(circulatingUsd, V9_CANDIDATE_POLICY_V1)!;
@@ -22,6 +22,28 @@ describe("exact-request execution certificate admission", () => {
     expect(admission(partial)).toMatchObject({ state: "observed", point: { executableUsd: 50_000 } });
     partial.gates[0]!.verdict = "unavailable"; partial.gates[0]!.reason = "account-unavailable";
     expect(admission(partial)).toMatchObject({ state: "unavailable", responsibility: "producer-failed", reason: "account-unavailable" });
+  });
+  it("does not use canonical-attempt diagnostics to change admission, gates or capacity", () => {
+    const certificate = makeExecutionCertificate();
+    const baseline = admission(certificate);
+    certificate.points[0]!.canonicalAttempt = {
+      outcome: "accepted-but-unfunded",
+      block: { number: 1, hash: `0x${"1".repeat(64)}`, timestamp: executionClockSec },
+      requestedRawInput: "100000000000", shareBalanceBefore: "100000000000", shareBalanceAfter: "0",
+      totalSupplyBefore: "200000000000", totalSupplyAfter: "100000000000",
+      returnedRawOutput: "0", receivedRawOutput: "0", revertData: null,
+      reason: "erc4626-canonical-accepted-but-unfunded",
+    };
+    for (const outcome of ["completed", "accepted-but-unfunded", "reverted", "inconsistent-receipt"] as const) {
+      certificate.points[0]!.canonicalAttempt.outcome = outcome;
+      const diagnostic = admission(certificate);
+      expect(diagnostic.state).toBe(baseline.state);
+      if (diagnostic.state !== "unavailable" && baseline.state !== "unavailable") {
+        expect(diagnostic.point.executableUsd).toBe(baseline.point.executableUsd);
+        expect(diagnostic.point.executionCostBps).toBe(baseline.point.executionCostBps);
+        expect(diagnostic.certificate.gates).toEqual(baseline.certificate.gates);
+      }
+    }
   });
 
   it("admits supply drift within the selected bucket but rejects a changed request even if its point was measured", () => {
@@ -125,5 +147,26 @@ describe("exact-request execution certificate admission", () => {
     expect(projected.gates[0]).toMatchObject({ verdict: "passed" });
     expect(projected).not.toHaveProperty("prerequisites");
     expect(projected.gates[0]).not.toHaveProperty("evidenceId");
+  });
+  it("projects optional canonical receipt diagnostics and fraction-scoped settlement without private data", () => {
+    const certificate = makeExecutionCertificate();
+    certificate.points[0]!.canonicalAttempt = {
+      outcome: "accepted-but-unfunded",
+      block: { number: 1, hash: `0x${"1".repeat(64)}`, timestamp: executionClockSec },
+      requestedRawInput: "100000000000", shareBalanceBefore: "100000000000", shareBalanceAfter: "0",
+      totalSupplyBefore: "200000000000", totalSupplyAfter: "100000000000",
+      returnedRawOutput: "0", receivedRawOutput: "0", revertData: null,
+      reason: "erc4626-canonical-accepted-but-unfunded",
+    };
+    certificate.settlement.scope = "executed-input-only";
+    const projected = projectExitExecutionCertificate(certificate);
+    expect(ExitExecutionPublicCertificateSchema.parse(projected)).toEqual(projected);
+    expect(projected.points[0]!.canonicalAttempt).toMatchObject({ outcome: "accepted-but-unfunded",
+      requestedRawInput: "100000000000", returnedRawOutput: "0", receivedRawOutput: "0" });
+    expect(projected.points[0]!.canonicalAttempt).not.toHaveProperty("revertData");
+    expect(projected.settlement.scope).toBe("executed-input-only");
+    const legacy = projectExitExecutionCertificate(makeExecutionCertificate());
+    expect(legacy.points[0]).not.toHaveProperty("canonicalAttempt");
+    expect(legacy.settlement).not.toHaveProperty("scope");
   });
 });

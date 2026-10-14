@@ -129,13 +129,22 @@ export function projectExitExecutionCertificate(certificate: ExitExecutionCertif
     holder: certificate.holder,
     capacityBasis: certificate.capacityBasis,
     source: certificate.source,
-    settlement: { endpoint: certificate.settlement.endpoint, maximumCompletionSec: certificate.settlement.maximumCompletionSec },
+    settlement: { endpoint: certificate.settlement.endpoint, maximumCompletionSec: certificate.settlement.maximumCompletionSec,
+      ...(certificate.settlement.scope ? { scope: certificate.settlement.scope } : {}) },
     gates: certificate.gates.map((gate) => ({ gateId: gate.gateId, verdict: gate.verdict, reason: gate.reason, observedAtSec: gate.observedAtSec })),
     points: certificate.points.map((point) => ({
       requestedNotionalUsd: point.requestedNotionalUsd, requestedRawInput: point.requestedRawInput,
       executedRawInput: point.executedRawInput, executableUsd: point.executableUsd,
       executionCostBps: point.executionCostBps, allInCostBps: point.allInCostBps,
       certification: point.certification, reason: point.reason, fees: point.fees,
+      ...(point.canonicalAttempt ? { canonicalAttempt: {
+        outcome: point.canonicalAttempt.outcome, block: point.canonicalAttempt.block,
+        requestedRawInput: point.canonicalAttempt.requestedRawInput,
+        shareBalanceBefore: point.canonicalAttempt.shareBalanceBefore, shareBalanceAfter: point.canonicalAttempt.shareBalanceAfter,
+        totalSupplyBefore: point.canonicalAttempt.totalSupplyBefore, totalSupplyAfter: point.canonicalAttempt.totalSupplyAfter,
+        returnedRawOutput: point.canonicalAttempt.returnedRawOutput, receivedRawOutput: point.canonicalAttempt.receivedRawOutput,
+        reason: point.canonicalAttempt.reason,
+      } } : {}),
       outputs: point.outputs.map((leg) => ({
         assetKey: leg.assetKey, rawUnits: leg.rawUnits, decimals: leg.decimals,
         unitValueUsd: leg.unitValueUsd, expectedUnitValueUsd: leg.expectedUnitValueUsd,
