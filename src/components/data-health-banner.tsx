@@ -49,6 +49,8 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
     }, null);
 
   const nonFresh = entries.filter((entry) => entry.state !== "fresh");
+  const warningDetails = nonFresh
+    .flatMap((entry) => entry.meta?.warning ? [`${entry.label}: ${entry.meta.warning}`] : []).join("\n");
   const catchUps = nonFresh.flatMap((entry) => (entry.catchUp ? [entry.catchUp] : []));
   const allCatchingUp = merged.state === "degraded" && catchUps.length === nonFresh.length;
 
@@ -94,7 +96,7 @@ export function DataHealthBanner({ entries, showFreshTimestamp = false }: DataHe
       className={`rounded-xl border px-4 py-3 text-sm leading-relaxed shadow-sm ${DATA_HEALTH_COLORS[merged.state]}`}
     >
       <p className="font-medium">{title}</p>
-      <p className="mt-1">{message}</p>
+      <p className="mt-1" title={warningDetails || undefined}>{message}</p>
       {lastSuccessfulText ? (
         <p className="mt-1.5 text-xs opacity-85">{lastSuccessfulText}.</p>
       ) : null}

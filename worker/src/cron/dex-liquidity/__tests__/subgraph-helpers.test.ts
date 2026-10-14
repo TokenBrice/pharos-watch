@@ -94,6 +94,36 @@ describe("subgraph helpers", () => {
     expect(result.shouldLogIndex).toBe(false);
   });
 
+  it.each([true, false])("logs sanitized errors-only GraphQL diagnostics when enabled=%s", async (warnOnGraphQlErrors) => {
+    const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      fetchJsonWithRetryMock.mockResolvedValueOnce({
+        response: new Response(""),
+        body: { errors: [{ message: "Exact lookup unavailable at https://gateway.thegraph.com/api/private-token/subgraphs/id/example; api_key=private-token; " + "x".repeat(1_000) }] },
+      });
+      const result = await fetchSubgraphEntities({
+        subgraphUrl: "https://subgraph.example", sourceLabel: "test subgraph", chain: "arbitrum",
+        buildQuery: () => "{ pools { id } }",
+        extractEntities: (data) => (data as { pools?: unknown[] } | undefined)?.pools,
+        mapEntity: () => [],
+        errorHandling: { warnOnGraphQlErrors },
+      });
+
+      expect(result).toMatchObject({ failed: true, failureReason: "graphql", shouldLogIndex: false, entityCount: 0 });
+      expect(warnings).toHaveBeenCalledTimes(warnOnGraphQlErrors ? 1 : 0);
+      if (warnOnGraphQlErrors) {
+        const diagnostic = JSON.parse(String(warnings.mock.calls[0][0]));
+        expect(diagnostic.message).toContain("GraphQL errors for arbitrum");
+        expect(diagnostic.metadata.arguments[0]).toContain("Exact lookup unavailable");
+        expect(diagnostic.metadata.arguments[0].length).toBeLessThanOrEqual(503);
+        expect(JSON.stringify(diagnostic)).not.toContain("private-token");
+        expect(JSON.stringify(diagnostic)).not.toContain("https://");
+      }
+    } finally {
+      warnings.mockRestore();
+    }
+  });
+
   it("maps entities into observations and stops on short final page", async () => {
     fetchJsonWithRetryMock.mockResolvedValueOnce({
       response: new Response("", { status: 200 }),

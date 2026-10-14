@@ -77,6 +77,25 @@ function persistDriftSummary(summary: DexLiquidityDriftSummary): DexLiquidityCro
 }
 
 describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
+  it.each([true, false])("drops archived cliffs even with carried candidates (prior row: %s)", (hasPriorRow) => {
+    const summary = computeDexLiquidityDriftSummary({
+      previousSummary: null,
+      previousCandidates: [{ flag: "major-tvl-cliff:cdxusd-cod3x", consecutiveRuns: 2, baselineValue: 86_583_463, observedValue: 0 }],
+      priceObservations: new Map(),
+      stagedMergedCount: 0,
+      stagedSkippedCount: 0,
+      weakCoverageCoinsBeforeFallback: 0,
+      measuredBalanceCoveragePct: 1,
+      watchlistPreviousById: new Map(),
+      scoreResults: new Map(),
+      previousMajorTvlById: new Map(hasPriorRow ? [["cdxusd-cod3x", 86_583_463]] : []),
+    });
+    expect(summary.majorTvlCliffs).toEqual([]);
+    expect(summary.qualityDriftCandidates).toEqual([]);
+    expect(summary.qualityDriftFlags).toEqual([]);
+    expect(summary.qualityDriftSeverity).toBe("none");
+  });
+
   it("holds a first-run cliff as a candidate instead of reporting it", () => {
     const first = cliff({ previousTvl: 152_000_000, currentTvl: 13_720_000 });
 

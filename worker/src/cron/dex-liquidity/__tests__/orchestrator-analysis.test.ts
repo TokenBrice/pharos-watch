@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-persistence.test-support";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
@@ -122,23 +123,64 @@ describe("analyzeDexLiquidityPostScoring", () => {
         (stablecoin_id, symbol, total_tvl_usd, liquidity_score, coverage_class, source_mix_json,
          updated_at, publication_state)
         VALUES (?, 'USD', 100, 80, 'fallback', ?, 1700000000, 'published')`);
-      for (let i = 0; i < 20; i++) insert.run(`ticker-${i}`, JSON.stringify({ cg_tickers: { poolCount: 1, tvlUsd: 100 } }));
-      for (let i = 0; i < 10; i++) insert.run(`real-${i}`, JSON.stringify({ dl: { poolCount: 1, tvlUsd: 100 } }));
+      const tickerIds = ACTIVE_STABLECOINS.slice(0, 20).map((coin) => coin.id);
+      const realIds = ACTIVE_STABLECOINS.slice(20, 30).map((coin) => coin.id);
+      for (const id of tickerIds) insert.run(id, JSON.stringify({ cg_tickers: { poolCount: 1, tvlUsd: 100 } }));
+      for (const id of realIds) insert.run(id, JSON.stringify({ dl: { poolCount: 1, tvlUsd: 100 } }));
       const oldMetadata = JSON.parse(makeCronMetadata({ dlProtocolsAvailable: true, currentGlobalTvl: 3000, currentCoverage: 30 }));
       oldMetadata.sourceCoverage.retainedPoolCountBySourceFamily = { cg_tickers: 20, dl: 10 };
       sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-dex-liquidity', 1700000000, 100, 'ok', ?)")
         .run(JSON.stringify(oldMetadata));
       const cutover = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
-        db, scoreResults: new Map(Array.from({ length: 10 }, (_, i) => [`real-${i}`, BASE_SCORE_RESULT])),
+        db, scoreResults: new Map(realIds.map((id) => [id, BASE_SCORE_RESULT])),
       }));
       expect(cutover.previousCoverage).toBe(10);
       expect(cutover.currentCoverage).toBe(10);
       expect(cutover.nearCoverageGuard).toBe(false);
       expect(cutover.hardCoverageGuard).toBe(false);
       const outage = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
-        db, scoreResults: new Map(Array.from({ length: 5 }, (_, i) => [`real-${i}`, BASE_SCORE_RESULT])),
+        db, scoreResults: new Map(realIds.slice(0, 5).map((id) => [id, BASE_SCORE_RESULT])),
       }));
       expect(outage.hardCoverageGuard).toBe(true);
+    } finally {
+      fixtures.closeAll();
+    }
+  });
+
+  it("excludes archived rows before selecting coverage baselines while retaining missing active assets", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    const { sqlite, db } = fixtures.open();
+    try {
+      const activeIds = ACTIVE_STABLECOINS.slice(0, 10).map((coin) => coin.id);
+      const insert = sqlite.prepare(`INSERT INTO dex_liquidity
+        (stablecoin_id, symbol, total_tvl_usd, effective_tvl_usd, liquidity_score, coverage_class, updated_at)
+        VALUES (?, 'USD', ?, ?, 80, 'primary', 1700000000)`);
+      for (const id of activeIds) insert.run(id, 10_000_000, 10_000_000);
+      insert.run("cdxusd-cod3x", 86_583_463, 86_583_463);
+      sqlite.prepare(`INSERT INTO dex_liquidity_publication_generations
+        (generation_id, started_at, state, expected_row_count, created_at)
+        VALUES ('previous', 1700000000, 'published', 2, 1700000000)`).run();
+      const insertRun = sqlite.prepare(`INSERT INTO dex_liquidity_run_rows
+        (generation_id, stablecoin_id, symbol, total_tvl_usd, updated_at)
+        VALUES ('previous', ?, 'USD', ?, 1700000000)`);
+      insertRun.run("cdxusd-cod3x", 86_583_463);
+      insertRun.run(activeIds[0], 10_000_000);
+      const scores = new Map(activeIds.map((id) => [id, { ...BASE_SCORE_RESULT, tvl: 10_000_000, effectiveTvl: 10_000_000 }]));
+      const healthy = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db, scoreResults: scores }));
+      expect(healthy.previousCoverage).toBe(10);
+      expect(healthy.sourceCoverage.previousCoverageClasses.primary).toBe(10);
+      expect(healthy.previousTop10CoveredTvl).toBe(100_000_000);
+      expect(healthy.currentTop10CoveredTvl).toBe(100_000_000);
+      expect(healthy.sourceCoverage.majorTvlCliffs).toEqual([]);
+      expect(healthy.sourceCoverage.coinTvlStepMissingCurrent).toBe(0);
+
+      const missing = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db, scoreResults: new Map() }));
+      expect(missing.hardCoverageGuard).toBe(true);
+      expect(missing.hardMajorCoverageGuard).toBe(true);
+      expect(missing.sourceCoverage.coinTvlStepMissingCurrent).toBe(1);
+      expect(missing.sourceCoverage.majorTvlCliffs.map((cliff) => cliff.stablecoinId).sort()).toEqual([...activeIds].sort());
+      expect(sqlite.prepare("SELECT total_tvl_usd FROM dex_liquidity WHERE stablecoin_id = 'cdxusd-cod3x'").get())
+        .toMatchObject({ total_tvl_usd: 86_583_463 });
     } finally {
       fixtures.closeAll();
     }

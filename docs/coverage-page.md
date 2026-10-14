@@ -172,7 +172,7 @@ If a feature gains richer user-facing states, update the relevant resolver under
 - The per-coin matrix renders after the pricing-source card and is explicitly positioned as the asset-level drill-down surface.
 - A compact `CoverageLensSummary` block sits above the matrix to show the active search/filter lens and the tracked market-cap share currently in view.
 - The status legend remains an inline disclosure above the matrix; there is no separate full-page explainer block.
-- Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view.
+- Shared stale-data banners surface freshness problems from the stablecoins, peg-summary, dex-liquidity, redemption-backstops, yield-rankings, mint-burn-flows, and report-cards queries without collapsing the structural coverage view. Liquidity producer failures served with saved data use the refresh-failure notice, while source or quality findings use the data-quality notice; an older snapshot still takes precedence. Advisory details remain available in the message tooltip without putting machine-readable flags in the banner body.
 
 The page should continue to render meaningfully when some live datasets are temporarily unavailable. Structural coverage survives partial feature-query failures, but an unavailable stablecoins snapshot shows the error card and withholds the matrix.
 

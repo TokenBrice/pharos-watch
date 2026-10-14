@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -562,16 +563,16 @@ describe("dex liquidity scoring stage cycle", () => {
     const guardDb = makeNoopD1({
       prepare(sql: string) {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
-          return { first: async () => ({ cnt: 165 }) };
+          return { bind: () => ({ first: async () => ({ cnt: 165 }) }) };
         }
         if (sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
           return { first: async () => ({ total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 }) };
         }
         if (sql.includes("GROUP BY coverage_class")) {
-          return { all: async () => ({ results: [] }) };
+          return { bind: () => ({ all: async () => ({ results: [] }) }) };
         }
         if (sql.includes("ORDER BY total_tvl_usd DESC")) {
-          return { all: async () => ({ results: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 4_000_000_000 }] }) };
+          return { bind: () => ({ all: async () => ({ results: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 4_000_000_000 }] }) }) };
         }
         if (sql.includes("FROM cron_runs")) {
           return { all: async () => ({ results: [] }) };
@@ -634,7 +635,7 @@ describe("dex liquidity scoring stage cycle", () => {
       const guardDb = makeNoopD1({
         prepare(sql: string) {
           if (rejection === "coverage" && sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
-            return { first: async () => ({ cnt: 100 }) };
+            return { bind: () => ({ first: async () => ({ cnt: 100 }) }) };
           }
           if (rejection === "value" && sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity")) {
             return { first: async () => ({ total_tvl_usd: 1_000_000_000, updated_at: 1_777_556_412 }) };
@@ -757,7 +758,11 @@ describe("dex liquidity scoring stage cycle", () => {
       degradedChains: ["bsc"],
     });
 
-    const result = await runDexLiquidityScoringCycle(db, "graph-key");
+    const stageResult = await stageDexLiquidityScoring(db, "graph-key");
+    const stageQuality = getCronQualityReasons(JSON.parse(stageResult.metadata ?? "{}"));
+    expect(stageResult.status).toBe("ok");
+    expect(stageQuality).toEqual(["source-partial:pancakeswap-api:bsc", "direct-api-source-warnings"]);
+    const result = await consumeDexLiquidityScoringStage(db);
 
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       failedSources?: string[];
@@ -765,6 +770,16 @@ describe("dex liquidity scoring stage cycle", () => {
     };
     expect(metadata.degradedSources).toEqual(["pancakeswap-api:bsc"]);
     expect(metadata.failedSources).toEqual([]);
+    expect(getCronQualityReasons(metadata)).toEqual(stageQuality);
+  });
+
+  it("reports failed optional stage sources as findings without failing successful staging", async () => {
+    phaseFixtures.reset({ uniswapV4: { uniswapV4ExecutionCandidates: new Map(), failedChains: ["ethereum", "arbitrum"] } });
+    const result = await stageDexLiquidityScoring(db, "graph-key");
+    expect(result.status).toBe("ok");
+    expect(getCronQualityReasons(JSON.parse(result.metadata ?? "{}"))).toEqual([
+      "source-failed:uniswap-v4-subgraph:ethereum", "source-failed:uniswap-v4-subgraph:arbitrum",
+    ]);
   });
 
   it("loads the source slot derived from the registered stage and consumer offsets", async () => {
@@ -1408,17 +1423,17 @@ describe("dex liquidity scoring stage cycle", () => {
 
     const driftDb = makeNoopD1({
       prepare(sql: string) {
-        if (sql.includes("COUNT(*) as cnt FROM dex_liquidity WHERE stablecoin_id != '__global__'")) {
-          return { first: async () => ({ cnt: 5 }) };
+        if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
+          return { bind: () => ({ first: async () => ({ cnt: 5 }) }) };
         }
         if (sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
           return { first: async () => ({ total_tvl_usd: 100 }) };
         }
         if (sql.includes("GROUP BY coverage_class")) {
-          return { all: async () => ({ results: [] }) };
+          return { bind: () => ({ all: async () => ({ results: [] }) }) };
         }
         if (sql.includes("ORDER BY total_tvl_usd DESC")) {
-          return { all: async () => ({ results: [{ stablecoin_id: "usdc-circle", total_tvl_usd: 100 }] }) };
+          return { bind: () => ({ all: async () => ({ results: [{ stablecoin_id: "usdc-circle", total_tvl_usd: 100 }] }) }) };
         }
         if (sql.includes("SELECT started_at, status, metadata") && sql.includes("cron_runs")) {
           return {

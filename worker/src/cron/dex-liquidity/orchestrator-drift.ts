@@ -1,4 +1,5 @@
 import { round4 } from "@shared/lib/math";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult } from "./types";
 
@@ -260,6 +261,8 @@ export function computeDexLiquidityDriftSummary(params: {
 
   const majorTvlCliffs: DexLiquidityMajorTvlCliff[] = [];
   for (const [stablecoinId, naturalBaseline] of cliffBaselines) {
+    // Archived rows and carried candidates outlive their eligibility for live scoring.
+    if (!ACTIVE_IDS.has(stablecoinId)) continue;
     const currentTvlUsd = params.scoreResults.get(stablecoinId)?.tvl ?? 0;
     const candidate = confirmCondition(
       `${MAJOR_TVL_CLIFF_FLAG_PREFIX}${stablecoinId}`,

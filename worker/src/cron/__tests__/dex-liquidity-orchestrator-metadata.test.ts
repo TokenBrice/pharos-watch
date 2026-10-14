@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 
 import { buildDexLiquidityCronMetadata } from "../dex-liquidity/orchestrator-metadata";
 import { initLiquidityFallbackCounters } from "../dex-liquidity/pool-helpers";
 import type { DexLiquidityPostScoreAnalysis } from "../dex-liquidity/orchestrator-analysis";
 import type { DexPricePersistenceDiagnostics } from "../dex-liquidity/scoring";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
+import { compactCronMetadataForPersistence, MAX_PERSISTED_CRON_METADATA_BYTES } from "../../lib/cron-metadata-persistence";
 
 function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
   return {
@@ -61,6 +63,45 @@ function metadataParams(): Parameters<typeof buildDexLiquidityCronMetadata>[0] {
 }
 
 describe("dex liquidity cron metadata", () => {
+  it("publishes drift and source findings through the canonical quality envelope", () => {
+    const params = metadataParams();
+    Object.assign(params.scoreState.analysis.sourceCoverage, {
+      qualityDriftSeverity: "high",
+      qualityDriftFlags: ["major-tvl-cliff:cdxusd-cod3x"],
+    });
+    params.sourceState.failedSources = ["uni-v4:ethereum", "uni-v4:arbitrum", "uni-v4:ethereum"];
+    params.sourceState.degradedSources = ["orca:solana", "orca:solana"];
+    params.sourceState.directApiSourceSummary.sourceWarnings = ["orca: some pools were unavailable"];
+
+    const metadata = buildDexLiquidityCronMetadata(params);
+    const reasons = [
+      "major-tvl-cliff:cdxusd-cod3x", "source-failed:uni-v4:ethereum", "source-failed:uni-v4:arbitrum",
+      "source-partial:orca:solana", "direct-api-source-warnings",
+    ];
+    expect(getCronQualityReasons(metadata)).toEqual(reasons);
+    expect(metadata.rowsWritten).toBe(300);
+    expect(metadata.persistence).toMatchObject({ skipped: false, historicalSnapshotWriteFailed: false });
+
+    const compacted = compactCronMetadataForPersistence(JSON.stringify({
+      ...metadata, oversizedDiagnostic: "x".repeat(MAX_PERSISTED_CRON_METADATA_BYTES),
+    }));
+    expect(compacted.compacted).toBe(true);
+    expect(getCronQualityReasons(JSON.parse(compacted.metadata!))).toEqual(reasons);
+  });
+
+  it("omits findings for a clean publication or an ordinary fallback", () => {
+    const params = metadataParams();
+    Object.assign(params.scoreState.analysis.sourceCoverage, { qualityDriftSeverity: "none", qualityDriftFlags: [] });
+    params.sourceState.fallbackSignals = ["gecko"];
+    expect(buildDexLiquidityCronMetadata(params)).not.toHaveProperty("quality");
+  });
+
+  it("reports partial-source warnings even without confirmed drift or a failed source", () => {
+    const params = metadataParams();
+    params.sourceState.directApiSourceSummary.sourceWarnings = ["orca: partial inventory"];
+    expect(getCronQualityReasons(buildDexLiquidityCronMetadata(params))).toEqual(["direct-api-source-warnings"]);
+  });
+
   it("aggregates rejection groups and applies aggregate TVL materiality", () => {
     const params = metadataParams();
     params.poolState.poolRejections = [
