@@ -943,6 +943,8 @@
       "risk": "medium",
       "sources": [
         "src/**",
+        "data/logos.json",
+        "public/logos/**",
         "shared/lib/public-docs.ts",
         "shared/lib/og-route-cards.ts",
         "shared/lib/og-route-glyphs.ts",
