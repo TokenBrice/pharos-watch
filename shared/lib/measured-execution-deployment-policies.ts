@@ -189,3 +189,92 @@ export const CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS = [
     outputIndex: 0,
   },
 ] as const;
+
+/**
+ * Exact retained-pool recovery within already-active QuoterV2 deployments.
+ * Ordered tokens, decimals, fee, factory() and factory getPool() were checked
+ * on 2026-10-14 at Ethereum 26189504, BSC 127562072 and Celo 80065279.
+ * These are identity policies, not liquidity observations or new activations.
+ */
+export const QUOTER_V2_REVIEWED_RETAINED_POOLS = [
+  {
+    adapterProfileId: "pancakeswap-v3-quoter-v2", protocol: "pancakeswap", chain: "bsc",
+    poolAddress: "0x78ad546ab1fdab49ce912f793edae23d438b6200", feePips: 100,
+    factoryAddress: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
+    inputAssetIds: ["usdf-astherus"],
+    poolTokens: [
+      { address: "0x55d398326f99059ff775485246999027b3197955", symbol: "USDT", decimals: 18, trackedAssetId: "usdt-tether" },
+      { address: "0x5a110fc00474038f6c02e89c707d638602ea44b5", symbol: "USDF", decimals: 18, trackedAssetId: "usdf-astherus" },
+    ],
+  },
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "ethereum",
+    poolAddress: "0x75a5a265d21bc89ec130f18edde2b49a4b200dac", feePips: 3000,
+    factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
+    inputAssetIds: ["ggbr-goldfish-gold"],
+    poolTokens: [
+      { address: "0x7e2ac793f3e692f388e66c7dc28f739d13b0b71a", symbol: "GGBR", decimals: 18, trackedAssetId: "ggbr-goldfish-gold" },
+      { address: "0xdac17f958d2ee523a2206206994597c13d831ec7", symbol: "USDT", decimals: 6, trackedAssetId: "usdt-tether" },
+    ],
+  },
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "ethereum",
+    poolAddress: "0x48e6f94302ccf91f7a66d0f0c22aed1b8f265aa9", feePips: 10000,
+    factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
+    inputAssetIds: ["mre7yield-midas"],
+    poolTokens: [
+      { address: "0x87c9053c819bb28e0d73d33059e1b3da80afb0cf", symbol: "mRe7YIELD", decimals: 18, trackedAssetId: "mre7yield-midas" },
+      { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
+    ],
+  },
+  {
+    adapterProfileId: "pancakeswap-v3-quoter-v2", protocol: "pancakeswap", chain: "bsc",
+    poolAddress: "0x027176e1e37a26d47e0031e6d1540ef2cc07c49f", feePips: 500,
+    factoryAddress: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
+    inputAssetIds: ["usdf-astherus", "asusdf-astherus"],
+    poolTokens: [
+      { address: "0x5a110fc00474038f6c02e89c707d638602ea44b5", symbol: "USDF", decimals: 18, trackedAssetId: "usdf-astherus" },
+      { address: "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb", symbol: "asUSDF", decimals: 18, trackedAssetId: "asusdf-astherus" },
+    ],
+  },
+  {
+    adapterProfileId: "pancakeswap-v3-quoter-v2", protocol: "pancakeswap", chain: "bsc",
+    poolAddress: "0x9b006c42939c567dd691f42db5ad74589c79d643", feePips: 500,
+    factoryAddress: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
+    inputAssetIds: ["asusdf-astherus"],
+    poolTokens: [
+      { address: "0x55d398326f99059ff775485246999027b3197955", symbol: "USDT", decimals: 18, trackedAssetId: "usdt-tether" },
+      { address: "0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb", symbol: "asUSDF", decimals: 18, trackedAssetId: "asusdf-astherus" },
+    ],
+  },
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "ethereum",
+    poolAddress: "0x5e1ea25a1cd7e94adeb18221b94efe7fd7ff0d23", feePips: 100,
+    factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
+    inputAssetIds: ["rusd-reservoir"],
+    poolTokens: [
+      { address: "0x09d4214c03d01f49544c0448dbe3a27f768f2b34", symbol: "rUSD", decimals: 18, trackedAssetId: "rusd-reservoir" },
+      { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", symbol: "USDC", decimals: 6, trackedAssetId: "usdc-circle" },
+    ],
+  },
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "ethereum",
+    poolAddress: "0xb0acd8dcd962bee729bda18d3c287547482ddf3e", feePips: 100,
+    factoryAddress: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
+    inputAssetIds: ["eur0-usual"],
+    poolTokens: [
+      { address: "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c", symbol: "EURC", decimals: 6, trackedAssetId: "eurc-circle" },
+      { address: "0x3c89cd1884e7bef73ca3ef08d2ef6ec338fd8e49", symbol: "EUR0", decimals: 18, trackedAssetId: "eur0-usual" },
+    ],
+  },
+  {
+    adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "celo",
+    poolAddress: "0xb793ff8031fce64b3f553dbf40a70370fdeac1c7", feePips: 100,
+    factoryAddress: "0xafe208a311b21f13ef87e33a90049fc17a7acdec",
+    inputAssetIds: ["zarm-mento"],
+    poolTokens: [
+      { address: "0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e", symbol: "USDT", decimals: 6, trackedAssetId: "usdt-tether" },
+      { address: "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6", symbol: "ZARm", decimals: 18, trackedAssetId: "zarm-mento" },
+    ],
+  },
+] as const;

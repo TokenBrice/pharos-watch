@@ -1,10 +1,20 @@
-import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS } from "@shared/lib/measured-execution-deployment-policies";
+import { CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS, QUOTER_V2_REVIEWED_RETAINED_POOLS } from "@shared/lib/measured-execution-deployment-policies";
 import { buildDexMeasuredExecutionTargetId, DEX_MEASURED_TARGET_SCHEMA_VERSION } from "@shared/types/measured-execution";
 import type { LiquidityMetrics } from "../types";
+import { getDexMeasuredExecutionDeployment, isDexMeasuredExecutionDeploymentScoreEligible } from "../../measured-execution/registry";
 
-// Exact retained pools on chains without a protocol source API. Quote-time
-// factory membership, bytecode, token order and decimals remain mandatory.
-const PINNED_SHADOW_POOLS = [
+// Static identity recovery only. Quote-time factory membership, bytecode,
+// ordered tokens, decimals and fees remain mandatory; prices are run-local.
+const PINNED_REVIEWED_POOLS = [
+  ...QUOTER_V2_REVIEWED_RETAINED_POOLS.flatMap((policy) => {
+    const deployment = getDexMeasuredExecutionDeployment(policy.adapterProfileId, policy.chain);
+    if (deployment?.factoryAddress !== policy.factoryAddress ||
+        !isDexMeasuredExecutionDeploymentScoreEligible(policy.adapterProfileId, policy.chain)) return [];
+    return policy.inputAssetIds.map((stablecoinId) => {
+      const inputIndex = policy.poolTokens.findIndex((token) => token.trackedAssetId === stablecoinId);
+      return { ...policy, stablecoinId, inputIndex, outputIndex: inputIndex === 0 ? 1 : 0 };
+    });
+  }),
   ...CURVE_STABLESWAP_NG_SHADOW_DEPLOYMENTS.map((pool) => ({ ...pool, protocol: "curve", feePips: undefined })),
   {
     adapterProfileId: "uniswap-v3-quoter-v2", protocol: "uniswap-v3", chain: "xlayer",
@@ -16,17 +26,19 @@ const PINNED_SHADOW_POOLS = [
   },
 ] as const;
 
-export function attachPinnedShadowExecutionTargets(input: {
+export function attachPinnedReviewedExecutionTargets(input: {
   metrics: Map<string, LiquidityMetrics>;
   stablecoinPriceById: Map<string, number>;
   chainAddressToId: Map<string, string>;
   capturedAt: number;
 }): void {
-  for (const policy of PINNED_SHADOW_POOLS) {
+  for (const policy of PINNED_REVIEWED_POOLS) {
     const poolId = `${policy.chain}:${policy.poolAddress}`;
     const pool = input.metrics.get(policy.stablecoinId)?.topPools.find((row) =>
       row.poolId.toLowerCase() === poolId && row.chain.toLowerCase() === policy.chain && row.project === policy.protocol);
     if (!pool || pool.extra?.measuredExecutionTarget) continue;
+    if (!Number.isFinite(pool.tvlUsd) || pool.tvlUsd <= 0 ||
+        pool.extra?.measurement?.synthetic || pool.extra?.measurement?.decayed) continue;
     const tokenIn = policy.poolTokens[policy.inputIndex]!;
     const tokenOut = policy.poolTokens[policy.outputIndex]!;
     const inputPrice = input.stablecoinPriceById.get(tokenIn.trackedAssetId);
@@ -38,6 +50,7 @@ export function attachPinnedShadowExecutionTargets(input: {
       chain: policy.chain, protocol: policy.protocol, poolId,
       tokenInAddress: tokenIn.address, tokenOutAddress: tokenOut.address,
       poolTokenAddresses: policy.poolTokens.map((token) => token.address),
+      ...(policy.feePips != null ? { feePips: policy.feePips } : {}),
     };
     pool.extra = { ...pool.extra, measuredExecutionTarget: {
       schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
