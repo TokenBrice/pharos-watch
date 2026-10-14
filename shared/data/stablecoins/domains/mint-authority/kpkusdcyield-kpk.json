@@ -63,8 +63,8 @@
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
@@ -97,10 +97,14 @@
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Pinned owner()=0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 26110242: setPerformanceFee(uint256)=1209601 sec; setManagementFee(uint256)=1209601 sec. No blanket all-action timelock is inferred. On 2026-10-03 at ethereum block 26110242, isSentinel(address) returned true. This role can revoke pending changes, reduce allocation caps and deallocate; it cannot call arbitrary share mint or mint parent USDC.",
-        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "evidence": "Pinned owner()=0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 26110242: setPerformanceFee(uint256)=1209601 sec; setManagementFee(uint256)=1209601 sec. No blanket all-action timelock is inferred. On 2026-10-03 at ethereum block 26110242, isSentinel(address) returned true. This role can revoke pending changes, reduce allocation caps and deallocate; it cannot call arbitrary share mint or mint parent USDC. Re-read at block 26191269: owner and sole current sentinel, isAllocator=false; Safe remains 5/8, complete module page empty, zero guard, unchanged owners/fallback/singleton. Signer independence and key custody remain unestablished. Complete selector census at Ethereum block 26191269 (2026-10-14): setIsAllocator(0xb192a84a)=0s; setReceiveSharesGate(0x2cb19f98), setSendSharesGate(0xc21ad028), setReceiveAssetsGate(0x04dbf0ce) and setSendAssetsGate(0x871c979c)=604801s, with the first three abdicated and sendAssetsGate not abdicated; setAdapterRegistry(0x5b34b823)=0s and abdicated; addAdapter(0x60d54d41), increaseAbsoluteCap(0xf6f98fd5) and increaseRelativeCap(0x2438525b)=259201s; removeAdapter(0x585cd34b), increaseTimelock(0x47966291) and abdicate(0xb2e32848)=604801s; decreaseTimelock(0x5c1a1a4f) mapping=0s but its effective submission wait is the current delay of the selector being decreased; setPerformanceFee(0x70897b23) and setManagementFee(0xfe56e232)=1209601s; setPerformanceFeeRecipient(0x6a5f1aa2), setManagementFeeRecipient(0x9faae464) and setForceDeallocatePenalty(0x3e9d2ac7)=0s. All selectors except the four named abdications remain non-abdicated. Pending submissions retain their original executableAt if delays later increase; abdicated selectors cannot execute. All four gates and both fee rates are zero; sendAssetsGate governs deposits, not share transfers or withdrawals. Owner appointment functions are immediate, not generic timelocked setters; there is no blanket governance delay.",
+        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee. Complete selector census at Ethereum block 26191269 (2026-10-14): setIsAllocator(0xb192a84a)=0s; setReceiveSharesGate(0x2cb19f98), setSendSharesGate(0xc21ad028), setReceiveAssetsGate(0x04dbf0ce) and setSendAssetsGate(0x871c979c)=604801s, with the first three abdicated and sendAssetsGate not abdicated; setAdapterRegistry(0x5b34b823)=0s and abdicated; addAdapter(0x60d54d41), increaseAbsoluteCap(0xf6f98fd5) and increaseRelativeCap(0x2438525b)=259201s; removeAdapter(0x585cd34b), increaseTimelock(0x47966291) and abdicate(0xb2e32848)=604801s; decreaseTimelock(0x5c1a1a4f) mapping=0s but its effective submission wait is the current delay of the selector being decreased; setPerformanceFee(0x70897b23) and setManagementFee(0xfe56e232)=1209601s; setPerformanceFeeRecipient(0x6a5f1aa2), setManagementFeeRecipient(0x9faae464) and setForceDeallocatePenalty(0x3e9d2ac7)=0s. All selectors except the four named abdications remain non-abdicated. Pending submissions retain their original executableAt if delays later increase; abdicated selectors cannot execute. All four gates and both fee rates are zero; sendAssetsGate governs deposits, not share transfers or withdrawals. Owner appointment functions are immediate, not generic timelocked setters; there is no blanket governance delay.",
         "threshold": 5,
         "signerCount": 8,
         "safe": {
@@ -116,8 +120,8 @@
           ],
           "threshold": 5,
           "enabledModules": [],
-          "observedBlock": 26154662,
-          "observedAt": "2026-10-09",
+          "observedBlock": 26191269,
+          "observedAt": "2026-10-14",
           "source": "onchain",
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
@@ -135,8 +139,8 @@
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "present",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
@@ -181,10 +185,18 @@
           {
             "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
             "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
           }
         ],
-        "evidence": "Pinned curator()=0x7e43df1c1c5a2245858b60d4655fda83704e4171. Safe threshold and complete owners/modules are pinned below; signer independence and enabled-module permissions are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 26110242: setPerformanceFee(uint256)=1209601 sec; setManagementFee(uint256)=1209601 sec. No blanket all-action timelock is inferred. Enabled module 0xc3a8702bc57e0b787bd62d429a993265f596be1e is an EIP-1167 proxy to Zodiac Roles 0x9646fdad06d3e24444381f44362a3b0eb343d337; exact proxy bytes matched archive RPC. owner(), avatar() and target() all returned this curator Safe at Ethereum block 26107704. Roles supports mutable assignRoles, scope/allow target/function, allowances and unwrappers; the public role/member/function event census is now reconstructed, while exact permission storage, executable implementation correspondence and unwrap-adapter noninterference remain unverified. On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. Blockscout returned all 34 decoded events with next_page_params=null. Applying AllowFunction/RevokeFunction and AssignRoles events yields {\"grants\":[[\"MORPHO_REBALANCER_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x7299aa31\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x3b24c2bf\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x7299aa31\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x41b67833\"],[\"MORPHO_REBALANCER_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x5c9ce04d\"],[\"MORPHO_REBALANCER_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x4b219d16\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x5c9ce04d\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x4b219d16\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x8c54519b\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x57975270\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x3e9d2ac7\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x7fb6caad\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0xef7fa71b\"]],\"members\":[[\"0x7a35f5dcd3faa4bd617b7d7c3cc9b9ea6353291f\",\"MORPHO_REBALANCER_AGENT\"],[\"0x769605006f6feee3494c72236130067526af848f\",\"MORPHO_SHUTDOWN_AGENT\"],[\"0x393d8d9c3dae91b2d0530673c57e9c7e13ff4c9a\",\"MORPHO_MONITORING_AGENT\"]],\"unwrappers\":[[\"0x38869bf66a61cf6bdb996a6ae40d5853fd43b526\",\"0x8d80ff0a\",\"0xb4cd4bb764c089f20da18700ce8bc5e49f369efd\"],[\"0x9641d764fc13c8b624c04430c7356c1c7c8102e2\",\"0x8d80ff0a\",\"0xb4cd4bb764c089f20da18700ce8bc5e49f369efd\"]]}. Current getModulesPaginated(0x1,100) returned the same three assigned EOA agents with next=0x1 at Ethereum block 26110242. Current unwrap adapters are mutable; event history alone is not a complete execution-scope certificate.",
-        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee.",
+        "evidence": "Pinned curator()=0x7e43df1c1c5a2245858b60d4655fda83704e4171. Safe threshold and complete owners/modules are pinned below; signer independence and complete executable authorization closure are not established. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 26110242: setPerformanceFee(uint256)=1209601 sec; setManagementFee(uint256)=1209601 sec. No blanket all-action timelock is inferred. Enabled module 0xc3a8702bc57e0b787bd62d429a993265f596be1e is an EIP-1167 proxy to Zodiac Roles 0x9646fdad06d3e24444381f44362a3b0eb343d337; exact proxy bytes matched archive RPC. owner(), avatar() and target() all returned this curator Safe at Ethereum block 26107704. Roles supports mutable assignRoles, scope/allow target/function, allowances and unwrappers; the public role/member/function event census and exact current permission storage are reconstructed; implementation correspondence is verified below, but complete unwrap-adapter noninterference and authorization closure remain unverified. On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. Blockscout returned all 34 decoded events with next_page_params=null. Applying AllowFunction/RevokeFunction and AssignRoles events yields {\"grants\":[[\"MORPHO_REBALANCER_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x7299aa31\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x3b24c2bf\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x7299aa31\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0x9178ebe0691593184c1d785a864b62a326cc3509\",\"0x41b67833\"],[\"MORPHO_REBALANCER_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x5c9ce04d\"],[\"MORPHO_REBALANCER_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x4b219d16\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x5c9ce04d\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x4b219d16\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x8c54519b\"],[\"MORPHO_SHUTDOWN_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x57975270\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x3e9d2ac7\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0x7fb6caad\"],[\"MORPHO_MONITORING_AGENT\",\"0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13\",\"0xef7fa71b\"]],\"members\":[[\"0x7a35f5dcd3faa4bd617b7d7c3cc9b9ea6353291f\",\"MORPHO_REBALANCER_AGENT\"],[\"0x769605006f6feee3494c72236130067526af848f\",\"MORPHO_SHUTDOWN_AGENT\"],[\"0x393d8d9c3dae91b2d0530673c57e9c7e13ff4c9a\",\"MORPHO_MONITORING_AGENT\"]],\"unwrappers\":[[\"0x38869bf66a61cf6bdb996a6ae40d5853fd43b526\",\"0x8d80ff0a\",\"0xb4cd4bb764c089f20da18700ce8bc5e49f369efd\"],[\"0x9641d764fc13c8b624c04430c7356c1c7c8102e2\",\"0x8d80ff0a\",\"0xb4cd4bb764c089f20da18700ce8bc5e49f369efd\"]]}. Current getModulesPaginated(0x1,100) returned the same three assigned EOA agents with next=0x1 at Ethereum block 26110242. Current unwrap adapters are mutable; event history alone is not a complete execution-scope certificate. Re-read at block 26191269: curator Safe remains 2/5, sole enabled Roles module, zero guard, unchanged owners/fallback/singleton; curator isAllocator=true and isSentinel=false. Module owner=avatar=target remains this Safe. Implementation 0x9646fdad06d3e24444381f44362a3b0eb343d337 has Sourcify runtimeMatch=match and current bytes equal its onchainBytecode. All 13 function-grant headers are 0x0000000001000000000000000000000000000000000000000000000000000000: wildcard arguments, ordinary call only (no ETH-send/delegatecall), zero condition count/pointer; target clearance is Function. Current member cross-matrix confirms each enabled EOA only in its named role, and defaultRoles=0. Both MultiSend targets map selector 0x8d80ff0a to unwrapper 0xb4cd4bb764c089f20da18700ce8bc5e49f369efd. The Safe can reconfigure Roles permissions and mutable unwrappers; this concrete census is not a complete joint-liability authorization certificate or signer-custody proof. Complete selector census at Ethereum block 26191269 (2026-10-14): setIsAllocator(0xb192a84a)=0s; setReceiveSharesGate(0x2cb19f98), setSendSharesGate(0xc21ad028), setReceiveAssetsGate(0x04dbf0ce) and setSendAssetsGate(0x871c979c)=604801s, with the first three abdicated and sendAssetsGate not abdicated; setAdapterRegistry(0x5b34b823)=0s and abdicated; addAdapter(0x60d54d41), increaseAbsoluteCap(0xf6f98fd5) and increaseRelativeCap(0x2438525b)=259201s; removeAdapter(0x585cd34b), increaseTimelock(0x47966291) and abdicate(0xb2e32848)=604801s; decreaseTimelock(0x5c1a1a4f) mapping=0s but its effective submission wait is the current delay of the selector being decreased; setPerformanceFee(0x70897b23) and setManagementFee(0xfe56e232)=1209601s; setPerformanceFeeRecipient(0x6a5f1aa2), setManagementFeeRecipient(0x9faae464) and setForceDeallocatePenalty(0x3e9d2ac7)=0s. All selectors except the four named abdications remain non-abdicated. Pending submissions retain their original executableAt if delays later increase; abdicated selectors cannot execute. All four gates and both fee rates are zero; sendAssetsGate governs deposits, not share transfers or withdrawals. Owner appointment functions are immediate, not generic timelocked setters; there is no blanket governance delay.",
+        "capDescription": "addAdapter timelock=259201 seconds; performance/management fee setters each 1209601 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee. Complete selector census at Ethereum block 26191269 (2026-10-14): setIsAllocator(0xb192a84a)=0s; setReceiveSharesGate(0x2cb19f98), setSendSharesGate(0xc21ad028), setReceiveAssetsGate(0x04dbf0ce) and setSendAssetsGate(0x871c979c)=604801s, with the first three abdicated and sendAssetsGate not abdicated; setAdapterRegistry(0x5b34b823)=0s and abdicated; addAdapter(0x60d54d41), increaseAbsoluteCap(0xf6f98fd5) and increaseRelativeCap(0x2438525b)=259201s; removeAdapter(0x585cd34b), increaseTimelock(0x47966291) and abdicate(0xb2e32848)=604801s; decreaseTimelock(0x5c1a1a4f) mapping=0s but its effective submission wait is the current delay of the selector being decreased; setPerformanceFee(0x70897b23) and setManagementFee(0xfe56e232)=1209601s; setPerformanceFeeRecipient(0x6a5f1aa2), setManagementFeeRecipient(0x9faae464) and setForceDeallocatePenalty(0x3e9d2ac7)=0s. All selectors except the four named abdications remain non-abdicated. Pending submissions retain their original executableAt if delays later increase; abdicated selectors cannot execute. All four gates and both fee rates are zero; sendAssetsGate governs deposits, not share transfers or withdrawals. Owner appointment functions are immediate, not generic timelocked setters; there is no blanket governance delay.",
         "threshold": 2,
         "signerCount": 5,
         "safe": {
@@ -199,8 +211,8 @@
           "enabledModules": [
             "0xc3a8702bc57e0b787bd62d429a993265f596be1e"
           ],
-          "observedBlock": 26154662,
-          "observedAt": "2026-10-09",
+          "observedBlock": 26191269,
+          "observedAt": "2026-10-14",
           "source": "onchain",
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
@@ -219,8 +231,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -229,9 +241,13 @@
           {
             "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. Re-read at Ethereum block 26191269 (2026-10-14): isAllocator=true, isSentinel=false, eth_getCode=0x. These direct allocators do not require a fresh curator-Safe signature for each allocation."
       },
       {
         "chain": "ethereum",
@@ -245,8 +261,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -255,9 +271,13 @@
           {
             "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. Re-read at Ethereum block 26191269 (2026-10-14): isAllocator=true, isSentinel=false, eth_getCode=0x. These direct allocators do not require a fresh curator-Safe signature for each allocation."
       },
       {
         "chain": "ethereum",
@@ -271,8 +291,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -281,9 +301,13 @@
           {
             "label": "ethereum RPC role/code census at block 26110242; credentials omitted",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+        "evidence": "On 2026-10-03 at ethereum block 26110242, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC. Re-read at Ethereum block 26191269 (2026-10-14): isAllocator=true, isSentinel=false, eth_getCode=0x. These direct allocators do not require a fresh curator-Safe signature for each allocation."
       },
       {
         "chain": "ethereum",
@@ -296,8 +320,8 @@
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
@@ -310,9 +334,17 @@
           {
             "label": "Exact VaultV2 ABI/source for role-granted selectors",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
           }
         ],
-        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_REBALANCER_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors allocate(address,bytes,uint256), deallocate(address,bytes,uint256). Allowed functions execute through the curator Safe. submit(bytes) may schedule arbitrary curator changes subject to vault selector timelocks and irreversible abdications; the Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established."
+        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_REBALANCER_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors allocate(address,bytes,uint256), deallocate(address,bytes,uint256). Allowed functions execute through the curator Safe. This role has wildcard call-only root allocate/deallocate and separate legacy 0x9178ebe0691593184c1d785a864b62a326cc3509 reallocate grants, not root submit(bytes). Only MORPHO_MONITORING_AGENT has root submit(bytes); the curator Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established. At block 26191269 (2026-10-14), complete member pagination ends at 0x1, only the matching role membership is 1, other two memberships are 0, defaultRoles=0 and eth_getCode=0x. Current relevant permission headers are 0x0000000001000000000000000000000000000000000000000000000000000000, wildcard ordinary call only, with no parameter-condition payloads. Exact Roles implementation runtime match is verified; complete authorization closure remains unresolved."
       },
       {
         "chain": "ethereum",
@@ -325,8 +357,8 @@
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
@@ -339,9 +371,17 @@
           {
             "label": "Exact VaultV2 ABI/source for role-granted selectors",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
           }
         ],
-        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_SHUTDOWN_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors allocate(address,bytes,uint256), deallocate(address,bytes,uint256), decreaseAbsoluteCap(bytes,uint256), decreaseRelativeCap(bytes,uint256). Allowed functions execute through the curator Safe. submit(bytes) may schedule arbitrary curator changes subject to vault selector timelocks and irreversible abdications; the Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established."
+        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_SHUTDOWN_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors allocate(address,bytes,uint256), deallocate(address,bytes,uint256), decreaseAbsoluteCap(bytes,uint256), decreaseRelativeCap(bytes,uint256). Allowed functions execute through the curator Safe. This role has wildcard call-only root allocate/deallocate/cap-decrease grants and separate legacy 0x9178ebe0691593184c1d785a864b62a326cc3509 reallocate, submitCap and updateWithdrawQueue grants, not root submit(bytes). Legacy submitCap can schedule increases, and queue changes can recognize loss. Only MORPHO_MONITORING_AGENT has root submit(bytes); the curator Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established. At block 26191269 (2026-10-14), complete member pagination ends at 0x1, only the matching role membership is 1, other two memberships are 0, defaultRoles=0 and eth_getCode=0x. Current relevant permission headers are 0x0000000001000000000000000000000000000000000000000000000000000000, wildcard ordinary call only, with no parameter-condition payloads. Exact Roles implementation runtime match is verified; complete authorization closure remains unresolved."
       },
       {
         "chain": "ethereum",
@@ -354,8 +394,8 @@
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242,
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269,
         "sources": [
           {
             "label": "Exact Zodiac Roles complete public grant log (34 records; pagination end) and current module-member census, reviewed 2026-10-03",
@@ -368,9 +408,17 @@
           {
             "label": "Exact VaultV2 ABI/source for role-granted selectors",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
           }
         ],
-        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_MONITORING_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors setForceDeallocatePenalty(address,uint256), setLiquidityAdapterAndData(address,bytes), submit(bytes). Allowed functions execute through the curator Safe. submit(bytes) may schedule arbitrary curator changes subject to vault selector timelocks and irreversible abdications; the Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established."
+        "evidence": "The enabled Zodiac Roles module 0xc3a8702bc57e0b787bd62d429a993265f596be1e assigns this EOA to MORPHO_MONITORING_AGENT; current enabled-member pagination matches the grant events and eth_getCode returned 0x. Public events grant exact-vault selectors setForceDeallocatePenalty(address,uint256), setLiquidityAdapterAndData(address,bytes), submit(bytes). Allowed functions execute through the curator Safe. Only this monitoring role holds root submit(bytes), which is wildcard call-only and can schedule non-abdicated curator changes, including setIsAllocator with current zero delay. This reach is source-derived, not an executed attack test; cap/adapter delays still apply. The curator Safe can mutate role grants and unwrap targets. No independent-human attribution, key-custody assurance, exhaustive executable permission certificate or arbitrary USDC minting is established. At block 26191269 (2026-10-14), complete member pagination ends at 0x1, only the matching role membership is 1, other two memberships are 0, defaultRoles=0 and eth_getCode=0x. Current relevant permission headers are 0x0000000001000000000000000000000000000000000000000000000000000000, wildcard ordinary call only, with no parameter-condition payloads. Exact Roles implementation runtime match is verified; complete authorization closure remains unresolved."
       }
     ],
     "mintIncidents": [
@@ -378,7 +426,7 @@
         "date": "2026-06-21",
         "status": "resolved",
         "resolvedAt": "2026-06-21",
-        "summary": "A forceDeallocate griefing campaign temporarily disrupted KPK USDC Yield VaultV2 allocations. KPK documented mitigation by raising the force-deallocation fee to 0.5%, making further griefing economically prohibitive; this is a local share-burning/deallocation control incident, not arbitrary USDC minting or the separate Resolv collateral exploit.",
+        "summary": "KPK disclosed a June 21 forceDeallocate griefing campaign affecting its Morpho VaultV2 vaults; this exact vault's monitoring agent set the adapter force-deallocation penalty to 0.5% at block 25369252 (2026-06-21T23:27:35Z). Explorer history shows no Yield ForceDeallocate event on June 21; the disruption attribution rests on KPK's disclosure, not an independently reconstructed successful June 21 call on this vault. After repeated 0.5% settings on June 22 at blocks 25373703, 25374423, 25374426 and 25376201, the penalty was reset to 0% at 25381971, 0.01% at 25552981, 0.5% at 25809513/25840400, and 0.01% at 25841814. It is 0.01% at block 26191269 (2026-10-14) with a zero-delay setter, so the June mitigation is not permanent prevention. This is a local share-burning/deallocation control incident, not arbitrary USDC minting or the separate Resolv collateral exploit; resolution remains scoped to the disclosed June 21 response. Earlier active-adapter settings were 0.5% at block 24922351 and 0% at 25180877; the obsolete adapter 0x494495f8575b4acdfc6ef4b8c7c490475cc70cdc had 0.5% at 24125564, distinct from this active-adapter history.",
         "sources": [
           {
             "label": "KPK monitoring-agent disclosure: June 21 forceDeallocate griefing and same-day fee mitigation",
@@ -387,6 +435,66 @@
           {
             "label": "Exact mitigation transaction at block 25369252 on 2026-06-21T23:27:35Z; logs bind fee change to Yield VaultV2 0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13 and adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550",
             "url": "https://eth.blockscout.com/api/v2/transactions/0x6601b8ffa2a8b6b302f45f3f30e999fcdc3920579e041e4990c0d1b46579ef4b/logs"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.5% at historical block 24922351; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x9ee365645a52e6b51b9231a91bbdc5bc6fea79875f3316d01021e480306dfe1a"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0% at historical block 25180877; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x9fe1edbebf6bd2547914c51fa90175b2a5e2d62bb5331e79661cf009b73af4e7"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.5% at historical block 25373703; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x44874f5e990b4d4b95540e4661979a40cdd289c1c4ba48f9449627b1fa534a6f"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.5% at historical block 25374423; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x07698ace20417fc554f417ea4e34f3014affb345e38d3044ece01c361cc06200"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.5% at historical block 25374426; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x6b0b2a3024ebe04bafcbe17b23b685ea411a27ecb963734a818ed7c14f24bfb7"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.5% at historical block 25376201; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0xdb1b02553386c0064c9de159fbbf6c9b32061320035fdb16a52ec8df8fb4b8b0"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0% at historical block 25381971; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0xe807d8d26cc784da72634339dba688c186538c3857402f883186909f5a9884fa"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.01% at historical block 25552981; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0xdac189bbe5c34c8f5e4eac3b54439b6f7a963b4e94f0a26febc137ae6d763f8b"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.5% at historical block 25809513; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x913158b34375e4b68737dfe35e7b7af1e3fc882cd0c0fb3760e3b179605ce2ce"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.5% at historical block 25840400; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x1bd92fe1717b5d97ac8deff1dc3ab135b4f2b012415d0f0383f5f0c5e09e5bff"
+          },
+          {
+            "label": "Exact Yield active-adapter penalty setting 0.01% at historical block 25841814; setting event, not an independently classified incident",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x4fdca6d83d0a1dc070f9cdd8773d2f3b6752b2132c948bc446ea0a92cbee24ec"
+          },
+          {
+            "label": "KPK changelog: June griefing response and subsequent penalty resets",
+            "url": "https://docs.kpk.io/changelog/readme.md"
+          },
+          {
+            "label": "Complete Yield creation-to-pin explorer force/penalty candidate history, reviewed 2026-10-14; no June 21 ForceDeallocate event on this exact root, no claim of absence of attempted disruption",
+            "url": "https://eth.blockscout.com/api/v2/addresses/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13/logs"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Obsolete Yield adapter 0x494495f8575b4acdfc6ef4b8c7c490475cc70cdc penalty 0.5% at block 24125564; not the current adapter",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x193156d2038e76ffd6813c5f5bbd2f050c04f209876d854c767c8140956ac435"
           }
         ]
       }
@@ -395,8 +503,8 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "KPK USDC Yield V2 deposit-backed share accounting",
-      "observedAt": "2026-10-05",
-      "observedBlock": 26124896,
+      "observedAt": "2026-10-14",
+      "observedBlock": 26191269,
       "sources": [
         {
           "label": "Exact KPK USDC Yield V2 Morpho Vault V2 deployment",
@@ -433,6 +541,10 @@
         {
           "label": "Ethereum block 26124896 on 2026-10-05: unchanged root runtime; zero EIP-1967 implementation/admin/beacon slots; mutable allocation and fee controls retained",
           "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); exact root EIP-1967 implementation/admin/beacon slots all zero, observed 2026-10-14T14:41:54.546Z; runtime/explorer equality observed 14:43:45.599Z; retained functional compiler proof not re-dated",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ]
     },
@@ -505,14 +617,42 @@
         {
           "label": "Ethereum block 26124896: unchanged 27 Zodiac permission/membership/default-role reads and zero new module events; complete native and legacy issuance event censuses",
           "url": "https://eth-mainnet.g.alchemy.com"
+        },
+        {
+          "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
+        },
+        {
+          "label": "KPK Inside the War Room: issuer-reported Opsek personnel operational-security review; review lead only, not exact-controller custody/recovery or independence attestation",
+          "url": "https://kpk.io/blog/inside-the-war-room"
+        },
+        {
+          "label": "Gnosis Guild Zodiac June 2026 post-mortem: upstream signature vulnerability prerequisites; review lead, no exploit of these KPK vaults established",
+          "url": "https://engineering.gnosisguild.org/posts/zodiac-post-mortem"
+        },
+        {
+          "label": "Gnosis Ltd 2026-06-12 Zodiac signature-patch audit: named Gnosis-chain patch scope only; not proof of Ethereum KPK module patching or key custody",
+          "url": "https://raw.githubusercontent.com/gnosisguild/zodiac/master/audits/ZodiacJune2026.pdf"
+        },
+        {
+          "label": "Yield pending PT-USD3-17DEC2026 market-group absolute/relative cap submissions at block 26106709",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x4e8a1e9dca804ca179053aaf9aa129b49cd8ec966144db908c5aa658f27a70fd"
+        },
+        {
+          "label": "Yield pending PT-USD3-17DEC2026 collateral-group absolute/relative cap submissions at block 26106713",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0xb966d2f57a24e0b7abd7e3b63405fa5f0bc965f7cab8444519385955fd402c54"
         }
       ],
-      "evidence": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Current performance and management fees are zero; governed fee settings can create accrual fee shares. Parent issuer authority is inherited rather than copied as favorable wrapper supervision. On 2026-10-03 the exact owner/curator returned by Morpho were independently reconfirmed by RPC. Published allocator/sentinel addresses were each checked with isAllocator/isSentinel at block 26110242. Selector-specific fee delays and the published role census are recorded below; no exhaustive module-permission or independent-human-signer closure is claimed. Calibration retention (2026-10-03): Human signer attribution, independent human control and key custody are undisclosed. Module role/member/function events and current member pagination are reconstructed; exact permission-storage validation, full executable source correspondence and current unwrap-adapter execution/noninterference remain unverified. Exact-vault signed financial assurance and legal insolvency priority. Mint reconciliation remains not-applicable to this deposit-backed local share/fee-share mechanism; independent financial assurance, reserve-to-liability reconciliation and holder insolvency priority remain separate Backing observations, not a claim that such assurance exists. Parent durable-token issuance is inherited and is not resolved by this local share review. Calibration v2 (2026-10-03): Matching explorer-reported deployed bytecode to pinned RPC does not establish equality to a fully verified reference runtime. The previously scoped compiler/source-completeness and executable Zodiac permission/unwrap gaps remain genuine local mint/authorization-path unknowns and are restored to the aggregate unresolved review; no unidentified signer custody is added to that aggregate flag. Calibration v2 custody retention: signer independence, actual key custody and signing-policy questions are restored separately for each identified Safe/EOA controller; known controller addresses and quorum evidence do not establish the human/key-custody facts. Reconciliation remains not-applicable because this is a local deposit-backed ERC-4626 share/fee-share mechanism, not an issuer supply-to-reserve reconciliation regime; parent durable issuance and independent financial assurance are not established by this local review. Supervision remains none: no local prudential or assurance-opinion credit is claimed. Independently reproduced functional compiler/runtime correspondence on 2026-10-03 at ethereum block 26107704 for exact VaultV2 0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13 and its complete one-adapter inventory 0x4f74895557bea2de5d51d8c06e944da92dbc8550, also the observed liquidityAdapter. Vault reference is Sourcify chain 8453, 0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c, runtimeMatch=match, matchId 30034094, verifiedAt 2026-05-26T22:26:25Z; compiler solc 0.8.28+commit.7893614a, viaIR, optimizer 100000. Pinned target runtime length is 21808 bytes. Masked only compiler-declared immutable references AST37 asset (6 occurrences), AST39 decimals (1), AST41 virtualShares (5), and declared 12-byte CBOR auxdata including length trailer at byte offset 21796. All 12 immutable 32-byte occurrences independently match exact target getters: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Every remaining executable runtime byte equals the verified reference recompiled runtime; normalized SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Adapter independently matches a separate Sourcify-verified MorphoMarketV1AdapterV2 reference, chain 8453 0x812b71c33ae5eafebae967c5670e37eca3cab0ac, runtimeMatch=match, matchId 33231859, verifiedAt 2026-06-21T06:48:43Z, same compiler/viaIR/optimizer settings. Pinned adapter runtime length is 11784 bytes; masked only declared immutable AST2265 factory (1 occurrence), AST2267 parentVault (6), AST2269 asset (3), AST2271 morpho (4), AST2273 adapterId (2), AST2275 adaptiveCurveIrm (4), and 12-byte CBOR auxdata at offset 11772. All 20 immutable occurrences match exact same-block adapter getters: factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x9e6db6cbaceaa8946a86cf8d688574746d10ffe2b6633a44843d07209f4e705e; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc. Every remaining adapter executable byte equals its verified reference recompiled runtime; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. This closes the earlier partial-explorer/compiler source-identity unknown for this vault and its mint-accounting adapter under calibration v2 R4. It is functional executable correspondence, not complete target creation-bytecode/metadata identity or financial assurance. Previously recorded code-identity uncertainty is superseded by this direct proof; signer-custody and any separately listed Zodiac permission/unwrap execution gaps remain unresolved.",
-      "reviewer": "R07 current liability and issuance census; retains W3R18 functional/source proofs, the resolved Yield incident and unresolved full execution authorization",
-      "reviewedAt": "2026-10-05",
+      "evidence": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Current performance and management fees are zero; governed fee settings can create accrual fee shares. Parent issuer authority is inherited rather than copied as favorable wrapper supervision. On 2026-10-03 the exact owner/curator returned by Morpho were independently reconfirmed by RPC. Published allocator/sentinel addresses were each checked with isAllocator/isSentinel at block 26110242. Selector-specific fee delays and the published role census are recorded below; no exhaustive module-permission or independent-human-signer closure is claimed. Calibration retention (2026-10-03): Human signer attribution, independent human control and key custody are undisclosed. Module role/member/function events and current member pagination are reconstructed; exact permission-storage validation, full executable source correspondence and current unwrap-adapter execution/noninterference remain unverified. Exact-vault signed financial assurance and legal insolvency priority. Mint reconciliation remains not-applicable to this deposit-backed local share/fee-share mechanism; independent financial assurance, reserve-to-liability reconciliation and holder insolvency priority remain separate Backing observations, not a claim that such assurance exists. Parent durable-token issuance is inherited and is not resolved by this local share review. Calibration v2 (2026-10-03): Matching explorer-reported deployed bytecode to pinned RPC does not establish equality to a fully verified reference runtime. The previously scoped compiler/source-completeness and executable Zodiac permission/unwrap gaps remain genuine local mint/authorization-path unknowns and are restored to the aggregate unresolved review; no unidentified signer custody is added to that aggregate flag. Calibration v2 custody retention: signer independence, actual key custody and signing-policy questions are restored separately for each identified Safe/EOA controller; known controller addresses and quorum evidence do not establish the human/key-custody facts. Reconciliation remains not-applicable because this is a local deposit-backed ERC-4626 share/fee-share mechanism, not an issuer supply-to-reserve reconciliation regime; parent durable issuance and independent financial assurance are not established by this local review. Supervision remains none: no local prudential or assurance-opinion credit is claimed. Independently reproduced functional compiler/runtime correspondence on 2026-10-03 at ethereum block 26107704 for exact VaultV2 0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13 and its complete one-adapter inventory 0x4f74895557bea2de5d51d8c06e944da92dbc8550, also the observed liquidityAdapter. Vault reference is Sourcify chain 8453, 0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c, runtimeMatch=match, matchId 30034094, verifiedAt 2026-05-26T22:26:25Z; compiler solc 0.8.28+commit.7893614a, viaIR, optimizer 100000. Pinned target runtime length is 21808 bytes. Masked only compiler-declared immutable references AST37 asset (6 occurrences), AST39 decimals (1), AST41 virtualShares (5), and declared 12-byte CBOR auxdata including length trailer at byte offset 21796. All 12 immutable 32-byte occurrences independently match exact target getters: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Every remaining executable runtime byte equals the verified reference recompiled runtime; normalized SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Adapter independently matches a separate Sourcify-verified MorphoMarketV1AdapterV2 reference, chain 8453 0x812b71c33ae5eafebae967c5670e37eca3cab0ac, runtimeMatch=match, matchId 33231859, verifiedAt 2026-06-21T06:48:43Z, same compiler/viaIR/optimizer settings. Pinned adapter runtime length is 11784 bytes; masked only declared immutable AST2265 factory (1 occurrence), AST2267 parentVault (6), AST2269 asset (3), AST2271 morpho (4), AST2273 adapterId (2), AST2275 adaptiveCurveIrm (4), and 12-byte CBOR auxdata at offset 11772. All 20 immutable occurrences match exact same-block adapter getters: factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x9e6db6cbaceaa8946a86cf8d688574746d10ffe2b6633a44843d07209f4e705e; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc. Every remaining adapter executable byte equals its verified reference recompiled runtime; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. This closes the earlier partial-explorer/compiler source-identity unknown for this vault and its mint-accounting adapter under calibration v2 R4. It is functional executable correspondence, not complete target creation-bytecode/metadata identity or financial assurance. Previously recorded code-identity uncertainty is superseded by this direct proof; signer-custody and any separately listed Zodiac permission/unwrap execution gaps remain unresolved. Substantive control re-review 2026-10-14 at block 26191269: owner/curator Safe state, direct allocators, all six vault-specific agent memberships, wildcard call-only permission headers, Roles implementation/runtime correspondence, MultiSend unwrapper mappings, all 18 selector delays/abdications, executable root submissions and currently queued legacy cap/pending state are re-read. This supersedes earlier permission-storage/implementation-identity uncertainty only; the dated financial/accounting/compiler observations above retain their historical pins. Complete joint-liability Safe signature/delegate/fallback, mutable permission-owner, pending-change and reactivation authorization closure remains unresolved. Opsek personnel-security disclosure and Zodiac post-mortem/patch audit are review leads, not exact-controller custody/independence attestations or proof these Ethereum modules were patched or exploited.",
+      "reviewer": "Sol KPK review 2026-10-14 (ControlIncidents)",
+      "reviewedAt": "2026-10-14",
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "At block 26124896, all 27 prior Zodiac permission/membership/default-role reads are unchanged and no module event occurred since 26122342. Legacy target 0x9178ebe0691593184c1d785a864b62a326cc3509 now has exact fully verified MetaMorphoV1_1 source/runtime identity: owner/guardian remain old Security Council 0x354c92af243d53a24feb3dff20372af7b7c47478, curator is the Yield Safe, timelock=259200, totalSupply=68884444802711263348 and totalAssets=71491738. It remains a separate live liability, not disabled-final. Its wildcard call-only shutdown submitCap grant can schedule cap increases, and updateWithdrawQueue can recognize loss. Root submit(bytes) can schedule setIsAllocator with current delay zero. Four complete native/legacy creation-to-pin event censuses contain zero unexplained mint/burn totals, but do not themselves certify all permission-owner, Safe signature/delegate/fallback, pending-change and reactivation paths. Joint-liability live cap/queue and pending-state closure remains required; no broad issuer parameter/timelock guarantee substitutes for that certificate."
+        "At block 26124896, all 27 prior Zodiac permission/membership/default-role reads are unchanged and no module event occurred since 26122342. Legacy target 0x9178ebe0691593184c1d785a864b62a326cc3509 now has exact fully verified MetaMorphoV1_1 source/runtime identity: owner/guardian remain old Security Council 0x354c92af243d53a24feb3dff20372af7b7c47478, curator is the Yield Safe, timelock=259200, totalSupply=68884444802711263348 and totalAssets=71491738. It remains a separate live liability, not disabled-final. Its wildcard call-only shutdown submitCap grant can schedule cap increases, and updateWithdrawQueue can recognize loss. Root submit(bytes) can schedule setIsAllocator with current delay zero. Four complete native/legacy creation-to-pin event censuses contain zero unexplained mint/burn totals, but do not themselves certify all permission-owner, Safe signature/delegate/fallback, pending-change and reactivation paths. Joint-liability live cap/queue and pending-state closure remains required; no broad issuer parameter/timelock guarantee substitutes for that certificate. Current re-read at block 26191269 (2026-10-14): Roles runtime correspondence and wildcard call-only headers 0x0000000001000000000000000000000000000000000000000000000000000000 are verified; only monitoring holds root submit(bytes), including zero-delay setIsAllocator. Four executable, unaccepted/unrevoked PT-USD3-17DEC2026 submissions remain: market-group increaseAbsoluteCap to 340282366920938463463374607431768211455 and increaseRelativeCap to 1000000000000000000 (tx 0x4e8a1e9dca804ca179053aaf9aa129b49cd8ec966144db908c5aa658f27a70fd, block 26106709, executableAt 2026-10-05T19:24:36Z) and the same collateral-group increases (tx 0xb966d2f57a24e0b7abd7e3b63405fa5f0bc965f7cab8444519385955fd402c54, block 26106713, executableAt 2026-10-05T19:25:24Z). Market cap ID 0x447cabeabf3e61ffc30daab95b4d217aab81bee6d14281e2e437858d5891d742 and collateral cap ID 0x2563a4f8438da0ff340852f91b5467917919beb0515301f21a5c43045c164bf5 each have absoluteCap=relativeCap=allocation=0 at the pin: latent admissible risk, not current exposure. Legacy 0x9178ebe0691593184c1d785a864b62a326cc3509 still has totalSupply=68884444802711263348 raw shares, totalAssets=71491738 raw USDC, supplyQueue length 1 and withdrawQueue length 15; owner/guardian remain 0x354c92af243d53a24feb3dff20372af7b7c47478, curator the Yield Safe, timelock=259200, pending owner/timelock/guardian zero. No currently queued legacy market has nonzero pendingCap, without claiming every historical legacy market was enumerated. Legacy liabilities/grants are not disabled-final. Concrete current storage closes census subquestions, not complete Safe signature/delegate/fallback, permission-owner, pending-change and reactivation authorization closure."
       ],
       "scopedQuestions": [
         {
@@ -712,6 +852,105 @@
             {
               "label": "Exact VaultV2 ABI/source for role-granted selectors",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x7a35f5dcd3faa4bd617b7d7c3cc9b9ea6353291f",
+          "question": "Dedicated signer-vault custody and absence of manual key access are disclosed, but exact service-operator/recovery authority is not identified. At block 26191269 (2026-10-14), the rebalancer has wildcard call-only root allocate/deallocate and separate live legacy 0x9178ebe0691593184c1d785a864b62a326cc3509 reallocate grants, not root submit(bytes). Headers have no parameter conditions; legacy supply=68884444802711263348 raw shares, assets=71491738 raw USDC and withdrawQueue length=15. A complete joint-liability authorization certificate, including mutable permission ownership and Safe delegate/fallback/reconfiguration paths, has not been established.",
+          "subject": "execution-scope",
+          "reviewedAt": "2026-10-14",
+          "reviewer": "Sol KPK review 2026-10-14 (ControlIncidents)",
+          "sources": [
+            {
+              "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
+            },
+            {
+              "label": "Exact Yield Zodiac complete 34-record public grant history, pagination exhausted; current headers independently re-read at block 26191269",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+            },
+            {
+              "label": "Issuer dedicated ETH signer-vault and no manual team-key-access disclosure; not exact service/recovery authority attestation",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
+            },
+            {
+              "label": "Exact Yield VaultV2 source and selector authority checks",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Exact separate live Yield legacy vault source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9178ebe0691593184c1d785a864b62a326cc3509"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x769605006f6feee3494c72236130067526af848f",
+          "question": "Dedicated signer-vault custody and absence of manual key access are disclosed, but exact service-operator/recovery authority is not identified. At block 26191269 (2026-10-14), the shutdown agent has wildcard call-only root allocate/deallocate/cap-decrease grants and legacy 0x9178ebe0691593184c1d785a864b62a326cc3509 reallocate, submitCap and updateWithdrawQueue grants, not root submit(bytes) or merely cap-zero automation. Legacy increases can be scheduled behind its 259200-second timelock and queue removal can recognize loss. No currently queued legacy pendingCap is nonzero, but full historical pending-market and joint-liability cap/queue/pending-state, permission-owner reactivation/delegate/fallback closure remains uncertified; no independent signer or irreversible shutdown is inferred.",
+          "subject": "execution-scope",
+          "reviewedAt": "2026-10-14",
+          "reviewer": "Sol KPK review 2026-10-14 (ControlIncidents)",
+          "sources": [
+            {
+              "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
+            },
+            {
+              "label": "Exact Yield Zodiac complete 34-record public grant history, pagination exhausted; current headers independently re-read at block 26191269",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+            },
+            {
+              "label": "Issuer dedicated ETH signer-vault and no manual team-key-access disclosure; not exact service/recovery authority attestation",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
+            },
+            {
+              "label": "Exact Yield VaultV2 source and selector authority checks",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Exact separate live Yield legacy vault source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9178ebe0691593184c1d785a864b62a326cc3509"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0x393d8d9c3dae91b2d0530673c57e9c7e13ff4c9a",
+          "question": "Dedicated signer-vault custody and absence of manual key access are disclosed, but exact service-operator/recovery authority is not identified. The monitoring EOA executed the exact Yield June 21 penalty mitigation through Zodiac and MultiSend. At block 26191269 (2026-10-14), only monitoring has wildcard call-only root submit(bytes), not parameter-conditioned; setIsAllocator has zero selector delay, so source-derived allocator appointment reach does not inherit a blanket governance delay. Four expired-wait, unaccepted PT-USD3-17DEC2026 root cap increases remain executable since 2026-10-05 while both cap IDs and allocation are zero. Complete pending-state, mutable permission-owner, Safe delegate/fallback and reactivation closure remains uncertified.",
+          "subject": "execution-scope",
+          "reviewedAt": "2026-10-14",
+          "reviewer": "Sol KPK review 2026-10-14 (ControlIncidents)",
+          "sources": [
+            {
+              "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); owner/curator Safes, allocators, Zodiac agents/wildcard headers/unwrappers, selector delays/abdications, pending submissions, legacy queues and active-adapter penalties re-read 2026-10-14",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Sourcify Roles source/storage layout and runtimeMatch=match; exact Ethereum implementation bytes matched at block 26191269",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9646fdad06d3e24444381f44362a3b0eb343d337?fields=all"
+            },
+            {
+              "label": "Exact Yield Zodiac complete 34-record public grant history, pagination exhausted; current headers independently re-read at block 26191269",
+              "url": "https://eth.blockscout.com/api/v2/addresses/0xc3a8702bc57e0b787bd62d429a993265f596be1e/logs"
+            },
+            {
+              "label": "Issuer dedicated ETH signer-vault and no manual team-key-access disclosure; not exact service/recovery authority attestation",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
+            },
+            {
+              "label": "Exact Yield VaultV2 source and selector authority checks",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            },
+            {
+              "label": "Exact separate live Yield legacy vault source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9178ebe0691593184c1d785a864b62a326cc3509"
             }
           ]
         }

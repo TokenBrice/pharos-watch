@@ -2,7 +2,7 @@
   "id": "kpkusdcyield-kpk",
   "name": "KPK USDC Yield V2",
   "symbol": "KPK_USDC_Yield",
-  "oneLiner": "KPK USDC Yield V2 is a KPK-curated Morpho V2 USDC lending vault; shares accrue interest, absorb losses, and redeem subject to liquidity.",
+  "oneLiner": "KPK USDC Yield V2 is a Morpho V2 USDC vault targeting incentive-rich collateral; shares accrue lending interest, absorb losses and redeem subject to liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -12,7 +12,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC-denominated idle balances and lender positions in KPK-curated Morpho markets. Borrower collateral, valuation and market liquidity vary; the share does not represent cash held solely at the parent issuer.",
+  "collateral": "USDC-denominated idle balances and lender positions in KPK-curated Morpho markets targeting interest-bearing and incentive-rich collateral. The mandate includes restaking, yield-bearing stablecoin, principal-token and credit-linked exposures, including savUSD (Avant), siUSD and PT-siUSD (InfiniFi), and USD3's unsecured-credit dependency. Borrower collateral secures the underlying loans rather than being held directly by the vault; shares remain exposed to collateral valuation, liquidation, credit and market-liquidity risk.",
   "pegMechanism": "ERC-4626 deposits exchange USDC for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDC and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets. VaultV2 deliberately returns zero from maxWithdraw and maxRedeem as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
@@ -61,7 +61,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.morpho.org/curate/"
+      "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield"
     }
   ],
   "contracts": [
@@ -72,7 +72,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "KPK USDC Yield V2 Morpho V2 lending interest",
@@ -103,9 +103,9 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
       "deployedExposure": {
-        "basis": "Complete current adapter census at Ethereum block 26107704 identifies USDC-denominated lender positions, not idle cash; credit, collateral and liquidity risks remain local.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+        "basis": "Complete adapter census at Ethereum block 26191269 (2026-10-14; hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7; timestamp 2026-10-14T14:14:47Z, 1791987287) identifies USDC-denominated lender positions in 7 markets plus four 1-raw-unit residuals, with no idle cash; credit, collateral and liquidity risks remain local.",
+        "reviewedAt": "2026-10-14",
+        "sourceUrl": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

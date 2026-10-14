@@ -2,6 +2,9 @@
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
+import { lenderBookAdmissionReason, lenderOracleBranchKey } from "@shared/lib/safety-score-v9/lender-book-registry";
+import type { LenderBookObservation } from "@shared/types/safety-score-v9-lender-book";
 import type { OracleRiskBranch, OracleRiskProfile, OracleRiskTier } from "@shared/types/core";
 import {
   confidenceForResearch,
@@ -50,6 +53,15 @@ function isWeakOracleTier(tier: OracleRiskTier): boolean {
   return tier === "single-source-or-laggy";
 }
 
+function worstOracleTier(worst: OracleRiskTier, candidate: OracleRiskTier): OracleRiskTier {
+  const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
+  return quality[candidate] < quality[worst] ||
+    (quality[candidate] === quality[worst] &&
+      ((isWeakOracleTier(candidate) && !isWeakOracleTier(worst)) ||
+        (isWeakOracleTier(candidate) === isWeakOracleTier(worst) && candidate < worst)))
+    ? candidate : worst;
+}
+
 export function deriveOracleBranchMateriality(
   branches: readonly OracleRiskBranch[],
   authoredTier: OracleRiskTier,
@@ -59,18 +71,7 @@ export function deriveOracleBranchMateriality(
   const isMaterial = (branch: OracleRiskBranch): boolean =>
     branch.debtSharePct === undefined || branch.debtSharePct >= ORACLE_BRANCH_MATERIAL_SHARE_PCT;
   const materialTiers = branches.filter(isMaterial).map((branch) => branch.tier);
-  const tierQuality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
-  const tier =
-    materialTiers.length === 0
-      ? authoredTier
-      : materialTiers.reduce((worst, candidate) =>
-          tierQuality[candidate] < tierQuality[worst] ||
-          (tierQuality[candidate] === tierQuality[worst] &&
-            ((isWeakOracleTier(candidate) && !isWeakOracleTier(worst)) ||
-              (isWeakOracleTier(candidate) === isWeakOracleTier(worst) && candidate < worst)))
-            ? candidate
-            : worst,
-        );
+  const tier = materialTiers.length === 0 ? authoredTier : materialTiers.reduce(worstOracleTier);
   const subMaterialWeak = branches.filter(
     (branch) => branch.debtSharePct !== undefined && !isMaterial(branch) && isWeakOracleTier(branch.tier),
   );
@@ -83,11 +84,85 @@ export function deriveOracleBranchMateriality(
   return { tier, subMaterialWeakBand };
 }
 
+/**
+ * NAV materiality is separate from CDP debt materiality. This consumes an
+ * admitted complete book; it neither changes reviewed debt shares nor prices
+ * collateral quality. Unjoined reviewed weights remain material; an unmatched
+ * positive claim disables relief and diagnoses the unchanged reviewed aggregate.
+ */
+export function deriveMorphoOracleBranchMateriality(
+  branches: readonly OracleRiskBranch[],
+  authoredTier: OracleRiskTier,
+  book: Extract<LenderBookObservation, { status: "ok" }>,
+  paths: NonNullable<OracleRiskProfile["paths"]>,
+): { tier: OracleRiskTier; missingBranch: boolean } {
+  const materialTiers: OracleRiskTier[] = [];
+  const joinedPaths = new Set<string>();
+  let hasBorrowerExposure = false;
+  // The policy literal is admitted as exactly .01. Use its reciprocal for the
+  // exact integer comparison, never a float/display-rounded NAV percentage.
+  const thresholdScale = BigInt(1 / V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.oracleMaterialNavShare);
+  for (const deployment of book.deployments) {
+    const claims = new Map<string, { marketId: string; oracle: string; assets: bigint; ambiguousOracle: boolean }>();
+    for (const market of deployment.markets) {
+      const key = lenderOracleBranchKey(deployment.chain, market.morpho, market.marketId);
+      const existing = claims.get(key);
+      if (existing) {
+        existing.assets += BigInt(market.includedAssetsRaw);
+        existing.ambiguousOracle ||= existing.oracle !== canonicalEvmAddress(market.oracle);
+      } else {
+        claims.set(key, { marketId: market.marketId, oracle: canonicalEvmAddress(market.oracle) ?? market.oracle,
+          assets: BigInt(market.includedAssetsRaw), ambiguousOracle: false });
+      }
+    }
+    const nav = BigInt(deployment.realAssetsRaw ?? deployment.totalAssetsRaw);
+    for (const [key, claim] of claims) {
+      if (claim.assets > 0n) hasBorrowerExposure = true;
+      const matching = branches.filter((branch) => {
+        const id = branch.id.toLowerCase();
+        return (id === `market-${claim.marketId.slice(2)}` || id === claim.marketId ||
+          id === key || id === `oracle-${claim.oracle}`) &&
+          (!branch.chains || branch.chains.includes(deployment.chain)) &&
+          paths.some((path) => path.branchId === branch.id && path.chain === deployment.chain &&
+            canonicalEvmAddress(path.address) === claim.oracle &&
+            path.applicability?.disposition === "branches-required");
+      });
+      // A core-qualified key disambiguates otherwise identical markets. Bare
+      // market/oracle reviews cannot establish which core owns the NAV weight.
+      const unambiguousCore = matching[0]?.id.toLowerCase() === key ||
+        [...claims.values()].filter((candidate) =>
+          candidate.marketId === claim.marketId && candidate.oracle === claim.oracle,
+        ).length === 1;
+      if (matching.length !== 1 || !unambiguousCore || claim.ambiguousOracle) {
+        if (claim.assets > 0n) return { tier: authoredTier, missingBranch: true };
+        continue;
+      }
+      const branch = matching[0]!;
+      for (const path of paths) {
+        if (path.branchId === branch.id && path.chain === deployment.chain &&
+            canonicalEvmAddress(path.address) === claim.oracle) joinedPaths.add(path.id);
+      }
+      if (thresholdScale * claim.assets >= nav) materialTiers.push(branch.tier);
+    }
+  }
+  // All-idle is not proof of an oracleless mechanism.
+  if (!hasBorrowerExposure) return { tier: authoredTier, missingBranch: false };
+  for (const branch of branches) {
+    const branchPaths = paths.filter((path) => path.branchId === branch.id);
+    if (branchPaths.length === 0 || branchPaths.some((path) => !joinedPaths.has(path.id))) {
+      materialTiers.push(branch.tier);
+    }
+  }
+  const tier = materialTiers.length === 0 ? authoredTier : materialTiers.reduce(worstOracleTier);
+  return { tier, missingBranch: false };
+}
+
 export function adaptOracleReview(
   meta: V9ExtensionRegistryMeta,
   archetype: string,
   evidence: ReviewEvidenceBuilder,
   clockSec: number,
+  lenderBook?: LenderBookObservation,
 ): NonNullable<ExtensionAsset["economicControlReview"]>["oracle"] {
   const profile: OracleRiskProfile | undefined = meta.oracleRisk;
   if (!profile?.reviewedAt || !profile.reviewer || !profile.confidence) {
@@ -223,9 +298,25 @@ export function adaptOracleReview(
     path.applicability?.disposition === "branches-required" &&
     paths?.some((compiled) => compiled.id === path.id && compiled.applicability.state === "required" && compiled.observationState === "known"),
   );
-  const missingPathBranch = lendingPaths?.some((path) =>
-    !path.branchId || !applicableBranches.some((branch) => branch.id === path.branchId),
+  const lenderPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
+  const admittedBook = lenderBook?.status === "ok" &&
+    lenderBookAdmissionReason(lenderBook, meta.id, clockSec, lenderPolicy) === null
+    ? lenderBook : undefined;
+  const topLevelPaths = profile.paths?.filter((path) =>
+    path.applicability?.disposition === "top-level-only" &&
+    paths?.some((compiled) => compiled.id === path.id && compiled.applicability.state === "required" && compiled.observationState === "known"),
+  ) ?? [];
+  const onlyShareAccounting = admittedBook && topLevelPaths.every((path) =>
+    path.id === "vault-nav" && path.pricingAuthority === "internal-price" &&
+    admittedBook.deployments.some((deployment) => deployment.chain === path.chain &&
+      deployment.vault === canonicalEvmAddress(path.address)),
   );
+  const morphoMateriality = admittedBook && !unresolvedPaths && onlyShareAccounting && lendingPaths
+    ? deriveMorphoOracleBranchMateriality(applicableBranches, profile.tier, admittedBook, lendingPaths)
+    : undefined;
+  const missingPathBranch = (lendingPaths?.some((path) =>
+    !path.branchId || !applicableBranches.some((branch) => branch.id === path.branchId),
+  ) ?? false);
   const topState = unresolvedPaths || missingPathBranch
     ? "bounded-unknown"
     : paths || profile.branchApplicability?.disposition === "branches-required" ||
@@ -235,12 +326,31 @@ export function adaptOracleReview(
   const branchesRequired = paths
     ? (lendingPaths?.length ?? 0) > 0
     : profile.branchApplicability?.disposition === "branches-required" && !!profile.branches?.length;
-  const materiality = branchesRequired && topState !== "missing" &&
-    !profile.paths?.some((path) => path.applicability?.disposition === "top-level-only" &&
-      paths?.some((compiled) => compiled.id === path.id && compiled.applicability.state === "required" && compiled.observationState === "known"),
-    )
-    ? deriveOracleBranchMateriality(applicableBranches, profile.tier)
-    : { tier: profile.tier };
+  const materiality: { tier: OracleRiskTier; subMaterialWeakBand?: "moderate" | "low" } =
+    admittedBook
+      ? morphoMateriality
+        // The NAV lever may only remove reviewed constraints, never create a
+        // worse aggregate than the pre-v10.19 top-level NAV guard.
+        ? { tier: worstOracleTier(profile.tier, morphoMateriality.tier) === morphoMateriality.tier
+            ? profile.tier : morphoMateriality.tier }
+        : { tier: profile.tier }
+      : branchesRequired && topState !== "missing" && topLevelPaths.length === 0
+        ? deriveOracleBranchMateriality(applicableBranches, profile.tier)
+        : { tier: profile.tier };
+  if (morphoMateriality && admittedBook) {
+    evidenceKeys.push(...evidence.add({
+      componentKeys,
+      sourceId: morphoMateriality.missingBranch
+        ? "live-reserves.morpho-lender-book-oracle-materiality-unjoined-claim-fallback"
+        : "live-reserves.morpho-lender-book-oracle-materiality",
+      reviewedAtSec: admittedBook.acquiredAtSec,
+      observedAtSec: Math.min(admittedBook.acquiredAtSec, ...admittedBook.deployments.map((deployment) => deployment.pin.timestampSec)),
+      publishedBy: "unknown",
+      confidence: "verified",
+      payload: { book: admittedBook, materiality: morphoMateriality },
+      maxAgeSec: lenderPolicy.observationMaxAgeSec,
+    }));
+  }
   const branches = branchesRequired
       ? ORACLE_BRANCH_ADAPTERS.map(([branchKind, predicate]) => {
           // An explicit review owns this kind's confidence and census. It cannot

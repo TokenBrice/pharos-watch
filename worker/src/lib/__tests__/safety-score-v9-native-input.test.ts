@@ -4,6 +4,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { computePegScore } from "@shared/lib/peg-score";
+import type { LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance";
 import { pegSummary } from "./safety-score-v9-peg-provenance.test-support";
 import {
@@ -91,6 +92,34 @@ function nativeDraft(overrides: Record<string, unknown> = {}): Record<string, un
 
 function nativeInput(overrides: Record<string, unknown> = {}): NativeSafetyScoreV9Input {
   return normalizeNativeV9Input(nativeDraft(overrides));
+}
+
+function lenderCollateralBacking(): LenderCollateralBacking {
+  return {
+    schemaVersion: 1,
+    status: "ok",
+    reason: null,
+    publicationGenerationId: "accepted-publication:previous",
+    publishedAtSec: CLOCK_SEC - 60,
+    policyDigest: "a".repeat(64),
+    evaluationBuildDigest: "b".repeat(64),
+    registryFingerprint: "c".repeat(64),
+    maxAgeSec: 28_800,
+    tokenToAssetId: {
+      [`ethereum:0x${"2".repeat(40)}`]: "usdt-tether",
+      [`ethereum:0x${"1".repeat(40)}`]: "usdc-circle",
+    },
+    byAssetId: {
+      "usdt-tether": {
+        assetId: "usdt-tether", backingScore: 80, cardSha256: "d".repeat(64),
+        sourceCause: null, sourceGapIds: [],
+      },
+      "usdc-circle": {
+        assetId: "usdc-circle", backingScore: 85, cardSha256: "e".repeat(64),
+        sourceCause: "U", sourceGapIds: ["gap:a", "gap:z"],
+      },
+    },
+  };
 }
 
 describe("native Safety Score V9 input", () => {
@@ -229,6 +258,77 @@ describe("native Safety Score V9 input", () => {
     await expect(parseNativeV9InputCacheValue(corruptLength)).rejects.toThrow(
       "exceeds its declared uncompressed byte length",
     );
+  });
+
+  it("rejects malformed JSON before dispatching the cache envelope parser", async () => {
+    await expect(parseSafetyScoreV9InputCacheValue('{"schemaVersion":2,')).rejects.toThrow(
+      /Malformed V9 input cache envelope:/,
+    );
+  });
+
+  describe("lender collateral backing admission", () => {
+    it.each([null, [], "not-a-map"])("rejects malformed accepted row maps: %j", (byAssetId) => {
+      expect(() => nativeInput({
+        lenderCollateralBacking: { ...lenderCollateralBacking(), byAssetId },
+      })).toThrow(/Malformed native V9 input at lenderCollateralBacking.byAssetId/);
+    });
+
+    it.each([null, "gap:a", ["gap:a", 1]])("rejects malformed source gap attribution: %j", (sourceGapIds) => {
+      const backing = lenderCollateralBacking();
+      expect(() => nativeInput({
+        lenderCollateralBacking: {
+          ...backing,
+          byAssetId: {
+            ...backing.byAssetId,
+            "usdc-circle": { ...backing.byAssetId["usdc-circle"], sourceGapIds },
+          },
+        },
+      })).toThrow(/Malformed native V9 input at lenderCollateralBacking.byAssetId.usdc-circle.sourceGapIds/);
+    });
+
+    it("rejects duplicate source gap IDs rather than silently deduplicating evidence", () => {
+      const backing = lenderCollateralBacking();
+      backing.byAssetId["usdc-circle"]!.sourceGapIds = ["gap:a", "gap:a"];
+      expect(() => nativeInput({ lenderCollateralBacking: backing })).toThrow(
+        /Source gap IDs must be unique and sorted/,
+      );
+    });
+
+    it("canonicalizes row, token and gap ordering without changing the captured identity or source", () => {
+      const backing = lenderCollateralBacking();
+      const original = structuredClone(backing);
+      const reordered = structuredClone(backing);
+      reordered.tokenToAssetId = Object.fromEntries(Object.entries(reordered.tokenToAssetId).reverse());
+      reordered.byAssetId = Object.fromEntries(Object.entries(reordered.byAssetId).reverse());
+      reordered.byAssetId["usdc-circle"]!.sourceGapIds.reverse();
+
+      const input = nativeInput({ lenderCollateralBacking: backing });
+      const permuted = nativeInput({ lenderCollateralBacking: reordered });
+
+      expect(permuted).toEqual(input);
+      expect(input.baseInputGenerationId).not.toBe(nativeInput().baseInputGenerationId);
+      expect(Object.keys(input.lenderCollateralBacking!.byAssetId)).toEqual(["usdc-circle", "usdt-tether"]);
+      expect(Object.keys(input.lenderCollateralBacking!.tokenToAssetId)).toEqual([
+        `ethereum:0x${"1".repeat(40)}`, `ethereum:0x${"2".repeat(40)}`,
+      ]);
+      expect(permuted.lenderCollateralBacking!.byAssetId["usdc-circle"]!.sourceGapIds).toEqual(["gap:a", "gap:z"]);
+      expect(backing).toEqual(original);
+      expect(reordered.byAssetId["usdc-circle"]!.sourceGapIds).toEqual(["gap:z", "gap:a"]);
+    });
+
+    it("preserves absent lender fields through normalization and the native cache round trip", async () => {
+      const input = nativeInput();
+      const identity = buildSafetyScoreV9InputIdentity({
+        methodologyVersion: input.methodologyVersion,
+        baseInputGenerationId: input.baseInputGenerationId,
+        publicationGenerationId: input.sourceGeneration,
+      });
+      const entry = await buildNativeV9InputCacheEntry(input, identity);
+      const parsed = await parseSafetyScoreV9InputCacheValue(entry.value);
+      expect(input).not.toHaveProperty("lenderCollateralBacking");
+      expect(parsed).not.toHaveProperty("lenderCollateralBacking");
+      expect(parsed).toEqual(input);
+    });
   });
 
   it("refuses a v1 envelope on the native parser", async () => {
@@ -431,6 +531,8 @@ describe("native Safety Score V9 input", () => {
     expect(parsed.schemaVersion).toBe(3);
     expect(parsed.baseInputGenerationId).toMatch(/^report-cards-input:v1:[a-f0-9]{64}$/);
     await expect(parseSafetyScoreV9InputCacheValue(entry.value)).resolves.toEqual(legacy);
+    expect(legacy).not.toHaveProperty("lenderCollateralBacking");
+    expect(parsed).not.toHaveProperty("lenderCollateralBacking");
   });
   describe("fail-closed consistency guards", () => {
     // The native capture is the deterministic-replay contract's payload: every

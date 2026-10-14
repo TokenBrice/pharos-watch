@@ -38,6 +38,15 @@ import { logWorkerEvent } from "../structured-log";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { captureRedemptionReserveQuarantine } from "./redemption-reserve-quarantine";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { resolveLenderTokenIds, deriveLenderBookObservationIdentity, canonicalizeLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
+import type { LiveReserveSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
+import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { loadSafetyScoreV9Publication, loadSafetyScoreV9PublicationHealth } from "./publication-store";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./consumer-freshness";
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
 export function captureReservePipelineGaps(
@@ -106,6 +115,109 @@ function freshnessAtClock(
 }
 
 /**
+ * Project the prior accepted publication immediately into compact, registry-bound
+ * collateral rows. The decoded card set never escapes this capture-only scope.
+ */
+export async function captureLenderCollateralBacking(
+  db: D1Database,
+  provenanceMap: ReadonlyMap<string, LiveReserveSnapshotProvenance>,
+  registryFingerprint: string,
+  clockSec: number,
+): Promise<LenderCollateralBacking> {
+  const tokenIds = resolveLenderTokenIds(ACTIVE_STABLECOINS.flatMap((coin) =>
+    (coin.contracts ?? []).map((contract) => ({ assetId: coin.id, chain: contract.chain, address: contract.address })),
+  ));
+  const requiredTokens = new Set<string>();
+  const admittedIds = new Set(V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.admittedAssets.map((row) => row.assetId));
+  for (const [assetId, provenance] of provenanceMap) {
+    if (!admittedIds.has(assetId)) continue;
+    const parsed = LenderBookObservationSchema.safeParse(canonicalizeLenderBookObservation(provenance.lenderBookObservation));
+    if (!parsed.success || parsed.data.assetId !== assetId || parsed.data.status !== "ok") continue;
+    for (const deployment of parsed.data.deployments) {
+      for (const market of deployment.markets) requiredTokens.add(`${deployment.chain}:${market.collateralToken}`);
+    }
+  }
+  const tokenToAssetId: Record<string, string> = {};
+  for (const key of [...requiredTokens].sort(compareCodeUnits)) {
+    const ids = tokenIds.get(key);
+    if (ids?.length === 1) tokenToAssetId[key] = ids[0]!;
+  }
+  const unavailable = (reason: NonNullable<LenderCollateralBacking["reason"]>): LenderCollateralBacking =>
+    LenderCollateralBackingSchema.parse({
+      schemaVersion: 1, status: "unavailable", reason,
+      publicationGenerationId: null, publishedAtSec: null, policyDigest: null, evaluationBuildDigest: null,
+      registryFingerprint, maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, tokenToAssetId, byAssetId: {},
+    });
+  try {
+    // One bounded D1-backed source read; no RPC, API fetch or score evaluation.
+    const [publication, health] = await Promise.all([
+      loadSafetyScoreV9Publication(db),
+      loadSafetyScoreV9PublicationHealth(db),
+    ]);
+    if (!publication || !health) return unavailable("accepted-source-unavailable");
+    if (health.status !== "current") return unavailable("accepted-source-held");
+    if (health.acceptedPublicationGenerationId !== publication.publicationGenerationId ||
+        health.acceptedAtSec !== publication.publishedAtSec) return unavailable("accepted-source-unavailable");
+    if (!Number.isSafeInteger(clockSec) || clockSec < 0 ||
+        !Number.isSafeInteger(publication.publishedAtSec) || publication.publishedAtSec < 0 ||
+        !Number.isSafeInteger(health.attemptedAtSec) || health.attemptedAtSec < 0) return unavailable("malformed");
+    if (publication.publishedAtSec > clockSec || health.attemptedAtSec > clockSec) return unavailable("future-dated");
+    if (clockSec - publication.publishedAtSec > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+      return unavailable("accepted-source-stale");
+    }
+    const requiredIds = new Set(Object.values(tokenToAssetId));
+    const byAssetId: LenderCollateralBacking["byAssetId"] = {};
+    for (const card of publication.cards) {
+      if (!requiredIds.has(card.id)) continue;
+      const backing = card.pillars.backing;
+      if (card.ratingStatus !== "rated" || backing.aggregationDisposition === "excluded-a-b" ||
+          backing.score === null || !Number.isFinite(backing.score) || backing.score < 0 || backing.score > 100) continue;
+      const sourceCause = (["D", "C", "U"] as const).find((cause) => backing.limitedEvidenceCauses?.includes(cause)) ?? null;
+      const sourceGapIds = [...new Set((backing.causeGapRefs ?? []).map((ref) => resolveCauseGapId(publication, card, ref)))].sort(compareCodeUnits);
+      if ((sourceCause === "C" || sourceCause === "U") && sourceGapIds.length === 0) continue;
+      byAssetId[card.id] = {
+        assetId: card.id, backingScore: backing.score,
+        cardSha256: sha256Hex(stableJsonStringifyV1(card)),
+        sourceCause, sourceGapIds,
+      };
+    }
+    return LenderCollateralBackingSchema.parse({
+      schemaVersion: 1, status: "ok", reason: null,
+      publicationGenerationId: publication.publicationGenerationId, publishedAtSec: publication.publishedAtSec,
+      policyDigest: publication.policy.semanticDigest, evaluationBuildDigest: publication.evaluationBuildDigest,
+      registryFingerprint, maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, tokenToAssetId,
+      byAssetId: Object.fromEntries(Object.entries(byAssetId).sort(([a], [b]) => compareCodeUnits(a, b))),
+    });
+  } catch {
+    return unavailable("accepted-source-unavailable");
+  }
+}
+
+/** New captures name missing outcomes; retained captures are never backfilled. */
+function captureLenderBookOutcomes(
+  provenanceMap: ReadonlyMap<string, LiveReserveSnapshotProvenance>,
+  clockSec: number,
+): Map<string, LiveReserveSnapshotProvenance> {
+  const captured = new Map(provenanceMap);
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
+  for (const { assetId } of policy.admittedAssets) {
+    const provenance = captured.get(assetId);
+    if (provenance?.lenderBookObservation !== undefined) continue;
+    const payload = {
+      schemaVersion: 1 as const, assetId, acquiredAtSec: clockSec, maxAgeSec: policy.observationMaxAgeSec,
+      status: "unavailable" as const, reason: "missing-observation" as const,
+      failedDeploymentKey: null, deployments: null,
+    };
+    captured.set(assetId, {
+      // Availability is not a reserve observation; never freshen source clocks.
+      ...(provenance ?? { source: "morpho-lender-book:capture-availability", fetchedAt: 0 }),
+      lenderBookObservation: LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) }),
+    });
+  }
+  return captured;
+}
+
+/**
  * Captures the exact native V9 scoring input straight from its producers.
  *
  * This deliberately never calls `buildLiveReportCards`: the V8 report-card
@@ -151,6 +263,9 @@ export async function buildNativeSafetyScoreV9Capture(
   const pegAnalyticsPublished = await publishPegAnalyticsCache(db, pegAnalytics);
 
   const clockSec = pegAnalytics.nowSec;
+  const registryFingerprint = computeReportCardsRegistryFingerprint();
+  const capturedReserveProvenanceMap = captureLenderBookOutcomes(liveReserveProvenanceMap, clockSec);
+  const lenderCollateralBacking = await captureLenderCollateralBacking(db, capturedReserveProvenanceMap, registryFingerprint, clockSec);
   const nonNavPegDataById = new Map(
     [...pegAnalytics.pegDataById].filter(([id]) => ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
   );
@@ -257,7 +372,6 @@ export async function buildNativeSafetyScoreV9Capture(
   // backing compiler reads it.
   const { fallbackCoins: liveToFallbackCoins } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
-  const registryFingerprint = computeReportCardsRegistryFingerprint();
   const pegDataById = Object.fromEntries(nonNavPegDataById);
   const input = normalizeNativeV9Input({
     schemaVersion: 4,
@@ -291,7 +405,8 @@ export async function buildNativeSafetyScoreV9Capture(
     activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),
     redemptionBackstopMap,
     liveReserveMap: Object.fromEntries(liveReserveMap),
-    liveReserveProvenanceMap: Object.fromEntries(liveReserveProvenanceMap),
+    liveReserveProvenanceMap: Object.fromEntries(capturedReserveProvenanceMap),
+    lenderCollateralBacking,
     pipelineGapByAssetId,
     chainCirculatingById: Object.fromEntries(
       peggedAssets.map((asset) => [

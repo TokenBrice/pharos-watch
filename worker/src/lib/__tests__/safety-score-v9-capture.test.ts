@@ -26,6 +26,7 @@ vi.mock("../safety-score-v9/native-input", () => ({
   normalizeNativeV9Input: (value: unknown) => value,
 }));
 import { buildNativeSafetyScoreV9Capture } from "../safety-score-v9/capture";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
 const RUN = 1790000000;
 
 function fixture(scoringClock: number, fetchedAt = RUN - 48 * 3600 + 60, metadataValid = true) {
@@ -129,5 +130,45 @@ describe("V9 consumed reserve scoring-clock admission", () => {
     expect(input.redemptionBackstopMap[assetId]?.reserveInput?.freshness.freshnessMode).toBe("unverified");
     expect(input.pipelineGapByAssetId?.[assetId]).toBeUndefined();
     expect(input.liveReserveMap[assetId]).toBeUndefined();
+  });
+});
+
+describe("V9 lender-book capture availability provenance", () => {
+  it.each([false, true])("does not count availability markers as reserve observations (real reserve: %s)", async (hasReserve) => {
+    const clockSec = RUN + 60;
+    const observedAtSec = RUN - 3600;
+    fixture(clockSec);
+    const loaded = await mocks.inputs();
+    if (hasReserve) {
+      loaded.liveReserveProvenanceMap.set("kpkusdcprime-kpk", {
+        source: "erc4626-single-asset",
+        fetchedAt: observedAtSec,
+      });
+    }
+    const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
+    const marker = input.liveReserveProvenanceMap["kpkusdcyield-kpk"];
+    expect(marker).toMatchObject({
+      source: "morpho-lender-book:capture-availability",
+      fetchedAt: 0,
+      lenderBookObservation: {
+        status: "unavailable",
+        reason: "missing-observation",
+        acquiredAtSec: clockSec,
+      },
+    });
+    if (hasReserve) {
+      expect(input.liveReserveProvenanceMap["kpkusdcprime-kpk"]).toMatchObject({
+        source: "erc4626-single-asset",
+        fetchedAt: observedAtSec,
+        lenderBookObservation: { status: "unavailable", reason: "missing-observation" },
+      });
+    }
+    // Exercise the real aggregate source compiler without unrelated asset facts.
+    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput({
+      ...input,
+      activeAssetIds: [],
+    }, { registryFingerprint: input.registryFingerprint });
+    expect(extension.sources.liveReserves.observedAtSec).toBe(hasReserve ? observedAtSec : 0);
+    expect(loaded.liveReserveProvenanceMap.has("kpkusdcyield-kpk")).toBe(false);
   });
 });

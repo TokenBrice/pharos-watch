@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { URL, fileURLToPath } from "node:url";
 import type { OracleRiskProfile } from "@shared/types/core";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -8,8 +10,14 @@ import ghoRiskReview from "@shared/data/stablecoins/domains/risk-review/gho-aave
 import phtRiskReview from "@shared/data/stablecoins/domains/risk-review/pht-pht.json";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
+import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { makeV9FixedInput, V9_EVALUATION_TEST_TIMEOUT_MS } from "../../test-helpers/v9-fixed-input";
 import { internalPriceMeta, metaMap, reviewedOracleMeta } from "./safety-score-v9-fact-set.test-support";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
+import type { LenderBookObservation } from "@shared/types/safety-score-v9-lender-book";
+import { adaptOracleReview } from "../safety-score-v9/extension-oracle";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 
 type Path = NonNullable<OracleRiskProfile["paths"]>[number];
 const sources = [{ label: "Verified deployed source", url: "https://example.com/deployed-source" }];
@@ -256,5 +264,246 @@ describe("reviewed per-path oracle applicability", { timeout: V9_EVALUATION_TEST
     const { control } = evaluate(profile);
     expect(control.components.find((component) => component.kind === "oracle")).toMatchObject({ posture: "opaque-or-unknown", score: 45 });
     expect(oracleReasons(control)).toContainEqual(expect.objectContaining({ code: "unresolved-oracle-branch-applicability" }));
+  });
+});
+
+const lenderAssetId = "kpkusdcprime-kpk";
+const lenderRoot = "0x3333333333333333333333333333333333333333";
+const lenderCore = "0x1111111111111111111111111111111111111111";
+const lenderOracle = "0x2222222222222222222222222222222222222222";
+const lenderClock = 100000;
+
+function morphoFixture(weakAssets = "999", clockSec = lenderClock) {
+  const reviewedAt = new Date(clockSec * 1000).toISOString().slice(0, 10);
+  const meta = reviewedOracleMeta(reviewedAt);
+  meta.id = lenderAssetId;
+  const profile = meta.oracleRisk!;
+  profile.tier = "single-source-or-laggy";
+  const template = profile.branches![0]!;
+  profile.branches = ["a", "b"].map((digit) => ({
+    ...template, id: `market-${digit.repeat(64)}`,
+    tier: digit === "a" ? "standard-external" as const : "single-source-or-laggy" as const,
+    debtSharePct: digit === "a" ? 99 : 1,
+  }));
+  profile.paths = [
+    path("vault-nav", "top-level-only", lenderRoot),
+    ...profile.branches.map((branch) => ({
+      ...path(branch.id, "branches-required", lenderOracle), branchId: branch.id,
+    })),
+  ];
+  for (const oraclePath of profile.paths) oraclePath.applicability!.reviewedAt = reviewedAt;
+  const amounts = ["99001", weakAssets];
+  const total = amounts.reduce((sum, amount) => sum + BigInt(amount), 0n).toString();
+  const payload: Extract<LenderBookObservation, { status: "ok" }> = {
+    schemaVersion: 1, status: "ok", assetId: lenderAssetId, sourceGenerationId: "pending",
+    contentSha256: "0".repeat(64), acquiredAtSec: clockSec - 100, maxAgeSec: 28800,
+    censusScope: "complete-nav-accounted-current-book",
+    deployments: [{
+      chain: "ethereum", vault: lenderRoot, kind: "vault-v2",
+      pin: { chain: "ethereum", number: 1, hash: `0x${"a".repeat(64)}`, timestampSec: clockSec - 100, finality: "finalized" },
+      loanToken: lenderOracle, loanDecimals: 6, totalAssetsRaw: total, totalSupplyRaw: total,
+      idleAssetsRaw: "0", reconciledAssetsRaw: total, reconciliationResidualRaw: "0",
+      codeHashes: { [lenderRoot]: `0x${"b".repeat(64)}` }, selectorsRead: ["totalAssets()"],
+      markets: amounts.map((amount, index) => ({
+        account: lenderRoot, adapter: lenderCore, morpho: lenderCore, marketId: `0x${index === 0 ? "a".repeat(64) : "b".repeat(64)}`,
+        loanToken: lenderOracle, collateralToken: lenderOracle, oracle: lenderOracle, irm: lenderCore,
+        lltvRaw: "860000000000000000", supplySharesRaw: amount,
+        positionBorrowSharesRaw: "0", positionCollateralRaw: "0",
+        marketSupplyAssetsRaw: amount, marketSupplySharesRaw: amount,
+        marketBorrowAssetsRaw: "0", marketBorrowSharesRaw: "0",
+        marketLastUpdateSec: clockSec - 100, marketFeeRaw: "0", includedAssetsRaw: amount,
+        accruedMethod: "adapter-expected-supply-assets", collateralMode: "collateralized",
+      })),
+    }],
+  };
+  const book = canonicalizeLenderBookObservation({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+  return { meta, profile, book };
+}
+
+function compileMorphoOracle(meta: V9ExtensionRegistryMeta, book?: LenderBookObservation) {
+  return adaptOracleReview(meta, "cdp", new ReviewEvidenceBuilder(meta.id, lenderClock), lenderClock, book);
+}
+
+describe("admitted Morpho share-accounting oracle exception", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
+  it("bypasses only matching known vault-nav while retaining paths and all five kind obligations", () => {
+    const { meta, profile, book } = morphoFixture();
+    const result = compileMorphoOracle(meta, book);
+    expect(result.tier).toBe("standard-external");
+    expect(result).not.toHaveProperty("subMaterialWeakBand");
+    expect(result.paths).toHaveLength(3);
+    expect(result.paths).toContainEqual(expect.objectContaining({ id: "vault-nav", observationState: "known" }));
+    expect(result.branches).toHaveLength(5);
+    delete profile.branches![1]!.backstop;
+    const incomplete = compileMorphoOracle(meta, book);
+    expect(incomplete.tier).toBe("standard-external");
+    expect(incomplete.branches.find((branch) => branch.branch === "backstop")!.status.observationState).toBe("missing");
+    expect(profile.branches![1]!.debtSharePct).toBe(1);
+  });
+
+  it.each(["wrong-root", "unrelated-top-level", "unresolved", "wrong-path-id"] as const)(
+    "retains the aggregate tier for %s instead of erasing accounting evidence", (change) => {
+      const { meta, profile, book } = morphoFixture();
+      if (change === "wrong-root") profile.paths![0]!.address = lenderCore;
+      if (change === "unrelated-top-level") profile.paths!.push(path("direct-minter", "top-level-only", lenderCore));
+      if (change === "unresolved") delete profile.paths![0]!.applicability;
+      if (change === "wrong-path-id") profile.paths![0]!.id = "unrelated-accounting";
+      expect(compileMorphoOracle(meta, book).tier).toBe("single-source-or-laggy");
+    },
+  );
+
+  it.each(["missing", "stale", "unreconciled", "future", "bad-digest", "unavailable"] as const)(
+    "retains the old tier for a %s book", (failure) => {
+      const { meta, book } = morphoFixture();
+      let input: LenderBookObservation | undefined = book;
+      if (failure === "missing") input = undefined;
+      else if (failure === "unavailable") input = {
+        schemaVersion: 1, status: "unavailable", assetId: lenderAssetId,
+        acquiredAtSec: lenderClock - 100, maxAgeSec: 28800, contentSha256: "a".repeat(64),
+        sourceGenerationId: "failed", reason: "rpc-unavailable", failedDeploymentKey: null, deployments: null,
+      };
+      else if (book.status === "ok") {
+        if (failure === "stale") {
+          book.acquiredAtSec = book.deployments[0]!.pin.timestampSec = lenderClock - 28801;
+          for (const market of book.deployments[0]!.markets) market.marketLastUpdateSec = lenderClock - 28801;
+        }
+        if (failure === "future") book.acquiredAtSec = lenderClock + 1;
+        if (failure === "unreconciled") book.deployments[0]!.reconciliationResidualRaw = "1";
+        if (failure !== "bad-digest") Object.assign(book, deriveLenderBookObservationIdentity(book));
+      }
+      if (failure === "bad-digest") book.contentSha256 = "f".repeat(64);
+      expect(compileMorphoOracle(meta, input).tier).toBe("single-source-or-laggy");
+    },
+  );
+
+  it("admits the older pin/acquisition clock at 28800 seconds but not 28801", () => {
+    const { meta, book } = morphoFixture();
+    if (book.status !== "ok") throw new Error("Expected complete fixture");
+    book.deployments[0]!.pin.timestampSec = lenderClock - 28800;
+    for (const market of book.deployments[0]!.markets) market.marketLastUpdateSec = lenderClock - 28800;
+    Object.assign(book, deriveLenderBookObservationIdentity(book));
+    expect(compileMorphoOracle(meta, book).tier).toBe("standard-external");
+    book.deployments[0]!.pin.timestampSec -= 1;
+    for (const market of book.deployments[0]!.markets) market.marketLastUpdateSec -= 1;
+    Object.assign(book, deriveLenderBookObservationIdentity(book));
+    expect(compileMorphoOracle(meta, book).tier).toBe("single-source-or-laggy");
+  });
+
+  it("does not activate the NAV exception for a non-Morpho asset or an absent reviewed profile", () => {
+    const { meta, book } = morphoFixture();
+    meta.id = "alpha";
+    expect(compileMorphoOracle(meta, book).tier).toBe("single-source-or-laggy");
+    delete meta.oracleRisk;
+    expect(compileMorphoOracle(meta, book)).toMatchObject({ tier: null, status: { observationState: "missing" } });
+  });
+
+  it("retains the pre-v10.19 aggregate and diagnoses a newly funded unreviewed market without changing reviewed kind obligations", () => {
+    const { meta, profile, book } = morphoFixture();
+    profile.branches!.pop();
+    profile.paths!.pop();
+    const baseline = compileMorphoOracle(meta);
+    const evidence = new ReviewEvidenceBuilder(meta.id, lenderClock);
+    const oracle = adaptOracleReview(meta, "cdp", evidence, lenderClock, book);
+    expect(oracle.tier).toBe(baseline.tier);
+    expect(oracle.status.observationState).toBe(baseline.status.observationState);
+    expect(oracle.status.applicability.rationale).toBeNull();
+    expect(oracle.branches).toHaveLength(5);
+    expect(oracle.branches.map((branch) => branch.status.observationState))
+      .toEqual(baseline.branches.map((branch) => branch.status.observationState));
+    const diagnostic = evidence.finish().researchEvidence.find((item) =>
+      item.sourceId === "live-reserves.morpho-lender-book-oracle-materiality-unjoined-claim-fallback");
+    expect(diagnostic).toBeDefined();
+  });
+
+  it.each(["market-prefix", "bare-market", "oracle-address", "core-market-key"] as const)(
+    "keeps a fully reviewed %s profile known when the materiality join succeeds", (form) => {
+      const { meta, profile, book } = morphoFixture();
+      if (book.status !== "ok") throw new Error("Expected complete fixture");
+      book.deployments[0]!.markets[1]!.oracle = lenderCore;
+      for (const [index, branch] of profile.branches!.entries()) {
+        const market = book.deployments[0]!.markets[index]!;
+        if (form === "bare-market") branch.id = market.marketId;
+        if (form === "oracle-address") branch.id = `oracle-${market.oracle}`;
+        if (form === "core-market-key") branch.id = `ethereum:${market.morpho}:${market.marketId}`;
+        profile.paths![index + 1]!.branchId = branch.id;
+        profile.paths![index + 1]!.address = market.oracle;
+      }
+      Object.assign(book, deriveLenderBookObservationIdentity(book));
+      const oracle = compileMorphoOracle(meta, book);
+      expect(oracle.tier).toBe("standard-external");
+      expect(oracle.status.observationState).toBe("known");
+      expect(oracle.status.applicability.rationale).toBeNull();
+      expect(oracle.branches.every((branch) => branch.status.observationState === "known")).toBe(true);
+    },
+  );
+
+  it.each(["standard-external", "privileged-internal-pricing"] as const)(
+    "never makes the pre-v10.19 %s aggregate worse, including weak-tier ties", (baselineTier) => {
+      const { meta, profile, book } = morphoFixture("1001");
+      profile.tier = baselineTier;
+      profile.branches![0]!.tier = baselineTier;
+      const baseline = compileMorphoOracle(meta);
+      const result = compileMorphoOracle(meta, book);
+      expect(result.tier).toBe(baseline.tier);
+      expect(result.status.observationState).toBe("known");
+      expect(result.branches.map((branch) => branch.status.observationState))
+        .toEqual(baseline.branches.map((branch) => branch.status.observationState));
+    },
+  );
+
+  // Supply the smoke's frozen metadata artifact to exercise the real curated
+  // cohort without committing a production capture to the test fixtures.
+  it.runIf(process.env.PHAROS_ORACLE_SMOKE_METADATA != null)(
+    "never worsens any admitted asset's aggregate on a frozen movers smoke book", () => {
+      const observations = JSON.parse(readFileSync(process.env.PHAROS_ORACLE_SMOKE_METADATA!, "utf8")) as
+        Record<string, { metadata: { lenderBookObservation: LenderBookObservation } }>;
+      const admitted = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.admittedAssets;
+      expect(Object.keys(observations).sort()).toEqual(admitted.map((asset) => asset.assetId).sort());
+      const quality = V9_CANDIDATE_POLICY_V1.policy.semantic.control.oracleTierQuality;
+      const changes: { assetId: string; baseline: OracleRiskProfile["tier"] | null; candidate: OracleRiskProfile["tier"] | null }[] = [];
+      let admittedBooks = 0;
+      let fallbackDiagnostics = 0;
+      for (const asset of admitted) {
+        const book = observations[asset.assetId]!.metadata.lenderBookObservation;
+        const review = JSON.parse(readFileSync(fileURLToPath(new URL(
+          `../../../../shared/data/stablecoins/domains/risk-review/${asset.assetId}.json`, import.meta.url,
+        )), "utf8")) as { oracleRisk?: OracleRiskProfile };
+        const meta = reviewedOracleMeta(new Date(book.acquiredAtSec * 1000).toISOString().slice(0, 10));
+        meta.id = asset.assetId;
+        meta.oracleRisk = review.oracleRisk;
+        const baseline = adaptOracleReview(meta, "cdp", new ReviewEvidenceBuilder(meta.id, book.acquiredAtSec), book.acquiredAtSec);
+        const candidateEvidence = new ReviewEvidenceBuilder(meta.id, book.acquiredAtSec);
+        const candidate = adaptOracleReview(meta, "cdp", candidateEvidence, book.acquiredAtSec, book);
+        if (book.status === "ok") admittedBooks++;
+        if (candidateEvidence.finish().researchEvidence.some((item) =>
+          item.sourceId === "live-reserves.morpho-lender-book-oracle-materiality-unjoined-claim-fallback")) fallbackDiagnostics++;
+        if (baseline.tier === null) expect(candidate.tier, asset.assetId).toBeNull();
+        else {
+          expect(candidate.tier, asset.assetId).not.toBeNull();
+          expect(quality[candidate.tier!], asset.assetId).toBeGreaterThanOrEqual(quality[baseline.tier]);
+          if (baseline.tier !== "single-source-or-laggy") expect(candidate.tier, asset.assetId).not.toBe("single-source-or-laggy");
+        }
+        if (baseline.tier !== candidate.tier) changes.push({ assetId: asset.assetId, baseline: baseline.tier, candidate: candidate.tier });
+      }
+      console.info("Frozen oracle smoke comparison:", JSON.stringify({ assets: admitted.length, admittedBooks, fallbackDiagnostics, changes }));
+    },
+  );
+
+  it("passes the captured book through baseline construction without a binding excluded weak-oracle cap", () => {
+    const clockSec = 1_792_000_000;
+    const { meta, book } = morphoFixture("999", clockSec);
+    const base = makeV9FixedInput({ assetId: lenderAssetId, clockSec });
+    const fixed = normalizeFixedInput({
+      ...base, baseInputGenerationId: undefined, liveReserveProvenanceMap: {
+        [lenderAssetId]: { ...base.liveReserveProvenanceMap[lenderAssetId], lenderBookObservation: book },
+      },
+    });
+    expect(fixed.baseInputGenerationId).not.toBe(base.baseInputGenerationId);
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(meta) });
+    expect(extension.assets[0]!.admissionQuarantine).toBeUndefined();
+    expect(extension.assets[0]!.economicControlReview!.oracle.tier).toBe("standard-external");
+    const facts = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension);
+    const evaluated = evaluateV9FactSet(facts, V9_CANDIDATE_POLICY_V1).assets[0]!;
+    expect(evaluated.control.structuralFailures.filter((failure) => failure.kind === "weak-oracle-branch")).toEqual([]);
+    expect(evaluated.trace.caps.filter((cap) => cap.kind.startsWith("signal:weak-oracle-branch"))).toEqual([]);
   });
 });

@@ -281,8 +281,7 @@ describe("methodology registry", () => {
     ["liquidity-score", "6.94", "6.95"],
   ] as const)("converges the October 14 drain release identity for %s", (key, previousVersion, version) => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === key)!;
-    const release = methodology.entries[0];
-    expect(methodology.currentLabel).toBe(`v${version}`);
+    const release = methodology.entries.find((candidate) => candidate.version === version)!;
     expect(release).toMatchObject({ version, date: "2026-10-14", effectiveAt: 1_791_981_600, reconstructed: false });
     expect(getMethodologyVersionAt(key, release.effectiveAt - 1)).toBe(previousVersion);
     expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
@@ -291,9 +290,7 @@ describe("methodology registry", () => {
   });
 
   it("keeps the Safety drain policy identity and accepted-pair replay proof explicit", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.18");
-    expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.18")!;
     expect(release.summary).toContain("Track M is not part of this release");
     expect(release.impact.join(" ")).toContain("zero score, grade or rating-status movers");
     expect(release.impact.join(" ")).toContain("Final accepted-pair impact");
@@ -303,6 +300,24 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("935 decisions");
     expect(release.impact.join(" ")).toContain("23 pinned veto observations");
     expect(release.impact.join(" ")).toContain("no shadow DEX family met its documented maturity gates");
+  });
+
+  it("aligns v10.19 policy identity with its recorded release cut", () => {
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.19");
+    expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+    expect(release).toMatchObject({
+      version: "10.19",
+      date: "2026-10-14",
+      effectiveAt: 1_792_015_200,
+      reconstructed: false,
+      commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.18");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.19");
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-14 22:00 UTC (release cut; 1792015200)");
+    expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
+    expect(release.impact.join(" ")).toMatch(/Morpho/);
   });
 
   it("provides an LLM-facing description for every changelog", () => {

@@ -16,6 +16,18 @@ export function SafetyScoresOverview() {
         structural constraints, dependency limits and track record still matter; missing-data ceilings do not.
       </p>
       <p>
+        Methodology v10.19 adds collateral-book risk for direct Morpho lender vaults. Deployed lending is weighted
+        by each market&apos;s measured share of NAV and collateral quality, with higher liquidation loan-to-value
+        (LLTV) transmitting more of the quality shortfall. Idle cash retains inherited parent Backing; the blend
+        can never raise the vault above that parent. Borrower collateral is not a new reserve holding or dependency.
+      </p>
+      <p>
+        A separate Morpho-only oracle rule keeps branches below 1% of total deployment NAV disclosed without letting
+        them set the worst tier or a weak-oracle cap. Exactly 1% still counts, and every position still contributes
+        to Backing. Missing or unreconciled books retain the existing score path with an unavailable diagnostic,
+        not measured safe-book credit. v10.19 activated at the 2026-10-14 22:00 UTC release cut.
+      </p>
+      <p>
         Exit compares every admissible route alone and every independently usable pair, then takes the best feasible
         portfolio. The stronger member is primary; its backup adds{" "}
         <span className="font-mono">min(10, 100 − primary score) × backup score / 100</span>. An improving correlated
@@ -64,6 +76,83 @@ export function SafetyScoresOverview() {
 function SafetyScoresVersionNotes() {
   return (
     <>
+      <p>
+        v10.19 admits 33 direct Morpho Blue lender-vault assets across 35 VaultV2/MetaMorpho V1/V1.1 deployments,
+        including non-USDC denominations, not every ERC-4626 share or indirect issuer holding. At one finalized
+        block, idle cash plus included accrued lender claims must reconcile exactly to the source-accounted book.
+        VaultV2 uses realAssets, separately proves totalAssets equals the lower of realAssets and max-rate-capped
+        accrual, and records the undistributed buffer. MetaMorpho uses totalAssets, excluding skimmable donations.
+        No dust plug is allowed. Nonfungible deployments are scored separately; the lowest quality binds and
+        every required deployment must be available.
+      </p>
+      <p>
+        Collateral quality uses eligible Backing—not the final grade—from the frozen previous accepted publication
+        only when chain and token match exactly one active Pharos asset. No recursive scoring or curator grades
+        are imported. Tracked quality wins whether higher or lower; stale, held, missing or ineligible scores fall
+        back to the authored class, never zero. Classes are native ETH 95; BTC wrappers, ETH LSTs and
+        precious-metal receipts 85; yield/restaked ETH 80; major non-BTC/ETH L1 assets and wrapped/staking
+        receipts 70; synthetic dollars, principal tokens and yield-bearing stables 55; structured credit and
+        other/unknown 35.
+        Unknown is bounded U, not observed loss. siUSD and PT-siUSD do not borrow iUSD&apos;s score.
+      </p>
+      <p>
+        For collateralized markets, with collateral quality q and fractional LLTV l, lender quality is{" "}
+        <span className="font-mono">L = 100 − l² × (100 − q)</span>. Allocation-weighted book quality Q scales
+        parent Backing P on the deployed share:{" "}
+        <span className="font-mono">R = min(P, idleShare × P + deployedShare × P × Q / 100)</span>.
+        The squared-LLTV calibration transmits more quality shortfall as liquidation headroom narrows; it does
+        not assert actual borrower LTV equals LLTV. Genuine collateral-free debt-bearing markets transmit fully;
+        verified idle sentinels do not become unsecured lending. An exhaustively measured all-idle vault keeps P
+        with Q not applicable; zero NAV is unavailable. Both inherited reserve and concentration contributions
+        use R without a second haircut, even below the generic unknown floor. These dimensionless scores are
+        not loss probabilities, recovery forecasts or financial assurance. Capital reuse, parent caps, Exit,
+        mechanism evidence, peg, pillar weights and grade bands are unchanged.
+      </p>
+      <p>
+        Complete required, known, live same-parent multi-slice envelopes are admitted only for this Morpho lane.
+        Every slice must map to the sole serial wrapper parent; weights sum to one within 10⁻⁶ with no residual.
+        Existing cycle and dependency checks remain. Any lower pre-existing generic reserve quality and its
+        structural/evidence constraints still bind; the nonbinding path has zero-weight diagnostic factors,
+        not a second haircut. Unavailable books keep the previous generic path; non-Morpho behavior is unchanged.
+      </p>
+      <p>
+        The live on-chain producer runs in the existing four-hour reserve adapter, not score preparation.
+        Same-finalized-block identities, adapters/queues, accrued lender claims and idle cash must reconcile with
+        no tolerance or dust plug. Original pins, raw amounts, LLTV, code/source identities and typed outcomes
+        persist in reserve metadata and frozen replay input. The older of block and acquisition clocks must fit
+        an inclusive eight-hour book budget; accepted collateral scores separately need a current publication
+        within one hour. Partial, stale, failed or unsupported books retain pre-v10.19 reserve scoring with a
+        zero-weight unavailable book factor, without erasing valid denomination/redemption evidence. Measured
+        unknown collateral instead contributes its U class score. Old captures are explicitly legacy-unobserved,
+        not filled with historical live facts. Existing storage is reused without a D1 migration or new endpoint.
+      </p>
+      <p>
+        Oracle materiality groups claims by deployment, Morpho core and market, combining accounts before the
+        exact integer test:{" "}
+        <span className="font-mono">100 × branch assets ≥ total deployment assets</span>.
+        The denominator includes idle cash and uses VaultV2 realAssets, otherwise totalAssets. Unknown reviewed
+        weights remain material. An unmatched or ambiguous positive claim keeps the pre-v10.19 reviewed aggregate
+        with a diagnostic, never inventing an opaque tier or worsening that aggregate. The worst remaining tier
+        binds across deployments; an all-idle book retains the authored tier rather than proving oracleless.
+        The exception preserves the reviewed
+        vault-share NAV accounting path, all authored branches and oracle-kind completeness; unrelated top-level
+        pricing paths still block relief. Sub-1% borrower branches have no binding weak-oracle cap, but material
+        branches and non-Morpho/CDP rules remain unchanged. LLTV and class quality never change an oracle tier.
+      </p>
+      <p>
+        Calibration counterfactual only: quantities at Ethereum block 26191269 (October 14, 2026 14:14:47 UTC)
+        use the separately frozen later accepted Backing source at clock 1791989210, with other accepted inputs
+        held fixed. Prime&apos;s book quality is 88.7418377232, reserve quality 80.1217131799 and Backing
+        65.5486852720, implying 60 (C+) → 59 (C). Hybrid Yield&apos;s book quality is 62.8491909074, reserve quality
+        56.7442029224 and Backing 56.1976811690, implying 60 (C+) → 57 (C); class-only Yield fallback separately
+        implies 56. A synthetic 20%-idle hybrid Yield book preserves reserve quality 63.4526203879.
+        Prime&apos;s material rETH privileged-internal-pricing branch remains about 10.505% of NAV; OETH is
+        standard-external with a disclosed peg assumption. Dropping LsETH below 1% and weETH dust does not
+        upgrade Prime&apos;s tier; Control stays 45 in the example. Yield&apos;s material issuer/receipt branches
+        also remain. These are not exercised end-to-end replays or observed release movers.
+        Activation: October 14, 2026 22:00 UTC release cut (1792015200). Live differentiation begins after the first
+        post-deploy four-hour reserve run stores lender books and the next accepted publication consumes them.
+      </p>
       <p>
         Methodology v10.18 keeps route-exclusive A/B gaps on unscored optional Exit alternatives diagnostic,
         rather than marking the card partial. Selected or scored routes and genuine whole-pillar,

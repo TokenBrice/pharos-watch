@@ -2,6 +2,7 @@ import { z } from "zod";
 import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { isWellFormedDeploymentId } from "./deployment-id";
 import { CanonicalTextSchema, FractionSchema, NonNegativeFiniteSchema, Sha256Schema, StrictIsoDateSchema, UnixSecondsSchema, BaseInputGenerationIdSchema } from "./safety-schema-primitives";
+import { LenderBookObservationSchema, LenderBookFailedAttemptSchema } from "./safety-score-v9-lender-book";
 
 const vocabulary = candidatePolicy.semantic.backing.reserveScope;
 const policyEnum = (values: string[]) => z.enum(values as [string, ...string[]]);
@@ -89,6 +90,11 @@ export const LiveReserveSnapshotProvenanceShapeSchema = z.strictObject({
   sharedBookAssetIds: z.array(CanonicalTextSchema).optional(), sharedBookMeasuredHoldings: z.record(z.string(), NonNegativeFiniteSchema).optional(),
   reserveObservation: ReserveObservationEnvelopeSchema.optional(),
   boundedFactsGeneration: ReserveBoundedFactsGenerationSchema.optional(),
+  lenderBookObservation: LenderBookObservationSchema.optional(),
+  lenderBookLatestAttemptFailure: LenderBookFailedAttemptSchema.optional(),
+  lenderBookObservationFailure: z.strictObject({
+    code: z.literal("producer-failed"), reason: z.literal("malformed-lender-book-observation"), sourceSha256: Sha256Schema,
+  }).optional(),
   reserveObservationFailure: z.strictObject({
     code: z.literal("producer-failed"), reason: z.literal("malformed-reserve-observation"), sourceSha256: Sha256Schema,
   }).optional(),

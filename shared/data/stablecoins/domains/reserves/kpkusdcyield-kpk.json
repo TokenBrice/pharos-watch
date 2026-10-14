@@ -23,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R82 exact historical denominator and adapter-source review",
+    "reviewedAt": "2026-10-14",
+    "reviewer": "Sol KPK review 2026-10-14 (S1AllocationCensus)",
     "confidence": "verified",
     "sources": [
       {
@@ -58,11 +58,15 @@
       {
         "label": "Issuer exact Yield vault, adapter and strategy documentation",
         "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
+      },
+      {
+        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights.",
+    "rationale": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=12583798852158679851432343 raw 18-decimal shares and totalAssets()=13255106628776 raw 6-decimal USDC (13,255,106.628776 USDC). One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 7 current markets; summed expectedSupplyAssets=13255106628776, idle underlying=0; their sum equals totalAssets() and adapter.realAssets(). Lender-claim allocation shares are savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437% and weETH 0.0004%. Four off-list residuals retain 1 raw USDC unit each (srNUSD, YFI, matured PT-cUSD-23JUL2026 and ssftUSD), with allocation 0 and excluded from realAssets(). All current positions have zero borrow shares and zero posted collateral. The 100% slice identifies the denomination and standing parent dependency across idle and deployed lending positions; it does not assert that every asset is idle cash or invent borrower-collateral reserve weights. Weights are lender-claim allocation shares, not holdings of pledged collateral. Superseded 2026-10-02 review at block 26107704: totalSupply()=9792630120840452584390720, totalAssets()=10295065635649, 5 markets with summed expectedSupplyAssets=9983200606668 and idle underlying=311865028981.",
     "compositionBasis": "Pinned full adapter census and underlying-asset denomination",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-14",
     "scope": "full-composition",
     "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
     "knownUnknownExposurePct": 0
@@ -85,8 +89,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-14",
+    "reviewer": "Sol KPK review 2026-10-14 (S1AllocationCensus)",
     "confidence": "probable",
     "sources": [
       {
@@ -112,8 +116,12 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+      },
+      {
+        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "uncertainty": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification."
+    "uncertainty": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=12583798852158679851432343 raw 18-decimal shares and totalAssets()=13255106628776 raw 6-decimal USDC (13,255,106.628776 USDC). One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 7 current markets; summed expectedSupplyAssets=13255106628776, idle underlying=0; their sum equals totalAssets() and adapter.realAssets(). Lender-claim allocation shares are savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437% and weETH 0.0004%. Four off-list residuals retain 1 raw USDC unit each (srNUSD, YFI, matured PT-cUSD-23JUL2026 and ssftUSD), with allocation 0 and excluded from realAssets(). All current positions have zero borrow shares and zero posted collateral. 72.318% of lender allocation is to savUSD/USD3 markets. Weights are lender-claim allocation shares, not holdings of pledged collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Superseded 2026-10-02 review at block 26107704: totalSupply()=9792630120840452584390720, totalAssets()=10295065635649, 5 markets with summed expectedSupplyAssets=9983200606668 and idle underlying=311865028981."
   }
 }

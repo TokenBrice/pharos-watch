@@ -25,6 +25,22 @@ import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing"
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
 import { refineV9CauseContribution } from "@shared/types/safety-score-v9-causes";
+import { buildLenderBookFact } from "../safety-score-v9/fact-set-lender-book";
+import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderBookObservation, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
+import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
+import { V1019LenderBookFactSchema } from "@shared/types/safety-score-v9-facts";
+import type { AssetBuildContext } from "../safety-score-v9/fact-set-context";
+import { evaluateV1019LenderBook } from "@shared/lib/safety-score-v9/lender-book";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { mockD1 } from "@shared/test-utils/mock-d1";
+import { finalizeReserveSyncSuccess } from "../live-reserves/store-write";
+import { loadFreshIndependentLiveReserveMap } from "../live-reserves/store-overview";
+import { reserveCompositionRow, reserveSyncRow } from "./live-reserves-store.test-support";
+import type { ReserveCompositionRecord, ReserveSyncStateRecord } from "../live-reserves/store-shared";
+import { LiveReserveSnapshotMetadataSchema } from "@shared/types/live-reserves";
 vi.mock("@shared/data/safety-score-v9/evidence-gap-classifications-v1.json", () => ({
   default: { schemaVersion: 1, entries: [
     {
@@ -696,5 +712,545 @@ describe("direct backing reserve builder", () => {
     ];
     expect(() => buildReserves(factBuilderContext(makeV9FixedInput({ reserves: rows }))))
       .toThrow(/exceed the whole-asset denominator/);
+  });
+});
+
+describe("v10.19 frozen lender-book fact admission", () => {
+  const assetId = "kpkusdcprime-kpk";
+  const clockSec = 1_792_000_000;
+  const address = (n: number) => `0x${n.toString(16).padStart(40, "0")}`;
+  const word = (n: number) => `0x${n.toString(16).padStart(64, "0")}`;
+  const btc = "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf";
+
+  function book(options: { age?: number; collateral?: string; idle?: boolean } = {}): LenderBookObservation {
+    const at = clockSec - (options.age ?? 100);
+    const payload = {
+      schemaVersion: 1 as const, assetId, acquiredAtSec: at, maxAgeSec: 28_800,
+      status: "ok" as const, censusScope: "complete-nav-accounted-current-book" as const,
+      deployments: [{
+        chain: "ethereum", vault: address(1), kind: "vault-v2" as const,
+        pin: { chain: "ethereum", number: 26_191_269, hash: word(1), timestampSec: at, finality: "finalized" as const },
+        loanToken: address(2), loanDecimals: 6, totalAssetsRaw: "1000", totalSupplyRaw: "1000",
+        idleAssetsRaw: options.idle ? "1000" : "0", reconciledAssetsRaw: "1000", reconciliationResidualRaw: "0",
+        codeHashes: { [address(1)]: word(2), [address(3)]: word(3), [address(4)]: word(4) },
+        selectorsRead: ["asset()", "market(bytes32)", "totalAssets()"],
+        markets: options.idle ? [] : [{
+          account: address(3), adapter: address(3), morpho: address(4), marketId: word(5),
+          loanToken: address(2), collateralToken: options.collateral ?? btc, oracle: address(6), irm: address(7),
+          lltvRaw: "860000000000000000", supplySharesRaw: "1000000000", positionBorrowSharesRaw: "0", positionCollateralRaw: "0",
+          marketSupplyAssetsRaw: "1000", marketSupplySharesRaw: "1000000000", marketBorrowAssetsRaw: "500",
+          marketBorrowSharesRaw: "500000000", marketLastUpdateSec: at, marketFeeRaw: "0", includedAssetsRaw: "1000",
+          accruedMethod: "adapter-expected-supply-assets" as const, collateralMode: "collateralized" as const,
+        }],
+      }],
+    };
+    return LenderBookObservationSchema.parse(canonicalizeLenderBookObservation({
+      ...payload, ...deriveLenderBookObservationIdentity(payload),
+    }));
+  }
+
+  function unavailable(reason: Extract<LenderBookObservation, { status: "unavailable" }>["reason"]): LenderBookObservation {
+    const payload = { schemaVersion: 1 as const, assetId, acquiredAtSec: clockSec - 100, maxAgeSec: 28_800,
+      status: "unavailable" as const, reason, failedDeploymentKey: "ethereum:failed-vault", deployments: null };
+    return LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+  }
+
+  function source(context: AssetBuildContext, rows: Partial<LenderCollateralBacking> = {}): LenderCollateralBacking {
+    return LenderCollateralBackingSchema.parse({
+      schemaVersion: 1, status: "ok", reason: null,
+      publicationGenerationId: "report-cards:v9:fixture", publishedAtSec: clockSec - 50,
+      policyDigest: "a".repeat(64), evaluationBuildDigest: "b".repeat(64),
+      registryFingerprint: context.fixedInput.registryFingerprint, maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      tokenToAssetId: {}, byAssetId: {}, ...rows,
+    });
+  }
+
+  function context(observation?: LenderBookObservation, bundle?: LenderCollateralBacking, scoringClockSec = clockSec): AssetBuildContext {
+    const fixed = makeV9FixedInput({ assetId, clockSec: scoringClockSec });
+    const result = factBuilderContext(fixed, makeV9Extension({ assetId, clockSec: scoringClockSec, registryFingerprint: fixed.registryFingerprint }));
+    return { ...result, fixedInput: { ...result.fixedInput,
+      liveReserveProvenanceMap: { [assetId]: { source: "onchain", fetchedAt: clockSec - 100,
+        ...(observation ? { lenderBookObservation: observation } : {}) } },
+      ...(bundle ? { lenderCollateralBacking: bundle } : {}),
+    } };
+  }
+
+  it("omits the lane for non-cohort assets", () => {
+    expect(buildLenderBookFact(factBuilderContext())).toBeUndefined();
+  });
+
+  it.each([0, 28_800])("admits complete class-proxy books at inclusive age %s", (age) => {
+    const ctx = context(book({ age }));
+    const fact = buildLenderBookFact(ctx)!;
+    expect(V1019LenderBookFactSchema.safeParse(fact).success).toBe(true);
+    expect(fact.status.observationState).toBe("known");
+    expect(fact.collaterals[0]).toMatchObject({ quality: 85, qualitySource: "authored-class", collateralClass: "btc-wrapper" });
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)?.reserveQuality).toBeCloseTo(80.0154, 8);
+    expect(ctx.fixedInput.liveReserveMap[assetId]).toBeDefined();
+    expect(fact.status.evidenceRefIds.every((id) => ctx.evidence.has(id))).toBe(true);
+  });
+
+  it.each(["rpc-unavailable", "unreconciled", "deadline"] as const)(
+    "retains admitted Backing after %s until the original eight-hour budget expires", async reason => {
+      const meta = ACTIVE_META_BY_ID.get(assetId)!;
+      const config = meta.liveReservesConfig!;
+      const fingerprint = computeLiveReserveConfigFingerprint(config);
+      const measured = book();
+      if (measured.status !== "ok") throw new Error("Expected measured fixture");
+      const payload = { ...measured, deployments: measured.deployments.map(deployment => ({
+        ...deployment, vault: meta.contracts!.find(contract => contract.chain === deployment.chain)!.address.toLowerCase(),
+      })) };
+      const good = LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+      const failurePayload = { ...unavailable(reason), acquiredAtSec: clockSec };
+      const failed = LenderBookObservationSchema.parse({ ...failurePayload, ...deriveLenderBookObservationIdentity(failurePayload) });
+      const originalContext = context(good);
+      const originalFact = buildLenderBookFact(originalContext)!;
+      const originalQuality = evaluateV1019LenderBook(originalFact, 90, V9_CANDIDATE_POLICY_V1)!.reserveQuality;
+      let storedMetadata = JSON.stringify({ lenderBookObservation: good });
+      const composition: ReserveCompositionRecord = {
+        stablecoinId: assetId, slices: meta.reserves!, fetchedAt: clockSec, source: config.adapter,
+        attemptId: "failed-book-successful-reserve", configFingerprint: fingerprint,
+        metadata: { freshnessMode: "not-applicable", lenderBookObservation: failed },
+        warningCount: 0, warnings: [], adapterSourceModel: "dynamic-mix", adapterEvidenceClass: "independent",
+      };
+      const state: ReserveSyncStateRecord = {
+        stablecoinId: assetId, adapterKey: config.adapter, breakerKey: "fixture",
+        lastAttemptedAt: clockSec, lastSuccessAt: clockSec, lastStatus: "ok",
+        warningCount: 0, warnings: [], lastError: null, metadata: composition.metadata,
+        lastAttemptId: composition.attemptId, configFingerprint: fingerprint,
+      };
+      const db = mockD1([
+        { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+          rows: [{ metadata: storedMetadata, config_fingerprint: fingerprint }] },
+        { match: "INSERT INTO reserve_composition", rows: [], runMeta: { changes: 1 } },
+        { match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes: 1 } },
+        { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [], runMeta: { changes: 1 } },
+        { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [], runMeta: { changes: 1 } },
+      ]);
+      expect(await finalizeReserveSyncSuccess(db, composition, state, Number.MAX_SAFE_INTEGER)).toEqual({ finalized: true });
+      storedMetadata = String(db.getHistory().find(entry => entry.sql.includes("INSERT INTO reserve_composition ("))!.binds[5]);
+      const stored = LiveReserveSnapshotMetadataSchema.parse(JSON.parse(storedMetadata));
+      expect(stored.lenderBookObservation).toEqual(good);
+      expect(stored.lenderBookLatestAttemptFailure).toEqual(failed);
+      const sourceDb = mockD1([
+        { match: "FROM reserve_composition", rows: [reserveCompositionRow({
+          stablecoin_id: assetId, slices: JSON.stringify(meta.reserves), metadata: storedMetadata,
+          source: config.adapter, fetched_at: clockSec, attempt_id: composition.attemptId,
+          config_fingerprint: fingerprint, adapter_source_model: "dynamic-mix", adapter_evidence_class: "independent",
+        })] },
+        { match: "FROM reserve_sync_state", rows: [reserveSyncRow({
+          stablecoin_id: assetId, last_success_at: clockSec, last_attempted_at: clockSec,
+          last_success_attempt_id: composition.attemptId, config_fingerprint: fingerprint,
+        })] },
+      ]);
+      const live = await loadFreshIndependentLiveReserveMap(sourceDb, clockSec);
+      const provenance = live.provenanceById.get(assetId)!;
+      expect(provenance.lenderBookObservation).toEqual(good);
+      expect(provenance.lenderBookLatestAttemptFailure).toEqual(failed);
+      const budget = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook.observationMaxAgeSec;
+      for (const age of [budget, budget + 1]) {
+        const attemptedAt = measured.acquiredAtSec + age;
+        const retryPayload = { ...failed, acquiredAtSec: attemptedAt };
+        const retry = LenderBookObservationSchema.parse({ ...retryPayload, ...deriveLenderBookObservationIdentity(retryPayload) });
+        const retryDb = mockD1([
+          { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+            rows: [{ metadata: storedMetadata, config_fingerprint: fingerprint }] },
+          { match: "INSERT INTO reserve_composition", rows: [], runMeta: { changes: 1 } },
+          { match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes: 1 } },
+          { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [], runMeta: { changes: 1 } },
+          { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [], runMeta: { changes: 1 } },
+        ]);
+        await finalizeReserveSyncSuccess(retryDb, {
+          ...composition, fetchedAt: attemptedAt, metadata: { ...composition.metadata, lenderBookObservation: retry },
+        }, { ...state, lastAttemptedAt: attemptedAt, lastSuccessAt: attemptedAt }, Number.MAX_SAFE_INTEGER);
+        const retryMetadata = LiveReserveSnapshotMetadataSchema.parse(JSON.parse(String(
+          retryDb.getHistory().find(entry => entry.sql.includes("INSERT INTO reserve_composition ("))!.binds[5],
+        )));
+        expect(retryMetadata.lenderBookObservation).toEqual(age > budget ? retry : good);
+        expect(retryMetadata.lenderBookLatestAttemptFailure).toEqual(age > budget ? undefined : retry);
+      }
+      const readFailedDb = mockD1([
+        { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+          rows: [], throwError: new Error("Prior book read unavailable") },
+      ]);
+      await expect(finalizeReserveSyncSuccess(readFailedDb, composition, state, Number.MAX_SAFE_INTEGER))
+        .rejects.toThrow("Prior book read unavailable");
+      expect(readFailedDb.getHistory().every(entry => !entry.sql.includes("INSERT INTO"))).toBe(true);
+      for (const age of [100, budget, budget + 1]) {
+        const baseContext = context(good, undefined, measured.acquiredAtSec + age);
+        const ctx = { ...baseContext, fixedInput: { ...baseContext.fixedInput,
+          liveReserveProvenanceMap: { [assetId]: provenance } } };
+        const fact = buildLenderBookFact(ctx)!;
+        expect(V1019LenderBookFactSchema.safeParse(fact).success).toBe(true);
+        expect(fact.observation).toEqual(good);
+        expect(fact.latestAttemptFailure).toEqual(failed);
+        const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(ctx.fixedInput, ctx.extension);
+        expect(compiled.quarantines).toEqual([]);
+        const evaluated = evaluateV9ReserveExposures({
+          ...compiled.factSet.assets[0]!, resolvedUpstreamExposures: [],
+          inheritedStablecoinBacking: { parentAssetId: "usdc-circle", parentBackingScore: 90,
+            weight: 1, tier: "wrapped", failureDomains: [] },
+        }, V9_CANDIDATE_POLICY_V1);
+        expect(evaluated.score).toBeCloseTo(age > budget ? 90 : originalQuality, 8);
+        expect(evaluated.contributions[0]!.factors!.find(factor => factor.componentKey.endsWith(":latest-attempt"))).toMatchObject({
+          score: null, effectiveScoringWeight: 0, cause: "A", scoringDisposition: "excluded-pipeline",
+        });
+        expect(ctx.gaps.get(fact.latestAttemptStatus!.gapIds[0]!)!.causeProof).toMatchObject({
+          cause: "A", rejectionCode: reason, sourceGenerationId: failed.sourceGenerationId,
+        });
+        if (age > budget) {
+          expect(fact.status.observationState).toBe("stale");
+          expect(ctx.gaps.get(fact.status.gapIds[0]!)!.causeProof).toMatchObject({ cause: "A", rejectionCode: "stale" });
+        }
+      }
+    },
+  );
+
+  it("persists the failed read without retaining a book from corrupt prior metadata", async () => {
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const config = meta.liveReservesConfig!;
+    const fingerprint = computeLiveReserveConfigFingerprint(config);
+    const failed = unavailable("rpc-unavailable");
+    const composition: ReserveCompositionRecord = {
+      stablecoinId: assetId, slices: meta.reserves!, fetchedAt: clockSec, source: config.adapter,
+      attemptId: "corrupt-prior-book", configFingerprint: fingerprint,
+      metadata: { freshnessMode: "not-applicable", lenderBookObservation: failed },
+      warningCount: 0, warnings: [], adapterSourceModel: "dynamic-mix", adapterEvidenceClass: "independent",
+    };
+    const state: ReserveSyncStateRecord = {
+      stablecoinId: assetId, adapterKey: config.adapter, breakerKey: "fixture",
+      lastAttemptedAt: clockSec, lastSuccessAt: clockSec, lastStatus: "ok",
+      warningCount: 0, warnings: [], lastError: null, metadata: composition.metadata,
+      lastAttemptId: composition.attemptId, configFingerprint: fingerprint,
+    };
+    const db = mockD1([
+      { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+        rows: [{ metadata: '{"lenderBookObservation":', config_fingerprint: fingerprint }] },
+      { match: "INSERT INTO reserve_composition", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [], runMeta: { changes: 1 } },
+    ]);
+    expect(await finalizeReserveSyncSuccess(db, composition, state, Number.MAX_SAFE_INTEGER))
+      .toEqual({ finalized: true });
+    const stored = LiveReserveSnapshotMetadataSchema.parse(JSON.parse(String(
+      db.getHistory().find(entry => entry.sql.includes("INSERT INTO reserve_composition ("))!.binds[5],
+    )));
+    expect(stored.lenderBookObservation).toEqual(failed);
+    expect(stored.lenderBookLatestAttemptFailure).toBeUndefined();
+    const ctx = context(stored.lenderBookObservation);
+    const fact = buildLenderBookFact(ctx)!;
+    expect(fact.collaterals).toEqual([]);
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).toBeNull();
+    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof)
+      .toMatchObject({ cause: "A", rejectionCode: "rpc-unavailable" });
+  });
+
+  it.each([
+    { label: "wrong asset", overrides: { assetId: "gtusdcp-gauntlet" }, reidentify: true },
+    { label: "content digest mismatch", overrides: { contentSha256: "d".repeat(64) }, reidentify: false },
+    { label: "source generation mismatch", overrides: { sourceGenerationId: "morpho-lender-book:v1:invalid" }, reidentify: false },
+    { label: "wrong freshness budget", overrides: { maxAgeSec: 28_801 }, reidentify: true },
+    { label: "future attempt", overrides: { acquiredAtSec: clockSec + 1 }, reidentify: true },
+    { label: "attempt older than retained book", overrides: { acquiredAtSec: clockSec - 101 }, reidentify: true },
+  ])("rejects a retained failure with $label instead of emitting a trusted diagnostic", ({ overrides, reidentify }) => {
+    const ctx = context(book());
+    const original = unavailable("rpc-unavailable");
+    if (original.status !== "unavailable") throw new Error("Expected failed fixture");
+    const payload = { ...original, ...overrides };
+    const failed = { ...payload, ...(reidentify ? deriveLenderBookObservationIdentity(payload) : {}) };
+    const attempted = { ...ctx, fixedInput: { ...ctx.fixedInput,
+      liveReserveProvenanceMap: { [assetId]: {
+        ...ctx.fixedInput.liveReserveProvenanceMap[assetId]!, lenderBookLatestAttemptFailure: failed,
+      } },
+    } };
+    const denomination = buildReserves(attempted);
+    expect(() => buildLenderBookFact(attempted)).toThrow(`Invalid retained lender-book attempt for ${assetId}`);
+    expect([...ctx.gaps.values()].some(gap => gap.causeScope?.componentKey === "lender-book-latest-attempt")).toBe(false);
+    expect(buildReserves(attempted)).toEqual(denomination);
+  });
+
+  it("admits and digest-binds the exact capped-NAV real-assets denominator", () => {
+    const observed = book();
+    if (observed.status !== "ok") throw new Error("Expected measured fixture");
+    const payload = { ...observed, deployments: observed.deployments.map(deployment => ({
+      ...deployment, totalAssetsRaw: "900", realAssetsRaw: "1000", undistributedAssetsRaw: "100",
+    })) };
+    const observation = LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+    if (observation.status !== "ok") throw new Error("Expected admitted capped book");
+    expect(observation.contentSha256).not.toBe(observed.contentSha256);
+    const fact = buildLenderBookFact(context(observation))!;
+    expect(fact.status.observationState).toBe("known");
+    expect(fact.observation).toEqual(observation);
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)?.reserveQuality).toBeCloseTo(80.0154, 8);
+    const invalid = { ...observation, deployments: observation.deployments.map(deployment => ({
+      ...deployment, undistributedAssetsRaw: "99",
+    })) };
+    expect(LenderBookObservationSchema.safeParse(invalid).success).toBe(false);
+    expect(LenderBookObservationSchema.safeParse({ ...observation, deployments: observation.deployments.map(deployment => ({
+      ...deployment, realAssetsRaw: undefined,
+    })) }).success).toBe(false);
+    expect(LenderBookObservationSchema.safeParse({ ...observation, deployments: observation.deployments.map(deployment => ({
+      ...deployment, totalAssetsRaw: "1001",
+    })) }).success).toBe(false);
+  });
+
+  it.each([28_801, -1])("rejects stale/future source age %s without admitting partial quality", (age) => {
+    const ctx = context(book({ age }));
+    const fact = buildLenderBookFact(ctx)!;
+    const reason = age > 0 ? "stale" : "future-dated";
+    expect(fact.collaterals).toEqual([]);
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).toBeNull();
+    const gap = ctx.gaps.get(fact.status.gapIds[0]!)!;
+    expect(gap.causeProof).toMatchObject({ cause: "A", rejectionCode: reason });
+    expect(gap.message).toContain(`reason=${reason}`);
+  });
+
+  it.each([28_800, 28_801])("judges the older pin age %s rather than acquisition or prepare time", (age) => {
+    const observed = book();
+    if (observed.status !== "ok") throw new Error("Expected measured fixture");
+    const pinAtSec = clockSec - age;
+    const payload = { ...observed, deployments: observed.deployments.map((deployment) => ({ ...deployment,
+      pin: { ...deployment.pin, timestampSec: pinAtSec },
+      markets: deployment.markets.map((market) => ({ ...market, marketLastUpdateSec: pinAtSec })),
+    })) };
+    const observation = LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+    const ctx = context(observation);
+    const fact = buildLenderBookFact(ctx)!;
+    expect(fact.status.observationState).toBe(age === 28_800 ? "known" : "stale");
+    if (age === 28_800) {
+      expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).not.toBeNull();
+    } else {
+      expect(fact.collaterals).toEqual([]);
+      expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).toBeNull();
+      expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof).toMatchObject({ cause: "A", rejectionCode: "stale" });
+    }
+  });
+
+  it.each(["rpc-unavailable", "unreconciled", "incomplete-census", "zero-nav", "census-limit"] as const)(
+    "preserves producer reason %s while keeping independent denomination facts", (reason) => {
+      const ctx = context(unavailable(reason));
+      const before = buildReserves(ctx);
+      const fact = buildLenderBookFact(ctx)!;
+      expect(fact.observation).toMatchObject({ status: "unavailable", reason, deployments: null });
+      expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof).toMatchObject({ cause: "A", rejectionCode: reason });
+      expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).toBeNull();
+      expect(buildReserves(ctx)).toEqual(before);
+    },
+  );
+
+  it("names retained capture absence legacy-unobserved rather than a successful empty book", () => {
+    const ctx = context();
+    const fact = buildLenderBookFact(ctx)!;
+    expect(fact.observation).toBeNull();
+    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.message).toContain("legacy-unobserved");
+    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof.cause).toBe("U");
+  });
+
+  it("admits successful exhaustive all-idle reads without pretending missing positions are zero", () => {
+    const fact = buildLenderBookFact(context(book({ idle: true })))!;
+    const result = evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)!;
+    expect(fact.status.observationState).toBe("known");
+    expect(result.reserveQuality).toBe(90);
+    expect(result.deploymentQualities[0]!.bookQuality).toBeNull();
+  });
+
+  it("unknown exact collateral is a contributing U35, not source failure A or score zero", () => {
+    const ctx = context(book({ collateral: address(99) }));
+    const fact = buildLenderBookFact(ctx)!;
+    expect(fact.status.observationState).toBe("bounded-unknown");
+    expect(fact.collaterals[0]).toMatchObject({ quality: 35, qualitySource: "bounded-unknown", sourceCause: "U", fallbackReason: "unmapped-collateral" });
+    expect(fact.collaterals[0]!.sourceGapIds.every((id) => ctx.gaps.get(id)?.causeProof.cause === "U")).toBe(true);
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).not.toBeNull();
+  });
+
+  it.each(["C", "U", "D"] as const)("retains frozen accepted Backing and portable %s proxy cause IDs", (cause) => {
+    const ctx = context(book());
+    const bundle = source(ctx, { tokenToAssetId: { [`ethereum:${btc}`]: "fixture-collateral" },
+      byAssetId: { "fixture-collateral": { assetId: "fixture-collateral", backingScore: 52.5,
+        cardSha256: "c".repeat(64), sourceCause: cause, sourceGapIds: [`fixture-collateral:gap:stable-${cause}`] } } });
+    const captured = { ...ctx, fixedInput: { ...ctx.fixedInput, lenderCollateralBacking: bundle } };
+    const fact = buildLenderBookFact(captured)!;
+    expect(fact.collaterals[0]).toMatchObject({ quality: 52.5, qualitySource: "previous-accepted-backing", sourceCause: cause,
+      sourceGapIds: [`fixture-collateral:gap:stable-${cause}`], acceptedPublicationGenerationId: bundle.publicationGenerationId });
+    expect(fact.status.evidenceRefIds.map((id) => captured.evidence.get(id))).toContainEqual(expect.objectContaining({
+      sourceId: "previous-accepted-backing:fixture-collateral", sourceGenerationId: bundle.publicationGenerationId,
+    }));
+    expect(buildLenderBookFact(captured)).toEqual(fact);
+  });
+
+  it("source staleness uses class fallback and a separate zero-weight A diagnostic", () => {
+    const ctx = context(book());
+    const bundle = source(ctx, { publishedAtSec: clockSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1,
+      tokenToAssetId: { [`ethereum:${btc}`]: "fixture-collateral" } });
+    const fact = buildLenderBookFact({ ...ctx, fixedInput: { ...ctx.fixedInput, lenderCollateralBacking: bundle } })!;
+    expect(fact.status.observationState).toBe("known");
+    expect(fact.collaterals[0]).toMatchObject({ quality: 85, qualitySource: "authored-class", fallbackReason: "accepted-source-stale" });
+    expect([...ctx.gaps.values()]).toContainEqual(expect.objectContaining({ causeProof: expect.objectContaining({ cause: "A", rejectionCode: "accepted-source-stale" }) }));
+    expect(fact.status.gapIds).toEqual([]);
+    expect(fact.acceptedSourceStatus).toMatchObject({
+      observationState: "stale", gapIds: [`${assetId}:gap:lender-collateral-accepted-source`],
+    });
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).not.toBeNull();
+  });
+
+  it.each(["accepted-source-unavailable", "accepted-source-held"] as const)(
+    "keeps unavailable accepted source %s distinct from book unavailability", (reason) => {
+      const ctx = context(book());
+      const bundle = source(ctx, { status: "unavailable", reason, publicationGenerationId: null,
+        publishedAtSec: null, policyDigest: null, evaluationBuildDigest: null,
+        tokenToAssetId: { [`ethereum:${btc}`]: "fixture-collateral" } });
+      const fact = buildLenderBookFact({ ...ctx, fixedInput: { ...ctx.fixedInput, lenderCollateralBacking: bundle } })!;
+      expect(fact.status.observationState).toBe("known");
+      expect(fact.collaterals[0]).toMatchObject({ quality: 85, fallbackReason: reason, qualitySource: "authored-class" });
+      expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).not.toBeNull();
+      expect([...ctx.gaps.values()]).toContainEqual(expect.objectContaining({ causeProof: expect.objectContaining({ cause: "A", rejectionCode: reason }) }));
+      expect(fact.status.gapIds).toEqual([]);
+      expect(fact.acceptedSourceStatus).toMatchObject({
+        observationState: "missing", gapIds: [`${assetId}:gap:lender-collateral-accepted-source`],
+      });
+      const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension({
+        ...ctx.fixedInput, lenderCollateralBacking: bundle,
+      }, ctx.extension);
+      expect(compiled.quarantines).toEqual([]);
+      expect(compiled.factSet.assets[0]!.lenderBook).toMatchObject({
+        status: { observationState: "known", gapIds: fact.status.gapIds },
+        acceptedSourceStatus: fact.acceptedSourceStatus,
+        collaterals: fact.collaterals,
+      });
+      const evaluated = evaluateV9ReserveExposures({
+        ...compiled.factSet.assets[0]!, resolvedUpstreamExposures: [],
+        inheritedStablecoinBacking: {
+          parentAssetId: "usdc-circle", parentBackingScore: 90, weight: 1,
+          tier: "wrapped", failureDomains: [],
+        },
+      }, V9_CANDIDATE_POLICY_V1);
+      expect(evaluated.score).toBeCloseTo(80.0154, 8);
+      const factors = evaluated.contributions[0]!.factors!;
+      expect(factors.find((factor) => factor.componentKey.endsWith(":accepted-source"))).toMatchObject({
+        score: null, normalizedWeight: 0, effectiveScoringWeight: 0, cause: "A",
+        causeGapIds: fact.acceptedSourceStatus!.gapIds, scoringDisposition: "excluded-pipeline",
+      });
+      expect(factors.filter((factor) => factor.effectiveScoringWeight > 0).every((factor) => factor.cause === null)).toBe(true);
+    },
+  );
+
+  it("uses class fallback for future publication and absent/NR/excluded score cards", () => {
+    const ctx = context(book());
+    for (const publishedAtSec of [clockSec + 1, clockSec - 50]) {
+      const bundle = source(ctx, { publishedAtSec, tokenToAssetId: { [`ethereum:${btc}`]: "fixture-collateral" } });
+      const fact = buildLenderBookFact({ ...ctx, evidence: new Map(ctx.evidence), gaps: new Map(),
+        fixedInput: { ...ctx.fixedInput, lenderCollateralBacking: bundle } })!;
+      expect(fact.collaterals[0]).toMatchObject({ quality: 85, qualitySource: "authored-class",
+        fallbackReason: publishedAtSec > clockSec ? "future-dated" : "accepted-card-ineligible" });
+    }
+  });
+
+  it("keeps synthetic missing-observation availability U rather than claiming a failed actual read", () => {
+    const ctx = context(unavailable("missing-observation"));
+    const fact = buildLenderBookFact(ctx)!;
+    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof.cause).toBe("U");
+    expect(fact.status.evidenceRefIds).toEqual([]);
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).toBeNull();
+  });
+
+  it("retains the producer reason when the compiler independently rejects its acquisition age", () => {
+    const original = unavailable("unreconciled");
+    const payload = { ...original, acquiredAtSec: clockSec - 28_801 };
+    const ctx = context({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+    const fact = buildLenderBookFact(ctx)!;
+    expect(fact.observation).toMatchObject({ status: "unavailable", reason: "unreconciled" });
+    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof).toMatchObject({ cause: "A", rejectionCode: "stale" });
+  });
+
+  it("canonicalizes reordered producer inventories without repairing duplicate identities", () => {
+    const measured = book();
+    if (measured.status !== "ok") throw new Error("Expected measured fixture");
+    const reversed = { ...measured, deployments: measured.deployments.map((deployment) => ({
+      ...deployment, selectorsRead: [...deployment.selectorsRead].reverse(),
+    })) };
+    const canonical = LiveReserveSnapshotProvenanceSchema.parse({ source: "onchain", fetchedAt: clockSec - 100,
+      lenderBookObservation: reversed });
+    expect(canonical.lenderBookObservation).toEqual(measured);
+    const duplicate = { ...measured, deployments: measured.deployments.map((deployment) => ({
+      ...deployment, markets: [...deployment.markets, ...deployment.markets],
+    })) };
+    expect(LiveReserveSnapshotProvenanceSchema.parse({ source: "onchain", fetchedAt: clockSec - 100,
+      lenderBookObservation: duplicate }).lenderBookObservationFailure).toBeDefined();
+  });
+
+  it("recompiles identical frozen inputs and binds lender facts into the compiled digest", () => {
+    const first = context(book());
+    const repeated = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(first.fixedInput, first.extension);
+    const retry = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(first.fixedInput, first.extension);
+    expect(repeated.quarantines).toEqual([]);
+    expect(repeated.factSet.assets[0]!.lenderBook?.observation).toEqual(first.fixedInput.liveReserveProvenanceMap[assetId]!.lenderBookObservation);
+    expect(retry.factSet).toEqual(repeated.factSet);
+    const other = context(book({ collateral: address(99) }));
+    const changed = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(other.fixedInput, other.extension);
+    expect(changed.quarantines).toEqual([]);
+    expect(changed.factSet.v9FactSetDigest).not.toBe(repeated.factSet.v9FactSetDigest);
+  });
+
+  it("accepted score bytes change fact identity even when publication generation stays fixed", () => {
+    const digests = [52.5, 53].map((backingScore) => {
+      const ctx = context(book());
+      const bundle = source(ctx, { tokenToAssetId: { [`ethereum:${btc}`]: "fixture-collateral" },
+        byAssetId: { "fixture-collateral": { assetId: "fixture-collateral", backingScore,
+          cardSha256: "c".repeat(64), sourceCause: null, sourceGapIds: [] } } });
+      const result = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension({
+        ...ctx.fixedInput, lenderCollateralBacking: bundle,
+      }, ctx.extension);
+      expect(result.quarantines).toEqual([]);
+      return result.factSet.v9FactSetDigest;
+    });
+    expect(digests[0]).not.toBe(digests[1]);
+  });
+
+  it("routes invalid admitted source identity through asset-local quarantine, not a cohort throw", () => {
+    const ctx = context(book());
+    const outcome = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension({ ...ctx.fixedInput,
+      lenderCollateralBacking: source(ctx, { registryFingerprint: "d".repeat(64) }) }, ctx.extension);
+    expect(outcome.quarantines).toEqual([expect.objectContaining({ assetId, code: "fact-build-failed" })]);
+    expect(outcome.factSet.assets).toHaveLength(1);
+    expect(outcome.factSet.assets[0]!.reserveStatus.observationState).toBe("missing");
+  });
+
+  it("does not recursively score self collateral", () => {
+    const ctx = context(book());
+    const bundle = source(ctx, { tokenToAssetId: { [`ethereum:${btc}`]: assetId } });
+    expect(buildLenderBookFact({ ...ctx, fixedInput: { ...ctx.fixedInput, lenderCollateralBacking: bundle } })!.collaterals[0])
+      .toMatchObject({ trackedAssetId: null, quality: 85, fallbackReason: "self-collateral" });
+  });
+
+  it("retains malformed present producer bytes as a digest-bound local rejection", () => {
+    const ctx = context();
+    const provenance = LiveReserveSnapshotProvenanceSchema.parse({ source: "onchain", fetchedAt: clockSec - 100,
+      lenderBookObservation: { status: "ok", deployments: [] } });
+    expect(provenance.lenderBookObservation).toBeUndefined();
+    expect(provenance.lenderBookObservationFailure).toMatchObject({ code: "producer-failed", reason: "malformed-lender-book-observation" });
+    const fact = buildLenderBookFact({ ...ctx, fixedInput: { ...ctx.fixedInput,
+      liveReserveProvenanceMap: { [assetId]: provenance } } })!;
+    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof).toMatchObject({ cause: "A", rejectionCode: "malformed" });
+  });
+
+  it("rejects identity-inconsistent facts within the existing asset boundary", () => {
+    const ctx = context(book());
+    expect(() => buildLenderBookFact({ ...ctx, fixedInput: { ...ctx.fixedInput,
+      lenderCollateralBacking: source(ctx, { registryFingerprint: "d".repeat(64) }) } }))
+      .toThrow(/registry fingerprint mismatch/);
+    const valid = book();
+    expect(() => buildLenderBookFact(context({ ...valid, contentSha256: "d".repeat(64) }))).toThrow(/Invalid lender book/);
+  });
+
+  it("cannot silently admit one successful deployment of a required three-deployment book", () => {
+    const ctx = context(book());
+    const payload = { ...book(), assetId: "gtusdcp-gauntlet" };
+    const incompleteBook = { ...payload, ...deriveLenderBookObservationIdentity(payload) };
+    const partial = { ...ctx, asset: { ...ctx.asset, assetId: "gtusdcp-gauntlet" },
+      fixedInput: { ...ctx.fixedInput, liveReserveProvenanceMap: { "gtusdcp-gauntlet": {
+        source: "onchain", fetchedAt: clockSec - 100, lenderBookObservation: incompleteBook,
+      } } } };
+    expect(() => buildLenderBookFact(partial)).toThrow(/Invalid lender book/);
   });
 });
