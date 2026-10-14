@@ -906,6 +906,70 @@ describe("v10.19 frozen lender-book fact admission", () => {
     },
   );
 
+  it("persists the failed read without retaining a book from corrupt prior metadata", async () => {
+    const meta = ACTIVE_META_BY_ID.get(assetId)!;
+    const config = meta.liveReservesConfig!;
+    const fingerprint = computeLiveReserveConfigFingerprint(config);
+    const failed = unavailable("rpc-unavailable");
+    const composition: ReserveCompositionRecord = {
+      stablecoinId: assetId, slices: meta.reserves!, fetchedAt: clockSec, source: config.adapter,
+      attemptId: "corrupt-prior-book", configFingerprint: fingerprint,
+      metadata: { freshnessMode: "not-applicable", lenderBookObservation: failed },
+      warningCount: 0, warnings: [], adapterSourceModel: "dynamic-mix", adapterEvidenceClass: "independent",
+    };
+    const state: ReserveSyncStateRecord = {
+      stablecoinId: assetId, adapterKey: config.adapter, breakerKey: "fixture",
+      lastAttemptedAt: clockSec, lastSuccessAt: clockSec, lastStatus: "ok",
+      warningCount: 0, warnings: [], lastError: null, metadata: composition.metadata,
+      lastAttemptId: composition.attemptId, configFingerprint: fingerprint,
+    };
+    const db = mockD1([
+      { match: "SELECT metadata, config_fingerprint FROM reserve_composition",
+        rows: [{ metadata: '{"lenderBookObservation":', config_fingerprint: fingerprint }] },
+      { match: "INSERT INTO reserve_composition", rows: [], runMeta: { changes: 1 } },
+      { match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [], runMeta: { changes: 1 } },
+      { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [], runMeta: { changes: 1 } },
+    ]);
+    expect(await finalizeReserveSyncSuccess(db, composition, state, Number.MAX_SAFE_INTEGER))
+      .toEqual({ finalized: true });
+    const stored = LiveReserveSnapshotMetadataSchema.parse(JSON.parse(String(
+      db.getHistory().find(entry => entry.sql.includes("INSERT INTO reserve_composition ("))!.binds[5],
+    )));
+    expect(stored.lenderBookObservation).toEqual(failed);
+    expect(stored.lenderBookLatestAttemptFailure).toBeUndefined();
+    const ctx = context(stored.lenderBookObservation);
+    const fact = buildLenderBookFact(ctx)!;
+    expect(fact.collaterals).toEqual([]);
+    expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).toBeNull();
+    expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof)
+      .toMatchObject({ cause: "A", rejectionCode: "rpc-unavailable" });
+  });
+
+  it.each([
+    { label: "wrong asset", overrides: { assetId: "gtusdcp-gauntlet" }, reidentify: true },
+    { label: "content digest mismatch", overrides: { contentSha256: "d".repeat(64) }, reidentify: false },
+    { label: "source generation mismatch", overrides: { sourceGenerationId: "morpho-lender-book:v1:invalid" }, reidentify: false },
+    { label: "wrong freshness budget", overrides: { maxAgeSec: 28_801 }, reidentify: true },
+    { label: "future attempt", overrides: { acquiredAtSec: clockSec + 1 }, reidentify: true },
+    { label: "attempt older than retained book", overrides: { acquiredAtSec: clockSec - 101 }, reidentify: true },
+  ])("rejects a retained failure with $label instead of emitting a trusted diagnostic", ({ overrides, reidentify }) => {
+    const ctx = context(book());
+    const original = unavailable("rpc-unavailable");
+    if (original.status !== "unavailable") throw new Error("Expected failed fixture");
+    const payload = { ...original, ...overrides };
+    const failed = { ...payload, ...(reidentify ? deriveLenderBookObservationIdentity(payload) : {}) };
+    const attempted = { ...ctx, fixedInput: { ...ctx.fixedInput,
+      liveReserveProvenanceMap: { [assetId]: {
+        ...ctx.fixedInput.liveReserveProvenanceMap[assetId]!, lenderBookLatestAttemptFailure: failed,
+      } },
+    } };
+    const denomination = buildReserves(attempted);
+    expect(() => buildLenderBookFact(attempted)).toThrow(`Invalid retained lender-book attempt for ${assetId}`);
+    expect([...ctx.gaps.values()].some(gap => gap.causeScope?.componentKey === "lender-book-latest-attempt")).toBe(false);
+    expect(buildReserves(attempted)).toEqual(denomination);
+  });
+
   it("admits and digest-binds the exact capped-NAV real-assets denominator", () => {
     const observed = book();
     if (observed.status !== "ok") throw new Error("Expected measured fixture");
