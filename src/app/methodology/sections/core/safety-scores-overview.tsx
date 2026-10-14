@@ -79,17 +79,20 @@ function SafetyScoresVersionNotes() {
       <p>
         v10.19 admits 33 direct Morpho Blue lender-vault assets across 35 VaultV2/MetaMorpho V1/V1.1 deployments,
         including non-USDC denominations, not every ERC-4626 share or indirect issuer holding. At one finalized
-        block, actual NAV-accounted idle cash plus every included accrued lender claim must equal totalAssets
-        exactly. Caps, borrower debt shares and rounded display weights are not allocation weights. Nonfungible
-        deployments are evaluated separately and the lowest reserve quality binds; one unavailable required
-        deployment makes the adjustment unavailable rather than selecting the safest successful book.
+        block, idle cash plus included accrued lender claims must reconcile exactly to the source-accounted book.
+        VaultV2 uses realAssets, separately proves totalAssets equals the lower of realAssets and max-rate-capped
+        accrual, and records the undistributed buffer. MetaMorpho uses totalAssets, excluding skimmable donations.
+        No dust plug is allowed. Nonfungible deployments are scored separately; the lowest quality binds and
+        every required deployment must be available.
       </p>
       <p>
         Collateral quality uses eligible Backing—not the final grade—from the frozen previous accepted publication
         only when chain and token match exactly one active Pharos asset. No recursive scoring or curator grades
         are imported. Tracked quality wins whether higher or lower; stale, held, missing or ineligible scores fall
-        back to the authored class, never zero. Classes are native ETH 95; BTC wrappers and ETH LSTs 85;
-        yield/restaked ETH 80; principal tokens and yield-bearing stables 55; structured credit and other/unknown 35.
+        back to the authored class, never zero. Classes are native ETH 95; BTC wrappers, ETH LSTs and
+        precious-metal receipts 85; yield/restaked ETH 80; major non-BTC/ETH L1 assets and wrapped/staking
+        receipts 70; synthetic dollars, principal tokens and yield-bearing stables 55; structured credit and
+        other/unknown 35.
         Unknown is bounded U, not observed loss. siUSD and PT-siUSD do not borrow iUSD&apos;s score.
       </p>
       <p>
@@ -106,12 +109,19 @@ function SafetyScoresVersionNotes() {
         mechanism evidence, peg, pillar weights and grade bands are unchanged.
       </p>
       <p>
+        Complete required, known, live same-parent multi-slice envelopes are admitted only for this Morpho lane.
+        Every slice must map to the sole serial wrapper parent; weights sum to one within 10⁻⁶ with no residual.
+        Existing cycle and dependency checks remain. Any lower pre-existing generic reserve quality and its
+        structural/evidence constraints still bind; the nonbinding path has zero-weight diagnostic factors,
+        not a second haircut. Unavailable books keep the previous generic path; non-Morpho behavior is unchanged.
+      </p>
+      <p>
         The live on-chain producer runs in the existing four-hour reserve adapter, not score preparation.
         Same-finalized-block identities, adapters/queues, accrued lender claims and idle cash must reconcile with
         no tolerance or dust plug. Original pins, raw amounts, LLTV, code/source identities and typed outcomes
         persist in reserve metadata and frozen replay input. The older of block and acquisition clocks must fit
         an inclusive eight-hour book budget; accepted collateral scores separately need a current publication
-        within one hour. Partial, stale, failed or unsupported books retain inherited-parent behavior with a
+        within one hour. Partial, stale, failed or unsupported books retain pre-v10.19 reserve scoring with a
         zero-weight unavailable book factor, without erasing valid denomination/redemption evidence. Measured
         unknown collateral instead contributes its U class score. Old captures are explicitly legacy-unobserved,
         not filled with historical live facts. Existing storage is reused without a D1 migration or new endpoint.
@@ -120,9 +130,11 @@ function SafetyScoresVersionNotes() {
         Oracle materiality groups claims by deployment, Morpho core and market, combining accounts before the
         exact integer test:{" "}
         <span className="font-mono">100 × branch assets ≥ total deployment assets</span>.
-        The denominator includes idle cash. Unknown/unjoined weights remain material, and a funded unreviewed
-        market retains opaque required evidence. The worst remaining tier binds across deployments; an all-idle
-        book retains the authored tier rather than proving oracleless. The exception preserves the reviewed
+        The denominator includes idle cash and uses VaultV2 realAssets, otherwise totalAssets. Unknown reviewed
+        weights remain material. An unmatched or ambiguous positive claim keeps the pre-v10.19 reviewed aggregate
+        with a diagnostic, never inventing an opaque tier or worsening that aggregate. The worst remaining tier
+        binds across deployments; an all-idle book retains the authored tier rather than proving oracleless.
+        The exception preserves the reviewed
         vault-share NAV accounting path, all authored branches and oracle-kind completeness; unrelated top-level
         pricing paths still block relief. Sub-1% borrower branches have no binding weak-oracle cap, but material
         branches and non-Morpho/CDP rules remain unchanged. LLTV and class quality never change an oracle tier.
@@ -134,9 +146,10 @@ function SafetyScoresVersionNotes() {
         65.5486852720, implying 60 (C+) → 59 (C). Hybrid Yield&apos;s book quality is 62.8491909074, reserve quality
         56.7442029224 and Backing 56.1976811690, implying 60 (C+) → 57 (C); class-only Yield fallback separately
         implies 56. A synthetic 20%-idle hybrid Yield book preserves reserve quality 63.4526203879.
-        Prime&apos;s OETH internal-pricing branch remains about 8.06% of NAV, so dropping LsETH below 1% and
-        weETH dust does not upgrade its tier; Control stays 45 in the example. Yield&apos;s material issuer/receipt
-        branches also remain. These are not exercised end-to-end replays or observed release movers.
+        Prime&apos;s material rETH privileged-internal-pricing branch remains about 10.505% of NAV; OETH is
+        standard-external with a disclosed peg assumption. Dropping LsETH below 1% and weETH dust does not
+        upgrade Prime&apos;s tier; Control stays 45 in the example. Yield&apos;s material issuer/receipt branches
+        also remain. These are not exercised end-to-end replays or observed release movers.
         Activation is provisionally October 15, 2026 00:00 UTC (1792022400), to be re-dated at the authorized
         release cut. Fresh full-cohort replay, separately attributed movers and first reserve/prepare/accepted
         publication evidence are required before any production-acceptance claim.

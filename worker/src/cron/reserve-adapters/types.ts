@@ -31,6 +31,8 @@ export interface AdapterContext {
   onRequestCache?: (event: { key: string; hit: boolean; promise: Promise<unknown> }) => void;
   ioLimiter?: AdapterIoLimiter;
   abortSignal?: AbortSignal;
+  /** Absolute outer attempt/run deadline; optional phases must finish before it. */
+  attemptDeadlineMs?: number;
 }
 
 interface AssuranceSliceClassification {

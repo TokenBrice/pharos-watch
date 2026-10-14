@@ -1081,7 +1081,7 @@
         "id": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
         "chain": "ethereum",
         "address": "0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411",
-        "pricingAuthority": "external-price",
+        "pricingAuthority": "internal-price",
         "branchId": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
         "applicability": {
           "disposition": "branches-required",
@@ -1113,7 +1113,7 @@
         "id": "market-0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf",
         "chain": "ethereum",
         "address": "0x36cb058364a811636685ef15a71e8ea99043f815",
-        "pricingAuthority": "external-price",
+        "pricingAuthority": "internal-price",
         "branchId": "market-0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf",
         "applicability": {
           "disposition": "branches-required",

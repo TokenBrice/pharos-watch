@@ -443,8 +443,8 @@ export async function fetchErc4626SingleAssetReserves(
     warnings.push(warning("erc4626-redemption-paused", "ERC-4626 redemption route is paused on-chain"));
   }
 
-  // Run only after ordinary reserve and redemption I/O has settled. A failed
-  // lender census is diagnostic and must not revoke independently valid data.
+  // Run only after ordinary reserve and redemption I/O has settled. The census
+  // uses ctx.attemptDeadlineMs with a return margin, preserving these results.
   const lenderBookObservation = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook
     .admittedAssets.some(row => row.assetId === coin.id)
     ? await observeMorphoLenderBook(coin, config, signal, _ctx)

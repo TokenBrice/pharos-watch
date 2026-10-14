@@ -16,10 +16,11 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import {
   fetchEvmBlockHeader,
   fetchEvmBlockHeaderAtTag,
-  fetchEvmCodeAtBlock,
+  fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   type EvmBlockHeader,
   type EvmMulticall3Call,
@@ -35,6 +36,8 @@ const WAD = 10n ** 18n;
 const VIRTUAL_SHARES = 1_000_000n;
 const UINT256_MAX = (1n << 256n) - 1n;
 const BOOK_ALLOWANCE_MS = 20_000;
+// Leave room for the adapter's ordinary result to win the runner's outer race.
+const BOOK_RETURN_MARGIN_MS = 250;
 const bounds = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
 type Kind = LenderDeploymentObservation["kind"];
 
@@ -60,9 +63,9 @@ function words(raw: string | null | undefined, length: number): string[] {
     return word;
   });
 }
-function boundedCount(raw: string | null | undefined, max: number): number {
+function boundedCount(raw: string | null | undefined, max: number, reason: LenderBookReason = "census-limit"): number {
   const count = uint(raw);
-  if (count > BigInt(max)) fail("census-limit");
+  if (count > BigInt(max)) fail(reason);
   return Number(count);
 }
 function safeNumber(value: bigint): number {
@@ -76,6 +79,20 @@ function checked(value: bigint): bigint {
 function call(target: string, signature: string, args = ""): EvmMulticall3Call {
   const callData = `${toFunctionSelector(signature)}${args}`;
   return { target, callData, label: `${target}:${callData}`, allowFailure: true };
+}
+
+async function awaitPhaseRead<T>(read: () => Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) fail("aborted");
+  let abort!: () => void;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    abort = () => reject(signal.reason);
+    signal.addEventListener("abort", abort, { once: true });
+  });
+  try {
+    return await Promise.race([read(), aborted]);
+  } finally {
+    signal.removeEventListener("abort", abort);
+  }
 }
 
 /** Source: morpho-blue MorphoBalancesLib.expectedMarketBalances / SharesMathLib.
@@ -126,17 +143,20 @@ class PinnedReader {
     };
   }
   async io<T>(label: string, work: (options: EvmRpcOptions) => Promise<T>): Promise<T> {
-    const result = await runAdapterIo(this.ctx, label, () => work(this.options()), { signal: this.signal });
+    const result = await awaitPhaseRead(
+      () => runAdapterIo(this.ctx, label, () => work(this.options()), { signal: this.signal }),
+      this.signal,
+    );
     this.options();
     return result;
   }
   async code(target: string): Promise<void> {
     if (this.codeHashes[target]) return;
-    const code = await this.io(`lender-book-code:${this.chain}:${target}`, options =>
-      fetchEvmCodeAtBlock(this.chain, target, this.pin.number, options));
-    if (!code) fail("rpc-unavailable");
-    if (code === "0x") fail("identity-mismatch");
-    this.codeHashes[target] = keccak256(code).toLowerCase();
+    const result = await this.io(`lender-book-code:${this.chain}:${target}`, options =>
+      fetchEvmCodeStatusAtBlock(this.chain, target, this.pin.number, options));
+    if (result.status === "unavailable") fail("rpc-unavailable");
+    if (result.status === "absent") fail("identity-mismatch");
+    this.codeHashes[target] = keccak256(result.code).toLowerCase();
   }
   async read(calls: EvmMulticall3Call[]): Promise<(string | null)[]> {
     for (const row of calls) this.selectors.add(row.callData.slice(0, 10));
@@ -298,7 +318,7 @@ async function deployment(reader: PinnedReader, vault: string, kind: Kind, paren
   await reader.code(loan);
   const [decimalsRaw, cashRaw] = await reader.required([call(loan, "decimals()"),
     { target: loan, callData: encodeBalanceOfCallData(vault), label: `${loan}:cash:${vault}`, allowFailure: true }]);
-  const decimals = boundedCount(decimalsRaw, 36);
+  const decimals = boundedCount(decimalsRaw, 36, "malformed");
   const total = uint(totalRaw);
   if (total === 0n) fail("zero-nav");
   let idle = uint(cashRaw);
@@ -351,7 +371,7 @@ async function deployment(reader: PinnedReader, vault: string, kind: Kind, paren
         ]);
         const shares = uint(sharesRaw);
         const innerSupply = uint(supplyRaw);
-        const offset = boundedCount(offsetRaw, 36);
+        const offset = boundedCount(offsetRaw, 36, "malformed");
         const fee = uint(feeRaw);
         if (shares > innerSupply || fee > WAD) fail("identity-mismatch");
         const virtualShares = 10n ** BigInt(offset);
@@ -416,11 +436,22 @@ export async function observeMorphoLenderBook(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<LenderBookObservation> {
-  const deadlineMs = Date.now() + BOOK_ALLOWANCE_MS;
-  const phaseSignal = AbortSignal.any([signal, ...(ctx?.abortSignal ? [ctx.abortSignal] : []), AbortSignal.timeout(BOOK_ALLOWANCE_MS)]);
+  const startedMs = Date.now();
+  const deadlineMs = Math.min(
+    startedMs + BOOK_ALLOWANCE_MS,
+    (ctx?.attemptDeadlineMs ?? Infinity) - BOOK_RETURN_MARGIN_MS,
+  );
+  const timeout = createTimeoutSignal({
+    timeoutMs: Math.max(0, deadlineMs - startedMs),
+    timeoutReason: new CensusFailure("deadline"),
+    parentSignal: AbortSignal.any([signal, ...(ctx?.abortSignal ? [ctx.abortSignal] : [])]),
+  });
+  const phaseSignal = timeout.signal;
   let failedDeploymentKey: string | null = null;
   const base = { schemaVersion: 1 as const, assetId: coin.id, maxAgeSec: bounds.observationMaxAgeSec };
   try {
+    if (signal.aborted || ctx?.abortSignal?.aborted) fail("aborted");
+    if (Date.now() >= deadlineMs) fail("deadline");
     const admission = bounds.admittedAssets.find(row => row.assetId === coin.id);
     if (!admission || config.adapter !== "erc4626-single-asset") fail("identity-mismatch");
     const params = parseLiveReserveAdapterParams("erc4626-single-asset", config.params);
@@ -448,7 +479,8 @@ export async function observeMorphoLenderBook(
         pinPromise = runAdapterIo(ctx, pinKey, () => fetchEvmBlockHeaderAtTag(admitted.chain, "finalized", options), { signal: phaseSignal });
         ctx?.requestCache?.set(pinKey, pinPromise);
       }
-      const pin = await pinPromise;
+      // A shared pending pin may belong to another attempt's longer budget.
+      const pin = await awaitPhaseRead(() => pinPromise, phaseSignal);
       if (!pin) fail("rpc-unavailable");
       const reader = new PinnedReader(admitted.chain, pin, phaseSignal, ctx, deadlineMs, extraRpcUrls);
       const parentTokens = (parent.contracts ?? []).filter(row => row.chain === admitted.chain)
@@ -469,5 +501,7 @@ export async function observeMorphoLenderBook(
       : error instanceof CensusFailure ? error.reason : "malformed";
     const payload = { ...base, acquiredAtSec: Math.floor(Date.now() / 1000), status: "unavailable" as const, reason, failedDeploymentKey, deployments: null };
     return LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+  } finally {
+    timeout.dispose();
   }
 }

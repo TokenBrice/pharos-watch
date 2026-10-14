@@ -81,7 +81,7 @@ Wrapper-local reviews in `wrapper-allocation-reviews-v1.json.localReviews` are a
 
 ### Morpho lender collateral-book Backing (v10.19)
 
-Reconciled Morpho NAV books weight lender collateral risk by allocation: frozen previous-accepted Backing or policy classes, with LLTV² transmission. Idle keeps parent Backing; the blend never exceeds it or charges twice. Unavailable books keep inherited behavior with A diagnostics. Admitted books exclude sub-1%-NAV oracle branches (still disclosed, weighted); unmatched claims keep the pre-v10.19 aggregate, never worsened.
+Morpho books weight frozen accepted Backing or class quality by allocation and LLTV². Idle keeps parent quality; the blend cannot exceed it. Complete same-parent multi-slice envelopes retain any lower generic constraints; unavailable books keep prior scoring. Sub-1%-NAV oracle branches remain disclosed and weighted; unmatched claims keep the prior aggregate, never worsened.
 
 [Formulas, calibration and producer details](./process/report-cards-appendix.md#morpho-lender-collateral-book-backing-v1019) are in the appendix.
 

@@ -22,6 +22,7 @@ import type {
 } from "../../types/safety-score-v9-lender-book";
 import { evaluateV1019LenderBook } from "../safety-score-v9/lender-book";
 import { lenderMarketKey } from "../safety-score-v9/lender-book-registry";
+import { verifiedLiveInheritedExposures } from "../safety-score-v9/backing-inheritance";
 
 import { asset, exposure, knownStatus, missingMechanism } from "./safety-score-v9-backing.test-support";
 import { resolveV9EvidenceCause } from "../safety-score-v9/evidence";
@@ -1205,6 +1206,58 @@ describe("v10.19 allocation-weighted Morpho lender Backing", () => {
     expect(result).not.toBeNull();
     return result!;
   }
+
+  it.each([0, 35, 85, 100])("caps complete multi-slice reserves at both generic and book quality %s", quality => {
+    const fact = book([["100", quality, "1000000000000000000", "other-unknown"]]);
+    const base = inherited(fact);
+    const input = { ...base, reserveExposures: [
+      { ...base.reserveExposures[0]!, exposureKey: "deployed", assetClass: "protocol-position" as const, weight: .95 },
+      { ...base.reserveExposures[0]!, exposureKey: "idle", weight: .05 },
+    ] };
+    const { inheritedStablecoinBacking: _inherited, ...oldInput } = input;
+    const generic = evaluateV9ReserveExposures(oldInput, V9_CANDIDATE_POLICY_V1);
+    const result = evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1);
+    expect(result.score).toBeCloseTo(Math.min(generic.score!, arithmetic(fact).reserveQuality), 8);
+    expect(result.structuralReasons).toEqual(generic.structuralReasons);
+    expect(result.unresolved).toEqual(generic.unresolved);
+    expect(result.contributions.flatMap(row => row.factors ?? []).some(row => row.componentKey.includes(":lender-book:"))).toBe(true);
+    expect(result.contributions.find(row => row.source === "reserve-exposure")!.observationState).toBe("known");
+    fact.status = { ...fact.status, observationState: "missing" };
+    expect(evaluateV9ReserveExposures(input, V9_CANDIDATE_POLICY_V1).score).toBe(generic.score);
+  });
+
+  it("requires every multi-slice holding to be exact, live, known and same-parent, without extending non-lenders", () => {
+    const base = inherited(book(primeClaims));
+    const input = { ...base, reserveExposures: [
+      { ...base.reserveExposures[0]!, exposureKey: "deployed", weight: .95 },
+      { ...base.reserveExposures[0]!, exposureKey: "idle", weight: .05 },
+    ] };
+    const parent = input.inheritedStablecoinBacking!;
+    expect(verifiedLiveInheritedExposures(input, parent)).toBeUndefined();
+    expect(verifiedLiveInheritedExposures(input, parent, true)).toHaveLength(2);
+    for (const patch of [
+      { trackedAssetId: "other-parent" }, { trackedAssetId: null }, { provenance: "curated" as const },
+      { status: { ...knownStatus("unknown"), observationState: "bounded-unknown" as const } },
+      { weight: .049 }, { weight: .051 },
+    ]) {
+      const invalid = { ...input, reserveExposures: [input.reserveExposures[0]!, { ...input.reserveExposures[1]!, ...patch }] };
+      expect(verifiedLiveInheritedExposures(invalid, parent, true)).toBeUndefined();
+      const { inheritedStablecoinBacking: _inherited, ...oldInput } = invalid;
+      expect(evaluateV9ReserveExposures(invalid, V9_CANDIDATE_POLICY_V1))
+        .toEqual(evaluateV9ReserveExposures(oldInput, V9_CANDIDATE_POLICY_V1));
+    }
+    expect(verifiedLiveInheritedExposures({
+      ...input, reserveResiduals: [{ residualId: "unknown", weight: .001, status: knownStatus("residual") }],
+    }, parent, true)).toBeUndefined();
+    const withinTolerance = { ...input, reserveExposures: [
+      input.reserveExposures[0]!, { ...input.reserveExposures[1]!, weight: .0500005 },
+    ] };
+    expect(verifiedLiveInheritedExposures(withinTolerance, parent, true)).toHaveLength(2);
+    const nonLender = { ...input, assetId: "unadmitted-wrapper" };
+    // A manually supplied legacy inheritance candidate still takes its old
+    // bounded-witness path; the new book cannot admit a non-Morpho asset.
+    expect(evaluateV9ReserveExposures(nonLender, V9_CANDIDATE_POLICY_V1).score).toBe(parentBacking);
+  });
 
   it("reproduces the exact raw-weighted Prime counterfactual including one-raw-unit weETH", () => {
     const fact = book(primeClaims);

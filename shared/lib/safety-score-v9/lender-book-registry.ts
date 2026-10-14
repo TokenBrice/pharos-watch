@@ -106,8 +106,8 @@ export function lenderBookAdmissionReason(
   const observedKeys = value.deployments.map((deployment) => `${deployment.chain}:${deployment.kind}`).sort();
   const expectedKeys = admission.deployments.map((deployment) => `${deployment.chain}:${deployment.kind}`).sort();
   if (observedKeys.some((key, index) => key !== expectedKeys[index])) return "identity-mismatch";
-  if (value.acquiredAtSec > clockSec || value.deployments.some((deployment) => deployment.pin.timestampSec > clockSec)) return "future-dated";
-  if (value.deployments.some((deployment) => clockSec - Math.min(value.acquiredAtSec, deployment.pin.timestampSec) > policy.observationMaxAgeSec)) return "stale";
+  if (value.deployments.some((deployment) => deployment.pin.timestampSec > clockSec)) return "future-dated";
+  if (value.deployments.some((deployment) => clockSec - deployment.pin.timestampSec > policy.observationMaxAgeSec)) return "stale";
   if (value.deployments.some((deployment) => deployment.markets.length > policy.maxMarketsPerDeployment)) return "census-limit";
   if (value.deployments.some((deployment) => deployment.totalAssetsRaw === "0")) return "zero-nav";
   return null;

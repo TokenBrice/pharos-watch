@@ -209,6 +209,94 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
     expect(cardsById(pipeline.candidate)).toEqual(cardsById(legacyCandidate));
   });
 
+  describe("v10.19 complete same-parent two-slice books", () => {
+    // Exact deployed/idle shapes from the council's pinned smoke. Books below
+    // are synthetic current observations, not re-dated smoke acquisitions.
+    const shapes = [
+      ["bbqusdc-steakhouse", "usdc-circle", .99999999963835, "Smokehouse USDC", true],
+      ["senpyusdmain-sentora", "pyusd-paypal", .95020676091051, "Paypal USD Main", false],
+      ["senpyusdprimev2-sentora", "pyusd-paypal", .97307414633756, "Sentora PRIME Main", true],
+      ["senrlusdv2-sentora", "rlusd-ripple", .9500723688575201, "Sentora RLUSD Main", false],
+    ] as const;
+    let previous: Readonly<SafetyScoreV9CandidatePipelineResult>;
+    let current: Readonly<SafetyScoreV9CandidatePipelineResult>;
+    beforeAll(() => {
+      const ids: string[] = [...new Set(shapes.flatMap(([id, parent]) => [id, parent]))];
+      const pick = <T>(map: Record<string, T>): Record<string, T> =>
+        Object.fromEntries(Object.entries(map).filter(([id]) => ids.includes(id)));
+      const { baseInputGenerationId: _base, ...draft } = input;
+      const dexLiqMap = pick(input.dexLiqMap);
+      const liveReserveMap = Object.fromEntries(shapes.map(([id, parent, deployed, name]) => [id, [
+        { name: `${name} deployed strategy positions`, pct: deployed * 100, risk: "high",
+          coinId: parent, depType: "wrapper", assetClass: "protocol-position" },
+        { name: `${name} idle underlying`, pct: (1 - deployed) * 100, risk: "high",
+          coinId: parent, depType: "wrapper", assetClass: "stablecoin" },
+      ]]));
+      const observations = Object.fromEntries(shapes.map(([id, parent, , , weakBook]) => {
+        const source = book(PRIME, input.clockSec);
+        if (source.status !== "ok") throw new Error("Expected complete synthetic book");
+        const vault = ACTIVE_META_BY_ID.get(id)!.contracts!.find(row => row.chain === "ethereum")!.address.toLowerCase();
+        const loanToken = ACTIVE_META_BY_ID.get(parent)!.contracts!.find(row => row.chain === "ethereum")!.address.toLowerCase();
+        const kind = loadV9CandidateMethodologyPolicy().policy.semantic.backing.lenderCollateralBook.admittedAssets
+          .find(row => row.assetId === id)!.deployments[0]!.kind;
+        const payload = { ...source, assetId: id, deployments: source.deployments.map(deployment => ({
+          ...deployment, vault, loanToken, kind,
+          codeHashes: { ...deployment.codeHashes, [vault]: WORD },
+          markets: deployment.markets.map(market => ({
+            ...market, loanToken, collateralToken: weakBook ? "0xcd9f5907f92818bc06c9ad70217f089e190d2a32" : market.collateralToken,
+            lltvRaw: weakBook ? "1000000000000000000" : "0",
+          })),
+        })) };
+        return [id, LenderBookObservationSchema.parse(canonicalizeLenderBookObservation({
+          ...payload, ...deriveLenderBookObservationIdentity(payload),
+        }))];
+      }));
+      const fixed = {
+        ...draft, activeAssetIds: ids, pegDataById: pick(input.pegDataById),
+        dexLiqMap, dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(dexLiqMap, input.dexGenerationId),
+        chainCirculatingById: pick(input.chainCirculatingById), liveReserveMap,
+      };
+      const provenance = (withBooks: boolean) => Object.fromEntries(shapes.map(([id]) => [id, {
+        source: "erc4626-single-asset", fetchedAt: input.clockSec - 60,
+        ...(withBooks ? { lenderBookObservation: observations[id] } : {}),
+      }]));
+      previous = buildSafetyScoreV9Candidate({
+        fixedInput: normalizeNativeV9Input({ ...fixed, liveReserveProvenanceMap: provenance(false) }), publishedAtSec: input.clockSec,
+      });
+      current = buildSafetyScoreV9Candidate({
+        fixedInput: normalizeNativeV9Input({ ...fixed, liveReserveProvenanceMap: provenance(true) }), publishedAtSec: input.clockSec,
+      });
+    });
+
+    it.each(shapes)("consumes %s book without lifting its former generic Backing", (id, parent, deployed, _name, weakBook) => {
+      expect(current.quarantines).toEqual([]);
+      const facts = current.compiledFacts.assets.find(row => row.assetId === id)!;
+      expect(facts.reserveExposures).toHaveLength(2);
+      expect(facts.reserveExposures.every(row => row.trackedAssetId === parent && row.provenance === "live" &&
+        row.status.observationState === "known" && row.status.applicability.state === "required")).toBe(true);
+      expect(facts.reserveExposures.find(row => row.assetClass === "protocol-position")!.weight).toBeCloseTo(deployed, 12);
+      expect(facts.lenderBook?.status.observationState).toBe("known");
+      const before = previous.candidate.cards.find(row => row.id === id)!;
+      const after = current.candidate.cards.find(row => row.id === id)!;
+      expect(after.ratingStatus).toBe("rated");
+      expect(after.pillars.backing.score!).toBeLessThanOrEqual(before.pillars.backing.score!);
+      const reserve = after.breakdowns!.backing.groups.find(row => row.key === "reserves")!;
+      const oldReserve = before.breakdowns!.backing.groups.find(row => row.key === "reserves")!;
+      const parentBacking = current.candidate.cards.find(row => row.id === parent)!.pillars.backing.score!;
+      expect(reserve.score).toBeCloseTo(Math.min(oldReserve.score!, parentBacking * (weakBook ? .35 : 1)), 7);
+      const factors = after.breakdowns!.backing.components.flatMap(row => row.factors ?? [])
+        .filter(row => row.componentKey.includes(":lender-book:"));
+      expect(factors.length).toBeGreaterThan(0);
+      if (weakBook) {
+        expect(after.pillars.backing.score!).toBeLessThan(before.pillars.backing.score!);
+        expect(factors.some(row => resolveV9EffectiveScoringWeight(row) > 0)).toBe(true);
+      } else {
+        expect(after.pillars.backing.score).toBe(before.pillars.backing.score);
+        expect(factors.every(row => resolveV9EffectiveScoringWeight(row) === 0)).toBe(true);
+      }
+      expect(facts.dependencies.edges).toEqual(previous.compiledFacts.assets.find(row => row.assetId === id)!.dependencies.edges);
+    });
+  });
   describe("v10.19 frozen lender-book capture and publication", () => {
     const observations = { [PRIME]: book(PRIME, input.clockSec), [YIELD]: book(YIELD, input.clockSec) };
     const frozen = subsetInput(input, observations, acceptedBundle(input));

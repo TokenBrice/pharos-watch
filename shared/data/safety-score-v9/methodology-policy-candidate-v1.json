@@ -925,6 +925,52 @@
             ]
           },
           {
+            "chain": "robinhood", "address": "0x0bd7d308f8e1639fab988df18a8011f41eacad73", "class": "native-eth",
+            "reviewedAt": "2026-10-14",
+            "sources": [
+              { "label": "Explorer exact Robinhood WETH token identity; collateral address retained in reviewed block 79450688 market parameters", "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x0bd7d308f8e1639fab988df18a8011f41eacad73" },
+              { "label": "Robinhood official WETH deployment; wrapped native-ETH price-risk proxy, not risk-free", "url": "https://docs.robinhood.com/chain/contracts/" },
+              { "label": "Exact reviewed USDG/WETH Morpho market identity, not a fresh allocation census", "url": "https://app.morpho.org/robinhood-chain/variable/0x127353ba63e08f74d8e9ce8a1c2b41b5f89c7167135b1c09fbed34a71b4cb06b/usdg-weth" }
+            ]
+          },
+          {
+            "chain": "robinhood", "address": "0x40858070814a57fdf33a613ae84fe0a8b4a874f7", "class": "yield-bearing-stable",
+            "reviewedAt": "2026-10-14",
+            "sources": [
+              { "label": "Explorer exact Robinhood syrupUSDG identity; collateral address retained in reviewed block 79450688 market parameters; accepted Backing takes priority when eligible", "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x40858070814a57fdf33a613ae84fe0a8b4a874f7" },
+              { "label": "Chainlink directory binds exact Robinhood syrupUSDG deployment", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG" },
+              { "label": "Maple syrupUSDG is a yield-bearing USDG-denominated lending/strategy pool claim, not a 1:1 stablecoin", "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md" },
+              { "label": "Exact reviewed USDG/syrupUSDG Morpho market identity, not a fresh allocation census", "url": "https://app.morpho.org/robinhood-chain/variable/0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7/usdg-syrupusdg" }
+            ]
+          },
+          {
+            "chain": "robinhood", "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", "class": "synthetic-dollar",
+            "reviewedAt": "2026-10-14",
+            "sources": [
+              { "label": "Explorer exact Robinhood Ethena USDe identity; collateral address retained in reviewed block 79450688 market parameters; accepted Backing takes priority when eligible", "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34" },
+              { "label": "Ethena USDe delta-hedged synthetic dollar; hedging/custody strategy fallback, not a parity guarantee", "url": "https://docs.ethena.fi/overview/ethena-overview" },
+              { "label": "Exact reviewed USDG/USDe Morpho market identity, not a fresh allocation census", "url": "https://app.morpho.org/robinhood-chain/variable/0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6/usdg-usde" }
+            ]
+          },
+          {
+            "chain": "robinhood", "address": "0xde770c84fe66e063336b31737cfe9790f18c4087", "class": "yield-bearing-stable",
+            "reviewedAt": "2026-10-14",
+            "sources": [
+              { "label": "Explorer exact Robinhood Spark Savings USDG identity; collateral address retained in reviewed block 79450688 market parameters", "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0xde770c84fe66e063336b31737cfe9790f18c4087" },
+              { "label": "Spark spUSDG is a USDG ERC-4626 savings strategy receipt earning Spark Liquidity Layer yield on Robinhood, not direct USDG reserve ownership", "url": "https://docs.spark.fi/products/spark-savings" },
+              { "label": "Exact reviewed USDG/spUSDG Morpho market identity, not a fresh allocation census", "url": "https://app.morpho.org/robinhood-chain/variable/0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114/usdg-spusdg" }
+            ]
+          },
+          {
+            "chain": "robinhood", "address": "0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096", "class": "structured-credit",
+            "reviewedAt": "2026-10-14",
+            "sources": [
+              { "label": "Explorer exact Robinhood Midas Fasanara Global Open mGLO identity; collateral address retained in reviewed block 79450688 market parameters", "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0xfed493f38c1aacb4ea4e6a11f8b9287849ee0096" },
+              { "label": "Midas mGLO Robinhood launch and Fasanara alternative-debt strategy backed by SME asset-backed credit; conditional credit proxy, not direct cash reserves", "url": "https://blog.midas.app/midas-in-june-2026-recap/" },
+              { "label": "Exact reviewed USDG/mGLO Morpho market identity, not a fresh allocation census", "url": "https://app.morpho.org/robinhood-chain/variable/0x1efd13a2d1dc66a2466e7c25820537028e604791f00454d9c686fdfbf70f404d/usdg-mglo" }
+            ]
+          },
+          {
             "chain": "tempo", "address": "0x20c000000000000000000000c412ec89d0c08be5", "class": "btc-wrapper",
             "reviewedAt": "2026-10-14",
             "sources": [

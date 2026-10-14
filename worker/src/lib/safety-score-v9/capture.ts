@@ -202,14 +202,15 @@ function captureLenderBookOutcomes(
   const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
   for (const { assetId } of policy.admittedAssets) {
     const provenance = captured.get(assetId);
-    if (provenance?.lenderBookObservation !== undefined || provenance?.lenderBookObservationFailure !== undefined) continue;
+    if (provenance?.lenderBookObservation !== undefined) continue;
     const payload = {
       schemaVersion: 1 as const, assetId, acquiredAtSec: clockSec, maxAgeSec: policy.observationMaxAgeSec,
       status: "unavailable" as const, reason: "missing-observation" as const,
       failedDeploymentKey: null, deployments: null,
     };
     captured.set(assetId, {
-      ...(provenance ?? { source: "morpho-lender-book:capture-availability", fetchedAt: clockSec }),
+      // Availability is not a reserve observation; never freshen source clocks.
+      ...(provenance ?? { source: "morpho-lender-book:capture-availability", fetchedAt: 0 }),
       lenderBookObservation: LenderBookObservationSchema.parse({ ...payload, ...deriveLenderBookObservationIdentity(payload) }),
     });
   }

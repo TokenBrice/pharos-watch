@@ -18,25 +18,31 @@ import {
 
 /** Minimum mapped single-parent weight for a wrapper to qualify as ~100% backed. */
 export const V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT = 0.99;
-export function verifiedLiveInheritedExposure(
-  asset: V9BackingAssetInput,
-  inherited: V9InheritedStablecoinBacking,
-): V9ReserveExposureFactV2 | undefined {
+export function verifiedLiveInheritedExposures(
+  asset: Pick<V9BackingAssetInput, "reserveStatus" | "reserveExposures" | "reserveResiduals">,
+  inherited: Pick<V9InheritedStablecoinBacking, "parentAssetId">,
+  allowCompleteMultiSlice = false,
+): readonly V9ReserveExposureFactV2[] | undefined {
+  const exposures = asset.reserveExposures;
   if (
     asset.reserveStatus.applicability.state !== "required" ||
     asset.reserveStatus.observationState !== "known" ||
-    asset.reserveExposures.length !== 1
-  ) {
-    return undefined;
+    exposures.length === 0 ||
+    exposures.some(exposure =>
+      exposure.provenance !== "live" ||
+      exposure.status.applicability.state !== "required" ||
+      exposure.status.observationState !== "known" ||
+      exposure.trackedAssetId !== inherited.parentAssetId ||
+      !Number.isFinite(exposure.weight) || exposure.weight < 0)
+  ) return undefined;
+  const weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
+  if (exposures.length === 1) {
+    return weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT ? exposures : undefined;
   }
-  const exposure = asset.reserveExposures[0]!;
-  return exposure.provenance === "live" &&
-    exposure.status.applicability.state === "required" &&
-    exposure.status.observationState === "known" &&
-    exposure.trackedAssetId === inherited.parentAssetId &&
-    exposure.weight >= V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT
-    ? exposure
-    : undefined;
+  return allowCompleteMultiSlice &&
+    Math.abs(weight - 1) <= SCORE_EPSILON &&
+    (asset.reserveResiduals ?? []).every(residual => residual.weight === 0)
+    ? exposures : undefined;
 }
 
 /**
@@ -61,16 +67,17 @@ export function inheritedStablecoinReserveEvaluation(
   const lenderEvaluation = asset.lenderBook === undefined || asset.lenderBook.observation?.assetId !== asset.assetId ? null
     : evaluateV1019LenderBook(asset.lenderBook, inherited.parentBackingScore, policy);
   const inheritedQuality = lenderEvaluation?.reserveQuality ?? clampScore(inherited.parentBackingScore);
-  const liveExposure = verifiedLiveInheritedExposure(asset, inherited);
+  const liveExposures = verifiedLiveInheritedExposures(asset, inherited,
+    backing.lenderCollateralBook.admittedAssets.some(row => row.assetId === asset.assetId));
   const evidenceRefIds = uniqueSorted([
     ...asset.reserveStatus.evidenceRefIds,
-    ...(liveExposure?.status.evidenceRefIds ?? []),
+    ...(liveExposures?.flatMap(exposure => exposure.status.evidenceRefIds) ?? []),
     ...(asset.lenderBook?.status.evidenceRefIds ?? []),
   ]);
   const failureDomains = canonicalDomains(inherited.failureDomains);
   const componentKey = `reserve:inherited-backing:${inherited.parentAssetId}`;
-  const observationState = liveExposure === undefined ? "bounded-unknown" : "known";
-  const provenance = liveExposure?.provenance ?? null;
+  const observationState = liveExposures === undefined ? "bounded-unknown" : "known";
+  const provenance = liveExposures === undefined ? null : "live";
   const reserveGapAttributions = [
     ...canonicalUniqueBy(
       gapsForV9Ids(gapIndex, asset.reserveStatus.gapIds).map((gap) => ({
@@ -219,7 +226,7 @@ export function inheritedStablecoinReserveEvaluation(
     ],
     structuralReasons: [],
     unresolved:
-      liveExposure === undefined
+      liveExposures === undefined
         ? (reserveGapAttributions.length > 0
             ? reserveGapAttributions
             : [undefined]

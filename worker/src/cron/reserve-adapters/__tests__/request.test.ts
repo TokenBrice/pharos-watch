@@ -256,6 +256,30 @@ describe("adapter request cache", () => {
     expect(warning?.message).not.toContain("PRIVATE-EXAMPLE");
     expect(warning?.message).toContain("[redacted]");
   });
+  it.each([
+    { adapterTimeoutMs: 20_000, runRemainingMs: undefined, expectedRemainingMs: 20_000 },
+    { adapterTimeoutMs: 20_000, runRemainingMs: 12_000, expectedRemainingMs: 12_000 },
+  ])("passes the authoritative remaining attempt deadline: $expectedRemainingMs ms", async ({ adapterTimeoutMs, runRemainingMs, expectedRemainingMs }) => {
+    const start = 1_791_987_347_000;
+    vi.spyOn(Date, "now").mockReturnValue(start);
+    const coin = CONFIGURED_COINS.find(row => row.liveReservesConfig.adapter === "falcon")!;
+    const config = coin.liveReservesConfig;
+    const definition = getReserveAdapter("falcon")!;
+    const fetch = vi.fn<typeof definition.fetch>().mockResolvedValue({
+      slices: [{ name: "Observed reserve", pct: 100, risk: "low" }],
+    });
+    const runner = createReserveAdapterRunner({
+      signal: new AbortController().signal,
+      adapterCtx: { attemptDeadlineMs: start - 1 },
+      adapterTimeoutMs,
+      telemetry: createAdapterLatencyCollector(),
+    });
+    await runner(coin, config, { ...definition, fetch },
+      runRemainingMs === undefined ? undefined : start + runRemainingMs);
+    expect(fetch).toHaveBeenCalledExactlyOnceWith(coin, config, expect.any(AbortSignal), expect.objectContaining({
+      attemptDeadlineMs: start + expectedRemainingMs,
+    }));
+  });
 
   it("dedupes identical JSON GETs within an adapter context", async () => {
     const network = installAdapterNetwork({ json: { "https://issuer.example/reserves": { ok: true } } });

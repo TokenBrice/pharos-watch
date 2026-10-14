@@ -10,6 +10,10 @@ import { MULTICALL3_ADDRESS } from "../../../lib/evm-rpc";
 import { encodeUint256 } from "../../../lib/evm-selectors";
 import { createAdapterIoLimiter } from "../concurrency";
 import { accruedMorphoLenderAssets, observeMorphoLenderBook } from "../morpho-lender-book";
+import { createReserveAdapterRunner } from "../../reserve-adapter-runner";
+import { createAdapterLatencyCollector } from "../../sync-live-reserves-core";
+import { CONFIGURED_COINS } from "../../sync-live-reserves-shared";
+import { getReserveAdapter } from "../index";
 import { installAdapterNetwork, resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -141,6 +145,20 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     const f = fixture(); f.rpc[`${ADAPTER}:${selector}`] = value;
     const { result } = await observe(f);
     expect(result).toMatchObject({ status: "unavailable", reason, deployments: null });
+  });
+  it.each(["0x", "invalid-bytecode"])("distinguishes absent code from unavailable RPC: %s", async code => {
+    const f = fixture(); f.spec.code![f.vault] = code;
+    expect((await observe(f)).result).toMatchObject({
+      status: "unavailable", reason: code === "0x" ? "identity-mismatch" : "rpc-unavailable",
+    });
+  });
+  it.each(["decimals()", "DECIMALS_OFFSET()"])("labels out-of-range %s as malformed", async signature => {
+    const f = fixture([market(100n)], "kpkusdcprime-kpk", signature === "decimals()" ? "direct" : "nested");
+    f.rpc[signature] = 37n;
+    if (signature === "DECIMALS_OFFSET()") {
+      f.rpc["fee()"] = 0n; f.rpc["lastTotalAssets()"] = 100n; f.rpc[`${ADAPTER}:allocation()`] = 100n;
+    }
+    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "malformed" });
   });
   it("rejects root drift without any rounding tolerance", async () => {
     const f = fixture(); f.rpc[`${f.vault}:totalAssets()`] = 101n;
@@ -284,6 +302,99 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     expect(deadlineObservation.result).toMatchObject({ status: "unavailable", reason: "deadline" });
     expect(deadlineObservation.network.rpcCalls).toHaveLength(0);
   });
+  it("skips the optional census when only the attempt return margin remains", async () => {
+    const f = fixture();
+    const network = installAdapterNetwork(f.spec);
+    const result = await observeMorphoLenderBook(f.coin, f.config, new AbortController().signal, {
+      chainRpcs: network.chainRpcs, attemptDeadlineMs: Date.now() + 250,
+    });
+    expect(result).toMatchObject({ status: "unavailable", reason: "deadline", deployments: null });
+    expect(network.fetchSpy).not.toHaveBeenCalled();
+  });
+  it("bounds a shared pending finalized pin by this attempt's shorter phase allowance", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime((PIN.timestamp + 60) * 1000);
+    const f = fixture();
+    const network = installAdapterNetwork(f.spec);
+    const requestCache = new Map<string, Promise<unknown>>();
+    let resolvePin!: (pin: typeof PIN) => void;
+    const sharedPin = new Promise<typeof PIN>(resolve => { resolvePin = resolve; });
+    requestCache.set("morpho-book:finalized:ethereum", sharedPin);
+    const pending = observeMorphoLenderBook(f.coin, f.config, new AbortController().signal, {
+      chainRpcs: network.chainRpcs, requestCache, attemptDeadlineMs: Date.now() + 1_000,
+    });
+    await vi.advanceTimersByTimeAsync(750);
+    expect(await pending).toMatchObject({ status: "unavailable", reason: "deadline", deployments: null });
+    expect(network.fetchSpy).not.toHaveBeenCalled();
+    resolvePin(PIN);
+  });
+  it.each(["attempt", "run"] as const)("preserves slow ordinary success when the book exceeds the runner %s deadline", async limit => {
+    vi.useFakeTimers();
+    vi.setSystemTime((PIN.timestamp + 60) * 1000);
+    const start = Date.now();
+    const f = fixture();
+    f.rpc["paused()"] = false;
+    f.rpc["convertToAssets(uint256)"] = 100n;
+    let ordinaryStarted = false;
+    f.rpc["totalAssets()"] = async () => {
+      if (!ordinaryStarted) {
+        ordinaryStarted = true;
+        await new Promise<void>(resolve => { setTimeout(resolve, 8_000); });
+      }
+      return 100n;
+    };
+    const network = installAdapterNetwork(f.spec);
+    const fetch = globalThis.fetch;
+    let bookStarted = false;
+    let bookAborted = false;
+    vi.stubGlobal("fetch", async (...args: Parameters<typeof fetch>) => {
+      const request = new Request(...args);
+      const body = await request.clone().json() as { method: string; params: unknown[] };
+      if (body.method !== "eth_getBlockByNumber" || body.params[0] !== "finalized") return fetch(request);
+      bookStarted = true;
+      return new Promise<Response>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          request.signal.removeEventListener("abort", abort);
+          void fetch(request).then(resolve, reject);
+        }, 15_000);
+        const abort = () => {
+          bookAborted = true;
+          clearTimeout(timer);
+          reject(request.signal.reason);
+        };
+        request.signal.addEventListener("abort", abort, { once: true });
+      });
+    });
+    const params = { ...f.config.params };
+    delete params.redemptionLiquidity;
+    const config = { ...f.config, params };
+    const coin = CONFIGURED_COINS.find(row => row.id === f.coin.id)!;
+    const runner = createReserveAdapterRunner({
+      signal: new AbortController().signal,
+      adapterCtx: { chainRpcs: network.chainRpcs, requestCache: new Map() },
+      adapterTimeoutMs: limit === "attempt" ? 20_000 : 30_000,
+      telemetry: createAdapterLatencyCollector(),
+    });
+    const pending = runner(coin, config, getReserveAdapter("erc4626-single-asset")!,
+      limit === "run" ? start + 20_000 : undefined);
+    const resolved = vi.fn();
+    void pending.then(resolved);
+    await vi.advanceTimersByTimeAsync(19_749);
+    expect(bookStarted).toBe(true);
+    expect(resolved).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    const reserve = await pending;
+    expect(Date.now()).toBe(start + 19_750);
+    expect(bookAborted).toBe(true);
+    expect(reserve.slices).toMatchObject([{ pct: 100, coinId: "usdc-circle" }]);
+    expect(reserve.metadata).toMatchObject({
+      totalAssetsRaw: "100", assetAddress: LOAN, idleUnderlyingBalanceRaw: "0",
+      lenderBookObservation: { status: "unavailable", reason: "deadline" },
+      redemptionCapacityRaw: "0", redemptionCapacitySource: "erc4626-idle-underlying",
+      redemption: { capacityKind: "live-direct", capacityUsd: 0, freshnessKind: "same-run-onchain" },
+    });
+    expect(reserve.warnings?.some(row => row.code === "primary-fallback-used" || row.code.includes("lender-book"))).not.toBe(true);
+  });
   it.each(["multicall", "direct-fallback", "provider-fallback"] as const)("consumes bodies before next request: %s", async mode => {
     const f = fixture(primeRows);
     if (mode === "direct-fallback") f.spec.code![MULTICALL3_ADDRESS.toLowerCase()] = "0x";
@@ -358,9 +469,10 @@ describe("Morpho NAV-accounted lender-book producer", () => {
 });
 
 describe("MetaMorpho source-defined integer accrual", () => {
-  it("excludes skimmable donated wallet cash while preserving a real pinned accrued claim", async () => {
-    // Actual bbqusdc tuple/position/rate and 4,601 raw USDC cash at block
-    // 26192161. A one-market projection isolates wallet cash from the queue NAV.
+  it("excludes synthetic donated wallet cash while preserving a real pinned accrued claim", async () => {
+    // Actual bbqusdc tuple/position/rate at block 26192161. The one-market
+    // projection injects 4,601 raw USDC of synthetic donated cash (not that
+    // block's wallet balance) to isolate wallet cash from the queue NAV.
     const params = packed([LOAN, "0xecfafdc7741323a945a163ed068b5a3c43483957",
       "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0", IRM, 915000000000000000n]);
     const row = { params, id: keccak256(params), assets: 3150377586784n,
