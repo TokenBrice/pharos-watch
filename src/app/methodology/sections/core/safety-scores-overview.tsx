@@ -147,7 +147,8 @@ function SafetyScoresVersionNotes() {
       </p>
       <p>
         We classify why evidence is missing: A, our pipeline was unavailable; B, the required current data is public
-        but we have not curated it; C, research found the issuer does not disclose it; U, not yet researched;
+        but we have not curated it; C, research found the issuer does not disclose it;
+        U, unresolved (not yet researched, or researched without a conclusive admissible source);
         D, a measured adverse fact. A/B exclusion needs proof for that asset and question, not just a missing value.
         U is never labelled issuer silence. Unknown values do not prove safety, failure or zero loss.
       </p>
@@ -276,7 +277,7 @@ function SafetyScoresVersionNotes() {
         Responsibility follows validated evidence about the exact missing question, not the nearest processing stage
         or a compiler&apos;s default label. A pipeline verdict binds the captured source and generation.
         Public-but-uncurated and researched-undisclosed classifications retain dated primary sources; otherwise the
-        question is “Not yet researched”. Inherited gaps preserve their originating causes and evidence identities.
+        question is “Unresolved”. Inherited gaps preserve their originating causes and evidence identities.
         Every attributed root receives a causal-root-qualified score path, so adding another root cannot rename an
         existing public fact; ownership never becomes part of fact identity. Since methodology v9.46, a bridge control
         whose controlling party is an external message-validation quorum — a LayerZero DVN set, a Chainlink CCIP DON/RMN,
@@ -419,7 +420,7 @@ function SafetyScoresVersionNotes() {
       <p>
         Expired evidence stays dated history. Expiry is not proof the issuer is silent, nor that newer required data
         is public. Current cause proof decides whether the gap is pipeline, uncurated public data, researched
-        non-disclosure or not yet researched. Known active adverse facts are not cleared by an expired positive
+        non-disclosure or unresolved. Known active adverse facts are not cleared by an expired positive
         review, and favorable parent inheritance still needs current whole-allocation proof.
       </p>
       <p>

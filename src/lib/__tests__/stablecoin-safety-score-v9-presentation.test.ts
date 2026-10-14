@@ -34,9 +34,23 @@ describe("stablecoin V9 safety presentation", () => {
       expect.objectContaining({ key: "transparency", score: null, weight: 0, status: expect.stringContaining("awaiting curation") }),
     ]);
   });
+
+  it("labels U breakdown factors Unresolved without changing their cause", () => {
+    const card = makeV9Card();
+    card.breakdowns!.backing.components[0].factors = [
+      { componentKey: "assetQuality", score: 88, normalizedWeight: 1, effectiveScoringWeight: 1,
+        cause: "U", causeGapRefs: [], scoringDisposition: "included" },
+    ];
+    const children = buildStablecoinSafetyScoreV9Presentation(card)
+      .pillars[0].breakdown!.groups[0].rows[0].children;
+    expect(children).toContainEqual(expect.objectContaining({ key: "assetQuality", status: "Unresolved" }));
+    expect(card.breakdowns!.backing.components[0].factors[0].cause).toBe("U");
+  });
+
   it("has public copy for every evidence-responsibility value", () => {
     expect(Object.keys(SAFETY_SCORE_V9_RESPONSIBILITY_LABELS).sort())
       .toEqual([...V9EvidenceResponsibilitySchema.options].sort());
+    expect(SAFETY_SCORE_V9_RESPONSIBILITY_LABELS.unresearched).toBe("Unresolved");
   });
 
   it("explains limited score inputs without changing the visible evidence label or API key", () => {
@@ -45,7 +59,7 @@ describe("stablecoin V9 safety presentation", () => {
     const presentation = buildStablecoinSafetyScoreV9Presentation(card);
     expect(presentation.pillars[0].evidenceSummary).toBe("Evidence: limited · current");
     expect(presentation.pillars[0].evidenceDescription).toBe(
-      "Evidence: limited — the pillar score relies on undisclosed or not-yet-researched inputs.",
+      "Evidence: limited — the pillar score relies on undisclosed or unresolved inputs.",
     );
     expect(card.pillars.backing.evidenceLevel).toBe("limited");
     expect(presentation.pillars[1].evidenceDescription).toBeNull();

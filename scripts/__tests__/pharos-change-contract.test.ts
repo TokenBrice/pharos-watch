@@ -138,6 +138,12 @@ describe("classifyChangedFiles", () => {
       docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
     },
     {
+      name: "token logos and compact variants to the frontend contract",
+      files: ["data/logos.json", "public/logos/kpkusdcprime-kpk.png", "public/logos/compact/kpkusdcprime-kpk.webp"],
+      mappings: ["frontend-routes"],
+      docs: ["docs/architecture.md#frontend-runtime-and-seo-surface"],
+    },
+    {
       name: "a screener component through the shared frontend route contract",
       files: ["src/components/screener/screener-table.tsx"],
       mappings: ["frontend-routes"],

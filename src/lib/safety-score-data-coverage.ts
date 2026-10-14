@@ -146,8 +146,8 @@ const GAP_OWNERS = [
   },
   {
     responsibility: "unresearched",
-    label: "Not yet researched",
-    detail: "The required datum has not yet been researched; this is not a claim of issuer silence.",
+    label: "Unresolved",
+    detail: "No admissible evidence settles this input yet: it is unresearched or was researched without a conclusive source. This is not a claim of issuer silence.",
   },
   {
     responsibility: "public-data-uncurated",
