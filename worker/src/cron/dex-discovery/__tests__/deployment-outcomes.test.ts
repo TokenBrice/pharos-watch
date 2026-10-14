@@ -200,6 +200,25 @@ describe("DEX deployment outcomes", () => {
     }
   });
 
+  it.each([0, 1])("keeps CHFSAFO Aquarius evidence supplemental after provider registration: %s pool", (count) => {
+    const deployment = {
+      chain: "stellar", address: "CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4", decimals: 5,
+    };
+    const [outcome] = classifyDexDeploymentOutcomes({
+      stablecoinId: "chfsafo-spiko", deployments: [deployment], pools: [], nowSec: 100,
+      providerChecks: [{
+        ...deployment, provider: "aquarius", status: "success", observedPoolCount: count,
+        paginationComplete: true,
+      }],
+    });
+    expect(outcome).toMatchObject({
+      providers: ["aquarius"], observedPoolCount: count,
+      outcome: count > 0 ? "observed_pools" : "provider_inaccessible",
+      reason: count > 0 ? "At least one eligible direct-token pool was observed"
+        : "Provider census is not exhaustive for this chain",
+    });
+  });
+
   it("still certifies a completed-empty exhaustive Tezos census", () => {
     const deployment = {
       chain: "tezos",

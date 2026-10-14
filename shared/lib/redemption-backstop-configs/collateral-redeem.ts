@@ -535,6 +535,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ],
     }),
     "hyusd-hylo": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
+      capacityModel: { kind: "unquantified" },
       routeStatus: "unknown",
       outputAssetType: "mixed-collateral",
       reviewedAt: "2026-10-09",
@@ -743,6 +744,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ],
     }),
     "uusd-youves": defineReviewedCollateralConfig(REVIEWED_STABLECOIN_AUDIT_AT, {
+      capacityModel: { kind: "unquantified" },
       outputAssets: ["asset:xtz", "asset:tzbtc", "asset:sirs", "asset:usdt"],
       settlementModel: "days",
       executionModel: "rules-based-nav",
@@ -751,6 +753,16 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         625,
         "Holder conversion price is 0.9375 of target value, implying a 6.25% haircut before collateral market-price conversion",
       ),
+      v9RouteReviewTerms: {
+        scoringDisposition: "bounded-terms-gap",
+        missingScoringFields: ["capacity", "settlement", "cost"],
+        rationale: "Only eligible targetable minter vaults can fund holder conversion; neither the holder's balance nor aggregate collateral proves an executable capacity or full-supply entitlement. The 24-hour announcement window is not a completed-conversion maximum. The 0.9375 conversion price records a 625-bps haircut, not a complete request-sized cost bound including collateral valuation and network charges.",
+        reviewedAt: "2026-10-14",
+        docs: [
+          sourceRef("Youves holder conversion constraints (reviewed 2026-10-14; undated primary page)", "https://docs.youves.com/syntheticAssets/stableTokens/incentiveFeatures/userConversionRights/Holder-Conversion-Right/", ["route", "capacity", "access", "settlement"]),
+          sourceRef("Youves conversion price terms (reviewed 2026-10-14; undated primary page)", "https://docs.youves.com/syntheticAssets/stableTokens/incentiveFeatures/userConversionRights/User-Conversion-Terms/", ["route", "fees", "settlement"]),
+        ],
+      },
       docs: [
         sourceRef(
           "Youves holder conversion right",

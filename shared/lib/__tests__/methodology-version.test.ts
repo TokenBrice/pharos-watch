@@ -10,6 +10,7 @@ import {
 import { DDR_METHODOLOGY_CHANGELOG, DDR_V2_EFFECTIVE_AT } from "../methodology-versions/depeg-resolver";
 import { LIQUIDITY_METHODOLOGY_VERSION, SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
 import LIQUIDITY_SCORE_V6 from "../../data/methodology-changelogs/liquidity-score/v6.json";
+import SAFETY_SCORE_POLICY from "../../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { liquidityTvlBasisEpoch } from "../dex-liquidity-evidence";
 import {
   getMethodologyVersionAt,
@@ -274,6 +275,36 @@ describe("methodology registry", () => {
     expect(methodology.entries.slice(0, 4).map((candidate) => candidate.version)).toEqual(["6.50", "6.49", "6.48", "6.47"]);
   });
 
+  it.each([
+    ["safety-score", "10.17", "10.18"],
+    ["redemption-backstop", "4.49", "4.5"],
+    ["liquidity-score", "6.94", "6.95"],
+  ] as const)("converges the October 14 drain release identity for %s", (key, previousVersion, version) => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === key)!;
+    const release = methodology.entries[0];
+    expect(methodology.currentLabel).toBe(`v${version}`);
+    expect(release).toMatchObject({ version, date: "2026-10-14", effectiveAt: 1_791_981_600, reconstructed: false });
+    expect(getMethodologyVersionAt(key, release.effectiveAt - 1)).toBe(previousVersion);
+    expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
+    expect(release.impact.join(" ")).toContain("Activation: 2026-10-14 12:40 UTC (release cut; 1791981600)");
+    expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
+  });
+
+  it("keeps the Safety drain policy identity and accepted-pair replay proof explicit", () => {
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.18");
+    expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+    expect(release.summary).toContain("Track M is not part of this release");
+    expect(release.impact.join(" ")).toContain("zero score, grade or rating-status movers");
+    expect(release.impact.join(" ")).toContain("Final accepted-pair impact");
+    expect(release.impact.join(" ")).toContain("zero grade flips on both captures");
+    expect(release.impact.join(" ")).not.toContain("Second-capture proof is provisional");
+    expect(release.impact.join(" ")).toContain("W2 re-researched 102 W1-deferred groups");
+    expect(release.impact.join(" ")).toContain("935 decisions");
+    expect(release.impact.join(" ")).toContain("23 pinned veto observations");
+    expect(release.impact.join(" ")).toContain("no shadow DEX family met its documented maturity gates");
+  });
+
   it("provides an LLM-facing description for every changelog", () => {
     expect(METHODOLOGY_CHANGELOG_REGISTRY).toHaveLength(11);
     for (const methodology of METHODOLOGY_CHANGELOG_REGISTRY) {
@@ -318,5 +349,6 @@ describe("liquidity TVL-basis break list", () => {
     expect(liquidityTvlBasisEpoch("6.91")).toBeLessThan(liquidityTvlBasisEpoch("6.92"));
     expect(liquidityTvlBasisEpoch("6.92")).toBeLessThan(liquidityTvlBasisEpoch("6.93"));
     expect(liquidityTvlBasisEpoch("6.94")).toBe(liquidityTvlBasisEpoch("6.93"));
+    expect(liquidityTvlBasisEpoch("6.95")).toBe(liquidityTvlBasisEpoch("6.94"));
   });
 });

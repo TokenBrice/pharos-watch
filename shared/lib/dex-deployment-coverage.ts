@@ -89,7 +89,7 @@ const HORIZON_DISCOVERY_CHAINS: ReadonlySet<string> = new Set(["stellar"]);
 // eslint-disable-next-line security/detect-unsafe-regex -- anchored bounded optional code prefix plus fixed-width base32 contract id; linear, no backtracking ambiguity.
 const AQUARIUS_SOROBAN_IDENTITY_RE = /^(?:[A-Za-z0-9]{1,12}-)?(C[A-Z2-7]{55})$/;
 
-/** The exact eight Spiko Soroban token ids currently covered by Aquarius. */
+/** The exact nine Spiko Soroban token ids currently covered by Aquarius. */
 export const AQUARIUS_SUPPORTED_TOKEN_IDS: Readonly<Record<string, true>> = {
   CBOOCGZSVRSZFRE4U2NWR2B4RXYVJWRCBTGOUD2JPI2TDJPWMTJX7FZP: true,
   CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A: true,
@@ -99,6 +99,9 @@ export const AQUARIUS_SUPPORTED_TOKEN_IDS: Readonly<Record<string, true>> = {
   CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT: true,
   CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR: true,
   CARUUX2FZNPH6DGJOEUFSIUQWYHNL5AVDV7PMVSHWL7OBYIBFC76F4TO: true,
+  // CHFSAFO: reviewed native register, confirmed by the exact share-class API:
+  // https://public-api.spiko.io/share-classes/chfSAFO (ISIN FR0014015LG6).
+  CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4: true,
 };
 
 const TEZOS_UUSD_DISCOVERY_ADDRESS = "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW";

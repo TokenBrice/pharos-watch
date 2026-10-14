@@ -41,7 +41,7 @@ const REVIEW_AT_SEC = Date.UTC(2026, 6, 10) / 1000;
 describe("DEX deployment coverage ownership", () => {
 
   it("pins the six new provider and source-family identities", () => {
-    expect(Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)).toHaveLength(8);
+    expect(Object.keys(AQUARIUS_SUPPORTED_TOKEN_IDS)).toHaveLength(9);
     expect(DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS).toMatchObject({
       aquarius: false,
       tezos: true,
@@ -76,6 +76,29 @@ describe("DEX deployment coverage ownership", () => {
       "curve",
       "kava-swap",
     ]);
+  });
+
+  it.each([
+    "eursafo-spiko", "eutbl-spiko", "safo-spiko-usd", "ustbl-spiko", "gbpsafo-spiko",
+    "eurspkcc-spiko", "uktbl-spiko", "chfsafo-spiko", "spkcc-spiko",
+  ])("registers the reviewed Spiko Soroban deployment without exhaustive authority: %s", (assetId) => {
+    const deployment = TRACKED_STABLECOINS.find((coin) => coin.id === assetId)
+      ?.contracts?.find((contract) => contract.chain === "stellar");
+    expect(deployment, `${assetId} must retain its reviewed Stellar deployment`).toBeDefined();
+    expect(getDexDiscoveryProviders("stellar", deployment!.address)).toEqual(["aquarius"]);
+    expect(isAquariusSorobanDeployment("stellar", deployment!.address)).toBe(true);
+    expect(DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS.aquarius).toBe(false);
+  });
+
+  it("pins CHFSAFO's exact Soroban identity and invalidates its old unsupported provider snapshot", () => {
+    const address = "CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4";
+    const deployment = TRACKED_STABLECOINS.find((coin) => coin.id === "chfsafo-spiko")
+      ?.contracts?.find((contract) => contract.chain === "stellar");
+    expect(deployment).toMatchObject({ address, decimals: 5 });
+    expect(getDexDiscoveryProviders("stellar", address)).toEqual(["aquarius"]);
+    expect(getDexDiscoveryProviders("stellar", `chfSAFO-${address}`)).toEqual(["aquarius"]);
+    expect(isCensusProviderSetSupersededByRegistry("stellar", address, 0)).toBe(true);
+    expect(getDexDiscoveryProviders("ethereum", address)).not.toContain("aquarius");
   });
 
   it("registers the Cosmos census providers by chain and denom shape", () => {

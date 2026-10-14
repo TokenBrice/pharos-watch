@@ -18,6 +18,7 @@ import {
   estimateRemainingMeasuredQuoteRpcRequests,
   hasCompleteDexMeasuredQuoteProgress,
   isDexMeasuredExecutionTargetScoreEligible,
+  isDexMeasuredExecutionTargetInLane,
   isDiagnosticDexMeasuredQuoteFailure,
   projectMeasuredExecutionPacingStop,
   resolveMeasuredExecutionCronStatus,
@@ -203,6 +204,37 @@ function publishedRoute(
   };
   return { stablecoinId: measuredTarget.stablecoinId, observation };
 }
+
+describe("PKT-5 current-policy lane fencing — 2026-10-14", () => {
+  it.each(["base", "bsc", "arbitrum", "polygon", "tempo"])(
+    "keeps a reviewed V4 %s target in shadow despite positive retained value",
+    (chain) => {
+      const measuredTarget = target("usdc-circle", 25_000_000, `pkt5-v4-${chain}`, {
+        adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+        protocol: "uniswap-v4",
+        chain,
+      });
+      expect(isDexMeasuredExecutionTargetScoreEligible(measuredTarget)).toBe(false);
+      expect(isDexMeasuredExecutionTargetInLane(measuredTarget, "active")).toBe(false);
+      expect(isDexMeasuredExecutionTargetInLane(measuredTarget, "shadow")).toBe(true);
+    },
+  );
+
+  it.each([
+    ["hyperswap-v3-quoter-v2", "hyperswap-v3", "hyperevm"],
+    ["kodiak-v3-quoter-v2", "kodiak-v3", "berachain"],
+  ])("keeps %s collection separate from active admission", (adapterProfileId, protocol, chain) => {
+    const measuredTarget = target("usdc-circle", 25_000_000, `pkt5-${chain}`, {
+      adapterProfileId,
+      protocol,
+      chain,
+    });
+    expect(isDexMeasuredExecutionTargetScoreEligible(measuredTarget)).toBe(false);
+    expect(isDexMeasuredExecutionTargetInLane(measuredTarget, "active")).toBe(false);
+    expect(isDexMeasuredExecutionTargetInLane(measuredTarget, "shadow")).toBe(true);
+    expect(isDexMeasuredExecutionTargetInLane({ ...measuredTarget, protocol: "uniswap-v3" }, "shadow")).toBe(false);
+  });
+});
 
 describe("measured execution overflow admission", () => {
   it("reports the default hard, admission, and reserve limits", () => {

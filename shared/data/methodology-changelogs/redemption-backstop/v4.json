@@ -1,5 +1,22 @@
 [
   {
+    "version": "4.5",
+    "title": "Withdraw unsupported route capacity and completion claims",
+    "date": "2026-10-14",
+    "effectiveAt": 1791981600,
+    "summary": "Redemption v4.5 removes unsupported static capacity, completion and holder-eligibility assumptions from reviewed existing routes. Unquantified evidence remains unknown rather than full-supply capacity or atomic settlement. Shared scoring weights, ladders and request grids are unchanged.",
+    "impact": [
+      "Avalon, Youves, hyUSD and wARS retain unquantified capacity instead of unsupported family-default or full-supply assumptions. Avalon preserves its actual USDT output; Youves preserves the documented haircut and does not promote its announcement period to completed settlement.",
+      "Solayer's sUSD holder path is queued QLP fulfillment to USDC, not an atomic reserve-token redemption. Capacity and holder eligibility remain unquantified/unknown, geographic restrictions stay visible, and no completion maximum or complete all-in cost is invented.",
+      "pathUSD's issuer processing target does not establish same-day completed payout. Its multi-day category and scoped capacity/settlement/cost gaps remain distinct from a guaranteed elapsed completion bound.",
+      "The PKT-9 existing-route bound review establishes no new admissible config-only upgrades. Exact ERC-4626 certificates separately admit same-block NAV references for unpriced reviewed shares and actual smaller-probe receipts while retaining an unfunded canonical attempt; those Safety v10.18 execution rules do not promote static capacity or settle the canonical request.",
+      "This domain bump is required because withdrawing configured capacity, settlement and eligibility assumptions changes route-score inputs, not merely explanatory prose. The final Safety accepted-pair current-redemption scenario shows zero movers, not standalone redemption equivalence; route-level comparison and fresh producer-dependent evidence remain separate release prerequisites.",
+      "Activation: 2026-10-14 12:40 UTC (release cut; 1791981600)."
+    ],
+    "commits": ["1b9e00fc3", "390151db0", "7d3cb1be2"],
+    "reconstructed": false
+  },
+  {
     "version": "4.49",
     "title": "Exact fractional fees and source-bound executable outputs",
     "date": "2026-10-10",

@@ -669,6 +669,49 @@ const EXIT_ROUTE_GAP_EQUIVALENTS: Partial<Record<V9ReasonCode, readonly V9Reason
   "no-viable-exit-path": ["missing-runtime-route-evidence", "missing-same-notional-route", "unsupported-same-notional-route", "unresolved-exit-output"],
 };
 
+// Only route-exclusive facts on an unscored alternative are diagnostic-only.
+// A scored route with an excluded factor still has a genuine component exclusion.
+function diagnosticOptionalExitGapIds(asset: V9AssetFactsV3, result: V9ExitEvaluationResult, gapIndex: V9EvaluationGapIndex): Set<string> {
+  if (result.aggregationDisposition !== "included") return new Set();
+  const optionalRouteKeys = new Set(result.routes.filter((route) =>
+    route.routeKey !== result.primaryRouteKey && route.routeKey !== result.diversificationRouteKey &&
+    !route.included && route.score === null && route.components === null &&
+    route.scoringDisposition !== "excluded-pipeline" && route.scoringDisposition !== "excluded-uncurated" &&
+    Object.values(route.factorContributions ?? {}).every((factor) => factor.effectiveScoringWeight === 0 &&
+      factor.scoringDisposition !== "excluded-pipeline" && factor.scoringDisposition !== "excluded-uncurated"),
+  ).map((route) => route.routeKey));
+  const retainedGapIds = new Set([
+    ...asset.exitStatus.gapIds,
+    ...asset.exitRoutes.filter((route) => !optionalRouteKeys.has(route.routeKey)).flatMap((route) => [
+      ...route.status.gapIds, ...Object.values(route.factorStatuses ?? {}).flatMap((status) => status?.gapIds ?? []),
+    ]),
+  ]);
+  return new Set(asset.exitRoutes.filter((route) => optionalRouteKeys.has(route.routeKey)).flatMap((route) =>
+    [...route.status.gapIds, ...Object.values(route.factorStatuses ?? {}).flatMap((status) => status?.gapIds ?? [])],
+  ).filter((id) => {
+    const gap = gapIndex.byId.get(id);
+    if (retainedGapIds.has(id) || gap === undefined ||
+      (gap.causeProof.cause !== "A" && gap.causeProof.cause !== "B") ||
+      gap.causeScope?.pillar !== "exit" || gap.causeScope.routeKey == null ||
+      !optionalRouteKeys.has(gap.causeScope.routeKey)) return false;
+    if (result.primaryRouteKey !== null) return true;
+    // Without a primary, an A/B factor may itself be the missing admission
+    // datum. Require an independent barrier that resolving this fact cannot clear.
+    const route = asset.exitRoutes.find((candidate) => candidate.routeKey === gap.causeScope!.routeKey)!;
+    if (gap.causeScope.factorKey !== "output" && route.output.sameNotionalEligible === false) return true;
+    return route.coverageClass === "diagnostic" && (["capacity", "settlement"] as const).some((key) => {
+      if (key === gap.causeScope!.factorKey) return false;
+      const status = route.factorStatuses?.[key];
+      return status !== undefined && status.observationState !== "known" && status.gapIds.some((gapId) => {
+        const blocker = gapIndex.byId.get(gapId);
+        return (blocker?.causeProof.cause === "C" || blocker?.causeProof.cause === "U") &&
+          blocker.causeScope?.pillar === "exit" && blocker.causeScope.routeKey === route.routeKey &&
+          blocker.causeScope.factorKey === key;
+      });
+    });
+  }));
+}
+
 function exitPillar(
   asset: V9AssetFactsV3,
   result: V9ExitEvaluationResult,
@@ -744,13 +787,18 @@ function exitPillar(
       (primary.modelConfidence === "high" &&
         isDexMeasuredExecutionObservationHistoryMature(primary.observationHistory))) &&
     envelope.policy.semantic.exit.strongEvidenceKinds.includes(primary.evidenceKind);
+  const diagnosticGapIds = diagnosticOptionalExitGapIds(asset, result, gapIndex);
   const pillar: V9PillarEvaluation = {
-    ...pillarCauseMetadata(result, gapIndex, result.routes.flatMap((route) => [
+    ...pillarCauseMetadata({
+      ...result, causeGapIds: result.causeGapIds.filter((id) => !diagnosticGapIds.has(id)),
+    }, gapIndex, result.routes.flatMap((route) => [
       ...(route.scoringDisposition === "excluded-pipeline" || route.scoringDisposition === "excluded-uncurated" ? [route.routeKey] : []),
       ...Object.entries(route.factorContributions ?? {}).filter(([, factor]) =>
         factor.scoringDisposition === "excluded-pipeline" || factor.scoringDisposition === "excluded-uncurated",
       ).map(([key]) => `${route.routeKey}:${key}`),
     ])),
+    // Keep the complete inventory; only promotion into partial evidence is filtered.
+    causeGapIds: result.causeGapIds,
     score: result.score,
     evidenceLevel: primaryStrong ? "strong" : "adequate",
     reasons: canonicalReasons(
@@ -867,7 +915,11 @@ function exitPillar(
     structuralSignals: [],
     adverseAttribution: capacityAttribution,
   };
-  return Object.assign(pillar, reasonClassifiedEvidence(result.score, pillar.reasons, primaryStrong ? "strong" : "adequate", result.aggregationDisposition === "excluded-a-b"));
+  const evidence = reasonClassifiedEvidence(result.score, pillar.reasons, primaryStrong ? "strong" : "adequate", result.aggregationDisposition === "excluded-a-b");
+  return Object.assign(pillar, evidence, {
+    // These A/B diagnostics were never C/U/D witnesses before the promotion fix.
+    limitingCauseGapIds: evidence.limitingCauseGapIds?.filter((id) => !diagnosticGapIds.has(id)),
+  });
 }
 
 function controlPillar(

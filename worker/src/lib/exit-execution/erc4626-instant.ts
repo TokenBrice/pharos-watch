@@ -1,5 +1,5 @@
 import { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, parseAbi, parseAbiParameters } from "viem/utils";
-import type { ExitExecutionCertificate, ExitExecutionModelReview, ExitExecutionRequestPoint } from "@shared/types/exit-route";
+import type { ExitExecutionCanonicalAttempt, ExitExecutionCertificate, ExitExecutionModelReview, ExitExecutionRequestPoint } from "@shared/types/exit-route";
 import { requestedExitRawInput, exitRawUsd, exitUsdBoundary } from "@shared/lib/safety-score-v9/exit-execution-units";
 import { sha256Hex } from "@shared/lib/sha256";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
@@ -28,6 +28,12 @@ const uint = (value: string) => {
   return BigInt(value);
 };
 
+export class Erc4626CanonicalAttemptError extends Error {
+  constructor(public readonly canonicalAttempt: ExitExecutionCanonicalAttempt) {
+    super("erc4626-realized-output-inconsistent");
+  }
+}
+
 /** A read-only counterfactual holder: only its reviewed share balance is changed.
  * Vault assets, totalSupply, liquidity, gates, allowances and underlying balances
  * remain the real pinned state. Multicall measures the transfer and share burn
@@ -35,7 +41,7 @@ const uint = (value: string) => {
  */
 export async function observeErc4626InstantExit(args: {
   review: ExitExecutionModelReview;
-  inputReference: ExitExecutionCertificate["inputReference"];
+  inputReference?: ExitExecutionCertificate["inputReference"];
   outputReference: ExitExecutionCertificate["inputReference"];
   requests: readonly { requestedNotionalUsd: number; maxCostBps: number }[];
   rpcOptions?: EvmRpcOptions;
@@ -51,12 +57,16 @@ export async function observeErc4626InstantExit(args: {
   const shareToken = (externalShares?.address ?? vault) as `0x${string}`;
   const shareDeployment = `${config.chain}:${shareToken.toLowerCase()}`;
   if (args.review.holder !== "any-holder" || args.review.identity.deployment !== shareDeployment ||
-      args.review.identity.endpoint !== deployment || args.inputReference.assetKey !== args.review.identity.assetId ||
-      args.inputReference.deployment !== shareDeployment || args.inputReference.decimals !== config.inputDecimals ||
+      args.review.identity.endpoint !== deployment ||
+      (args.inputReference && (args.inputReference.assetKey !== args.review.identity.assetId ||
+        args.inputReference.deployment !== shareDeployment || args.inputReference.decimals !== config.inputDecimals)) ||
       args.outputReference.deployment !== `${config.chain}:${underlying.toLowerCase()}` ||
       args.outputReference.decimals !== config.outputDecimals ||
       args.review.identity.outputAssetKeys.length !== 1 || args.review.identity.outputAssetKeys[0] !== args.outputReference.assetKey) {
     throw new Error("erc4626-route-identity-mismatch");
+  }
+  if ((!args.inputReference && !args.refreshInputFromOutput) || (args.refreshInputFromOutput && externalShares)) {
+    throw new Error("erc4626-input-reference-unavailable");
   }
   const block = args.blockNumber ?? await fetchEvmBlockNumber(config.chain, args.rpcOptions);
   if (block === null) throw new Error("erc4626-block-unavailable");
@@ -160,9 +170,9 @@ export async function observeErc4626InstantExit(args: {
   }
   let inputReference = args.inputReference;
   if (args.refreshInputFromOutput) {
-    // A stale share-market quote cannot price a current request. The reviewed
-    // vault's gross NAV and a separately fresh underlying USD price can: pin
-    // both authorities in the input identity, without inventing dollar par.
+    // Missing or stale share-market prices cannot price a current request.
+    // Reviewed pinned gross NAV and a separately observed underlying USD price
+    // can, without inventing a seed price or dollar par.
     const nav = await batch([{ to: vault, data: calldata("convertToAssets", [10n ** BigInt(config.inputDecimals)]) }]);
     const navRaw = uint(nav[0]!);
     const navUsd = exitRawUsd(navRaw, config.outputDecimals, args.outputReference.unitValueUsd);
@@ -170,7 +180,8 @@ export async function observeErc4626InstantExit(args: {
     const unitValueUsd = exitUsdBoundary(navUsd);
     if (navRaw === 0n || !Number.isFinite(unitValueUsd) || unitValueUsd <= 0) throw new Error("erc4626-nav-reference-unavailable");
     inputReference = {
-      ...inputReference, unitValueUsd, expectedUnitValueUsd: unitValueUsd,
+      assetKey: args.review.identity.assetId, deployment: shareDeployment, rawUnits: "0", decimals: config.inputDecimals,
+      unitValueUsd, expectedUnitValueUsd: unitValueUsd,
       sourceId: `erc4626-nav:${args.outputReference.sourceId}`,
       sourceGenerationId: domainDigest("safety-score-v10.erc4626-nav-reference.v1", {
         deployment, blockHash: header.hash, navRaw: navRaw.toString(),
@@ -179,6 +190,7 @@ export async function observeErc4626InstantExit(args: {
       observedAtSec: Math.min(header.timestamp, args.outputReference.observedAtSec),
     };
   }
+  if (!inputReference) throw new Error("erc4626-input-reference-unavailable");
   // Two distinct sentinels detect ignored overrides as well as wrong mapping layouts.
   const probe = await batch([{ to: shareToken, data: calldata("balanceOf", [HOLDER]) }], 37n);
   const probe2 = await batch([{ to: shareToken, data: calldata("balanceOf", [HOLDER]) }], 71n);
@@ -282,11 +294,56 @@ export async function observeErc4626InstantExit(args: {
     const simulation = await batch([{ to: HOLDER, data: encodeFunctionData({ abi: MULTICALL_ABI, functionName: "aggregate3", args: [calls] }) }], requested);
     let results = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: simulation[0] as `0x${string}` });
     if (results.length !== calls.length || results.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
+    const canonicalResults = results;
+    const canonicalNested = externalShares && results[2]!.success ? decodeFunctionResult({
+      abi: MULTICALL_ABI, functionName: "aggregate3", data: results[2]!.returnData,
+    }) : null;
+    if (canonicalNested && (canonicalNested.length !== 2 || canonicalNested.some((entry) => !entry.success) ||
+        uint(canonicalNested[0]!.returnData) !== 1n)) throw new Error("erc4626-approval-receipt-invalid");
+    const canonicalBefore = uint(results[0]!.returnData);
+    const canonicalAfter = uint(results[3]!.returnData);
+    const canonicalAttempt: ExitExecutionCanonicalAttempt = {
+      outcome: "inconsistent-receipt",
+      block: { number: block, hash: header.hash, timestamp: header.timestamp },
+      requestedRawInput: requested.toString(),
+      shareBalanceBefore: uint(results[1]!.returnData).toString(),
+      shareBalanceAfter: uint(results[4]!.returnData).toString(),
+      totalSupplyBefore: totalSupply.toString(),
+      totalSupplyAfter: uint(results[5]!.returnData).toString(),
+      returnedRawOutput: results[2]!.success ? uint(canonicalNested ? canonicalNested[1]!.returnData : results[2]!.returnData).toString() : null,
+      receivedRawOutput: canonicalAfter >= canonicalBefore ? (canonicalAfter - canonicalBefore).toString() : null,
+      revertData: results[2]!.success ? null : results[2]!.returnData,
+      reason: "erc4626-realized-output-inconsistent",
+    };
     if (!results[2]!.success) {
-      // One bounded fallback: an ordinary max, or V2 idle assets / a smaller
-      // successful same-block ladder amount. The new holder balance still
-      // requires its own redeem, transfer and burn proof; prior success alone
-      // never certifies this request or proves that liquidity is exhausted.
+      if (canonicalAttempt.shareBalanceBefore !== requested.toString() ||
+          canonicalAttempt.shareBalanceAfter !== canonicalAttempt.shareBalanceBefore ||
+          canonicalAttempt.receivedRawOutput !== "0" || canonicalAttempt.totalSupplyAfter !== canonicalAttempt.totalSupplyBefore) {
+        throw new Erc4626CanonicalAttemptError(canonicalAttempt);
+      }
+      canonicalAttempt.outcome = "reverted";
+      canonicalAttempt.reason = "erc4626-redeem-reverted";
+    } else if (canonicalAttempt.receivedRawOutput === "0") {
+      // A successful queue acceptance is classified only after proving the
+      // original full burn, zero return and same-call supply/fee reconciliation.
+      const canonicalSupplyAfter = BigInt(canonicalAttempt.totalSupplyAfter);
+      if (canonicalAttempt.shareBalanceBefore !== requested.toString() || canonicalAttempt.shareBalanceAfter !== "0" ||
+          canonicalAttempt.returnedRawOutput !== "0" ||
+          (canonicalSupplyAfter + requested !== totalSupply &&
+            !(canonicalSupplyAfter + requested > totalSupply && await proveFeeShareMint(calls, results, requested, requested)))) {
+        throw new Erc4626CanonicalAttemptError(canonicalAttempt);
+      }
+      canonicalAttempt.outcome = "accepted-but-unfunded";
+      canonicalAttempt.reason = "erc4626-canonical-accepted-but-unfunded";
+    }
+    // Some vaults accept an illiquid redeem into a queue and burn shares but
+    // transfer no assets. That is not synchronous execution. A smaller fresh
+    // simulation may prove an instant lower bound, never the queued balance.
+    const deferredReceipt = canonicalAttempt.outcome === "accepted-but-unfunded";
+    if (!results[2]!.success || deferredReceipt) {
+      // One ordinary-max/idle fallback, then at most five smaller probes with
+      // the ORIGINAL holder balance. Each retained point still requires exact
+      // redeem, transfer and burn proof; no failed probe proves exhaustion.
       let candidate = maxRedeem;
       if (config.maxFunctions === "reviewed-non-binding-zero") {
         const idle = await batch([{ to: underlying, data: calldata("balanceOf", [vault]) }]);
@@ -305,12 +362,11 @@ export async function observeErc4626InstantExit(args: {
         results = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: retry[0] as `0x${string}` });
         if (results.length !== calls.length || results.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
       }
-      if (config.maxFunctions === "reviewed-non-binding-zero") {
-        // V2's zero max functions and idle balance do not describe liquidity
-        // held in its ordinary liquidity adapter. Probe at most five smaller
-        // executions with the ORIGINAL holder balance; keep only a successful
-        // receipt. Failed probes narrow this search, never certify exhaustion.
-        let lower = results[2]!.success ? amount : 0n;
+      if (config.maxFunctions === "reviewed-non-binding-zero" ||
+          (deferredReceipt && !externalShares && maxRedeem > 0n && maxWithdraw > 0n)) {
+        // V2 zero maxima and accepted-but-unfunded redemptions do not describe
+        // the instant executable boundary. Keep only an actual asset receipt.
+        let lower = results[2]!.success && uint(results[3]!.returnData) > uint(results[0]!.returnData) ? amount : 0n;
         let upper = requested;
         for (let attempt = 0; attempt < 5 && lower * 100n < requested * 95n; attempt++) {
           const candidate = (lower + upper) / 2n;
@@ -327,7 +383,7 @@ export async function observeErc4626InstantExit(args: {
           const probe = await batch([{ to: HOLDER, data: encodeFunctionData({ abi: MULTICALL_ABI, functionName: "aggregate3", args: [calls] }) }], requested);
           const candidateResults = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: probe[0] as `0x${string}` });
           if (candidateResults.length !== calls.length || candidateResults.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
-          if (candidateResults[2]!.success) {
+          if (candidateResults[2]!.success && uint(candidateResults[3]!.returnData) > uint(candidateResults[0]!.returnData)) {
             lower = candidate;
             amount = candidate;
             gross = candidateGross;
@@ -341,11 +397,13 @@ export async function observeErc4626InstantExit(args: {
     }
     if (!results[2]!.success) {
       const disabled = config.maxFunctions === "binding" && (maxRedeem === 0n || maxWithdraw === 0n);
-      points.push(empty(disabled ? "erc4626-withdrawal-disabled" : "erc4626-redeem-reverted", disabled ? "exact-lower-bound" : "diagnostic")); continue;
+      const point = empty(disabled ? "erc4626-withdrawal-disabled" : "erc4626-redeem-reverted", disabled ? "exact-lower-bound" : "diagnostic");
+      point.canonicalAttempt = canonicalAttempt;
+      points.push(point); continue;
     }
     const before = uint(results[0]!.returnData); const after = uint(results[3]!.returnData);
     const sharesBefore = uint(results[1]!.returnData); const sharesAfter = uint(results[4]!.returnData);
-    const nestedReceipt = externalShares ? decodeFunctionResult({
+    const nestedReceipt = externalShares ? results === canonicalResults ? canonicalNested : decodeFunctionResult({
       abi: MULTICALL_ABI, functionName: "aggregate3", data: results[2]!.returnData,
     }) : null;
     if (nestedReceipt && (nestedReceipt.length !== 2 || nestedReceipt.some((entry) => !entry.success) ||
@@ -356,10 +414,21 @@ export async function observeErc4626InstantExit(args: {
     if (sharesBefore !== requested || sharesAfter > sharesBefore || sharesBefore - sharesAfter !== amount ||
         after < before || received > gross || received === 0n ||
         (config.redeemReturns === "gross-before-fee" ? returned !== gross : returned !== received) ||
-        (config.previewRedeem !== "gross-before-fee" && received < preview)) throw new Error("erc4626-realized-output-inconsistent");
+        (config.previewRedeem !== "gross-before-fee" && received < preview)) {
+      if (amount === requested) throw new Erc4626CanonicalAttemptError(canonicalAttempt);
+      throw new Error("erc4626-realized-output-inconsistent");
+    }
+    // Later failed/queued probes may have changed the descriptor without
+    // replacing the winning receipt. Replay and gas must use that exact amount.
+    calls[2]!.callData = redeemCalldata(amount);
     if (supplyAfter + amount !== totalSupply &&
         !(supplyAfter + amount > totalSupply && await proveFeeShareMint(calls, results, requested, amount))) {
+      if (amount === requested) throw new Erc4626CanonicalAttemptError(canonicalAttempt);
       throw new Error("erc4626-realized-output-inconsistent");
+    }
+    if (amount === requested) {
+      canonicalAttempt.outcome = "completed";
+      canonicalAttempt.reason = null;
     }
     let gasRaw = 0n;
     if (externalShares) {
@@ -398,7 +467,8 @@ export async function observeErc4626InstantExit(args: {
         ...(nativeReference ? [{ kind: "gas", rawUnits: gasRaw.toString(), assetKey: nativeReference.assetKey }] : []),
       ],
       outputs: [{ ...args.outputReference, rawUnits: received.toString() }], certification: aboveBudget ? "diagnostic" : amount === requested ? "exact-complete" : "exact-lower-bound",
-      reason: aboveBudget ? "erc4626-cost-exceeds-request" : amount === requested ? null : "erc4626-liquidity-limited" });
+      reason: aboveBudget ? "erc4626-cost-exceeds-request" : amount === requested ? null : "erc4626-liquidity-limited",
+      canonicalAttempt });
     if (!aboveBudget && amount > provenShares) provenShares = amount;
   }
   const confirmed = await fetchEvmBlockHeader(config.chain, block, options);

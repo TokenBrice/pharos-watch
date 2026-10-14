@@ -3,6 +3,7 @@ import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig, type R
 import { RedemptionBackstopEntrySchema, type RedemptionBackstopEntry, type RedemptionCapacityProfile } from "@shared/types/redemption";
 import { EXIT_ROUTE_OUTPUT_VALUATION_TIMESTAMP_TOLERANCE_SEC, ExitRouteObservationSchema } from "@shared/types/exit-route";
 import { LiveReserveRedemptionOutputValuationSchema } from "@shared/types/live-reserves";
+import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import {
   buildRedemptionExitRouteObservation,
   buildPhysicalToUsdExitObservation,
@@ -10,6 +11,7 @@ import {
   usesPrimaryRedemptionReviewTerms,
 } from "../redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
+import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
 
 const config: RedemptionBackstopConfig = {
   routeFamily: "offchain-issuer",
@@ -1002,44 +1004,49 @@ describe("derived supply-model route observations", () => {
     });
   });
 
-  it("derives diagnostic eventual-redemption from the live Avalon USDa config", () => {
+  it("derives no executable capacity from the live unquantified Avalon USDa config", async () => {
     const avalonConfig = getRedemptionBackstopConfig("usda-avalon");
-    expect(avalonConfig).toBeDefined();
+    expect(avalonConfig).not.toBeNull();
+    expect(avalonConfig?.routeFamily).toBe("stablecoin-redeem");
     expect(avalonConfig?.outputAssets).toEqual(["usdt-tether"]);
     expect(avalonConfig?.settlementModel).toBe("days");
-    expect(avalonConfig?.capacityModel.kind).toBe("supply-full");
+    expect(avalonConfig?.capacityModel.kind).toBe("unquantified");
+    expect(avalonConfig?.v9RouteReviewTerms?.missingScoringFields).toContain("capacity");
 
-    const observation = deriveSupplyModelExitRouteObservation(
-      {
-        ...supplyFullEntry,
-        stablecoinId: "usda-avalon",
-        routeFamily: avalonConfig!.routeFamily,
-        accessModel: avalonConfig!.accessModel,
-        settlementModel: avalonConfig!.settlementModel,
-        executionModel: avalonConfig!.executionModel,
-        outputAssetType: avalonConfig!.outputAssetType,
-        feeModelKind: "documented-variable",
-        feeBps: null,
-        docs: {
-          label: avalonConfig!.docs![0]!.label,
-          url: avalonConfig!.docs![0]!.url,
-          reviewedAt: avalonConfig!.reviewedAt,
-        },
-      },
-      Date.UTC(2026, 9, 10, 12) / 1_000,
+    const clockSec = Date.UTC(2026, 9, 15, 12) / 1_000;
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1Strict([]),
+      "usda-avalon",
+      avalonConfig!,
+      100_000_000,
+      null,
+      clockSec,
+      { reserveSnapshotMetadata: null, exitExecutionReviews: [] },
     );
 
-    expect(observation).toMatchObject({
-      routeId: "redemption:usda-avalon:stablecoin-redeem",
-      routeFamily: "eventual-redemption",
-      settlementHorizonSec: 14 * 86_400,
-      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
-      evidenceKind: "documented-terms",
-      feeEvidence: "undisclosed-reviewed",
-      scoreEligible: false,
-      executableUsd: 5_000_000,
-      completionRatio: 1,
+    expect(entry).toMatchObject({
+      stablecoinId: "usda-avalon",
+      routeFamily: "stablecoin-redeem",
+      settlementModel: "days",
+      outputAssetType: "stable-single",
+      resolutionState: "missing-capacity",
+      immediateCapacityUsd: null,
+      feeModelKind: "undisclosed-reviewed",
+      capacityProfile: {
+        immediateUsd: null,
+        eventualUsd: null,
+        scoringUsd: null,
+        scoringHorizon: "unknown",
+      },
+      docs: {
+        label: avalonConfig!.docs![0]!.label,
+        url: avalonConfig!.docs![0]!.url,
+        reviewedAt: avalonConfig!.reviewedAt,
+        provenance: "config-reviewed",
+      },
     });
+    expect(entry.capacityProfile?.exitRouteObservations).toBeUndefined();
+    expect(deriveSupplyModelExitRouteObservation(entry, clockSec, undefined, avalonConfig!)).toBeNull();
   });
 });
 

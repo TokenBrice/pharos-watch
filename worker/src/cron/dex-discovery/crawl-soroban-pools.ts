@@ -63,7 +63,7 @@ export function canonicalSorobanTokenId(address: string): string | null {
   return match?.[1] ?? null;
 }
 
-/** The shared registry owns the eight-token Aquarius scope; keep the re-export for stage callers. */
+/** The shared registry owns the nine-token Aquarius scope; keep the re-export for stage callers. */
 export { isAquariusSorobanDeployment };
 
 function parseFiniteNonNegative(value: unknown): number | null {

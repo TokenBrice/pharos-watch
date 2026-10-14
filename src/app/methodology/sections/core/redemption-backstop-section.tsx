@@ -38,6 +38,15 @@ export function RedemptionBackstopMethodologySection() {
         complete member-price/FX clock, and physical commodity outputs require source-timed USD valuation distinct
         from fiat proceeds. These corrections can move route scores; weights and ladders are unchanged.
       </p>
+      <p>
+        Methodology v4.5 withdraws unsupported capacity, completion and eligibility assumptions on reviewed
+        existing routes. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Solayer&apos;s USDC
+        holder path is queued QLP fulfillment, not atomic redemption. pathUSD&apos;s processing target is
+        not a completed-payout maximum. The existing-route bound review grants no new config-only upgrade.
+        Exact smaller-probe receipts under Safety v10.18 prove only executed input, not full-request completion
+        or exhaustion. Weights and ladders are unchanged; fresh observations and final fixed-clock comparison
+        remain required. Activation: October 14, 2026 12:40 UTC (release cut; 1791981600).
+      </p>
       <MethodologyFacts
         facts={[
           { label: "Version", value: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL },

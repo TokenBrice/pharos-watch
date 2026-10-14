@@ -111,3 +111,60 @@ describe("wave-3 redemption handoff uptake", () => {
     expect(original.capacityModel).toMatchObject({ requiredOutputAssetKeys: ["wm-m0"] });
   });
 });
+
+describe("PKT-12 bounded holder conversion terms", () => {
+  it.each(["usda-avalon", "uusd-youves", "susd-solayer"])("does not promote %s conversion rights into full-supply capacity", (id) => {
+    const config = getRedemptionBackstopConfig(id)!;
+    const result = RedemptionBackstopConfigSchema.safeParse(config);
+    expect(result.success, JSON.stringify(result.error?.issues)).toBe(true);
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(
+      expect.arrayContaining(["capacity", "settlement", "cost"]),
+    );
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(config.v9RouteCostTerms?.publishedFeeSchedule).toBeUndefined();
+  });
+
+  it("retains Avalon's USDT payout without inventing conversion fees", () => {
+    const config = getRedemptionBackstopConfig("usda-avalon")!;
+    expect(config.outputAssets).toEqual(["usdt-tether"]);
+    expect(config.holderEligibility).toBe("unknown");
+    expect(config.costModel.kind).toBe("dynamic-or-unclear");
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+  });
+
+  it("retains Youves' collateral conversion haircut rather than treating it as par", () => {
+    const config = getRedemptionBackstopConfig("uusd-youves")!;
+    expect(config.outputAssetType).toBe("mixed-collateral");
+    expect(config.outputAssets).toEqual(["asset:xtz", "asset:tzbtc", "asset:sirs", "asset:usdt"]);
+    expect(config.costModel).toMatchObject({ kind: "fee-bps", feeBps: 625 });
+    expect(config.settlementModel).toBe("days");
+  });
+
+  it("keeps Solayer's QLP-dependent USDC payout non-atomic and eligibility unresolved", () => {
+    const config = getRedemptionBackstopConfig("susd-solayer")!;
+    expect(config.outputAssets).toEqual(["usdc-circle"]);
+    expect(config.settlementModel).toBe("queued");
+    expect(config.holderEligibility).toBe("unknown");
+    expect(config.costModel.kind).toBe("dynamic-or-unclear");
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+  });
+
+  it.each(["wars-argentine-peso", "hyusd-hylo"])("keeps %s's explicitly unmeasured capacity unquantified", (id) => {
+    const config = getRedemptionBackstopConfig(id)!;
+    const result = RedemptionBackstopConfigSchema.safeParse(config);
+    expect(result.success, JSON.stringify(result.error?.issues)).toBe(true);
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+  });
+
+  it("does not turn Bridge's compliance-gated processing term into completed pathUSD payout", () => {
+    const config = getRedemptionBackstopConfig("pathusd-bridge")!;
+    const result = RedemptionBackstopConfigSchema.safeParse(config);
+    expect(result.success, JSON.stringify(result.error?.issues)).toBe(true);
+    expect(config.outputAssets).toEqual(["usdc-circle"]);
+    expect(config.settlementModel).toBe("days");
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+    expect(config.v9RouteReviewTerms?.settlementDelaySec).toBeUndefined();
+    expect(config.v9RouteReviewTerms?.businessDayTerms).toBeUndefined();
+  });
+});

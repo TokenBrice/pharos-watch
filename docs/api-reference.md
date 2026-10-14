@@ -330,7 +330,7 @@ The same shared endpoint descriptors now also carry static worker dependency-hyd
 
 Each `cards[]` row publishes `ratingStatus: "rated" | "not-rated" | "pipeline-gap"`. Rated means numeric score and letter grade; not-rated means null score and `grade: "NR"` with causal withholding reasons. Pipeline-gap means null score and null grade, never NR, zero or F. At least two included pillars are needed for a Safety Score. Exactly one A/B-only excluded pillar permits a two-pillar rating; two or three give technical pipeline-gap. Pipeline-gap keeps diagnostic breakdowns and null aggregate/stages/weakest pillar, with no binding cap.
 
-`partialEvidence` is null or `{ reasonCode: "partial-evidence-pipeline-gap", excludedPillars, excludedComponentKeys, causeGapRefs, causes }`. Pillars are `backing | exit | control`; causes are A/B only. `causeGapRefs` are sorted unique numeric indexes into the card's local-then-foreign gap table; resolve IDs with `resolveCauseGapId()` (`shared/types/safety-score-v9-public-cause-gaps.ts`). Subcomponent exclusions can leave no whole pillar excluded. Partial does not itself mean NR; mixed components retain known/C/U/D contributions.
+`partialEvidence` is null or `{ reasonCode: "partial-evidence-pipeline-gap", excludedPillars, excludedComponentKeys, causeGapRefs, causes }`. Pillars are `backing | exit | control`; causes are A/B only. It is non-null when an A/B gap is promoted from a pillar's exclusion inventory or from a peg/methodology constraint, wrapper-local fact or inherited parent partial exclusion. Subcomponent exclusions can leave no whole pillar excluded. The Exit inventory does not promote route-exclusive A/B facts from an unscored optional alternative: the alternative is neither primary nor diversification, has no admitted score or scored components, and excludes no route or factor component. If no primary is admitted, this exception additionally requires an independent barrier on the same route: explicitly rejected same-notional output eligibility (for a non-output gap), or diagnostic coverage with a distinct unresolved capacity/settlement factor carrying C/U proof. An A/B datum that is itself the only admission blocker remains a partial-evidence trigger. Those filtered gaps remain diagnostic in the route evidence and gap tables. A/B facts on the primary, admitted alternatives with excluded components, whole-pillar exclusions and non-route inventory gaps retain their triggers. `causeGapRefs` are sorted unique numeric indexes into the card's local-then-foreign gap table; resolve IDs with `resolveCauseGapId()` (`shared/types/safety-score-v9-public-cause-gaps.ts`). Partial does not itself mean NR; mixed components retain known/C/U/D contributions.
 
 Pillars carry `aggregationDisposition: "included" | "excluded-a-b"`, `causeGapRefs`, `limitedEvidenceCauses` and `supportedComponentKeys`. Excluded scores are null; aggregation renormalizes `effectiveScoringWeights` across included pillars, with zero weight for exclusions. Contributions retain `cause`, `causeGapRefs`, `scoringDisposition` and `effectiveScoringWeight`: A/B is diagnostic null/zero weight, C/U is bounded uncertainty, admitted D is measured adverse. A requires captured pipeline proof; B requires current scoped public-data research; C is researched non-disclosure; U is not yet researched. Responsibility alone is not proof.
 
@@ -897,10 +897,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.49",
-    "versionLabel": "v4.49",
-    "currentVersion": "4.49",
-    "currentVersionLabel": "v4.49",
+    "version": "4.5",
+    "versionLabel": "v4.5",
+    "currentVersion": "4.5",
+    "currentVersionLabel": "v4.5",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -959,7 +959,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 ```json
 {
   "currentVersion": "8.48",
-  "methodologyVersion": "10.17"
+  "methodologyVersion": "10.18"
 }
 ```
 

@@ -15,6 +15,25 @@ describe("execution certificate wire invariants", () => {
       ...executionReview, producer: { kind: "kraken" },
     }).success).toBe(false);
   });
+  it("keeps legacy certificates unchanged and accepts optional pinned canonical diagnostics", () => {
+    const legacy = makeExecutionCertificate();
+    expect(ExitExecutionCertificateSchema.parse(legacy)).toEqual(legacy);
+    const certificate = makeExecutionCertificate();
+    certificate.points[0]!.canonicalAttempt = {
+      outcome: "accepted-but-unfunded",
+      block: { number: 1, hash: `0x${"1".repeat(64)}`, timestamp: executionClockSec },
+      requestedRawInput: "100000000000", shareBalanceBefore: "100000000000", shareBalanceAfter: "0",
+      totalSupplyBefore: "200000000000", totalSupplyAfter: "100000000000",
+      returnedRawOutput: "0", receivedRawOutput: "0", revertData: null,
+      reason: "erc4626-canonical-accepted-but-unfunded",
+    };
+    certificate.settlement.scope = "executed-input-only";
+    const parsed = ExitExecutionCertificateSchema.parse(certificate);
+    expect(parsed.points[0]!.canonicalAttempt).toEqual(certificate.points[0]!.canonicalAttempt);
+    expect(parsed.settlement.scope).toBe("executed-input-only");
+    certificate.points[0]!.canonicalAttempt.returnedRawOutput = "1.5";
+    expect(ExitExecutionCertificateSchema.safeParse(certificate).success).toBe(false);
+  });
   it("accepts bound execution but rejects an inflated observation envelope", () => {
     expect(ExitRouteObservationSchema.safeParse(observation()).success).toBe(true);
     expect(ExitRouteObservationSchema.safeParse({ ...observation(), executableUsd: 200_000 }).success).toBe(false);
