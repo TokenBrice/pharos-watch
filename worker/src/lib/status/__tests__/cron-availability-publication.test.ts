@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import { CONDITIONALLY_ADMITTED_SCHEDULED_TASKS } from "@shared/lib/scheduled-runner-registry";
 import { loadCronHealth } from "../cron-health";
 import { loadProducerFreshnessFacts } from "../freshness-oracle";
 
@@ -34,6 +35,103 @@ async function outputAt(fixture: Fixture, job: string): Promise<number | null> {
 }
 
 describe("cron availability retains independently confirmed publication evidence", () => {
+  it.each(["fresh", "stale", "missing"] as const)("ignores unadmitted catch-up failures without inventing %s output", async (output) => {
+    const fixture = fixtures.open();
+    const insert = fixture.sqlite.prepare(
+      `INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count,metadata,schedule_key)
+       VALUES (?,?,0,?,0,?,?)`,
+    );
+    for (const { scheduleKey, job } of CONDITIONALLY_ADMITTED_SCHEDULED_TASKS) {
+      const interval = getCronJobMeta(job)!.intervalSec;
+      if (output !== "missing") {
+        insertRun(fixture, job, output === "fresh" ? 12_000 : interval * 2 + 1, "ok", 1);
+      }
+      for (const age of [11_000, 10_900]) {
+        insert.run(job, NOW - age, "error", JSON.stringify({
+          reason: "stale-slot-reconciled", childDisposition: "not_started",
+        }), scheduleKey);
+      }
+      for (let index = 0; index < 12; index++) {
+        insert.run(job, NOW - 400 - index * 400, "skipped_neutral", JSON.stringify({
+          reason: "before_daily_slot",
+        }), scheduleKey);
+      }
+    }
+
+    const snapshot = await loadCronHealth(fixture.db, NOW);
+    for (const { job } of CONDITIONALLY_ADMITTED_SCHEDULED_TASKS) {
+      const cron = snapshot.crons[job];
+      expect(cron.healthy, job).toBe(output === "fresh");
+      expect(cron.lastRun?.status).toBe("skipped_neutral");
+      expect(cron.recentRuns.some((run) => run.status === "error")).toBe(false);
+      expect(snapshot.cronFindingJobs.watchErrors).not.toContain(job);
+      expect(fixture.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_runs WHERE job = ? AND status = 'error'")
+        .get(job)?.count).toBe(2);
+    }
+  });
+
+  it.each([
+    { schedule: "quarterHourly", status: "error", reason: "stale-slot-reconciled", disposition: "abandoned" },
+    { schedule: "quarterHourly", status: "error", reason: "stale-slot-reconciled", disposition: "execution_unknown" },
+    { schedule: "quarterHourly", status: "error", reason: "precheck-read-failed", disposition: "not_started" },
+    { schedule: "quarterHourly", status: "degraded", reason: "stale-slot-reconciled", disposition: "not_started" },
+    { schedule: "quarterHourly", status: "skipped_locked", reason: "stale-slot-reconciled", disposition: "not_started" },
+    { schedule: "daily0800Utc", status: "error", reason: "stale-slot-reconciled", disposition: "not_started" },
+    { schedule: null, status: "error", reason: "stale-slot-reconciled", disposition: "not_started" },
+  ] as const)("preserves required or uncertain attempts ($schedule/$status/$reason/$disposition)", async ({ schedule, status, reason, disposition }) => {
+    const fixture = fixtures.open();
+    const job = "snapshot-psi";
+    insertRun(fixture, job, 12_000, "ok", 1);
+    fixture.sqlite.prepare(
+      `INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count,metadata,schedule_key)
+       VALUES (?,?,0,?,0,?,?)`,
+    ).run(job, NOW - 2_000, status, JSON.stringify({ reason, childDisposition: disposition }), schedule);
+
+    const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
+    expect(cron.lastRun?.status).toBe(status);
+    expect(cron.recentRuns).toHaveLength(2);
+    if (status === "error") expect(cron.healthy).toBe(false);
+  });
+
+  it.each(["snapshot-psi", "snapshot-public-dataset"])("recovers %s daily success and readback behind false catch-up failures", async (job) => {
+    const fixture = fixtures.open();
+    insertRun(fixture, job, 76_000, "ok", 1);
+    if (job === "snapshot-public-dataset") insertRun(fixture, job, 75_960, "skipped_locked", 0);
+    insertRun(fixture, job, 20_000, "skipped_neutral", 0, { reason: "same_day_snapshot_exists" });
+    for (const age of [19_000, 18_000]) {
+      fixture.sqlite.prepare(
+        `INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count,metadata,schedule_key)
+         VALUES (?,?,0,'error',0,?,'quarterHourly')`,
+      ).run(job, NOW - age, JSON.stringify({ reason: "stale-slot-reconciled", childDisposition: "not_started" }));
+    }
+    for (let index = 0; index < 12; index++) {
+      insertRun(fixture, job, 400 + index * 400, "skipped_neutral", 0, { reason: "before_daily_slot" });
+    }
+
+    const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
+    expect(cron.healthy).toBe(true);
+    expect(cron.recentRuns.some((run) => run.status === "ok")).toBe(true);
+    expect(cron.recentRuns.some((run) => run.metadata?.reason === "same_day_snapshot_exists")).toBe(true);
+    expect(cron.recentRuns.some((run) => run.status === "error")).toBe(false);
+  });
+
+  it.each([
+    { status: "ok", age: 12_000, healthy: true },
+    { status: "ok", age: 172_801, healthy: false },
+    { status: "degraded", age: 12_000, healthy: false },
+    { status: "ok", age: null, healthy: false },
+  ] as const)("retains the locked-run requirement for older ok output ($status/$age)", async ({ status, age, healthy }) => {
+    const fixture = fixtures.open();
+    const job = "snapshot-public-dataset";
+    if (age != null) insertRun(fixture, job, age, status, 1, { outputPublishedAt: NOW - age });
+    for (let index = 0; index < 12; index++) insertRun(fixture, job, 400 + index * 400, "skipped_locked", 0);
+
+    const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
+    expect(cron.lastRun?.status).toBe("skipped_locked");
+    expect(cron.recentRuns).toHaveLength(10);
+    expect(cron.healthy).toBe(healthy);
+  });
+
   // Reduced from the September 28 production capture; no runtime dependency on the capture.
   it.each([
     ["sync-fx-rates", 486, 1386, 33, "cadence_bucket_completed"],

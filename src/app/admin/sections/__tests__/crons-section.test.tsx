@@ -72,6 +72,22 @@ function renderCrons({
 }
 
 describe("CronsSection", () => {
+  it("retains the required failure evidence behind ten neutral admissions", () => {
+    const neutralRuns = Array.from({ length: 10 }, (_, index) => ({
+      startedAt: 1_699_999_940 - index * 10, durationMs: 200, status: "skipped_neutral" as const,
+    }));
+    const failedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "error" as const };
+    renderCrons({ groups: [makeGroup([["snapshot-psi", makeCronStatus({
+      lastRun: neutralRuns[0], recentRuns: [...neutralRuns, failedRun], expectedIntervalSec: 86_400, healthy: false,
+    })]])] });
+    const row = screen.getByTestId("cron-row-snapshot-psi");
+    expect(within(row).getAllByRole("listitem")).toHaveLength(11);
+    expect(within(row).getByLabelText(/Failed: .*raw status error/)).toBeTruthy();
+    const detail = screen.getByRole("complementary", { name: /Details for/ });
+    expect(within(detail).getByText("Recent runs and retained evidence")).toBeTruthy();
+    expect(within(detail).getByText("Failed")).toBeTruthy();
+  });
+
   it.each(["unknown", "errors", "empty", "success"] as const)(
     "scopes last-completed evidence for %s history",
     (history) => {
@@ -175,6 +191,7 @@ describe("CronsSection", () => {
             makeCronStatus({
               lastRun: neutralRun,
               recentRuns: [neutralRun, degradedRun],
+              expectedIntervalSec: 900,
               healthy: true,
             }),
           ],
@@ -185,7 +202,9 @@ describe("CronsSection", () => {
     const row = screen.getByTestId("cron-row-weekly-recap");
     expect(within(row).getByText("Watch")).toBeTruthy();
     expect(within(row).queryByText("Run warning")).toBeNull();
-    expect(within(row).getByText("Completed with warnings (latest required run)")).toBeTruthy();
+    expect(within(row).getByText("Skipped: no work required")).toBeTruthy();
+    expect(within(row).getByText("200ms")).toBeTruthy();
+    expect(within(row).queryByText("500ms")).toBeNull();
     const warningBadge = screen
       .getAllByText("Completed with warnings")
       .find((element) => element.getAttribute("data-slot") === "badge");
@@ -203,6 +222,7 @@ describe("CronsSection", () => {
             makeCronStatus({
               lastRun: neutralRun,
               recentRuns: [neutralRun, failedRun],
+              expectedIntervalSec: 900,
               healthy: false,
             }),
           ],
@@ -212,7 +232,8 @@ describe("CronsSection", () => {
 
     const row = screen.getByTestId("cron-row-weekly-recap");
     expect(within(row).getByText("Watch")).toBeTruthy();
-    expect(within(row).getByText("Failed (latest required run)")).toBeTruthy();
+    expect(within(row).getByText("Skipped: no work required")).toBeTruthy();
+    expect(within(row).getByText("The latest required run failed.")).toBeTruthy();
   });
 
   it("keeps a fresh neutral-only no-op without success evidence in the attention view as one verdict", () => {

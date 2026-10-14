@@ -5,10 +5,12 @@ import {
   type CronScheduleKey,
 } from "@shared/lib/cron-jobs";
 import {
+  CONDITIONALLY_ADMITTED_SCHEDULED_TASKS,
   flattenScheduledSlotPlanJobs,
   getScheduledWorkerRoleForExpression,
   listScheduledExpressionsForWorker,
   getScheduledSlotPlanBudgetEntries,
+  isScheduledTaskDueAt,
   SHARED_SCHEDULED_JOB_IDENTITIES,
   SCHEDULED_SLOT_PLANS,
   OFF_SLOT_SCHEDULED_PRODUCERS,
@@ -34,6 +36,20 @@ function sorted(values: Iterable<string>): string[] {
 }
 
 describe("scheduled runner contract", () => {
+  it("keeps conditional admissions on registered secondary lanes without excusing canonical producers", () => {
+    const monday = Date.UTC(2026, 9, 12) / 1_000;
+    for (const { scheduleKey, job } of CONDITIONALLY_ADMITTED_SCHEDULED_TASKS) {
+      expect(flattenScheduledSlotPlanJobs(SCHEDULED_SLOT_PLANS[scheduleKey])).toContain(job);
+      const canonical = CRON_JOB_DEFINITIONS.find((definition) => definition.job === job)!;
+      expect(canonical.scheduleKey).not.toBe(scheduleKey);
+      for (const hour of [0, 7, 8, 23]) {
+        expect(isScheduledTaskDueAt(scheduleKey, job, monday + hour * 3_600)).toBe(false);
+        expect(isScheduledTaskDueAt(canonical.scheduleKey, job, monday + hour * 3_600)).toBe(true);
+      }
+    }
+    expect(isScheduledTaskDueAt("quarterHourly", "unknown-job", monday)).toBe(true);
+  });
+
   it("names missing GRAPH degradation on heavy DEX stage recovery", async () => {
     expect(await fetchPancakeSwapPools(null)).toMatchObject({
       ok: false, degraded: true, errors: ["missing GRAPH_API_KEY"],

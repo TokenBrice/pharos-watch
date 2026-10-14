@@ -8,6 +8,7 @@ import {
   deriveCronVerdict,
   formatCronGroupSummary,
   getCronNextExpected,
+  getCronNextRunAt,
   getCronRunbooks,
   formatCronDuration,
   formatCronRunStatus,
@@ -325,14 +326,14 @@ describe("cron workbench model", () => {
       requiredStatus: "degraded",
       cronHealthy: true,
       expectedState: "degraded",
-      expectedLabel: "Completed with warnings (latest required run)",
+      expectedLabel: "Skipped: no work required",
     },
     {
       name: "keeps a failed required outcome unhealthy after a neutral skip",
       requiredStatus: "error",
       cronHealthy: false,
       expectedState: "unhealthy",
-      expectedLabel: "Failed (latest required run)",
+      expectedLabel: "Skipped: no work required",
     },
   ] as const)("$name", ({ requiredStatus, cronHealthy, expectedState, expectedLabel }) => {
     const neutralRun = { startedAt: 1_700_000_000, durationMs: 200, status: "skipped_neutral" as const };
@@ -652,6 +653,46 @@ describe("cron workbench model", () => {
 
 describe("cron operator verdict", () => {
   const error = (startedAt: number) => ({ startedAt, durationMs: 100, status: "error" as const });
+
+  it("does not turn old required errors behind fresh neutral polls into repeated failures", () => {
+    const skip = { startedAt: 10_000, durationMs: 1, status: "skipped_neutral" as const };
+    const cron = makeCron({ healthy: false, lastRun: skip, recentRuns: [skip, error(1), error(0)] });
+    expect(deriveCronVerdict(cron, "admin-watch", classifyCronWorkbenchState(cron, 10_010), [], 10_010))
+      .toMatchObject({ verdict: "watch", code: "no-fresh-run" });
+  });
+
+  it.each([
+    { cron: makeCron({ lastRun: null, recentRuns: [], bootstrap: true }), code: "bootstrap", verdict: "ok" },
+    { cron: makeCron({ lastRun: null, recentRuns: [] }), code: "no-runs", verdict: "unavailable" },
+    { cron: makeCron({ lastRun: { startedAt: 100, durationMs: 1, status: "skipped_locked" } }), code: "skipped", verdict: "ok" },
+  ] as const)("describes $code without claiming a successful run", ({ cron, code, verdict }) => {
+    const result = deriveCronVerdict(cron, "admin-watch", classifyCronWorkbenchState(cron), [], 100);
+    expect(result).toMatchObject({ code, verdict });
+    expect(result.sentence).not.toContain("succeeded");
+  });
+
+  it.each([
+    ["snapshot-psi", "2026-10-14T07:17:00Z", "2026-10-14T08:00:00Z"],
+    ["snapshot-public-dataset", "2026-10-14T08:17:00Z", "2026-10-15T08:00:00Z"],
+    ["snapshot-chain-supply", "2026-10-14T07:17:00Z", "2026-10-14T07:30:00Z"],
+    ["weekly-recap", "2026-10-14T07:17:00Z", "2026-10-14T08:10:00Z"],
+    ["sync-v9-supply-attribution", "2026-10-14T07:17:00Z", "2026-10-14T07:23:00Z"],
+    ["sync-cl-exit-depth", "2026-10-14T07:01:00Z", "2026-10-14T07:05:00Z"],
+    ["sync-cl-exit-depth", "2026-10-14T07:05:00Z", "2026-10-14T07:35:00Z"],
+    ["prune-cron-history", "2026-10-14T03:01:00Z", "2026-10-14T03:03:00Z"],
+    ["yield-coverage-audit", "2026-10-14T07:17:00Z", "2026-11-01T06:00:00Z"],
+    ["yield-coverage-audit", "2026-02-01T06:00:00Z", "2026-03-01T06:00:00Z"],
+  ])("uses primary trigger opportunities for %s", (job, now, expected) => {
+    const nowSeconds = Date.parse(now) / 1000;
+    expect(getCronNextRunAt(job, nowSeconds)).toBe(Date.parse(expected) / 1000);
+    expect(getCronNextExpected(makeCron(), nowSeconds, job).budget).toContain("Next primary trigger opportunity");
+  });
+
+  it("does not let a daily neutral admission reset the next daily opportunity", () => {
+    const now = Date.parse("2026-10-14T07:17:00Z") / 1000;
+    const cron = makeCron({ expectedIntervalSec: 86_400, lastRun: { startedAt: now - 1, durationMs: 1, status: "skipped_neutral" } });
+    expect(getCronNextExpected(cron, now, "snapshot-psi")).toMatchObject({ kind: "scheduled", label: "in 43m" });
+  });
 
   it.each([
     { name: "public-critical job without a usable run", cron: makeCron({ healthy: false }), impact: "public-critical", verdict: "act", code: "no-fresh-run" },

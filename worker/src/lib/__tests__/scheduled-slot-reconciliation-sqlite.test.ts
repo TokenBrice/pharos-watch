@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { CONDITIONALLY_ADMITTED_SCHEDULED_TASKS } from "@shared/lib/scheduled-runner-registry";
 import { logCronRun, cronEventCacheKey } from "../cron-logger";
 import { recordProducerOutcome } from "../producer-history";
 import { runScheduledSlotWithFence, sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
@@ -764,6 +765,42 @@ describe("scheduled slot reconciliation against the current D1 schema", () => {
       completed_at: progressUpdatedAt,
       outcome: "abandoned",
     });
+  });
+
+  it.each(CONDITIONALLY_ADMITTED_SCHEDULED_TASKS.flatMap((task) =>
+    [false, true].map((started) => ({ ...task, started })),
+  ))("requires admission evidence for $scheduleKey/$job (started=$started)", async ({ scheduleKey, job, started }) => {
+    const { sqlite, db } = createMigratedDb();
+    const slotStartedAt = Math.floor(Date.UTC(2026, 9, 14) / 1_000);
+    const nowSec = slotStartedAt + 3_600;
+    sqlite.prepare(
+      `INSERT INTO cron_slot_executions (
+         slot_key, slot_started_at, state, execution_owner, execution_generation,
+         invocation_id, worker_version, started_at, updated_at, child_marker_version
+       ) VALUES (?, ?, 'running', 'stale-owner', 1,
+                 'stale-invocation', 'worker-version', ?, ?, 1)`,
+    ).run(scheduleKey, slotStartedAt, slotStartedAt, slotStartedAt + 30);
+    if (started) {
+      await markScheduledChildStarted(db, {
+        scheduleKey, slotStartedAt, job, producerPath: scheduleKey, producerKind: "scheduled-job",
+        invocationId: "stale-invocation", attemptNo: 1, workerVersion: "worker-version",
+        executionFence: {
+          scheduleKey, slotStartedAt, invocationId: "stale-invocation",
+          owner: "stale-owner", generation: 1, workerRole: "public",
+        },
+      }, slotStartedAt + 10);
+    }
+
+    const summary = await sweepStaleScheduledSlotExecutions(db, {
+      nowSec, staleAfterSec: 1_200, slotKey: scheduleKey,
+    });
+    expect(summary.slotsReconciled).toBe(1);
+    const rows = sqlite.prepare("SELECT status, metadata FROM cron_runs WHERE job = ?").all(job);
+    expect(rows).toHaveLength(started ? 1 : 0);
+    if (started) {
+      expect(rows[0].status).toBe("error");
+      expect(JSON.parse(String(rows[0].metadata)).childDisposition).toBe("abandoned");
+    }
   });
 
   it("does not invent a weekly-recap failure for a non-Monday 08:10 slot", async () => {

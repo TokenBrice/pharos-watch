@@ -35,7 +35,7 @@ export interface TriageInboxItem {
    * succeed: start of its most recent successful run ("No successful run for X").
    */
   lastSuccessSec: number | null;
-  /** Schedule position of the first named cron job: "Overdue by 22m (budget 35m)" or "Next run in 5m". */
+  /** Next primary trigger opportunity and freshness budget of the first named cron job. */
   timing: string | null;
   /** Degrade transitions carrying this cause code inside the recurrence window. */
   recurrence: number;
@@ -101,11 +101,13 @@ function countRecurrence(timeline: StatusResponse["timeline"], code: string, now
 
 const VERDICT_RANK = { act: 0, watch: 1 } as const;
 
-function describeCronTiming(cron: CronStatus | undefined, nowSec: number): string | null {
+function describeCronTiming(cron: CronStatus | undefined, nowSec: number, job?: string): string | null {
   if (!cron) return null;
-  const next = getCronNextExpected(cron, nowSec);
+  const next = getCronNextExpected(cron, nowSec, job);
   if (next.kind === "running") return next.label;
-  if (next.kind === "scheduled") return `Next run ${next.label}`;
+  if (next.kind === "scheduled") {
+    return `Next primary opportunity ${next.label} (budget ${formatElapsedSeconds(cron.expectedIntervalSec * CRON_STALE_BUDGET_MULTIPLIER)})`;
+  }
   if (next.kind === "due" || next.kind === "overdue") {
     return `${next.label} (budget ${formatElapsedSeconds(cron.expectedIntervalSec * CRON_STALE_BUDGET_MULTIPLIER)})`;
   }
@@ -151,7 +153,7 @@ export function buildTriageInbox(
         subject: getSubject(issue, cronSubjects),
         sinceSec,
         lastSuccessSec: sinceSec == null ? getLastSuccessSec(firstCron) : null,
-        timing: describeCronTiming(firstCron, data.timestamp),
+        timing: describeCronTiming(firstCron, data.timestamp, cronSubjects[0]),
         recurrence,
         link: getPrimaryLink(issue, cronSubjects),
         informational,
