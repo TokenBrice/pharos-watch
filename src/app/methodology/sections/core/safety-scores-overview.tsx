@@ -89,6 +89,15 @@ function SafetyScoresVersionNotes() {
         premium remain unchanged. Fixed-input replay is not producer-dependent closure or production-health proof.
       </p>
       <p>
+        W2 re-researched 102 W1-deferred groups. Zero operations passed independent review; all 102 remain
+        deferred with sharper blockers, bringing the combined W1+W2 ledger to 935 decisions. The 23 pinned
+        veto observations cover paused M Portals on Optimism/Sei, a paused USDS Avalanche adapter,
+        cUSDO&apos;s 2-unit inbound limiter on Base, closed sDOLA CCIP lanes, and sUSDe and sfrxUSD zero-peer
+        channels. Under the October 14, 2026 PKT-5 owner ruling, no shadow DEX family met its documented
+        maturity gates and none activated. W2 and PKT-5 add no runtime or curation change, so the
+        accepted-pair equivalence numbers remain unchanged. These outcomes stay in the single v10.18 release.
+      </p>
+      <p>
         Since methodology v9.96, issuer redemption routes honor reviewed explicit stablecoin payouts before the legacy
         fiat projection. Reviewed USDC payouts cover pathUSD, USYC Teller, pUSD and USDO; USDC/USDT payouts cover
         thBILL, MXNB&apos;s conversion rail and StandX DUSD, alongside HLUSD&apos;s existing basket. Unreviewed issuers

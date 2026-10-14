@@ -298,6 +298,10 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("Final accepted-pair impact");
     expect(release.impact.join(" ")).toContain("zero grade flips on both captures");
     expect(release.impact.join(" ")).not.toContain("Second-capture proof is provisional");
+    expect(release.impact.join(" ")).toContain("W2 re-researched 102 W1-deferred groups");
+    expect(release.impact.join(" ")).toContain("935 decisions");
+    expect(release.impact.join(" ")).toContain("23 pinned veto observations");
+    expect(release.impact.join(" ")).toContain("no shadow DEX family met its documented maturity gates");
   });
 
   it("provides an LLM-facing description for every changelog", () => {
