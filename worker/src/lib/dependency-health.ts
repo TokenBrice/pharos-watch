@@ -172,13 +172,20 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
     };
   }
   if (!cron.healthy) {
-    const lastStatus = cron.lastRun?.status ?? null;
+    const requiredRun = cron.lastRun?.status === "skipped_neutral"
+      ? cron.recentRuns.find((run) => run.status !== "skipped_neutral")
+      : cron.lastRun;
+    const lastStatus = requiredRun?.status ?? null;
+    const failureReason = requiredRun?.degradedReason ?? requiredRun?.metadata?.reason;
+    const reason = lastStatus === "error" || lastStatus === "degraded"
+      ? `Latest required cron status is ${lastStatus}${typeof failureReason === "string" ? `: ${failureReason}` : ""}.`
+      : `No confirmed cron output within the ${maxAgeSec}s availability budget.`;
     return {
       status: cron.lastRun ? "degraded" : "stale",
-      updatedAt,
-      ageSeconds,
+      updatedAt: requiredRun?.startedAt ?? updatedAt,
+      ageSeconds: requiredRun ? Math.max(0, now - requiredRun.startedAt) : ageSeconds,
       maxAgeSec,
-      reason: lastStatus ? `Latest cron status is ${lastStatus}.` : "No successful cron run recorded.",
+      reason: cron.lastRun ? reason : "No successful cron run recorded.",
     };
   }
 

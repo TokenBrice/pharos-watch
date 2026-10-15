@@ -53,6 +53,11 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   // deployments block single-contract supply, so the carried row loses its
   // native-implied price minutes after each sparse CoinGecko update.
   "brlv-crown",
+  // 2026-10-15: exact-contract CG identities retain observed low-volume quotes
+  // inside seven days; wM/MXNe carried supply and cgUSD lose strict freshness.
+  "cgusd-cygnus-finance",
+  "wm-m0",
+  "mxne-real-mxn",
 ]);
 
 export async function runCoingeckoLowVolumePass(

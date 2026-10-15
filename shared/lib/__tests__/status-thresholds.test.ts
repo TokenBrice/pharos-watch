@@ -57,6 +57,9 @@ describe("missing-price duration bands", () => {
 
 describe("publication materiality evidence", () => {
   const now = 1_790_000_000;
+  it("reserves service degradation for billion-dollar exposure", () => {
+    expect(STATUS_MISSING_PRICE_THRESHOLDS.durationMaterialMarketCapUsd).toBe(1_000_000_000);
+  });
   it.each([
     [now, 60_000_000, 120_000_000],
     [now - STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, 30_000_000, 60_000_000],

@@ -90,6 +90,11 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
   }
 
   const stablecoinPublication = data.dataQuality?.stablecoinPublication;
+  const publicationIsAdvisory = data.causes.dataQuality.some((cause) =>
+    cause.code === "stablecoin_publication_incomplete" && cause.severity === "info",
+  ) && !data.causes.dataQuality.some((cause) =>
+    cause.code === "stablecoin_publication_incomplete" && cause.severity !== "info",
+  );
   const repairDebt = data.dataQuality?.repairDebt;
   const controlRows: PipelineIntegrityRow[] = [
     stablecoinPublication
@@ -101,7 +106,7 @@ export function buildPipelineIntegrityModel(data: StatusResponse): PipelineInteg
             stablecoinPublication.status === "complete"
               ? "healthy"
               : stablecoinPublication.status === "incomplete"
-                ? "critical"
+                ? publicationIsAdvisory ? "watch" : "critical"
                 : "unknown",
           currentValue:
             stablecoinPublication.status === "unknown"

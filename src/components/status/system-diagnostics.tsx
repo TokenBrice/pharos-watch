@@ -112,7 +112,7 @@ export function SystemDiagnostics({
         </div>
         {browserProbe && browserProbe.failCount > 0 && (
           <div className="text-xs text-muted-foreground">
-            failures {browserProbe.failCount}
+            unhealthy {browserProbe.failCount}
             {browserProbe.degradedCount != null || browserProbe.staleCount != null
               ? ` (${browserProbe.degradedCount ?? 0} degraded, ${browserProbe.staleCount ?? 0} stale)`
               : ""}

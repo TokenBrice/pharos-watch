@@ -216,6 +216,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     const now = 1_800_000_000;
     const { caches } = await buildCacheStatuses(freshnessDb({
       cacheRows: [sentinelRow("yield-data", now - age, { generationId: "yield-winner" })],
+      cronRows: [{ job: "sync-yield-data", started_at: now - age, degraded_runs_since_ok: 0 }],
     }), now);
     expect(caches["yield-data"]).toMatchObject({
       generationId: "yield-winner", publishedAt: now - age, ageSeconds: age,
@@ -245,7 +246,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     const db = freshnessDb({ cacheRows: [{
       ...sentinelRow("dews", observedAt + futureOffset),
       observed_at: observedAt,
-    }] });
+    }], cronRows: [{ job: "compute-dews", started_at: observedAt, degraded_runs_since_ok: 0 }] });
     const { caches } = await buildCacheStatuses(db, now);
     expect(caches.dews).toMatchObject(futureOffset === 0
       ? { freshnessSource: "freshness-sentinel", degraded: false, ageSeconds: 0 }
@@ -295,27 +296,123 @@ describe("buildCacheStatuses sentinel validation", () => {
       const insert = sqlite.prepare(
         "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, degraded_reason) VALUES ('sync-yield-data', ?, 1, ?, ?, ?)",
       );
-      insert.run(now - 180, "ok", JSON.stringify({ quality: { degraded: false, reasons: [] } }), null);
+      insert.run(now - 180, "ok", JSON.stringify({ outputPublishedAt: now - 180, quality: { degraded: false, reasons: [] } }), null);
       insert.run(now - 120, "degraded", JSON.stringify({ reason: "yield-publication-transaction-failed" }), "yield-publication-transaction-failed");
       const reason = "yield-supplemental:family-degraded:aaveV3:upstream-unavailable";
-      insert.run(now - 60, "ok", JSON.stringify({ quality: { degraded: true, reasons: [reason] } }), null);
+      insert.run(now - 60, "ok", JSON.stringify({ outputPublishedAt: now - 60, quality: { degraded: true, reasons: [reason] } }), null);
       const impaired = await buildCacheStatuses(db, now);
       expect(impaired.caches["yield-data"]).toMatchObject({
-        ageSeconds: 60, degraded: true, degradedReason: reason, streakDegradedRuns: 2,
+        ageSeconds: 60, degraded: true, degradedReason: reason, streakDegradedRuns: 1,
         generationId: "yield-imperfect", publishedAt: now - 60,
       });
       expect(sqlite.prepare("SELECT status, degraded_reason FROM cron_runs ORDER BY started_at DESC LIMIT 1").get())
         .toEqual({ status: "ok", degraded_reason: null });
       insert.run(now - 30, "ok", JSON.stringify({
+        outputPublishedAt: null,
         quality: {
           degraded: false,
           reasons: [],
           advisoryReasons: ["yield-supplemental:family-degraded:pendle:pendle-rate-limited-backoff"],
         },
       }), null);
+      const retained = await buildCacheStatuses(db, now);
+      expect(retained.caches["yield-data"]).toMatchObject({
+        degraded: true, degradedReason: reason, streakDegradedRuns: 1,
+      });
+      insert.run(now - 10, "ok", JSON.stringify({ outputPublishedAt: now - 10 }), null);
+      const clean = sentinelRow("yield-data", now - 10, { generationId: "yield-clean" });
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(clean.value, clean.updated_at, clean.key);
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'yield-rankings'").run(
+        JSON.stringify({ publication: { generationId: "yield-clean" } }), now - 10,
+      );
       const recovered = await buildCacheStatuses(db, now);
       expect(recovered.caches["yield-data"]).toMatchObject({
         degraded: false, degradedReason: null, streakDegradedRuns: 0, healthy: true,
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each([
+    { label: "no terminal history", rows: [] },
+    { label: "older confirmed publication", rows: [{ job: "sync-dex-liquidity", started_at: 1_800_000_000 - 600, generation_id: "dex-old", degraded_runs_since_ok: 0 }] },
+    { label: "older generation completing after the new source clock", rows: [{ job: "sync-dex-liquidity", started_at: 1_800_000_000 - 30, generation_id: "dex-old", degraded_runs_since_ok: 0 }] },
+  ])("keeps DEX publication quality unknown with $label", async ({ rows }) => {
+    const now = 1_800_000_000;
+    const { caches } = await buildCacheStatuses(freshnessDb({
+      cacheRows: [sentinelRow("dex-liquidity", now - 60, { generationId: "dex-new" })],
+      cronRows: rows,
+    }), now);
+    expect(caches["dex-liquidity"]).toMatchObject({
+      freshnessSource: "freshness-sentinel", generationId: "dex-new", publishedAt: now - 60,
+      degraded: null, degradedReason: "producer-publication-unconfirmed", streakDegradedRuns: null, healthy: false,
+    });
+  });
+
+  it.each(["error", "degraded", "skipped_neutral"])(
+    "keeps a fresh clean publication healthy after an unpublished %s attempt",
+    async (status) => {
+      const now = Math.floor(Date.now() / 1000);
+      const { db, sqlite } = createLatestSchemaSqlite();
+      try {
+        const sentinel = sentinelRow("yield-data", now - 600, { generationId: "retained-clean" });
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+          sentinel.key, sentinel.value, sentinel.updated_at,
+        );
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(
+          JSON.stringify({ publication: { generationId: "retained-clean" } }), now - 600,
+        );
+        const insert = sqlite.prepare(
+          "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata, degraded_reason) VALUES ('sync-yield-data', ?, 20000, ?, ?, ?)",
+        );
+        insert.run(now - 600, "ok", JSON.stringify({ outputPublishedAt: now - 590, persistence: { generationId: "retained-clean" } }), null);
+        insert.run(now - 60, status, JSON.stringify({ outputPublishedAt: null, reason: "candidate-not-published" }), "candidate-not-published");
+
+        const { caches } = await buildCacheStatuses(db, now);
+        expect(caches["yield-data"]).toMatchObject({
+          ageSeconds: 600, degraded: false, degradedReason: null, streakDegradedRuns: 0,
+          healthy: true, generationId: "retained-clean", publishedAt: now - 600,
+        });
+        const aged = await buildCacheStatuses(db, now + 8_000);
+        expect(aged.caches["yield-data"]).toMatchObject({
+          ageSeconds: 8_600, degraded: false, healthy: false, publishedAt: now - 600,
+        });
+        const advanced = sentinelRow("yield-data", now - 60, { generationId: "new-unconfirmed" });
+        sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(advanced.value, advanced.updated_at, advanced.key);
+        sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = 'yield-rankings'").run(
+          JSON.stringify({ publication: { generationId: "new-unconfirmed" } }), now - 60,
+        );
+        const unconfirmed = await buildCacheStatuses(db, now);
+        expect(unconfirmed.caches["yield-data"]).toMatchObject({
+          generationId: "new-unconfirmed", degraded: null, degradedReason: "producer-publication-unconfirmed", healthy: false,
+        });
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
+  it.each([false, true])("orders publication quality by output clock when the latest output is degraded=%s", async (degraded) => {
+    const now = Math.floor(Date.now() / 1000);
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const sentinel = sentinelRow("yield-data", now - 60, { generationId: "latest-output" });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        sentinel.key, sentinel.value, sentinel.updated_at,
+      );
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('yield-rankings', ?, ?)").run(
+        JSON.stringify({ publication: { generationId: "latest-output" } }), now - 60,
+      );
+      const insert = sqlite.prepare(
+        "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-yield-data', ?, 120000, 'ok', ?)",
+      );
+      insert.run(now - 180, JSON.stringify({ outputPublishedAt: now - 60, quality: { degraded, reasons: ["latest-output-quality"] } }));
+      insert.run(now - 120, JSON.stringify({ outputPublishedAt: now - 100, quality: { degraded: !degraded, reasons: ["older-output-quality"] } }));
+      const { caches } = await buildCacheStatuses(db, now);
+      expect(caches["yield-data"]).toMatchObject({
+        degraded, degradedReason: degraded ? "latest-output-quality" : null,
+        streakDegradedRuns: degraded ? 1 : 0, publishedAt: now - 60,
       });
     } finally {
       sqlite.close();
@@ -510,7 +607,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           sentinelRow("dews", now - 240),
         ],
       },
-      { match: "GROUP BY job", rows: [] },
+      { match: "GROUP BY job", rows: [{ job: "sync-yield-data", started_at: now - 1_800, degraded_runs_since_ok: 0 }] },
     ]);
 
     const { caches, statusFloor } = await buildCacheStatuses(db, now);
@@ -661,7 +758,7 @@ describe("buildCacheStatuses sentinel validation", () => {
           sentinelRow("dews", now - 240),
         ],
       },
-      { match: "GROUP BY job", rows: [] },
+      { match: "GROUP BY job", rows: [{ job: "compute-dews", started_at: now - 240, degraded_runs_since_ok: 0 }] },
       { match: "FROM yield_data", rows: [], first: { age: 60 } },
     ]);
 
@@ -679,7 +776,7 @@ describe("buildCacheStatuses sentinel validation", () => {
     expect(caches.dews).toMatchObject({ degraded: false, healthy: true });
   });
 
-  it("degrades a sentinel-fresh cache whose producer degraded since its last clean run", async () => {
+  it("degrades a sentinel-fresh cache whose confirmed publication has degraded inputs", async () => {
     const now = 1_800_000_000;
     const db = mockD1([
       {
@@ -697,7 +794,7 @@ describe("buildCacheStatuses sentinel validation", () => {
       },
       {
         match: "GROUP BY job",
-        rows: [{ job: "sync-yield-data", started_at: now - 7_200, degraded_runs_since_ok: 3, latest_reason: "yield-publication-transaction-failed" }],
+        rows: [{ job: "sync-yield-data", started_at: now - 60, degraded_runs_since_ok: 3, latest_reason: "yield-source-coverage-degraded" }],
       },
     ]);
 
@@ -707,7 +804,7 @@ describe("buildCacheStatuses sentinel validation", () => {
       ageSeconds: 60,
       freshnessSource: "freshness-sentinel",
       degraded: true,
-      degradedReason: "yield-publication-transaction-failed",
+      degradedReason: "yield-source-coverage-degraded",
       streakDegradedRuns: 3,
       healthy: false,
     });
@@ -1004,7 +1101,11 @@ describe("buildCacheStatuses", () => {
           sentinelRow("dews", now - 3_473),
         ],
       },
-      { match: "GROUP BY job", rows: [] },
+      { match: "GROUP BY job", rows: [
+        { job: "compute-dews", started_at: now - 3_473, degraded_runs_since_ok: 0 },
+        { job: "sync-dex-liquidity", started_at: now - 120, degraded_runs_since_ok: 0 },
+        { job: "sync-yield-data", started_at: now - 7_400, degraded_runs_since_ok: 0 },
+      ] },
     ]);
 
     const { caches } = await buildCacheStatuses(db, now);

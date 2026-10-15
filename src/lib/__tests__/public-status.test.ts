@@ -30,7 +30,7 @@ describe("public status helpers", () => {
     expect(issues[0]).toMatchObject({ kind, publicImpacting });
   });
 
-  it.each([30_000_000, 60_000_000])("keeps publication UI impact aligned for a last-known cap of %s", (cap) => {
+  it.each([30_000_000, 96_534_823.01, 500_000_000])("keeps publication UI impact aligned for a last-known cap of %s", (cap) => {
     const health: HealthResponse = {
       ...BASE_HEALTH,
       warnings: ["stablecoin-publication-incomplete:hbd-hive"],
@@ -44,7 +44,7 @@ describe("public status helpers", () => {
       })]),
     };
     expect(getImpactedPublicSurfaces(health).some((surface) => surface.id === "stablecoin-publication"))
-      .toBe(cap === 60_000_000);
+      .toBe(cap === 500_000_000);
     const presentation = getPublicHealthWarningPresentation(health.warnings[0]!, health);
     expect(presentation.detail).toContain("hbd-hive");
     expect(presentation.detail).not.toBe(health.warnings[0]);

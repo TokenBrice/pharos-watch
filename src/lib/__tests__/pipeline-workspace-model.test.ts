@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { D1UsageSummary, StatusResponse } from "@shared/types";
+import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 import {
   buildPipelineIntegrityModel,
   buildPipelineModeSummaries,
@@ -209,6 +210,48 @@ describe("pipeline storage capacity", () => {
 });
 
 describe("pipeline coverage summaries", () => {
+  it.each([
+    ["healthy", 0, "watch"],
+    ["degraded", 0, "watch"],
+    ["stale", 0, "critical"],
+    ["healthy", 1, "critical"],
+  ] as const)("uses aggregate reserve health %s and %i conservation mismatches", (status, criticalCount, severity) => {
+    const base = makeHealthyStatusResponse();
+    const data = degraded(base, {
+      reserveComposition: makeReserveComposition({ status, errorCoins: 2, degradedCoins: 29 }),
+      reserveDrift: [],
+      mintBurnReconciliation: { checkedAt: base.timestamp, criticalCount, rows: [] },
+    });
+    expect(buildPipelineModeSummaries(data).find((mode) => mode.id === "reserves"))
+      .toMatchObject({ severity, issueCount: 31 + criticalCount });
+  });
+
+  it.each([
+    ["info", "watch"], ["warning", "critical"], [null, "critical"],
+  ] as const)("uses the publication evaluator's %s verdict for an isolated missing listing", (severity, state) => {
+    const base = makeHealthyStatusResponse();
+    const data = degraded(base, {
+      dataQuality: {
+        ...base.dataQuality,
+        stablecoinPublication: {
+          status: "incomplete", expectedActiveCount: 396, presentActiveCount: 395,
+          waivedActiveCount: 0, waivedActiveIds: [], expiredWaiverIds: [],
+          missingActiveIds: ["pyusdx-moonpay"], observedAt: base.timestamp,
+        },
+      },
+      causes: {
+        overall: [], availability: [],
+        dataQuality: severity ? [{
+          code: "stablecoin_publication_incomplete", layer: "data-quality", severity,
+          message: "Stablecoin publication is missing pyusdx-moonpay.",
+        }] : [],
+      },
+    });
+    expect(buildPipelineIntegrityModel(data).controlRows[0]).toMatchObject({
+      state, currentValue: "395/396", detail: "1 missing; 0 waived; 0 expired waivers.",
+    });
+  });
+
   it.each([false, true])("preserves complete missing-evidence Integrity rows (inventory: %s)", (hasInventory) => {
     const base = makeHealthyStatusResponse();
     const { stablecoinPublication: _stablecoinPublication, repairDebt: _repairDebt, ...dataQuality } = base.dataQuality;
