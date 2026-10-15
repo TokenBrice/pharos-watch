@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import {
-  buildSafetyScoreV9AcceptedBaselineProjection, buildSafetyScoreV9LenderCollateralProjection,
+  buildSafetyScoreV9AcceptedBaselineProjection, buildSafetyScoreV9AcceptedProjections, buildSafetyScoreV9LenderCollateralProjection,
   parseSafetyScoreV9AcceptedBaselineProjection, parseSafetyScoreV9LenderCollateralProjection,
   serializeSafetyScoreV9AcceptedBaselineProjection, serializeSafetyScoreV9LenderCollateralProjection,
   SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES, SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES,
@@ -118,6 +118,33 @@ describe("Safety Score V9 accepted projection writers", () => {
       const invalid = structuredClone(projection);
       mutate(invalid);
       expect(() => serializeSafetyScoreV9AcceptedBaselineProjection(invalid)).toThrow();
+    }
+  });
+
+  it("rejects a lender inventory larger than the accepted card count or keyed by another asset", () => {
+    const projection = buildSafetyScoreV9LenderCollateralProjection(makeWorkerSafetyScoreV9Publication());
+    const [assetId, row] = Object.entries(projection.byAssetId)[0]!;
+    const overCount = structuredClone(projection);
+    overCount.expectedCount = Object.keys(overCount.byAssetId).length - 1;
+    expect(() => serializeSafetyScoreV9LenderCollateralProjection(overCount)).toThrow(/exceeds accepted card count/);
+    const rekeyed = structuredClone(projection);
+    delete rekeyed.byAssetId[assetId];
+    rekeyed.byAssetId[`${assetId}-other`] = row;
+    expect(() => serializeSafetyScoreV9LenderCollateralProjection(rekeyed)).toThrow(/key must match asset ID/);
+  });
+
+  it("warns once a projection passes half its byte cap, before the fail-closed cap", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      buildSafetyScoreV9AcceptedProjections(makeWorkerSafetyScoreV9Publication());
+      expect(warn).not.toHaveBeenCalled();
+      const cards = Array.from({ length: 1_600 }, (_, index) => makeWorkerV9Card({ id: `asset-${String(index).padStart(4, "0")}` }));
+      const { baseline } = buildSafetyScoreV9AcceptedProjections(makeWorkerSafetyScoreV9Publication({ cards }));
+      expect(Buffer.byteLength(baseline) * 2).toBeGreaterThan(SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]![0])).toContain("safety_score_v9_accepted_projection_size_warning");
+    } finally {
+      warn.mockRestore();
     }
   });
 });
