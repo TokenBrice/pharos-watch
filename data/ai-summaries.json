@@ -125,9 +125,17 @@
     "updatedAt": "2026-10-02"
   },
   "jpydf-deltaforesight": {
-    "title": "Yen-targeted borrowing protocol before mainnet",
-    "text": "DeltaForesight announced JPYdf on September 25, 2026 as a yen-targeted token for borrowing against cryptoassets and stablecoins in the JPY DeFi protocol. The planned design uses overcollateralized smart-contract issuance and liquidation, while explicitly providing no yen monetary claim or yen redemption right. A September 29 roadmap announcement adds plans for related Fusion by IPOR vaults after mainnet, with chains and strategies still undecided. Mainnet timing, eligible collateral, liquidation parameters and holder exit terms remain unpublished.",
-    "updatedAt": "2026-10-02"
+    "title": "Immutable yen CDP on a USDC-heavy, multisig-run vault layer",
+    "text": "JPYdf is a yen-targeted token borrowed against wstETH or USDC through JPY DeFi, a Liquity v2 fork that DeltaForesight helped build and launched on Ethereum on October 15, 2026. Pharos still lists it as upcoming because neither DefiLlama nor CoinGecko prices it. The token and borrowing core cannot be upgraded, and no function freezes a holder's balance. Control sits one layer down: the dToken vaults holding collateral are upgradeable and pausable, and governance can recognize losses and swap oracle sources. All three governance, operator and guardian Safes are 2-of-3 with the same signers. USDC made up about 71% of collateral value on launch day, so most backing inherits Circle's freeze power. Redemption pays out in dTokens worth ¥1 before fees, with no claim to yen and no entity committed to buy JPYdf back at face value.",
+    "updatedAt": "2026-10-15",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-15",
+    "sources": [
+      { "label": "DeltaForesight: JPY DeFi mainnet launch", "url": "https://deltaforesight.com/en/news/jpy-defi-mainnet-20261015/" },
+      { "label": "JPY DeFi documentation", "url": "https://jpydf.gitbook.io/jpy-defi" },
+      { "label": "JPYdf Ethereum token verified source", "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code" }
+    ]
   },
   "kpkusdcprime-kpk": {
     "title": "Blue-chip collateral, variable lending shares",

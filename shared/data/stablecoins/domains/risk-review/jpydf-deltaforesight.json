@@ -1,14 +1,16 @@
 {
   "id": "jpydf-deltaforesight",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": "inherited",
     "sources": [
-      { "label": "DeltaForesight development announcement", "url": "https://prtimes.jp/main/html/rd/p/000000001.000190693.html" },
-      { "label": "DeltaForesight product design", "url": "https://deltaforesight.com/products/" },
-      { "label": "DeltaForesight Fusion roadmap", "url": "https://deltaforesight.com/en/news/fusion-vaults-20260929/" }
+      { "label": "JPYdf Ethereum token verified source", "url": "https://etherscan.io/address/0xb122f4a154f84708407213d6a715181180012f45#code" },
+      { "label": "JPY DeFi: What is JPYdf (scope of permissions)", "url": "https://jpydf.gitbook.io/jpy-defi" },
+      { "label": "JPY DeFi: Collateral Assets", "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/collateral-assets.md" },
+      { "label": "JPY DeFi: dToken", "url": "https://jpydf.gitbook.io/jpy-defi/collateral-and-pricing/dtoken.md" },
+      { "label": "DeltaForesight: JPY DeFi mainnet launch", "url": "https://deltaforesight.com/en/news/jpy-defi-mainnet-20261015/" }
     ],
-    "evidence": "The developer describes smart-contract issue and burn rules, cryptoasset and stablecoin collateral, and ongoing legal and operational review before mainnet. The reviewed sources disclose no JPYdf contract or direct freeze, blacklist or seizure authority. DeFi branding does not prove the absence of such controls. Possible stablecoin collateral also leaves indirect freeze exposure unresolved because assets and weights are unpublished. The possible verdict records uncertainty, not a confirmed freeze function.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "Verified source for the immutable Ethereum token 0xb122f4a154f84708407213d6a715181180012f45 restricts minting and burning to registered branch BorrowerOperations and ActivePool contracts and exposes no holder blacklist, freeze, seizure or global transfer pause; owner() returned the zero address and the EIP-1967 implementation slot was empty at block 26196851 (October 15 2026). The protocol documentation states the token and Liquity v2 core cannot freeze a particular user's JPYdf. The inherited verdict reflects backing rather than a direct holder control: at the same block the dUSDC branch held 586,394 USDC against 79.39 wstETH in the dwstETH branch, so freezable USDC made up about 71% of collateral value at the oracle's last good prices. The governance-upgradeable and pausable dToken vault layer can also halt collateral exits during an impairment.",
+    "reviewer": "Claude pre-launch update 2026-10-15",
+    "reviewedAt": "2026-10-15"
   }
 }
