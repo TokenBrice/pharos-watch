@@ -128,11 +128,11 @@ export const STATUS_MISSING_PRICE_THRESHOLDS = {
   generationsElevated: MISSING_PRICE_GENERATIONS_PER_DAY,
   generationsCritical: 7 * MISSING_PRICE_GENERATIONS_PER_DAY,
   /**
-   * A long-running gap degrades status only for an asset at least this large.
+   * A long-running gap degrades the service only for an asset at least this large.
    * Smaller long-running gaps stay named warnings: one thin asset without a
    * price is a catalog follow-up, not an app-wide degradation.
    */
-  durationMaterialMarketCapUsd: 100_000_000,
+  durationMaterialMarketCapUsd: 1_000_000_000,
 } as const;
 
 /** Three isolated minor omissions tolerate upstream tail churn; four is a breadth incident. */

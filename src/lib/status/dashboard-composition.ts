@@ -274,7 +274,7 @@ function buildDashboardSections({ data, browserProbeSummary, cronGroups, running
         : browserProbeSummary.failCount > 0
           ? verdictValue("watch", browserProbeSummary.failCount)
           : verdictValue("ok")),
-      summary: `${data.summary.availabilityImpactingCronErrors ?? "unavailable"} impacting cron errors, ${browserProbeSummary ? `${browserProbeSummary.failCount} failing browser probes` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio == null ? "unavailable" : `${data.summary.worstCacheRatio.toFixed(2)}x`}`,
+      summary: `${data.summary.availabilityImpactingCronErrors ?? "unavailable"} impacting cron errors, ${browserProbeSummary ? `browser probes: ${browserProbeSummary.degradedCount} degraded, ${browserProbeSummary.staleCount} stale` : "browser probe result unknown"}, worst cache ${data.summary.worstCacheRatio == null ? "unavailable" : `${data.summary.worstCacheRatio.toFixed(2)}x`}`,
     },
     {
       id: "crons", title: "Crons",

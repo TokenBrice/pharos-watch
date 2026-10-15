@@ -108,6 +108,9 @@ describe("status dashboard model", () => {
       status: "degraded",
       updatedAt: 10,
     });
+    const reliability = buildModel(BASE_STATUS, { probes }).attentionSections.find((section) => section.id === "reliability");
+    expect(reliability?.summary).toContain("browser probes: 1 degraded, 0 stale");
+    expect(reliability?.summary).not.toContain("failing browser probes");
   });
 
   it("uses the oldest required query timestamp and the shared polling tolerance as the freshness floor", () => {

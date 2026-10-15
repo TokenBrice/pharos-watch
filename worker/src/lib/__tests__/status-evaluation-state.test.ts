@@ -715,7 +715,8 @@ describe("status cause text", () => {
 
   it.each([
     [30_000_000, "healthy", "info"],
-    [60_000_000, "degraded", "warning"],
+    [96_534_823.01, "healthy", "info"],
+    [500_000_000, "degraded", "warning"],
   ] as const)("aligns publication cause and floor for retained cap %s", (cap, expectedStatus, severity) => {
     const nowSec = 1_790_000_000;
     const evaluated = evaluateStablecoinActivePriceCoverage([], ["missing"], {

@@ -63,7 +63,7 @@ export interface CacheFreshnessDiagnostic {
 export interface CacheQualityVerdict {
   degraded: boolean | null;
   reason: string | null;
-  /** Producer runs that degraded/errored since its last clean run; `null` when unreadable (rule R1). */
+  /** Degraded publications since the last clean publication; `null` when unreadable (rule R1). */
   streakDegradedRuns: number | null;
 }
 
@@ -88,6 +88,7 @@ interface CacheRow {
 
 interface ProducerCronObservation {
   lastPublishedAt: number | null;
+  lastPublishedGenerationId: string | null;
   degradedRunsSinceOk: number | null;
   latestReason: string | null;
 }
@@ -179,7 +180,7 @@ function buildSentinelValidationWarning(
 /**
  * Single per-request producer-history read behind a typed `{value, error}`
  * boundary (rule R2): it carries both the cron fallback timestamp and the
- * consecutive-degraded-run streak used as the lane's quality input. A failed
+ * consecutive-degraded-publication streak used as the lane's quality input. A failed
  * read yields `value: null` so callers publish "unknown", never zero.
  */
 async function readProducerCronHistory(
@@ -197,6 +198,7 @@ async function readProducerCronHistory(
       .prepare(
         `WITH producer_runs AS (
            SELECT job, started_at, status, degraded_reason, ${CONFIRMED_CRON_OUTPUT_AT_SQL} AS output_at,
+                  CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.persistence.generationId') END AS generation_id,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality.degraded') ELSE 0 END AS quality_degraded,
                   CASE WHEN json_valid(metadata) THEN
                     COALESCE(json_extract(metadata, '$.quality.reasons[0]'), json_extract(metadata, '$.quality.reason'))
@@ -205,23 +207,28 @@ async function readProducerCronHistory(
          )
          SELECT job,
                 MAX(output_at) as started_at,
+                (SELECT recent.generation_id FROM producer_runs recent
+                 WHERE recent.job = producer_runs.job AND recent.output_at IS NOT NULL
+                 ORDER BY recent.output_at DESC, recent.started_at DESC LIMIT 1) as generation_id,
                 SUM(CASE
-                      WHEN (status IN ('degraded', 'error') OR quality_degraded = 1)
-                        AND started_at > COALESCE((
-                          SELECT MAX(clean_run.started_at) FROM producer_runs clean_run
+                      WHEN output_at IS NOT NULL AND (status = 'degraded' OR quality_degraded = 1)
+                        AND output_at > COALESCE((
+                          SELECT MAX(clean_run.output_at) FROM producer_runs clean_run
                           WHERE clean_run.job = producer_runs.job AND clean_run.status = 'ok'
+                            AND clean_run.output_at IS NOT NULL
                             AND COALESCE(clean_run.quality_degraded, 0) != 1), 0)
                       THEN 1 ELSE 0 END) as degraded_runs_since_ok,
                 (SELECT COALESCE(recent.quality_reason, recent.degraded_reason)
                  FROM producer_runs recent
                  WHERE recent.job = producer_runs.job
-                   AND (recent.status IN ('degraded', 'error') OR recent.quality_degraded = 1)
-                 ORDER BY recent.started_at DESC LIMIT 1) as latest_reason
+                   AND recent.output_at IS NOT NULL
+                   AND (recent.status = 'degraded' OR recent.quality_degraded = 1)
+                 ORDER BY recent.output_at DESC, recent.started_at DESC LIMIT 1) as latest_reason
          FROM producer_runs
          GROUP BY job`,
       )
       .bind(...inClause.binds)
-      .all<{ job: string; started_at: number | null; degraded_runs_since_ok: number | null; latest_reason: string | null }>();
+      .all<{ job: string; started_at: number | null; generation_id: string | null; degraded_runs_since_ok: number | null; latest_reason: string | null }>();
     const keyByJob = new Map(
       sentinelBackedCacheKeys.map((key) => [getFreshnessSentinelProducerJob(key), key]),
     );
@@ -231,6 +238,7 @@ async function readProducerCronHistory(
       if (!key) continue;
       value.set(key, {
         lastPublishedAt: row.started_at ?? null,
+        lastPublishedGenerationId: row.generation_id ?? null,
         degradedRunsSinceOk: row.degraded_runs_since_ok ?? null,
         latestReason: row.latest_reason ?? null,
       });
@@ -244,6 +252,8 @@ async function readProducerCronHistory(
 
 function buildCacheQuality(params: {
   freshnessSource: CacheFreshnessDiagnostic["freshnessSource"] | null;
+  generationId: string | null;
+  publishedAt: number | null;
   sentinelValidationReason: FreshnessSentinelValidationReason | undefined;
   cacheLookupFailed: boolean;
   observation: ProducerCronObservation | undefined;
@@ -270,6 +280,12 @@ function buildCacheQuality(params: {
     // machine-readable reason instead of letting a valid sentinel launder the
     // failed read into a clean verdict (rules R2/R4).
     return { degraded: null, reason: "producer-history-unreadable", streakDegradedRuns: null };
+  }
+  if (params.observation?.lastPublishedAt == null || params.publishedAt == null
+    || params.observation.lastPublishedAt < params.publishedAt
+    || (params.observation.lastPublishedGenerationId != null
+      && params.observation.lastPublishedGenerationId !== params.generationId)) {
+    return { degraded: null, reason: "producer-publication-unconfirmed", streakDegradedRuns: null };
   }
   if (streakDegradedRuns != null && streakDegradedRuns > 0) {
     return { degraded: true, reason: params.observation?.latestReason ?? "producer-quality-reason-unavailable", streakDegradedRuns };
@@ -318,6 +334,8 @@ async function resolveSentinelBackedFreshness(params: {
     ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
     quality: buildCacheQuality({
       freshnessSource,
+      generationId: sentinelValidation?.payload?.generationId ?? null,
+      publishedAt: sentinelValidation?.payload?.updatedAt ?? null,
       sentinelValidationReason: sentinelValidation?.reason,
       cacheLookupFailed: params.cacheLookupFailed,
       observation: params.cronHistory.value?.get(params.key),

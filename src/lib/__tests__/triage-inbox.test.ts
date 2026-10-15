@@ -112,7 +112,7 @@ describe("buildTriageInbox", () => {
     expect(inbox.act[0]!.subject).not.toMatch(/cron job\(s\)/);
   });
 
-  it("promotes an admin warning that degraded the state repeatedly to act, with recurrence and since", () => {
+  it("keeps repeated admin warnings on watch while preserving recurrence and since", () => {
     const timeline = [
       transition(NOW - 600, [adminWarning]),
       transition(NOW - 4 * 3600, [adminWarning], "recover"),
@@ -123,11 +123,11 @@ describe("buildTriageInbox", () => {
     const data = withCauses([adminWarning], timeline);
     const inbox = buildTriageInbox(normalizeStatusIssues(data.causes), data);
 
-    expect(inbox.act).toHaveLength(1);
-    expect(inbox.act[0]!.recurrence).toBe(3);
-    expect(formatRecurrence(inbox.act[0]!.recurrence)).toBe("3× in 48h");
-    expect(inbox.act[0]!.sinceSec).toBe(NOW - 60 * 3600);
-    expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE).text).toMatch(/^Act on 1: .+\.$/);
+    expect(inbox.act).toHaveLength(0);
+    expect(inbox.watch[0]!.recurrence).toBe(3);
+    expect(formatRecurrence(inbox.watch[0]!.recurrence)).toBe("3× in 48h");
+    expect(inbox.watch[0]!.sinceSec).toBe(NOW - 60 * 3600);
+    expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE).verdict).toBe("watch");
   });
 
   it("reports nothing to do on a clean status and refuses to answer on stale evidence", () => {
@@ -138,6 +138,29 @@ describe("buildTriageInbox", () => {
       "unavailable",
     );
   });
+
+  it.each([
+    "active_price_coverage_incomplete", "ddr_repair_debt_present",
+    "reserve_sync_write_uncertain", "reserve_sync_budget_truncated",
+  ])("does not promote incidental %s warnings to act", (code) => {
+    const gap: StatusCause = {
+      code, layer: "data-quality", severity: "warning", message: "An operator diagnostic remains open.",
+    };
+    const data = withCauses([gap], [600, 1200, 1800].map((age) =>
+      transition(NOW - age, [gap, cronCause]),
+    ));
+    const inbox = buildTriageInbox(normalizeStatusIssues(data.causes), data);
+    expect(inbox.act).toHaveLength(0);
+    expect(inbox.watch[0]).toMatchObject({ verdict: "watch", recurrence: 3 });
+  });
+
+  it.each(["active_price_coverage_duration_degraded", "active_price_coverage_unknown"])(
+    "keeps %s actionable without recurrence",
+    (code) => {
+      const data = withCauses([{ code, layer: "data-quality", severity: "warning", message: code }]);
+      expect(buildTriageInbox(normalizeStatusIssues(data.causes), data).act).toHaveLength(1);
+    },
+  );
 });
 
 describe("describeRecoveryHold", () => {
@@ -174,5 +197,8 @@ describe("describeSelfCheck", () => {
     );
     expect(describeSelfCheck({ ...probe, status: "healthy", p95LatencyMs: 80 }, null)).toBe("All 17 probes pass");
     expect(describeSelfCheck({ ...probe, failCount: 2, passCount: 15 }, null)).toBe("2 of 17 probes failing");
+    expect(describeSelfCheck({ ...probe, passCount: 14, p95LatencyMs: 80 }, null)).toBe(
+      "14 transport passes; no transport failures (17 total samples); aggregate reports degraded",
+    );
   });
 });
