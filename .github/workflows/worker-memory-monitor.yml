@@ -81,7 +81,12 @@ jobs:
           try {
             const report = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/worker-memory/report.json`, 'utf8'));
             if (report.schemaVersion === 1 && report.verdict?.heavyKillObserved === true) {
-              console.error('::error::heavy-exceeded-memory-observed; inspect retained lane and candidate-job evidence');
+              const safe = value => String(value).replace(/[^\x20-\x7e]/g, ' ').replace(/::/g, ': :').slice(0, 160).replace(/%/g, '%25');
+              const lanes = report.exceededMemory.groups
+                .filter(row => row.workerRole === 'heavy' && Date.parse(row.adaptive.dimensions.datetime) >= Date.parse(report.verdict.alertFrom) && Date.parse(row.adaptive.dimensions.datetime) < Date.parse(report.verdict.alertTo))
+                .slice(0, 5)
+                .map(row => `lane=${safe(row.lane?.cron ?? 'unattributed')} schedule=${safe(row.lane?.scheduleKey ?? 'unattributed')} correlation=${safe(row.correlation)} requests=${safe(row.adaptive.sum.requests)}`);
+              console.error(`::error::heavy-exceeded-memory-observed; ${lanes.join('; ') || 'lane=unattributed'}; inspect retained candidate-job evidence`);
               process.exitCode = 1;
             }
           } catch { /* Missing evidence belongs to the separate collection incident. */ }
@@ -98,10 +103,14 @@ jobs:
             const root = `${process.env.RUNNER_TEMP}/worker-memory`;
             const report = JSON.parse(readFileSync(`${root}/report.json`, 'utf8'));
             const verdict = report.verdict;
-            if (report.schemaVersion !== 1 || typeof verdict?.heavyKillObserved !== 'boolean' || typeof verdict?.collectionIncomplete !== 'boolean' || ![0, 1].includes(verdict.exitCode)
+            if (report.schemaVersion !== 1 || typeof verdict?.heavyKillObserved !== 'boolean' || typeof verdict?.collectionIncomplete !== 'boolean' || typeof verdict?.freshnessFailed !== 'boolean' || ![0, 1].includes(verdict.exitCode)
                 || !['report.json', 'report.md', 'samples.ndjson', 'exceeded-memory.ndjson', 'queries.json'].every(file => existsSync(`${root}/${file}`))) throw new Error();
             if (verdict.collectionIncomplete || process.env.COLLECT_OUTCOME !== (verdict.exitCode === 0 ? 'success' : 'failure')) {
               console.error('::error::collection-incomplete; inspect retained source coverage and machine reasons');
+              process.exitCode = 1;
+            }
+            if (verdict.freshnessFailed) {
+              console.error('::error::coverage-stale; default-window evidence exceeds the coverage-lag budget');
               process.exitCode = 1;
             }
           } catch {

@@ -34,16 +34,26 @@ const emptyFetch = () => injectedFetch((query) => response(query.includes("worke
 const options = () => ({ from, to, now, token: "test-only-token", accountId: "test-account", wait: async () => {}, clock: () => now.getTime() });
 
 // Parse through the collector boundary so tests use the same nullable row shape.
-async function capture(rows: unknown[], scheduledRows: unknown[] = [scheduled]) {
+async function capture(rows: unknown[], scheduledRows: unknown[] = [scheduled], includeBroad = false) {
   return collectWorkerMemory({ ...options(), fetchImpl: injectedFetch((query, variables) => {
     const isScheduled = query.includes("workersInvocationsScheduled");
-    const selected = isScheduled ? scheduledRows : query.includes('status:"exceededMemory"') ? rows : [];
+    const selected = isScheduled ? scheduledRows : query.includes('status:"exceededMemory"') || (includeBroad && query.includes("datetime scriptVersion")) ? rows : [];
     return response(isScheduled ? "workersInvocationsScheduled" : "workersInvocationsAdaptive", selected.filter((value) => {
       const row = value as { datetime?: string; dimensions?: { datetime: string; scriptName: string } };
       const datetime = row.datetime ?? row.dimensions?.datetime;
       return (!row.dimensions || row.dimensions.scriptName === variables.s) && (!isScheduled || variables.s === "stablecoin-heavy") && datetime !== undefined && Date.parse(datetime) >= Date.parse(variables.f) && Date.parse(datetime) < Date.parse(variables.t);
     }));
   }) });
+}
+
+function runWorkflowVerdict(name: string, runnerTemp: string, collectOutcome: "success" | "failure") {
+  const workflow = parseYaml(readFileSync(".github/workflows/worker-memory-monitor.yml", "utf8"));
+  const run = workflow.jobs.memory.steps.find((step: { name?: string }) => step.name === name).run as string;
+  const script = run.match(/<<'NODE'\n([\s\S]*?)\nNODE(?:\n|$)/)?.[1];
+  if (!script) throw new Error(`Missing Node verdict script: ${name}`);
+  return spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+    env: { ...process.env, RUNNER_TEMP: runnerTemp, COLLECT_OUTCOME: collectOutcome }, encoding: "utf8",
+  });
 }
 
 describe("sampled Worker memory correlation", () => {
@@ -189,14 +199,29 @@ describe("bounded Analytics collection and unavailable evidence", () => {
       expect(JSON.stringify(report)).not.toContain("secret provider detail");
     }
   });
-  it("uses exact trailing-window and freshness boundaries without making historical events fresh", async () => {
-    const report = await capture([adaptive()]);
+  it.each(["default", "explicit"] as const)("labels stale %s coverage separately from collection completeness", async (mode) => {
+    const report = await collectWorkerMemory({ ...options(), from: mode === "default" ? undefined : from, to: mode === "default" ? undefined : to, fetchImpl: emptyFetch() });
+    expect(report.window.mode).toBe(mode);
     const boundary = new Date(Date.parse(report.window.to) + 8100_000);
-    expect(evaluateMemoryObservation({ ...report, generatedAt: boundary.toISOString() }, boundary).collectionIncomplete).toBe(false);
-    expect(evaluateMemoryObservation({ ...report, generatedAt: boundary.toISOString() }, new Date(boundary.getTime() + 1)).reasons).toContain("coverage-stale");
-    const age = new Date(Date.parse(report.generatedAt) + 7200_000);
-    expect(evaluateMemoryObservation({ ...report, window: { ...report.window, to: age.toISOString() } }, age).reasons).not.toContain("report-stale");
-    expect(evaluateMemoryObservation(report, new Date(age.getTime() + 1)).reasons).toContain("report-stale");
+    expect(evaluateMemoryObservation(report, boundary)).toMatchObject({ collectionIncomplete: false, freshnessFailed: false, exitCode: 0 });
+    const stale = evaluateMemoryObservation(report, new Date(boundary.getTime() + 1));
+    expect(stale.reasons).toContain("coverage-stale");
+    expect(stale).toMatchObject({ collectionIncomplete: false, freshnessFailed: mode === "default", exitCode: mode === "default" ? 1 : 0 });
+  });
+  it("reports a complete historical forensic window as stale without failing it", async () => {
+    const report = await collectWorkerMemory({ ...options(), now: new Date("2026-10-16T00:15:00Z"), fetchImpl: emptyFetch() });
+    expect(report.freshness).toMatchObject({ status: "stale", reason: "coverage-stale" });
+    expect(report.verdict).toMatchObject({ status: "no-observed-kills", reasons: ["coverage-stale"], collectionIncomplete: false, freshnessFailed: false, exitCode: 0 });
+    expect(report.policy).not.toHaveProperty("maxReportAgeSec");
+    expect(report.freshness).not.toHaveProperty("reportAgeSec");
+    expect(renderWorkerMemoryMarkdown(report)).not.toContain("7200");
+    const killReport = await capture([adaptive()]);
+    expect(evaluateMemoryObservation(killReport, new Date("2026-10-16T00:15:00Z"))).toMatchObject({
+      heavyKillObserved: true, collectionIncomplete: false, freshnessFailed: false, exitCode: 1,
+    });
+  });
+  it("uses exact trailing-window boundaries even for historical observations", async () => {
+    const report = await capture([adaptive()]);
     const event = Date.parse(scheduled.datetime);
     expect(evaluateMemoryObservation({ ...report, window: { ...report.window, to: new Date(event + 86400_000).toISOString() } }, now).heavyKillObserved).toBe(true);
     expect(evaluateMemoryObservation({ ...report, window: { ...report.window, to: new Date(event + 86400_000 + 1).toISOString() } }, now).heavyKillObserved).toBe(false);
@@ -207,6 +232,8 @@ describe("memory operator and evidence-retaining workflow", () => {
   it("validates paired bounded timezone-qualified arguments before effects", () => {
     expect(parseWorkerMemoryArgs(["--help"], now)).toEqual({ help: true });
     expect(resolveWorkerMemoryWindow(undefined, undefined, now)).toEqual({ from: "2026-10-14T00:00:00.000Z", to: "2026-10-15T00:00:00.000Z" });
+    expect(parseWorkerMemoryArgs([], now)).toMatchObject({ help: false, from: undefined, to: undefined });
+    expect(parseWorkerMemoryArgs(["--from", from, "--to", to], now)).toMatchObject({ from, to });
     for (const argv of [["--account-id", "x"], ["--from", from], ["--from", from, "--from", from, "--to", to], ["--from", "2026-10-14", "--to", to], ["--from", to, "--to", from], ["--from", "2026-10-12T00:00:00Z", "--to", to]]) expect(() => parseWorkerMemoryArgs(argv, now)).toThrow();
   });
   it("exits 1 after retaining reports on runtime unavailability and exits 2 for usage", async () => {
@@ -221,6 +248,64 @@ describe("memory operator and evidence-retaining workflow", () => {
       const invalid = spawnSync(process.execPath, ["--import", "tsx", resolve("scripts/maintenance/monitor-worker-memory.ts"), "--unknown"], { env, encoding: "utf8" });
       expect(invalid.status).toBe(2);
     } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+  it("stores lane descriptors once in report.json, not per NDJSON row", async () => {
+    const report = await capture([adaptive()], [scheduled], true);
+    expect(report.samples).toHaveLength(1);
+    const scheduleKey = report.samples[0]!.lane!.scheduleKey;
+    expect(report.laneDescriptors[scheduleKey]?.map((descriptor) => descriptor.job)).toContain("prepare-safety-score-v9-input");
+    const dir = await mkdtemp(join(tmpdir(), "worker-memory-dictionary-"));
+    try {
+      await writeWorkerMemoryReport(report, dir);
+      const saved = JSON.parse(await readFile(join(dir, "report.json"), "utf8"));
+      expect(saved.laneDescriptors[scheduleKey]).toEqual(report.laneDescriptors[scheduleKey]);
+      for (const file of ["samples.ndjson", "exceeded-memory.ndjson"]) {
+        const rows = (await readFile(join(dir, file), "utf8")).trim().split("\n").map((line) => JSON.parse(line));
+        expect(rows).toHaveLength(1);
+        expect(rows[0].lane).toMatchObject({ cron: "16 * * * *", scheduleKey });
+        expect(rows[0].lane).not.toHaveProperty("descriptors");
+        expect(rows[0].lane.candidateJobChains.flat()).toContain("prepare-safety-score-v9-input");
+      }
+      expect(renderWorkerMemoryMarkdown(report)).toContain("16 * * * * / halfHourlyChartsOffset");
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+  it.each(["default", "explicit"] as const)("gates stale %s coverage in the workflow without calling it incomplete", async (mode) => {
+    const args = parseWorkerMemoryArgs(mode === "default" ? [] : ["--from", from, "--to", to], now);
+    const report = await collectWorkerMemory({ ...options(), ...args, fetchImpl: emptyFetch() });
+    report.verdict = evaluateMemoryObservation(report, new Date(Date.parse(report.window.to) + 8100_001));
+    const root = await mkdtemp(join(tmpdir(), "worker-memory-verdict-"));
+    try {
+      await writeWorkerMemoryReport(report, join(root, "worker-memory"));
+      const result = runWorkflowVerdict("Collection incomplete", root, mode === "default" ? "failure" : "success");
+      expect(result.status, result.stderr).toBe(mode === "default" ? 1 : 0);
+      expect(result.stderr).not.toContain("collection-incomplete");
+      if (mode === "default") expect(result.stderr).toContain("::error::coverage-stale;");
+      else expect(result.stderr).toBe("");
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+  it("includes only alert-window heavy lanes in the heavy-kill annotation", async () => {
+    const report = await capture([adaptive()]);
+    const kill = report.exceededMemory.groups[0]!;
+    report.exceededMemory.groups.unshift(
+      { ...kill, workerRole: "public", lane: { ...kill.lane!, cron: "public-lane" } },
+      { ...kill, adaptive: { ...kill.adaptive, dimensions: { ...kill.adaptive.dimensions, datetime: "2026-10-13T00:00:00Z" } }, lane: { ...kill.lane!, cron: "old-lane" } },
+    );
+    const root = await mkdtemp(join(tmpdir(), "worker-memory-annotation-"));
+    try {
+      await writeWorkerMemoryReport(report, join(root, "worker-memory"));
+      const result = runWorkflowVerdict("Heavy kill observed", root, "failure");
+      expect(result.status, result.stderr).toBe(1);
+      expect(result.stderr).toContain("lane=16 * * * * schedule=halfHourlyChartsOffset correlation=unique-singleton requests=1");
+      expect(result.stderr).not.toContain("public-lane");
+      expect(result.stderr).not.toContain("old-lane");
+      const collection = runWorkflowVerdict("Collection incomplete", root, "failure");
+      expect(collection.status, collection.stderr).toBe(0);
+      kill.lane!.cron = "bad::lane\n%0A::error::injected";
+      await writeWorkerMemoryReport(report, join(root, "worker-memory"));
+      const sanitized = runWorkflowVerdict("Heavy kill observed", root, "failure");
+      expect(sanitized.stderr).toContain("lane=bad: :lane %250A: :error: :injected");
+      expect(sanitized.stderr.match(/::error::/g)).toHaveLength(1);
+    } finally { await rm(root, { recursive: true, force: true }); }
   });
   it("uploads retained evidence before distinct always-running incident verdicts", () => {
     const workflow = parseYaml(readFileSync(".github/workflows/worker-memory-monitor.yml", "utf8"));

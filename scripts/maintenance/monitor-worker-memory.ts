@@ -10,7 +10,7 @@ import { buildScheduledInvocationQuery } from "./cron-delivery.mjs";
 
 export const WORKER_MEMORY_TELEMETRY_POLICY = {
   schemaVersion: 1, scheduleIntervalSec: 3600, ingestionLagAllowanceSec: 900,
-  maxReportAgeSec: 7200, maxCoverageLagSec: 8100, alertWindowSec: 86400,
+  maxCoverageLagSec: 8100, alertWindowSec: 86400,
   initialSliceSec: 21600, minSliceSec: 1, queryRowLimit: 10000, maxRequests: 240,
   collectionDeadlineSec: 360, requestTimeoutSec: 30, minRequestSpacingMs: 1000,
   cpuMatchToleranceUsExclusive: 2,
@@ -42,7 +42,7 @@ const adaptiveSchema = z.object({
 });
 const scheduledSchema = z.object({ datetime: timestamp, scheduledDatetime: timestamp, cron: z.string(), status: z.string(), cpuTimeUs: numeric });
 const observationEnvelopeSchema = z.object({
-  generatedAt: timestamp, window: z.object({ from: timestamp, to: timestamp }),
+  generatedAt: timestamp, window: z.object({ from: timestamp, to: timestamp, mode: z.enum(["default", "explicit"]) }),
   sources: z.array(z.object({ workerRole: z.enum(["heavy", "public"]), kind: z.enum(["kills", "scheduled", "samples", "role-day"]), from: timestamp, to: timestamp, queryComplete: z.boolean(), failures: z.array(z.object({ from: timestamp, to: timestamp, reason: z.string() })) })),
 });
 type AdaptiveRow = z.infer<typeof adaptiveSchema>;
@@ -64,7 +64,7 @@ type SourceRead = {
 type Lane = {
   cron: string; scheduledDatetime: string; scheduleKey: string; slotStartedAt: number;
   mappingBasis: "collector-registry"; candidateJobChains: readonly (readonly string[])[];
-  descriptors: typeof SCHEDULED_TASK_DESCRIPTORS; budgetOnlyJobs: readonly string[];
+  budgetOnlyJobs: readonly string[];
   expectedJob: string | null; jobBasis: "registry-plan"; executionConfirmed: false;
 };
 type JoinedRow = {
@@ -86,17 +86,17 @@ type LaneDay = {
 };
 type Verdict = {
   status: "no-observed-kills" | "observed-kills" | "unavailable"; reasons: string[];
-  alertFrom: string; alertTo: string; heavyKillObserved: boolean; collectionIncomplete: boolean;
+  alertFrom: string; alertTo: string; heavyKillObserved: boolean; collectionIncomplete: boolean; freshnessFailed: boolean;
   observedHeavyRequests: number | null; observedPublicRequests: number | null;
   knownHeavyRequests: number; knownPublicRequests: number; exitCode: 0 | 1;
 };
 type WorkerMemoryReport = {
   schemaVersion: 1; reportId: string; generatedAt: string; sourceSha: string | null; runIdentity: string;
   targets: typeof TARGETS; policy: typeof WORKER_MEMORY_TELEMETRY_POLICY;
-  window: { from: string; to: string; fromInclusive: true; toExclusive: true };
-  freshness: { status: "fresh" | "stale"; reportAgeSec: number; coverageLagSec: number; generationId: string; reason: string | null };
+  window: { from: string; to: string; fromInclusive: true; toExclusive: true; mode: "default" | "explicit" };
+  freshness: { status: "fresh" | "stale"; coverageLagSec: number; generationId: string; reason: string | null };
   sources: SourceRead[]; roleDays: { workerRole: Role; from: string; to: string; basis: "Cloudflare-sampled-role-day-quantiles"; queryComplete: boolean; rows: AdaptiveRow[] }[];
-  laneDays: LaneDay[]; samples: JoinedRow[];
+  laneDays: LaneDay[]; laneDescriptors: Record<string, (typeof SCHEDULED_TASK_DESCRIPTORS)[number][]>; samples: JoinedRow[];
   sampleCorrelations: { workerRole: Role; correlation: string; returnedRows: number }[];
   exceededMemory: { groups: JoinedRow[]; complete: boolean; returnedGroups: number | null; reportedRequests: number | null; knownReturnedGroups: number; knownReportedRequests: number; reasons: string[] };
   queries: QueryRecord[]; verdict: Verdict; caveats: string[]; outputFiles: string[];
@@ -106,7 +106,7 @@ Reads sampled Cloudflare Worker isolate memory and independently filtered exceed
 Requires CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN (Account Analytics: Read) and CLOUDFLARE_ACCOUNT_ID in the environment.
 Windows require timezone-qualified timestamps, at most 48 hours. Default: previous UTC day plus today, with 900s ingestion lag.
 Writes report.json, report.md, samples.ndjson, exceeded-memory.ndjson, queries.json under agents/worker-memory/<run>/.
-Exits: 0 complete/no alert, 1 heavy kill or unavailable required evidence (after writing evidence), 2 invalid usage. -h/--help: help.`;
+Exits: 0 complete/no alert, 1 heavy kill, unavailable required evidence or stale default coverage (after writing evidence), 2 invalid usage. -h/--help: help.`;
 
 export function resolveWorkerMemoryWindow(from: string | undefined, to: string | undefined, now = new Date()) {
   assertCliUsage(Boolean(from) === Boolean(to), "--from and --to must be supplied together");
@@ -123,7 +123,8 @@ export function parseWorkerMemoryArgs(argv: string[], now = new Date()) {
   if (values.help) return { help: true as const };
   const from = values.from as string | undefined;
   const to = values.to as string | undefined;
-  return { help: false as const, ...resolveWorkerMemoryWindow(from, to, now), outDir: values["out-dir"] as string | undefined };
+  resolveWorkerMemoryWindow(from, to, now);
+  return { help: false as const, from, to, outDir: values["out-dir"] as string | undefined };
 }
 function adaptiveQuery(kind: Exclude<Kind, "scheduled">) {
   return `query($a:String!,$f:Time!,$t:Time!,$s:String!){viewer{accounts(filter:{accountTag:$a}){
@@ -181,7 +182,6 @@ export function joinScheduledMemory(adaptiveRows: AdaptiveRow[], scheduledRows: 
         cron: scheduled.cron, scheduledDatetime: scheduled.scheduledDatetime, scheduleKey: plan.scheduleKey,
         slotStartedAt: getCronSlotStartedAtForSchedule(plan.scheduleKey, Date.parse(scheduled.scheduledDatetime)),
         mappingBasis: "collector-registry", candidateJobChains: plan.jobChains,
-        descriptors: SCHEDULED_TASK_DESCRIPTORS.filter((descriptor) => descriptor.scheduleKey === plan.scheduleKey && descriptor.producerKind === "scheduled-job"),
         budgetOnlyJobs: plan.budgetOnlyJobs ?? [], expectedJob: plan.jobChains.length === 1 && plan.jobChains[0]?.length === 1 ? plan.jobChains[0][0]! : null,
         jobBasis: "registry-plan", executionConfirmed: false,
       };
@@ -255,21 +255,20 @@ export function evaluateMemoryObservation(report: Pick<WorkerMemoryReport, "gene
   if (kills.some((row) => row.workerRole === "public")) reasons.push("public-exceeded-memory-observed-report-only");
   const required = report.sources.filter((source) => source.workerRole === "heavy" || source.kind !== "samples");
   if (required.some((source) => !source.queryComplete)) reasons.push(...required.flatMap((source) => source.failures.map((failure) => failure.reason)));
-  const reportStale = now.getTime() - Date.parse(report.generatedAt) > WORKER_MEMORY_TELEMETRY_POLICY.maxReportAgeSec * 1000;
   const coverageStale = now.getTime() - end > WORKER_MEMORY_TELEMETRY_POLICY.maxCoverageLagSec * 1000;
-  if (reportStale) reasons.push("report-stale");
   if (coverageStale) reasons.push("coverage-stale");
   const missingSource = (["heavy", "public"] as const).some((role) =>
     (role === "heavy" ? ["kills", "scheduled", "samples"] : ["kills", "scheduled"]).some((kind) =>
       !report.sources.some((source) => source.workerRole === role && source.kind === kind && source.from === report.window.from && source.to === report.window.to))
     || windows(report.window.from, report.window.to, 86400_000, true).some((day) =>
       !report.sources.some((source) => source.workerRole === role && source.kind === "role-day" && source.from === day.from && source.to === day.to)));
-  const collectionIncomplete = missingSource || required.some((source) => !source.queryComplete) || reportStale || coverageStale;
+  const collectionIncomplete = missingSource || required.some((source) => !source.queryComplete);
+  const freshnessFailed = coverageStale && report.window.mode === "default";
   if (missingSource) reasons.push("required-source-missing");
-  return { status: kills.length ? "observed-kills" : collectionIncomplete ? "unavailable" : "no-observed-kills", reasons: [...new Set(reasons)],
-    alertFrom: new Date(start).toISOString(), alertTo: report.window.to, heavyKillObserved, collectionIncomplete,
+  return { status: kills.length ? "observed-kills" : collectionIncomplete || freshnessFailed ? "unavailable" : "no-observed-kills", reasons: [...new Set(reasons)],
+    alertFrom: new Date(start).toISOString(), alertTo: report.window.to, heavyKillObserved, collectionIncomplete, freshnessFailed,
     observedHeavyRequests: complete("heavy") ? known("heavy") : null, observedPublicRequests: complete("public") ? known("public") : null,
-    knownHeavyRequests: known("heavy"), knownPublicRequests: known("public"), exitCode: heavyKillObserved || collectionIncomplete ? 1 : 0 };
+    knownHeavyRequests: known("heavy"), knownPublicRequests: known("public"), exitCode: heavyKillObserved || collectionIncomplete || freshnessFailed ? 1 : 0 };
 }
 
 export async function collectWorkerMemory({ from, to, token, accountId, now = new Date(), sourceSha = null, runIdentity = randomUUID(), fetchImpl = fetch, clock = Date.now, wait = sleep }: {
@@ -383,10 +382,15 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
   const knownRequests = kills.reduce((sum, row) => sum + row.adaptive.sum.requests, 0);
   const generatedAt = new Date(now.getTime() + Math.max(0, clock() - started)).toISOString();
   const reportId = randomUUID();
+  const laneDescriptors: WorkerMemoryReport["laneDescriptors"] = {};
+  for (const descriptor of SCHEDULED_TASK_DESCRIPTORS) {
+    if (descriptor.producerKind === "scheduled-job") (laneDescriptors[descriptor.scheduleKey] ??= []).push(descriptor);
+  }
   const report: WorkerMemoryReport = {
-    schemaVersion: 1, reportId, generatedAt, sourceSha, runIdentity, targets: TARGETS, policy, window: { ...window, fromInclusive: true, toExclusive: true },
-    freshness: { status: "fresh", reportAgeSec: 0, coverageLagSec: (Date.parse(generatedAt) - Date.parse(window.to)) / 1000, generationId: reportId, reason: null },
+    schemaVersion: 1, reportId, generatedAt, sourceSha, runIdentity, targets: TARGETS, policy, window: { ...window, fromInclusive: true, toExclusive: true, mode: from === undefined && to === undefined ? "default" : "explicit" },
+    freshness: { status: "fresh", coverageLagSec: (Date.parse(generatedAt) - Date.parse(window.to)) / 1000, generationId: reportId, reason: null },
     sources, roleDays, laneDays: buildDailyLaneSamples(broad, (["heavy", "public"] as const).map((role) => ({ role, rows: data.get(`${role}-scheduled`) as ScheduledRow[] })), sources, window.from, window.to),
+    laneDescriptors,
     samples: broad.filter((row) => row.lane !== null || row.candidates.length > 0),
     sampleCorrelations: (["heavy", "public"] as const).flatMap((workerRole) => {
       const counts = new Map<string, number>();
@@ -394,7 +398,7 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
       return [...counts].map(([correlation, returnedRows]) => ({ workerRole, correlation, returnedRows }));
     }),
     exceededMemory: { groups: kills, complete, returnedGroups: complete ? kills.length : null, reportedRequests: complete ? knownRequests : null, knownReturnedGroups: kills.length, knownReportedRequests: knownRequests, reasons: [...new Set(killSources.flatMap((source) => source.failures.map((failure) => failure.reason)))] },
-    queries, verdict: { status: "unavailable", reasons: [], alertFrom: window.from, alertTo: window.to, heavyKillObserved: false, collectionIncomplete: true, observedHeavyRequests: null, observedPublicRequests: null, knownHeavyRequests: 0, knownPublicRequests: 0, exitCode: 1 },
+    queries, verdict: { status: "unavailable", reasons: [], alertFrom: window.from, alertTo: window.to, heavyKillObserved: false, collectionIncomplete: true, freshnessFailed: false, observedHeavyRequests: null, observedPublicRequests: null, knownHeavyRequests: 0, knownPublicRequests: 0, exitCode: 1 },
     caveats: ["All memory values are sampled V8 isolate memory shared across concurrent invocations, not phase peaks or headroom.", "Query-complete is not unsampled request-population completeness. Unknown values are null, never zero-filled.", "Filtered Adaptive exceededMemory is kill authority; Scheduled status can differ. Correlation is not a request ID.", "Current collector-registry candidate jobs are not historical execution or culprit proof.", "Public kills and incomplete public broad samples are report-only; revisit after one week of baseline.", "Small-N empirical P999 can equal the largest returned P50 sample. No population confidence is claimed."],
     outputFiles: ["report.json", "report.md", "samples.ndjson", "exceeded-memory.ndjson", "queries.json"],
   };
@@ -404,7 +408,7 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
 }
 
 function validateReport(report: WorkerMemoryReport) {
-  observationEnvelopeSchema.extend({ schemaVersion: z.literal(1), verdict: z.object({ heavyKillObserved: z.boolean(), collectionIncomplete: z.boolean(), exitCode: z.union([z.literal(0), z.literal(1)]), reasons: z.array(z.string()) }) }).parse(report);
+  observationEnvelopeSchema.extend({ schemaVersion: z.literal(1), verdict: z.object({ heavyKillObserved: z.boolean(), collectionIncomplete: z.boolean(), freshnessFailed: z.boolean(), exitCode: z.union([z.literal(0), z.literal(1)]), reasons: z.array(z.string()) }) }).parse(report);
   for (const row of [...report.samples, ...report.exceededMemory.groups]) adaptiveSchema.parse(row.adaptive);
 }
 export function renderWorkerMemoryMarkdown(report: WorkerMemoryReport) {
@@ -412,13 +416,13 @@ export function renderWorkerMemoryMarkdown(report: WorkerMemoryReport) {
   const mib = (value: number | null | undefined) => value == null ? "unavailable" : (value / 1048576).toFixed(2);
   const safe = (value: string) => value.replace(/[|<>`\r\n]/g, " ");
   const lines = ["# Worker sampled isolate memory", "", `Verdict: **${report.verdict.status}**; exit ${report.verdict.exitCode}.`,
-    `Window: ${report.window.from} ≤ invocation < ${report.window.to}. Generated: ${report.generatedAt}; generation: ${report.reportId}.`,
+    `Window (${report.window.mode}): ${report.window.from} ≤ invocation < ${report.window.to}. Generated: ${report.generatedAt}; generation: ${report.reportId}.`,
     `Targets: heavy=${TARGETS.heavy}, public=${TARGETS.public}. Collector/registry SHA: ${report.sourceSha ?? "unavailable"}.`,
-    `Freshness: ${report.freshness.status}; report-age budget 7200s, coverage-lag budget 8100s, ingestion allowance 900s (not an ingestion guarantee).`,
+    `Freshness: ${report.freshness.status}; coverage-lag budget 8100s (gates default windows only), ingestion allowance 900s (not an ingestion guarantee). No report-age gate is applied.`,
     `Reasons: ${report.verdict.reasons.join(", ") || "none"}.`, "", ...report.caveats.map((text) => `- ${text}`), "",
     "## Independently filtered exceededMemory inventory", "", `Returned groups: ${report.exceededMemory.returnedGroups ?? "unavailable"}; known subtotal ${report.exceededMemory.knownReturnedGroups}. Reported requests: ${report.exceededMemory.reportedRequests ?? "unavailable"}; known subtotal ${report.exceededMemory.knownReportedRequests}.`,
-    "Full inventory: `exceeded-memory.ndjson` (bounded display below: first 100 groups).", "", "| Invocation | Role | Requests / sample interval | Physical lane | Correlation | Adaptive / Scheduled status |", "|---|---|---|---|---|---|"];
-  for (const row of report.exceededMemory.groups.slice(0, 100)) lines.push(`| ${row.adaptive.dimensions.datetime} | ${row.workerRole} | ${row.adaptive.sum.requests} / ${row.adaptive.avg.sampleInterval ?? "unknown"} | ${safe(row.lane?.cron ?? "unattributed")} | ${row.correlation} | exceededMemory / ${safe(row.scheduledStatus ?? "unavailable")} |`);
+    "Full inventory: `exceeded-memory.ndjson` (bounded display below: first 100 groups). Lane descriptors are stored once in `report.json.laneDescriptors`, keyed by each row's `lane.scheduleKey`.", "", "| Invocation | Role | Requests / sample interval | Physical / logical lane | Correlation | Adaptive / Scheduled status |", "|---|---|---|---|---|---|"];
+  for (const row of report.exceededMemory.groups.slice(0, 100)) lines.push(`| ${row.adaptive.dimensions.datetime} | ${row.workerRole} | ${row.adaptive.sum.requests} / ${row.adaptive.avg.sampleInterval ?? "unknown"} | ${safe(row.lane?.cron ?? "unattributed")} / ${safe(row.lane?.scheduleKey ?? "unattributed")} | ${row.correlation} | exceededMemory / ${safe(row.scheduledStatus ?? "unavailable")} |`);
   lines.push("", "## Lane/day empirical matched-row P50 distribution (MiB)", "", "Basis: empirical-nearest-rank-of-matched-row-memoryUsageBytesP50. Outcome/version strata and physical/logical rollups stay separate. Counts accompany every distribution; null is unavailable.", "", "| Day / role | Lane / rollup | Outcome / version | N measured / matched | p50 | p90 | p99 | p999 | Complete |", "|---|---|---|---|---|---|---|---|---|");
   for (const row of report.laneDays) {
     const q = row.sampledRowMemoryP50DistributionBytes;
@@ -453,6 +457,6 @@ runDirectCli(import.meta.url, async () => {
   const runIdentity = process.env.GITHUB_RUN_ID ? `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT ?? "1"}` : new Date().toISOString().replace(/[:.]/g, "-");
   const report = await collectWorkerMemory({ ...args, token: process.env.CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN, accountId: process.env.CLOUDFLARE_ACCOUNT_ID, sourceSha: process.env.GITHUB_SHA ?? null, runIdentity });
   await writeWorkerMemoryReport(report, args.outDir ?? `agents/worker-memory/${runIdentity}`);
-  console.log(`Worker memory: ${report.verdict.status}; heavy-kill-observed=${report.verdict.heavyKillObserved}; collection-incomplete=${report.verdict.collectionIncomplete}; reasons=${report.verdict.reasons.join(",") || "none"}`);
+  console.log(`Worker memory: ${report.verdict.status}; heavy-kill-observed=${report.verdict.heavyKillObserved}; collection-incomplete=${report.verdict.collectionIncomplete}; freshness-failed=${report.verdict.freshnessFailed}; reasons=${report.verdict.reasons.join(",") || "none"}`);
   process.exitCode = report.verdict.exitCode;
 });

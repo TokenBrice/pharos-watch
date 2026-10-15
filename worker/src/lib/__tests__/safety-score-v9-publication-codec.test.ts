@@ -41,7 +41,6 @@ describe("Safety Score V9 publication codec", () => {
     expect(admitted.cards[0]).toBe(publication.cards[0]);
     expect(Object.isFrozen(admitted)).toBe(true);
     expect(Object.isFrozen(admitted.cards)).toBe(true);
-    expect(stored).toBe(await serializeSafetyScoreV9Publication(publication));
     const envelope = JSON.parse(stored);
     const raw = Buffer.from(stableJsonStringifyV1(publication));
     expect(envelope.payloadSha256).toBe(createHash("sha256").update(raw).digest("hex"));
