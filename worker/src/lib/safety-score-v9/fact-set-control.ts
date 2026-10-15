@@ -393,20 +393,26 @@ export function buildEconomicControlReview(context: AssetBuildContext): V9Econom
   // Extension factors name research keys; compiled facts name registered
   // evidence IDs. Retain the factor's exact sources rather than substituting
   // the whole bridge profile's evidence for an independently reviewed tier.
-  for (const route of normalized.bridge.routes) {
-    for (const status of Object.values(route.factorStatuses ?? {})) {
-      status.evidenceRefIds = status.evidenceRefIds.map((key) => {
-        const evidenceId = `${context.asset.assetId}:research:${key}`;
-        if (!context.evidence.has(evidenceId)) {
-          throw new Error(`Bridge factor ${context.asset.assetId}:${route.controlKey} has unknown research evidence ${key}`);
+  // Admission can intern equal statuses across routes, and structuredClone
+  // preserves those aliases. Translate into fresh maps and statuses per route.
+  normalized.bridge.routes = normalized.bridge.routes.map((route) => ({
+    ...route,
+    ...(route.factorStatuses ? {
+      factorStatuses: Object.fromEntries(Object.entries(route.factorStatuses).map(([factorKey, status]) => {
+        const evidenceRefIds = status.evidenceRefIds.map((key) => {
+          const evidenceId = `${context.asset.assetId}:research:${key}`;
+          if (!context.evidence.has(evidenceId)) {
+            throw new Error(`Bridge factor ${context.asset.assetId}:${route.controlKey} has unknown research evidence ${key}`);
+          }
+          return evidenceId;
+        });
+        if (status.observationState === "known") {
+          assertKnownComponentEvidenceCurrent(context, `economic-control:bridge:${route.controlKey}`, evidenceRefIds);
         }
-        return evidenceId;
-      });
-      if (status.observationState === "known") {
-        assertKnownComponentEvidenceCurrent(context, `economic-control:bridge:${route.controlKey}`, status.evidenceRefIds);
-      }
-    }
-  }
+        return [factorKey, { ...status, evidenceRefIds }];
+      })),
+    } : {}),
+  }));
   return compileEconomicFactorStatuses(context, normalized);
 }
 
