@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usds-sky",
   "collateral": "USDS held idle or supplied through Sky.money-curated Morpho lending markets",
-  "pegMechanism": "ERC-4626 shares represent a pro-rata USDS-denominated claim on idle tokens and Morpho lender positions. Interest accrual and realized losses change the exchange rate; redeem/withdraw delivers USDS when vault and market liquidity allow.",
+  "pegMechanism": "ERC-4626 shares represent a pro-rata USDS-denominated claim on idle tokens and Morpho lender positions. Interest accrual and realized losses change the exchange rate. No liquidity adapter is configured, so ordinary redeem/withdraw pays from idle USDS; reaching lent USDS needs allocator deallocation or a holder forceDeallocate, which carries a 0.2% penalty and depends on market liquidity. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The exact Ethereum deployment 0xe15fcc81118895b67b6647bbd393182df44e11e0 is an immutable Morpho Vault V2 lender share over USDS. The holder has an operational pro-rata vault claim, not direct title to borrower collateral or a fiat claim. Its local conservation, allocation and recovery mechanics differ from the tracked parent. Exact implementation creation is pinned by transaction 0xbecea2aa97133574b2e3251bc794e0d827b473d2ac78311ba788e22d2c651b3e, block 24441155, timestamp 2026-02-12T14:00:11+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 exact-deployment review",
+    "rationale": "The exact Ethereum deployment 0xe15fcc81118895b67b6647bbd393182df44e11e0 is an immutable Morpho Vault V2 lender share over USDS. The holder has an operational pro-rata vault claim, not direct title to borrower collateral or a fiat claim. Its local conservation, allocation and recovery mechanics differ from the tracked parent. Runtime matches the verified source at Ethereum block 26197300 (2026-10-15T10:25:11Z); the implementation slot is zero. Exact implementation creation is transaction 0xbecea2aa97133574b2e3251bc794e0d827b473d2ac78311ba788e22d2c651b3e, block 24441155, timestamp 2026-02-12T14:00:11Z. This is the deployment inception, not issuer founding, public-interface launch or parent-token launch.",
     "sources": [
       {
         "label": "Sky.money curated vault disclosure",
@@ -31,8 +31,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
       },
       {
-        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-        "url": "https://etherscan.io/block/26107702"
+        "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+        "url": "https://etherscan.io/block/26197300"
       },
       {
         "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -57,6 +57,26 @@
     {
       "label": "Exact vault contract",
       "url": "https://etherscan.io/address/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+    },
+    {
+      "label": "Morpho: Vault V2 documentation",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Skybase International: Terms of use",
+      "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
+    },
+    {
+      "label": "Skybase International: User risks",
+      "url": "https://docs.sky.money/legal/skybase-international/user-risks"
+    },
+    {
+      "label": "Morpho: Vault",
+      "url": "https://app.morpho.org/ethereum/vault/0xe15fcc81118895b67b6647bbd393182df44e11e0"
     }
   ],
   "contracts": [
@@ -66,7 +86,7 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "implementationLaunchDate": "2026-02-12",
   "yieldConfig": {
@@ -75,7 +95,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "skymoneyusdsflagship-sky",
     "display": {
@@ -91,16 +111,16 @@
     },
     "params": {
       "slice": {
-        "name": "sky.money USDS Flagship idle underlying and Morpho lender claims",
+        "name": "sky.money USDS Flagship Morpho lender claims",
         "risk": "high",
         "coinId": "usds-sky",
         "depType": "wrapper",
         "expectedAssetAddress": "0xdc035d45d973e3ec169d2276ddab16f1e407384f"
       },
       "deployedExposure": {
-        "basis": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=37213041.517174 USDS; totalSupply=37094821.851264 shares; convertToAssets(1e18)=1.003186958718484905 USDS (raw 1003186958718484905); idle balance=29771240.288112 USDS. Complete current adapter census contains 1 adapter, 3 markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 2535545.351573 USDS lender claim; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 1323435.223921 USDS lender claim; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 3582820.653569 USDS lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The reviewed slice includes both the idle parent token and the complete parent-denominated lender claim inventory.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://sky.money/vaults"
+        "basis": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), totalAssets=40957315.564631184834483764 USDS; totalSupply=40816828.320738646526976560 shares; convertToAssets(1e18)=1.003441895161196492 USDS (raw 1003441895161196492); idle balance=33370015.140198112300770155 USDS. The complete current census contains one adapter, 0xf94be39e8863183ff41194b5923627c90a34039d, and three markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 4387091.447458699794356951 USDS; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 660946.990058586169876117 USDS; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 2539261.986915786569480541 USDS. Lender claims sum exactly to adapter realAssets=7587300.424433072533713609 USDS; idle plus adapter realAssets equals totalAssets. All three positions have zero borrow shares and collateral. liquidityAdapter is zero: ordinary redemption uses idle USDS, while market deallocation requires a separate action. The denomination slice is not idle-only or a guarantee of full-book immediate liquidity. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://etherscan.io/block/26197300"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

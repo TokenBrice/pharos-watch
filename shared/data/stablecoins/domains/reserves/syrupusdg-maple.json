@@ -7,7 +7,7 @@
       "pct": 100,
       "risk": "medium",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Maple International Operations SPC, Maple USDG Segregated Portfolio 1",
+      "issuerOrObligor": "Maple International Operations SPC acting for Maple USDG Segregated Portfolio 1",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SyrupusdgMaple",
     "confidence": "verified",
     "sources": [
       {
@@ -46,14 +46,14 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z: full strategy-list census, LoanManager accounting and idle USDG",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "The entire holder instrument is a proportional claim on a managed pooled portfolio. This 100% row identifies the claim itself; it does not assert a measured allocation to loans, idle USDG or supporting strategies.",
+    "rationale": "The entire holder instrument is a proportional claim on a managed pooled portfolio. This 100% row identifies the claim itself, not a reconciled borrower-collateral allocation. At Ethereum block 26197300 (2026-10-15T10:25:11Z), the complete strategy list contained one LoanManager, 0x7be9a1fa4cd69f7a077692d4afa52bd09531920a (implementation 0xbad003da1e107f537ae2f687f5fe7a7affe9b241). Its assetsUnderManagement() was 213043086.307244 USDG, comprising 212800005 principal, 227422.998948 accounted interest and 15658.308296 accrued interest. Idle pool USDG was 6206669.688824. Those two accounting balances sum to totalAssets() of 219249755.996068 USDG; neither identifies collateral custodians, borrower concentrations or off-chain asset recoverability.",
     "compositionBasis": "Standing whole-token claim identity corroborated by exact deployed code and pinned chain state; not a measured look-through allocation",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current borrower, cash, strategy, collateral and custodian weights, maturities and independent reserve-to-liability reconciliation remain unavailable. The Network Firm dashboard covers syrupUSDC and syrupUSDT only.",
+    "knownUnknownExposure": "Complete current borrower, loan-collateral, collateral-custodian, encumbrance and maturity coverage and independent reserve-to-liability reconciliation remain unavailable. Pinned pool cash and LoanManager accounting are contextual observations, not look-through exposure weights. The Network Firm dashboard covers syrupUSDC and syrupUSDT only.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -68,15 +68,15 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Maple USDG Segregated Portfolio 1 (claim issuer; not a complete custodian census)",
+        "name": "Maple International Operations SPC acting for Maple USDG Segregated Portfolio 1 (issuer, not an identified collateral custodian)",
         "role": "other"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
-    "rehypothecation": "conditional",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SyrupusdgMaple",
     "confidence": "manual-review",
     "sources": [
       {
@@ -86,9 +86,13 @@
       {
         "label": "Chainlink exact syrupUSDG deployments and pools",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+      },
+      {
+        "label": "Cayman Islands General Registry: segregated portfolios are not separate legal entities",
+        "url": "https://www.ciregistry.ky/companies-register/types-of-companies/segregated-portfolio-company/"
       }
     ],
     "knownUnknownExposurePct": 100,
-    "uncertainty": "Maple documents statutory ring-fencing and permits lending and supporting strategies. Named current syrupUSDG collateral custodians, provider allocations, reuse terms and failure-continuity arrangements are not disclosed in the reviewed scope; sibling custodians and assurance are not copied."
+    "uncertainty": "Maple documents statutory ring-fencing and portfolio-limited recourse, but the legal issuer is the SPC: Cayman General Registry states that its portfolios are not separate legal entities. Structured segregation is not guaranteed insolvency immunity. Current syrupUSDG collateral custodians, allocations, reuse/repledging conditions and failure-continuity terms remain undisclosed. Lending or permitted trading does not establish particular rehypothecation conditions. Maple's July launch article broadly references Proof of Reserves, but the current independent dashboard names only syrupUSDC and syrupUSDT; no syrupUSDG-specific financial reconciliation is inferred."
   }
 }

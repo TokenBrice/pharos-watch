@@ -36,8 +36,8 @@
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_EurwNewrails",
     "sources": [
       {
         "label": "Hacken Newrails Monad code security audit dated March 12, 2026",
@@ -48,13 +48,13 @@
         "url": "https://www.newrails.xyz/en/legal/emt-redemption-policy"
       }
     ],
-    "evidence": "The Hacken audit of the Monad Stablecoin and Blacklistable modules identifies BLACKLISTER_ROLE add/remove blacklist authority and restrictions on transfers and approvals. The current exact Monad EURW UUPS deployment is bound by six-decimal symbol/supply and implementation reads. The issuer redemption policy expressly permits wallet blocking and legal-order freezing. Hedera administrative-key observations are not used because its exact token ID lacks primary binding."
+    "evidence": "Hacken's March 12 audit identifies BLACKLISTER_ROLE add/remove blacklist powers and restrictions on ordinary transfers and approvals, with accepted exceptions for certain privileged interactions. The redemption policy permits wallet blocking and lawful-order freezing. At Monad block 113592456 (2026-10-15T10:44:07Z), the EURW proxy still points to implementation 0x52778511bec5ff87f9b52c7a2434631edcc157f4 and paused is false. The complete genesis-to-pin role census has no BLACKLISTER_ROLE or PAUSER_ROLE grant; ADMIN_ROLE can grant both immediately, so transfer restrictability remains reactivatable. Hedera key observations are excluded because no issuer exact-token binding was retrieved."
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only the exact CoinGecko-bound Monad issuer-native EURW deployment is authored. The whitepaper also describes Hedera, but token lead 0.0.10250174 lacks an issuer exact-ID binding and is excluded. No cross-chain bridge mechanism or controller is established by a network-support statement.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_EurwNewrails",
     "confidence": "manual-review",
     "sources": [
       {
@@ -82,10 +82,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The issuer identifies Monad EURW, CoinGecko binds the exact contract and six decimals, and current RPC reads confirm EURW symbol, positive supply and UUPS implementation. An issuer-native route is not evidence of a bridge.",
+        "reviewNote": "CoinGecko binds this exact Monad EURW deployment and six decimals. At Monad block 113592456 (2026-10-15T10:44:07Z), symbol is EURW, totalSupply is 310193.7936 EURW, paused is false and the UUPS implementation is unchanged. Genesis-to-pin logs retain the initial implementation and sole identified native minter. Issuer-native deployment does not establish a bridge or bind the unresolved Hedera token lead.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016408,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592456,
         "sources": [
           {
             "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",

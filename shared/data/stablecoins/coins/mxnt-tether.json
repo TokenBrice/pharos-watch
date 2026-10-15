@@ -1,6 +1,6 @@
 {
   "liveReservesConfig": {
-    "adapter": "tether-transparency",
+    "adapter": "tether-transparency-mxnt",
     "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "mxnt-tether",
@@ -30,22 +30,25 @@
     "governance": "centralized"
   },
   "collateral": "Tether's shared reserves for fiat-denominated tokens include Treasuries, reverse repos, bank cash, gold, bitcoin, secured loans, equities and other investments; no dedicated MXNT allocation is disclosed.",
-  "pegMechanism": "Verified Tether clients may mint and redeem at one Mexican peso per MXNT less fees. The USD 100,000-equivalent minimum and fee floor restrict access; timing and capacity are not guaranteed.",
+  "pegMechanism": "Verified Tether clients acquire MXNT for one Mexican peso plus fees and redeem for one peso less fees. The USD 100,000-equivalent minimum and USD 1,000 redemption fee floor restrict access; timing and capacity are not guaranteed.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
-    "rationale": "MXNT is a fixed-peso issuer fiat-token claim on the shared reserve book, not a variable-NAV share or borrower instrument. Ethereum receipts bind the proxy's creation to block 14750719 on 2022-05-10 and the exact current TetherToken logic deployment to block 17310207 on 2023-05-21; dates do not imply a proven unchanged runtime since deployment.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_MxntTether",
+    "rationale": "MXNT is a fixed-peso issuer fiat-token claim on the shared reserve book, not a variable-NAV share or borrower instrument. Tether publicly launched MXNT on May 26, 2022; the Ethereum proxy was deployed earlier at block 14750719 on May 10. The current implementation was created on May 21, 2023 but activated in this proxy at block 17329925 on May 24, 2023 (2023-05-24T15:26:11Z), as confirmed by its Upgraded event. Fresh state at block 26197399 (2026-10-15T10:44:59Z) binds the same implementation; deployment and activation dates do not prove uninterrupted operation.",
     "sources": [
       {"label": "Tether fiat-token holder terms", "url": "https://tether.to/en/legal/"},
       {"label": "Current TetherToken implementation creation", "url": "https://etherscan.io/tx/0xf9aebec57c6be2bc1ffe2254f3dc8dd4bd330ade48f456f7bb82ed2bd8de7129"},
-      {"label": "Ethereum proxy creation", "url": "https://etherscan.io/tx/0xae1b0c17afb159552f6edc69488a3b8d5053e5626c4ad2f7474ea42b37b025b3"}
+      {"label": "Ethereum proxy creation", "url": "https://etherscan.io/tx/0xae1b0c17afb159552f6edc69488a3b8d5053e5626c4ad2f7474ea42b37b025b3"},
+      {"label": "Official MXNT public launch, May 26, 2022", "url": "https://tether.io/news/tether-launches-mxntugrik-tether-tokens-pegged-to-the-mexican-peso/"},
+      {"label": "Current implementation activation, block 17329925", "url": "https://etherscan.io/tx/0x2d934823b2e073ab326e56110facf7072e1ac8ea37b0a4d0fd4e5bf05b0e7bdc"},
+      {"label": "Ethereum pinned state, block 26197399, 2026-10-15T10:44:59Z", "url": "https://api-ethereum-mainnet.n.dwellir.com"}
     ]
   },
   "detailProvider": "defillama",
-  "launchDate": "2022-05-10",
-  "implementationLaunchDate": "2023-05-21",
+  "launchDate": "2022-05-26",
+  "implementationLaunchDate": "2023-05-24",
   "contracts": [
     {
       "chain": "ethereum",
@@ -54,9 +57,12 @@
     }
   ],
   "jurisdiction": {
-    "country": "El Salvador"
+    "country": "El Salvador",
+    "regulator": "Comisión Nacional de Activos Digitales (CNAD)",
+    "license": "Stablecoin issuer EME-0003; registered May 19, 2025"
   },
   "custodyModel": "unknown",
+  "governanceQuality": "regulated-entity",
   "collateralQuality": "exotic",
   "links": [
     {
@@ -78,6 +84,34 @@
     {
       "label": "Current TetherToken implementation creation, block 17310207",
       "url": "https://etherscan.io/tx/0xf9aebec57c6be2bc1ffe2254f3dc8dd4bd330ade48f456f7bb82ed2bd8de7129"
+    },
+    {
+      "label": "Current implementation activation, block 17329925",
+      "url": "https://etherscan.io/tx/0x2d934823b2e073ab326e56110facf7072e1ac8ea37b0a4d0fd4e5bf05b0e7bdc"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://tether.to/en/transparency/?tab=mxnt"
+    },
+    {
+      "label": "Docs",
+      "url": "https://tether.to/en/supported-protocols/"
+    },
+    {
+      "label": "Redemption fees and minimum",
+      "url": "https://tether.to/en/fees/"
+    },
+    {
+      "label": "Relevant Information Document",
+      "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+    },
+    {
+      "label": "CNAD stablecoin issuer registry",
+      "url": "https://cnad.gob.sv/es/issuers/#expand-25eec8d"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/tether/"
     }
   ],
   "llamaId": "281",

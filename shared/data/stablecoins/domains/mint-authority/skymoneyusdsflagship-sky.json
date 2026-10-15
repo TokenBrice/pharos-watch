@@ -4,17 +4,34 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
+    "headline": "Asset-backed shares have no arbitrary mint; separate curator and allocator Safes control lending parameters.",
     "summary": "Local share issuance is asset-backed and accounting-mediated; the parameter administrator does not have arbitrary share mint authority. Base USDS issuance remains inherited from usds-sky.",
     "inheritedFrom": "usds-sky",
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "The immutable VaultV2 enter function transfers USDS from the depositor before creating the corresponding shares; deposit and mint both use that path. The only other share creation is formula-mediated management/performance fee issuance against accounted assets, with both fees zero at Ethereum block 26197300 (2026-10-15T10:25:11Z). No local owner, curator or allocator entrypoint can mint arbitrary unbacked shares or authorize such a minter, and the fixed vault code has no upgrade path. Curation changes adapters, allocation caps, fees and routing, not a native issuance ceiling. Parent USDS issuance authority belongs to usds-sky and is inherited separately through the serial-claim dependency; this bounded verdict concerns only local wrapper-share issuance.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch64 exact-deployment review",
+      "sources": [
+        {
+          "label": "Exact verified VaultV2 enter, accrueInterest and share-creation functions",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+        },
+        {
+          "label": "Ethereum block 26197300 (2026-10-15T10:25:11Z), pinned immutable vault and fee reads",
+          "url": "https://etherscan.io/block/26197300"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "sky.money USDS Flagship immutable asset-backed share contract",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107702,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197300,
       "sources": [
         {
           "label": "Sky.money curated vault disclosure",
@@ -25,8 +42,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
         },
         {
-          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-          "url": "https://etherscan.io/block/26107702"
+          "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+          "url": "https://etherscan.io/block/26197300"
         },
         {
           "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -48,8 +65,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "Sky.money curated vault disclosure",
@@ -60,8 +77,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
           },
           {
-            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-            "url": "https://etherscan.io/block/26107702"
+            "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+            "url": "https://etherscan.io/block/26197300"
           },
           {
             "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -72,7 +89,7 @@
             "url": "https://api.morpho.org/graphql"
           }
         ],
-        "evidence": "Deposits and mint calls transfer the underlying parent asset before minting shares. Interest accrual may mint management/performance fee shares against accounted assets; both rates are zero in the current exact-vault API. Verified fixed deployment code has no privileged arbitrary native share mint or upgrade entrypoint; the implementation slot is zero."
+        "evidence": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), deposit/mint transfers USDS before creating shares. Fee issuance remains accounting-mediated and both managementFee and performanceFee read zero. Runtime matches the verified immutable VaultV2 source and the EIP-1967 implementation slot is zero. No privileged arbitrary share mint or upgrade entrypoint exists in this deployment. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/."
       },
       {
         "chain": "ethereum",
@@ -86,6 +103,7 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "version": "1.4.1",
           "owners": [
             "0x477fba4f877feb7b21467a5a1e6e5290ba7cb742",
             "0x4503d863ee8c57689e564904520c161986d1ab1a",
@@ -94,12 +112,15 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26107702,
-          "observedAt": "2026-10-02",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26197300,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "Sky.money curated vault disclosure",
@@ -110,8 +131,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
           },
           {
-            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-            "url": "https://etherscan.io/block/26107702"
+            "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+            "url": "https://etherscan.io/block/26197300"
           },
           {
             "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -126,7 +147,54 @@
             "url": "https://etherscan.io/address/0x3f32bc09d41ee699844f8296e806417d6bf61bba"
           }
         ],
-        "evidence": "At block 26107702, current Safe threshold/owner enumeration, empty getModulesPaginated result and zero guard were re-read. This Safe is both owner and curator. Current API reports 259200-second delays for adding adapters and increasing allocation caps, but zero for allocator and fee settings. Share-transfer and asset-exit gate setters are abdicated. Signer independence and offchain key custody are not established."
+        "evidence": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), this Safe is owner, curator and sentinel, but isAllocator is false. It is 2-of-3 with the enumerated owners, no enabled modules (pagination ends at the sentinel), zero guard and module guard, and the standard compatibility fallback handler. addAdapter, increaseAbsoluteCap and increaseRelativeCap have 259200-second timelocks; allocator and fee setters have zero delay. All share-transfer and asset-exit gate setters, and setAdapterRegistry, are abdicated. The deposit gate setter remains callable. Current registry is 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e. The adapter-wide absolute allocation cap is uint128 maximum and relative cap 20%; each current market/collateral relative cap is 10%. PT-sUSDS absolute market/collateral caps are 5 million USDS; the other current absolute caps are uint128 maximum. These are adjustable allocation caps, not native issuance limits. forceDeallocatePenalty is 0.2%, with a 604800-second setter delay; adapter burnShares and setSkimRecipient have 259200-second delays. Pending executable proposals and signer independence are not established by getter reads. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe4d5f54ce1830d5ecc49751021f306cfe7a52649",
+        "label": "sky.money USDS Flagship allocator Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 1,
+        "signerCount": 3,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "timelockDelaySec": 0,
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x8672b6c94b0c370b0d1315c9ccaaa77ab71ed785",
+            "0x1060277caec1db39b40b6592fd331fc9f64cd72a",
+            "0xd4351069bbbb2f73a850100ecb655e9fca0b7829"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 26197300,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Exact vault role and allocator functions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+          },
+          {
+            "label": "Allocator Safe",
+            "url": "https://etherscan.io/address/0xe4d5f54ce1830d5ecc49751021f306cfe7a52649"
+          },
+          {
+            "label": "Ethereum block 26197300, pinned allocator role and Safe state",
+            "url": "https://etherscan.io/block/26197300"
+          }
+        ],
+        "evidence": "Morpho's indexed role roster identifies this allocator, independently confirmed by isAllocator=true and isSentinel=false at Ethereum block 26197300 (2026-10-15T10:25:11Z). Safe getter/storage reads show 1-of-3 signing, no enabled modules, zero guard/module guard and the standard compatibility fallback handler. The allocator can allocate and deallocate within approved adapters and caps, set maxRate and change liquidityAdapter/data without a timelock; it cannot raise caps or mint arbitrary native shares. liquidityAdapter is currently zero, so ordinary redeem/withdraw uses idle USDS unless a separate deallocation occurs. Offchain signer custody, independence and a historical permission/pending-operation census are not established. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/."
       }
     ],
     "review": {
@@ -140,8 +208,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
         },
         {
-          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-          "url": "https://etherscan.io/block/26107702"
+          "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+          "url": "https://etherscan.io/block/26197300"
         },
         {
           "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -156,9 +224,9 @@
           "url": "https://eth.blockscout.com/tx/0xbecea2aa97133574b2e3251bc794e0d827b473d2ac78311ba788e22d2c651b3e"
         }
       ],
-      "evidence": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=37213041.517174 USDS; totalSupply=37094821.851264 shares; convertToAssets(1e18)=1.003186958718484905 USDS; idle balance=29771240.288112 USDS. Complete current adapter census contains 1 adapter, 3 markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 2535545.351573 USDS lender claim; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 1323435.223921 USDS lender claim; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 3582820.653569 USDS lender claim. The API snapshot is separately observed and is not the pinned-block denominator. Exact-deployment source and current Safe state establish the local share and parameter paths; parent native mint authority is inherited separately. Exact implementation creation transaction 0xbecea2aa97133574b2e3251bc794e0d827b473d2ac78311ba788e22d2c651b3e, block 24441155, timestamp 2026-02-12T14:00:11+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Offchain key custody and independence of Safe signers remain unestablished. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes.",
-      "reviewer": "Sol refinement Refine11",
-      "reviewedAt": "2026-10-03",
+      "evidence": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), totalAssets=40957315564631184834483764 raw USDS and totalSupply=40816828320738646526976560 raw shares. Idle USDS=33370015140198112300770155 plus the sole adapter's realAssets=7587300424433072533713609 reconciles exactly to totalAssets. All three current lender positions have zero borrowing and collateral. Runtime-matched vault/adapter code and pinned state establish immutable asset-backed share issuance, the separate 2-of-3 owner/curator/sentinel Safe and 1-of-3 allocator Safe. Morpho's indexed roster supplies current role candidates; it is not a pinned complete historical permission or pending-operation census. Exact deployment creation receipt and header were re-read at block 24441155 (2026-02-12T14:00:11Z), transaction 0xbecea2aa97133574b2e3251bc794e0d827b473d2ac78311ba788e22d2c651b3e. Parent USDS issuance is inherited separately. reconciliation=not-applicable describes local deposit-backed share mechanics, not independent financial assurance; supervision=none grants no prudential credit. No signer-independence or hardware-key-custody attestation was located in the issuer vault disclosure or September 2026 governing terms. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/.",
+      "reviewer": "Pharos batch64 exact-deployment review",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -166,8 +234,8 @@
           "controlRef": "ethereum:0x3f32bc09d41ee699844f8296e806417d6bf61bba",
           "question": "For sky.money USDS Flagship parameter-control Safe (ethereum:0x3f32bc09d41ee699844f8296e806417d6bf61bba): Offchain key custody and independence of Safe signers remain unestablished.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 exact-deployment review",
           "sources": [
             {
               "label": "Sky.money curated vault disclosure",
@@ -178,8 +246,8 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
             },
             {
-              "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-              "url": "https://etherscan.io/block/26107702"
+              "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+              "url": "https://etherscan.io/block/26197300"
             },
             {
               "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -192,6 +260,27 @@
             {
               "label": "Parameter-control Safe",
               "url": "https://etherscan.io/address/0x3f32bc09d41ee699844f8296e806417d6bf61bba"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xe4d5f54ce1830d5ecc49751021f306cfe7a52649",
+          "question": "What offchain key-storage safeguards, beneficial ownership and signer-independence policies govern the allocator Safe?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 exact-deployment review",
+          "sources": [
+            {
+              "label": "Sky.money curated vault disclosure",
+              "url": "https://sky.money/vaults"
+            },
+            {
+              "label": "Skybase International governing terms, section 1.9",
+              "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
+            },
+            {
+              "label": "Allocator Safe",
+              "url": "https://etherscan.io/address/0xe4d5f54ce1830d5ecc49751021f306cfe7a52649"
             }
           ]
         }

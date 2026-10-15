@@ -4,7 +4,7 @@
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "USCC fund, service providers and October 1 holdings",
+        "label": "USCC fund, service providers and October 13, 2026 holdings",
         "url": "https://superstate.com/assets/uscc"
       },
       {
@@ -14,11 +14,15 @@
       {
         "label": "Superstate deployments and administrative powers",
         "url": "https://docs.superstate.com/investors/smart-contracts"
+      },
+      {
+        "label": "Exact finalized Solana slot 457209132, 2026-10-15T10:46:10Z: default-frozen mint, freeze authority and permanent delegate",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
-    "evidence": "Official EVM contracts check a centrally administered allowlist and permit forced administrative burn. Solana at finalized slot 452748144 is default-frozen and retains freeze authority/permanent delegate 2Yq4T3mPNfjtEyTxSbRjRKqLf1pwbTasuCQrWe6QpM7x. These are direct native holder restrictions, not inferred from mint authority."
+    "reviewer": "Rev_UsccSuperstate primary-source and pinned-state review",
+    "reviewedAt": "2026-10-15",
+    "evidence": "Official EVM contracts check a centrally administered allowlist and permit forced administrative burn. Ethereum block 26197388 and Plume block 99537544 identify the current AllowlistV4 proxies and unchanged issuer owner. Exact archived Solana state at finalized slot 457209132 (2026-10-15T10:46:10Z) is default-frozen and retains freeze authority/permanent delegate 2Yq4T3mPNfjtEyTxSbRjRKqLf1pwbTasuCQrWe6QpM7x. These are direct native holder restrictions, not inferred from mint authority."
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
@@ -27,12 +31,12 @@
     "summary": "NAV Fund Services marks the USCC fund using daily 4pm prices, staking rates and dealer OTC marks. Chainlink republishes that centrally originated NAV; an oracle transport does not independently reconcile the fund.",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_UsccSuperstate primary-source review",
       "rationale": "The applicable price authority prices subscriptions, redemptions and fund NAV; no borrower liquidation branches are disclosed for the holder instrument.",
       "sources": [
         {
-          "label": "USCC fund, service providers and October 1 holdings",
+          "label": "USCC fund, service providers and October 13, 2026 holdings",
           "url": "https://superstate.com/assets/uscc"
         },
         {
@@ -45,16 +49,16 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine05 primary-source and pinned-RPC review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsccSuperstate primary-source and pinned-state review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "USCC Chainlink NAV transport 0xaffd8f5578e8590665de561bde9e7badb99300d9, answer 11772765 at 2026-10-02T13:10:47Z; read at Ethereum block 26110192",
-        "url": "https://etherscan.io/address/0xaffd8f5578e8590665de561bde9e7badb99300d9"
+        "label": "Ethereum block 26197388, 2026-10-15T10:42:47Z: USCC Chainlink NAV answer 11790193, six decimals, updated 2026-10-14T14:00:35Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
-        "label": "USCC fund, service providers and October 1 holdings",
+        "label": "USCC fund, service providers and October 13, 2026 holdings",
         "url": "https://superstate.com/assets/uscc"
       },
       {
@@ -70,12 +74,12 @@
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "USCC shares are issued natively on Ethereum, Plume and Solana. Superstate documents issuer-mediated EVM source burn/destination reissue; Solana has no ordinary bridge and uses redemption and repurchase instead. Book-entry conversion removes public tokens rather than creating an extra aggregate supply leg.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R22 primary issuer cap-reach review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsccSuperstate primary-source and pinned-state review",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "USCC fund, service providers and October 1 holdings",
+        "label": "USCC fund, service providers and October 13, 2026 holdings",
         "url": "https://superstate.com/assets/uscc"
       },
       {
@@ -100,13 +104,13 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Current issuer investor terms explicitly permit tokenization on this network; separate burn/reissue rails conserve shares and do not convert the token into a wrapped claim.",
+        "reviewNote": "Current issuer terms explicitly permit native tokenization on Ethereum. At block 26197388 (2026-10-15T10:42:47Z), owner and ProxyAdmin owner match the issuer EOA, six decimals and raw supply 8543006114245 are observed, and both pause flags are false. Separate EVM burn/reissue conserves shares rather than creating a wrapped claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
         "sources": [
           {
-            "label": "USCC fund, service providers and October 1 holdings",
+            "label": "USCC fund, service providers and October 13, 2026 holdings",
             "url": "https://superstate.com/assets/uscc"
           },
           {
@@ -116,6 +120,10 @@
           {
             "label": "Superstate deployments and administrative powers",
             "url": "https://docs.superstate.com/investors/smart-contracts"
+          },
+          {
+            "label": "Ethereum block 26197388, 2026-10-15T10:42:47Z: native token, authority and emergency-state reads",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       },
@@ -131,13 +139,13 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Current issuer investor terms explicitly permit tokenization on this network; separate burn/reissue rails conserve shares and do not convert the token into a wrapped claim.",
+        "reviewNote": "Current issuer terms explicitly permit native tokenization on Plume. At block 99537544 (2026-10-15T10:45:07Z), owner and ProxyAdmin owner match the issuer EOA, six decimals and raw supply 1443532039021 are observed, and both pause flags are false. Separate EVM burn/reissue conserves shares rather than creating a wrapped claim.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 96961184,
+        "observedAt": "2026-10-15",
+        "observedBlock": 99537544,
         "sources": [
           {
-            "label": "USCC fund, service providers and October 1 holdings",
+            "label": "USCC fund, service providers and October 13, 2026 holdings",
             "url": "https://superstate.com/assets/uscc"
           },
           {
@@ -147,6 +155,10 @@
           {
             "label": "Superstate deployments and administrative powers",
             "url": "https://docs.superstate.com/investors/smart-contracts"
+          },
+          {
+            "label": "Plume block 99537544, 2026-10-15T10:45:07Z: native token, authority and emergency-state reads",
+            "url": "https://rpc.plume.org"
           }
         ]
       },
@@ -162,13 +174,13 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Current issuer investor terms explicitly permit tokenization on this network; separate burn/reissue rails conserve shares and do not convert the token into a wrapped claim.",
+        "reviewNote": "Current issuer terms explicitly permit native tokenization on Solana; ordinary bridging is not supported and migration requires redemption and repurchase. At exact finalized slot 457209132 (2026-10-15T10:46:10Z), Token-2022 mint state identifies six decimals, raw supply 429805036336 and current/new scaled-UI multipliers of 1.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748144,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209132,
         "sources": [
           {
-            "label": "USCC fund, service providers and October 1 holdings",
+            "label": "USCC fund, service providers and October 13, 2026 holdings",
             "url": "https://superstate.com/assets/uscc"
           },
           {
@@ -178,6 +190,10 @@
           {
             "label": "Superstate deployments and administrative powers",
             "url": "https://docs.superstate.com/investors/smart-contracts"
+          },
+          {
+            "label": "Exact finalized Solana slot 457209132, 2026-10-15T10:46:10Z: native mint state",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ]
       }
@@ -202,11 +218,11 @@
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": true,
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
         "sources": [
           {
-            "label": "USCC fund, service providers and October 1 holdings",
+            "label": "USCC fund, service providers and October 13, 2026 holdings",
             "url": "https://superstate.com/assets/uscc"
           },
           {
@@ -216,6 +232,14 @@
           {
             "label": "Superstate deployments and administrative powers",
             "url": "https://docs.superstate.com/investors/smart-contracts"
+          },
+          {
+            "label": "Ethereum block 26197388, 2026-10-15T10:42:47Z: token and ProxyAdmin owner",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Plume block 99537544, 2026-10-15T10:45:07Z: token and ProxyAdmin owner",
+            "url": "https://rpc.plume.org"
           }
         ],
         "evidence": "Superstate documents bridge() source burn and specified-amount delivery on supported EVM destination networks, plus bridgeToBookEntry. The shared issuer owner controls Ethereum/Plume token and ProxyAdmin contracts. Official documentation expressly states that the contracts are upgradable and all minting is gated by the Superstate Admin Address. The same issuer upgrade/mint reach can therefore replace or bypass a bridge supply ceiling; canRaiseCap is adverse raiseable semantics, not a protective fixed cap. Native subscription minting remains separately inventoried. No external validator, independent rate limit or timelock is established."

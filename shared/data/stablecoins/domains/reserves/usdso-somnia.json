@@ -8,7 +8,7 @@
       "coinId": "frxusd-frax",
       "depType": "wrapper",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Frax Inc. and/or affiliates through the Somnia BrandedCustodian",
+      "issuerOrObligor": "Frax Inc. and/or affiliates through chain-local BrandedCustodian contracts",
       "riskFactors": [
         "counterparty",
         "custody",
@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
     "confidence": "verified",
     "sources": [
       {
@@ -50,28 +50,119 @@
       {
         "label": "Frax parent reserve balance sheet (issuer telemetry)",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Somnia block 439069606, 2026-10-15T10:43:10Z",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      },
+      {
+        "label": "Frax branded factory deployment and lookup documentation",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+      },
+      {
+        "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      },
+      {
+        "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+        "url": "https://rpc-gel.inkonchain.com"
+      },
+      {
+        "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+        "url": "https://rpc.linea.build"
+      },
+      {
+        "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.optimism.io"
+      },
+      {
+        "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+        "url": "https://rpc.scroll.io"
+      },
+      {
+        "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+        "url": "https://evm-rpc.sei-apis.com"
+      },
+      {
+        "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.katana.network"
+      },
+      {
+        "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.mode.network"
+      },
+      {
+        "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+        "url": "https://api-stable-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement.",
-    "compositionBasis": "Verified immediate parent-token custody and liability conservation at pinned block 428274392",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Somnia block 439069606 (0x716403bfe03e376c5ccebe2421103e0defcf068386a4a60fb17ff454719dc15f; 2026-10-15T10:43:10Z), child totalSupply(), custodian totalAssets(), brandedCoinMinted() and the actual frxUSD balance each equaled 3,547,660.062648 tokens. Both asset() and custodianTkn() identify Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5. previewRedeem(1e18)=1e18, mintFee()=0, redeemFee()=0 and isolatedBackingEnabled()=false. This verifies immediate parent-token custody and the complete authored local child supply at one block, not upstream fiat reserves, independent financial assurance or an executed redemption. The terms name Frax Inc. and/or affiliates as issuer and give the Somnia website operator no redemption obligation. Round r2 verified twenty additional exact USDso deployments with 18 decimals, each mapped by the official factory to the same chain-local custodian address. On every additional chain, totalSupply, totalAssets, brandedCoinMinted and actual local frxUSD custody reconcile at the chain-specific block and timestamp listed in sources; asset() identifies that chain's frxUSD. Ethereum, Fraxtal, Arbitrum, Avalanche and Base have positive local supply; the remaining new deployments were observed with explicit zero supply and zero custody, not treated as unavailable. Retrieved verified token, factory and custodian implementations match pinned runtimes across all twenty-one reviewed chains. These are separate local custody/accounting observations, not a synchronized global or in-flight liability reconciliation, independent financial assurance or an executed exit. Unichain at block 61321808 (2026-10-15T13:16:07Z) is also verified: exact USDso identity and native factory mapping, source-matched implementations, distinct three-of-six Safe, zero supply/totalAssets/brandedCoinMinted and an explicit zero actual local frxUSD balance read from 0x80eede496655fb9047dd39d9f418d5483ed600df. Earlier exclusion based on an exploratory empty-code observation was incorrect; the saved pinned code and independent Dwellir re-verification supersede it.",
+    "compositionBasis": "Immediate frxUSD parent-token custody on twenty-one exact reviewed native deployments, with a separate block/timestamp per chain; no global or in-flight liability closure",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "The immediate parent-token custody is identified; whole-book upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority are not established by this local balance observation.",
+    "knownUnknownExposure": "Immediate backing on each reviewed deployment is frxUSD. Complete global and in-flight liability coverage, uncatalogued integrations, upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority remain unestablished; zero unknown immediate asset-class exposure is not zero whole-product custody uncertainty.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Frax Somnia BrandedCustodian",
-        "role": "custodian",
-        "sharePct": 100
+        "name": "Frax chain-local USDso BrandedCustodian contracts",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -101,8 +192,100 @@
       {
         "label": "Frax parent reserve balance sheet (issuer telemetry)",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Somnia block 439069606, 2026-10-15T10:43:10Z",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      },
+      {
+        "label": "Verified BrandedFactory source, matched to each new deployment implementation runtime",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x690575465af47835b72c5b74c334234624cfd942"
+      },
+      {
+        "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      },
+      {
+        "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+        "url": "https://rpc-gel.inkonchain.com"
+      },
+      {
+        "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+        "url": "https://rpc.linea.build"
+      },
+      {
+        "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.optimism.io"
+      },
+      {
+        "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+        "url": "https://rpc.scroll.io"
+      },
+      {
+        "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+        "url": "https://evm-rpc.sei-apis.com"
+      },
+      {
+        "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.katana.network"
+      },
+      {
+        "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.mode.network"
+      },
+      {
+        "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+        "url": "https://api-stable-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
       }
     ],
-    "uncertainty": "The immediate parent-token custody is identified; whole-book upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority are not established by this local balance observation. Custodian owner is the factory proxy. Its current implementation has no generic recovery forwarder; the shared Safe owns the factory ProxyAdmin and custodian beacon, so reserve code remains replaceable. The current BrandedCustodian recoverERC20 function has no reserve-token exclusion."
+    "uncertainty": "The twenty-one reviewed deployments identify local frxUSD custody and chain-specific controlling Safes. No provider percentage is assigned to the whole product from asynchronous local balances. Global/in-flight liability closure, uncatalogued integrations, upstream legal segregation, independent financial reconciliation and holder seniority remain unestablished. On every reviewed chain the custodian owner is the factory proxy; source-matched current factory code has no generic recovery forwarder. Token/factory ProxyAdmins and custodian beacons are controlled by a three-of-five Safe on Ethereum and separate three-of-six Safes on the other reviewed chains. Custodian recoverERC20 has no reserve-token exclusion, and privileged replacement of factory or custody code remains possible."
   }
 }

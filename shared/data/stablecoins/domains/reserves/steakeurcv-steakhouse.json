@@ -3,8 +3,25 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x5f7827fdeb7c20b443265fc2f40845b715385ff2",
+      "name": "Steakhouse Prime EURCV idle EURCV",
+      "pct": 72.67692630366,
+      "risk": "medium",
+      "coinId": "eurcv-societe-generale-forge",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Societe Generale-FORGE EURCV",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f:deployed",
       "name": "EURCV-denominated Steakhouse Morpho lending claim",
-      "pct": 100,
+      "pct": 27.323073696339,
       "risk": "high",
       "coinId": "eurcv-societe-generale-forge",
       "depType": "wrapper",
@@ -23,8 +40,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SteakeurcvSteakhouse",
     "confidence": "verified",
     "sources": [
       {
@@ -42,11 +59,15 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+        "url": "https://etherscan.io/block/26197300"
       }
     ],
-    "rationale": "Exact asset, 18 share decimals, 18 underlying decimals, positive totalAssets and totalSupply were independently read at ethereum block 26107702. Sole adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a matches the current Morpho API. The complete direct reserve relationship is the EURCV-denominated protocol position, not idle fiat or an independently attested loan book.",
-    "compositionBasis": "Standing underlying-asset relationship corroborated by fixed-block RPC and exact Morpho current deployment inventory",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), asset() resolves to EURCV; both share and underlying decimals are 18. The sole MorphoMarketV1AdapterV2 has nine funded EURCV markets. Their expectedSupplyAssets sum to 36688867074060704535651111; idle EURCV is 97413204485849894142539451; total real assets reconcile to 134102071559910598678190562 raw units. Rate-capped totalAssets is 134035944336494731221690720, leaving 66127223415867456499842 undistributed raw units. All nine lender positions have zero borrowShares and posted collateral. This complete direct reserve relationship is the EURCV-denominated protocol position, including idle liquidity, not a fiat reserve attestation or borrower-collateral weighting. Family pass (block 26197300, 2026-10-15T10:25:11Z): after the config-version-2 measured split, idle EURCV is classified under the underlying key at 72.67692630366% and non-idle lender claims under the vault :deployed key at 27.323073696339%, using the producer's held/totalAssets denominator.",
+    "compositionBasis": "Pinned idle EURCV and complete sole-adapter nine-market census at Ethereum block 26197300; measured idle/deployed split under separate underlying and vault :deployed keys",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Borrower collateral allocations and realizable stress exit vary. The 100% underlying-token claim does not assert any collateral-market weighting, signed reconciliation, legal segregation or funded recovery.",
     "knownUnknownExposurePct": 0
@@ -55,8 +76,7 @@
     "providers": [
       {
         "name": "Steakhouse Prime EURCV VaultV2 and Morpho adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a",
-        "role": "other",
-        "jurisdiction": "ethereum"
+        "role": "other"
       },
       {
         "name": "Carniceria Tropical SA (Steakhouse vault service operator and curator)",
@@ -67,8 +87,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SteakeurcvSteakhouse",
     "confidence": "manual-review",
     "sources": [
       {
@@ -86,8 +106,16 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+        "url": "https://etherscan.io/block/26197300"
+      },
+      {
+        "label": "Coinbase cbBTC backed by BTC held in Coinbase custody",
+        "url": "https://www.coinbase.com/cbbtc"
       }
     ],
-    "uncertainty": "Immediate assets sit in vault and adapter/market contracts; the curator terms deny custody and fiduciary obligations. Ultimate parent reserve custody, borrower-collateral custody, legal priority, continuity resources and legal reuse rights are not fully established for this exact share. Whole-book custody therefore remains unknown."
+    "uncertainty": "Immediate assets sit in vault and adapter/market contracts; the curator terms deny custody and fiduciary obligations. Ultimate parent reserve custody, borrower-collateral custody, legal priority, continuity resources and legal reuse rights are not fully established for this exact share. Whole-book custody is mixed: 72.68% idle EURCV carries SG-FORGE issuer reserve custody, and lender claims include material cbBTC/WBTC collateral backed by custodied BTC; safeguards of those layers remain unestablished. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

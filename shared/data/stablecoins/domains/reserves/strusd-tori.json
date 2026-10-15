@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_StrusdTori primary-source and pinned-state review",
     "confidence": "verified",
     "sources": [
       {
@@ -44,30 +44,29 @@
         "url": "https://docs.tori.finance/legal/trusd-terms.md"
       },
       {
-        "label": "Pinned Ethereum block 26107706",
-        "url": "https://etherscan.io/block/26107706"
+        "label": "Pinned Ethereum block 26197398, 15 October 2026",
+        "url": "https://etherscan.io/block/26197398"
       }
     ],
-    "rationale": "At Ethereum block 26107706, asset() returned tracked trUSD and totalSupply was 43340867.809940872216080268 shares. totalAssets was 44539660.969214475465229229 trUSD, equal to the separately read 44539892.811952570703324467 trUSD balance less 231.842738095238095238 unvested rewards. The immediate vault exposure is entirely trUSD; high legacy risk follows the parent synthetic strategy rather than duplicating its reserve percentages. Burned cooldown liabilities and their silo assets are separate from outstanding share accounting.",
+    "rationale": "At Ethereum block 26197398 (2026-10-15T10:44:47Z), asset() returned tracked trUSD and totalSupply was 53468176.729689242647566242 shares. totalAssets was 55128315.719349813868587824 trUSD, exactly equal to the separately read vault balance of 55131848.085401401170175124 trUSD less 3532.366051587301587300 unvested rewards. The silo separately held 6101169.460821163463636619 trUSD for burned cooldown claims; those funds are excluded from outstanding-share backing and new-request capacity. The immediate vault exposure remains entirely trUSD; high legacy risk follows the parent synthetic strategy rather than duplicating parent reserve percentages. The seven-day liquidity horizon is the current configurable cooldown, not an immutable commitment or a dollar-repurchase guarantee.",
     "compositionBasis": "Exact ERC-4626 underlying-asset relationship and pinned balance/share reads",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Immediate parent identity is known. This review does not independently close parent reserves, offchain legal segregation, or stressed recovery.",
+    "knownUnknownExposure": "Immediate parent identity is known. Parent terms deny holder ownership or recourse to issuer reserves; the backing page's segregated-custodian description does not establish holder-beneficial segregation, creditor priority or stressed recovery.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
         "name": "Ethereum StakedTrUSD 0x280839980a7ed0d7717f64125fe241012e5f5815",
-        "role": "other",
-        "jurisdiction": "ethereum"
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_StrusdTori primary-source and pinned-state review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -91,10 +90,10 @@
         "url": "https://docs.tori.finance/legal/trusd-terms.md"
       },
       {
-        "label": "Pinned Ethereum block 26107706",
-        "url": "https://etherscan.io/block/26107706"
+        "label": "Pinned Ethereum block 26197398, 15 October 2026",
+        "url": "https://etherscan.io/block/26197398"
       }
     ],
-    "uncertainty": "Immediate trUSD is held in the vault and cooldown silo 0xf7c0d8853e69dcd37ee7599c6280d2632f3360b4; bridge units rely on the Ethereum CCIP pool. Parent offchain reserve institutions and enforceable insolvency protections remain unresolved. Restricted-holder funds can be redistributed or seized by the admin."
+    "uncertainty": "Immediate trUSD is held in the Ethereum vault and cooldown silo 0xf7c0d8853e69dcd37ee7599c6280d2632f3360b4; bridge units rely on one Ethereum CCIP pool. Ethereum is the execution chain, not a legal custody jurisdiction. The issuer describes segregated institutional accounts, but the holder-binding terms make parent reserves Tori BVI's general assets and deny direct economic recourse to investments. Exact offchain institutions, whole-book legal safeguards and insolvency recovery remain unresolved. Restricted-holder shares and silo funds can be redistributed or seized."
   }
 }

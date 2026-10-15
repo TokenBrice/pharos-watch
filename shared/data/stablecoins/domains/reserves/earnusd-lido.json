@@ -12,14 +12,15 @@
         "counterparty",
         "liquidity",
         "smart-contract",
-        "concentration"
+        "concentration",
+        "leverage"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_EarnusdLido",
     "confidence": "verified",
     "sources": [
       {
@@ -47,18 +48,30 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; vault, subvault and share identities",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Mellow named underlying conservative and experimental vaults",
         "url": "https://docs.mellow.finance/lido-earn/earnusd"
+      },
+      {
+        "label": "Exact EarnUSD interface strategy risks and linked legal terms",
+        "url": "https://stake.lido.fi/earn/usd/withdraw"
+      },
+      {
+        "label": "Mellow API exact lido-earn-usd row; aggregates are not a whole-book reserve census",
+        "url": "https://points.mellow.finance/v1/vaults"
+      },
+      {
+        "label": "Runtime Global strategist legal terms and third-party risk allocation",
+        "url": "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf"
       }
     ],
-    "rationale": "The entire holder instrument is an operational protocol-position claim. The deployed vault has two subvaults, unlike the one-subvault introduction text. No current look-through allocation is inferred from deposit assets or the USDC withdrawal denomination. Mellow explicitly identifies earnUSDc (conservative, Ethereum/Base) and earnUSDe (experimental, Ethereum/Plasma/Mantle) as the two underlying vaults and USDC/USDT USD strategies. This establishes standing structure, not current allocation weights, encumbrances or whole-book assurance.",
+    "rationale": "The entire holder instrument is an operational protocol-position claim, not a measured 100% USDC cash reserve. At Ethereum block 26196064 (2026-10-15T06:16:59Z), the vault still has two subvaults. A bounded five-token balance census finds subvault 0 holds 15212506004451727577664921 raw earnUSDc shares, 48692137485 raw USDC and 130611051366 raw USDT; subvault 1 holds 40779186888805424391750779 raw earnUSDe shares and 49359624869 raw USDC. This is an immediate technical observation, not a complete look-through inventory or valued portfolio allocation. Mellow names earnUSDc on Ethereum/Base and earnUSDe on Ethereum/Plasma/Mantle; Lido's current registry additionally lists earnUSDe on Robinhood. These are underlying strategy deployments, not earnUSD holder-token representations. The official interface discloses liquidity provision and leverage risk without measured gearing. Neither these observations nor the aggregate API supplies complete holdings, debt, encumbrance and share-liability reconciliation; no current look-through weights are inferred.",
     "compositionBasis": "Standing whole-token claim identity corroborated by exact deployed code and pinned chain state; not a measured look-through allocation",
     "scope": "full-composition",
-    "knownUnknownExposure": "Named earnUSDc and earnUSDe standing structure is public; current constituent holdings/weights, encumbrances, cross-chain allocation and complete matched share-liability valuation are still not established.",
+    "knownUnknownExposure": "Named underlying vaults and immediate top-level custody contracts are public; current constituent holdings/weights, gearing, encumbrances, cross-chain allocations and complete matched share-liability valuation remain unestablished.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -74,25 +87,22 @@
     "providers": [
       {
         "name": "Lido EarnUSD vault 0x014e6da8f283c4af65b2aa0f201438680a004452",
-        "role": "other",
-        "jurisdiction": "Ethereum"
+        "role": "other"
       },
       {
         "name": "Lido EarnUSD subvault 0x77b9441d5cb89fca435190a9b6d108ad4b00ccfd",
-        "role": "other",
-        "jurisdiction": "Ethereum"
+        "role": "other"
       },
       {
         "name": "Lido EarnUSD subvault 0xe3e0111e31fa3aeb7a528128f2dbae1c15397242",
-        "role": "other",
-        "jurisdiction": "Ethereum"
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_EarnusdLido",
     "confidence": "manual-review",
     "sources": [
       {
@@ -104,8 +114,8 @@
         "url": "https://docs.lido.fi/earn/"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; exact vault and two subvault identities",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
     "knownUnknownExposurePct": 100,

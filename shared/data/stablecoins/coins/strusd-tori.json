@@ -36,8 +36,8 @@
   "mechanismArchetype": "protocol-position",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_StrusdTori primary-source and pinned-state review",
     "rationale": "Exact Ethereum StakedTrUSD is a transferable ERC-4626 operational share claim against trUSD held in 0x280839980a7ed0d7717f64125fe241012e5f5815. Monad and Pharos are CCIP representations backed by the Ethereum escrow, not independent vaults or additional native liabilities. Local share accounting and cooldown differ from the parent synthetic-dollar mechanism.",
     "sources": [
       {
@@ -61,13 +61,13 @@
         "url": "https://docs.tori.finance/legal/trusd-terms.md"
       },
       {
-        "label": "Pinned Ethereum block 26107706",
-        "url": "https://etherscan.io/block/26107706"
+        "label": "Pinned Ethereum block 26197398, 15 October 2026",
+        "url": "https://etherscan.io/block/26197398"
       }
     ]
   },
   "collateral": "trUSD held by the Ethereum staking vault; unvested rewards are excluded from totalAssets. Burned cooldown claims hold trUSD in the separate silo. Offchain reserve and strategy risks remain with tracked trUSD.",
-  "pegMechanism": "Holders stake trUSD for ERC-4626 shares. Current cooldownDuration is 604800 seconds: cooldownShares or cooldownAssets burns shares and moves trUSD to the silo, then unstake releases it. Staking and unstaking carry no protocol fee; gas applies. Restricted addresses can be blocked and their shares or cooldown funds seized. Parent trUSD repurchase is a separate KYC-approved, discretionary issuer route.",
+  "pegMechanism": "Holders stake trUSD for ERC-4626 shares. At Ethereum block 26197398, cooldownDuration is 604800 seconds: cooldownShares or cooldownAssets burns shares and moves trUSD to the silo, then unstake releases it. The admin can change the cooldown up to 90 days; adding another request resets the timer for all accumulated cooldown funds. Staking and unstaking carry no protocol fee; gas applies. Restricted addresses can be blocked and their shares or cooldown funds seized. Parent trUSD repurchase is a separate KYC-approved, discretionary issuer route.",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://etherscan.io/address/0x280839980a7ed0d7717f64125fe241012e5f5815#readProxyContract",
@@ -76,8 +76,24 @@
   },
   "links": [
     {
-      "label": "Tori strUSD staking and unstaking terms",
+      "label": "Website",
+      "url": "https://tori.finance"
+    },
+    {
+      "label": "Docs",
       "url": "https://docs.tori.finance/products/strusd.md"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/tori_finance"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.tori.finance/security/audits.md"
+    },
+    {
+      "label": "Terms",
+      "url": "https://docs.tori.finance/legal/trusd-terms.md"
     },
     {
       "label": "Tori canonical vault and CCIP deployments",
@@ -86,10 +102,18 @@
   ],
   "collateralQuality": "exotic",
   "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Tori net trading rewards through the strUSD exchange rate",
     "yieldType": "nav-appreciation"
   },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Staking eligibility and holder rights",
+      "message": "Tori's terms do not offer strUSD acquisition to persons with habitual residence or registered office in the EU, EEA or United States. Rewards are discretionary and may be negative; holders have no direct economic recourse to Tori's underlying investments. Unstaking returns trUSD, not dollars."
+    }
+  ],
   "archetypeOverride": true,
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",

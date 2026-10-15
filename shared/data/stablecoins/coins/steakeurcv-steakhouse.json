@@ -14,14 +14,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "eurcv-societe-generale-forge",
   "collateral": "EURCV held idle in the exact Morpho VaultV2 and supplied through its sole MorphoMarketV1 adapter; borrower collateral and market liquidity determine strategy risk.",
-  "pegMechanism": "ERC-4626 shares represent a proportional EURCV-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Holder withdrawals burn shares and pay EURCV atomically when idle assets plus the selected liquidity adapter suffice.",
+  "pegMechanism": "ERC-4626 shares represent a proportional EURCV-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Holder withdrawals burn shares and pay EURCV atomically when idle assets plus the selected liquidity adapter suffice. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.001% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current holder claim is the operational ERC-4626 claim at ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f, not direct ownership of the parent’s fiat reserves. Exact verified immutable VaultV2 code pulls underlying before user mint, can mint fee shares during interest accrual, and burns receipts against available underlying on exit. Reverified at block 26107702; parent fiat-cash protections remain upstream.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SteakeurcvSteakhouse",
+    "rationale": "The exact immutable Ethereum VaultV2 share represents a EURCV-denominated strategy position, not direct ownership of the parent fiat reserves. At block 26197300 (2026-10-15T10:25:11Z), asset() is EURCV, share and underlying decimals are 18, and the sole adapter holds nine funded Morpho lender positions. Source-matched enter() pulls assets before user mint; accrueInterest() can mint fee shares and realizes strategy losses; exit() burns shares for available EURCV. Parent fiat-cash protections remain upstream.",
     "sources": [
       {
         "label": "Morpho exact Steakhouse Prime EURCV deployment",
@@ -38,13 +38,17 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+        "url": "https://etherscan.io/block/26197300"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho exact Steakhouse Prime EURCV deployment",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
     },
     {
@@ -52,8 +56,28 @@
       "url": "https://www.steakhouse.financial/docs"
     },
     {
-      "label": "Morpho Vault V2 mechanics",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Curator",
+      "url": "https://www.steakhouse.financial/"
+    },
+    {
+      "label": "Steakhouse: Vault terms",
+      "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+    },
+    {
+      "label": "Ethereum vault contract",
+      "url": "https://etherscan.io/address/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Steakhouse Supervisor v2 governance",
+      "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2"
     }
   ],
   "contracts": [
@@ -63,14 +87,16 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "unknown",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "mixed",
+  "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Steakhouse Morpho EURCV lending vault",
     "yieldType": "lending-vault"
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "steakeurcv-steakhouse",
     "display": {
@@ -93,9 +119,9 @@
         "expectedAssetAddress": "0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
       },
       "deployedExposure": {
-        "basis": "Exact asset() returned 0x5f7827fdeb7c20b443265fc2f40845b715385ff2; sole adapter 0x5e3aca36fe2361e1866752ad74cb429f64cdcf1a is identified by Morpho as MorphoMarketV1 over the same loan asset. This 100% slice is the underlying lending claim, not an estimate of borrower collateral or idle cash.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+        "basis": "At Ethereum block 26197300, asset() is EURCV and the sole source-matched MorphoMarketV1AdapterV2 holds nine funded EURCV lender positions. Idle EURCV (97413204485849894142539451 raw units) plus adapter realAssets (36688867074060704535651111 raw units) reconciles real holdings (134102071559910598678190562); totalAssets (134035944336494731221690720) is rate-capped below real holdings. The reviewed descriptor covers non-idle EURCV-denominated lender claims; the live adapter separately measures idle/deployed exposure, not borrower-collateral weights.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://etherscan.io/block/26197300"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

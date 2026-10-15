@@ -39,7 +39,7 @@
     "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
     "provider": "Nephos Accountants Limited; the report disclaims a formal assurance engagement despite its ISAE 3000 examination opening.",
     "attestorTier": "niche",
-    "cadence": "undisclosed",
+    "cadence": "monthly",
     "attestorJurisdiction": "United Kingdom",
     "latestReport": {
       "periodEnd": "2026-09-30",
@@ -84,10 +84,24 @@
     {
       "label": "Current Ethereum implementation activated at block 25438318, July 1, 2026",
       "url": "https://etherscan.io/block/25438318"
+    },
+    {
+      "label": "Agant GBPA token design and cross-chain transfer semantics",
+      "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+    },
+    {
+      "label": "Agant public monthly reserve-report archive",
+      "url": "https://security.agant.io/resources"
+    },
+    {
+      "label": "Agant FCA registration scope and GBPA protection exclusions",
+      "url": "https://www.agant.io/company/"
     }
   ],
   "jurisdiction": {
-    "country": "United Kingdom"
+    "country": "United Kingdom",
+    "regulator": "Financial Conduct Authority (issuer-disclosed cryptoasset AML registration)",
+    "license": "Money Laundering Regulations 2017 cryptoasset registration, FRN 1037671; not prudential stablecoin authorization"
   },
   "contracts": [
     {
@@ -117,8 +131,8 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "single-entity",
-  "launchDate": "2026-01-25",
+  "launchDate": "2026-06",
   "implementationLaunchDate": "2026-07-01"
 }

@@ -12,15 +12,15 @@
   "variantOf": "rlusd-ripple",
   "variantKind": "strategy-vault",
   "pegReferenceId": "rlusd-ripple",
-  "collateral": "RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token.",
-  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for RLUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at the pinned review; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity and an in-kind position exit do not promise full-size cash redemption.",
+  "collateral": "RLUSD lending positions against kBTC, weETH, USDe, cbBTC, FXRP, syrupUSDC and wstETH, plus 1-wei lender dust positions against WBTC, PT-sUSDE-13AUG2026 and WETH at Ethereum block 26197000 (2026-10-15). Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token.",
+  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for RLUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at Ethereum block 26197000; ordinary cash redemptions use idle assets unless assets are first deallocated. Permissionless forceDeallocate has a 0.01% penalty and depends on market liquidity; an in-kind position exit does not promise full-size cash redemption. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum deployment 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf is immutable VaultV2, issuing transferable ERC-4626 operational shares over RLUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=24587448, creationTimestamp=1772667719 (2026-03-04T23:41:59.000Z); independently retrieved 2026-10-03.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_Senrlusdv2Sentora",
+    "rationale": "Exact Ethereum deployment 0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf is immutable VaultV2, issuing transferable ERC-4626 operational shares over RLUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26197000 (2026-10-15T09:24:59Z); the simulation returned 1014234889118427417 raw RLUSD and is not a settled redemption. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=24587448, creationTimestamp=1772667719 (2026-03-04T23:41:59.000Z); independently retrieved 2026-10-15.",
     "sources": [
       {
         "label": "Sentora RLUSD Main exact vault",
@@ -39,8 +39,8 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho exact-vault portfolio API",
@@ -51,16 +51,28 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
     },
     {
-      "label": "Issuer",
+      "label": "Curator",
       "url": "https://sentora.com"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Sentora: Terms of use",
+      "url": "https://sentora.com/legal/terms-of-use"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
     }
   ],
   "contracts": [
@@ -71,7 +83,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Sentora RLUSD Main Morpho lending vault",
@@ -79,7 +91,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "senrlusdv2-sentora",
     "display": {
@@ -95,11 +107,16 @@
     },
     "params": {
       "slice": {
-        "name": "RLUSD deposited into Sentora-curated Morpho lending markets",
-        "risk": "medium",
+        "name": "RLUSD supplied to Sentora RLUSD Main Morpho lending positions",
+        "risk": "high",
         "coinId": "rlusd-ripple",
         "depType": "wrapper",
         "expectedAssetAddress": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+      },
+      "deployedExposure": {
+        "basis": "At Ethereum block 26197870 (2026-10-15T12:19:35Z), idle RLUSD raw 22598046459278494064050190 plus sole adapter 0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff realAssets raw 431923963526671330247199131 equaled totalAssets raw 454522009985949824311249321 exactly. The adapter held ten Morpho lender market positions against cbBTC, weETH, wstETH, syrupUSDC, kBTC, WBTC, PT-sUSDE-13AUG2026, WETH, FXRP, USDe collateral, each with zero borrowShares and posted collateral. The reviewed descriptor covers non-idle RLUSD-denominated lender claims, not idle cash or borrower-collateral ownership.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

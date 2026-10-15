@@ -4,7 +4,7 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "usdso-somnia",
-    "display": { "url": "https://somnia.network/usdso-stablecoin", "label": "USDso frxUSD custodian" },
+    "display": { "url": "https://somnia.network/usdso-stablecoin", "label": "USDso Somnia-local frxUSD custodian" },
     "inputs": { "primary": { "kind": "onchain-evm", "chain": "somnia", "rpcMode": "public-rpc" } },
     "params": {
       "reads": [{
@@ -25,7 +25,7 @@
   "launchDate": "2026-04-21",
   "name": "USD Somnia",
   "symbol": "USDso",
-  "oneLiner": "Frax-issued USDso wraps frxUSD on Somnia, with on-chain parent-token redemption and administrator-controlled issuance and custody.",
+  "oneLiner": "Frax-issued USDso wraps frxUSD across EVM chains, with local parent-token redemption and chain-specific administrators controlling issuance and custody.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -34,9 +34,33 @@
   "variantOf": "frxusd-frax",
   "variantKind": "pure-wrapper",
   "pegReferenceId": "frxusd-frax",
-  "collateral": "Somnia frxUSD held by the local BrandedCustodian; Treasury funds and other cash-equivalent reserves sit upstream in frxUSD.",
-  "pegMechanism": "The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement.",
+  "collateral": "Local frxUSD held by each chain's BrandedCustodian; Treasury funds and other cash-equivalent reserves sit upstream in frxUSD.",
+  "pegMechanism": "Frax's BrandedCustodian burns caller-owned USDso and returns local frxUSD. At the October 15, 2026 review pins, each reviewed deployment's child supply, custodian minted accounting and actual frxUSD custody were equal, redemption previewed one for one and the redemption fee was zero. The cross-chain router redeems to frxUSD, sends it through LayerZero and deposits into the destination custodian to mint USDso. Fees, issuance and custody logic remain administrator-controlled. Somnia's terms name Frax Inc. and/or affiliates as issuer, disclaim the website operator's redemption responsibility and give holders no reserve-yield entitlement.",
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdsoSomnia primary-source review",
+    "rationale": "USDso retains its tracked frxUSD parent's tbill archetype. Its immediate backing and redemption output are frxUSD, not a direct fund share or legal title to Treasury reserves. Frax documents one-for-one BrandedCustodian conversion; pinned reads reconcile each of the twenty-one reviewed local deployments to its parent-token custody. These local balances do not establish a complete global or in-flight liability census. Treasury and cash-equivalent reserve risks remain upstream.",
+    "sources": [
+      {
+        "label": "Frax branded custodian documentation",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+      },
+      {
+        "label": "Frax branded stablecoin multichain architecture",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+      },
+      {
+        "label": "frxUSD issuer and reserve structure",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd"
+      },
+      {
+        "label": "Somnia block 439069606, 2026-10-15T10:43:10Z",
+        "url": "https://api.infra.mainnet.somnia.network"
+      }
+    ]
+  },
   "llamaId": "378",
   "detailProvider": "defillama",
   "links": [
@@ -47,6 +71,22 @@
     {
       "label": "Token explorer",
       "url": "https://explorer.somnia.network/address/0x00000022da000002656c64d9ea6011ea952d008a"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+    },
+    {
+      "label": "Terms of service",
+      "url": "https://somnia.network/usdso-terms-of-service"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Somnia_Network"
+    },
+    {
+      "label": "Parent reserve disclosure",
+      "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
     }
   ],
   "contracts": [
@@ -54,19 +94,120 @@
       "chain": "somnia",
       "address": "0x00000022da000002656c64d9ea6011ea952d008a",
       "decimals": 18
+    },
+    {
+      "chain": "ethereum",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "fraxtal",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "avalanche",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "bsc",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "ink",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "katana",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "linea",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "monad",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "mode",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "plume",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "polygon",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "scroll",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "sei",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "sonic",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "stable",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "worldchain",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x00000022da000002656c64d9ea6011ea952d008a",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
+  "governanceQuality": "multisig",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://explorer.somnia.network/address/0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9",
-    "provider": "On-chain parent-token custody; not independent financial assurance",
+    "provider": "Somnia-local parent-token custody only; not global coverage or independent financial assurance",
     "cadence": "real-time"
   },
   "dependencyReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07 primary-source review 2026-10-03",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdsoSomnia primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -100,9 +241,25 @@
       {
         "label": "Exact USDso deployment transaction, block 286960382, 2026-04-21T16:21:07Z",
         "url": "https://explorer.somnia.network/api/v2/transactions/0x8127701f07729cd06534afbafcccb7c9d81c1b57690b15075811e4f1ce898780"
+      },
+      {
+        "label": "Somnia block 439069606, 2026-10-15T10:43:10Z",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "Frax branded custodian documentation",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+      },
+      {
+        "label": "Frax branded factory deployment and lookup documentation",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+      },
+      {
+        "label": "Verified BrandedCustodian source, matched to all reviewed local implementations",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
       }
     ],
-    "rationale": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. The BrandedCustodian burns caller-owned USDso and returns frxUSD. At the pin, custodianTkn() was Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; totalAssets(), brandedCoinMinted(), actual frxUSD custody and child supply matched. previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. The terms identify Frax Inc. and/or affiliates as issuer, disclaim Somnia fiat-redemption responsibility and exclude a holder yield entitlement. The exact deployment launch date is 2026-04-21, established by the explorer creation transaction.",
+    "rationale": "At Somnia block 439069606 (0x716403bfe03e376c5ccebe2421103e0defcf068386a4a60fb17ff454719dc15f; 2026-10-15T10:43:10Z), child totalSupply(), custodian totalAssets(), brandedCoinMinted() and the actual frxUSD balance each equaled 3,547,660.062648 tokens. asset() and custodianTkn() both identify Somnia frxUSD 0x00000000d61733e7a393a10a5b48c311abe8f1e5; previewRedeem(1e18)=1e18, redeemFee()=0 and isolatedBackingEnabled()=false. Round r2 verified twenty additional exact-token native deployments; each local custodian identifies that chain's frxUSD and reconciles child supply to actual parent-token custody at its separately recorded pin in the reserves and mint-authority sidecars. Retrieved verified token, custodian and factory source matches pinned implementation runtimes on all twenty-one reviewed chains. This is a serial parent-token claim, not independent Treasury ownership, complete global/in-flight liability reconciliation or financial assurance. Somnia's terms identify Frax Inc. and/or affiliates as issuer and disclaim website-operator redemption and holder yield obligations. The Somnia creation receipt was independently re-read at block 286960382 (2026-04-21T16:21:07Z), confirming the retained deployment date.",
     "relationships": [
       {
         "id": "frxusd-frax",

@@ -3,13 +3,29 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8",
-      "name": "PYUSD held idle and supplied to Sentora Huma PST Main Morpho lending positions",
-      "pct": 100,
+      "name": "Sentora Huma PST Main idle underlying",
+      "pct": 4.7357,
+      "risk": "medium",
+      "coinId": "pyusd-paypal",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Paxos",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0x8381a156958711e230f325428b5eb4b6555c75d9:deployed",
+      "name": "PYUSD supplied to Sentora Huma PST Main Morpho lending positions",
+      "pct": 95.2643,
       "risk": "high",
       "coinId": "pyusd-paypal",
       "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Sentora Huma PST Main, Morpho lending borrowers and the PYUSD issuer",
+      "issuerOrObligor": "Sentora-curated Morpho markets and their borrowers",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -21,8 +37,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4C06Schuman)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -30,8 +46,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
       },
       {
-        "label": "Dwellir Ethereum block 26155384 (2026-10-09T14:14:35Z), complete root/adapter/market accounting observed 2026-10-09T14:31:34Z through 14:32:33Z",
-        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        "label": "Dwellir Ethereum block 26197000 (2026-10-15T09:24:59Z), complete root/adapter/market accounting",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -58,9 +74,9 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x39ad1c6152c09de4598a4f39c7b0a85f7b03326b"
       }
     ],
-    "rationale": "At Ethereum block 26155384 (hash 0x779c1c2f6e751166c9157d5a1dad25061c8a523d9ae72a6bbed43af98890a3fa; 2026-10-09T14:14:35Z), asset() was PYUSD 0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets raw 73982573569218 and totalSupply raw 73456129922268937768761718. adaptersLength() was 1, binding sole adapter 0x39ad1c6152c09de4598a4f39c7b0a85f7b03326b to this parentVault. Root idle PYUSD raw 8929972046303 plus adapter realAssets raw 65052601522915 reconciled exactly to totalAssets. marketIdsLength() was 1; market 0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512 loans PYUSD against Huma PST 0x22ae3d9a738471f405169af055d31c687087d4c7 at 86% LLTV. The adapter position's borrowShares and collateral were zero. The 100% row identifies the immediate PYUSD-denominated idle/lender claim; neither zero current adapter debt nor exact accounting establishes all borrower/SPV borrowing authority, latent strategy reach, custody safeguards, or a whole-allocation exemption.",
-    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; single parent-denominated strategy dependency",
-    "compositionAsOf": "2026-10-09",
+    "rationale": "At Ethereum block 26197000 (hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d; 2026-10-15T09:24:59Z), asset() was PYUSD 0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets raw 68353678138750 and totalSupply raw 67815111844226194785652874. adaptersLength() was 1, binding sole adapter 0x39ad1c6152c09de4598a4f39c7b0a85f7b03326b to this parentVault. Root idle PYUSD raw 3237009198161 plus adapter realAssets raw 65116668940589 reconciled exactly to totalAssets. marketIdsLength() was 1; market 0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512 loans PYUSD against Huma PST 0x22ae3d9a738471f405169af055d31c687087d4c7 at 86% LLTV. The adapter position's borrowShares and collateral were zero. Reserve rows split measured idle PYUSD (4.7357% of totalAssets) from the deployed lender claim (95.2643%) at the same pin, matching the measured idle/deployed runtime split. Exact accounting and zero adapter debt do not establish borrower/SPV borrowing limits, legal recovery rights or whole-book custody protections.",
+    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; measured idle and deployed shares of totalAssets, rounded to four decimals",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Current immediate asset and adapter inventory are identified. Borrower legal recovery, default liquidation proceeds and future allocations remain uncertain.",
     "knownUnknownExposurePct": 0
@@ -85,9 +101,9 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -95,8 +111,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z: exact vault and lender custody",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -121,8 +137,12 @@
       {
         "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
         "url": "https://docs.morpho.org/get-started/resources/audits/"
+      },
+      {
+        "label": "Sentora Huma PST credit structure and custody limitations",
+        "url": "https://sentora.com/asset-risk-reviews/huma"
       }
     ],
-    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. No exact-share legal insolvency priority or whole-book off-chain collateral-custody safeguards were established. Lending reuse is explicit. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
+    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. Sentora identifies Huma PST as a tokenized private-payment-credit pool concentrated in affiliated Arf origination and states that independently audited loan-tape and complete entity financial statements were not evidenced. These disclosures do not establish this Ethereum lender share's enforceable insolvency priority, borrower-collateral segregation or a whole-book custody denominator. Lending reuse is explicit. June 2026 Sentora terms section 4.3 describes non-custodial software; section 21.4 specifies BVI governing law and arbitration. The legal disclaimer does not remove observed curator and allocator powers. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

@@ -18,8 +18,8 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "U.S. Treasury obligations with no more than 93 days to maturity and Treasury-secured overnight repurchase agreements in BlackRock Daily Reinvestment Stablecoin Reserve Vehicle. October 8, 2026 listed securities comprise approximately 63.99% Treasury bills and 36.01% overnight repo by market value; BNY Mellon is custodian and accounting-services provider, Securitize is transfer agent. These portfolio weights do not establish whole-token liability reconciliation.",
-  "pegMechanism": "Registered government money-market OnChain share targeting $1 NAV, with daily income reinvested in additional shares. Securitize administers whitelisted subscriptions, transfers and redemptions across Ethereum, Tempo and Solana. Good-order redemption requests received before 5 p.m. Eastern on eligible business days ordinarily settle by same-day federal-funds wire when the custodian is open; the fund reserves up to seven days, with specified legal/emergency suspension exceptions. The prospectus charges no redemption fee, but shareholder-initiated transactions generally incur variable network gas and intermediary charges may apply. Redemption processing remains available off-chain during blockchain outages. Sponsor support and principal preservation are not guaranteed.",
+  "collateral": "Cash, U.S. Treasury obligations with no more than 93 days to maturity and Treasury-secured overnight repurchase agreements in BlackRock Daily Reinvestment Stablecoin Reserve Vehicle. October 14, 2026 listed securities comprise approximately 61.8874% Treasury bills and 38.1126% overnight repo by market value; BNY Mellon is custodian and accounting-services provider, Securitize is transfer agent. These weights cover disclosed securities, not total fund net assets or a whole-token liability reconciliation.",
+  "pegMechanism": "Registered government money-market OnChain share targeting $1 NAV. Income is declared daily and, unless the shareholder elects cash dividends, reinvested in additional shares on the next business day. New subscription and reinvestment tokens have a 24-hour peer-transfer lock, but remain available for redemption and relocation between the same investor's whitelisted wallets. Securitize administers whitelisted subscriptions, transfers and redemptions across Ethereum, Tempo and Solana. Access is generally limited to U.S. investors with a $3 million initial minimum, which may be waived. Good-order redemption requests received before 5 p.m. Eastern on eligible business days ordinarily settle by same-day federal-funds wire when the custodian is open; the fund reserves up to seven days, with specified legal/emergency suspension exceptions. The prospectus charges no redemption fee, but shareholder-initiated transactions generally incur variable network gas and intermediary charges may apply. Redemption processing remains available off-chain during blockchain outages. Peer transfers do not constitute a public trading market. Sponsor support and principal preservation are not guaranteed.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -59,6 +59,30 @@
     {
       "label": "BRSRV implementation creation, block 25590450 (2026-07-22)",
       "url": "https://etherscan.io/tx/0xab19cf9580d67e03a6673838b4adaf06e6fd9ecd5e44827348972d9f1eb477b1"
+    },
+    {
+      "label": "Statement of Additional Information",
+      "url": "https://www.blackrock.com/cash/literature/sai/sai-brsrv.pdf"
+    },
+    {
+      "label": "Securitize subscription and redemption portal",
+      "url": "https://brsrv.invest.securitize.io/"
+    },
+    {
+      "label": "Ethereum token",
+      "url": "https://etherscan.io/token/0x3078bcf707e457d3af2f938a2a478bbeea50a942"
+    },
+    {
+      "label": "Tempo token",
+      "url": "https://explore.tempo.xyz/address/0xe36e2e79beb1b7f618201eead6106a7d737695e3"
+    },
+    {
+      "label": "Solana token",
+      "url": "https://solscan.io/token/9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/blackrock"
     }
   ],
   "jurisdiction": {
@@ -85,6 +109,7 @@
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
+  "governanceQuality": "regulated-entity",
   "yieldConfig": {
     "yieldSource": "BlackRock Treasury, overnight repo and cash fund income reinvestment",
     "yieldType": "rebase"
@@ -96,6 +121,5 @@
     "attestorTier": "self",
     "cadence": "daily-nav"
   },
-  "launchDate": "2026-08-03",
-  "implementationLaunchDate": "2026-08-03"
+  "launchDate": "2026-08-03"
 }

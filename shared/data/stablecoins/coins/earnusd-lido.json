@@ -2,7 +2,7 @@
   "id": "earnusd-lido",
   "name": "Lido EarnUSD",
   "symbol": "earnUSD",
-  "oneLiner": "earnUSD is Lido's Mellow-curated vault share for dollar-denominated strategies; returns compound into NAV and USDC withdrawals use a request-and-claim queue.",
+  "oneLiner": "earnUSD is Lido's Mellow-curated dollar-strategy share; returns compound into NAV, with queued USDC withdrawals and a conditional instant USDC rail.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -12,15 +12,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "Lido/Mellow earnUSD MetaVault allocates across earnUSDc (conservative) and earnUSDe (experimental) underlying vaults. The exact issuer API and deployment registry list USDC, USDT and USDe deposit assets; permitted deposits and USDC withdrawal denomination do not establish current allocation weights, holdings or encumbrances.",
-  "pegMechanism": "Returns compound into vault shares using privileged oracle reports. Deposits and request-and-claim withdrawals are processed by queues; the documented USDC withdrawal wait is typically about three days, not a guaranteed maximum.",
+  "collateral": "Lido/Mellow earnUSD MetaVault allocates across earnUSDc (conservative) and earnUSDe (experimental) underlying vaults. The official interface discloses lending, structured positions, liquidity provision and leverage risk. USDC, USDT and USDe are registered deposit assets, not measured reserve weights; current whole-book holdings, gearing and encumbrances remain unreconciled.",
+  "pegMechanism": "Returns compound into vault shares through privileged oracle reports. Ordinary USDC withdrawals use a non-cancellable request-and-claim queue, typically about three days. A separate synchronous USDC rail is conditional on usable oracle pricing, liquidity and rolling-limit headroom. Neither the typical wait nor the interface's 'instant or up to 72 hours' description establishes guaranteed completion under stress.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The exact Ethereum 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981 is the deployed BurnableTokenizedShareManager proxy for vault 0x014e6da8f283c4af65b2aa0f201438680a004452. It records 50902385.14796045 transferable shares at block 26107703; vault.subvaults() returned 2. Lido documents compounded protocol-strategy returns and queued USDC exits; asset() and totalAssets() revert on this share token, so it is not an ordinary ERC-4626 reserve receipt. The protocol-position override records this exact operational claim rather than inheriting USDC's fiat-cash model. No legal segregation, current allocation or independent reconciliation is inferred.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_EarnusdLido",
+    "rationale": "The exact Ethereum share token is a BurnableTokenizedShareManager proxy for vault 0x014e6da8f283c4af65b2aa0f201438680a004452. At block 26196064 (2026-10-15T06:16:59Z), totalSupply is 55763458395796490454989108 raw with 18 decimals, vault.subvaults() is 2 and all six decoded share flags are zero. Its verified ABI implements modular vault-share accounting, not ERC-4626 asset()/totalAssets(). Returns depend on underlying strategies and internal oracle reports; ordinary exits use queued USDC claims, with a separate conditional synchronous rail. This protocol-position override does not establish legal segregation, current look-through allocations or independent financial reconciliation. The March 7 creation transaction is deployment provenance; Lido announced the product live on March 12.",
     "sources": [
       {
         "label": "Lido earnUSD holder deposits and withdrawals",
@@ -47,8 +47,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000615b2771511daa693ac07be5622869e01"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; ShareManager and vault reads",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Mellow earnUSD underlying-vault structure; weights undisclosed",
@@ -61,6 +61,14 @@
       {
         "label": "Exact current earnUSD ShareManager implementation activation Upgraded event, block 24602425, 2026-03-07",
         "url": "https://etherscan.io/tx/0x5097bdcbdf5be3b9b9e4210d2938d411bc1391bd498eb30c5b373471e3e7300e"
+      },
+      {
+        "label": "Lido EarnUSD product launch, March 12, 2026",
+        "url": "https://blog.lido.fi/lido-earn-expands-with-earneth-and-earnusd/"
+      },
+      {
+        "label": "Exact EarnUSD withdrawal interface and strategy risk disclosures",
+        "url": "https://stake.lido.fi/earn/usd/withdraw"
       }
     ]
   },
@@ -69,7 +77,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://earn.lido.fi/"
+      "url": "https://stake.lido.fi/earn/usd"
     },
     {
       "label": "Vault API",
@@ -78,6 +86,30 @@
     {
       "label": "Docs",
       "url": "https://docs.lido.fi/earn/"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.lido.fi/earn/audits/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/token/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
+    },
+    {
+      "label": "Terms",
+      "url": "https://lido.fi/terms-of-use"
+    },
+    {
+      "label": "Strategist terms",
+      "url": "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf"
+    },
+    {
+      "label": "Risk disclosures",
+      "url": "https://lido.fi/earn/risk-disclosures"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/lidofinance"
     }
   ],
   "contracts": [
@@ -87,6 +119,7 @@
       "decimals": 18
     }
   ],
+  "collateralQuality": "exotic",
   "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
@@ -94,8 +127,8 @@
     "yieldType": "nav-appreciation"
   },
   "dependencyReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_EarnusdLido",
     "confidence": "verified",
     "sources": [
       {
@@ -107,11 +140,11 @@
         "url": "https://docs.lido.fi/earn/deployment-contracts"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; registered asset and queue census",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "USDC is the adjudicated accounting parent and documented ordinary withdrawal asset. USDT deposits and a protocol-position portfolio do not establish a current 100% USDC reserve allocation.",
+    "rationale": "USDC remains the accounting parent and documented ordinary withdrawal asset. All eight registered queues across USDC, USDT and USDe were re-read at block 26196064. This wrapper settlement relationship does not establish a measured 100% USDC reserve claim; favorable parent Backing inheritance is separately withheld.",
     "relationships": [
       {
         "id": "usdc-circle",
@@ -121,6 +154,29 @@
       }
     ]
   },
-  "launchDate": "2026-03-07",
-  "implementationLaunchDate": "2026-03-07"
+  "parentBackingInheritance": {
+    "state": "withheld",
+    "reason": "mixed-strategy-without-measured-parent-claim",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_EarnusdLido",
+    "rationale": "EarnUSD allocates between conservative and experimental strategy vaults; the official interface discloses lending, structured positions, liquidity provision and leverage risk. No complete current portfolio reconciliation establishes a single-parent USDC claim. USDC accounting and withdrawal denomination cannot support favorable USDC reserve-quality inheritance.",
+    "sources": [
+      {
+        "label": "Mellow EarnUSD underlying strategies",
+        "url": "https://docs.mellow.finance/lido-earn/earnusd"
+      },
+      {
+        "label": "Lido EarnUSD exact interface and strategy risk disclosures",
+        "url": "https://stake.lido.fi/earn/usd/withdraw"
+      }
+    ]
+  },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Interface eligibility restrictions",
+      "message": "Lido's September 23, 2026 terms exclude Lido Earn access or deposits from U.S. and UK citizens or residents and users accessing from those countries. The linked strategist terms separately restrict vault use to professional or business capacity, not consumers. See the linked terms for the full eligibility conditions."
+    }
+  ],
+  "launchDate": "2026-03-12"
 }

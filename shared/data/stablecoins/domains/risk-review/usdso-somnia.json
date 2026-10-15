@@ -30,17 +30,109 @@
       {
         "label": "Frax parent reserve balance sheet (issuer telemetry)",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Somnia block 439069606, 2026-10-15T10:43:10Z",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+      },
+      {
+        "label": "somnia block 439069606, 2026-10-15T10:43:10Z",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      },
+      {
+        "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+        "url": "https://rpc-gel.inkonchain.com"
+      },
+      {
+        "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+        "url": "https://rpc.linea.build"
+      },
+      {
+        "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.optimism.io"
+      },
+      {
+        "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+        "url": "https://rpc.scroll.io"
+      },
+      {
+        "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+        "url": "https://evm-rpc.sei-apis.com"
+      },
+      {
+        "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.katana.network"
+      },
+      {
+        "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.mode.network"
+      },
+      {
+        "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+        "url": "https://api-stable-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "At somnia block 428274392, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 3,268,350.769507 frxUSD against 3,268,350.769507 USDso supply. Verified GeniusDollar freeze()/freezeMany() accepts FREEZER_ROLE or DEFAULT_ADMIN_ROLE, and the ordinary transfer hook rejects frozen accounts; DEFAULT_ADMIN can bypass the hook and pause/unpause. The observed 3-of-6 Safe 0x9527e19f55d1afce9f1e9edcea79552bf41983f9 holds token DEFAULT_ADMIN_ROLE.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At somnia block 439069606 (2026-10-15T10:43:10Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x9527e19f55d1afce9f1e9edcea79552bf41983f9)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At ethereum block 26198151 (2026-10-15T13:15:59.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0xb1748c79709f4ba2dd82834b8c82d4a505003f27)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At fraxtal block 42629727 (2026-10-15T13:16:05.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x5f25218ed9474b721d6a38c115107428e832fa2e)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At arbitrum block 515069602 (2026-10-15T13:16:04.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x3da490b19f300e7cb2280426c8ad536db2df445c)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At avalanche block 97619420 (2026-10-15T13:16:04.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At base block 52640409 (2026-10-15T13:16:05.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At bsc block 127792956 (2026-10-15T13:16:06.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At ink block 58571755 (2026-10-15T13:16:06.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x91ebc17cd330dd694225133455583fbca54b8ec8)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At linea block 32331593 (2026-10-15T13:16:03.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At monad block 113622662 (2026-10-15T13:16:07.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At optimism block 158235695 (2026-10-15T13:16:07.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x419e672d625f998dd07a7ecf2e06b896f8717cb2)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At plume block 99559163 (2026-10-15T13:16:08.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x77ddd3ec570eeaf2c513de3c833c5e82a721978b)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At polygon block 95576562 (2026-10-15T13:16:08.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0xdbf59eda454679bb157b3b048ba54c4d762b559e)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At scroll block 35384265 (2026-10-15T13:15:37.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x73f365d34b81e731825a094c2e722a08574335cd)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At sei block 237738118 (2026-10-15T13:16:08.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x0357d02fc95320b990322d3ff69204c3d251171b)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At sonic block 81070055 (2026-10-15T13:16:05.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At worldchain block 36367273 (2026-10-15T13:16:25.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0xf57d47c3ea11c12253dbc0beaf097d5c206e8773)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At katana block 45327356 (2026-10-15T13:16:07.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x19a90b0476cdc8ec1239266663ca820175b9b527)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At mode block 45951292 (2026-10-15T13:16:07.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x6336cfa6edbec2a459d869031db77fc2770eaa66)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At stable block 43144320 (2026-10-15T13:16:09.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions. At unichain block 61321808 (2026-10-15T13:16:07.000Z), EIP-1967 binds the exact USDso token to 0x155384be16fa171e6d97e4136643a9ac31678d04. Its pinned runtime matches retrieved verified GeniusDollar source. _update rejects isPaused or frozen sender/recipient/caller unless msg.sender holds DEFAULT_ADMIN_ROLE; freeze/freezeMany accept FREEZER_ROLE or DEFAULT_ADMIN_ROLE, while thaw and pause/unpause require DEFAULT_ADMIN_ROLE. hasRole(DEFAULT_ADMIN_ROLE,0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d)=true; isPaused()=false at the pin, not an assurance of future availability or every account's freeze state. This canonical native deployment is directly restrictable; parent frxUSD retains its own restrictions.",
+    "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "Sole authored native child-token deployment. The reviewed local wrapping/custodian mint path issues the child on this chain; parent-token cross-chain and custody risks remain inherited. No global uncatalogued bridge-liability absence is asserted.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07",
+    "tier": "external-validated-network",
+    "summary": "Twenty-one reviewed native USDso deployments mint against their local frxUSD custodians. Their exact mapped CrossChainRouters redeem USDso to frxUSD, transfer the parent through Frax RemoteHopV2/LayerZero, then deposit into the destination custodian to mint USDso. Chain-local Safes govern router beacons and router administration separately from native issuance. Complete peer, validator, role-history, limit, in-flight-liability and loss-scope inventories remain unresolved.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
     "confidence": "probable",
     "sources": [
       {
@@ -70,6 +162,102 @@
       {
         "label": "Frax parent reserve balance sheet (issuer telemetry)",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Somnia block 439069606, 2026-10-15T10:43:10Z",
+        "url": "https://api.infra.mainnet.somnia.network"
+      },
+      {
+        "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+      },
+      {
+        "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+      },
+      {
+        "label": "Frax branded factory deployment and lookup documentation",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+      },
+      {
+        "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+        "url": "https://arb1.arbitrum.io/rpc"
+      },
+      {
+        "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+        "url": "https://api.avax.network/ext/bc/C/rpc"
+      },
+      {
+        "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+        "url": "https://rpc-gel.inkonchain.com"
+      },
+      {
+        "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+        "url": "https://rpc.linea.build"
+      },
+      {
+        "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.monad.xyz"
+      },
+      {
+        "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.optimism.io"
+      },
+      {
+        "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+        "url": "https://rpc.plume.org"
+      },
+      {
+        "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+        "url": "https://rpc.scroll.io"
+      },
+      {
+        "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+        "url": "https://evm-rpc.sei-apis.com"
+      },
+      {
+        "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+        "url": "https://rpc.soniclabs.com"
+      },
+      {
+        "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+        "url": "https://rpc.katana.network"
+      },
+      {
+        "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+        "url": "https://mainnet.mode.network"
+      },
+      {
+        "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+        "url": "https://api-stable-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
       }
     ],
     "routes": [
@@ -85,9 +273,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The sole authored child token is locally minted against parent-token custody. No child bridge path is established; this does not certify absence of uncatalogued integrations or parent bridge risks.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 428274392,
+        "reviewNote": "Somnia-local native custodian issuance is verified. The exact mapped child router provides a separate parent-token-mediated cross-chain transfer path; router control and external validation are reviewed separately below. This is not a bridged child representation or an exhaustive integration census.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 439069606,
         "sources": [
           {
             "label": "USD Somnia product documentation (accessed 2026-10-02)",
@@ -116,6 +304,2732 @@
           {
             "label": "Frax parent reserve balance sheet (issuer telemetry)",
             "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+          },
+          {
+            "label": "Somnia block 439069606, 2026-10-15T10:43:10Z",
+            "url": "https://api.infra.mainnet.somnia.network"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At ethereum block 26198151 (2026-10-15T13:15:59.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26198151,
+        "sources": [
+          {
+            "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At fraxtal block 42629727 (2026-10-15T13:16:05.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 42629727,
+        "sources": [
+          {
+            "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At arbitrum block 515069602 (2026-10-15T13:16:04.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 515069602,
+        "sources": [
+          {
+            "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "avalanche",
+        "canonicalChain": "avalanche",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At avalanche block 97619420 (2026-10-15T13:16:04.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 97619420,
+        "sources": [
+          {
+            "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "base:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At base block 52640409 (2026-10-15T13:16:05.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52640409,
+        "sources": [
+          {
+            "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At bsc block 127792956 (2026-10-15T13:16:06.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 127792956,
+        "sources": [
+          {
+            "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "ink",
+        "canonicalChain": "ink",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At ink block 58571755 (2026-10-15T13:16:06.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 58571755,
+        "sources": [
+          {
+            "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+            "url": "https://rpc-gel.inkonchain.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "linea:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "linea",
+        "canonicalChain": "linea",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At linea block 32331593 (2026-10-15T13:16:03.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 32331593,
+        "sources": [
+          {
+            "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+            "url": "https://rpc.linea.build"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "monad",
+        "canonicalChain": "monad",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At monad block 113622662 (2026-10-15T13:16:07.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 113622662,
+        "sources": [
+          {
+            "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "optimism",
+        "canonicalChain": "optimism",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At optimism block 158235695 (2026-10-15T13:16:07.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 158235695,
+        "sources": [
+          {
+            "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.optimism.io"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "plume",
+        "canonicalChain": "plume",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At plume block 99559163 (2026-10-15T13:16:08.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 99559163,
+        "sources": [
+          {
+            "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At polygon block 95576562 (2026-10-15T13:16:08.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 95576562,
+        "sources": [
+          {
+            "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "scroll:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "scroll",
+        "canonicalChain": "scroll",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At scroll block 35384265 (2026-10-15T13:15:37.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 35384265,
+        "sources": [
+          {
+            "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+            "url": "https://rpc.scroll.io"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "sei",
+        "canonicalChain": "sei",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At sei block 237738118 (2026-10-15T13:16:08.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 237738118,
+        "sources": [
+          {
+            "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+            "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "sonic",
+        "canonicalChain": "sonic",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At sonic block 81070055 (2026-10-15T13:16:05.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 81070055,
+        "sources": [
+          {
+            "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "worldchain",
+        "canonicalChain": "worldchain",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At worldchain block 36367273 (2026-10-15T13:16:25.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 36367273,
+        "sources": [
+          {
+            "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "katana:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "katana",
+        "canonicalChain": "katana",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At katana block 45327356 (2026-10-15T13:16:07.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 45327356,
+        "sources": [
+          {
+            "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.katana.network"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "mode:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "mode",
+        "canonicalChain": "mode",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At mode block 45951292 (2026-10-15T13:16:07.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 45951292,
+        "sources": [
+          {
+            "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.mode.network"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "stable:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "stable",
+        "canonicalChain": "stable",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At stable block 43144320 (2026-10-15T13:16:09.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 43144320,
+        "sources": [
+          {
+            "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+            "url": "https://api-stable-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      },
+      {
+        "id": "unichain:0x00000022da000002656c64d9ea6011ea952d008a",
+        "destinationChain": "unichain",
+        "canonicalChain": "unichain",
+        "contractAddress": "0x00000022da000002656c64d9ea6011ea952d008a",
+        "protocol": "Frax BrandedCustodian",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At unichain block 61321808 (2026-10-15T13:16:07.000Z), the official factory maps the exact USDso token to local custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and router 0x82a91b22c894b56af69be52da09000e0568fd31d. hasRole(MINTER_ROLE,custodian)=true and runtime-matched custody code takes frxUSD before minting; child supply, minted accounting, totalAssets and actual parent-token custody match. Native local issuance is distinct from the router's parent-mediated transfer rail; no child representation semantics or complete global census is inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 61321808,
+        "sources": [
+          {
+            "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+            "url": "https://api-unichain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          },
+          {
+            "label": "Verified BrandedCustodian source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+          },
+          {
+            "label": "Verified GeniusDollar source, matched to each new deployment implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+          }
+        ]
+      }
+    ],
+    "nativeExternalTransferReviews": [
+      {
+        "id": "usdso-somnia-frax-parent-transfer",
+        "routeRefs": [
+          "somnia:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At somnia block 439069606, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "somnia block 439069606, 2026-10-15T10:43:10Z",
+            "url": "https://api.infra.mainnet.somnia.network"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-ethereum-frax-parent-transfer",
+        "routeRefs": [
+          "ethereum:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At ethereum block 26198151, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-fraxtal-frax-parent-transfer",
+        "routeRefs": [
+          "fraxtal:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At fraxtal block 42629727, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-arbitrum-frax-parent-transfer",
+        "routeRefs": [
+          "arbitrum:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At arbitrum block 515069602, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-avalanche-frax-parent-transfer",
+        "routeRefs": [
+          "avalanche:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At avalanche block 97619420, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-base-frax-parent-transfer",
+        "routeRefs": [
+          "base:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At base block 52640409, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-bsc-frax-parent-transfer",
+        "routeRefs": [
+          "bsc:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At bsc block 127792956, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-ink-frax-parent-transfer",
+        "routeRefs": [
+          "ink:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At ink block 58571755, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+            "url": "https://rpc-gel.inkonchain.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-linea-frax-parent-transfer",
+        "routeRefs": [
+          "linea:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At linea block 32331593, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+            "url": "https://rpc.linea.build"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-monad-frax-parent-transfer",
+        "routeRefs": [
+          "monad:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At monad block 113622662, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-optimism-frax-parent-transfer",
+        "routeRefs": [
+          "optimism:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At optimism block 158235695, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.optimism.io"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-plume-frax-parent-transfer",
+        "routeRefs": [
+          "plume:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At plume block 99559163, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-polygon-frax-parent-transfer",
+        "routeRefs": [
+          "polygon:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At polygon block 95576562, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-scroll-frax-parent-transfer",
+        "routeRefs": [
+          "scroll:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At scroll block 35384265, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+            "url": "https://rpc.scroll.io"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-sei-frax-parent-transfer",
+        "routeRefs": [
+          "sei:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At sei block 237738118, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+            "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-sonic-frax-parent-transfer",
+        "routeRefs": [
+          "sonic:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At sonic block 81070055, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-worldchain-frax-parent-transfer",
+        "routeRefs": [
+          "worldchain:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At worldchain block 36367273, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-katana-frax-parent-transfer",
+        "routeRefs": [
+          "katana:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At katana block 45327356, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.katana.network"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-mode-frax-parent-transfer",
+        "routeRefs": [
+          "mode:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At mode block 45951292, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.mode.network"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-stable-frax-parent-transfer",
+        "routeRefs": [
+          "stable:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At stable block 43144320, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+            "url": "https://api-stable-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      },
+      {
+        "id": "usdso-unichain-frax-parent-transfer",
+        "routeRefs": [
+          "unichain:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "rationale": "At unichain block 61321808, exact factory mapping and router coin()/custodian()/frxusd()/oftLocal()/remoteHopV2() bind USDso to router 0x82a91b22c894b56af69be52da09000e0568fd31d, custodian 0xebc80dc35a23a76a6d43fdd99578d3bbd60766d9 and the local parent-token bridge path. Router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 resolves to 0xbd8e690465e84e97075a89fb30c64d5c44e04ad5; its pinned runtime matches retrieved verified CrossChainRouter source. send redeems caller-supplied USDso, transfers frxUSD through RemoteHopV2/LayerZero and hopCompose deposits the received parent into destination custody. This is documented external message validation, not proof of a completed transfer or exhaustive current peers, validators/DVNs, thresholds, role holders, rate limits, residual liabilities or loss bounds. Parent bridge controls remain inherited and each router's own mutable controls stay explicit.",
+        "sources": [
+          {
+            "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+            "url": "https://api-unichain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
+          {
+            "label": "Frax branded factory deployment and lookup documentation",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedFactory"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "usdso-somnia-router-administrator",
+        "routeRefs": [
+          "somnia:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "somnia",
+        "controllerAddress": "0x9527e19f55d1afce9f1e9edcea79552bf41983f9",
+        "label": "somnia USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 439069606,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "guard": null,
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 439069606,
+        "sources": [
+          {
+            "label": "somnia block 439069606, 2026-10-15T10:43:10Z",
+            "url": "https://api.infra.mainnet.somnia.network"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At somnia block 439069606, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-ethereum-router-administrator",
+        "routeRefs": [
+          "ethereum:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+        "label": "ethereum USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 26198151,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x6933bcc3e96f1c4d2cb73cb391d854b18ab7a4f2",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26198151,
+        "sources": [
+          {
+            "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At ethereum block 26198151, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-fraxtal-router-administrator",
+        "routeRefs": [
+          "fraxtal:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x5f25218ed9474b721d6a38c115107428e832fa2e",
+        "label": "fraxtal USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 42629727,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 42629727,
+        "sources": [
+          {
+            "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At fraxtal block 42629727, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-arbitrum-router-administrator",
+        "routeRefs": [
+          "arbitrum:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x3da490b19f300e7cb2280426c8ad536db2df445c",
+        "label": "arbitrum USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 515069602,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 515069602,
+        "sources": [
+          {
+            "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At arbitrum block 515069602, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-avalanche-router-administrator",
+        "routeRefs": [
+          "avalanche:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xbf1ff4d8b05f0871ca3f49e49ff1ca8aeebd3b4b",
+        "label": "avalanche USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 97619420,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 97619420,
+        "sources": [
+          {
+            "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At avalanche block 97619420, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-base-router-administrator",
+        "routeRefs": [
+          "base:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53",
+        "label": "base USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 52640409,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52640409,
+        "sources": [
+          {
+            "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At base block 52640409, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-bsc-router-administrator",
+        "routeRefs": [
+          "bsc:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0xb1eff95b323d60cc04b1a44ca1dbcbc935ae2c84",
+        "label": "bsc USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 127792956,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 127792956,
+        "sources": [
+          {
+            "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At bsc block 127792956, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-ink-router-administrator",
+        "routeRefs": [
+          "ink:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "ink",
+        "controllerAddress": "0x91ebc17cd330dd694225133455583fbca54b8ec8",
+        "label": "ink USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 58571755,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 58571755,
+        "sources": [
+          {
+            "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+            "url": "https://rpc-gel.inkonchain.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At ink block 58571755, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-linea-router-administrator",
+        "routeRefs": [
+          "linea:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "linea",
+        "controllerAddress": "0x0e5a5284820e350ffce7fe7ba3364fac1c53eafd",
+        "label": "linea USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 32331593,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 32331593,
+        "sources": [
+          {
+            "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+            "url": "https://rpc.linea.build"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At linea block 32331593, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-monad-router-administrator",
+        "routeRefs": [
+          "monad:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x47ff5bbab981ff022743aa4281d4d6dd7fb1a4d0",
+        "label": "monad USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 113622662,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 113622662,
+        "sources": [
+          {
+            "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At monad block 113622662, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-optimism-router-administrator",
+        "routeRefs": [
+          "optimism:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x419e672d625f998dd07a7ecf2e06b896f8717cb2",
+        "label": "optimism USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 158235695,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 158235695,
+        "sources": [
+          {
+            "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.optimism.io"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At optimism block 158235695, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-plume-router-administrator",
+        "routeRefs": [
+          "plume:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "plume",
+        "controllerAddress": "0x77ddd3ec570eeaf2c513de3c833c5e82a721978b",
+        "label": "plume USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 99559163,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 99559163,
+        "sources": [
+          {
+            "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At plume block 99559163, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-polygon-router-administrator",
+        "routeRefs": [
+          "polygon:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "polygon",
+        "controllerAddress": "0xdbf59eda454679bb157b3b048ba54c4d762b559e",
+        "label": "polygon USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 95576562,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 95576562,
+        "sources": [
+          {
+            "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At polygon block 95576562, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-scroll-router-administrator",
+        "routeRefs": [
+          "scroll:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "scroll",
+        "controllerAddress": "0x73f365d34b81e731825a094c2e722a08574335cd",
+        "label": "scroll USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 35384265,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 35384265,
+        "sources": [
+          {
+            "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+            "url": "https://rpc.scroll.io"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At scroll block 35384265, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-sei-router-administrator",
+        "routeRefs": [
+          "sei:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "sei",
+        "controllerAddress": "0x0357d02fc95320b990322d3ff69204c3d251171b",
+        "label": "sei USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 237738118,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 237738118,
+        "sources": [
+          {
+            "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+            "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At sei block 237738118, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-sonic-router-administrator",
+        "routeRefs": [
+          "sonic:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "sonic",
+        "controllerAddress": "0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac",
+        "label": "sonic USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 81070055,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 81070055,
+        "sources": [
+          {
+            "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At sonic block 81070055, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-worldchain-router-administrator",
+        "routeRefs": [
+          "worldchain:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "worldchain",
+        "controllerAddress": "0xf57d47c3ea11c12253dbc0beaf097d5c206e8773",
+        "label": "worldchain USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 36367273,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 36367273,
+        "sources": [
+          {
+            "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At worldchain block 36367273, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-katana-router-administrator",
+        "routeRefs": [
+          "katana:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "katana",
+        "controllerAddress": "0x19a90b0476cdc8ec1239266663ca820175b9b527",
+        "label": "katana USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 45327356,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 45327356,
+        "sources": [
+          {
+            "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.katana.network"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At katana block 45327356, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-mode-router-administrator",
+        "routeRefs": [
+          "mode:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "mode",
+        "controllerAddress": "0x6336cfa6edbec2a459d869031db77fc2770eaa66",
+        "label": "mode USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 45951292,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 45951292,
+        "sources": [
+          {
+            "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.mode.network"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At mode block 45951292, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-stable-router-administrator",
+        "routeRefs": [
+          "stable:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "stable",
+        "controllerAddress": "0x0c46f54bf9ef8fd58e2d294b8cea488204ecb3d8",
+        "label": "stable USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 43144320,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 43144320,
+        "sources": [
+          {
+            "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+            "url": "https://api-stable-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At stable block 43144320, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      },
+      {
+        "id": "usdso-unichain-router-administrator",
+        "routeRefs": [
+          "unichain:0x00000022da000002656c64d9ea6011ea952d008a"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "unichain",
+        "controllerAddress": "0x6f8fddfd4f6a1456ba5632c919bef74b64dd032d",
+        "label": "unichain USDso cross-chain router administrator",
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "threshold": 3,
+          "observedBlock": 61321808,
+          "observedAt": "2026-10-15",
+          "source": "onchain",
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "fallbackHandler": null,
+          "guard": null,
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e"
+        },
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 61321808,
+        "sources": [
+          {
+            "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+            "url": "https://api-unichain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Verified CrossChainRouter source, matched to each reviewed router implementation runtime",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ],
+        "evidence": "At unichain block 61321808, this exact Safe owns router beacon 0x5b4823dff96efe68f0a56736cc30f5e33e537527 and hasRole(DEFAULT_ADMIN_ROLE,Safe)=true on router 0x82a91b22c894b56af69be52da09000e0568fd31d. Runtime-matched source permits the default administrator to replace RemoteHopV2 and grant RELAYER_ROLE, which can set non-deterministic destination-router mappings; beacon ownership permits replacing router code. These are transfer-rail capabilities, not the native token minter-authorization capability recorded in Mint Authority. The per-chain Safe threshold/owner set and extension observations are pinned independently. Complete role histories, endpoint/validator/peer configuration, transfer execution and immutable limits are not certified."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "usdso-somnia-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "somnia block 439069606, 2026-10-15T10:43:10Z",
+            "url": "https://api.infra.mainnet.somnia.network"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-ethereum-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-fraxtal-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-arbitrum-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+            "url": "https://arb1.arbitrum.io/rpc"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-avalanche-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+            "url": "https://api.avax.network/ext/bc/C/rpc"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-base-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+            "url": "https://mainnet.base.org"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-bsc-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-ink-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+            "url": "https://rpc-gel.inkonchain.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-linea-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+            "url": "https://rpc.linea.build"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-monad-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-optimism-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.optimism.io"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-plume-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+            "url": "https://rpc.plume.org"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-polygon-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-scroll-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+            "url": "https://rpc.scroll.io"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-sei-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+            "url": "https://evm-rpc.sei-apis.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-sonic-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
+            "url": "https://rpc.soniclabs.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-worldchain-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+            "url": "https://worldchain-mainnet.g.alchemy.com/public"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-katana-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+            "url": "https://rpc.katana.network"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-mode-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+            "url": "https://mainnet.mode.network"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-stable-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+            "url": "https://api-stable-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          }
+        ]
+      },
+      {
+        "controlRef": "usdso-unichain-router-administrator",
+        "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
+        "subject": "execution-scope",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "sources": [
+          {
+            "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+            "url": "https://api-unichain-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
       }

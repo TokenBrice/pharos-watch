@@ -22,22 +22,74 @@
       {
         "label": "Credential-free RPC endpoint; pinned read in review notes",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "ChainSecurity legacy L1/L2 transfer and control assessment",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+      },
+      {
+        "label": "Official Arbitrum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Arbitrum.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned arbitrum block 515036950, 2026-10-15T10:49:28.000Z",
+        "url": "https://arb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Base deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Base.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned base block 52636002, 2026-10-15T10:49:11.000Z",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Optimism deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Optimism.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned optimism block 158231275, 2026-10-15T10:48:47.000Z",
+        "url": "https://opt-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Unichain deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Unichain.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned unichain block 61312998, 2026-10-15T10:49:17.000Z",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "Observed 2026-10-02T22:43:52.688407+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 161342339855641335323322489 (18 decimals), asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (6 decimals), totalAssets 179331003650749, convertToAssets(10^18) 1111493. One-share redeem from actual holder 0xa09fe38187abecc2768b98b80ea30afbc2fbd774 returned 1111493 asset base units via eth_call at that same block; no transaction broadcast. Underlying USDC retains its issuer freeze authority; the pinned parent authority getter returned 0x0000000000000000000000000a06be16275b95a7d2567fbdae118b36c7da78f9. No direct receipt-transfer blacklist is asserted. Local governance/upgrade authority is reviewed separately from inherited asset freezing.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "Ethereum block 26197387, hash 0x530cc1059f89d04e8a499a738ba8a4983a6a5695ffe0fa29d5bd25934b8dd702, timestamp 2026-10-15T10:42:35.000Z. Exact Ethereum implementation is unchanged; native USDC blacklister remains 0x0a06be16275b95a7d2567fbdae118b36c7da78f9. The four added native L2 sUSDC contracts resolve to the official UsdcVaultL2 implementations. Both source families implement ordinary invalid-address, balance and allowance checks for transfer/transferFrom, without a local receipt blacklist or pause list. All five receipts are UUPS-upgradeable. This describes current holder-transfer code, not immunity from upgrades, USDC issuer blocking, sUSDS representation controls or PSM exit impairment.",
+    "reviewer": "Rev_SusdcSparkV1",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
-    "tier": "oracleless",
-    "summary": "Legacy UsdcVault values shares using sUSDS.convertToAssets and deterministic Sky PSM tin/tout conversion arithmetic. The exact implementation has no external collateral-price read, borrower liquidation branch or administrator-set NAV feed. Sky rate/parent backing controls remain inherited; the UUPS replacement authority remains in mintAuthority.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Ethereum passes through native sUSDS conversion accounting. The four L2 vaults value local sUSDS using PSM3 and a trusted cross-chain savings-rate provider. Sky governance sets the underlying savings rate; transmitted accumulator/rate observations affect local conversion values. There is no local borrower collateral or liquidation engine. The prior oracleless description applied only to the Ethereum pass-through path and did not cover L2 conversion authority.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
-      "rationale": "The exact legacy savings receipt has one share-to-underlying accounting path and no local borrower collateral or liquidation engine. This is verified source applicability, not a claim that Sky's upstream reserve or governance risks are absent.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SusdcSparkV1",
+      "rationale": "These are savings shares with top-level share conversion, not local borrower debt or liquidation markets. Ethereum uses sUSDS accounting; L2 PSM3 uses a trusted rate provider. The aggregate tier reflects those positively identified internal-rate paths; upstream collateral oracles and bridged sUSDS risks remain inherited.",
       "sources": [
         {
           "label": "Exact current UsdcVault conversion and redemption source",
@@ -45,8 +97,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdcSparkV1",
     "confidence": "verified",
     "sources": [
       {
@@ -56,7 +108,393 @@
       {
         "label": "Current getImplementation re-pin at Ethereum block 26110183",
         "url": "https://etherscan.io/block/26110183"
+      },
+      {
+        "label": "ChainSecurity assessment section 2.2.2: trusted L2 RateProvider",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+      },
+      {
+        "label": "Official Arbitrum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Arbitrum.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned arbitrum block 515036950, 2026-10-15T10:49:28.000Z",
+        "url": "https://arb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Base deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Base.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned base block 52636002, 2026-10-15T10:49:11.000Z",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Optimism deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Optimism.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned optimism block 158231275, 2026-10-15T10:48:47.000Z",
+        "url": "https://opt-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Unichain deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Unichain.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned unichain block 61312998, 2026-10-15T10:49:17.000Z",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
+      }
+    ],
+    "paths": [
+      {
+        "id": "ethereum-legacy-share-nav",
+        "chain": "ethereum",
+        "address": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SusdcSparkV1",
+          "confidence": "verified",
+          "rationale": "Local implementation passes through sUSDS.convertToAssets and PSM fees; no separate administrator-set NAV feed is added on Ethereum.",
+          "sources": [
+            {
+              "label": "Exact Ethereum source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba"
+            }
+          ]
+        }
+      },
+      {
+        "id": "arbitrum-legacy-share-nav",
+        "chain": "arbitrum",
+        "address": "0x940098b108fb7d0a7e374f6eded7760787464609",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SusdcSparkV1",
+          "confidence": "verified",
+          "rationale": "Pinned rateProvider()=0xee2816c1e1eed14d444552654ed3027abc033a36; getConversionRate()=1112886778788095189551489501 (ray). UsdcVaultL2 and PSM3 use that trusted savings-rate input for share/USDC conversion; no borrower liquidation branch exists.",
+          "sources": [
+            {
+              "label": "Official Arbitrum deployment registry",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Arbitrum.sol"
+            },
+            {
+              "label": "Legacy L2 vault source",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+            },
+            {
+              "label": "Pinned arbitrum block 515036950, 2026-10-15T10:49:28.000Z",
+              "url": "https://arb-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Audited L2 RateProvider trust model",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+            }
+          ]
+        }
+      },
+      {
+        "id": "base-legacy-share-nav",
+        "chain": "base",
+        "address": "0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SusdcSparkV1",
+          "confidence": "verified",
+          "rationale": "Pinned rateProvider()=0x65d946e533748a998b1f0e430803e39a6388f7a1; getConversionRate()=1112886756413610455109878465 (ray). UsdcVaultL2 and PSM3 use that trusted savings-rate input for share/USDC conversion; no borrower liquidation branch exists.",
+          "sources": [
+            {
+              "label": "Official Base deployment registry",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Base.sol"
+            },
+            {
+              "label": "Legacy L2 vault source",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+            },
+            {
+              "label": "Pinned base block 52636002, 2026-10-15T10:49:11.000Z",
+              "url": "https://base-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Audited L2 RateProvider trust model",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+            }
+          ]
+        }
+      },
+      {
+        "id": "optimism-legacy-share-nav",
+        "chain": "optimism",
+        "address": "0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SusdcSparkV1",
+          "confidence": "verified",
+          "rationale": "Pinned rateProvider()=0x6e53585449142a5e6d5fc918ae6bea341dc81c68; getConversionRate()=1112886724826103360534063555 (ray). UsdcVaultL2 and PSM3 use that trusted savings-rate input for share/USDC conversion; no borrower liquidation branch exists.",
+          "sources": [
+            {
+              "label": "Official Optimism deployment registry",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Optimism.sol"
+            },
+            {
+              "label": "Legacy L2 vault source",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+            },
+            {
+              "label": "Pinned optimism block 158231275, 2026-10-15T10:48:47.000Z",
+              "url": "https://opt-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Audited L2 RateProvider trust model",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+            }
+          ]
+        }
+      },
+      {
+        "id": "unichain-legacy-share-nav",
+        "chain": "unichain",
+        "address": "0x14d9143becc348920b68d123687045db49a016c6",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SusdcSparkV1",
+          "confidence": "verified",
+          "rationale": "Pinned rateProvider()=0x1566bfa55d95686a823751298533d42651183988; getConversionRate()=1112886764310487368841455095 (ray). UsdcVaultL2 and PSM3 use that trusted savings-rate input for share/USDC conversion; no borrower liquidation branch exists.",
+          "sources": [
+            {
+              "label": "Official Unichain deployment registry",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Unichain.sol"
+            },
+            {
+              "label": "Legacy L2 vault source",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+            },
+            {
+              "label": "Pinned unichain block 61312998, 2026-10-15T10:49:17.000Z",
+              "url": "https://api-unichain-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Audited L2 RateProvider trust model",
+              "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+            }
+          ]
+        }
       }
     ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "All five cataloged sUSDC contracts issue native deposit-backed vault shares. Each independently obtains matching local sUSDS on deposit and burns its own shares on redemption; none is minted against an escrow of Ethereum sUSDC. Cross-chain governance messages control local upgrades and L2 reserve sUSDS is bridged, but those facts do not turn the local sUSDC receipt into a bridge representation.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdcSparkV1",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Official multichain deployment registry",
+        "url": "https://github.com/sparkdotfi/spark-address-registry/tree/master/src"
+      },
+      {
+        "label": "Audited native L1/L2 issuance",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+        "protocol": "Spark Legacy UsdcVault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native receipt minted against matching local sUSDS shares; do not add bridge mint controls for the receipt. Upstream sUSDS representation controls remain linked reserve exposure.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197387,
+        "sources": [
+          {
+            "label": "Official Ethereum registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol"
+          },
+          {
+            "label": "Ethereum block 26197387, hash 0x530cc1059f89d04e8a499a738ba8a4983a6a5695ffe0fa29d5bd25934b8dd702, timestamp 2026-10-15T10:42:35.000Z",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x940098b108fb7d0a7e374f6eded7760787464609",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x940098b108fb7d0a7e374f6eded7760787464609",
+        "protocol": "Spark Legacy UsdcVault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native receipt minted against matching local sUSDS shares; do not add bridge mint controls for the receipt. Upstream sUSDS representation controls remain linked reserve exposure.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 515036950,
+        "sources": [
+          {
+            "label": "Official Arbitrum deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Arbitrum.sol"
+          },
+          {
+            "label": "Legacy L2 vault source",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+          },
+          {
+            "label": "Pinned arbitrum block 515036950, 2026-10-15T10:49:28.000Z",
+            "url": "https://arb-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+        "protocol": "Spark Legacy UsdcVault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native receipt minted against matching local sUSDS shares; do not add bridge mint controls for the receipt. Upstream sUSDS representation controls remain linked reserve exposure.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52636002,
+        "sources": [
+          {
+            "label": "Official Base deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Base.sol"
+          },
+          {
+            "label": "Legacy L2 vault source",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+          },
+          {
+            "label": "Pinned base block 52636002, 2026-10-15T10:49:11.000Z",
+            "url": "https://base-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+        "destinationChain": "optimism",
+        "canonicalChain": "optimism",
+        "contractAddress": "0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+        "protocol": "Spark Legacy UsdcVault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native receipt minted against matching local sUSDS shares; do not add bridge mint controls for the receipt. Upstream sUSDS representation controls remain linked reserve exposure.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 158231275,
+        "sources": [
+          {
+            "label": "Official Optimism deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Optimism.sol"
+          },
+          {
+            "label": "Legacy L2 vault source",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+          },
+          {
+            "label": "Pinned optimism block 158231275, 2026-10-15T10:48:47.000Z",
+            "url": "https://opt-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      },
+      {
+        "id": "unichain:0x14d9143becc348920b68d123687045db49a016c6",
+        "destinationChain": "unichain",
+        "canonicalChain": "unichain",
+        "contractAddress": "0x14d9143becc348920b68d123687045db49a016c6",
+        "protocol": "Spark Legacy UsdcVault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native receipt minted against matching local sUSDS shares; do not add bridge mint controls for the receipt. Upstream sUSDS representation controls remain linked reserve exposure.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 61312998,
+        "sources": [
+          {
+            "label": "Official Unichain deployment registry",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Unichain.sol"
+          },
+          {
+            "label": "Legacy L2 vault source",
+            "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+          },
+          {
+            "label": "Pinned unichain block 61312998, 2026-10-15T10:49:17.000Z",
+            "url": "https://api-unichain-mainnet.n.dwellir.com"
+          }
+        ]
+      }
+    ],
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SusdcSparkV1",
+      "routeIds": [
+        "ethereum:0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+        "arbitrum:0x940098b108fb7d0a7e374f6eded7760787464609",
+        "base:0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+        "optimism:0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+        "unichain:0x14d9143becc348920b68d123687045db49a016c6"
+      ],
+      "rationale": "Scanned every src chain registry in the official Spark address-registry master tree on 2026-10-15; SUSDC declarations occur only on Ethereum, Arbitrum, Base, Optimism and Unichain. All five pinned identities have positive native supply and matching held local sUSDS balances. MORPHO_VAULT_SUSDC and SPARK_VAULT_V2_SPUSDC are distinct contracts/instruments, not additional Legacy V1 liabilities.",
+      "sources": [
+        {
+          "label": "Official multichain deployment registry",
+          "url": "https://github.com/sparkdotfi/spark-address-registry/tree/master/src"
+        },
+        {
+          "label": "Audited native L1/L2 issuance",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
+        }
+      ]
+    }
   }
 }

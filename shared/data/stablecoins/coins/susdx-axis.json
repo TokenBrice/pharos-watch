@@ -8,7 +8,7 @@
       "url": "https://docs.axis.to/reference/staking-contracts.md",
       "label": "Axis active-share USDx accounting"
     },
-    "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "alchemy" } },
+    "inputs": { "primary": {"kind": "onchain-evm", "chain": "ethereum", "rpcMode": "alchemy"} },
     "params": {
       "slice": {
         "name": "USDx principal and vested rewards in the StakedUSDx vault",
@@ -18,7 +18,7 @@
         "expectedAssetAddress": "0xa1fa7777974312f7d801a8880714a218f76233f8"
       },
       "redemptionRoute": "async-request",
-      "redemptionLock": [{ "selector": "cooldownDuration()", "kind": "cooldown-seconds" }]
+      "redemptionLock": [{"selector": "cooldownDuration()", "kind": "cooldown-seconds"}]
     }
   },
   "id": "susdx-axis",
@@ -28,13 +28,17 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
-    "rationale": "The exact Ethereum StakedUSDx V2 implementation is an asset-backed USDx rewards wrapper. Its backing archetype follows the canonical synthetic-delta-neutral USDx parent; local share accounting and async exits are reviewed separately. The reviewed V2 implementation was activated at vault deployment on July 23, 2026.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review 2026-10-15 (Rev_SusdxAxis)",
+    "rationale": "The exact Ethereum StakedUSDx V2 implementation is an asset-backed USDx rewards wrapper. Its backing archetype follows the canonical synthetic-delta-neutral USDx parent; local share accounting and async exits are reviewed separately. The product predates V2: the legacy Plasma V1 Staked Axis USD (sUSDx) vault received the first 9,899,990.1 USDx tranche stake at Plasma block 18608029 (April 7, 2026, 05:31:32 UTC). The reviewed V2 implementation was activated at vault deployment on July 23, 2026, so its mechanism history does not inherit the private-beta product age.",
     "sources": [
       {"label": "Exact V2 vault deployment", "url": "https://etherscan.io/tx/0xdf82a52bbd1c7082c9c0523c25e47b9c4bd02bebcc1110bbb31ddeebe4de9791"},
       {"label": "Axis canonical vault accounting", "url": "https://docs.axis.to/reference/staking-contracts.md"},
-      {"label": "Parent synthetic-dollar backing model", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md"}
+      {"label": "Parent synthetic-dollar backing model", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md"},
+      {
+        "label": "Legacy Plasma V1 sUSDx vault first tranche stake, April 7, 2026",
+        "url": "https://plasmascan.to/tx/0xa9c852119450a005db220d2273a6bf5a741a8874ea13af9ee19a94276714ade1"
+      }
     ]
   },
   "flags": {
@@ -46,8 +50,8 @@
   "variantOf": "usdx-axis",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "usdx-axis",
-  "collateral": "Canonical USDx deposited into Axis's Ethereum StakedUSDx vault. Active principal and vested USDx rewards back outstanding shares; funded but unvested rewards and pending or claimable redemption liabilities are excluded from totalAssets and share pricing. Upstream USDx portfolio, venue and hedge risks remain inherited.",
-  "pegMechanism": "Users deposit USDx for ERC-4626 shares whose exchange rate rises as funded rewards vest. ERC-7540 requestRedeem burns shares and reserves USDx inside the vault; after the configured cooldown, a privileged servicer makes the request claimable. The cooldown was 604800 seconds at Ethereum block 26107703 on October 2, 2026, but does not guarantee completion after seven days. previewRedeem and previewWithdraw revert because exits are asynchronous; still-pending requests may be cancelled.",
+  "collateral": "Canonical USDx deposited into Axis's Ethereum StakedUSDx vault. Active principal and vested USDx rewards back outstanding shares; funded but unvested rewards and pending or claimable redemption liabilities are excluded from totalAssets and share pricing. Reward funding is discretionary and is not a mechanical pass-through of trading results. Upstream USDx portfolio, venue and hedge risks remain inherited.",
+  "pegMechanism": "Users deposit USDx for ERC-4626 shares whose exchange rate rises as funded rewards vest. ERC-7540 requestRedeem burns shares and reserves USDx inside the vault; after the configured cooldown, a privileged servicer makes the request claimable. At Ethereum block 26197360 (October 15, 2026, 10:37:11 UTC), the cooldown was 604800 seconds; deposits, requests, servicing and claims were unpaused, but cancellations were paused. Seven days establishes eligibility, not a completion guarantee. previewRedeem and previewWithdraw revert because exits are asynchronous. Pending-request cancellation is available only when governance unpauses it and applicable restrictions permit it.",
   "detailProvider": "coingecko",
   "geckoId": "staked-axis-usd",
   "links": [
@@ -55,16 +59,55 @@
     { "label": "Stake and unstake", "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md" },
     { "label": "Vault accounting reference", "url": "https://docs.axis.to/reference/staking-contracts.md" },
     { "label": "Transparency", "url": "https://app.axis.to/transparency" },
-    { "label": "Canonical V2 vault deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xdf82a52bbd1c7082c9c0523c25e47b9c4bd02bebcc1110bbb31ddeebe4de9791" }
+    { "label": "Canonical V2 vault deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xdf82a52bbd1c7082c9c0523c25e47b9c4bd02bebcc1110bbb31ddeebe4de9791" },
+    {
+      "label": "Docs",
+      "url": "https://docs.axis.to/"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.axis.to/backing-reserves-and-transparency/audits.md"
+    },
+    {
+      "label": "Terms",
+      "url": "https://www.axis.to/terms-of-service"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4#code"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/AxisFDN"
+    },
+    {
+      "label": "Telegram",
+      "url": "https://t.me/AxisFDN"
+    },
+    {
+      "label": "Vault state checkpoint, October 15, 2026",
+      "url": "https://etherscan.io/block/26197360"
+    },
+    {
+      "label": "Discretionary reward policy",
+      "url": "https://docs.axis.to/susdx-the-rewards-vault/reward-distribution.md"
+    }
   ],
   "jurisdiction": { "country": "British Virgin Islands" },
   "contracts": [
     { "chain": "ethereum", "address": "0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4", "decimals": 18 }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
-  "yieldConfig": { "yieldSource": "Vested USDx rewards funded from Axis's market-neutral trading results", "yieldType": "nav-appreciation" },
-  "launchDate": "2026-07-23",
+  "yieldConfig": { "yieldSource": "Discretionary USDx rewards selected by Axis and vested into share value; no mechanical pass-through of trading results", "yieldType": "nav-appreciation" },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Pending-request cancellation was paused at the October 15 checkpoint",
+      "message": "At Ethereum block 26197360 (October 15, 2026, 10:37:11 UTC), the vault's redemption controls had pending-request cancellation paused. Requests, servicing and claims were unpaused. A pending request stops earning rewards and cannot be cancelled while cancellation stays paused. The seven-day cooldown establishes eligibility only; a privileged servicer must still make the request claimable. Check current contract state before requesting an exit."
+    }
+  ],
+  "launchDate": "2026-04-07",
   "implementationLaunchDate": "2026-07-23"
 }

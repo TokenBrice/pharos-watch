@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UmintUbs batch64 primary-source review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -42,9 +42,13 @@
       {
         "label": "Ethereum token deployment",
         "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
+      },
+      {
+        "label": "DigiFT native fund mandate and shareholder rights (January 24, 2025)",
+        "url": "https://gov.ethenafoundation.com/t/reserve-fund-ubs-money-market-investment-fund-umint/474"
       }
     ],
-    "rationale": "The 100% slice describes the authenticated native Singapore VCC fund-share claim without inventing current portfolio weights. The March 20, 2025 DigiFT dossier names State Street as custodian/administrator and claims underlying-fund Moody's AAAmmf and Fitch AAA-mf assessments. Those historical distributor assertions have not been matched to an identified current rating-agency record and grant no independent-assurance credit. Exact underlying strategy, native PPM and current position weights remain private.",
+    "rationale": "The 100% slice describes the authenticated native Singapore VCC fund-share claim, not measured portfolio weights. DigiFT's January 24, 2025 native-fund disclosure names UBS (Irl) Select Money Market Fund - USD as the all-or-substantially-all underlying investment, investing in short-term USD debt of US and non-US governmental and other issuers. The exact underlying share class and current allocation remain unavailable. The March 2025 dossier names State Street as native custodian/administrator and EY as auditor. Its Plan design section 10 correctly attributes Aaa-mf to Moody's and AAAmmf to Fitch, unlike its reversed introductory ratings and the prior review. These remain historical distributor assertions, not a current agency opinion or financial-assurance report. The private native PPM, current look-through positions and token-to-fund reconciliation are unavailable.",
     "compositionBasis": "Standing authenticated fund-share identity, not a current position-weighted portfolio or token-to-assets reconciliation",
     "scope": "classification-only",
     "knownUnknownExposure": "All current underlying position weights and complete token-to-fund asset/liability reconciliation remain unavailable. Named custodians and auditors do not prove current whole-book custody allocation or financial assurance.",
@@ -66,11 +70,11 @@
         "role": "custodian"
       }
     ],
-    "segregation": "unknown",
-    "bankruptcyRemoteness": "unknown",
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UmintUbs batch64 primary-source review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -84,9 +88,13 @@
       {
         "label": "UBS Ethereum uMINT launch",
         "url": "https://www.ubs.com/global/en/media/display-page-ndp/en-20241101-first-tokenized-investment-fund.html"
+      },
+      {
+        "label": "DigiFT native fund custody trust and VCC statutory segregation (January 24, 2025)",
+        "url": "https://gov.ethenafoundation.com/t/reserve-fund-ubs-money-market-investment-fund-umint/474"
       }
     ],
-    "uncertainty": "The March 2025 distributor dossier names State Street for the native fund. Private native PPM and current custody allocations remain unavailable; DR-wrapper bare-trust and bankruptcy-remoteness claims are not applied to native uMINT.",
+    "uncertainty": "DigiFT's January 2025 native-fund disclosure, separate from its DR proposal, states that native fund assets are held in trust at the fund custodian, with separate fund/class accounts and statutory sub-fund liability segregation under VCC Act section 29. It expressly warns that non-Singapore courts may not apply that bankruptcy remoteness. Segregated/structured describe this disclosed native legal structure, not a current independent custody audit or a guarantee of recovery. The March 2025 dossier names State Street; exact underlying share class, current allocations, complete material custody layers, rehypothecation terms and native PPM remain unavailable. The whole-book custodyModel remains unknown. DR-wrapper bare-trust claims are not imported.",
     "knownUnknownExposurePct": 100
   }
 }

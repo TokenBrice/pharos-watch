@@ -30,17 +30,21 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      },
+      {
+        "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+        "url": "https://basescan.org/block/52630636"
       }
     ],
-    "evidence": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), all four gates are zero. receiveSharesGate, sendSharesGate and receiveAssetsGate setters remain abdicated, so the reviewed deployment cannot introduce a local transfer/direct-withdrawal gate. sendAssetsGate setter is not abdicated and has a 259200-second delay; it governs deposit/mint, not direct share transfer or ordinary withdrawal. Deposit-dependent in-kind paths can be constrained by it. Underlying USDC freeze exposure remains inherited from usdc-circle. Allocator changes to liquidityAdapter/data can separately interrupt ordinary liquidity without creating a blacklist.",
+    "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "One reviewed native base VaultV2 share deployment; no bridge or separate confidential receipt supply is included. This does not prove absence of uncatalogued integrations.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
     "confidence": "probable",
     "sources": [
       {
@@ -70,6 +74,10 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      },
+      {
+        "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+        "url": "https://basescan.org/block/52630636"
       }
     ],
     "routes": [
@@ -86,8 +94,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Native asset-backed ERC-4626 share issuance on the sole authored deployment.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -116,6 +124,10 @@
           {
             "label": "Exact Morpho lending adapter",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ]
       }
@@ -124,12 +136,12 @@
   "oracleRisk": {
     "tier": "standard-external",
     "role": "collateral-pricing",
-    "summary": "Eight reviewed Morpho borrower oracle paths use external feeds. The formerly opaque JitoSOL path is an EIP-1167 MetaOracleDeviationTimelock with Chainlink-compliant primary and backup composers, pinned at Base block 52139743. No independent-provider redundancy, heartbeat budget or measured debt shares are asserted.",
+    "summary": "Eight current Morpho borrower oracle paths were reproduced at Base block 52630636. External-feed composers, including the JitoSOL primary/backup meta-oracle, are unchanged. No independent-provider redundancy or end-to-end protective freshness budget is established.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
       "rationale": "Every current adapter market ID was enumerated and resolved to exact collateral, oracle and LLTV at the pinned block; borrower liquidation remains economically applicable.",
       "sources": [
         {
@@ -151,11 +163,15 @@
         {
           "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+        },
+        {
+          "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+          "url": "https://basescan.org/block/52630636"
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine08 census; Unknown-wave W1R67 exact meta-oracle resolution",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
     "confidence": "verified",
     "sources": [
       {
@@ -193,6 +209,10 @@
       {
         "label": "Sourcify functional VaultV2 runtime match (matchId 30034094); independent exact-deployment equality after only declared immutable/CBOR masks; immutables checked via getters",
         "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+      },
+      {
+        "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+        "url": "https://basescan.org/block/52630636"
       }
     ],
     "branches": [
@@ -213,15 +233,15 @@
             "path": "BASE_FEED_1: XRP / USD",
             "address": "0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xcb585250f852c6c6bf90434ab21a00f02833a4af",
@@ -259,6 +279,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: XRP / USD",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -280,8 +304,8 @@
             "path": "BASE_FEED_1: cbETH-ETH Exchange Rate",
             "address": "0x868a501e68f3d1e89cfc0d22f6b22e8dabce5f04",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0x868a501e68f3d1e89cfc0d22f6b22e8dabce5f04"
             ]
@@ -291,8 +315,8 @@
             "path": "BASE_FEED_2: ETH / USD",
             "address": "0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70"
             ]
@@ -302,15 +326,15 @@
             "path": "QUOTE_FEED_1: USDC / USD",
             "address": "0x7e860098f58bbfc8648a4311b374b1d669a2bc6b",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0x7e860098f58bbfc8648a4311b374b1d669a2bc6b"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
@@ -356,6 +380,10 @@
           {
             "label": "Exact QUOTE_FEED_1 downstream feed: USDC / USD",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7e860098f58bbfc8648a4311b374b1d669a2bc6b"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -377,15 +405,15 @@
             "path": "BASE_FEED_1: BTC / USD",
             "address": "0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
@@ -423,6 +451,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: BTC / USD",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -444,15 +476,15 @@
             "path": "BASE_FEED_1: ADA / USD",
             "address": "0x34cd971a092d5411bd69c10a5f0a7eef72c69041",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0x34cd971a092d5411bd69c10a5f0a7eef72c69041"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xcbada732173e39521cdbe8bf59a6dc85a9fc7b8c",
@@ -490,6 +522,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: ADA / USD",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x34cd971a092d5411bd69c10a5f0a7eef72c69041"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -498,7 +534,7 @@
         "id": "oracle-0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
         "label": "Morpho borrower oracle 0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
         "tier": "standard-external",
-        "summary": "Exact market 0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5 oracle is an EIP-1167 clone of verified MetaOracleDeviationTimelock 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e. Base block 52139743 pins primary 0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b, backup 0x41b5637a347a6c199a503fddef466080d7256acc, 2% deviation threshold, 10800-second challenge and 28800-second healing. Both composers use external Chainlink-compliant feeds; no independent-provider redundancy or freshness bound is established.",
+        "summary": "Exact market 0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5 oracle is an EIP-1167 clone of verified MetaOracleDeviationTimelock 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e. Base block 52630636 pins primary 0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b, backup 0x41b5637a347a6c199a503fddef466080d7256acc, 2% deviation threshold, 10800-second challenge and 28800-second healing. Both composers use external Chainlink-compliant feeds; no independent-provider redundancy or freshness bound is established.",
         "collateralAssets": [
           "0x97be14dd8f994a5364573bc035d85309e7cb34de"
         ],
@@ -507,16 +543,16 @@
         ],
         "feeds": [
           {
-            "provider": "Chainlink-compliant primary JITOSOL-SOL Calculated × SOL/USD; backup JITOSOL/USD",
+            "provider": "Chainlink-compliant primary JITOSOL-SOL Calculated \u00d7 SOL/USD; backup JITOSOL/USD",
             "path": "MetaOracleDeviationTimelock.price(): primary feeds 0x4b28dfaf2acaf982524a75409ab59dff85942ad7 and 0xb221fff161c23c6473a6316294e2d510cfb667b0; backup feed 0x0ca181015d21a5ed19bafc17f2138883c2b16d54. Both composers have zero quote feeds and zero ERC4626 vault inputs.",
             "address": "0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52139743
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52139743,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0x97be14dd8f994a5364573bc035d85309e7cb34de",
@@ -566,8 +602,13 @@
           {
             "label": "Exact deployed market oracle source / verification availability",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x78f772f5fcc03256260cc1165e34da9bb3f9be1c"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
-        ]
+        ],
+        "fallbackBehavior": "MetaOracleDeviationTimelock.price() tries the selected composer and, on a revert, calls the other composer. A persistent deviation above 2% permits a permissionless challenge and switch after 10800 seconds; reconvergence permits healing after 28800 seconds. At the pin the primary composer is selected and challenge/healing timestamps are zero. This does not enforce updatedAt freshness or prove independent upstream providers."
       },
       {
         "id": "oracle-0xe9725430f3a72611ac72eddc650625bce4f45dc7",
@@ -586,15 +627,15 @@
             "path": "BASE_FEED_1: SOL / USD",
             "address": "0x975043adbb80fc32276cbf9bbcfd4a601a12462d",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0x975043adbb80fc32276cbf9bbcfd4a601a12462d"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0x311935cd80b76769bf2ecc9d8ab7635b2139cf82",
@@ -632,6 +673,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: SOL / USD",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x975043adbb80fc32276cbf9bbcfd4a601a12462d"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -653,15 +698,15 @@
             "path": "BASE_FEED_1: ZEC / USD",
             "address": "0xc4a161651546983083aedddec5878a2eaf604890",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0xc4a161651546983083aedddec5878a2eaf604890"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xb2000000000000000000008501b13360000cb2ec",
@@ -699,6 +744,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: ZEC / USD",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc4a161651546983083aedddec5878a2eaf604890"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -720,15 +769,15 @@
             "path": "BASE_FEED_1: HYPE / USD",
             "address": "0xadb55ef366459c94a318af2b05a44eee463f8e63",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636,
             "failureDomainKeys": [
               "feed:base:0xadb55ef366459c94a318af2b05a44eee463f8e63"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xb200000000000000000000451d033a5000cb479e",
@@ -766,6 +815,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: HYPE / USD",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xadb55ef366459c94a318af2b05a44eee463f8e63"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -779,10 +832,10 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
-          "rationale": "This exact share-accounting path computes assets/share from underlying balances, adapter realAssets and configured fee accrual; it has no price-feed input. This exemption does NOT cover borrower markets: every enumerated market oracle remains a separate applicable path. Exact executable correspondence to the Sourcify recompiled VaultV2 runtime and all deployment-specific immutable occurrences were independently checked; metadata equality is not required for this functional-path determination.",
+          "rationale": "The reviewed VaultV2 share-accounting source computes assets/share from underlying balances, adapter realAssets and configured fee accrual, without a price-feed input. Fresh Base block 52630636 reproduces the exact previously admitted runtime identity (SHA-256 of RPC hex string 1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7); this review did not rerun the earlier Sourcify compilation comparison. This exemption covers only share accounting. Every currently enumerated borrower-market oracle remains a separate applicable path.",
           "sources": [
             {
               "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
@@ -807,6 +860,10 @@
             {
               "label": "Sourcify functional VaultV2 runtime match (matchId 30034094); independent exact-deployment equality after only declared immutable/CBOR masks; immutables checked via getters",
               "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -819,8 +876,8 @@
         "branchId": "oracle-0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -851,6 +908,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: XRP / USD",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -863,8 +924,8 @@
         "branchId": "oracle-0x4756c26e01e61c7c2f86b10f4316e179db8f9425",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -903,6 +964,10 @@
             {
               "label": "Exact QUOTE_FEED_1 downstream feed: USDC / USD",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7e860098f58bbfc8648a4311b374b1d669a2bc6b"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -915,8 +980,8 @@
         "branchId": "oracle-0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -947,6 +1012,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: BTC / USD",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -959,8 +1028,8 @@
         "branchId": "oracle-0x35d87a743d1f2f7cafb42d855dc1c5df857ce45f",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -991,6 +1060,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: ADA / USD",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x34cd971a092d5411bd69c10a5f0a7eef72c69041"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -1003,8 +1076,8 @@
         "branchId": "oracle-0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -1031,6 +1104,10 @@
             {
               "label": "Exact deployed market oracle source / verification availability",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x78f772f5fcc03256260cc1165e34da9bb3f9be1c"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -1043,8 +1120,8 @@
         "branchId": "oracle-0xe9725430f3a72611ac72eddc650625bce4f45dc7",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -1075,6 +1152,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: SOL / USD",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x975043adbb80fc32276cbf9bbcfd4a601a12462d"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -1087,8 +1168,8 @@
         "branchId": "oracle-0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -1119,6 +1200,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: ZEC / USD",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc4a161651546983083aedddec5878a2eaf604890"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }
@@ -1131,8 +1216,8 @@
         "branchId": "oracle-0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -1163,6 +1248,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: HYPE / USD",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xadb55ef366459c94a318af2b05a44eee463f8e63"
+            },
+            {
+              "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+              "url": "https://basescan.org/block/52630636"
             }
           ]
         }

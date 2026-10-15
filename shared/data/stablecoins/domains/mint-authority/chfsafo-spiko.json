@@ -5,6 +5,7 @@
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "CHFSAFO has five observed EVM ADMIN Safes and a shared Solana MinterConfig. The Solana admin Squads account has one voting/executing member, who also directly holds the program upgrade authority. Current executable bytes match the verified issuer source; this does not establish independent key custody, exhaustive register control closure or financial reconciliation.",
+    "headline": "Spiko controls native issuance and upgrades; EVM multisignature wallets coexist with a single-signature Solana upgrade path.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -18,8 +19,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Spiko Ethereum super-admin Safe",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107707,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197328,
       "sources": [
         {
           "label": "Spiko UUPS permission architecture",
@@ -82,8 +83,8 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110192,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197328,
         "safe": {
           "owners": [
             "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
@@ -95,11 +96,13 @@
           ],
           "threshold": 3,
           "enabledModules": [],
-          "observedBlock": 26110192,
-          "observedAt": "2026-10-03",
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 26197328,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "evidence": "At Ethereum block 26110192, authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; getRequirements(token,mint(address,uint256)) returned mask 0x5 and upgradeToAndCall(address,bytes) returned 0x1. getGroups(Safe) includes ADMIN group 0, so this Safe can mint directly as well as administer permissions and upgrade. getThreshold returned 3, getOwners the six listed addresses, and getModulesPaginated(sentinel,256) returned an empty list and sentinel end. Guard/fallback-handler closure and full group membership are not claimed.",
+        "evidence": "At Ethereum block 26197328 (2026-10-15T10:30:47Z), authority() returned PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; the Safe's groups include ADMIN bit 0, exact mint requirements are 0x5 and upgrade requirements 0x1. The Safe can mint directly and administer permissions/upgrades. Threshold remains 3 with the six listed owners; module pagination is empty with sentinel end. Safe guard storage is zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The token implementation slot is 0x869dbfc8c578d7af77e0214287bb49d351d3e4e1. Full group membership, module-guard and fallback runtime/execution closure, independent key custody and delay closure are not claimed.",
         "sources": [
           {
             "label": "Spiko permission architecture",
@@ -122,9 +125,9 @@
         ],
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107707,
-        "evidence": "At block 26107707, getGroups(0x5ed5a75eeed1934ea060186e35187eaa73331366) included group 2, matching the exact CHF token mint requirements mask 0x5. Limit values and current pending-mint capacity were not retrieved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197328,
+        "evidence": "At Ethereum block 26197328 (2026-10-15T10:30:47Z), getGroups(0x5ed5a75eeed1934ea060186e35187eaa73331366) returned public bit 255 and minter bit 2, matching exact CHF mint requirements 0x5. Limit values and current pending-mint capacity were not retrieved; a successful permission read is not exhaustive controller or economic-cap closure.",
         "sources": [
           {
             "label": "CHF Ethereum proxy",
@@ -148,10 +151,10 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "capDescription": "The verified current program permits the configured admin to change the daily limit and approve pending mints without a daily-limit recheck; the limit is not an immutable economic supply cap.",
-        "observedAt": "2026-10-09",
-        "observedBlock": 454856255,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209716,
         "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Sol curation campaign 2026-10-09 (W2L27Newrails), observed 2026-10-09T11:43:28Z: one finalized getMultipleAccounts response at bank-context slot 454856255 binds the exact CHF mintAuthority to this MinterConfig, owned by issuer program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. getBlock for that slot gives hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198 (2026-10-09T11:43:18Z). MinterConfig decodes to admin vault 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd and bump 255. ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe executable bytes after the 45-byte loader header, with trailing zero padding removed, hash to 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d, exactly matching OSEc's independently verified issuer commit afdab14fb1a59bf3abe2f263870023349a560e2e (verification dated 2026-09-01T13:05:46.166083). Its set_daily_limit is admin-gated and adjustable; approve_mint mints the pending amount without rechecking MintDailyLimit. These are RPC-returned finalized-bank contextual observations, not historical-slot account queries. No complete Squads execution certificate, incident-free state, supply share, human independence or key-custody proof is asserted.",
+        "evidence": "A finalized getMultipleAccounts response at bank-context slot 457209716 binds the exact CHF mint authority to this MinterConfig and issuer program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw. getBlock gives hash HHF31Fm7P3XqeiPpMMvoBEkUXrkoP51Kk68wr4dCTq4A and timestamp 1792061294 (2026-10-15T10:48:14Z). MinterConfig decodes to admin vault 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9, pending_admin None, initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd and bump 255. Mint supply is zero with five decimals. ProgramData executable bytes after the 45-byte loader header, with trailing zero padding removed, hash to 0aff1fc23cc42369aacdcaf797d2579c691019c3170115b91116c3394f70a68d, matching the independent verification record and immutable issuer source afdab14fb1a59bf3abe2f263870023349a560e2e. The verified set_daily_limit and approve_mint instructions establish adjustable limits and pending-mint approval without a daily-limit recheck. Complete execution closure and independent key custody remain unestablished.",
         "sources": [
           {
             "label": "Exact CHF Solana mint",
@@ -162,11 +165,11 @@
             "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
           },
           {
-            "label": "Finalized exact CHF/controller/runtime census at bank-context slot 454856255, block time 2026-10-09T11:43:18Z",
+            "label": "Finalized CHF/controller/runtime census at slot 457209716, 15 October 2026 10:48:14 UTC",
             "url": "https://api.mainnet-beta.solana.com"
           },
           {
-            "label": "Independent executable/source verification, current byte hash matched at slot 454856255",
+            "label": "Independent executable/source verification, byte hash matched at slot 457209716",
             "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
           }
         ]
@@ -185,11 +188,11 @@
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
         "failureDomainKeys": ["solana-key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"],
-        "observedAt": "2026-10-09",
-        "observedBlock": 454856255,
-        "evidence": "Sol curation campaign 2026-10-09 (W2L27Newrails), observed 2026-10-09T11:43:28Z: the same finalized bank-context slot 454856255 census binds this vault as MinterConfig.admin and the issuer mainnet deployment inventory binds it to Squads account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A. The account is owned by Squads v4 SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf; its source-layout decode gives threshold 1, time_lock 0, config_authority the zero pubkey, transaction_index 25, stale_transaction_index 0 and exactly one member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h with permissions mask 7 (initiate, vote, execute). This is one cryptographic signer, not a multi-person independence attestation. The verified issuer minter source gives the admin daily-limit adjustment and pending-mint approval. Block hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198 (2026-10-09T11:43:18Z). Squads runtime/source parity, alternative execution paths, spending-limit closure and incident state remain unestablished; no exhaustive execution certificate is asserted.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209716,
+        "evidence": "The finalized slot 457209716 account census binds this vault as MinterConfig.admin; immutable issuer inventory binds it to Squads account CqexeLYpGafaLfX7Nb3tD8ShLmWP1mmap16iR9M59u1A. Source-layout decoding confirms Squads v4 ownership, threshold 1, time_lock 0, config_authority the zero pubkey, transaction_index 25, stale_transaction_index 0 and exactly one member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h with permission mask 7. This is one cryptographic signer, not independent human custody. Block hash HHF31Fm7P3XqeiPpMMvoBEkUXrkoP51Kk68wr4dCTq4A, timestamp 1792061294 (2026-10-15T10:48:14Z). Squads runtime/source parity, spending limits and alternative execution paths remain unestablished.",
         "sources": [
-          {"label": "Finalized CHF/config/Squads census at bank-context slot 454856255", "url": "https://api.mainnet-beta.solana.com"},
+          {"label": "Finalized CHF/config/Squads census at slot 457209716, 15 October 2026", "url": "https://api.mainnet-beta.solana.com"},
           {"label": "Immutable issuer mainnet minter and admin-vault inventory", "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/minter-mainnet-beta.json"},
           {"label": "Immutable Squads Multisig account and permission layout", "url": "https://github.com/Squads-Protocol/v4/blob/af94153ff77a28b6effe46b9c94baaa93742b48c/programs/squads_multisig_program/src/state/multisig.rs"},
           {"label": "Verified issuer minter executable/source identity", "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"}
@@ -205,11 +208,11 @@
         "directMintAbility": "upgrade-only",
         "canRaiseCap": true,
         "failureDomainKeys": ["solana-key:GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h"],
-        "observedAt": "2026-10-09",
-        "observedBlock": 454856255,
-        "evidence": "Sol curation campaign 2026-10-09 (W2L27Newrails), observed 2026-10-09T11:43:28Z: the same finalized bank-context slot 454856255 account response identifies the exact mint's authority PDA as issuer MinterConfig and its owning executable program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw as BPFLoaderUpgradeable-owned. Its Program account points to ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe; ProgramData's loader state has deployment slot 443429864 and Some(upgrade_authority_address) equal to this signer, corroborating the immutable issuer deployment inventory. The signer is an on-curve public key with a system-owned zero-data account and is also the sole admin Squads member. Program replacement can replace the mint-critical code which signs as the existing MinterConfig PDA; the observed daily limit is therefore not an immutable supply cap. Block hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198 (2026-10-09T11:43:18Z). This proves the local upgrade signer identity, not key custody, an incident-free history, complete execution-domain closure or a runtime liability share.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209716,
+        "evidence": "The finalized slot 457209716 response binds the exact mint's MinterConfig to BPFLoaderUpgradeable-owned program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw and ProgramData Gc8oYdqWg3PrgA7ioCXKY53vsB9vy6XHNWJyDcGaaWJe. The ProgramData header retains deployment slot 443429864 and this direct upgrade authority, also the sole Squads admin member. The signer account is system-owned with zero data. Replacement of the mint-critical program can change its PDA-authorized mint behavior; current daily limits are not immutable economic caps. Block hash HHF31Fm7P3XqeiPpMMvoBEkUXrkoP51Kk68wr4dCTq4A, timestamp 1792061294 (2026-10-15T10:48:14Z). No independent key custody, exhaustive execution closure, incident-free history or runtime liability share is inferred.",
         "sources": [
-          {"label": "Finalized exact program, ProgramData and signer census at bank-context slot 454856255", "url": "https://api.mainnet-beta.solana.com"},
+          {"label": "Finalized program, ProgramData and signer census at slot 457209716, 15 October 2026", "url": "https://api.mainnet-beta.solana.com"},
           {"label": "Immutable issuer program upgrade authority inventory", "url": "https://github.com/spiko-tech/solana-contracts/blob/afdab14fb1a59bf3abe2f263870023349a560e2e/deployments/minter-mainnet-beta.json"},
           {"label": "Verified immutable issuer minter source", "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"}
         ]
@@ -226,13 +229,13 @@
         "threshold": 3,
         "signerCount": 6,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-03",
-        "observedBlock": 94870785,
+        "observedAt": "2026-10-15",
+        "observedBlock": 95570584,
         "safe": {
           "owners": ["0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"],
-          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 94870785, "source": "onchain"
+          "threshold": 3, "enabledModules": [], "guard": null, "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99", "observedAt": "2026-10-15", "observedBlock": 95570584, "source": "onchain"
         },
-        "evidence": "Pinned authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "evidence": "At Polygon block 95570584 (2026-10-15T10:46:42Z), authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe groups include ADMIN bit 0; mint requirements are 0x5 and upgrade requirements 0x1. Threshold is 3, the six listed owners are unchanged and module pagination ends empty at sentinel. Guard storage is zero; fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Token implementation is 0x22eaa6d2202fb825b682645ca1317880477ac066. Full group census, module-guard and fallback execution closure remain unproven.",
         "sources": [{"label": "Polygon pinned RPC census", "url": "https://polygon.drpc.org"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
       },
       {
@@ -241,12 +244,12 @@
         "address": "0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e",
         "deploymentRefs": ["arbitrum:0x97e7962bcd091e7ecfb583fc96289b1e1553ac6e"],
         "directMintAbility": "direct", "canRaiseCap": true, "threshold": 3, "signerCount": 6,
-        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-03", "observedBlock": 511230438,
+        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-15", "observedBlock": 515032516,
         "safe": {
           "owners": ["0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"],
-          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 511230438, "source": "onchain"
+          "threshold": 3, "enabledModules": [], "guard": null, "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99", "observedAt": "2026-10-15", "observedBlock": 515032516, "source": "onchain"
         },
-        "evidence": "Pinned authority() is chain-local PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "evidence": "At Arbitrum block 515032516 (2026-10-15T10:29:24Z), authority() is chain-local PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Safe groups include ADMIN bit 0; mint requirements are 0x5 and upgrade requirements 0x1. Threshold is 3, the six listed owners are unchanged and module pagination ends empty at sentinel. Guard storage is zero; fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Token implementation is 0x82f419a5bf4073c8d3b14798462cb9c1054f96e6. Full group census, module-guard and fallback execution closure remain unproven.",
         "sources": [{"label": "Arbitrum pinned RPC census", "url": "https://arb1.arbitrum.io/rpc"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
       },
       {
@@ -255,12 +258,12 @@
         "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
         "deploymentRefs": ["base:0xd9aa2300e126869182dfb6ecf54984e4c687f36b"],
         "directMintAbility": "direct", "canRaiseCap": true, "threshold": 3, "signerCount": 6,
-        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-03", "observedBlock": 52110837,
+        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-15", "observedBlock": 52635441,
         "safe": {
           "owners": ["0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"],
-          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 52110837, "source": "onchain"
+          "threshold": 3, "enabledModules": [], "guard": null, "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4", "observedAt": "2026-10-15", "observedBlock": 52635441, "source": "onchain"
         },
-        "evidence": "Pinned authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "evidence": "At Base block 52635441 (2026-10-15T10:30:29Z), authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe groups include ADMIN bit 0; mint requirements are 0x5 and upgrade requirements 0x1. Threshold is 3, the six listed owners are unchanged and module pagination ends empty at sentinel. Guard storage is zero; fallback handler is 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. Token implementation is 0xdcf337be639c1269c19272ec35b2763b08687ea2. Full group census, module-guard and fallback execution closure remain unproven.",
         "sources": [{"label": "Base pinned RPC census", "url": "https://base-rpc.publicnode.com"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
       },
       {
@@ -269,23 +272,23 @@
         "address": "0x09991fbf6b16741f6fde3b1c16e8e4d95a5e5538",
         "deploymentRefs": ["etherlink:0xef53e7d17822b641c6481837238a64a688709301"],
         "directMintAbility": "direct", "canRaiseCap": true, "threshold": 3, "signerCount": 6,
-        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-03", "observedBlock": 54814446,
+        "modulesOrGuardsStatus": "unknown", "observedAt": "2026-10-15", "observedBlock": 55662435,
         "safe": {
           "owners": ["0x75e0092e7d2c8d854fcf5334f95554852d62746a", "0x4d1d9c5b5d9ca448194313d799de374f362bd460", "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2", "0xd01046472371168721e45dc357296683f026d6b8", "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949", "0xa6e06dfe42064b7cd6dc902a62e74ca5bb574011"],
-          "threshold": 3, "enabledModules": [], "observedAt": "2026-10-03", "observedBlock": 54814446, "source": "onchain"
+          "threshold": 3, "enabledModules": [], "guard": null, "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99", "observedAt": "2026-10-15", "observedBlock": 55662435, "source": "onchain"
         },
-        "evidence": "Pinned authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe getGroups includes ADMIN bit 0; exact CHF mint mask is 0x5 and UUPS upgrade mask 0x1. getThreshold=3, getOwners=the listed six, modules pagination ends at sentinel with no modules. Full group census and guard/fallback closure remain unproven.",
+        "evidence": "At Etherlink block 55662435 (2026-10-15T10:46:22Z), authority() is PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Safe groups include ADMIN bit 0; mint requirements are 0x5 and upgrade requirements 0x1. Threshold is 3, the six listed owners are unchanged and module pagination ends empty at sentinel. Guard storage is zero; fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Token implementation is 0xfc705884939921117a22f8be11e947785cb6a184. Full group census, module-guard and fallback execution closure remain unproven.",
         "sources": [{"label": "Etherlink pinned RPC census", "url": "https://node.mainnet.etherlink.com"}, {"label": "Spiko UUPS and permission model", "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"}]
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "periodic",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
       "disposition": "scoreable",
-      "reviewedAt": "2026-10-09",
-      "reviewer": "Sol curation campaign 2026-10-09 (W2L27Newrails)",
-      "evidence": "The October 9 substantive review adds the exact Solana minter executable/source match, adjustable admin cap and approval semantics, one-member admin Squads topology and the same member's direct program upgrade authority at finalized bank-context slot 454856255, block hash F9jDR1JsLdZGzBsH55EcSMhcCe4ZhW81AUud14PowXnj, timestamp 1791546198, observation 2026-10-09T11:43:28Z. It does not refresh the prior October 2/3 EVM, fund, custody or reconciliation observations. Five exact CHF EVM token requirement masks and chain-local ADMIN Safe signer/module reads establish observed direct-mint and upgrade controllers; their full permission-group census and guard/fallback/delay closure have not been independently established. The shared AMF-authorized SICAV/prospectus, CACEIS depositary and daily fund valuation, recurring fund reporting and named PwC appointment retain the previously reviewed prudential/periodic/unbounded-reconciled vocabulary, not a new independently signed CHF-token/all-register reconciliation or audit opinion. Starknet/Stellar operator and upgrade enumeration, the complete EVM permission-group roster, and EVM guard/fallback/delay observations remain unestablished. Solana Squads runtime/source parity and alternative execution-path closure remain unestablished despite the issuer minter's independently verified current byte hash. Independent key custody and signing policy remain unresolved. Native circulation exclusions and complete cross-register financial reconciliation remain unavailable in Backing.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
+      "evidence": "Fresh five-chain EVM reads on 15 October bind exact CHF token authority/mint/upgrade masks and chain-local ADMIN Safe owners, thresholds, modules, guard slots and fallback addresses; executable fallback reach, module-guard state and complete group membership remain open. Finalized Solana slot 457209716 binds the exact CHF mint to its MinterConfig, one-member admin Squads and the same member's direct program-upgrade authority; current minter executable bytes match immutable verified source. The AMF certificate of 23 February 2026 names issuing SPIKO SICAV SCV20240012 and its SAFO sub-fund SCV20260075 as French UCITS, and identifies Twenty First Capital GP-11000029 as manager. This establishes prudential supervision of the exact issuing fund, not merely custodian regulation. Reconciliation is corrected from periodic to unknown: daily NAV and share-class arithmetic, recurring fund reporting and a named statutory auditor do not establish a recurring match of all CHF native liabilities and circulation exclusions to backing. The June 30 report contains no CHF share row or financial audit opinion, and no current independent all-register CHF or all-class reconciliation was retrieved. The unbounded-reconciled annotation is retained for independently established prudential supervision alone, not for a claimed reconciliation cadence. Complete Starknet/Stellar controllers, alternative execution paths and independent beneficial key custody remain unestablished.",
       "sources": [
         {
           "label": "Spiko SICAV prospectus, 1 September 2026",
@@ -322,6 +325,18 @@
         {
           "label": "Independent verified issuer minter source, current executable hash matched October 9",
           "url": "https://verify.osec.io/status/8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw"
+        },
+        {
+          "label": "AMF certificate dated 23 February 2026: SPIKO SICAV and SAFO authorizations",
+          "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf"
+        },
+        {
+          "label": "Ethereum block 26197328, 15 October 2026: exact CHF authority, Safe and upgrade observations",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Finalized Solana account census at slot 457209716, 15 October 2026 10:48:14 UTC",
+          "url": "https://api.mainnet-beta.solana.com"
         }
       ],
       "unresolvedQuestions": [],

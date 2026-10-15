@@ -3,13 +3,29 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:tempo:0x20c0000000000000000000000000000000000000",
-      "name": "pathUSD held idle and supplied to Sentora pathUSD Morpho lending positions",
-      "pct": 100,
+      "name": "Sentora pathUSD idle underlying",
+      "pct": 99.5108,
+      "risk": "medium",
+      "coinId": "pathusd-bridge",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Bridge",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626:deployed",
+      "name": "pathUSD supplied to Sentora pathUSD Morpho lending positions",
+      "pct": 0.4892,
       "risk": "high",
       "coinId": "pathusd-bridge",
       "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Sentora pathUSD, Morpho lending borrowers and the pathUSD issuer",
+      "issuerOrObligor": "Sentora-curated Morpho markets and their borrowers",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -21,8 +37,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SenpathusdSentora batch64 primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -54,9 +70,9 @@
         "url": "https://sentora.com/legal/terms-of-use"
       }
     ],
-    "rationale": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. The single 100% slice records the verified denomination and position claim, not an invented allocation or underlying borrower-credit rating.",
-    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; single parent-denominated strategy dependency",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "Tempo block 44247051 (2026-10-15T10:43:13Z; hash 0x024caf7e7fb2f3a3c7956a291666e5da42248b41fc2774e2d196605e88b4400d): asset() is pathUSD with 6 decimals; shares have 18 decimals. totalAssets 36848708806636 raw equals idle 36668441836389 plus sole adapter lender assets 180266970247 exactly. totalSupply is 18427933572000507348471599 raw. The sole funded market lends pathUSD against cbBTC at 77% LLTV; adapter borrowing and posted collateral are zero. Reserve rows split measured idle pathUSD (99.5108% of totalAssets) from the deployed lender claim (0.4892%) at the same pin, matching the measured idle/deployed runtime split. No guaranteed whole-slice cash realization horizon is disclosed.",
+    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; measured idle and deployed shares of totalAssets, rounded to four decimals",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Current immediate asset and adapter inventory are identified. Borrower legal recovery, default liquidation proceeds and future allocations remain uncertain.",
     "knownUnknownExposurePct": 0
@@ -65,25 +81,23 @@
     "providers": [
       {
         "name": "Sentora pathUSD VaultV2",
-        "role": "other",
-        "jurisdiction": "tempo"
+        "role": "other"
       },
       {
         "name": "MorphoMarketV1AdapterV2 0x799cd096e5ebc436daecef85392b2ecf196dfbe6",
-        "role": "other",
-        "jurisdiction": "tempo"
+        "role": "other"
       },
       {
-        "name": "Sentora Digital Holdings (BVI) Ltd, risk curator; issuer states it is not a custodian",
+        "name": "Sentora Digital Holdings (BVI) Ltd, risk curator; Sentora states it is not a custodian",
         "role": "other",
         "jurisdiction": "British Virgin Islands"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SenpathusdSentora batch64 primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -117,8 +131,16 @@
       {
         "label": "Morpho Vault V2 and MarketV1AdapterV2 security audits; no financial assurance",
         "url": "https://docs.morpho.org/get-started/resources/audits/"
+      },
+      {
+        "label": "Bridge pathUSD issuer-reported cash and Treasury reserves",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
+      },
+      {
+        "label": "Coinbase cbBTC underlying BTC custody",
+        "url": "https://www.coinbase.com/cbbtc"
       }
     ],
-    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. No exact-share legal insolvency priority or whole-book off-chain collateral-custody safeguards were established. Lending reuse is explicit. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
+    "uncertainty": "Whole-book custody is mixed: the immediate vault and Morpho lender positions are on-chain, while pathUSD depends on Bridge-reported cash and Treasury reserves and cbBTC depends on Coinbase-held BTC. At Tempo block 44247051 (2026-10-15T10:43:13Z), idle assets were 36668441836389 raw pathUSD and the sole lending position 180266970247 raw. These are immediate allocation amounts, not custody-provider percentages. No exact-share legal insolvency priority or whole-book collateral-custody safeguards were established. Lending reuse is explicit. Sentora's June 2026 terms section 4.3 describes non-custodial configurations and section 21.4 specifies BVI law and arbitration; these legal statements do not remove observed curator powers or prove upstream segregation. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

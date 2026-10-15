@@ -9,7 +9,7 @@
     "governance": "centralized"
   },
   "collateral": "Euro-denominated cash and permitted liquid government money-market funds or similar investments in segregated safeguarding arrangements; the whitepaper sets a minimum 30% cash policy, not an observed portfolio allocation.",
-  "pegMechanism": "All holders, including secondary-market holders, may redeem EURW for EUR 1 after identity, wallet and own-name SEPA-bank-account verification. The issuer charges no redemption fee and burns tokens before SEPA payment. Numerical minimum, capacity and settlement SLA are not disclosed; third-party bank and network charges may apply.",
+  "pegMechanism": "All holders, including secondary-market holders, may redeem EURW for EUR 1 after identity, wallet and own-name SEPA-bank-account verification. Ordinary redemption carries no issuer fee; third-party bank and network charges may apply. Tokens are burned before SEPA payment. No routine numerical minimum, executable capacity or settlement SLA is disclosed. The whitepaper permits temporary fees, limits, delays or suspension during recovery; its 60-day wind-down endeavor is not a normal payout guarantee.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -43,12 +43,28 @@
     "url": "https://www.newrails.xyz/en/platform/eurw",
     "provider": "Newrails claims monthly independent attestations, but no exact-token financial reserve report was retrieved from its product page or public download inventory.",
     "attestorTier": "undisclosed",
-    "cadence": "monthly"
+    "cadence": "undisclosed"
   },
   "links": [
     {
-      "label": "Newrails EURW product and reserve disclosure",
+      "label": "Website",
       "url": "https://www.newrails.xyz/en/platform/eurw"
+    },
+    {
+      "label": "Newrails general terms and EURW annex",
+      "url": "https://www.newrails.xyz/en/legal/terms-of-use"
+    },
+    {
+      "label": "Newrails EURW guide",
+      "url": "https://www.newrails.xyz/en/hubs/euro-stablecoin"
+    },
+    {
+      "label": "Monad EURW token explorer",
+      "url": "https://monadscan.com/token/0x1111b3ded9f1fe1801ad4ebef8e2788183a24111"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/Newrails_xyz"
     },
     {
       "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",

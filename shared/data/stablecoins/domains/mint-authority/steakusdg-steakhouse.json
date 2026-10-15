@@ -3,16 +3,16 @@
   "mintAuthority": {
     "capSemanticsReview": {
       "verdict": "bounded-by-construction",
-      "rationale": "Pinned robinhood block 79299257 (hash 0x08773688fa49ad28274d7479204a50a6ef3feb23903f3ea10b3f8e73dca1dffa). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdg-paxos, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "rationale": "Robinhood block 89162029 (2026-10-15T10:43:17Z), hash 0x686c9c1ba7a13e33aa0a54f4e55592d85aa52b2fbb4940bd4ee5a33e2a56fac9. Deployed VaultV2 runtime exactly matches the verified source. deposit/mint route through enter(), transferring underlying before createShares(). Curator cap increases and adapter admission govern allocation rather than arbitrary recipient issuance. Owner, curator, deposit-gate and fee-recipient settings cannot bypass that construction. accrueInterest() separately creates fee shares under immutable maximums of 50% of interest and 5% annualized management fees. Both current fees and fee recipients are zero. The immutable core has no upgrade entrypoint and its EIP-1967 implementation slot is zero. USDG parent issuance remains carried by the serial-claim dependency rather than wrapper-local minting.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch-64 review (Rev_SteakusdgSteakhouse)",
       "sources": [
         {
           "label": "Verified current local mint implementation/source",
           "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
         },
         {
-          "label": "robinhood D14 observation block 79299257, hash 0x08773688fa49ad28274d7479204a50a6ef3feb23903f3ea10b3f8e73dca1dffa",
+          "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
           "url": "https://rpc.mainnet.chain.robinhood.com"
         }
       ]
@@ -21,6 +21,7 @@
     "authorityPosture": "none-resolved-mint",
     "confidence": "manual-review",
     "summary": "steakUSDG user shares mint against deposited USDG; interest accrual can mint fee shares. Immutable core and owner/curator parameter powers do not create native USDG, whose issuance remains inherited.",
+    "headline": "Deposits back new shares; fee governance can dilute holders, while USDG issuance remains upstream.",
     "inheritedFrom": "usdg-paxos",
     "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
@@ -32,8 +33,8 @@
       ],
       "canChangeMintLogic": false,
       "controlRef": "steakUSDG immutable VaultV2 share issuance",
-      "observedAt": "2026-10-02",
-      "observedBlock": 78597801,
+      "observedAt": "2026-10-15",
+      "observedBlock": 89162029,
       "sources": [
         {
           "label": "Morpho exact Steakhouse USDG deployment",
@@ -58,8 +59,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 78597801,
+        "observedAt": "2026-10-15",
+        "observedBlock": 89162029,
         "sources": [
           {
             "label": "Morpho exact Steakhouse USDG deployment",
@@ -70,7 +71,7 @@
             "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
           }
         ],
-        "evidence": "Exact verified VaultV2 enter() transfers deposited USDG before creating user shares; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and EIP-1967 implementation slot was zero. Performance fee 0% of interest; management fee 0% at block 78597801."
+        "evidence": "Exact verified VaultV2 enter() transfers deposited USDG before creating user shares; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and EIP-1967 implementation slot was zero. Performance fee 0% of interest; management fee 0% at block 89162029."
       },
       {
         "chain": "robinhood",
@@ -79,13 +80,13 @@
           "robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd"
         ],
         "label": "steakUSDG vault owner",
-        "role": "other",
+        "role": "governor",
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 78597801,
+        "observedAt": "2026-10-15",
+        "observedBlock": 89162029,
         "sources": [
           {
             "label": "Morpho exact Steakhouse USDG deployment",
@@ -100,7 +101,7 @@
             "url": "https://api.morpho.org/graphql"
           },
           {
-            "label": "robinhood pinned block 78892407, owner/curator, Guardian list and Safe getters",
+            "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
             "url": "https://rpc.mainnet.chain.robinhood.com"
           },
           {
@@ -108,7 +109,7 @@
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
           }
         ],
-        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved. Exact supervisor owner()=0x337fefe49514fb901eb455a501b8be76cdef7660; getGuardians(vault)=0x8fadb7fcc26a6aad705147097b165b6b8e766e75. Guardians can revoke pending owner/curator actions, including their own removal, but cannot expand native minting. No depositor-voting assertion is made from the default documentation alone."
+        "evidence": "Robinhood block 89162029 (2026-10-15T10:43:17Z): vault owner() remains this supervisor. Its owner() is 0x337fefe49514fb901eb455a501b8be76cdef7660 and getGuardians(vault) returns 0x8fadb7fcc26a6aad705147097b165b6b8e766e75. TIMELOCK() is 1209600 seconds. Issuer reference documentation timelocks vault-owner transfer and Guardian removal, permits immediate curator replacement and describes Guardian veto. The exact Robinhood supervisor remains unverified in Sourcify and absent from the issuer deployment table; neither full source correspondence nor internal execution closure is inferred from the getters or generic reference documentation."
       },
       {
         "chain": "robinhood",
@@ -117,13 +118,13 @@
           "robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd"
         ],
         "label": "steakUSDG curator",
-        "role": "cap-admin",
+        "role": "other",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 78892407,
+        "observedAt": "2026-10-15",
+        "observedBlock": 89162029,
         "sources": [
           {
             "label": "Morpho exact Steakhouse USDG deployment",
@@ -138,11 +139,11 @@
             "url": "https://api.morpho.org/graphql"
           },
           {
-            "label": "robinhood pinned block 78892407, owner/curator, Guardian list and Safe getters",
+            "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
             "url": "https://rpc.mainnet.chain.robinhood.com"
           }
         ],
-        "evidence": "curator() schedules adapter, allocation-cap, fee and gate changes. Allocation-cap increases were delayed 604800 seconds; both fee selectors had zero delay. User issuance remains asset-backed; fee governance can dilute shares. Ultimate controller authorization is not granted favorable credit. Current pinned getOwners/getThreshold and getModulesPaginated(0x1,100) resolve the 3/7 Safe; pagination ends at 0x1 with no modules, transaction guard and module-guard slots zero. Fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Human independence and operational key custody remain unproven.",
+        "evidence": "Robinhood block 89162029 (2026-10-15T10:43:17Z): curator() is this 3-of-7 Safe; getOwners/getThreshold match the recorded roster. getModulesPaginated(0x1,100) returns an empty list and terminates at 0x1. Transaction guard and module-guard storage slots are zero; fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Allocation-cap increases, adapter admission/removal and timelock increases have 604800-second delays; both fee setters and recipients have zero delays. The send-assets deposit gate is unset but remains configurable after 604800 seconds. Share transfer gates and the receive-assets withdrawal gate are unset and permanently abdicated, as is replacement of the adapter registry. Allocation limits cannot authorize arbitrary share issuance. Human independence, key custody and fallback-handler execution closure remain unproven.",
         "safe": {
           "owners": [
             "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
@@ -158,8 +159,8 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "observedBlock": 78892407,
-          "observedAt": "2026-10-03",
+          "observedBlock": 89162029,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
         "threshold": 3,
@@ -176,11 +177,11 @@
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 78892407,
+        "observedAt": "2026-10-15",
+        "observedBlock": 89162029,
         "sources": [
           {
-            "label": "robinhood pinned block 78892407, owner/curator, Guardian list and Safe getters",
+            "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
             "url": "https://rpc.mainnet.chain.robinhood.com"
           },
           {
@@ -188,13 +189,20 @@
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
           }
         ],
-        "evidence": "Pinned supervisor.owner() is this address and eth_getCode is 0x. It is not an onchain Safe. Immediate curator replacement and owner timelocked actions remain reachable; signing threshold, MPC custody and independent human operators are not publicly established."
+        "evidence": "Robinhood block 89162029 (2026-10-15T10:43:17Z): supervisor.owner() is this address and eth_getCode returns 0x. It is not an onchain Safe. The issuer reference permits immediate curator replacement and timelocked owner actions; exact Robinhood supervisor execution correspondence, signing threshold, MPC custody and independent human operators remain unestablished.",
+        "canRaiseCap": false
       }
     ],
     "review": {
       "sources": [
-        {"label": "Verified current local mint implementation/source", "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"},
-        {"label": "robinhood D14 observation block 79299257, hash 0x08773688fa49ad28274d7479204a50a6ef3feb23903f3ea10b3f8e73dca1dffa", "url": "https://rpc.mainnet.chain.robinhood.com"},
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
+        },
+        {
+          "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
+          "url": "https://rpc.mainnet.chain.robinhood.com"
+        },
         {
           "label": "Morpho exact Steakhouse USDG deployment",
           "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
@@ -212,7 +220,7 @@
           "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
         },
         {
-          "label": "robinhood pinned block 78892407, owner/curator, Guardian list and Safe getters",
+          "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
           "url": "https://rpc.mainnet.chain.robinhood.com"
         },
         {
@@ -220,9 +228,9 @@
           "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
         }
       ],
-      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at robinhood block 78597801. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption. Refinement pin 78892407: supervisor getGuardians(vault) returned 0x8fadb7fcc26a6aad705147097b165b6b8e766e75. Supervisor TIMELOCK=1209600 seconds applies to setOwner/removeGuardian; setCurator remains immediate. Guardian veto is verified; these exact Guardian addresses are not independently proven Aragon/depositor-weighted instances. Morpho creationTimestamp=1780062634 and creationBlockNumber=22721 identify this exact vault, not the issuer founding date. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: The supervisor-owner EOA has no publicly verified signing/MPC policy or independent key-custody attestation. No exact-vault independent financial assurance or enforceable statutory holder priority has been published. Calibration v2 2026-10-03: Robinhood supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73 runtime at block 78953544 has SHA-256 1c3b22dd9c71f48568740dfbab6821078130ed3bdd62ceed768641a736b54532; verified Ethereum VaultV2Supervisor 0x4d7bd498bb24098ca281c05519629c605407f71d runtime at block 26110706 matches its Blockscout deployed bytecode and has SHA-256 2acc610d718a002f9c65eb49fd65a112d8f6125308c2061605efd7110a63b997. They are not byte-identical, so no source correspondence is claimed for the Robinhood supervisor. Its unresolved internal authorization is retained as a scoped parameter-control observation; the exact verified immutable VaultV2 source excludes supervisor authority to expand native issuance or replace share-mint logic. supervision remains none and reconciliation remains not-applicable to local deposit-backed receipt-share issuance, without granting independent financial-assurance credit. D14/A7/A10 review 2026-10-03, pinned robinhood block 79299257 (hash 0x08773688fa49ad28274d7479204a50a6ef3feb23903f3ea10b3f8e73dca1dffa). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdg-paxos, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at robinhood block 89162029. Parent mint authority remains inherited. Owner/curator control addresses and core selector delays are current; internal supervisor authorization closure receives no favorable assumption. At Robinhood block 89162029 (2026-10-15T10:43:17Z), supervisor getGuardians(vault) returned 0x8fadb7fcc26a6aad705147097b165b6b8e766e75 and TIMELOCK() returned 1209600 seconds. Issuer reference documentation describes that delay for setOwner/removeGuardian, immediate setCurator, and Guardian veto of pending supervisor and curator actions. The published deployment tables omit Robinhood and the exact supervisor's source correspondence and veto execution closure remain unestablished. These getters do not prove action-specific enforcement or veto execution; no claim that veto is absent or fails is made. The exact Guardian is not independently proven to be an Aragon/depositor-weighted instance. Morpho creationTimestamp=1780062634 and creationBlockNumber=22721 identify this exact vault, not the issuer founding date. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: The supervisor-owner EOA has no publicly verified signing/MPC policy or independent key-custody attestation. No exact-vault independent financial assurance or enforceable statutory holder priority has been published. Calibration v2 2026-10-03: Robinhood supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73 runtime at block 78953544 has SHA-256 1c3b22dd9c71f48568740dfbab6821078130ed3bdd62ceed768641a736b54532; verified Ethereum VaultV2Supervisor 0x4d7bd498bb24098ca281c05519629c605407f71d runtime at block 26110706 matches its Blockscout deployed bytecode and has SHA-256 2acc610d718a002f9c65eb49fd65a112d8f6125308c2061605efd7110a63b997. They are not byte-identical, so no source correspondence is claimed for the Robinhood supervisor. Its unresolved internal authorization is retained as a scoped parameter-control observation; the exact verified immutable VaultV2 source excludes supervisor authority to expand native issuance or replace share-mint logic. supervision remains none and reconciliation remains not-applicable to local deposit-backed receipt-share issuance, without granting independent financial-assurance credit. D14/A7/A10 review 2026-10-03, pinned robinhood block 79299257 (hash 0x08773688fa49ad28274d7479204a50a6ef3feb23903f3ea10b3f8e73dca1dffa). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdg-paxos, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewer": "Batch-64 review (Rev_SteakusdgSteakhouse)",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -230,11 +238,11 @@
           "controlRef": "steakUSDG supervisor owner EOA",
           "question": "The supervisor-owner EOA 0x337fefe49514fb901eb455a501b8be76cdef7660 is identified by the pinned owner() and code-empty reads. What publicly verified signing/MPC policy, operational independence and independent key-custody attestation bind this exact EOA?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch-64 review (Rev_SteakusdgSteakhouse)",
           "sources": [
             {
-              "label": "robinhood pinned block 78892407, owner/curator, Guardian list and Safe getters",
+              "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
               "url": "https://rpc.mainnet.chain.robinhood.com"
             },
             {
@@ -245,13 +253,13 @@
         },
         {
           "controlRef": "steakUSDG vault owner",
-          "question": "What verified implementation and complete internal authorization census bind the parameter-only supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73? At Robinhood block 78953544 its deployed runtime is not identical to the verified Ethereum VaultV2Supervisor reference. The exact immutable share core has no upgrade entrypoint, and this supervisor cannot expand native minting. On 2026-10-09T10:35:28Z, the issuer's Supervisor v2 deployment table and source-repository README still list only Ethereum, Base and Arbitrum, without a Robinhood deployment/source binding or exact authorization census. Generic high-security multisig and default Aragon-Guardian descriptions do not establish this controller's execution closure.",
+          "question": "What verified source and complete internal authorization census bind supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73? At Robinhood block 89162029 (2026-10-15T10:43:17Z), owner and Guardian getters remain readable, but Sourcify has no verified exact deployment and the issuer Supervisor v2 documentation and repository README still omit Robinhood. The immutable share core excludes arbitrary unbacked share issuance and upgrades. Generic multisig and Aragon-Guardian descriptions do not establish this supervisor internal authorization, veto implementation or execution closure.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-09",
-          "reviewer": "Sol curation campaign 2026-10-09 (Lane23Steakhouse)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch-64 review (Rev_SteakusdgSteakhouse)",
           "sources": [
             {
-              "label": "Robinhood RPC: eth_getCode supervisor at block 78953544",
+              "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
               "url": "https://rpc.mainnet.chain.robinhood.com"
             },
             {
@@ -267,11 +275,11 @@
               "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
             },
             {
-              "label": "Supervisor v2 issuer deployment table and immediate operations, accessed 2026-10-09T10:35:28Z",
+              "label": "Supervisor v2 issuer deployment table and immediate operations, accessed 2026-10-15",
               "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
             },
             {
-              "label": "Issuer source repository README deployment inventory, accessed 2026-10-09T10:35:28Z",
+              "label": "Issuer source repository README deployment inventory, accessed 2026-10-15",
               "url": "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/README.md"
             }
           ]

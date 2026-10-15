@@ -350,6 +350,28 @@ describe("buildRedemptionBackstopEntry", () => {
   });
 
   it.each([
+    { keys: undefined, expected: "unknown" },
+    { keys: ["m-m0"], expected: "unknown" },
+    { keys: ["wm-m0"], expected: "cohort-limited" },
+  ])("binds USDR cohort restrictions to the configured payout ($keys)", async ({ keys, expected }) => {
+    const entry = await buildEntry("usdr-rise", getRedemptionBackstopConfig("usdr-rise")!, 1_000_000, null, {
+      reserveSnapshotMetadata: liveSnapshot("usdr-rise", { freshnessMode: "not-applicable", redemption: {
+        outputAssetKeys: keys, routeStatus: "cohort-limited", routeStatusSource: "onchain",
+        routeStatusReason: "Configured swapper cannot access this output path",
+        holderEligibility: "whitelisted-primary",
+      } }),
+    });
+    expect(entry).toMatchObject({ routeStatus: expected, immediateCapacityUsd: null });
+    if (expected === "unknown") {
+      expect(entry.routeStatusSource).toBe("static-config");
+      expect(entry.capacityRejectionReason).toBe("route-output-identity-unobserved");
+      expect(entry.liveHolderEligibility).toBeUndefined();
+    } else {
+      expect(entry.routeStatusSource).toBe("onchain");
+    }
+  });
+
+  it.each([
     { keys: undefined, accepted: false },
     { keys: null, accepted: false },
     { keys: "usdc-circle", accepted: false },
@@ -529,6 +551,105 @@ describe("buildRedemptionBackstopEntry", () => {
     // Dispositions census only unconfigured assets; the separate unmeasured
     // wM rail must not make this configured institutional branch look absent.
     expect(REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.find((row) => row.id === asset.id)).toBeUndefined();
+  });
+
+  it.each(["gbpa-agant", "mxnt-tether"])(
+    "keeps %s capacity unquantified instead of inheriting full circulating supply", async (id) => {
+      const config = getRedemptionBackstopConfig(id)!;
+      expect(config.capacityModel).toEqual({ kind: "unquantified" });
+      const entry = await buildEntry(id, config, 100_000_000, null);
+      expect(entry).toMatchObject({
+        resolutionState: "missing-capacity",
+        immediateCapacityUsd: null, immediateCapacityRatio: null,
+        capacityScore: null, score: null, eventualRedeemabilityScore: null,
+      });
+      expect(entry.capacityProfile).toMatchObject({
+        immediateUsd: null, scoringUsd: null, eventualUsd: null, scoringHorizon: "unknown",
+      });
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+    },
+  );
+
+  it.each(["usdfc-secured-finance", "meusd-mezo"])(
+    "keeps %s native-pool fee/status telemetry without admitting gross debt as capacity", async (id) => {
+      const config = getRedemptionBackstopConfig(id)!;
+      expect(config.capacityModel).toEqual({ kind: "unquantified" });
+      const entry = await buildEntry(id, config, 100_000_000, null, {
+        reserveSnapshotMetadata: liveSnapshot(id, { freshnessMode: "not-applicable", redemption: {
+          capacityUsd: 90_000_000, capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain", sourceTimestamp: now, blockNumber: 123,
+          feeBps: 64, routeStatus: "open", routeStatusSource: "onchain",
+        } }),
+      });
+      expect(entry).toMatchObject({
+        resolutionState: "missing-capacity", feeBps: 64,
+        routeStatus: "open", routeStatusSource: "onchain",
+        immediateCapacityUsd: null, immediateCapacityRatio: null,
+        capacityScore: null, score: null, eventualRedeemabilityScore: null,
+      });
+      expect(entry.capacityProfile).toMatchObject({
+        immediateUsd: null, scoringUsd: null, eventualUsd: null, scoringHorizon: "unknown",
+      });
+    },
+  );
+
+  it.each([false, true])("binds unquantified status-only evidence to a fresh reserve generation (stale=%s)", async (stale) => {
+    const id = "usdfc-secured-finance";
+    const snapshot = liveSnapshot(id, { freshnessMode: "not-applicable", redemption: {
+      routeStatus: "open", routeStatusSource: "onchain",
+      routeStatusReason: "Current oracle and TCR permit redemption requests",
+    } });
+    if (stale) snapshot.fetchedAt = now - 72 * 3600;
+    const reserveInput = {
+      generationId: "reserve:1700000000:native-status", contentSha256: "a".repeat(64),
+      stablecoinId: id, attemptId: null, configFingerprint: "b".repeat(64),
+      freshness: assessReserveFetchFreshness(snapshot, now, 172800),
+    };
+    const entry = await buildEntry(id, getRedemptionBackstopConfig(id)!, 100_000_000, null, {
+      reserveSnapshotMetadata: snapshot, reserveInput,
+    });
+    expect(entry).toMatchObject({
+      routeStatus: stale ? "unknown" : "open",
+      routeStatusSource: stale ? "static-config" : "onchain",
+      immediateCapacityUsd: null, score: null,
+    });
+    expect(entry.reserveInput).toEqual(stale ? undefined : reserveInput);
+  });
+
+  it.each(["filqa-fidelity-international", "fiusd-sygnum"])(
+    "models %s USD cash output separately from its NAV-priced share input", async (id) => {
+      const config = getRedemptionBackstopConfig(id)!;
+      expect(config.outputAssets).toBeUndefined();
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+      const entry = await buildEntry(id, config, 100_000_000, null);
+      expect(entry).toMatchObject({
+        routeFamily: "offchain-issuer", executionModel: "rules-based-nav",
+        outputAssetType: "stable-single", outputAssetQualityScore: 100,
+        immediateCapacityUsd: null, capacityScore: null, score: null, feeBps: null,
+      });
+    },
+  );
+
+  it("labels JLTXX NAV pricing without asserting a non-cash payout", () => {
+    const config = getRedemptionBackstopConfig("jltxx-jpmorgan")!;
+    expect(config).toMatchObject({
+      routeFamily: "offchain-issuer", outputAssetType: "nav", executionModel: "rules-based-nav",
+    });
+    expect(config.v9RouteReviewTerms?.minRedeemUsd).toBeUndefined();
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
+  });
+
+  it("separates strUSD public contract execution from discretionary holder eligibility", async () => {
+    const config = getRedemptionBackstopConfig("strusd-tori")!;
+    expect(config.outputAssets).toEqual(["trusd-tori"]);
+    expect(config.capacityModel).toEqual({ kind: "reserve-sync-metadata" });
+    const entry = await buildEntry("strusd-tori", config, 100_000_000, null);
+    expect(entry).toMatchObject({
+      routeFamily: "queue-redeem", accessModel: "permissionless-onchain",
+      holderEligibility: "issuer-discretionary", settlementModel: "days",
+      immediateCapacityUsd: null, capacityScore: null, score: null,
+      feeBps: 0, feeConfidence: "fixed",
+    });
   });
 
 

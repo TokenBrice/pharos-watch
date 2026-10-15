@@ -20,6 +20,16 @@
       "invariant": "transfer-supply"
     },
     {
+      "chainId": "base",
+      "stablecoinId": "ousd-open-standard",
+      "address": "0xb2000000000000000000002feb517dfec7415344",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "unverified-implementation-source",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
       "chainId": "ethereum",
       "stablecoinId": "a7a5-old-vector",
       "address": "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
@@ -104,6 +114,16 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "brsrv-blackrock",
+      "address": "0x3078bcf707e457d3af2f938a2a478bbeea50a942",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "total-supply-override",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "brz-transfero",
       "address": "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
       "decimals": 18,
@@ -161,6 +181,15 @@
       "stablecoinId": "chfau-allunity",
       "address": "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
       "decimals": 6,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "chfsafo-spiko",
+      "address": "0x18b5c15e5196a38a162b1787875295b76e4313fb",
+      "decimals": 5,
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
@@ -414,6 +443,15 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "gldon-ondo",
+      "address": "0x423d42e505e64f99b6e277eb7ed324cc5606f139",
+      "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "gusd-gate",
       "address": "0xaf6186b3521b60e27396b5d23b48abc34bf585c5",
       "decimals": 6,
@@ -535,6 +573,15 @@
       "stablecoinId": "nusd-neutrl",
       "address": "0xe556aba6fe6036275ec1f87eda296be72c811bce",
       "decimals": 18,
+      "disposition": "admitted",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "ousd-open-standard",
+      "address": "0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
+      "decimals": 6,
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
@@ -1354,25 +1401,6 @@
       "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
       "decimals": 6,
       "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
-      "stablecoinId": "ousd-open-standard",
-      "address": "0x9f6f3991d525015a6f8caf062c83b62fd3ac4436",
-      "decimals": 6,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "base",
-      "stablecoinId": "ousd-open-standard",
-      "address": "0xb2000000000000000000002feb517dfec7415344",
-      "decimals": 6,
-      "disposition": "unsupported",
-      "unsupportedReason": "unverified-implementation-source",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
     }

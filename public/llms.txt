@@ -187,7 +187,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Dai (DAI)](https://pharos.watch/stablecoin/dai-makerdao/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Savings Dai (sDAI)](https://pharos.watch/stablecoin/sdai-sky/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [PayPal USD (PYUSD)](https://pharos.watch/stablecoin/pyusd-paypal/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [Paypal USD Main (senPYUSDmain)](https://pharos.watch/stablecoin/senpyusdmain-sentora/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
+- [PayPal USD Main (senPYUSDmain)](https://pharos.watch/stablecoin/senpyusdmain-sentora/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Sentora PRIME Main (senPYUSDPRIMEv2)](https://pharos.watch/stablecoin/senpyusdprimev2-sentora/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Sentora Huma PST Main (senPYUSDPST)](https://pharos.watch/stablecoin/senpyusdpst-sentora/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Sentora mWIN Main (senPYUSDmWIN)](https://pharos.watch/stablecoin/senpyusdmwin-sentora/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -305,7 +305,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Noble Dollar (USDN)](https://pharos.watch/stablecoin/usdn-noble/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [SMARDEX USDN (USDN)](https://pharos.watch/stablecoin/usdn-smardex/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [USD CoinVertible (USDCV)](https://pharos.watch/stablecoin/usdcv-societe-generale-forge/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [UBS USD Money Market Investment Fund Token (UMINT)](https://pharos.watch/stablecoin/umint-ubs/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [UBS USD Money Market Investment Fund Token (uMINT)](https://pharos.watch/stablecoin/umint-ubs/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Bera USD (BUSD)](https://pharos.watch/stablecoin/honey-berachain/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Frankencoin (ZCHF)](https://pharos.watch/stablecoin/zchf-frankencoin/): CeFi-dependent stablecoin collateralized by crypto assets pegged to Swiss Franc.
 - [USDB Blast (USDB)](https://pharos.watch/stablecoin/usdb-blast/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
@@ -376,7 +376,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Ondo OUSG (OUSG)](https://pharos.watch/stablecoin/ousg-ondo-finance/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [iShares Silver Trust (Ondo Tokenized) (SLVon)](https://pharos.watch/stablecoin/slvon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [iShares Gold Trust (Ondo Tokenized) (IAUon)](https://pharos.watch/stablecoin/iauon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
-- [SPDR Gold Shares (Ondo Tokenized) (GLDON)](https://pharos.watch/stablecoin/gldon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
+- [SPDR Gold Shares (Ondo Tokenized) (GLDon)](https://pharos.watch/stablecoin/gldon-ondo/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Midas mTBILL (mTBILL)](https://pharos.watch/stablecoin/mtbill-midas/): centralized stablecoin backed by real-world assets pegged to US Dollar.
 - [Midas mRe7YIELD (mRe7YIELD)](https://pharos.watch/stablecoin/mre7yield-midas/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Midas mF-ONE (mF-ONE)](https://pharos.watch/stablecoin/mf-one-midas/): centralized stablecoin backed by real-world assets pegged to US Dollar.

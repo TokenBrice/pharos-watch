@@ -27,7 +27,7 @@
           "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2026-07-29",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-15"
         }
       ]
     },
@@ -45,38 +45,45 @@
         "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-09-01",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "Exact CHF KID, ISIN FR0014015LG6",
         "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-07-29",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "GENIUS Act: Public Law 119-27",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "AMF Enforcement Committee decision of 20 December 2021 on Twenty First Capital",
         "url": "https://www.amf-france.org/en/news-publications/news-releases/enforcement-committee-news-releases/amf-enforcement-committee-fines-asset-management-company-several-breaches-its-professional",
         "sourceKind": "foreign-regulator",
         "sourceDate": "2021-12-20",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
+      },
+      {
+        "label": "AMF approval certificate: SPIKO SICAV SCV20240012 and SAFO SCV20260075",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2026-02-23",
+        "accessedAt": "2026-10-15"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
+    "reviewedAt": "2026-10-15"
   }
 }

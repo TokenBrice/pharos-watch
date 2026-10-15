@@ -3,22 +3,22 @@
   "mintAuthority": {
     "capSemanticsReview": {
       "verdict": "bounded-by-construction",
-      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern pyusd-paypal, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "rationale": "At Ethereum block 26197398 (2026-10-15T10:44:47Z), exact vault and adapter runtime match verified source. VaultV2 deposit/mint calls enter(), transferring PYUSD before createShares(). Curator allocation caps and adapter permissions do not create arbitrary recipient shares. accrueInterest() separately creates formula-bound fee shares under immutable 50%-of-interest performance-fee and 5%-annualized management-fee limits. No local bytecode upgrade entrypoint exists and all EIP-1967 proxy slots are zero. Current managementFee=317097919, performanceFee=0. Parent PYUSD issuer mint authority is inherited through the serial claim, not copied into the local cap semantics.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch64 review (Rev_SenpyusdmainSentora)",
       "sources": [
         {
           "label": "Verified current local mint implementation/source",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
         },
         {
-          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
-          "url": "https://etherscan.io/block/26113624"
+          "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
     },
     "mintPath": "wrapped-or-variant-inherited",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "senPYUSDmain issues asset-backed PYUSD vault shares and fee shares through immutable accounting. Owner and curator are separate 1-of-1 Safes, each controlled by one EOA; underlying issuance remains inherited from pyusd-paypal.",
     "inheritedFrom": "pyusd-paypal",
@@ -29,11 +29,11 @@
       ],
       "canChangeMintLogic": false,
       "controlRef": "senPYUSDmain immutable asset-backed share accounting",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107702,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197398,
       "sources": [
         {
-          "label": "Paypal USD Main exact vault",
+          "label": "PayPal USD Main exact vault",
           "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
         },
         {
@@ -49,7 +49,7 @@
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
         },
         {
-          "label": "Ethereum RPC, pinned block 26107702",
+          "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
           "url": "https://ethereum-rpc.publicnode.com"
         },
         {
@@ -70,11 +70,11 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
-            "label": "Paypal USD Main exact vault",
+            "label": "PayPal USD Main exact vault",
             "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
           },
           {
@@ -90,7 +90,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -98,7 +98,8 @@
             "url": "https://api.morpho.org/graphql"
           }
         ],
-        "evidence": "Exact VaultV2 source transfers assets before issuing depositor shares and separately creates fee shares during accrueInterest(). Corrected EIP-1967 implementation, admin and beacon slots are zero. No discretionary arbitrary-share mint or bytecode upgrade path was found."
+        "evidence": "At Ethereum block 26197398, exact vault runtime matches verified VaultV2 source and implementation/admin/beacon slots are zero. Deposits transfer assets before issuing shares; accrueInterest separately creates formula-bound fee shares. No discretionary arbitrary-recipient mint, configurable share-mint cap or bytecode upgrade entrypoint exists.",
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
@@ -121,15 +122,15 @@
           "threshold": 1,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26107702,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26197388,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
-            "label": "Paypal USD Main exact vault",
+            "label": "PayPal USD Main exact vault",
             "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
           },
           {
@@ -145,7 +146,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -155,9 +156,13 @@
           {
             "label": "Sentora owner 1-of-1 Safe",
             "url": "https://etherscan.io/address/0xe8c9c99ecad0686a14a00d8521c572281e938008"
+          },
+          {
+            "label": "Safe signing, guards, terminal module pages and runtime pin, Ethereum block 26197388 (2026-10-15T10:42:47Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Pinned block 26107702: getThreshold()=1, getOwners() contains sole signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Owner appoints curator and sentinels."
+        "evidence": "Pinned block 26197398: getThreshold()=1, getOwners() contains sole signer 0x295df6b70f4ed2be704bd802a4d805fe700bd7e9, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Owner appoints curator and sentinels. Fresh Safe extension and signer-code observations are separately pinned at block 26197388; current threshold/owners are also re-read at 26197398."
       },
       {
         "chain": "ethereum",
@@ -166,12 +171,12 @@
           "ethereum:0xb576765fb15505433af24fee2c0325895c559fb2"
         ],
         "label": "Sentora curator 1-of-1 Safe",
-        "role": "cap-admin",
+        "role": "other",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
         "threshold": 1,
         "signerCount": 1,
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
@@ -180,15 +185,15 @@
           "threshold": 1,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26107702,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26197388,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
-            "label": "Paypal USD Main exact vault",
+            "label": "PayPal USD Main exact vault",
             "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
           },
           {
@@ -204,7 +209,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -214,11 +219,15 @@
           {
             "label": "Sentora curator 1-of-1 Safe",
             "url": "https://etherscan.io/address/0x9e396de3312d373b87f9bd8763fb48184b42aac0"
+          },
+          {
+            "label": "Safe signing, guards, terminal module pages and runtime pin, Ethereum block 26197388 (2026-10-15T10:42:47Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Pinned block 26107702: getThreshold()=1, getOwners() contains sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Curator can configure allocation caps, fees and the send-assets gate. Fee and send-assets-gate actions have zero timelock; adding an adapter and increasing absolute caps have a three-day timelock. No arbitrary direct share mint is established. Source review distinguishes sendAssetsGate (deposits) from permanently abdicated receiveAssetsGate (withdrawals); no future gate-setting withdrawal power is claimed. At pinned block 26107702, full deployment-history role logs and current mapping reads establish allocator and sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes.",
+        "evidence": "Pinned block 26197398: getThreshold()=1, getOwners() contains sole signer 0x992592e073aa9b98daed79ee05c4af832e1d0abe, whose code is empty (EOA); no enabled modules and zero guard. This is single-key control, not an independent multi-signer quorum. Curator can configure allocation caps, fees and the send-assets gate. Fee and send-assets-gate actions have zero timelock; adding an adapter and increasing absolute caps have a three-day timelock. No arbitrary direct share mint is established. Source review distinguishes sendAssetsGate (deposits) from permanently abdicated receiveAssetsGate (withdrawals); no future gate-setting withdrawal power is claimed. At pinned block 26197398, full deployment-history role logs and current mapping reads establish allocator and sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Fresh Safe extension and signer-code observations are separately pinned at block 26197388; current threshold/owners are also re-read at 26197398. Full creation-to-26197398 role events and current mappings identify this curator Safe also as an allocator and sentinel. Current adapter burnShares is curator-submitted with a 259200-second delay; setSkimRecipient has zero delay and its recipient is currently zero. forceDeallocatePenalty is 0.01% with zero setter delay. These adapter and fee authorities do not bypass asset-backed share minting.",
         "timelockDelaySec": 0,
-        "capDescription": "addAdapter and increaseAbsoluteCap have 259200-second delay, but deposit-gate and management/performance fee setters have zero delay. A single blanket three-day delay does not cover curator economic authority."
+        "capDescription": "At Ethereum block 26197870 (2026-10-15T12:19:35Z), addAdapter, increaseAbsoluteCap and increaseRelativeCap each have a 259200-second selector delay; removeAdapter, increaseTimelock and abdicate each have 604800 seconds. Allocator, deposit-gate, fee, fee-recipient and force-deallocation-penalty setters have zero configured delay. The three share-transfer/withdrawal gate setters and setAdapterRegistry are abdicated. decreaseTimelock uses the target selector's delay, not its own zero entry. These are allocation and configuration constraints, not a blanket timelock or a share-issuance cap. The three abdicated share-transfer/withdrawal gate setters retain 604800-second stored delays; abdication prevents their execution."
       },
       {
         "chain": "ethereum",
@@ -233,117 +242,11 @@
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-05",
-        "observedBlock": 26124911,
-        "executionScope": {
-          "controllerDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-05",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R10 root arbitrary execution adverse upper envelope",
-          "confidence": "verified",
-          "sources": [
-            {
-              "label": "Verified EIP-7702 root arbitrary-call executor source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
-            },
-            {
-              "label": "Pinned Ethereum block and allocator role bindings",
-              "url": "https://etherscan.io/block/26124911"
-            }
-          ],
-          "pin": {
-            "position": "26124911",
-            "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
-            "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
-            "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
-          },
-          "observedState": {
-            "position": "26124911",
-            "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
-            "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
-            "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
-          },
-          "inventory": "complete",
-          "closure": {
-            "entrypoints": true,
-            "mutableTargets": true,
-            "delegateAndFallback": true,
-            "permissions": true,
-            "upgrades": true,
-            "bypasses": true,
-            "liabilityInventory": true
-          },
-          "paths": [
-            {
-              "id": "maximal-execution",
-              "targetDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
-              "entrypointKind": "evm-selector",
-              "entrypoints": [
-                "0x5c1c6dcd",
-                "0xe9ae5c53",
-                "0xd691c964"
-              ],
-              "callMode": "call",
-              "capabilities": [
-                "mint",
-                "burn",
-                "upgrade",
-                "freeze",
-                "seize",
-                "oracle-update",
-                "bridge-mint",
-                "custody-transfer",
-                "parameter-change"
-              ],
-              "capSemantics": {
-                "kind": "unbounded",
-                "bound": null
-              },
-              "claimImpairment": "unbounded",
-              "economicLossScope": "global-claim",
-              "unavoidableDelaySec": 0,
-              "activation": "active",
-              "affectedLiabilityIds": [
-                "senpyusdmain-sentora"
-              ],
-              "affectedDeployments": [],
-              "reach": "root",
-              "controlRefs": [],
-              "reactivationRefs": [],
-              "permissionChangeRefs": [],
-              "upgradeRefs": [],
-              "bypassRefs": [],
-              "downstreamCallDomain": {
-                "kind": "conservative-maximal",
-                "controllerDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
-                "executorDeployment": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
-                "sourceDeployment": "ethereum:0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
-                "targets": "any-address",
-                "calldata": "arbitrary-bytes",
-                "capabilities": "all-reachable",
-                "arbitraryCallVerified": true,
-                "sourceRuntimeCorrespondence": "verified",
-                "executorPin": {
-                  "position": "26124911",
-                  "hash": "0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb",
-                  "runtimeIdentity": "sha256:7652a45dda6a3f58cf50f4b74a64b449053dba0d37db5c509169b6447b03dcd8",
-                  "signerIdentity": "EIP-7702 root EOA ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
-                },
-                "sourceRuntimeIdentity": "sha256:deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c",
-                "observedSourceRuntimeIdentity": "sha256:deb51590e22cdf9f70292f763d6d3aea8b078148aae082f3af1eca19bf0aa58c",
-                "minimumDelaySec": 0,
-                "source": {
-                  "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b",
-                  "location": "EIP7702DeleGatorCore.sol:197-277 execute/executeFromExecutor; EIP7702StatelessDeleGator._isValidSignature; arbitrary single/batch CALL with root EOA authorization, no executor delay"
-                }
-              }
-            }
-          ]
-        },
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
-            "label": "Paypal USD Main exact vault",
+            "label": "PayPal USD Main exact vault",
             "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
           },
           {
@@ -359,7 +262,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -373,9 +276,13 @@
           {
             "label": "Exact RegistryList verified source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+          },
+          {
+            "label": "Verified EIP-7702 root arbitrary-call executor source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
           }
         ],
-        "evidence": "Ethereum block 26124911/hash 0x4928625841961c8196aa5e3af36affd63e85b5f4495912f739e3953bf24be7bb independently re-verifies the allocator role and EIP-7702 designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. Exact verified EIP7702StatelessDeleGator source/runtime recovers the root account EOA and permits arbitrary target/value/calldata single and batch CALLs through root self execution and signed contexts. The execution scope is a conservative adverse global upper envelope with every capability, unbounded loss and zero executor delay; it is not a claim that VaultV2 permits arbitrary unbacked share minting. Actual immutable deposit/fee accounting bounds remain separately documented. No outstanding-delegation enumeration, exact EntryPoint closure, key-custody, signer-independence or incident credit is inferred."
+        "evidence": "Ethereum block 26197398/hash 0x6fd1992621fb11dd9599781da3964b4af01610ac03562cc0735ea6dd7cf9ad87 independently re-verifies the allocator role and EIP-7702 designator 0xef010063c0c19a282a1b52b07dd5a65b58948a07dae32b. Exact verified EIP7702StatelessDeleGator source/runtime recovers the root account EOA and permits arbitrary target/value/calldata single and batch CALLs through root self execution and signed contexts. The executor-wide maximal envelope is not retained as an asset-native mint certificate: the pinned VaultV2 grant is allocation authority, not owner, curator or unrestricted share issuance. The immutable target still enforces asset-backed deposit/fee accounting and allocator caps. Arbitrary CALL at the signing account does not bypass target authorization. Outstanding delegations, EntryPoint reach, mutable downstream permissions and exact key custody are not exhaustively resolved; no complete benign execution-scope or noninterference certificate is claimed. Allocation, liquidity routing and strategy-loss exposure remain documented separately."
       },
       {
         "chain": "ethereum",
@@ -390,11 +297,11 @@
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
-            "label": "Paypal USD Main exact vault",
+            "label": "PayPal USD Main exact vault",
             "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
           },
           {
@@ -410,7 +317,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -426,7 +333,7 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
           }
         ],
-        "evidence": "At pinned block 26107702, full deployment-history role logs and current mapping reads establish allocator authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
+        "evidence": "At pinned block 26197398, full deployment-history role logs and current mapping reads establish allocator authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
       },
       {
         "chain": "ethereum",
@@ -441,11 +348,11 @@
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
-            "label": "Paypal USD Main exact vault",
+            "label": "PayPal USD Main exact vault",
             "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
           },
           {
@@ -461,7 +368,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -477,7 +384,7 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
           }
         ],
-        "evidence": "At pinned block 26107702, full deployment-history role logs and current mapping reads establish sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
+        "evidence": "At pinned block 26197398, full deployment-history role logs and current mapping reads establish sentinel authority. Allocator can allocate/deallocate within caps, change liquidityAdapter/data and maxRate without delay; this can affect future fee accrual and cash-exit routing but is not arbitrary share minting. Sentinel can deallocate, reduce caps and revoke pending changes. Pinned account code is empty."
       },
       {
         "chain": "ethereum",
@@ -507,15 +414,15 @@
           "threshold": 6,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26124911,
-          "observedAt": "2026-10-05",
+          "observedBlock": 26197388,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "timelockDelaySec": 0,
-        "observedAt": "2026-10-05",
-        "observedBlock": 26124911,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
             "label": "RegistryList exact verified source",
@@ -531,10 +438,14 @@
           },
           {
             "label": "Pinned current Ethereum control observation",
-            "url": "https://etherscan.io/block/26124911"
+            "url": "https://etherscan.io/block/26197398"
+          },
+          {
+            "label": "Safe signing, guards, terminal module pages and runtime pin, Ethereum block 26197388 (2026-10-15T10:42:47Z)",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Ethereum block 26124911: RegistryList.owner is this 6-of-10 Safe. Nine owner addresses have empty code; the tenth is a 1-of-2 Safe whose two owners have empty code. Both Safes have terminal empty module lists, zero guards and source/runtime-matched standard CompatibilityFallbackHandlers and singletons. This proves address/signature topology, not organizational independence or attested key custody. Source-bound RegistryList permits immediate addSubRegistry and ownership transfer, but no removal of existing registries, vault upgrade, cap change or share mint. Current four immutable subregistries and five immutable factories use append-only creation/indexing. The curator must separately install an adapter and increase vault allocation caps; registry approval does not bypass that authority or the immutable asset-backed share accounting. Aggregate delegation and incident review remain open."
+        "evidence": "Ethereum block 26197398: RegistryList.owner is this 6-of-10 Safe. Nine owner addresses have empty code; the tenth is a 1-of-2 Safe whose two owners have empty code. Both Safes have terminal empty module lists, zero guards and source/runtime-matched standard CompatibilityFallbackHandlers and singletons. This proves address/signature topology, not organizational independence or attested key custody. Source-bound RegistryList permits immediate addSubRegistry and ownership transfer, but no removal of existing registries, vault upgrade, cap change or share mint. Current four immutable subregistries and five immutable factories use append-only creation/indexing. The curator must separately install an adapter and increase vault allocation caps; registry approval does not bypass that authority or the immutable asset-backed share accounting. Aggregate delegation and incident review remain open. Safe extension and nested-signer evidence is separately pinned at Ethereum block 26197388. RegistryList, all four current subregistries and all five referenced factories exactly match their verified runtime at 26197398."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -543,10 +454,16 @@
     "review": {
       "disposition": "scoreable",
       "sources": [
-        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"},
-        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
         {
-          "label": "Paypal USD Main exact vault",
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        },
+        {
+          "label": "PayPal USD Main exact vault",
           "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
         },
         {
@@ -588,14 +505,20 @@
         {
           "label": "Ethereum control and registry recheck block 26124911",
           "url": "https://etherscan.io/block/26124911"
+        },
+        {
+          "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Complete creation-to-pin role and adapter event census, Ethereum block 26197398, 2026-10-15T10:44:47Z",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ],
-      "evidence": "Prior pinned reviews at Ethereum blocks 26107702 and 26113624 establish immutable VaultV2 asset-backed deposit/mint and separately bounded accrued-fee shares; zero proxy slots; owner and curator separate 1-of-1 Safes; performanceFee=0 and managementFee=317097919. MAX_PERFORMANCE_FEE is 50% of interest and MAX_MANAGEMENT_FEE is 5% annualized. Owner appoints curator/sentinels; allocator changes liquidityAdapter/data and maxRate; sentinel deallocates, reduces caps and revokes pending changes. Fee and sendAssetsGate setters have zero delay; addAdapter/increaseAbsoluteCap have 259200-second delays. receiveAssetsGate and share-gate setters are permanently abdicated; sendAssetsGate affects deposits, not withdrawals. Underlying issuance is inherited from pyusd-paypal; parent reports are not exact-vault reconciliation or holder assurance. On 2026-10-05 at block 26124911, current vault owner, curator, sole adapter, RegistryList and delegated allocator role/designator were re-read. RegistryList owner topology, nested Safe/fallbacks, four subregistries and five referenced factories now have runtime-bound permission evidence and an explicit administrator control. The registry can append a subregistry or change its owner immediately but cannot install adapters, alter caps, replace vault bytecode or mint shares. This answers the prior unidentified-registry mutation question without certifying a complete execution scope. Delegator and DelegationManager runtimes match verified sources; their signed permissionContext/caveat inventory and EntryPoint/reauthorization bypass review remain incomplete. Original owner/curator scoped signer-custody questions remain unchanged; no independence, incident-free, prudential-supervision or favorable economic-control closure is asserted.",
-      "reviewer": "R10 wave-4 pinned registry and delegation research; retaining prior D14/A7/A10 evidence",
-      "reviewedAt": "2026-10-05",
-      "unresolvedQuestions": [
-        "The allocator root EOA, EIP-7702 designator and arbitrary single/batch CALL implementation were re-verified at Ethereum block 26124911. Conservative maximal reach now records complete adverse global execution without enumerating signed permission contexts, EntryPoint bypasses or future root reauthorization. Those routes receive no exclusions or benign-target credit. Independently attested human/organizational key custody and asset incident review remain unresolved; no cryptographic signer-independence or absence-of-incident claim is made."
-      ],
+      "evidence": "Prior pinned reviews at Ethereum blocks 26107702 and 26113624 establish immutable VaultV2 asset-backed deposit/mint and separately bounded accrued-fee shares; zero proxy slots; owner and curator separate 1-of-1 Safes; performanceFee=0 and managementFee=317097919. MAX_PERFORMANCE_FEE is 50% of interest and MAX_MANAGEMENT_FEE is 5% annualized. Owner appoints curator/sentinels; allocator changes liquidityAdapter/data and maxRate; sentinel deallocates, reduces caps and revokes pending changes. Fee and sendAssetsGate setters have zero delay; addAdapter/increaseAbsoluteCap have 259200-second delays. receiveAssetsGate and share-gate setters are permanently abdicated; sendAssetsGate affects deposits, not withdrawals. Underlying issuance is inherited from pyusd-paypal; parent reports are not exact-vault reconciliation or holder assurance. On 2026-10-05 at block 26124911, current vault owner, curator, sole adapter, RegistryList and delegated allocator role/designator were re-read. RegistryList owner topology, nested Safe/fallbacks, four subregistries and five referenced factories now have runtime-bound permission evidence and an explicit administrator control. The registry can append a subregistry or change its owner immediately but cannot install adapters, alter caps, replace vault bytecode or mint shares. This answers the prior unidentified-registry mutation question without certifying a complete execution scope. Delegator and DelegationManager runtimes match verified sources; their signed permissionContext/caveat inventory and EntryPoint/reauthorization bypass review remain incomplete. Original owner/curator scoped signer-custody questions remain unchanged; no independence, incident-free, prudential-supervision or favorable economic-control closure is asserted. Fresh 2026-10-15 review at Ethereum block 26197398 re-reads the exact vault accounting, zero proxy slots, sole adapter, gate/abdication and selector-timelock census, role mappings, fee settings, 0.01% force-deallocation penalty and the complete creation-to-pin 16-event role/adapter-history census. Three active allocator accounts are curator Safe, delegated root and allocator EOA; two active sentinels are curator Safe and sentinel EOA. Shared owner/curator/RegistryList Safe signing, guard/fallback and nested-signer topology is independently supplied at block 26197388 and reviewed here. RegistryList, four subregistries, five factories and the delegated root executor retain exact source/runtime correspondence. No new user execution measurement, financial assurance, attested human independence or lifetime incident-absence claim is made.",
+      "reviewer": "Batch64 review (Rev_SenpyusdmainSentora)",
+      "reviewedAt": "2026-10-15",
+      "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "ethereum:0xe8c9c99ecad0686a14a00d8521c572281e938008",
@@ -605,7 +528,7 @@
           "reviewer": "Sol refinement 2026-10-03 (Refine10)",
           "sources": [
             {
-              "label": "Paypal USD Main exact vault",
+              "label": "PayPal USD Main exact vault",
               "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
             },
             {
@@ -646,7 +569,7 @@
           "reviewer": "Sol refinement 2026-10-03 (Refine10)",
           "sources": [
             {
-              "label": "Paypal USD Main exact vault",
+              "label": "PayPal USD Main exact vault",
               "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
             },
             {
@@ -678,8 +601,54 @@
               "url": "https://sentora.com/legal/terms-of-use"
             }
           ]
+        },
+        {
+          "controlRef": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
+          "subject": "execution-scope",
+          "question": "The EIP-7702 signing account can execute arbitrary calls. Outstanding delegations, EntryPoint paths, future root reauthorization and mutable downstream permissions are not exhaustively enumerated. This is an allocator-scoped execution-closure uncertainty, not evidence of arbitrary native share issuance by immutable VaultV2. Exact human key custody, signer independence and controller-specific incident absence remain unresolved.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "VaultConventionArbiter",
+          "sources": [
+            {
+              "label": "PayPal USD Main exact vault",
+              "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact verified VaultV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
+            },
+            {
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
+            },
+            {
+              "label": "Morpho Vault V2 accounting and redemption mechanics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+            },
+            {
+              "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Morpho exact-vault portfolio API",
+              "url": "https://api.morpho.org/graphql"
+            },
+            {
+              "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
+              "url": "https://sentora.com/legal/terms-of-use"
+            },
+            {
+              "label": "Exact RegistryList verified source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
+            },
+            {
+              "label": "Verified EIP-7702 root arbitrary-call executor source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
+            }
+          ]
         }
       ]
-    }
+    },
+    "headline": "Immutable PYUSD-backed share minting operates under single-key owner and curator controls; allocation, fees and inherited parent issuance remain separate risks."
   }
 }

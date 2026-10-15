@@ -28,9 +28,9 @@
         "url": "https://ripple.com/legal/stablecoin/"
       }
     ],
-    "evidence": "At ethereum block 26107706, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Exact immutable VaultV2 code forbids executing abdicated setters. Local share transfer and withdrawal gates are disabled; upstream RLUSD blacklist/pause or reserve-access powers remain inherited from rlusd-ripple. Allocator liquidity configuration and lending losses are distinct risks.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26196664 (2026-10-15T08:17:23Z; hash 0x1d9a5e0db4037391462bf5be8686b4ad1e0077cb253c7d200e91bfe5e2d39e04), all four gates are zero. The receiveShares, sendShares and receiveAssets setters are permanently abdicated, so immutable VaultV2 prevents re-enabling local share-transfer or withdrawal gates. The sendAssets deposit gate remains configurable after 604800 seconds and does not block existing holders' withdrawals. Parent RLUSD blacklist/pause and reserve-access powers remain inherited. Liquidity routing and lending losses are separate risks.",
+    "reviewer": "Pharos batch64 review (Rev_SxsrlusdSentora)",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "standard-external",
@@ -39,13 +39,13 @@
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine13)",
-      "rationale": "At Ethereum block 26110183 the sole adapter and idToMarketParams pin identify the funded WBTC collateral market. Lender NAV inherits borrower liquidation and bad-debt outcomes, so a borrower branch is required.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch64 review (Rev_SxsrlusdSentora)",
+      "rationale": "At Ethereum block 26196664 (2026-10-15T08:17:23Z) the complete sole-adapter/market census and idToMarketParams identify the funded WBTC collateral market. Lender NAV inherits liquidation and bad-debt outcomes, so the borrower branch remains required.",
       "sources": [
         {
-          "label": "Market parameters and oracle/feed getters pinned at block 26110183",
-          "url": "https://etherscan.io/block/26110183"
+          "label": "Market parameters and oracle/feed getters at block 26196664, 2026-10-15T08:17:23Z",
+          "url": "https://etherscan.io/block/26196664"
         },
         {
           "label": "Exact immutable borrower oracle and feed library",
@@ -53,8 +53,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SxsrlusdSentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -66,8 +66,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf58725eb213161e9054c97f970dc80b2d0327e8d"
       },
       {
-        "label": "Market/feed latestRoundData, description and decimals pin at block 26110183",
-        "url": "https://etherscan.io/block/26110183"
+        "label": "Market/feed latestRoundData, description and decimals at block 26196664, 2026-10-15T08:17:23Z",
+        "url": "https://etherscan.io/block/26196664"
       },
       {
         "label": "Morpho liquidation, bad debt and VaultV2 loss socialization",
@@ -83,7 +83,7 @@
         "id": "rlusd-wbtc-86",
         "label": "RLUSD loan / WBTC collateral market a128dddc761075df",
         "tier": "standard-external",
-        "summary": "idToMarketParams binds RLUSD, WBTC, oracle 0xf58725eb213161e9054c97f970dc80b2d0327e8d, IRM 0x870ac11d48b15db9a138cf899d20f13f79ba00bc and LLTV 860000000000000000. At block 26110183 oracle.price() returned 845747192858835850839479540234574584385117067048216. BASE_VAULT and QUOTE_VAULT are zero; QUOTE_FEED_2 is zero (unit multiplier). The three nonzero feed answers were WBTC/BTC 99940000, BTC/USD 8462780908991, RLUSD/USD 100002735 (all 8 decimals).",
+        "summary": "idToMarketParams binds RLUSD, WBTC, oracle 0xf58725eb213161e9054c97f970dc80b2d0327e8d, IRM 0x870ac11d48b15db9a138cf899d20f13f79ba00bc and LLTV 860000000000000000. At Ethereum block 26196664 (2026-10-15T08:17:23Z), price() returned 809874324010859973172448693820658014522198431177760. BASE_VAULT, QUOTE_VAULT and QUOTE_FEED_2 are zero. Feed answers were WBTC/BTC 99850000, BTC/USD 8110742925323 and RLUSD/USD 99997945, each 8 decimals; updatedAt values were 1792013099, 1792049855 and 1792039907 respectively. The consumer does not reject old observations by timestamp.",
         "collateralAssets": ["WBTC"],
         "chains": ["ethereum"],
         "feeds": [
@@ -92,29 +92,29 @@
             "path": "WBTC/BTC",
             "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110183
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196664
           },
           {
             "provider": "Chainlink",
             "path": "BTC/USD",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110183
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196664
           },
           {
             "provider": "Chainlink",
             "path": "RLUSD/USD denominator",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110183
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196664
           }
         ],
         "fallbackBehavior": "No alternate feed or failover: price() directly composes the configured latestRoundData answers. ChainlinkDataFeedLib checks nonnegative answers but deliberately does not check updatedAt or min/max bounds; no consumer staleness bound is claimed.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110183,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196664,
         "collateralParameters": [
           {
             "asset": "WBTC",
@@ -132,7 +132,7 @@
           },
           {
             "label": "Pinned market and feed observations",
-            "url": "https://etherscan.io/block/26110183"
+            "url": "https://etherscan.io/block/26196664"
           },
           {
             "label": "Morpho liquidation and bad-debt rules",
@@ -145,8 +145,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only the exact native ethereum vault-share deployment is authored. No share bridge representation is evidenced; upstream parent routes are separate inherited exposure.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SxsrlusdSentora)",
     "confidence": "verified",
     "sources": [
       {

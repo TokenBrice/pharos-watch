@@ -12,7 +12,7 @@
         "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
       },
       {
-        "label": "Pinned mantra RPC at block 18531313",
+        "label": "Pinned mantra RPC at block 18858665",
         "url": "https://evm.mantrachain.io"
       },
       {
@@ -32,15 +32,15 @@
         "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
       }
     ],
-    "evidence": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. The verified MYieldToOne/Freezable source exposes role-gated holder freezes and rejects frozen-account transfers and wrap/unwrap interactions. The packet-identified FREEZE_MANAGER 0x9cb81ad5423e0ca22d3e3af3004c85d865b70efe still returned hasRole=true; operational DEFAULT_ADMIN is a 3-of-5 Safe. The token has direct local freeze controls beyond inherited M exposure.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At MANTRA block 18858665, timestamp 2026-10-15T10:35:30Z, the EIP-1967 implementation remains 0x9d7a7b406568668e7943740f5b370c86e13dcca8. Verified MYieldToOne/Freezable code exposes holder freezes and rejects frozen-account transfers, approvals and wrap/unwrap interactions. Complete RoleGranted/RoleRevoked histories through this block and pinned hasRole reads identify both active FREEZE_MANAGER holders: 0x9cb81ad5423e0ca22d3e3af3004c85d865b70efe and 0x363c256d368277bbfaf6eaf65bee123a7adba464. DEFAULT_ADMIN remains the independently re-read 3-of-5 Safe. The token has direct local holder-freeze controls beyond inherited M exposure.",
+    "reviewer": "Batch64 Rev_MantrausdMantra primary-source review",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Sole authored native child-token deployment. The reviewed local wrapping/custodian mint path issues the child on this chain; parent-token cross-chain and custody risks remain inherited. No global uncatalogued bridge-liability absence is asserted.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 Rev_MantrausdMantra primary-source review",
     "confidence": "probable",
     "sources": [
       {
@@ -52,7 +52,7 @@
         "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
       },
       {
-        "label": "Pinned mantra RPC at block 18531313",
+        "label": "Pinned mantra RPC at block 18858665",
         "url": "https://evm.mantrachain.io"
       },
       {
@@ -86,8 +86,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "The sole authored child token is locally minted against parent-token custody. No child bridge path is established; this does not certify absence of uncatalogued integrations or parent bridge risks.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 18531313,
+        "observedAt": "2026-10-15",
+        "observedBlock": 18858665,
         "sources": [
           {
             "label": "M0 MANTRA platform deployment inventory",
@@ -98,7 +98,7 @@
             "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
           },
           {
-            "label": "Pinned mantra RPC at block 18531313",
+            "label": "Pinned mantra RPC at block 18858665",
             "url": "https://evm.mantrachain.io"
           },
           {

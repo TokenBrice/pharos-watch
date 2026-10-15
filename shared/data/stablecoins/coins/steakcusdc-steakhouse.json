@@ -1,6 +1,6 @@
 {
   "id": "steakcusdc-steakhouse",
-  "launchDate": "2026-06-19",
+  "launchDate": "2026-06-23",
   "name": "Steakhouse Confidential Prime USDC",
   "symbol": "steakcUSDC",
   "oneLiner": "steakcUSDC is Steakhouse's public USDC vault share behind a confidential deposit surface; withdrawals use liquid USDC and losses reduce NAV.",
@@ -14,14 +14,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC in the Steakhouse-curated Morpho Vault V2 on ethereum, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
-  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.001% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Steakhouse Confidential Prime USDC (steakcUSDC) at ethereum:0xbeef00a59b577423653a1526c7009bde103f542b is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x17bc9aa135cef1a5c3a91925e0f865d526318718 holds 3 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
+    "rationale": "Steakhouse Confidential Prime USDC (steakcUSDC) at ethereum:0xbeef00a59b577423653a1526c7009bde103f542b is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x17bc9aa135cef1a5c3a91925e0f865d526318718 holds 3 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications. The public share contract was created June 19, 2026; Zama announced public deposits open June 23, 2026, the product launchDate. Zama cShare 0x66bf74e96900d1a19c7070d939d124f2f565c458 is a separate confidential wrapper, not another native deployment of this public share.",
     "sources": [
       {
         "label": "Exact Morpho Vault V2 deployment",
@@ -32,8 +32,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
       },
       {
-        "label": "Pinned ethereum block 26107704",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+        "url": "https://etherscan.io/block/26196563"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -50,26 +50,62 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
+      },
+      {
+        "label": "Public-share and confidential-wrapper address boundary",
+        "url": "https://docs.zama.org/protocol/confidential-vault/reference/addresses.md"
+      },
+      {
+        "label": "Public deposit launch (distinct from deployment date)",
+        "url": "https://www.zama.org/post/steakhouse-confidential-prime-usdc-vault-on-morpho-deposits-now-live"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho vault",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
     },
     {
-      "label": "Vault mechanics",
+      "label": "Morpho: Vault asset flows",
       "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
     },
     {
-      "label": "Gate documentation",
+      "label": "Morpho: Gate documentation",
       "url": "https://docs.morpho.org/curate/concepts/gates.md"
     },
     {
       "label": "Zama confidential deposit surface",
       "url": "https://www.zama.org/post/morpho-zama-steakhouse-launch-confidential-usdc-vault"
+    },
+    {
+      "label": "Website",
+      "url": "https://app.zama.org/earn/ethereum/0xbEEF00A59B577423653A1526c7009bdE103F542B/steakhouse-confidential-prime-usdc"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.zama.org/protocol/confidential-vault/concepts/architecture"
+    },
+    {
+      "label": "Confidential wrapper addresses",
+      "url": "https://docs.zama.org/protocol/confidential-vault/reference/addresses.md"
+    },
+    {
+      "label": "Steakhouse: Vault terms",
+      "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Public deposits live June 23, 2026",
+      "url": "https://www.zama.org/post/steakhouse-confidential-prime-usdc-vault-on-morpho-deposits-now-live"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/SteakhouseFi"
     }
   ],
   "contracts": [
@@ -80,7 +116,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Steakhouse Confidential Prime USDC Morpho Vault V2",
@@ -89,7 +125,7 @@
   "geckoId": "steakhouse-confidential-prime-usdc",
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "steakcusdc-steakhouse",
     "display": {
@@ -112,8 +148,8 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
       "deployedExposure": {
-        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
-        "reviewedAt": "2026-10-02",
+        "basis": "The reviewed descriptor covers non-idle USDC-denominated lending claims, not cash; the idle buffer is measured separately. Ethereum block 26196563 (2026-10-15T07:57:11Z): idle USDC 2033369465 / totalAssets 35318046503247 raw, or 0.00575731% idle and 99.99424269% deployed; one MorphoMarketV1AdapterV2 and all three markets enumerated.",
+        "reviewedAt": "2026-10-15",
         "sourceUrl": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
       },
       "redemptionLiquidity": {

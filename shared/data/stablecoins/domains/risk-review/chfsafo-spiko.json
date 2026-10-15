@@ -2,8 +2,8 @@
   "id": "chfsafo-spiko",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane53Spiko)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
     "sources": [
       {
         "label": "Spiko allowlisted holder controls",
@@ -28,9 +28,17 @@
       {
         "label": "Immutable issuer Solana ACL architecture and authority inventory",
         "url": "https://github.com/spiko-tech/solana-contracts/tree/afdab14fb1a59bf3abe2f263870023349a560e2e"
+      },
+      {
+        "label": "Finalized exact CHF Solana mint at slot 457209716, 15 October 2026 10:48:14 UTC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Verified Ethereum token implementation observed at block 26197328",
+        "url": "https://eth.blockscout.com/address/0x869dbfc8c578d7af77e0214287bb49d351d3e4e1?tab=contract"
       }
     ],
-    "evidence": "The September 2026 SICAV prospectus page 10 requires shares to be held and transferred only between allowlisted investors. The issuer's exact CHF API binds ISIN FR0014015LG6 to all eight catalog registers: Ethereum, Polygon, Starknet, Arbitrum, Etherlink, Base, Stellar and Solana. Spiko Finance maintains the shareholder register under the Management Company's responsibility, making issuer register/allowlisting policy a common access failure domain. This establishes holder transfer restrictions across the exact share class, not current chain-by-chain administrator or material-supply closure. The historical Solana observation at finalized slot 452748326 identified default frozen accounts, an explicit freeze authority, permanent delegate and pausable authority; that observation is retained, not refreshed. Immutable issuer Solana source describes default-frozen Token-2022 accounts and an allow/block gate where the block list takes precedence; source publication alone does not establish current on-chain signer thresholds. No underlying-reserve freeze exposure is inferred from these holder restrictions."
+    "evidence": "The September 2026 SICAV prospectus page 10 requires shares to be held and transferred only between allowlisted investors; its page 49 and the current exact CHF API bind ISIN FR0014015LG6 to all eight catalog registers. Spiko Finance operates the shareholder register under the Management Company's responsibility. The verified Ethereum Token implementation observed at block 26197328 enforces authority.canCall allowlisting in _update and permits restricted pause and forced burn; this does not establish every administrator. A fresh finalized Solana bank-context observation at slot 457209716, block hash HHF31Fm7P3XqeiPpMMvoBEkUXrkoP51Kk68wr4dCTq4A, timestamp 1792061294 (2026-10-15T10:48:14Z), confirms Token-2022 ownership and freeze authority 9Sf6f8r63A86FEzbzkY4MXNjCX17B49fVizduLrZ7DyG. The earlier slot 452748326 default-frozen, permanent-delegate and pausable-extension observations remain historical evidence; no complete current ACL execution or material-supply closure is claimed. No underlying-reserve freeze exposure is inferred from holder restrictions."
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
@@ -39,8 +47,8 @@
     "summary": "CACEIS Fund Administration calculates daily fund NAV and Spiko publishes exact CHF class NAV. The chfSAFO totals and Spiko architecture identify a centrally originated fund-pricing path, not borrower-specific liquidation or a guaranteed peg. This verifies privileged internal pricing; no exact CHF external feed, redundancy, failover or publisher signer closure is credited.",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
       "rationale": "CHFSAFO subscriptions/redemptions use a fund NAV authority. This is a UCITS fund share, not borrower-specific liquidation collateral branches.",
       "sources": [
         {
@@ -52,13 +60,13 @@
           "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
         },
         {
-          "label": "CHF shares, assets and NAV at 2 October 2026",
+          "label": "Exact CHF NAV dated 14 October 2026, reviewed 15 October",
           "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine05 primary-source and pinned-RPC review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
     "confidence": "verified",
     "sources": [
       {
@@ -66,7 +74,7 @@
         "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
       },
       {
-        "label": "CHF shares, assets and NAV at 2 October 2026",
+        "label": "Exact CHF NAV dated 14 October 2026, reviewed 15 October",
         "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
       },
       {

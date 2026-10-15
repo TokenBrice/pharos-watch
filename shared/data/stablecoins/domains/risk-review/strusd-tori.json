@@ -24,13 +24,13 @@
         "url": "https://docs.tori.finance/legal/trusd-terms.md"
       },
       {
-        "label": "Pinned Ethereum block 26107706",
-        "url": "https://etherscan.io/block/26107706"
+        "label": "Pinned Ethereum block 26197398, 15 October 2026",
+        "url": "https://etherscan.io/block/26197398"
       }
     ],
-    "evidence": "Verified current StakedTrUSD implements FULL_RESTRICTED_STAKER_ROLE checks on sender/recipient transfers, staking and unstaking. The owner has BLACKLIST_MANAGER_ROLE and DEFAULT_ADMIN_ROLE. Admin redistributeLockedAmount burns a restricted holder and remints to another address or redistributes value; seizeCooldown transfers restricted-holder silo funds. The owner cannot be blacklisted. Spoke pool mint/burn control is separate bridge risk.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197398 the current implementation and native role memberships remain unchanged. FULL_RESTRICTED_STAKER_ROLE checks restrict transfers, staking and unstaking. DEFAULT_ADMIN can redistributeLockedAmount by burning a restricted balance and reminting it elsewhere, or seizeCooldown from the silo; the owner cannot be blacklisted. Monad block 113592633 and Pharos block 20300349 have byte-identical 7007-byte StakedTrUSDL2 runtimes, whose verified Monad source checks sender/recipient blackList on every transfer/mint/burn and permits owner-only redistribution. Both spokes name 0xb1e50b7a19b8f650a6ee77dc0ac52b88059fa169 as blackLister. Bridge mint/burn administration remains separate bridge risk.",
+    "reviewer": "Rev_StrusdTori primary-source and pinned-state review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
@@ -39,8 +39,8 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_StrusdTori primary-source and pinned-state review",
       "rationale": "The ERC-4626 asset-per-share rate controls deposit and withdrawal amounts, without borrower debt or local liquidation branches.",
       "sources": [
         {
@@ -64,13 +64,13 @@
           "url": "https://docs.tori.finance/legal/trusd-terms.md"
         },
         {
-          "label": "Pinned Ethereum block 26107706",
-          "url": "https://etherscan.io/block/26107706"
+          "label": "Pinned Ethereum block 26197398, 15 October 2026",
+          "url": "https://etherscan.io/block/26197398"
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_StrusdTori primary-source and pinned-state review",
     "confidence": "verified",
     "sources": [
       {
@@ -94,8 +94,8 @@
         "url": "https://docs.tori.finance/legal/trusd-terms.md"
       },
       {
-        "label": "Pinned Ethereum block 26107706",
-        "url": "https://etherscan.io/block/26107706"
+        "label": "Pinned Ethereum block 26197398, 15 October 2026",
+        "url": "https://etherscan.io/block/26197398"
       },
       {
         "label": "Tori audit scopes, dates and continuous bug bounty",
@@ -114,8 +114,8 @@
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Ethereum creates native staking shares; Monad and Pharos use CCIP burn/mint representations backed by one Ethereum lockbox. Bridge administration is separate from native UUPS authority.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_StrusdTori primary-source and pinned-state review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -129,6 +129,18 @@
       {
         "label": "Tori roles and timelock disclosure",
         "url": "https://docs.tori.finance/security/roles.md"
+      },
+      {
+        "label": "Pinned Ethereum state at block 26197398, 2026-10-15T10:44:47Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Pinned Monad state at block 113592633, 2026-10-15T10:45:00Z",
+        "url": "https://api-monad-mainnet-full.n.dwellir.com"
+      },
+      {
+        "label": "Pinned Pharos state at block 20300349, 2026-10-15T10:44:57Z",
+        "url": "https://api.zan.top/public/pharos-mainnet"
       }
     ],
     "routes": [
@@ -146,8 +158,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Native Ethereum vault creates share liabilities; its CCIP pool locks existing shares. Do not add spoke totalSupply to native supply.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107706,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -185,8 +197,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Official token/pool mapping and fresh symbol, decimals, getMinters/getBurners, getToken, owner, typeAndVersion and remote token/pool reads agree. Every spoke share represents a share locked on Ethereum, not a separate native vault.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016528,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592633,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -231,8 +243,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Official token/pool mapping and fresh symbol, decimals, getMinters/getBurners, getToken, owner, typeAndVersion and remote token/pool reads agree. Every spoke share represents a share locked on Ethereum, not a separate native vault.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 19213616,
+        "observedAt": "2026-10-15",
+        "observedBlock": 20300349,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -282,8 +294,8 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip-strusd"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107706,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -310,7 +322,7 @@
           "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
           "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
         },
-        "evidence": "At ethereum block 26107706, getToken and typeAndVersion matched the official mapping. Canonical shares are locked/released, not minted by the Ethereum pool."
+        "evidence": "At Ethereum block 26197398 (2026-10-15T10:44:47Z), getToken and LockReleaseTokenPool 1.5.1 match the official mapping. Both remote tokens/pools match Monad and Pharos. The pool holds 9629711.608474332752276164 existing canonical shares; it locks/releases rather than mints native shares. This observed escrow is not an exhaustive in-flight liability reconciliation."
       },
       {
         "id": "strusd-ethereum-ccip-owner",
@@ -327,12 +339,12 @@
         "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
         "authorityType": "multisig",
         "modulesOrGuardsStatus": "none-detected",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "failureDomainKeys": [
           "controller:0x0c6bbfd2d5666d44bf28580edeec0263692c8316"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107706,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -355,8 +367,8 @@
             "url": "https://etherscan.io/address/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
           }
         ],
-        "capDescription": "Ethereum and Monad inbound/outbound buckets are enabled with 1500000-token capacities and 69.444444444444444444-token/second refills. Pharos v2.0 numeric limiter API was not established; issuer states the same six-hour lane policy. Current bounds are mutable configuration, not an immutable issuance ceiling.",
-        "evidence": "At ethereum block 26107706, pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316. Ethereum owner Safe is freshly verified 3-of-5, no enabled modules, zero guard/module-guard slots. No bridge timelock is established.",
+        "capDescription": "Both Ethereum lanes have enabled inbound/outbound capacities of 1500000 shares and refill rates of 69.444444444444444444 shares per second. Verified TokenPool setters authorize the owner or separately appointed rateLimitAdmin to change these configurations immediately; the owner can replace that admin. Current buckets are not immutable issuance ceilings.",
+        "evidence": "At Ethereum block 26197398 (2026-10-15T10:44:47Z), pool owner is the recorded Safe, freshly read 3-of-5 with the same five owners, empty module pagination and zero guard/module-guard slots. getRateLimitAdmin returns separate code-empty 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. No bridge timelock is established.",
         "threshold": 3,
         "signerCount": 5
       },
@@ -378,8 +390,8 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip-strusd"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016528,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592633,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -406,7 +418,7 @@
           "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
           "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
         },
-        "evidence": "At monad block 110016528, getToken and typeAndVersion matched the official mapping. Token getMinters and getBurners both returned this pool as sole member. Representation mint/burn does not issue new native vault liabilities."
+        "evidence": "At Monad block 113592633 (2026-10-15T10:45:00Z), getToken and BurnMintTokenPool 1.5.1 match the official mapping, and both remote tokens/pools match Ethereum and Pharos. getMinters/getBurners name this pool as sole member. Token owner can change minter/burner authorization; maxSupply=0 means the verified token has no fixed maximum. Representation mint/burn is not new native vault issuance."
       },
       {
         "id": "strusd-monad-ccip-owner",
@@ -422,13 +434,13 @@
         "controllerChain": "monad",
         "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
         "authorityType": "multisig",
-        "modulesOrGuardsStatus": "unknown",
-        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
         "failureDomainKeys": [
           "controller:0x0c6bbfd2d5666d44bf28580edeec0263692c8316"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016528,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592633,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -451,8 +463,10 @@
             "url": "https://monadvision.com/address/0x936a28338985b905f7e932af379533666df6d1ec"
           }
         ],
-        "capDescription": "Ethereum and Monad inbound/outbound buckets are enabled with 1500000-token capacities and 69.444444444444444444-token/second refills. Pharos v2.0 numeric limiter API was not established; issuer states the same six-hour lane policy. Current bounds are mutable configuration, not an immutable issuance ceiling.",
-        "evidence": "At monad block 110016528, pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316. Same-address Safe owner is identified; chain-local Safe threshold and guards were not re-read, so no quorum protection is credited here."
+        "capDescription": "Both Monad lanes have enabled inbound/outbound capacities of 1500000 shares and refill rates of 69.444444444444444444 shares per second. Pool owner and the separate rateLimitAdmin can change bucket configuration; the owner can replace the rateLimitAdmin. Token owner can grant mint/burn roles, so current sole-pool membership is not immutable.",
+        "evidence": "At Monad block 113592633 (2026-10-15T10:45:00Z), pool owner and token owner are the recorded Safe. Chain-local getOwners/getThreshold independently resolve the same five owners and threshold three; module pagination is empty with sentinel 0x1, guard/module-guard slots are zero, and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. These are Monad reads, not inferred from Ethereum. No independent human signer separation or bridge timelock is asserted.",
+        "threshold": 3,
+        "signerCount": 5
       },
       {
         "id": "strusd-pharos-ccip-pool",
@@ -472,8 +486,8 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip-strusd"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 19213616,
+        "observedAt": "2026-10-15",
+        "observedBlock": 20300349,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -498,9 +512,9 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
-          "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
+          "trustedPeerOrRemote": "Fresh getRemoteToken and getRemotePools match the two issuer-listed peers. getSupportedChains failed; exhaustive current selector enumeration is not established by this read."
         },
-        "evidence": "At pharos block 19213616, getToken and typeAndVersion matched the official mapping. Token getMinters and getBurners both returned this pool as sole member. Representation mint/burn does not issue new native vault liabilities."
+        "evidence": "At Pharos block 20300349 (2026-10-15T10:44:57Z), getToken and BurnMintTokenPool 2.0.0 match the official mapping. getRemoteToken/getRemotePools for both known peers match Ethereum and Monad; the attempted getSupportedChains read failed, so no new exhaustive-selector claim is made. getMinters/getBurners name this pool as sole member. The token runtime is byte-identical to verified Monad StakedTrUSDL2; its owner can replace mint/burn roles and maxSupply=0 is uncapped. Pool runtime retrieval failed; no new pool build-equivalence claim is made."
       },
       {
         "id": "strusd-pharos-ccip-owner",
@@ -517,12 +531,12 @@
         "controllerAddress": "0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64",
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": true,
         "failureDomainKeys": [
           "controller:0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 19213616,
+        "observedAt": "2026-10-15",
+        "observedBlock": 20300349,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -545,8 +559,101 @@
             "url": "https://pharosscan.xyz/address/0x7305a63323d3171c6311d8f3218c3a7d164f3f0f"
           }
         ],
-        "capDescription": "Ethereum and Monad inbound/outbound buckets are enabled with 1500000-token capacities and 69.444444444444444444-token/second refills. Pharos v2.0 numeric limiter API was not established; issuer states the same six-hour lane policy. Current bounds are mutable configuration, not an immutable issuance ceiling.",
-        "evidence": "At pharos block 19213616, pool owner() returned 0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64. Owner code is empty. No independent MPC/HSM custody attestation or timelock established."
+        "capDescription": "Both Pharos lanes' v2.0 getCurrentRateLimiterState(selector,false) return enabled default inbound/outbound capacities of 1500000 shares and refill rates of 69.444444444444444444 shares per second. Fast-finality buckets queried with true are disabled with zero capacity/rate; disabled is not an active zero-capacity limit. getDynamicConfig identifies the separate rateLimitAdmin. These mutable limits are not an immutable issuance ceiling.",
+        "evidence": "At Pharos block 20300349 (2026-10-15T10:44:57Z), both pool owner and token owner remain 0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64 with empty code. getDynamicConfig returns rateLimitAdmin 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. Official CCIP v2 documentation assigns rate-limit updates to owner or rateLimitAdmin. No independent MPC/HSM attestation or timelock is established."
+      },
+      {
+        "id": "strusd-ethereum-ccip-rate-admin",
+        "label": "strUSD Ethereum CCIP rate-limit admin",
+        "routeRefs": [
+          "ethereum:0x280839980a7ed0d7717f64125fe241012e5f5815"
+        ],
+        "capabilities": [
+          "rate-limit"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "controller:0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7"
+        ],
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197398,
+        "sources": [
+          {
+            "label": "Verified TokenPool rate-limit authorization",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+          },
+          {
+            "label": "Ethereum state at block 26197398, 2026-10-15T10:44:47Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "getRateLimitAdmin returns this code-empty address. Verified TokenPool setChainRateLimiterConfig/setChainRateLimiterConfigs accept owner or this admin and can change inbound/outbound capacities and refill rates. This is independent rate-limit authority, not native share minting. Key-custody arrangements remain unverified."
+      },
+      {
+        "id": "strusd-monad-ccip-rate-admin",
+        "label": "strUSD Monad CCIP rate-limit admin",
+        "routeRefs": [
+          "monad:0x683fb58ee77172626d5b49087ddac71ef7825d20"
+        ],
+        "capabilities": [
+          "rate-limit"
+        ],
+        "controllerChain": "monad",
+        "controllerAddress": "0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "controller:0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7"
+        ],
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592633,
+        "sources": [
+          {
+            "label": "CCIP rate-limit administrator permissions",
+            "url": "https://docs.chain.link/ccip/evm/concepts/cross-chain-token/rate-limits/inspect-current-rate-limits"
+          },
+          {
+            "label": "Monad state at block 113592633, 2026-10-15T10:45:00Z",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "getRateLimitAdmin returns this code-empty address independently of the 3-of-5 owner Safe. CCIP permits owner or rateLimitAdmin to update lane limits. No chain-local multisig, key-custody attestation or mandatory delay is established for this rate-limit role."
+      },
+      {
+        "id": "strusd-pharos-ccip-rate-admin",
+        "label": "strUSD Pharos CCIP rate-limit admin",
+        "routeRefs": [
+          "pharos:0x25419e949b485d481bed4ea0c5a0496f6c7f7c63"
+        ],
+        "capabilities": [
+          "rate-limit"
+        ],
+        "controllerChain": "pharos",
+        "controllerAddress": "0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "controller:0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7"
+        ],
+        "observedAt": "2026-10-15",
+        "observedBlock": 20300349,
+        "sources": [
+          {
+            "label": "CCIP v2.0 dynamic config and rate-limit administrator permissions",
+            "url": "https://docs.chain.link/ccip/evm/concepts/cross-chain-token/rate-limits/inspect-current-rate-limits"
+          },
+          {
+            "label": "Pharos state at block 20300349, 2026-10-15T10:44:57Z",
+            "url": "https://api.zan.top/public/pharos-mainnet"
+          }
+        ],
+        "evidence": "getDynamicConfig returns this code-empty rateLimitAdmin, distinct from the pool owner. Official CCIP v2.0 documentation authorizes owner or rateLimitAdmin to update lane limits. This source/state review does not establish deployed pool bytecode equivalence, an independent signing quorum or key-custody policy."
       }
     ],
     "protocols": [

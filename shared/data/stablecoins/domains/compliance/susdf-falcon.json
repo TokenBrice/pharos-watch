@@ -4,8 +4,16 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Falcon sUSDf variable-exchange-rate savings product",
+        "label": "Variable-value sUSDf rights: structural ART/EMT exclusion; not a statement on EU offering, securities or CASP law",
         "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md"
+      },
+      {
+        "label": "Falcon terms, section 2.2, define sUSDf's variable USDf exchange rate",
+        "url": "https://docs.falcon.finance/resources/terms-of-use.md"
+      },
+      {
+        "label": "Exact savings implementation confirms balance-based variable share conversion",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
       }
     ]
   },
@@ -18,13 +26,13 @@
           "label": "Falcon sUSDf variable-exchange-rate savings product",
           "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-15"
         },
         {
           "label": "Falcon platform terms",
           "url": "https://docs.falcon.finance/resources/terms-of-use.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
+          "accessedAt": "2026-10-15",
           "sourceDate": "2026-08-11"
         }
       ]
@@ -39,25 +47,39 @@
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
+        "accessedAt": "2026-10-15",
         "sourceDate": "2026-02-25"
       },
       {
         "label": "GENIUS Act Public Law 119-27",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
+        "accessedAt": "2026-10-15",
         "sourceDate": "2025-07-18"
       },
       {
         "label": "Falcon sUSDf variable-exchange-rate savings product",
         "url": "https://docs.falcon.finance/earn/susdf-yield-bearing-token.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
+      },
+      {
+        "label": "Falcon platform terms identify Falcon Digital Limited and distinguish sUSDf rights",
+        "url": "https://docs.falcon.finance/resources/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-15",
+        "sourceDate": "2026-08-11"
+      },
+      {
+        "label": "HT Digital report identifies Falcon Digital Limited as BVI-incorporated; historical identity evidence only",
+        "url": "https://falcon.finance/api/media/file/Final%20Combined%20Assurance%20report%2031.10.25.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-15",
+        "sourceDate": "2025-12-17"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "reviewer": "Rev_SusdfFalcon batch64 primary-evidence review",
+    "reviewedAt": "2026-10-15",
     "issuerEntity": "Falcon Digital Limited",
     "issuerDomicile": "British Virgin Islands"
   }

@@ -13,8 +13,8 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "CSCBUSDC VaultV2 share issuer",
-      "observedAt": "2026-10-02",
-      "observedBlock": 52095852,
+      "observedAt": "2026-10-15",
+      "observedBlock": 52630636,
       "sources": [
         {
           "label": "Exact Morpho Vault V2 deployment",
@@ -47,6 +47,10 @@
         {
           "label": "Verified functional VaultV2 executable correspondence; no proxy or upgrade entrypoint",
           "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+          "url": "https://basescan.org/block/52630636"
         }
       ]
     },
@@ -60,8 +64,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -90,9 +94,13 @@
           {
             "label": "Exact Morpho lending adapter",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
-        "evidence": "Clearstar cbAssets Vault (CSCBUSDC) at base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x812b71c33ae5eafebae967c5670e37eca3cab0ac holds 8 enumerated Morpho market IDs. Performance fee 10% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero.",
+        "evidence": "Clearstar cbAssets Vault (CSCBUSDC) at base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x812b71c33ae5eafebae967c5670e37eca3cab0ac holds 8 enumerated Morpho market IDs. Performance fee 10% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero. Fresh block 52630636 re-read confirms the identical runtime (SHA-256 of the RPC hex string 1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7), unchanged underlying/decimals/fees and sole adapter; no arbitrary-recipient privileged mint path was found in the reviewed source.",
         "deploymentRefs": [
           "base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
         ]
@@ -107,8 +115,8 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095852,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "owners": [
             "0xbe5f13f80d7b13a47a1a5021f43fd7e88bbc0f0d",
@@ -122,8 +130,8 @@
         },
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -156,27 +164,32 @@
           {
             "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
             "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
-        "evidence": "Pinned owner() at base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 3/6, enabled-module count 0, guard zero. Independently re-read 2026-10-03 at the same block: full 6-owner roster, module pagination ended at 0x1 with 0 enabled modules, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. No independent-human or key-custody attestation follows from owner addresses.",
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), the exact owner role and Safe getOwners/getThreshold were re-read: 3-of-6. Complete SetIsAllocator/SetIsSentinel grant-event candidate censuses through the pin were checked against current mappings; the two former allocator candidates are inactive. Module pagination terminates at 0x1 with no enabled modules; guard is zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Adapter addition and absolute/relative cap increases have 259200-second selector delays; removeAdapter has 604800 seconds. Fee amounts, fee recipients, allocator admission and force-deallocation penalty have zero selector delays. The owner can replace the curator and sentinels immediately. No blanket timelock or human signer independence is asserted.",
         "threshold": 3,
         "signerCount": 6,
         "deploymentRefs": [
           "base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
-        ]
+        ],
+        "canRaiseCap": false
       },
       {
         "chain": "base",
         "address": "0x5634520dd1c044fd8e589a7113c2d8f8f279fc24",
         "label": "CSCBUSDC curator",
-        "role": "governor",
+        "role": "other",
         "authorityType": "safe",
         "safe": {
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095852,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "owners": [
             "0x8c5fdde03dfd6ac0d3d492321974f2ff573de1bd",
@@ -187,8 +200,8 @@
         },
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -221,14 +234,19 @@
           {
             "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
             "url": "https://basescan.org/block/52095852"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
-        "evidence": "Pinned curator() at base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/3, enabled-module count 0, guard zero. Independently re-read 2026-10-03 at the same block: full 3-owner roster, module pagination ended at 0x1 with 0 enabled modules, zero guard, fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. No independent-human or key-custody attestation follows from owner addresses.",
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), the exact curator role and Safe getOwners/getThreshold were re-read: 2-of-3. Complete SetIsAllocator/SetIsSentinel grant-event candidate censuses through the pin were checked against current mappings; the two former allocator candidates are inactive. Module pagination terminates at 0x1 with no enabled modules; guard is zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Adapter addition and absolute/relative cap increases have 259200-second selector delays; removeAdapter has 604800 seconds. Fee amounts, fee recipients, allocator admission and force-deallocation penalty have zero selector delays. The owner can replace the curator and sentinels immediately. No blanket timelock or human signer independence is asserted.",
         "threshold": 2,
         "signerCount": 3,
         "deploymentRefs": [
           "base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
-        ]
+        ],
+        "canRaiseCap": false
       },
       {
         "chain": "base",
@@ -242,8 +260,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
@@ -256,9 +274,13 @@
           {
             "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
-        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact sentinel mapping reads, proves this active holder. Sentinel can cancel pending curator actions and decrease allocation caps; it cannot create arbitrary share liabilities or expand caps. Protective role is not a mint authority. Safe getOwners/getThreshold prove 2-of-4; module pagination terminates at 0x1 and guard=0x0000000000000000000000000000000000000000; fallback=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Human independence and custody procedures are unestablished.",
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), the exact sentinel role and Safe getOwners/getThreshold were re-read: 2-of-4. Complete SetIsAllocator/SetIsSentinel grant-event candidate censuses through the pin were checked against current mappings; the two former allocator candidates are inactive. Module pagination terminates at 0x1 with no enabled modules; guard is zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The sentinel can revoke pending curator actions, lower caps and deallocate assets but cannot expand caps or create arbitrary share liabilities.",
         "threshold": 2,
         "signerCount": 4,
         "safe": {
@@ -271,8 +293,8 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095852,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
         }
@@ -289,8 +311,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
@@ -303,13 +325,18 @@
           {
             "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
-        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. Safe getOwners/getThreshold prove 1-of-6; module pagination terminates at 0x1 and guard=0x0000000000000000000000000000000000000000; fallback=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Human independence and custody procedures are unestablished.",
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), the exact allocator role and Safe getOwners/getThreshold were re-read: 1-of-7. Complete SetIsAllocator/SetIsSentinel grant-event candidate censuses through the pin were checked against current mappings; the two former allocator candidates are inactive. Module pagination terminates at 0x1 with no enabled modules; guard is zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The allocator can allocate/deallocate within configured caps, choose liquidity adapter/data and set maxRate without a timelock. This can affect ordinary withdrawal availability but cannot change the immutable share minting construction or raise curator caps. The roster now includes 0xda65e9960b996fff145c6c54c60e863fc928326f, so the former 1-of-6 observation is superseded by 1-of-7.",
         "threshold": 1,
-        "signerCount": 6,
+        "signerCount": 7,
         "safe": {
           "owners": [
+            "0xda65e9960b996fff145c6c54c60e863fc928326f",
             "0xfde446dac9377a716c9724073f2ead2c37c9fa48",
             "0x8c5fdde03dfd6ac0d3d492321974f2ff573de1bd",
             "0x323a2d85c1ceb74f9a0835dfd8ff3b6a2ec5e496",
@@ -320,8 +347,8 @@
           "threshold": 1,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095852,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
         }
@@ -338,8 +365,8 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
@@ -352,9 +379,13 @@
           {
             "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+            "url": "https://basescan.org/block/52630636"
           }
         ],
-        "evidence": "Complete grant-log candidate census from genesis through the pinned block, followed by exact allocator mapping reads, proves this active holder. Allocator can allocate/deallocate within curator caps, choose liquidity adapter/data and maxRate; it cannot change immutable share mint logic or raise curator caps. Allocation loss and ordinary exit-liveness risk remain. Safe getOwners/getThreshold prove 1-of-4; module pagination terminates at 0x1 and guard=0x0000000000000000000000000000000000000000; fallback=0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Human independence and custody procedures are unestablished.",
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), the exact allocator role and Safe getOwners/getThreshold were re-read: 1-of-4. Complete SetIsAllocator/SetIsSentinel grant-event candidate censuses through the pin were checked against current mappings; the two former allocator candidates are inactive. Module pagination terminates at 0x1 with no enabled modules; guard is zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The allocator can allocate/deallocate within configured caps, choose liquidity adapter/data and set maxRate without a timelock. This can affect ordinary withdrawal availability but cannot change the immutable share minting construction or raise curator caps.",
         "threshold": 1,
         "signerCount": 4,
         "safe": {
@@ -367,8 +398,8 @@
           "threshold": 1,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095852,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
         }
@@ -424,11 +455,15 @@
         {
           "label": "Verified standard Safe CompatibilityFallbackHandler source, 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
+        },
+        {
+          "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+          "url": "https://basescan.org/block/52630636"
         }
       ],
-      "evidence": "Clearstar cbAssets Vault (CSCBUSDC) at base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x812b71c33ae5eafebae967c5670e37eca3cab0ac holds 8 enumerated Morpho market IDs. At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation. Independent refinement reproduced exact deployed bytecode equality, owner/curator, all gate addresses and irreversible setters, per-selector delays, and full historical grant-event candidates with active mapping confirmation. Active allocators=0x40ddccac38e4f6f2cb802c09f0a08f39d3dcb48f,0xc2bf28544e3439de6cc0403961e274950ca74ca6; active sentinels=0x1bb2d4532fbedc2a93b77248d023657014c18458. Owner/curator and added Safe rosters, terminating module pages, guards and nonzero fallback handlers are explicitly recorded. This closes role-address/quorum and coarse module-presence census, NOT execution-complete controller/alternate-call reach, custody attestation or financial/insolvency assurance. Independently reproduced functional compiler/runtime correspondence against Sourcify runtimeMatch=match (matchId 30034094, verifiedAt 2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000). Only compiler-declared immutable offsets (asset AST37, decimals AST39, virtualShares AST41) and the 11-byte CBOR compiler tag at byte offset 21796 were masked; every remaining executable byte equals the Sourcify recompiled VaultV2 runtime. Each immutable occurrence separately equals this exact deployment asset()/decimals()/virtualShares() getter. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. This is functional source correspondence, not full metadata/creation-bytecode identity or a financial audit. Calibration 2026-10-03 preserves the following observations outside the umbrella census flag: Independent human control and key-custody procedures are not publicly established for the exact listed controller/signing addresses; no custody attestation is inferred from Safe quorum or empty EOA code. | Safe fallback handlers are identified but their complete executable noninterference is not certified. | No exact-vault independently signed financial assurance or enforceable statutory holder insolvency priority is established; this separate backing gap is not resolved by the mint-role census. Under calibration rule 3, the recorded none-detected module/guard census and standard CompatibilityFallbackHandler identities do not introduce a separately identified mint path; absence of an execution-complete noninterference certificate remains recorded, not treated as an unidentified authority. Mint-level reconciliation remains not-applicable to the reviewed immutable, deposit/fee-share accounting mechanism; the missing independently signed financial assurance and insolvency priority remain explicit Backing-domain gaps in the existing reserves/mechanism evidence. Known signer/quorum facts receive no inferred custody or human-independence credit. V2 correction: the exact deployment functional runtime equivalence proof closes the VaultV2 mint-code identity gap. Supply is issued by immutable deposit/fee-share accounting; reconciliation remains not-applicable to that mint mechanism and supervision remains none, with no financial-assurance or regulatory-supervision credit inferred. V2 rule 1 records the existing signing-policy/human-independence/key-custody observations on every exact identified Safe/EOA control. No custody attestation or human independence is inferred, and no automatic multisig custody-pricing claim is made.",
-      "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Clearstar cbAssets Vault (CSCBUSDC) at base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x812b71c33ae5eafebae967c5670e37eca3cab0ac holds 8 enumerated Morpho market IDs. At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation. Independent refinement reproduced exact deployed bytecode equality, owner/curator, all gate addresses and irreversible setters, per-selector delays, and full historical grant-event candidates with active mapping confirmation. Active allocators=0x40ddccac38e4f6f2cb802c09f0a08f39d3dcb48f,0xc2bf28544e3439de6cc0403961e274950ca74ca6; active sentinels=0x1bb2d4532fbedc2a93b77248d023657014c18458. Owner/curator and added Safe rosters, terminating module pages, guards and nonzero fallback handlers are explicitly recorded. This closes role-address/quorum and coarse module-presence census, NOT execution-complete controller/alternate-call reach, custody attestation or financial/insolvency assurance. Independently reproduced functional compiler/runtime correspondence against Sourcify runtimeMatch=match (matchId 30034094, verifiedAt 2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000). Only compiler-declared immutable offsets (asset AST37, decimals AST39, virtualShares AST41) and the 11-byte CBOR compiler tag at byte offset 21796 were masked; every remaining executable byte equals the Sourcify recompiled VaultV2 runtime. Each immutable occurrence separately equals this exact deployment asset()/decimals()/virtualShares() getter. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. This is functional source correspondence, not full metadata/creation-bytecode identity or a financial audit. Calibration 2026-10-03 preserves the following observations outside the umbrella census flag: Independent human control and key-custody procedures are not publicly established for the exact listed controller/signing addresses; no custody attestation is inferred from Safe quorum or empty EOA code. | Safe fallback handlers are identified but their complete executable noninterference is not certified. | No exact-vault independently signed financial assurance or enforceable statutory holder insolvency priority is established; this separate backing gap is not resolved by the mint-role census. Under calibration rule 3, the recorded none-detected module/guard census and standard CompatibilityFallbackHandler identities do not introduce a separately identified mint path; absence of an execution-complete noninterference certificate remains recorded, not treated as an unidentified authority. Mint-level reconciliation remains not-applicable to the reviewed immutable, deposit/fee-share accounting mechanism; the missing independently signed financial assurance and insolvency priority remain explicit Backing-domain gaps in the existing reserves/mechanism evidence. Known signer/quorum facts receive no inferred custody or human-independence credit. V2 correction: the exact deployment functional runtime equivalence proof closes the VaultV2 mint-code identity gap. Supply is issued by immutable deposit/fee-share accounting; reconciliation remains not-applicable to that mint mechanism and supervision remains none, with no financial-assurance or regulatory-supervision credit inferred. V2 rule 1 records the existing signing-policy/human-independence/key-custody observations on every exact identified Safe/EOA control. No custody attestation or human independence is inferred, and no automatic multisig custody-pricing claim is made. Fresh full role/Safe, selector-delay, gate and sole-adapter market census at Base block 52630636 (2026-10-15T07:50:19Z) supersedes the prior current-state pin. The 0x40ddccac38e4f6f2cb802c09f0a08f39d3dcb48f allocator is now 1-of-7, with one added owner. Allocation and share minting remain separate from Circle USDC issuance. Current force-deallocation penalty is 0.3% and is not an ordinary withdrawal fee.",
+      "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
+      "reviewedAt": "2026-10-15",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {
@@ -575,6 +610,23 @@
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
             }
           ]
+        }
+      ]
+    },
+    "headline": "Deposit-backed shares with local Safe-controlled allocation and fees; USDC issuance remains with Circle.",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "The exact immutable VaultV2 enter path transfers USDC from the depositor before creating shares; interest accounting creates only formula-derived performance/management fee shares. Owner, curator, sentinel and allocator powers change configuration, allocation and fee parameters, but the reviewed deployment exposes no arbitrary-recipient unbacked-share mint or minter-authorization path. Circle underlying issuance remains an inherited parent control, not a local discretionary share mint. Allocation caps are not an economic cap on USDC issuance.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
+      "sources": [
+        {
+          "label": "Exact VaultV2 deposit and fee-share source",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+          "url": "https://basescan.org/block/52630636"
         }
       ]
     }

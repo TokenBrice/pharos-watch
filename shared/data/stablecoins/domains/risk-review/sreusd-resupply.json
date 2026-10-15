@@ -16,13 +16,13 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
       },
       {
-        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; runtime correspondence and fixed local custody via https://ethereum-rpc.publicnode.com",
+        "url": "https://etherscan.io/block/26197384"
       }
     ],
     "evidence": "Verified nonproxy SavingsReUSD and its ERC-20/ERC-4626 source contain no direct holder blacklist, transfer pause, seizure or arbitrary-holder burn. Native ERC-4626 withdrawals burn the holder's shares under ordinary allowance rules. Core ownership and reward/bridge configuration are separate control powers, not proof of a native freeze. Freeze exposure remains inherited from reusd-resupply and its backing dependencies.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "oracleless",
@@ -31,8 +31,8 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
       "rationale": "The ERC-4626 share-to-underlying exchange rate is the top-level mint/redemption authority. There are no borrower-owned collateral branches on the savings token.",
       "sources": [
         {
@@ -48,13 +48,13 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
         },
         {
-          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-          "url": "https://etherscan.io/block/26107704"
+          "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; runtime-matched ERC-4626 and vested-reward pricing",
+          "url": "https://etherscan.io/block/26197384"
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -70,8 +70,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
       },
       {
-        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; runtime-matched ERC-4626 and vested-reward pricing",
+        "url": "https://etherscan.io/block/26197384"
       }
     ]
   }

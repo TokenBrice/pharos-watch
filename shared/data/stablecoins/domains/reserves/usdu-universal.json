@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_UsduUniversal)",
     "confidence": "verified",
     "sources": [
       {
@@ -36,10 +36,10 @@
       }
     ],
     "rationale": "Crowe obtained direct bank confirmations and independently traced exact Ethereum liabilities; all reported reserves are U.S. dollar deposits.",
-    "compositionBasis": "Crowe ISAE3000 reasonable-assurance examination: August31 2026 USD deposits30,651,543.81 / total reserves30,651,543.81 =100%; same token liabilities. September18 signed date is a publication stand-in.",
+    "compositionBasis": "Crowe ISAE 3000 reasonable-assurance examination: August 31, 2026 USD deposits of $30,651,543.81 / total reserves of $30,651,543.81 = 100%, matching the exact Ethereum token liabilities at both examined checkpoints. September 18 is the report signature date, used only as a publication stand-in. This historical report does not examine the subsequently announced Solana integration or current holdings.",
     "compositionAsOf": "2026-08-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "Asset type is fully classified. Bank-specific shares, contractual deposit maturities and independently established holder insolvency priority are undisclosed.",
+    "knownUnknownExposure": "The examined August 31, 2026 assets are fully classified as USD bank deposits. Management's accompanying notes also permit short-term USD UAE government securities in the future, if and when available; Crowe excludes those notes from assurance, and no securities were reported at either examined checkpoint. Bank-specific shares, contractual deposit maturities and independently established holder insolvency priority are undisclosed.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -58,8 +58,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_UsduUniversal)",
     "confidence": "verified",
     "sources": [
       {
@@ -75,11 +75,15 @@
         "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
       },
       {
-        "label": "Universal named reserve banking partners",
-        "url": "https://www.universal.ae/"
+        "label": "Universal January 29, 2026 launch names reserve banks",
+        "url": "https://www.universal.ae/news/universal-launches-uaes-first-central-bank-registered-usd-stablecoin"
+      },
+      {
+        "label": "Zodia July 2026 USDU custody announcement and reserve-bank claim",
+        "url": "https://zodia-custody.com/product-drop-usdu-custody-is-now-live/"
       }
     ],
-    "uncertainty": "The issuer names Emirates NBD and Mashreq as reserve banks without publishing allocation shares; Crowe confirms balances but does not identify banks in its examined schedule. The whitepaper separates Universal reserve accounts from Aquanow client money accounts. Crowe excludes accompanying notes and legal compliance; no independently verified holder trust, insolvency priority or whole-book rehypothecation prohibition is established.",
+    "uncertainty": "Universal's January 29 launch release and current product page identify Emirates NBD and Mashreq as reserve banks and Mbank separately as a corporate banking partner. Zodia's July custody announcement instead includes Mbank among reserve banks. Crowe names no banks in its examined schedule, so Mbank's reserve role and every bank's allocation remain unresolved. Zodia safeguards clients' USDU tokens, not the underlying reserve deposits or issuer administrative keys. The whitepaper separates Universal reserve accounts from Aquanow client money accounts and describes holder-first pro-rata insolvency distribution. Crowe excludes accompanying notes and legal compliance; these disclosures do not independently verify a holder trust, enforceable insolvency priority or whole-book rehypothecation prohibition. No current reserve-account terms or replacement-custodian recovery arrangement were established.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -14,13 +14,13 @@
   "pegReferenceId": "usdc-circle",
   "launchDate": "2026-01-22",
   "collateral": "USDC in the Clearstar-curated Morpho Vault V2 on base, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
-  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.3% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
     "rationale": "Clearstar cbAssets Vault (CSCBUSDC) at base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x812b71c33ae5eafebae967c5670e37eca3cab0ac holds 8 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications. Exact deployment creationTimestamp=1769074507 (2026-01-22T09:35:07Z), creationBlockNumber=41142580, independently read from Morpho vaultV2ByAddress.",
     "sources": [
       {
@@ -32,7 +32,7 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
       },
       {
-        "label": "Pinned base block 52095852",
+        "label": "Superseded base pin 52095852, 2026-10-02; retained historical evidence",
         "url": "https://basescan.org/block/52095852"
       },
       {
@@ -50,22 +50,46 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      },
+      {
+        "label": "Fresh accounting, sole-adapter inventory and gate census at Base block 52630636 (2026-10-15T07:50:19Z)",
+        "url": "https://basescan.org/block/52630636"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho vault",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
     },
     {
-      "label": "Vault mechanics",
+      "label": "Morpho: Vault asset flows",
       "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
     },
     {
-      "label": "Gate documentation",
+      "label": "Morpho: Gate documentation",
       "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    },
+    {
+      "label": "Website",
+      "url": "https://www.clearstar.xyz/"
+    },
+    {
+      "label": "Terms",
+      "url": "https://www.clearstar.xyz/legal/terms-of-service.html"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://basescan.org/address/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+    },
+    {
+      "label": "X",
+      "url": "https://twitter.com/clearstarlabs"
     }
   ],
   "contracts": [
@@ -76,7 +100,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Clearstar cbAssets Vault Morpho Vault V2",
@@ -84,7 +108,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "cscbusdc-clearstar",
     "display": {
@@ -108,7 +132,7 @@
       },
       "deployedExposure": {
         "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
-        "reviewedAt": "2026-10-02",
+        "reviewedAt": "2026-10-15",
         "sourceUrl": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
       },
       "redemptionLiquidity": {

@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_PendleusdcPendle, batch64 primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -43,8 +43,8 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete accounting and lending inventory",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       {
         "label": "Exact VaultV2 partial source with matching deployed bytecode",
@@ -55,9 +55,9 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
       }
     ],
-    "rationale": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. The 100% slice is the USDC-denominated deployed lending claim, not ownership of borrower collateral or a separate direct claim on Circle reserve assets.",
+    "rationale": "At Ethereum block 26197390 (2026-10-15T10:43:11Z), totalSupply=54428789336656703110422943 atomic 18-decimal shares; accrueInterestView assets=55037908277824 atomic 6-decimal USDC, pending performance shares=1632717121445232583 and management shares=0. Idle USDC=0. The sole adapter 0xa2f362079dbc570a6df5bd04ad91002d17c0db9a enumerates three markets: PT-reUSD-10DEC2026 claim=29800370819809, PT-sUSDS-26NOV2026 claim=16439548895416, PT-sUSDE-26NOV2026 claim=8797988562599 atomic USDC. Their sum equals adapter realAssets and vault totalAssets exactly; all three positions have zero borrower shares and zero posted collateral. Each market's immutable LLTV is 91.5%. convertToAssets(1e18)=1011191. The 100% slice represents USDC-denominated deployed lending claims, not ownership of borrower collateral or a separate direct claim on Circle reserve assets. No financial attestation, guaranteed full-slice liquidity horizon or legal recovery priority is inferred.",
     "compositionBasis": "Full fixed-block ERC-4626 vault, adapter and Morpho market inventory",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Current strategy claims and parent asset are identified. Borrower collateral custody, legal insolvency priority, future allocations and stressed realization remain uncertain.",
     "knownUnknownExposurePct": 0
@@ -66,8 +66,7 @@
     "providers": [
       {
         "name": "Pendle Ecosystem USDC Morpho Vault V2",
-        "role": "other",
-        "jurisdiction": "ethereum"
+        "role": "other"
       },
       {
         "name": "0xa2f362079dbc570a6df5bd04ad91002d17c0db9a MorphoMarketV1 adapter and Morpho markets",
@@ -76,9 +75,9 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_PendleusdcPendle, batch64 primary-source review",
     "confidence": "probable",
     "sources": [
       {
@@ -98,8 +97,8 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum block 26197390, 2026-10-15T10:43:11Z; exact vault, adapter and complete three-market position census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       {
         "label": "Exact VaultV2 partial source with matching deployed bytecode",
@@ -110,6 +109,6 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
       }
     ],
-    "uncertainty": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. All present local positions are onchain lending claims; borrowed USDC is intentionally reused by borrowers. Upstream USDC reserve custody and borrower-collateral custody are separate inherited/credit exposures. No legal segregation or insolvency-remoteness claim is established."
+    "uncertainty": "At Ethereum block 26197390 (2026-10-15T10:43:11Z), idle USDC=0 and all 55037908277824 atomic USDC of current assets are lender claims in the three enumerated PT collateral markets. The local vault/adapter/Morpho positions are onchain, but that does not establish whole-book onchain custody across parent USDC and the reUSD, sUSDS and sUSDE collateral backing layers. Borrowed USDC is intentionally reused. Whole-book custodyModel is therefore unknown; provider locations and complete local accounting do not establish legal segregation, insolvency remoteness, collateral realizability or financial assurance. Ethereum identifies the execution network, not a provider's legal jurisdiction. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

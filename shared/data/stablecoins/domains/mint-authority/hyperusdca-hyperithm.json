@@ -13,8 +13,8 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "hyperUSDCa VaultV2 share issuer",
-      "observedAt": "2026-10-02",
-      "observedBlock": 110016412,
+      "observedAt": "2026-10-15",
+      "observedBlock": 113592449,
       "sources": [
         {
           "label": "Exact Morpho Vault V2 deployment",
@@ -43,6 +43,10 @@
         {
           "label": "Exact Morpho lending adapter",
           "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+        },
+        {
+          "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+          "url": "https://monadscan.com/block/113592449"
         }
       ]
     },
@@ -56,8 +60,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016412,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592449,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -86,9 +90,13 @@
           {
             "label": "Exact Morpho lending adapter",
             "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+          },
+          {
+            "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+            "url": "https://monadscan.com/block/113592449"
           }
         ],
-        "evidence": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. Performance fee 5% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero.",
+        "evidence": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: asset()=0x754704bc059f8c67012fed69bc8a327a5aafb603; share decimals=18, underlying decimals=6; verified nonproxy VaultV2 runtime; all three EIP-1967 implementation/admin/beacon slots are zero. Deposit/mint transfers USDC before issuing shares; accrued performance-fee shares follow the accounting formula. Performance fee=5%, management fee=0%; sole adapter has nine funded lender positions. No arbitrary share mint or underlying USDC mint entrypoint is established.",
         "deploymentRefs": [
           "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
         ]
@@ -103,8 +111,8 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 110016412,
-          "observedAt": "2026-10-02",
+          "observedBlock": 113592449,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "owners": [
             "0x270427b58d0faf37eeb5c5bced0bb8aee696520b",
@@ -114,8 +122,8 @@
         },
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016412,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592449,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -148,25 +156,30 @@
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+            "url": "https://monadscan.com/block/113592449"
           }
         ],
-        "evidence": "Pinned owner() at monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/3, enabled-module count 0, guard zero. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 110117695: setPerformanceFee(uint256)=0 sec; setManagementFee(uint256)=0 sec. No blanket all-action timelock is inferred.",
+        "evidence": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: owner()=0xee7e9bb21d5589bf657b94083db2fa349a3918c8; getThreshold()=2, getOwners() returns the retained three owners; getModulesPaginated sentinel returned an empty list and pagination end, Safe guard storage is zero. Owner can replace curator and sentinels; quorum does not establish independent humans or signing policy. Current selector timelocks are recorded in the profile review; owner actions themselves have no vault timelock.",
         "threshold": 2,
         "signerCount": 3,
         "deploymentRefs": [
           "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
-        ]
+        ],
+        "canRaiseCap": false
       },
       {
         "chain": "monad",
         "address": "0x75178137d3b4b9a0f771e0e149b00fb8167ba325",
         "label": "hyperUSDCa curator",
-        "role": "governor",
+        "role": "other",
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
-        "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016412,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592449,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -199,12 +212,17 @@
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+            "url": "https://monadscan.com/block/113592449"
           }
         ],
-        "evidence": "Pinned curator() at monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 259200, \"increaseAbsoluteCap(bytes,uint256)\": 259200, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Current API timelock census, independently reconfirmed by RPC on 2026-10-03 at block 110117695: setPerformanceFee(uint256)=0 sec; setManagementFee(uint256)=0 sec. No blanket all-action timelock is inferred.",
+        "evidence": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: curator()=0x75178137d3b4b9a0f771e0e149b00fb8167ba325; eth_getCode=0x. Curator can submit/execute timelocked configuration, lower caps and revoke pending actions, but cannot mint arbitrary share or underlying USDC supply. Adapter addition and absolute/relative cap increases each require 259200 seconds; fee, fee-recipient and allocator selectors have zero delay. Transfer and ordinary-withdrawal gate setters are abdicated.",
         "deploymentRefs": [
           "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
-        ]
+        ],
+        "canRaiseCap": false
       },
       {
         "chain": "monad",
@@ -213,13 +231,13 @@
           "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
         ],
         "label": "Hyperithm USDC Apex allocator 0x345e93f786e485b9f738b9a1a528c6eef1c73c5f",
-        "role": "governor",
+        "role": "other",
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 110117695,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592449,
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -228,9 +246,43 @@
           {
             "label": "monad RPC role/code census at block 110117695; credentials omitted",
             "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+            "url": "https://monadscan.com/block/113592449"
           }
         ],
-        "evidence": "On 2026-10-03 at monad block 110117695, isAllocator(address) returned true. This role can allocate/deallocate within configured adapter/cap bounds, set liquidity adapter/data and maxRate; it cannot call arbitrary share mint or mint parent USDC."
+        "evidence": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: isAllocator(0x345e93f786e485b9f738b9a1a528c6eef1c73c5f)=true and eth_getCode=0x. The sole allocator in the protocol API census may allocate within configured caps, choose liquidity adapter/data and set maxRate. liquidityAdapter() is zero and forceDeallocatePenalty(adapter)=0. No arbitrary share or underlying USDC mint power is established."
+      },
+      {
+        "chain": "monad",
+        "address": "0x5d7a97ef752b62526d961152e90896dbb3873a7e",
+        "deploymentRefs": [
+          "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        ],
+        "label": "hyperUSDCa sentinel",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592449,
+        "sources": [
+          {
+            "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+            "url": "https://monadscan.com/block/113592449"
+          },
+          {
+            "label": "Morpho exact vault role census",
+            "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "VaultV2 sentinel permissions",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: isSentinel(0x5d7a97ef752b62526d961152e90896dbb3873a7e)=true and eth_getCode=0x; the API returns this sole sentinel. Exact VaultV2 code permits revoking pending changes, lowering absolute/relative caps and deallocating. The sentinel cannot allocate, raise caps, replace owner/curator or mint arbitrary shares. This restriction-only role was missing from the prior census."
       }
     ],
     "review": {
@@ -279,11 +331,15 @@
         {
           "label": "Hyperithm Accountable issuer-book attestation; exact-vault scope unestablished",
           "url": "https://accountable.hyperithm.com/"
+        },
+        {
+          "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+          "url": "https://monadscan.com/block/113592449"
         }
       ],
-      "evidence": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation. On 2026-10-03 the exact owner/curator returned by Morpho were independently reconfirmed by RPC. Published allocator/sentinel addresses were each checked with isAllocator/isSentinel at block 110117695. Selector-specific fee delays and the published role census are recorded below; no exhaustive module-permission or independent-human-signer closure is claimed. Calibration retention (2026-10-03): Independent human signers and key-custody procedures are not established. No exact-vault financial assurance or statutory holder priority was established. Mint reconciliation remains not-applicable to this deposit-backed local share/fee-share mechanism; independent financial assurance, reserve-to-liability reconciliation and holder insolvency priority remain separate Backing observations, not a claim that such assurance exists. Parent durable-token issuance is inherited and is not resolved by this local share review. Calibration v2 custody retention: signer independence, actual key custody and signing-policy questions are restored separately for each identified Safe/EOA controller; known controller addresses and quorum evidence do not establish the human/key-custody facts. Reconciliation remains not-applicable because this is a local deposit-backed ERC-4626 share/fee-share mechanism, not an issuer supply-to-reserve reconciliation regime; parent durable issuance and independent financial assurance are not established by this local review. Supervision remains none: no local prudential or assurance-opinion credit is claimed.",
-      "reviewer": "Sol mint-authority calibration v2 2026-10-03 (Refine09)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: exact one-vault/one-adapter/nine-market census; immutable share implementation, two-of-three owner Safe, curator EOA, sole allocator EOA and previously omitted sentinel EOA are confirmed. All four gates are zero; receiveShares/sendShares/receiveAssets gate setters and setAdapterRegistry are abdicated. Adapter registry is 0x6a42f8b46224baa4dbbbc2f860f4675eea7bd52b. All 18 API-listed selector delays and abdications were reread at the same pin: setIsAllocator=0s, setReceiveSharesGate=604800s (abdicated), setSendSharesGate=604800s (abdicated), setReceiveAssetsGate=604800s (abdicated), setSendAssetsGate=0s, setAdapterRegistry=0s (abdicated), addAdapter=259200s, removeAdapter=604800s, increaseTimelock=604800s, decreaseTimelock=0s, setPerformanceFee=0s, setManagementFee=0s, setPerformanceFeeRecipient=0s, setManagementFeeRecipient=0s, increaseAbsoluteCap=259200s, increaseRelativeCap=259200s, setForceDeallocatePenalty=0s, abdicate=604800s. Selector-specific delays are not a blanket all-action timelock. Existing key custody/human independence questions remain unanswered; the firm-wide Fordefi announcement does not bind these exact controllers. The new sentinel has no issuance power.",
+      "reviewer": "Pharos batch64 review (Rev_HyperusdcaHyperithm)",
+      "reviewedAt": "2026-10-15",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {
@@ -384,6 +440,27 @@
               "url": "https://rpc.monad.xyz"
             }
           ]
+        }
+      ]
+    },
+    "headline": "Deposit-backed shares inherit USDC issuance risk; owner, curator and allocator control strategy parameters, while a sentinel can restrict allocations.",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "The exact immutable VaultV2 deposit/mint path transfers the required underlying USDC before minting shares; the only other share creation is formula-bound accrued fee shares. Owner/curator can alter strategy allocations and bounded fees but cannot invoke an arbitrary-recipient unbacked share mint or replace this share contract. These local share constraints do not remove Circle issuance authority or borrower credit risk, carried through the USDC parent and strategy positions.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch64 review (Rev_HyperusdcaHyperithm)",
+      "sources": [
+        {
+          "label": "Exact verified VaultV2 implementation",
+          "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+        },
+        {
+          "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+          "url": "https://monadscan.com/block/113592449"
+        },
+        {
+          "label": "VaultV2 issuance and fee accounting",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
         }
       ]
     }

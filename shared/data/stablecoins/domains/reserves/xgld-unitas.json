@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane43Unitas)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review Rev_XgldUnitas",
     "confidence": "probable",
     "sources": [
       {
@@ -45,11 +45,11 @@
         "url": "https://docs.unitas.so/mainnet-program-and-address-index.md"
       }
     ],
-    "rationale": "Classification-only research on 2026-10-09 retains the 2026-10-03 composition date and unmeasured 100% strategy envelope. The XGLD-specific Accountable response reports gross venue totals for Binance and Bnb_smartchain, without a token/position inventory or borrowed-USDT liability schedule. Neither venue label identifies an economic reserve class, exhaustive issuer/obligor census, contractual maturity maximum or reserve realization horizon. The primary XGLD page describes XAUt collateral, BYBIT borrowing and delta-neutral strategies; its seven-day holder cooldown does not establish liquidity of either reserve location. Published platform terms and the address index concern USDu/sUSDu and do not identify XGLD's immediate legal custodian. No live percentage, debt-netted NAV, financial-assurance credit or tracked-parent allocation is inferred.",
+    "rationale": "Primary-source review on 2026-10-15 retains the unmeasured 100% strategy envelope and original 2026-10-03 economic-composition date. The XGLD Accountable response at 2026-10-15T10:31:32.186Z reports gross reserves of $12386709.43: Binance $12069895.62 and Bnb_smartchain $316813.81, against token-supply value $4226267.13. These figures describe gross venues, not a complete instrument inventory or debt-netted solvency. In particular, the response's cryptographic collateral/liability proof parameters are not shown to reconcile the borrowed-USDT obligations of the XGLD strategy. Primary docs still describe XAUt collateral, BYBIT borrowing, OES and delta-neutral strategies; no exact legal custodian, net allocation, contractual maturity maximum or reserve realization horizon is established. The seven-day holder cooldown is not a reserve-liquidity certificate. Platform terms and address disclosures concern USDu/sUSDu, not an identified XGLD issuing entity. No financial-assurance credit or measured parent-backing weight is inferred.",
     "compositionBasis": "Issuer strategy and gross Accountable venue disclosure; borrowed debt not netted",
     "compositionAsOf": "2026-10-03",
     "scope": "full-composition",
-    "knownUnknownExposure": "Both live Accountable location slices, Binance and Bnb_smartchain, lack exact economic-instrument inventories, complete obligor identities, contractual maturities and reserve realization terms in the XGLD-specific primary surfaces reviewed 2026-10-09. Gross location values cannot establish those facts. Borrowed liabilities, immediate legal custodians, segregation and net weights remain unestablished; the original compositionAsOf is retained.",
+    "knownUnknownExposure": "Both live Accountable location slices lack exact economic-instrument inventories, complete obligor identities, contractual maturities and reserve realization terms in the XGLD-specific primary surfaces reviewed 2026-10-15. Gross location and cryptographic proof totals do not establish complete strategy-debt reconciliation. Borrowed liabilities, immediate legal custodians, segregation and net weights remain unestablished; the economic compositionAsOf is retained rather than refreshed from a location snapshot.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -75,8 +75,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine06 primary-source and Accountable review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review Rev_XgldUnitas",
     "confidence": "probable",
     "sources": [
       {
@@ -92,7 +92,7 @@
         "url": "https://docs.unitas.so/overview/xgld.md"
       }
     ],
-    "uncertainty": "At the 2026-10-03 dashboard observation Binance represents about 95.1% of gross venue reserves, with the remainder on BNB; this is concentration evidence, not a legal-custodian or net-backing share. Program OES docs name Copper/Ceffu, segregated MPC cold storage and approximately hourly rebalancing in USDu context, but do not bind those providers or protections to XGLD. Exact Fund Vault addresses, XGLD legal custody/continuity, borrowed liabilities and net weights remain unverified.",
+    "uncertainty": "The Accountable observation timestamped 2026-10-15T10:31:32.186Z assigns about 97.44% of $12386709.43 gross venue reserves to Binance and the rest to Bnb_smartchain. This updates the historical October 3 concentration observation, not a legal-custodian or net-backing share. Program OES docs name Copper/Ceffu and safeguards in USDu context but do not bind those providers or protections to XGLD. Exact Fund Vault addresses, legal custody/continuity, complete borrowed liabilities and net weights remain unverified.",
     "knownUnknownExposurePct": 100
   }
 }

@@ -19,7 +19,7 @@
     "issuerDomicile": "United Kingdom",
     "foreignExceptionStatus": "unknown",
     "redemptionPolicyPresent": true,
-    "notes": "The review maps the exact token to its foreign issuer and does not establish U.S. distribution, official GENIUS approval/application or a registered foreign-issuer exception. Agant's current company-page disclosure identifies FCA cryptoasset registration under the Money Laundering Regulations 2017, FRN 1037671, and explicitly excludes GBPA services from FSCS and FOS coverage. This issuer-disclosed AML registration is not evidence of prudential stablecoin authorization. Foreign licensing and reserve disclosures are not substituted for U.S. authorization. The dated public-source negative-evidence review now supports no-public-authorization-found; its boundaries do not support an ineligibility finding. The Nephos September 30, 2026 report supplies public reserve-to-supply figures but expressly disclaims a full audit or formal assurance engagement; a recurring monthly report series was not established. Direct business platform onboarding is limited to UK-incorporated entities, with retail access through onboarded distributors. DASP status reflects the pre-effective GENIUS framework, not permission under other U.S. laws.",
+    "notes": "The review maps the exact token to its foreign issuer and does not establish U.S. distribution, official GENIUS approval/application or a registered foreign-issuer exception. Agant's company-page disclosure identifies FCA cryptoasset registration under the Money Laundering Regulations 2017, FRN 1037671, and explicitly excludes GBPA services from FSCS and FOS coverage. This issuer-disclosed AML registration is not prudential stablecoin authorization and is not substituted for U.S. authorization. The bounded October 7 negative-evidence review supports no-public-authorization-found, not ineligibility; its historical search scope and dates are preserved. On October 15 the public issuer archive was rendered and lists June, July, August and September 2026 proof-of-reserves reports. The August and September Nephos reports were reopened and reconcile reserves to supply, but expressly disclaim a full audit or formal assurance engagement despite their examination openings. Monthly publication is established; audit-grade assurance is not. Direct platform onboarding remains limited to appropriately FCA-authorized/registered UK business distribution customers, with retail access through onboarded distributors. DASP status reflects the pre-effective GENIUS framework, not permission under other U.S. laws. EU offer/admission scope and token-specific MiCA authorization remain unestablished; no guessed MiCA row is authored.",
     "references": [
       {
         "label": "Agant GBPA token design",
@@ -84,11 +84,24 @@
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-10-07",
         "sourceDate": "2026-02-25"
+      },
+      {
+        "label": "Agant public June-September 2026 monthly reserve-report archive",
+        "url": "https://security.agant.io/resources",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-15"
+      },
+      {
+        "label": "Nephos GBPA whole-supply reserve attestation as of August 31, 2026",
+        "url": "https://security.agant.io/doc/trust?rid=6a96cc38d6872004fe8bb2a0&r=lz53fv2d0lk02myddnbz7&download=true",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-15"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "reviewer": "Batch-64 review (Rev_GbpaAgant)",
+    "reviewedAt": "2026-10-15",
     "reserveDisclosurePresent": true,
+    "monthlyAttestationPresent": true,
     "reserveDisclosureUrl": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true",
     "daspOfferSaleStatus": "not-yet-restricted",
     "negativeEvidenceReview": {

@@ -9,7 +9,7 @@
       "coinId": "usdc-circle",
       "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Circle USDC and Wintermute-curated Morpho lending markets, including principal-token and nested Morpho V1 USDC vault-share borrower collateral",
+      "issuerOrObligor": "Circle USDC and Wintermute-curated Morpho lending markets, including principal-token, Wildcat debt-token wrapper and 3Jane USD3 borrower collateral",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 pinned composition review",
     "confidence": "verified",
     "sources": [
       {
@@ -57,11 +57,23 @@
       {
         "label": "Six-market adapter census at Ethereum block 26110193 and chainId 1 Morpho marketById collateral resolution, accessed 2026-10-03",
         "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Complete seven-market inventory at Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Exact v-wmtUSDC Wildcat4626Wrapper source and wrapped market",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf65460b84c13eeb911303336ab0f9d63cc79839f"
+      },
+      {
+        "label": "Armitage terms: no withdrawal guarantee, curator identity and conflicts",
+        "url": "https://armitage.wintermute.com/terms-of-use"
       }
     ],
-    "rationale": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units. The 100% slice is the USDC-denominated deployed lending claim, not ownership of borrower collateral or a separate direct claim on Circle reserve assets. Supplemental collateral census: market 0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b uses v-wmtUSDC 0xf65460b84c13eeb911303336ab0f9d63cc79839f; market 0xc7e49dd404825da16988955201ed22ecf8a7b25f0337db8a698d70d7a9f343ea uses PT-USDat-14JAN2027 0xba96292ee7673e3b546cc90db6d97111cd9a314f. No borrower-collateral percentages are inferred from token identity.",
+    "rationale": "Ethereum block 26197390 (2026-10-15T10:43:11Z): totalSupply=45777319351152393341737589 atomic 18-decimal shares; totalAssets=46779493778612 atomic 6-decimal USDC. Idle USDC and pending fee shares are zero. The sole adapter's seven expectedSupplyAssets values sum exactly to totalAssets: cbBTC=22522079579271 (48.1452%), WBTC=6849318976780 (14.6417%), PT-reUSD-10DEC2026=8017712569874 (17.1394%), v-wmtUSDC=4355776296301 (9.3113%), PT-USDat-14JAN2027=1037902596668 (2.2187%), wstETH=2507240142441 (5.3597%), 3Jane USD3=1489463617277 (3.1840%). These percentages describe lender allocations by collateral market, not ownership of collateral. Every adapter position has zero borrow shares and zero posted collateral. The 100% reserve slice remains the deployed USDC lending claim. v-wmtUSDC is Wildcat4626Wrapper over Wildcat debt token 0xc9499006a149c553d18171747ed19aa7c6dd19e2, not a Morpho V1 vault.",
     "compositionBasis": "Full fixed-block ERC-4626 vault, adapter and Morpho market inventory",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Current strategy claims and parent asset are identified. Borrower collateral custody, legal insolvency priority, future allocations and stressed realization remain uncertain.",
     "knownUnknownExposurePct": 0
@@ -70,8 +82,7 @@
     "providers": [
       {
         "name": "Wintermute USDC Select Morpho Vault V2",
-        "role": "other",
-        "jurisdiction": "ethereum"
+        "role": "other"
       },
       {
         "name": "0x3b9e060a2b05588126fda01b95e9485687fc91d7 MorphoMarketV1 adapter and Morpho markets",
@@ -80,9 +91,9 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 whole-book custody review",
     "confidence": "probable",
     "sources": [
       {
@@ -112,8 +123,16 @@
       {
         "label": "Exact adapter partial source with matching deployed bytecode",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
+      },
+      {
+        "label": "Ethereum block 26197390, 2026-10-15T10:43:11Z; complete seven-market lender inventory",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Armitage terms: noncustodial shares, counterparty exposure, no guaranteed exit",
+        "url": "https://armitage.wintermute.com/terms-of-use"
       }
     ],
-    "uncertainty": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units. All present local positions are onchain lending claims; borrowed USDC is intentionally reused by borrowers. Upstream USDC reserve custody and borrower-collateral custody are separate inherited/credit exposures. No legal segregation or insolvency-remoteness claim is established."
+    "uncertainty": "At Ethereum block 26197390, all immediate positions are onchain USDC lending claims and borrowers reuse the lent USDC. That local custody fact does not establish fully onchain custody for the complete economic book. cbBTC/WBTC-secured lending is 62.7869% of NAV; additional claims depend on PT-reUSD, PT-USDat, Wildcat unsecured debt-token collateral and 3Jane USD3. Their full downstream asset custody and legal priority were not established. The material custodial BTC collateral layer alongside onchain positions makes the whole-book custodyModel mixed. Circle reserve custody remains a separate inherited exposure. The curator's terms disclaim custody of depositor shares, financial protection and guaranteed withdrawal timing; they establish neither legal segregation nor bankruptcy remoteness. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

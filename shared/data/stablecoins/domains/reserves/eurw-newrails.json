@@ -22,10 +22,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_EurwNewrails",
     "confidence": "manual-review",
     "sources": [
+      {
+        "label": "Newrails business account: cash and AAA-rated MMF description",
+        "url": "https://www.newrails.xyz/en/business/account"
+      },
+      {
+        "label": "Newrails EURW guide: cash and overnight deposit description reviewed October 15, 2026",
+        "url": "https://www.newrails.xyz/en/hubs/euro-stablecoin"
+      },
       {
         "label": "Newrails EURW MiCA whitepaper notified May 26, 2026",
         "url": "https://cmpl-docs.newrails.xyz/docs/Newrails%20EURW%20WP%202026-05-26.xhtml"
@@ -39,10 +47,10 @@
         "url": "https://www.newrails.xyz/en/download-centre"
       }
     ],
-    "rationale": "The whitepaper specifies at least 30% cash at regulated EU credit institutions and up to 70% euro government MMFs or similar investments. These are policy bounds, not measured weights. The full reserve envelope is therefore one explicitly unclassified basket; no 30/70 allocation is invented. The current product page claims monthly independent reports, but its linked artifact is a smart-contract security audit and the retrieved download inventory exposes no exact-token financial reserve reconciliation. Medium legacy risk records the unresolved permitted-investment basket, not an observed loss.",
+    "rationale": "The whitepaper and product page specify at least 30% cash at regulated EU credit institutions and up to 70% euro government MMFs or similar investments. These are policy bounds, not measured weights. The issuer's EURW guide separately describes cash and overnight deposits, while its business-account page mentions cash and AAA-rated MMFs. No dated portfolio report reconciles these descriptions. The reserve envelope remains one explicitly unclassified basket; no 30/70 allocation is invented. The product page claims monthly independent reports but links a smart-contract security audit. The download centre yielded only navigation and a whitepaper link on this review, so its incomplete rendering is not proof that reports do not exist. No exact-token financial reserve reconciliation was retrieved from the accessible materials. Medium legacy risk records the unresolved permitted-investment basket, not an observed loss.",
     "compositionBasis": "Issuer whitepaper and product-page reserve eligibility, with no observed cash/investment allocation",
     "scope": "classification-only",
-    "knownUnknownExposure": "No dated portfolio inventory, allocation, named reserve bank, fund identity, maturity schedule or exact-token independent financial reconciliation was retrieved. Corporate financial audit and code audit do not establish reserve assurance.",
+    "knownUnknownExposure": "No dated portfolio inventory, allocation, named reserve bank, fund identity, maturity schedule or exact-token independent financial reconciliation was retrieved. The current cash/overnight guide and cash/MMF disclosures are not reconciled by a dated holdings report. Corporate financial audit and code audit do not establish reserve assurance.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -65,8 +73,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_EurwNewrails",
     "confidence": "manual-review",
     "sources": [
       {

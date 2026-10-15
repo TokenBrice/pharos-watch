@@ -4,7 +4,8 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "MoonPay issuance uses a mutable IssuerGateway, while the earner manager can mint rewards directly to any account. The same issuer address controls token roles, rewards and ProxyAdmin on all four catalogued chains. A 300-second gateway delay does not constrain the reward or upgrade paths. An additional 0G native deployment has zero supply at block46024355 and is evidenced but not registered.",
+    "summary": "MoonPay issuance uses a mutable IssuerGateway, while the earner manager can configure rewards and mint outside the gateway queue. Ethereum, Arbitrum, Monad and Base share an issuer admin and token ProxyAdmin owner. Gateway delay is 300 seconds, not a financial issuance cap. The fifth native deployment on 0G has a different single-key administrator, which also owns its token and gateway upgrades. All five native stocks must be read for complete supply.",
+    "headline": "Issuer-controlled minting and upgrades remain outside the gateway delay; independent reserve reconciliation and signing safeguards are undisclosed.",
     "controls": [
       {
         "chain": "ethereum",
@@ -17,8 +18,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
         "sources": [
           {
             "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -37,8 +38,8 @@
             "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
           }
         ],
-        "evidence": "Official deployment roster and token security specification identify IssuerGateway as ISSUER_ROLE holder. The gateway mint delay was 300 seconds at block 26107703. This delays the gateway queue only; direct earner-manager reward minting and admin-granted issuer roles are not bounded by it.",
-        "capDescription": "Queue delay is mutable and is not a reserve-enforcing economic cap.",
+        "evidence": "Ethereum block 26197396 (2026-10-15T10:44:23Z), https://api-ethereum-mainnet.n.dwellir.com: hasRole(ISSUER_ROLE,IssuerGateway)=true, mintDelay()=300 and mintTTL()=10800. getRateLimitConfig(gateway) returns capacity 25000000000000 and refillPerSecond 12500000000 raw units (25 million PYUSDx burst, 12500 PYUSDx/second). These mutable token-bucket limits and the gateway delay do not enforce PYUSD reserve coverage.",
+        "capDescription": "Mutable 25 million-token burst and 12500-token/second refill; not a financial cap or a bound on reward and upgrade issuance.",
         "canRaiseCap": "unknown"
       },
       {
@@ -62,8 +63,8 @@
           "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.",
           "The same no-code address owns token ProxyAdmin and can replace native mint logic."
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
         "sources": [
           {
             "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -86,7 +87,7 @@
             "url": "https://etherscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
           }
         ],
-        "evidence": "At block 26107703, DEFAULT_ADMIN_ROLE(owner)=true, earnerManager()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, ProxyAdmin.owner()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, eth_getCode(owner)=0x. Security and token/yield specifications document role granting and direct distributeReward() issuance. No MPC, HSM or multisignature safeguards are established by a no-code address."
+        "evidence": "Ethereum block 26197396 (2026-10-15T10:44:23Z), https://api-ethereum-mainnet.n.dwellir.com: DEFAULT_ADMIN_ROLE(owner)=true, earnerManager() and token ProxyAdmin.owner() both equal this address, eth_getCode(owner)=0x. The complete 17-event token permission census through this pin retains this sole admin and rate-limit manager. Its reward bucket is currently unconfigured (capacity=0, refill=0), so direct distributeReward requires configuration first; its rate-limit-manager and admin powers can configure that path without a reserve-enforcing cap. No key-custody safeguards are established by a no-code address."
       },
       {
         "chain": "arbitrum",
@@ -99,8 +100,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123860,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
         "sources": [
           {
             "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -119,8 +120,8 @@
             "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
           }
         ],
-        "evidence": "Official deployment roster and token security specification identify IssuerGateway as ISSUER_ROLE holder. The gateway mint delay was 300 seconds at block 511123860. This delays the gateway queue only; direct earner-manager reward minting and admin-granted issuer roles are not bounded by it.",
-        "capDescription": "Queue delay is mutable and is not a reserve-enforcing economic cap.",
+        "evidence": "Arbitrum block 515035868 (2026-10-15T10:44:30Z), https://api-arbitrum-mainnet-archive.n.dwellir.com: hasRole(ISSUER_ROLE,IssuerGateway)=true, mintDelay()=300 and mintTTL()=10800. Gateway capacity is 25000000000000 raw and refillPerSecond 12500000000 raw (25 million PYUSDx burst, 12500 PYUSDx/second). These mutable token-bucket limits do not enforce reserve coverage or bound reward and upgrade paths.",
+        "capDescription": "Mutable 25 million-token burst and 12500-token/second refill; not a financial issuance cap.",
         "canRaiseCap": "unknown"
       },
       {
@@ -144,8 +145,8 @@
           "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.",
           "The same no-code address owns token ProxyAdmin and can replace native mint logic."
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123860,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
         "sources": [
           {
             "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -168,7 +169,7 @@
             "url": "https://arbiscan.io/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
           }
         ],
-        "evidence": "At block 511123860, DEFAULT_ADMIN_ROLE(owner)=true, earnerManager()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, ProxyAdmin.owner()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, eth_getCode(owner)=0x. Security and token/yield specifications document role granting and direct distributeReward() issuance. No MPC, HSM or multisignature safeguards are established by a no-code address."
+        "evidence": "Arbitrum block 515035868 (2026-10-15T10:44:30Z), https://api-arbitrum-mainnet-archive.n.dwellir.com: DEFAULT_ADMIN_ROLE(owner)=true, earnerManager() and token ProxyAdmin.owner() both equal this no-code address. Complete 17-event token permission history through this pin retains this sole admin/rate-limit manager. Its reward bucket capacity is 5000000000000 raw and refillPerSecond 2500000000 raw (5 million PYUSDx burst, 2500 PYUSDx/second), mutable by the rate-limit manager. Direct rewards bypass the gateway queue; signing safeguards remain undisclosed."
       },
       {
         "chain": "monad",
@@ -181,8 +182,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016384,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
         "sources": [
           {
             "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -201,8 +202,8 @@
             "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
           }
         ],
-        "evidence": "Official deployment roster and token security specification identify IssuerGateway as ISSUER_ROLE holder. The gateway mint delay was 300 seconds at block 110016384. This delays the gateway queue only; direct earner-manager reward minting and admin-granted issuer roles are not bounded by it.",
-        "capDescription": "Queue delay is mutable and is not a reserve-enforcing economic cap.",
+        "evidence": "Monad block 113592531 (2026-10-15T10:44:30Z), https://api-monad-mainnet-full.n.dwellir.com: hasRole(ISSUER_ROLE,IssuerGateway)=true, mintDelay()=300 and mintTTL()=10800. Gateway capacity is 25000000000000 raw and refillPerSecond 12500000000 raw (25 million PYUSDx burst, 12500 PYUSDx/second). The mutable queue and token-bucket limits are not a reserve-enforcing economic cap.",
+        "capDescription": "Mutable 25 million-token burst and 12500-token/second refill; reward and upgrade issuance remain separate.",
         "canRaiseCap": "unknown"
       },
       {
@@ -226,8 +227,8 @@
           "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.",
           "The same no-code address owns token ProxyAdmin and can replace native mint logic."
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016384,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
         "sources": [
           {
             "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -250,7 +251,7 @@
             "url": "https://monadscan.com/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
           }
         ],
-        "evidence": "At block 110016384, DEFAULT_ADMIN_ROLE(owner)=true, earnerManager()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, ProxyAdmin.owner()=0x314160525f5ea6677d3908112ff9bd885f3bb78e, eth_getCode(owner)=0x. Security and token/yield specifications document role granting and direct distributeReward() issuance. No MPC, HSM or multisignature safeguards are established by a no-code address."
+        "evidence": "Monad block 113592531 (2026-10-15T10:44:30Z), https://api-monad-mainnet-full.n.dwellir.com: DEFAULT_ADMIN_ROLE(owner)=true, earnerManager() and token ProxyAdmin.owner() equal this no-code address. Complete 17-event token permission history through this pin retains this sole admin/rate-limit manager. Its reward bucket capacity is 5000000000000 raw and refillPerSecond 2500000000 raw (5 million PYUSDx burst, 2500 PYUSDx/second). Mutable reward issuance bypasses the gateway queue; no MPC/HSM or independent signing safeguards are inferred."
       },
       {
         "chain": "base",
@@ -261,10 +262,10 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52110793,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
         "sources": [{"label": "Exact Base native token and issuer roles", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}],
-        "evidence": "Complete RoleGranted/RoleRevoked history from block0 through52110793 returned17events, leaving exactly IssuerGateway and Portal0xaad1466fe33d373189fb9dcc47270e608feee8a7 as ISSUER_ROLE members. Portal issuance is separately reviewed as burn/mint bridge authority."
+        "evidence": "Base block 52635861 (2026-10-15T10:44:29Z), https://api-base-mainnet-archive.n.dwellir.com: hasRole(ISSUER_ROLE,IssuerGateway)=true; mintDelay()=300, mintTTL()=10800. Gateway capacity 25000000000000 raw and refillPerSecond 12500000000 raw match the other catalogued deployments. A complete pinned 10000-block-page RPC permission census from the pre-deployment no-code boundary at block 50000000 through 52635861 returns 17 token role events and retains exactly IssuerGateway plus Portal as issuer-role holders."
       },
       {
         "chain": "base",
@@ -278,36 +279,332 @@
         "canRaiseCap": true,
         "failureDomainKeys": ["entity:moonpay-pyusdx-issuer", "address:0x314160525f5ea6677d3908112ff9bd885f3bb78e"],
         "bypassSurfaces": ["Direct reward issuance outside the IssuerGateway queue.", "DEFAULT_ADMIN_ROLE can replace the earner manager and grant issuer roles.", "Token ProxyAdmin owner can replace mint logic."],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52110793,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
         "sources": [{"label": "Exact Base token authority and ProxyAdmin", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}],
-        "evidence": "Complete17event role census leaves this sole DEFAULT_ADMIN_ROLE and RATE_LIMIT_MANAGER_ROLE member; earnerManager() and ProxyAdmin0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581.owner() both independently return it. Native supply is100000raw(0.1PYUSDx); no financial reserve reconciliation or key-custody safeguards are inferred."
+        "evidence": "Base block 52635861 (2026-10-15T10:44:29Z), https://api-base-mainnet-archive.n.dwellir.com: DEFAULT_ADMIN_ROLE and RATE_LIMIT_MANAGER_ROLE memberships are true; earnerManager() and token ProxyAdmin.owner() both return this no-code address. Native supply is 100000 raw (0.1 PYUSDx). Reward capacity is 5000000000000 raw and refillPerSecond 2500000000 raw (5 million-token burst, 2500 tokens/second). A fresh complete pinned RPC role census resolves this sole token admin/rate-limit manager. No reserve reconciliation or signing safeguards are inferred."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x6017927a1375ce8962116ecda22acda4a345403a",
+        "deploymentRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx ethereum gateway operator and executor",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
+        "sources": [
+          {
+            "label": "IssuerGateway verified mint and proposal implementation",
+            "url": "https://etherscan.io/address/0xc0914100ef894baba31f0ac85b291c8b156c7615#code"
+          },
+          {
+            "label": "Pinned exact-chain operator membership",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "ethereum block 26197396 (2026-10-15T10:44:23.000Z): IssuerGateway.hasRole(OPERATOR_ROLE,address)=true and hasRole(EXECUTOR_ROLE,address)=true; eth_getCode(address)=0x. The operator proposes issuance and the executor executes mint proposals after the current 300-second delay, with 10800-second TTL. Current gateway token bucket allows a 25 million PYUSDx burst and 12500 PYUSDx/second refill, not a reserve-enforcing economic cap. Key custody and independent human approvals are undisclosed.",
+        "capDescription": "Mutable token-bucket capacity and queue delay; no reserve-enforcing cap.",
+        "canRaiseCap": false
+      },
+{
+        "chain": "arbitrum",
+        "address": "0x6017927a1375ce8962116ecda22acda4a345403a",
+        "deploymentRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx arbitrum gateway operator and executor",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
+        "sources": [
+          {
+            "label": "IssuerGateway verified mint and proposal implementation",
+            "url": "https://etherscan.io/address/0xc0914100ef894baba31f0ac85b291c8b156c7615#code"
+          },
+          {
+            "label": "Pinned exact-chain operator membership",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "arbitrum block 515035868 (2026-10-15T10:44:30.000Z): IssuerGateway.hasRole(OPERATOR_ROLE,address)=true and hasRole(EXECUTOR_ROLE,address)=true; eth_getCode(address)=0x. The operator proposes issuance and the executor executes mint proposals after the current 300-second delay, with 10800-second TTL. Current gateway token bucket allows a 25 million PYUSDx burst and 12500 PYUSDx/second refill, not a reserve-enforcing economic cap. Key custody and independent human approvals are undisclosed.",
+        "capDescription": "Mutable token-bucket capacity and queue delay; no reserve-enforcing cap.",
+        "canRaiseCap": false
+      },
+{
+        "chain": "monad",
+        "address": "0x6017927a1375ce8962116ecda22acda4a345403a",
+        "deploymentRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx monad gateway operator and executor",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
+        "sources": [
+          {
+            "label": "IssuerGateway verified mint and proposal implementation",
+            "url": "https://etherscan.io/address/0xc0914100ef894baba31f0ac85b291c8b156c7615#code"
+          },
+          {
+            "label": "Pinned exact-chain operator membership",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
+        ],
+        "evidence": "monad block 113592531 (2026-10-15T10:44:30.000Z): IssuerGateway.hasRole(OPERATOR_ROLE,address)=true and hasRole(EXECUTOR_ROLE,address)=true; eth_getCode(address)=0x. The operator proposes issuance and the executor executes mint proposals after the current 300-second delay, with 10800-second TTL. Current gateway token bucket allows a 25 million PYUSDx burst and 12500 PYUSDx/second refill, not a reserve-enforcing economic cap. Key custody and independent human approvals are undisclosed.",
+        "capDescription": "Mutable token-bucket capacity and queue delay; no reserve-enforcing cap.",
+        "canRaiseCap": false
+      },
+{
+        "chain": "base",
+        "address": "0x6017927a1375ce8962116ecda22acda4a345403a",
+        "deploymentRefs": [
+          "base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx base gateway operator and executor",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
+        "sources": [
+          {
+            "label": "IssuerGateway verified mint and proposal implementation",
+            "url": "https://etherscan.io/address/0xc0914100ef894baba31f0ac85b291c8b156c7615#code"
+          },
+          {
+            "label": "Pinned exact-chain operator membership",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "base block 52635861 (2026-10-15T10:44:29.000Z): IssuerGateway.hasRole(OPERATOR_ROLE,address)=true and hasRole(EXECUTOR_ROLE,address)=true; eth_getCode(address)=0x. The operator proposes issuance and the executor executes mint proposals after the current 300-second delay, with 10800-second TTL. Current gateway token bucket allows a 25 million PYUSDx burst and 12500 PYUSDx/second refill, not a reserve-enforcing economic cap. Key custody and independent human approvals are undisclosed.",
+        "capDescription": "Mutable token-bucket capacity and queue delay; no reserve-enforcing cap.",
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": [
+          "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx ethereum token and gateway upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
+        "sources": [
+          {
+            "label": "Pinned chain-local token ProxyAdmin ownership",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "M0 native proxy upgrade semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          }
+        ],
+        "evidence": "ethereum block 26197396 (2026-10-15T10:44:23.000Z), https://api-ethereum-mainnet.n.dwellir.com: token ProxyAdmin 0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581 and IssuerGateway ProxyAdmin 0x63df2057c740d6369a003e040a7abdf40a2d82fd owner() both return 0x314160525f5ea6677d3908112ff9bd885f3bb78e; eth_getCode(owner)=0x. Dedicated ProxyAdmins can replace the native token and gateway implementations. This upgrade-only row is distinct from the same key's directly exercised reward/admin mint control and is bound only to this chain's native liability. No enforced delay or independent key-custody safeguard is established."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": [
+          "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx arbitrum token and gateway upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
+        "sources": [
+          {
+            "label": "Pinned chain-local token ProxyAdmin ownership",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "M0 native proxy upgrade semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          }
+        ],
+        "evidence": "arbitrum block 515035868 (2026-10-15T10:44:30.000Z), https://api-arbitrum-mainnet-archive.n.dwellir.com: token ProxyAdmin 0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581 and IssuerGateway ProxyAdmin 0x63df2057c740d6369a003e040a7abdf40a2d82fd owner() both return 0x314160525f5ea6677d3908112ff9bd885f3bb78e; eth_getCode(owner)=0x. Dedicated ProxyAdmins can replace the native token and gateway implementations. This upgrade-only row is distinct from the same key's directly exercised reward/admin mint control and is bound only to this chain's native liability. No enforced delay or independent key-custody safeguard is established."
+      },
+      {
+        "chain": "monad",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": [
+          "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx monad token and gateway upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
+        "sources": [
+          {
+            "label": "Pinned chain-local token ProxyAdmin ownership",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          },
+          {
+            "label": "M0 native proxy upgrade semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          }
+        ],
+        "evidence": "monad block 113592531 (2026-10-15T10:44:30.000Z), https://api-monad-mainnet-full.n.dwellir.com: token ProxyAdmin 0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581 and IssuerGateway ProxyAdmin 0x63df2057c740d6369a003e040a7abdf40a2d82fd owner() both return 0x314160525f5ea6677d3908112ff9bd885f3bb78e; eth_getCode(owner)=0x. Dedicated ProxyAdmins can replace the native token and gateway implementations. This upgrade-only row is distinct from the same key's directly exercised reward/admin mint control and is bound only to this chain's native liability. No enforced delay or independent key-custody safeguard is established."
+      },
+      {
+        "chain": "base",
+        "address": "0x314160525f5ea6677d3908112ff9bd885f3bb78e",
+        "deploymentRefs": [
+          "base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx base token and gateway upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
+        "sources": [
+          {
+            "label": "Pinned chain-local token ProxyAdmin ownership",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "M0 native proxy upgrade semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          }
+        ],
+        "evidence": "base block 52635861 (2026-10-15T10:44:29.000Z), https://api-base-mainnet-archive.n.dwellir.com: token ProxyAdmin 0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581 and IssuerGateway ProxyAdmin 0x63df2057c740d6369a003e040a7abdf40a2d82fd owner() both return 0x314160525f5ea6677d3908112ff9bd885f3bb78e; eth_getCode(owner)=0x. Dedicated ProxyAdmins can replace the native token and gateway implementations. This upgrade-only row is distinct from the same key's directly exercised reward/admin mint control and is bound only to this chain's native liability. No enforced delay or independent key-custody safeguard is established."
+      },
+      {
+        "chain": "0g",
+        "address": "0x693cc3305342b02ac1549b509a704ff944cd9499",
+        "deploymentRefs": [
+          "0g:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx 0G IssuerGateway",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 47207217,
+        "sources": [
+          {
+            "label": "Pinned 0G native authority and permission census",
+            "url": "https://evmrpc.0g.ai"
+          },
+          {
+            "label": "Source-corresponding Ethereum PYUSDx implementation",
+            "url": "https://etherscan.io/address/0x0568d0a74145fd557b3541897bc6878f5c6e9c8c#code"
+          },
+          {
+            "label": "M0 PYUSDx native issuance and reward semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          }
+        ],
+        "evidence": "0G block47207217, timestamp2026-10-15T10:44:28Z, https://evmrpc.0g.ai: complete token/Portal/gateway/adapter permission census returns15 events from the pre-deployment empty-code boundary45639789. Token issuer-role holders are exactly IssuerGateway and Portal. Gateway delay300 seconds, TTL10800 seconds; token bucket capacity25000000000000raw and refill12500000000raw/second. Token implementation0x78678c4ab4c32d1b4c2514ea2c8ebe7f8a363140 has byte-identical executable code to verified Ethereum implementation after stripping their51-byte Solidity CBOR trailers; metadata hashes differ. No immutable reserve-enforcing cap is established.",
+        "capDescription": "Mutable25million-token burst and12500tokens/second refill, not reserve coverage.",
+        "canRaiseCap": "unknown"
+      },
+      {
+        "chain": "0g",
+        "address": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "deploymentRefs": [
+          "0g:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx 0G issuer admin, gateway operator and earner manager",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-15",
+        "observedBlock": 47207217,
+        "sources": [
+          {
+            "label": "Pinned 0G native authority and permission census",
+            "url": "https://evmrpc.0g.ai"
+          },
+          {
+            "label": "Source-corresponding Ethereum PYUSDx implementation",
+            "url": "https://etherscan.io/address/0x0568d0a74145fd557b3541897bc6878f5c6e9c8c#code"
+          },
+          {
+            "label": "M0 PYUSDx native issuance and reward semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
+          }
+        ],
+        "failureDomainKeys": [
+          "address:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "bypassSurfaces": [
+          "Earner-manager rewards bypass the IssuerGateway queue.",
+          "DEFAULT_ADMIN_ROLE can change the earner manager and grant issuer roles.",
+          "Token and IssuerGateway ProxyAdmins can replace native issuance logic."
+        ],
+        "evidence": "0G block47207217 at2026-10-15T10:44:28Z: this no-code address is the sole token DEFAULT_ADMIN_ROLE/RATE_LIMIT_MANAGER_ROLE member, earnerManager and owner of token ProxyAdmin0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581 and gateway ProxyAdmin0x63df2057c740d6369a003e040a7abdf40a2d82fd. It also holds gateway OPERATOR_ROLE and EXECUTOR_ROLE. Reward bucket capacity5000000000000raw, refill2500000000raw/second. This differs from the four previously catalogued chains issuer address. No MPC/HSM, independent human approvals or financial reconciliation is inferred."
+      },
+      {
+        "chain": "0g",
+        "address": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "deploymentRefs": [
+          "0g:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "label": "PYUSDx 0G token and gateway upgrade owner",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 47207217,
+        "sources": [
+          {
+            "label": "Pinned0G token and gateway ProxyAdmin owners",
+            "url": "https://evmrpc.0g.ai"
+          },
+          {
+            "label": "Native proxy upgrade semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"
+          }
+        ],
+        "evidence": "0G block47207217 (2026-10-15T10:44:28Z; hash0xae34476285105133339a2638984009abaf5d65fa7785fe72547c31578b61a325): token ProxyAdmin0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581 and gateway ProxyAdmin0x63df2057c740d6369a003e040a7abdf40a2d82fd owner() return0xf2f1acbe0ba726fee8d75f3e32900526874740bb; eth_getCode(owner)=0x. This explicit chain-local upgrade-only control is separate from the same address directly exercising issuer/admin/reward issuance. The Ethereum scalar upgradeability reference does not own or substitute for this0G authority. No enforced delay or independently protected signing topology is established."
       }
     ],
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
-        "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
-        "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
-        "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
-        "base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        "ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
       ],
       "proxyAddresses": [
         "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
       ],
       "implementationAddresses": [
-        "0x0568d0a74145fd557b3541897bc6878f5c6e9c8c",
-        "0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0",
-        "0x411d482be645a807823bcc5f4e762d9c24c6966a",
-        "0x23ca665c8a73292fc7ac2cc4493d2ce883bba468"
+        "0x0568d0a74145fd557b3541897bc6878f5c6e9c8c"
       ],
       "adminAddresses": [
         "0xb8a874137df3d4b0f19490eb06cfbe6b6d35e581"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "PYUSDx ethereum issuer admin and earner manager",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107703,
+      "controlRef": "PYUSDx ethereum token and gateway upgrade owner",
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197396,
       "sources": [
         {
           "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -377,9 +674,9 @@
           "url": "https://chainscan.0g.ai/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
         }
       ],
-      "evidence": "Independent 2026-10-03 RPC census at Ethereum 26110185, Arbitrum 511230133 and Monad 110115415: complete token RoleGranted/RoleRevoked history from block zero returned 17 events per chain; applying grants and revokes leaves sole DEFAULT_ADMIN_ROLE and RATE_LIMIT_MANAGER_ROLE=0x314160525f5ea6677d3908112ff9bd885f3bb78e and exactly two ISSUER_ROLE members, IssuerGateway 0x693cc3305342b02ac1549b509a704ff944cd9499 and Portal 0xaad1466fe33d373189fb9dcc47270e608feee8a7. earnerManager() and token ProxyAdmin.owner() independently return the issuer address on each chain. EIP-1967 implementations resolve respectively to 0x0568d0a74145fd557b3541897bc6878f5c6e9c8c, 0x8dfb7c8ce5e67ace965520b134b4aca8fd71c5e0 and 0x411d482be645a807823bcc5f4e762d9c24c6966a; the structured upgrade inventory now covers all three exact deployments. Gateway delay remains distinct from reward and upgrade issuance. Financial reserve reconciliation and issuer key-custody safeguards are not established by this complete on-chain role census. W1R50 supervision research on 2026-10-03: PYUSDx terms section 13 expressly state that issuance is not regulated and regulatory protections applicable to regulated stablecoins are unavailable. MoonPay Enterprise likewise says PYUSDx is not a regulated stablecoin. The BVI issuer is MoonPay Digital Assets Limited, not the separately licensed UK/US/EEA/Jersey entities in MoonPay's licence roster; Paxos supervision is not supervision of this local issuance.",
-      "reviewer": "Sol refinement Refine03; W1R50 supervision research",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Pinned 2026-10-15 observations: Ethereum 26197396 at 10:44:23Z, Arbitrum 515035868 at 10:44:30Z, Monad 113592531 at 10:44:30Z and Base 52635861 at 10:44:29Z. Complete Etherscan token RoleGranted/RoleRevoked histories on Ethereum, Arbitrum and Monad still contain 17 events each, retaining sole admin/rate-limit manager 0x314160525f5ea6677d3908112ff9bd885f3bb78e and exactly IssuerGateway plus Portal as issuer-role members. Independent RPC confirms current roles, earner manager, ProxyAdmin owner, implementations and no-code issuer on all four. Base complete pinned RPC history from pre-deployment block 50000000 through 52635861 independently returns 17 token permission events and the same issuer-role census; the complete token/Portal/gateway/adapter permission inventory returns 35 events. Gateway OPERATOR_ROLE and EXECUTOR_ROLE on all four chains resolve to separately identified no-code address 0x6017927a1375ce8962116ecda22acda4a345403a. Gateway ProxyAdmin 0x63df2057c740d6369a003e040a7abdf40a2d82fd is owned by the same issuer admin on all four, so gateway implementation replacement is another issuance bypass. All four gateway delays remain 300 seconds and TTLs 10800 seconds. Gateway buckets permit 25 million-token bursts and 12500 tokens/second. The issuer reward bucket is unconfigured on Ethereum and 5 million tokens with 2500 tokens/second refill on the other three; role/admin powers can change these limits. 0G block 47207217 at 10:44:28Z has 7 PYUSDx, not zero, and different administrator/earner-manager/ProxyAdmin owner 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. A complete 0G role census resolves gateway and Portal issuer roles; its native controls and supply are included by this coordinated five-chain integration. Legal terms section 13 and the Enterprise disclosure still expressly describe local PYUSDx issuance as unregulated. Affiliate licences and Paxos supervision do not establish local prudential supervision, reserve reconciliation or issuer-key safeguards. Keyless RPC URLs and complete method/results are retained in the batch review ledger and research records. The scalar upgradeability summary binds only the Ethereum native token and its Ethereum upgrade-only control. Separate chain-qualified proxy-admin controls carry token/gateway upgrade reach for Arbitrum, Monad and Base; the 0G control is bound separately to its different owner. The scalar reference is representative, not an assertion that the Ethereum account administers every deployment.",
+      "reviewer": "Rev_PyusdxMoonpay",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -414,6 +711,14 @@
           "reviewedAt": "2026-10-03",
           "reviewer": "Sol refinement Refine03",
           "sources": [{"label": "Exact Base native token and issuer roles", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
+        },
+        {
+          "controlRef": "0g:0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+          "question": "Issuer key custody and signer safeguards are undisclosed for this identified 0G issuer admin, gateway operator, earner manager and token/gateway ProxyAdmin owner. What MPC/HSM controls, beneficial signing authority and signing policy govern its mint-capable key?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "FixR2_PyusdxMoonpay",
+          "sources": [{"label": "Pinned 0G block 47214952, 2026-10-15T13:00:57Z; native issuer admin, earner manager, ProxyAdmin owners and no-code key", "url": "https://evmrpc.0g.ai"}, {"label": "PYUSDx compliance controls", "url": "https://docs.m0.org/raw/protocol/pyusdx/compliance-and-security.md"}]
         }
       ]
     }

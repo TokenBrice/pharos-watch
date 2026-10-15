@@ -2,27 +2,12 @@
   "id": "sparkusdc-spark",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
-      "name": "Idle Base USDC in Spark Morpho vault",
-      "pct": 1.4819553725954864e-05,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Circle",
-      "riskFactors": [
-        "custody",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "immediate"
-    },
-    {
       "sourceKey": "erc4626-single-asset:base:0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a:deployed",
       "name": "Morpho USDC receivable in cbBTC-collateralized market",
       "coinId": "usdc-circle",
       "depType": "wrapper",
       "blacklistable": true,
-      "pct": 99.99998518044627,
+      "pct": 100,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Morpho market borrowers",
@@ -36,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SparkusdcSpark)",
     "confidence": "verified",
     "sources": [
       {
@@ -49,17 +34,17 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
       },
       {
-        "label": "Credential-free RPC endpoint; pinned read in review notes",
-        "url": "https://base-mainnet.g.alchemy.com/v2/"
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z: complete queue and accounting census",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       },
       {
         "label": "Morpho vault framework and holder exit mechanics",
         "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
       }
     ],
-    "rationale": "Observed 2026-10-02T22:43:43.966947+00:00 at base block 52095837 (hash 0x03974c717b8f0205ba3eef8dccfae70f5e044d6a8ac0a3f6e1b00ac938652604). Native totalSupply 306832432087111435323561004 (18 decimals), asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 (6 decimals), totalAssets 331690048897426, convertToAssets(10^18) 1081013. One-share redeem from actual holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca returned 1081013 asset base units via eth_call at that same block; no transaction broadcast. Current Morpho API lists only the cbBTC market with nonzero supplied assets; WETH and collateral-free queue entries have zero supplied assets. The immediate USDC balance fraction is derived at the pinned block; the remaining claim is lender exposure, not directly owned cbBTC.",
-    "compositionBasis": "Exact-vault operational position accounting; no independent financial assurance or legal segregation is inferred",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "Pinned Base block 52630636 (2026-10-15T07:50:19Z; hash 0xd29b0a40afb66cf6503e9627bbb4546f867c64172fb6f01822879425dc73b8a5). totalAssets()=476165762076098 USDC base units, totalSupply()=439882075988993114685529010, lostAssets()=0. Complete three-entry supply/withdraw queues retain cbBTC market 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836, WETH market 0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda and collateral-free market 0x38c846197ac32a752a60c25d4536ebb0c3920c532e9a859c38c91efb7b8c2abb. cbBTC holds the entire accounted USDC claim; WETH has 614313 supply shares that round to zero asset base units, and the collateral-free position is zero. Borrow shares and collateral are zero in all three vault positions. The 49154985 idle USDC base units are donated assets excluded by MetaMorphoV1_1 totalAssets() and its ordinary market-withdrawal path; they are not an immediate holder reserve slice. This corrects the old idle-plus-receivable denominator. These are protocol receivables, not directly held borrower cbBTC or independent financial assurance.",
+    "compositionBasis": "Complete immutable MetaMorphoV1_1 accounted-NAV denominator; donated idle USDC excluded, lostAssets separately checked at zero",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "No unresolved composition-link dispositions remain within the immediate position accounting denominator. This does not establish stressed realization, enforceable priority or independently reconciled ultimate backing; those protections remain unproven. Underlying issuer and protocol risk remains serial, and whole-book custody uncertainty is recorded separately in custodyProfile.",
     "knownUnknownExposurePct": 0
@@ -69,15 +54,27 @@
       {
         "name": "Exact Spark Morpho vault and Morpho lending contracts",
         "role": "other"
+      },
+      {
+        "name": "Coinbase, custodian of BTC backing borrower cbBTC collateral; not direct custodian of the vault's USDC receivable",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SparkusdcSpark)",
     "confidence": "manual-review",
     "sources": [
+      {
+        "label": "Coinbase cbBTC backing custodian and exact Base cbBTC deployment",
+        "url": "https://www.coinbase.com/cbbtc/proof-of-reserves"
+      },
+      {
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z: funded cbBTC-market claim",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
       {
         "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
         "url": "https://api.morpho.org/graphql"
@@ -95,7 +92,7 @@
         "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
       }
     ],
-    "uncertainty": "On-chain position location is verified. Complete ultimate custody, enforceable segregation, successor custody and legal insolvency protection are not established by the receipt code or parent reserve disclosures.",
+    "uncertainty": "Immediate vault/Morpho positions are onchain; the only materially funded borrower market uses cbBTC, whose BTC backing is held by Coinbase. This establishes heterogeneous custody layers and supports the mixed whole-book label, not a direct holder claim against Coinbase. Exact legal custodian entity, enforceable segregation, successor custody, key independence and insolvency protections across the whole book remain unestablished. No custody share percentage is inferred from collateral value.",
     "knownUnknownExposurePct": 100
   }
 }

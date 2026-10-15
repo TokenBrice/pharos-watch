@@ -1025,7 +1025,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:703345b7103b2cf26915"
+        "controlKey": "mint-meta:senrlusdv2-sentora:6e802d84a80d477e3ec4"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1293,7 +1293,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:5fe96ee55ec0810c61bb"
+        "controlKey": "mint-meta:senpyusdmain-sentora:a895122d089b7395ca9d"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1834,7 +1834,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914:path:maximal-execution"
+        "controlKey": "mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1908,7 +1908,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada:path:maximal-execution"
+        "controlKey": "mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -4310,7 +4310,7 @@
       "assetId": "gbpa-agant",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:gbpa-agant:946fa094ef021970c955"
+        "controlKey": "mint-meta:gbpa-agant:837bec1693d9879c4f77"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -4816,7 +4816,7 @@
       "assetId": "sparkusdc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdc-spark:836f8253a7150ceeed01"
+        "controlKey": "mint-meta:sparkusdc-spark:29603b0cab1dac38012d"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -4994,7 +4994,7 @@
       "assetId": "sparkusdtbc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdtbc-spark:58b1d2677783096dda96"
+        "controlKey": "mint-meta:sparkusdtbc-spark:20f437472bb89c674188"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -5083,7 +5083,7 @@
       "assetId": "sparkusdtbc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82"
+        "controlKey": "mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -9190,77 +9190,77 @@
         "kind": "control",
         "controlKey": "bridge-meta:uscc-superstate:0ef4bc412775564d1c52"
       },
-      "reviewedAt": "2026-10-11T05:37:27Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (I22USTBb)",
+      "reviewedAt": "2026-10-15T11:04:21Z",
+      "reviewer": "Rev_UsccSuperstate primary-source and pinned-state review",
       "windowStartSec": 1743086925,
-      "windowEndSec": 1791697047,
+      "windowEndSec": 1792062261,
       "conclusion": "no-known-incident",
       "searchedSurfaces": [
         {
           "kind": "issuer-announcements",
-          "url": "https://superstate.com/newsroom/smart-contract-upgrade-multichain-bridging-features",
-          "finding": "Searched Superstate newsroom/indexed issuer announcements for USTB/USCC bridge, Plume and Ethereum incident/hack/pause. Retrieved February 27 2025 multichain/bridging upgrade title and metadata and July 6 2026 modular-upgrade metadata; article bodies were incomplete. Full current issuer smart-contract documentation binds exact Ethereum/Plume issuer-native burn/reissue contracts and describes routine September 2026 allowlist migration, not an adverse event. No exact-control incident found in these bounded issuer surfaces; this is not an exhaustive announcement archive."
+          "url": "https://superstate.com/newsroom/smart-contract-upgrade-modular-infrastructure-for-ustb-uscc-and-beyond",
+          "finding": "Reopened current official contract/security documentation and July 6, 2026 modular-upgrade announcement metadata, and searched indexed Superstate USCC/Ethereum/Plume hack, exploit, incident and pause disclosures. Docs describe native issuer burn/reissue and routine allowlist migration; no exact-control incident found. Announcement body remains incomplete, and no exhaustive private-communication or announcement-archive census is claimed."
         },
         {
           "kind": "incident-tracker",
           "url": "https://api.llama.fi/hacks",
-          "finding": "Inherited full API response searched across all text (not just names) for Superstate, USTB, USCC, USSD, Sonic, Frax, Anemoy, ACRDX, Centrifuge, Brale, SBC, CASH, Phantom, LayerZero, Wormhole, Kelp, Portal, Plume and Monad. Kelp and Portal are rail-level incidents; cash/name/chain collisions do not identify these exact deployments. No exact asset/control incident identified; no complete incident census asserted."
+          "finding": "Fetched and searched the complete 1,302-record DefiLlama hacks API response for Superstate, USCC and Bitwise Crypto Carry; no matching record. Also reopened the Rekt current index and searched indexed Rekt Superstate/USCC reports; no exact-asset incident identified. Bounded public research is not proof of lifetime absence."
         },
         {
           "kind": "explorer-events",
           "url": "https://explorer.plume.org/api/v2/addresses/0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf/logs",
-          "finding": "Exact plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf displayed explorer events retrieved; visible records include routine Transfer/Bridge activity. Bounded page, not a lifetime log census. paused()=false and accountingPaused()=false at block 98424558, hash 0xe37196a8dbfd4d47510baf49c834282255bfdb338e22afc5e7dca8e498edebb8, UTC 2026-10-09T20:53:42Z; successful authenticated pinned reads, selectors 0x5c975abb and 0x0b9a59ea. No known incident found after the named searches."
+          "finding": "Reopened the exact deployment explorer API's first 50 logs, spanning 2026-07-29T15:00:53.000000Z to 2026-10-14T13:28:56.000000Z. Visible events are ordinary token approvals, mint/burn, transfers, issuer bridging or allowlist/name changes; this is not a complete history. Fresh pinned paused()=false and accountingPaused()=false at plume block 99537544, hash 0xac530a4a8f472c073aab731a572db3e9be4cab8415c6cddcf2cc5d768b57c85b, UTC 2026-10-15T10:45:07.000Z. No exact-control incident found in these bounded sources."
         }
       ],
       "sources": [
         {
-          "label": "DefiLlama full hacks API",
-          "url": "https://api.llama.fi/hacks",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "Full response text search; inherited artifact 7368; predecessor rail caches",
-          "excerpt": "Inherited full API response searched across all text (not just names) for Superstate, USTB, USCC, USSD, Sonic, Frax, Anemoy, ACRDX, Centrifuge, Brale, SBC, CASH, Phantom, LayerZero, Wormhole, Kelp, Portal, Plume and Monad. Kelp and Portal are rail-level incidents; cash/name/chain collisions do not identify these exact deployments. No exact asset/control incident identified; no complete incident census asserted."
-        },
-        {
-          "label": "Superstate issuer contract inventory",
-          "url": "https://docs.superstate.com/investors/smart-contracts.md",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "EVM contracts and Bridging; allowlist migration",
-          "excerpt": "Issuer binds plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf; EVM bridge burns source shares for destination receipt; SVM bridge unsupported. This is issuer-native control, not LayerZero."
+          "label": "Issuer exact deployment and native bridge design",
+          "url": "https://docs.superstate.com/investors/smart-contracts",
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "EVM deployments, transfers and bridging",
+          "excerpt": "Reopened current official contract/security documentation and July 6, 2026 modular-upgrade announcement metadata, and searched indexed Superstate USCC/Ethereum/Plume hack, exploit, incident and pause disclosures. Docs describe native issuer burn/reissue and routine allowlist migration; no exact-control incident found. Announcement body remains incomplete, and no exhaustive private-communication or announcement-archive census is claimed."
         },
         {
           "label": "Exact deployment displayed explorer events",
           "url": "https://explorer.plume.org/api/v2/addresses/0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf/logs",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "First returned events page; bounded",
-          "excerpt": "Exact plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf displayed explorer events retrieved; visible records include routine Transfer/Bridge activity. Bounded page, not a lifetime log census. paused()=false and accountingPaused()=false at block 98424558, hash 0xe37196a8dbfd4d47510baf49c834282255bfdb338e22afc5e7dca8e498edebb8, UTC 2026-10-09T20:53:42Z; successful authenticated pinned reads, selectors 0x5c975abb and 0x0b9a59ea. No known incident found after the named searches."
-        },
-        {
-          "label": "Exact deployment creation",
-          "url": "https://explorer.plume.org/api/v2/transactions/0x1943972958ee56ab7c8f2ebf376a2c4888986bebb9ebdbddf38d27dc6de68c5d",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "Creation transaction timestamp",
-          "excerpt": "Exact plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf creation timestamp 2025-03-27T14:48:45Z."
-        },
-        {
-          "label": "Rekt incident research",
-          "url": "https://rekt.news/",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "Inherited index and relevant Burning Bridges, KelpDAO and Wormhole articles",
-          "excerpt": "Searches found rail/history leads, not an exact compromise of the reviewed deployment. This is bounded search evidence, not proof of lifetime absence."
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "First 50 returned logs; bounded",
+          "excerpt": "Reopened the exact deployment explorer API's first 50 logs, spanning 2026-07-29T15:00:53.000000Z to 2026-10-14T13:28:56.000000Z. Visible events are ordinary token approvals, mint/burn, transfers, issuer bridging or allowlist/name changes; this is not a complete history. Fresh pinned paused()=false and accountingPaused()=false at plume block 99537544, hash 0xac530a4a8f472c073aab731a572db3e9be4cab8415c6cddcf2cc5d768b57c85b, UTC 2026-10-15T10:45:07.000Z. No exact-control incident found in these bounded sources."
         },
         {
           "label": "Pinned token emergency state",
           "url": "https://rpc.plume.org",
-          "observedAt": "2026-10-11T05:32:11.273Z",
-          "location": "98424558, hash 0xe37196a8dbfd4d47510baf49c834282255bfdb338e22afc5e7dca8e498edebb8, UTC 2026-10-09T20:53:42Z",
-          "excerpt": "Exact plume:0x4c21b7577c8fe8b0b0669165ee7c8f67fa1454cf displayed explorer events retrieved; visible records include routine Transfer/Bridge activity. Bounded page, not a lifetime log census. paused()=false and accountingPaused()=false at block 98424558, hash 0xe37196a8dbfd4d47510baf49c834282255bfdb338e22afc5e7dca8e498edebb8, UTC 2026-10-09T20:53:42Z; successful authenticated pinned reads, selectors 0x5c975abb and 0x0b9a59ea. No known incident found after the named searches."
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "99537544, hash 0xac530a4a8f472c073aab731a572db3e9be4cab8415c6cddcf2cc5d768b57c85b, UTC 2026-10-15T10:45:07.000Z",
+          "excerpt": "paused()=false; accountingPaused()=false. Selectors 0x5c975abb and 0x0b9a59ea at exact pinned block; no lifetime-absence claim."
         },
         {
-          "label": "Superstate issuer upgrade announcement",
-          "url": "https://superstate.com/newsroom/smart-contract-upgrade-multichain-bridging-features",
-          "observedAt": "2026-10-11T05:37:27Z",
+          "label": "Exact deployment creation",
+          "url": "https://explorer.plume.org/api/v2/transactions/0x1943972958ee56ab7c8f2ebf376a2c4888986bebb9ebdbddf38d27dc6de68c5d",
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "Creation transaction timestamp",
+          "excerpt": "Exact USCC deployment creation 2025-03-27T14:48:45Z; retained window start is contract creation, not fund inception."
+        },
+        {
+          "label": "DefiLlama full hacks API",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "Complete 1,302-record response text search",
+          "excerpt": "Fetched and searched the complete 1,302-record DefiLlama hacks API response for Superstate, USCC and Bitwise Crypto Carry; no matching record. Also reopened the Rekt current index and searched indexed Rekt Superstate/USCC reports; no exact-asset incident identified. Bounded public research is not proof of lifetime absence."
+        },
+        {
+          "label": "Rekt current index and indexed Superstate/USCC research",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "Current index and bounded site search",
+          "excerpt": "Fetched and searched the complete 1,302-record DefiLlama hacks API response for Superstate, USCC and Bitwise Crypto Carry; no matching record. Also reopened the Rekt current index and searched indexed Rekt Superstate/USCC reports; no exact-asset incident identified. Bounded public research is not proof of lifetime absence."
+        },
+        {
+          "label": "Superstate modular-upgrade announcement",
+          "url": "https://superstate.com/newsroom/smart-contract-upgrade-modular-infrastructure-for-ustb-uscc-and-beyond",
+          "observedAt": "2026-10-15T11:04:21Z",
           "location": "Retrieved title/date/description; body incomplete",
-          "excerpt": "Searched Superstate newsroom/indexed issuer announcements for USTB/USCC bridge, Plume and Ethereum incident/hack/pause. Retrieved February 27 2025 multichain/bridging upgrade title and metadata and July 6 2026 modular-upgrade metadata; article bodies were incomplete. Full current issuer smart-contract documentation binds exact Ethereum/Plume issuer-native burn/reissue contracts and describes routine September 2026 allowlist migration, not an adverse event. No exact-control incident found in these bounded issuer surfaces; this is not an exhaustive announcement archive."
+          "excerpt": "Reopened current official contract/security documentation and July 6, 2026 modular-upgrade announcement metadata, and searched indexed Superstate USCC/Ethereum/Plume hack, exploit, incident and pause disclosures. Docs describe native issuer burn/reissue and routine allowlist migration; no exact-control incident found. Announcement body remains incomplete, and no exhaustive private-communication or announcement-archive census is claimed."
         }
       ]
     },
@@ -9271,77 +9271,77 @@
         "kind": "control",
         "controlKey": "bridge-meta:uscc-superstate:c9eb0ee71703ad47a59a"
       },
-      "reviewedAt": "2026-10-11T05:37:27Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (I22USTBb)",
+      "reviewedAt": "2026-10-15T11:04:21Z",
+      "reviewer": "Rev_UsccSuperstate primary-source and pinned-state review",
       "windowStartSec": 1720543595,
-      "windowEndSec": 1791697047,
+      "windowEndSec": 1792062261,
       "conclusion": "no-known-incident",
       "searchedSurfaces": [
         {
           "kind": "issuer-announcements",
-          "url": "https://superstate.com/newsroom/smart-contract-upgrade-multichain-bridging-features",
-          "finding": "Searched Superstate newsroom/indexed issuer announcements for USTB/USCC bridge, Plume and Ethereum incident/hack/pause. Retrieved February 27 2025 multichain/bridging upgrade title and metadata and July 6 2026 modular-upgrade metadata; article bodies were incomplete. Full current issuer smart-contract documentation binds exact Ethereum/Plume issuer-native burn/reissue contracts and describes routine September 2026 allowlist migration, not an adverse event. No exact-control incident found in these bounded issuer surfaces; this is not an exhaustive announcement archive."
+          "url": "https://superstate.com/newsroom/smart-contract-upgrade-modular-infrastructure-for-ustb-uscc-and-beyond",
+          "finding": "Reopened current official contract/security documentation and July 6, 2026 modular-upgrade announcement metadata, and searched indexed Superstate USCC/Ethereum/Plume hack, exploit, incident and pause disclosures. Docs describe native issuer burn/reissue and routine allowlist migration; no exact-control incident found. Announcement body remains incomplete, and no exhaustive private-communication or announcement-archive census is claimed."
         },
         {
           "kind": "incident-tracker",
           "url": "https://api.llama.fi/hacks",
-          "finding": "Inherited full API response searched across all text (not just names) for Superstate, USTB, USCC, USSD, Sonic, Frax, Anemoy, ACRDX, Centrifuge, Brale, SBC, CASH, Phantom, LayerZero, Wormhole, Kelp, Portal, Plume and Monad. Kelp and Portal are rail-level incidents; cash/name/chain collisions do not identify these exact deployments. No exact asset/control incident identified; no complete incident census asserted."
+          "finding": "Fetched and searched the complete 1,302-record DefiLlama hacks API response for Superstate, USCC and Bitwise Crypto Carry; no matching record. Also reopened the Rekt current index and searched indexed Rekt Superstate/USCC reports; no exact-asset incident identified. Bounded public research is not proof of lifetime absence."
         },
         {
           "kind": "explorer-events",
           "url": "https://eth.blockscout.com/api/v2/addresses/0x14d60e7fdc0d71d8611742720e4c50e7a974020c/logs",
-          "finding": "Exact ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c displayed explorer events retrieved; visible records include routine Transfer/Bridge activity. Bounded page, not a lifetime log census. paused()=false and accountingPaused()=false at block 26166573, hash 0x5f1809741f680ec6784658281998ee52cb5919b9adefeb2f365db6b7cf3df4dc, UTC 2026-10-11T03:39:11Z; successful authenticated pinned reads, selectors 0x5c975abb and 0x0b9a59ea. No known incident found after the named searches."
+          "finding": "Reopened the exact deployment explorer API's first 50 logs, spanning 2026-10-05T17:47:35.000000Z to 2026-10-14T18:58:35.000000Z. Visible events are ordinary token approvals, mint/burn, transfers, issuer bridging or allowlist/name changes; this is not a complete history. Fresh pinned paused()=false and accountingPaused()=false at ethereum block 26197388, hash 0x9f223fe6b5c28b53dedaeea0734937a8094c9e4a22659f2265ebaa7678b790a9, UTC 2026-10-15T10:42:47.000Z. No exact-control incident found in these bounded sources."
         }
       ],
       "sources": [
         {
-          "label": "Pinned token emergency state",
-          "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com",
-          "observedAt": "2026-10-11T05:32:11.322Z",
-          "location": "26166573, hash 0x5f1809741f680ec6784658281998ee52cb5919b9adefeb2f365db6b7cf3df4dc, UTC 2026-10-11T03:39:11Z",
-          "excerpt": "Exact ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c displayed explorer events retrieved; visible records include routine Transfer/Bridge activity. Bounded page, not a lifetime log census. paused()=false and accountingPaused()=false at block 26166573, hash 0x5f1809741f680ec6784658281998ee52cb5919b9adefeb2f365db6b7cf3df4dc, UTC 2026-10-11T03:39:11Z; successful authenticated pinned reads, selectors 0x5c975abb and 0x0b9a59ea. No known incident found after the named searches."
-        },
-        {
-          "label": "DefiLlama full hacks API",
-          "url": "https://api.llama.fi/hacks",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "Full response text search; inherited artifact 7368; predecessor rail caches",
-          "excerpt": "Inherited full API response searched across all text (not just names) for Superstate, USTB, USCC, USSD, Sonic, Frax, Anemoy, ACRDX, Centrifuge, Brale, SBC, CASH, Phantom, LayerZero, Wormhole, Kelp, Portal, Plume and Monad. Kelp and Portal are rail-level incidents; cash/name/chain collisions do not identify these exact deployments. No exact asset/control incident identified; no complete incident census asserted."
-        },
-        {
-          "label": "Superstate issuer contract inventory",
-          "url": "https://docs.superstate.com/investors/smart-contracts.md",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "EVM contracts and Bridging; allowlist migration",
-          "excerpt": "Issuer binds ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c; EVM bridge burns source shares for destination receipt; SVM bridge unsupported. This is issuer-native control, not LayerZero."
+          "label": "Issuer exact deployment and native bridge design",
+          "url": "https://docs.superstate.com/investors/smart-contracts",
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "EVM deployments, transfers and bridging",
+          "excerpt": "Reopened current official contract/security documentation and July 6, 2026 modular-upgrade announcement metadata, and searched indexed Superstate USCC/Ethereum/Plume hack, exploit, incident and pause disclosures. Docs describe native issuer burn/reissue and routine allowlist migration; no exact-control incident found. Announcement body remains incomplete, and no exhaustive private-communication or announcement-archive census is claimed."
         },
         {
           "label": "Exact deployment displayed explorer events",
           "url": "https://eth.blockscout.com/api/v2/addresses/0x14d60e7fdc0d71d8611742720e4c50e7a974020c/logs",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "First returned events page; bounded",
-          "excerpt": "Exact ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c displayed explorer events retrieved; visible records include routine Transfer/Bridge activity. Bounded page, not a lifetime log census. paused()=false and accountingPaused()=false at block 26166573, hash 0x5f1809741f680ec6784658281998ee52cb5919b9adefeb2f365db6b7cf3df4dc, UTC 2026-10-11T03:39:11Z; successful authenticated pinned reads, selectors 0x5c975abb and 0x0b9a59ea. No known incident found after the named searches."
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "First 50 returned logs; bounded",
+          "excerpt": "Reopened the exact deployment explorer API's first 50 logs, spanning 2026-10-05T17:47:35.000000Z to 2026-10-14T18:58:35.000000Z. Visible events are ordinary token approvals, mint/burn, transfers, issuer bridging or allowlist/name changes; this is not a complete history. Fresh pinned paused()=false and accountingPaused()=false at ethereum block 26197388, hash 0x9f223fe6b5c28b53dedaeea0734937a8094c9e4a22659f2265ebaa7678b790a9, UTC 2026-10-15T10:42:47.000Z. No exact-control incident found in these bounded sources."
+        },
+        {
+          "label": "Pinned token emergency state",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com",
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "26197388, hash 0x9f223fe6b5c28b53dedaeea0734937a8094c9e4a22659f2265ebaa7678b790a9, UTC 2026-10-15T10:42:47.000Z",
+          "excerpt": "paused()=false; accountingPaused()=false. Selectors 0x5c975abb and 0x0b9a59ea at exact pinned block; no lifetime-absence claim."
         },
         {
           "label": "Exact deployment creation",
           "url": "https://eth.blockscout.com/api/v2/transactions/0xbe8d18baf6aa7b9c40d8e099bbb44ef50ce83ba955589a4993127ed0434aabb1",
-          "observedAt": "2026-10-11T05:37:27Z",
+          "observedAt": "2026-10-15T11:04:21Z",
           "location": "Creation transaction timestamp",
-          "excerpt": "Exact ethereum:0x14d60e7fdc0d71d8611742720e4c50e7a974020c creation timestamp 2024-07-09T16:46:35Z."
+          "excerpt": "Exact USCC deployment creation 2024-07-09T16:46:35Z; retained window start is contract creation, not fund inception."
         },
         {
-          "label": "Rekt incident research",
+          "label": "DefiLlama full hacks API",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "Complete 1,302-record response text search",
+          "excerpt": "Fetched and searched the complete 1,302-record DefiLlama hacks API response for Superstate, USCC and Bitwise Crypto Carry; no matching record. Also reopened the Rekt current index and searched indexed Rekt Superstate/USCC reports; no exact-asset incident identified. Bounded public research is not proof of lifetime absence."
+        },
+        {
+          "label": "Rekt current index and indexed Superstate/USCC research",
           "url": "https://rekt.news/",
-          "observedAt": "2026-10-11T05:37:27Z",
-          "location": "Inherited index and relevant Burning Bridges, KelpDAO and Wormhole articles",
-          "excerpt": "Searches found rail/history leads, not an exact compromise of the reviewed deployment. This is bounded search evidence, not proof of lifetime absence."
+          "observedAt": "2026-10-15T11:04:21Z",
+          "location": "Current index and bounded site search",
+          "excerpt": "Fetched and searched the complete 1,302-record DefiLlama hacks API response for Superstate, USCC and Bitwise Crypto Carry; no matching record. Also reopened the Rekt current index and searched indexed Rekt Superstate/USCC reports; no exact-asset incident identified. Bounded public research is not proof of lifetime absence."
         },
         {
-          "label": "Superstate issuer upgrade announcement",
-          "url": "https://superstate.com/newsroom/smart-contract-upgrade-multichain-bridging-features",
-          "observedAt": "2026-10-11T05:37:27Z",
+          "label": "Superstate modular-upgrade announcement",
+          "url": "https://superstate.com/newsroom/smart-contract-upgrade-modular-infrastructure-for-ustb-uscc-and-beyond",
+          "observedAt": "2026-10-15T11:04:21Z",
           "location": "Retrieved title/date/description; body incomplete",
-          "excerpt": "Searched Superstate newsroom/indexed issuer announcements for USTB/USCC bridge, Plume and Ethereum incident/hack/pause. Retrieved February 27 2025 multichain/bridging upgrade title and metadata and July 6 2026 modular-upgrade metadata; article bodies were incomplete. Full current issuer smart-contract documentation binds exact Ethereum/Plume issuer-native burn/reissue contracts and describes routine September 2026 allowlist migration, not an adverse event. No exact-control incident found in these bounded issuer surfaces; this is not an exhaustive announcement archive."
+          "excerpt": "Reopened current official contract/security documentation and July 6, 2026 modular-upgrade announcement metadata, and searched indexed Superstate USCC/Ethereum/Plume hack, exploit, incident and pause disclosures. Docs describe native issuer burn/reissue and routine allowlist migration; no exact-control incident found. Announcement body remains incomplete, and no exhaustive private-communication or announcement-archive census is claimed."
         }
       ]
     },
@@ -39726,7 +39726,7 @@
         {
           "kind": "issuer-announcements",
           "url": "https://docs.unitas.so/overview/xgld.md",
-          "finding": "Searched issuer XGLD mechanism, documentation index/bridge guide and indexed unitas.so and UnitasFi asset/bridge incident, hack, exploit and pause terms. No exact Ethereum XGLD bridge incident announcement found. Current two-chain product table is an explicitly bounded surface, not an Ethereum retirement announcement."
+          "finding": "Searched issuer XGLD mechanism, documentation index/bridge guide and indexed unitas.so and UnitasFi asset/bridge incident, hack, exploit and pause terms. No exact XGLD bridge incident announcement was identified in this retained issuer-surface review; this is not chain-specific proof of incident absence. Current two-chain product table is an explicitly bounded surface, not an Ethereum retirement announcement."
         },
         {
           "kind": "incident-tracker",
@@ -39817,7 +39817,7 @@
         {
           "kind": "issuer-announcements",
           "url": "https://docs.unitas.so/overview/xgld.md",
-          "finding": "Searched issuer XGLD mechanism, documentation index/bridge guide and indexed unitas.so and UnitasFi asset/bridge incident, hack, exploit and pause terms. No exact Ethereum XGLD bridge incident announcement found. Current two-chain product table is an explicitly bounded surface, not an Ethereum retirement announcement."
+          "finding": "Searched issuer XGLD mechanism, documentation index/bridge guide and indexed unitas.so and UnitasFi asset/bridge incident, hack, exploit and pause terms. No exact XGLD bridge incident announcement was identified in this retained issuer-surface review; this is not chain-specific proof of incident absence. Current two-chain product table is an explicitly bounded surface, not an Ethereum retirement announcement."
         },
         {
           "kind": "incident-tracker",
@@ -68521,6 +68521,238 @@
           "observedAt": "2026-10-14T07:55:01.102957Z",
           "location": "Original bytes agents/ssc-drain/cache/objects/14/142c625de208fb400729d1be85fd6c9947f371ea1b7732834f698cfff008b6f5 SHA-256 142c625de208fb400729d1be85fd6c9947f371ea1b7732834f698cfff008b6f5",
           "excerpt": "July 29 2026 report identifies Verus Ethereum bridge 0x71518580f36feceffe0721f06ba4703218cd7f63 and theft of 92,784 scrvUSD held in third-party reserves. It does not identify this Etherlink satellite/minter/Curve bridge; the adverse lead is retained, not reassigned or erased."
+        }
+      ]
+    },
+    {
+      "reviewId": "xgz-goldzip-ethereum-mint-negative-review-20261015",
+      "assetId": "xgz-goldzip",
+      "scope": {
+        "kind": "control",
+        "controlKey": "mint-meta:xgz-goldzip:65b240a7ea10ee3756cb"
+      },
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_XgzGoldzip",
+      "windowStartSec": 1756282763,
+      "windowEndSec": 1792060631,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://goldzip.info/news/",
+          "finding": "Issuer announcement archive and current contract/audit documentation contain no identified mint-controller compromise or exact-token exploit; a no-known finding is bounded to this search."
+        },
+        {
+          "kind": "issuer-announcements",
+          "url": "https://goldzip-1.gitbook.io/goldzip/goldzip-xgz/smart-contract.md",
+          "finding": "Issuer links smart-contract source and an audit attachment; the attachment could not be retrieved. No security incident or recovery disclosure was found on this source page."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Searched 1,302 corpus entries for GoldZip, HKGX and exact XGZ aliases: no matching event. Absence from this corpus is not a guarantee."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://rekt.news/",
+          "finding": "Site-scoped GoldZip/XGZ search returned no exact-token incident; unrelated New Gold Protocol and other gold-token reports were not attributed to XGZ."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com",
+          "finding": "Creation transaction receipt at Ethereum block 23231220 (2025-08-27T08:19:23Z) contains the token initialization/owner/implementation logs. At block 26197360 (2026-10-15T10:37:11Z), paused=false, current implementation and owner unchanged. Verified-ABI emergency/upgrade/ownership/role/fee/freeze/force-burn filter over blocks 26147360-26197360 returns no events. Complete role grant/revoke census from 23231220 through 26197360 also returns no rows. Recent event coverage is bounded, not lifetime proof of no emergency."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Exact-controller pinned emergency state and bounded event census",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com",
+          "observedAt": "2026-10-15T11:07:10.115Z",
+          "location": "Ethereum 26197360; 2026-10-15T10:37:11Z; hash 0x958a36b84608b2d4560cf4a4647af29e6c881c698d492cd4141addec17f4bb4a; recent range 26147360-26197360; evidence/xgz-goldzip-recent-emergency-events.json",
+          "excerpt": "paused=false; current owner and implementation unchanged; 50,001-block verified-ABI emergency/control-event filter returns no events. Role grants/revocations also empty since deployment. No lifetime absence claim."
+        },
+        {
+          "label": "GoldZip issuer announcements",
+          "url": "https://goldzip.info/news/",
+          "observedAt": "2026-10-15T11:09:53Z",
+          "location": "News archive reopened during 2026-10-15 review",
+          "excerpt": "Current archive lists launch and partnership announcements; no identified exact-controller compromise."
+        },
+        {
+          "label": "DefiLlama hacks corpus",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-15T11:09:53Z",
+          "location": "1,302-row corpus exact-alias search",
+          "excerpt": "No GoldZip, HKGX or exact XGZ incident entry matched."
+        },
+        {
+          "label": "Rekt incident archive search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-15T11:09:53Z",
+          "location": "site:rekt.news GoldZip OR XGZ search",
+          "excerpt": "No exact GoldZip/XGZ incident located; unrelated gold-token events excluded."
+        }
+      ]
+    },
+    {
+      "reviewId": "incident-refresh-strusd-tori-5a4adaed36806a92a9e5-20261015",
+      "assetId": "strusd-tori",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:strusd-tori:5a4adaed36806a92a9e5"
+      },
+      "reviewedAt": "2026-10-15T14:46:27.979Z",
+      "reviewer": "IncidentReviewsRefresh independent expanded-controller research (2026-10-15)",
+      "windowStartSec": 1780953047,
+      "windowEndSec": 1792075587,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://x.com/tori_finance/status/2091481346849857639",
+          "finding": "Issuer announcements and current official exact-deployment docs searched for strUSD, bridge, CCIP and the reviewed chain. No exact bridge failure established; Term Finance incident explicitly reported unaffected."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com",
+          "finding": "Expanded ethereum aggregate independently researches token 0x280839980a7ed0d7717f64125fe241012e5f5815, pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b, owner Safe 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 and separate rate administrator 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. Exact-address all-event census over 26147399–26197398 inclusive (50,000 blocks) includes token/pool/Safe/rate-admin and contains ordinary token/pool activity, no observed pool ownership/role/admin/peer/rate-limit/emergency change. At block 26197398 (2026-10-15T10:44:47Z; hash 0x6fd1992621fb11dd9599781da3964b4af01610ac03562cc0735ea6dd7cf9ad87), current owner/rate-admin unchanged, rate-admin nonce=0, RMN global isCursed=false and exact pool token-restriction flag=false. Current separately captured lane limiter state remains documented, not an immutable cap. getRebalancer=zero and canAcceptLiquidity=true. Creation receipt and historical token creation establish the earlier start. Bounded event and current-state evidence is not a lifetime event census; holder-level blacklist, native mint, wrapper, key-custody and other-chain conclusions are excluded."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Complete1302-row dataset and bounded Rekt index/indexed exact-name searches found no exact Tori/strUSD bridge incident. Published CCIP provider advisories searched; no published advisory."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Expanded exact-controller events and emergency-state census",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com",
+          "observedAt": "2026-10-15T14:45:53.691Z",
+          "location": "ethereum block 26197398, 2026-10-15T10:44:47Z, hash 0x6fd1992621fb11dd9599781da3964b4af01610ac03562cc0735ea6dd7cf9ad87; integration/incident-refresh/strusd-ethereum-{events,emergency-pointers,curse,pool-restriction}.json; pool-creation.json; earlier strusd-ethereum-peers.json",
+          "excerpt": "Expanded ethereum aggregate independently researches token 0x280839980a7ed0d7717f64125fe241012e5f5815, pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b, owner Safe 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 and separate rate administrator 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. Exact-address all-event census over 26147399–26197398 inclusive (50,000 blocks) includes token/pool/Safe/rate-admin and contains ordinary token/pool activity, no observed pool ownership/role/admin/peer/rate-limit/emergency change. At block 26197398 (2026-10-15T10:44:47Z; hash 0x6fd1992621fb11dd9599781da3964b4af01610ac03562cc0735ea6dd7cf9ad87), current owner/rate-admin unchanged, rate-admin nonce=0, RMN global isCursed=false and exact pool token-restriction flag=false. Current separately captured lane limiter state remains documented, not an immutable cap. getRebalancer=zero and canAcceptLiquidity=true. Creation receipt and historical token creation establish the earlier start. Bounded event and current-state evidence is not a lifetime event census; holder-level blacklist, native mint, wrapper, key-custody and other-chain conclusions are excluded."
+        },
+        {
+          "label": "DefiLlama complete independent incident dataset",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-15T14:08:56.720Z",
+          "location": "Complete 1302-row response; common-trackers.json",
+          "excerpt": "All serialized rows searched for strUSD, Tori, CCIP and Chainlink: no matching target incident; generic or other-protocol incidents are not attributed. Non-discovery, not proof of absence."
+        },
+        {
+          "label": "Issuer exact chain token and CCIP pool map",
+          "url": "https://docs.tori.finance/resources/contracts.md",
+          "observedAt": "2026-10-15T14:44:28.650Z",
+          "location": "integration/incident-refresh/tori-contracts-capture.json; retrieved source text",
+          "excerpt": "Issuer binds Ethereum canonical strUSD LockRelease pool and Monad/Pharos BurnMint deployments to Chainlink CCIP; exact token/pool are separate listed addresses. Documentation and announcements searched for strUSD, Tori, bridge and the reviewed chain; no exact bridge incident identified."
+        },
+        {
+          "label": "Exact token creation receipt",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x7ef450f4da28e1ae6ba7d6387e9ef1bfad7baa6be8b71a3bb9c44824e31ff102",
+          "observedAt": "2026-10-11T05:56:05Z",
+          "location": "timestamp, block_number, result; creation_transaction_hash identity join",
+          "excerpt": "Successful creation transaction joined from exact address metadata; block25275301, 2026-06-08T21:10:47Z. Earlier canonical token/vault genesis, not later pool genesis."
+        },
+        {
+          "label": "CCIP provider published security advisories",
+          "url": "https://github.com/smartcontractkit/chainlink-ccip/security/advisories",
+          "observedAt": "2026-10-15T14:44:49.376Z",
+          "location": "integration/incident-refresh/chainlink-advisories-capture.json; retrieved source text",
+          "excerpt": "There aren't any published security advisories. Provider-disclosure search is bounded to published material, not undisclosed failures."
+        },
+        {
+          "label": "Rekt independent current index and indexed search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-15T14:44:49.832Z",
+          "location": "integration/incident-refresh/rekt-capture.json; current index through October14 2026 plus targeted site:rekt.news strUSD/Tori search",
+          "excerpt": "Current index and targeted strUSD/Tori indexed search identify no exact-control bridge incident. March31 Tori code/audit coverage is not a reported realized bridge failure. No exhaustive archive claim."
+        },
+        {
+          "label": "Issuer incident announcement and unaffected disposition",
+          "url": "https://x.com/tori_finance/status/2091481346849857639",
+          "observedAt": "2026-10-15T14:44:47.381Z",
+          "location": "integration/incident-refresh/tori-unaffected-capture.json; retrieved source text",
+          "excerpt": "August23 statement: Term Finance was exploited; Tori is not affected, trUSD and strUSD had zero exposure and all operations continue as normal. This is an explicit unaffected disposition for another protocol, not an absence guarantee."
+        }
+      ]
+    },
+    {
+      "reviewId": "incident-refresh-strusd-tori-8d45a5af087c9423d1d2-20261015",
+      "assetId": "strusd-tori",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:strusd-tori:8d45a5af087c9423d1d2"
+      },
+      "reviewedAt": "2026-10-15T14:46:27.979Z",
+      "reviewer": "IncidentReviewsRefresh independent expanded-controller research (2026-10-15)",
+      "windowStartSec": 1789150111,
+      "windowEndSec": 1792075587,
+      "conclusion": "no-known-incident",
+      "searchedSurfaces": [
+        {
+          "kind": "issuer-announcements",
+          "url": "https://x.com/tori_finance/status/2091481346849857639",
+          "finding": "Issuer announcements and current official exact-deployment docs searched for strUSD, bridge, CCIP and the reviewed chain. No exact bridge failure established; Term Finance incident explicitly reported unaffected."
+        },
+        {
+          "kind": "explorer-events",
+          "url": "https://api-monad-mainnet-full.n.dwellir.com",
+          "finding": "Expanded monad aggregate independently researches token 0x683fb58ee77172626d5b49087ddac71ef7825d20, pool 0x936a28338985b905f7e932af379533666df6d1ec, owner Safe 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 and separate rate administrator 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. Exact-address all-event census over 113542634–113592633 inclusive (50,000 blocks) includes token/pool/Safe/rate-admin and contains ordinary token/pool activity, no observed pool ownership/role/admin/peer/rate-limit/emergency change. At block 113592633 (2026-10-15T10:45:00Z; hash 0x2c5bd70d98facb6255ab73f1afe5bfe6766d9038fbc1da72b6543bc1fd208f68), current owner/rate-admin unchanged, rate-admin nonce=0, RMN global isCursed=false and exact pool token-restriction flag=false. Current separately captured lane limiter state remains documented, not an immutable cap. Creation receipt and historical token creation establish the earlier start. Bounded event and current-state evidence is not a lifetime event census; holder-level blacklist, native mint, wrapper, key-custody and other-chain conclusions are excluded."
+        },
+        {
+          "kind": "incident-tracker",
+          "url": "https://api.llama.fi/hacks",
+          "finding": "Complete1302-row dataset and bounded Rekt index/indexed exact-name searches found no exact Tori/strUSD bridge incident. Published CCIP provider advisories searched; no published advisory."
+        }
+      ],
+      "sources": [
+        {
+          "label": "Expanded exact-controller events and emergency-state census",
+          "url": "https://api-monad-mainnet-full.n.dwellir.com",
+          "observedAt": "2026-10-15T14:45:54.143Z",
+          "location": "monad block 113592633, 2026-10-15T10:45:00Z, hash 0x2c5bd70d98facb6255ab73f1afe5bfe6766d9038fbc1da72b6543bc1fd208f68; integration/incident-refresh/strusd-monad-{events,emergency-pointers,curse,pool-restriction}.json; pool-creation-public.json; earlier strusd-monad-peers.json",
+          "excerpt": "Expanded monad aggregate independently researches token 0x683fb58ee77172626d5b49087ddac71ef7825d20, pool 0x936a28338985b905f7e932af379533666df6d1ec, owner Safe 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 and separate rate administrator 0x5a54bbae78a3f043a1a41d6f9eb39fb2a1f766c7. Exact-address all-event census over 113542634–113592633 inclusive (50,000 blocks) includes token/pool/Safe/rate-admin and contains ordinary token/pool activity, no observed pool ownership/role/admin/peer/rate-limit/emergency change. At block 113592633 (2026-10-15T10:45:00Z; hash 0x2c5bd70d98facb6255ab73f1afe5bfe6766d9038fbc1da72b6543bc1fd208f68), current owner/rate-admin unchanged, rate-admin nonce=0, RMN global isCursed=false and exact pool token-restriction flag=false. Current separately captured lane limiter state remains documented, not an immutable cap. Creation receipt and historical token creation establish the earlier start. Bounded event and current-state evidence is not a lifetime event census; holder-level blacklist, native mint, wrapper, key-custody and other-chain conclusions are excluded."
+        },
+        {
+          "label": "DefiLlama complete independent incident dataset",
+          "url": "https://api.llama.fi/hacks",
+          "observedAt": "2026-10-15T14:08:56.720Z",
+          "location": "Complete 1302-row response; common-trackers.json",
+          "excerpt": "All serialized rows searched for strUSD, Tori, CCIP and Chainlink: no matching target incident; generic or other-protocol incidents are not attributed. Non-discovery, not proof of absence."
+        },
+        {
+          "label": "Issuer exact chain token and CCIP pool map",
+          "url": "https://docs.tori.finance/resources/contracts.md",
+          "observedAt": "2026-10-15T14:44:28.650Z",
+          "location": "integration/incident-refresh/tori-contracts-capture.json; retrieved source text",
+          "excerpt": "Issuer binds Ethereum canonical strUSD LockRelease pool and Monad/Pharos BurnMint deployments to Chainlink CCIP; exact token/pool are separate listed addresses. Documentation and announcements searched for strUSD, Tori, bridge and the reviewed chain; no exact bridge incident identified."
+        },
+        {
+          "label": "CCIP provider published security advisories",
+          "url": "https://github.com/smartcontractkit/chainlink-ccip/security/advisories",
+          "observedAt": "2026-10-15T14:44:49.376Z",
+          "location": "integration/incident-refresh/chainlink-advisories-capture.json; retrieved source text",
+          "excerpt": "There aren't any published security advisories. Provider-disclosure search is bounded to published material, not undisclosed failures."
+        },
+        {
+          "label": "Exact Monad token creation",
+          "url": "https://monadscan.com/tx/0x4eccf7f048a7ea86739555a16350d56d195544054eebe64f3a6d68659a88a248",
+          "observedAt": "2026-10-11T07:14:58.667588Z",
+          "location": "Successful creation receipt and internal create entries",
+          "excerpt": "Success at block103963391/time2026-09-11T18:08:31Z; exact0x683fb58ee77172626d5b49087ddac71ef7825d20 internally Created."
+        },
+        {
+          "label": "Rekt independent current index and indexed search",
+          "url": "https://rekt.news/",
+          "observedAt": "2026-10-15T14:44:49.832Z",
+          "location": "integration/incident-refresh/rekt-capture.json; current index through October14 2026 plus targeted site:rekt.news strUSD/Tori search",
+          "excerpt": "Current index and targeted strUSD/Tori indexed search identify no exact-control bridge incident. March31 Tori code/audit coverage is not a reported realized bridge failure. No exhaustive archive claim."
+        },
+        {
+          "label": "Issuer incident announcement and unaffected disposition",
+          "url": "https://x.com/tori_finance/status/2091481346849857639",
+          "observedAt": "2026-10-15T14:44:47.381Z",
+          "location": "integration/incident-refresh/tori-unaffected-capture.json; retrieved source text",
+          "excerpt": "August23 statement: Term Finance was exploited; Tori is not affected, trUSD and strUSD had zero exposure and all operations continue as normal. This is an explicit unaffected disposition for another protocol, not an absence guarantee."
         }
       ]
     }

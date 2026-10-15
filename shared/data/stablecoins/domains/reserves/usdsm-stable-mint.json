@@ -2,18 +2,21 @@
   "id": "usdsm-stable-mint",
   "reserves": [{ "name": "Undisclosed mix of USD cash deposits and high-quality liquid assets", "pct": 100, "risk": "medium", "assetClass": "other", "issuerOrObligor": "Undisclosed credit institutions and liquid-asset obligors", "riskFactors": ["counterparty", "custody", "liquidity", "concentration"], "liquidityHorizon": "unknown", "unclassifiedResidual": true, "residualReason": "insufficient-evidence" }],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
     "confidence": "manual-review",
     "sources": [
       { "label": "Stable Mint reserve disclosure", "url": "https://stablemint.io/stablecoins/" },
       { "label": "USDSM whitepaper", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" },
-      { "label": "Stable Mint terms, sections 4 and 9", "url": "https://stablemint.io/legal/terms-conditions/" }
+      { "label": "Stable Mint terms, sections 4 and 9", "url": "https://stablemint.io/legal/terms-conditions/" },
+      { "label": "Reserve safeguarding FAQ, legal deposit floor rather than measured weights", "url": "https://stablemint.io/faq/" },
+      { "label": "Supply feed documentation, on-chain liabilities only", "url": "https://docs.stablemint.io/feed/supply.md" },
+      { "label": "Account and transaction reports, not financial reserve attestations", "url": "https://docs.stablemint.io/guides/reports.md" }
     ],
-    "rationale": "Retrieved issuer terms and whitepaper describe same-currency cash and high-quality liquid financial assets in segregated accounts. No dated itemized portfolio, bank identities or signed reserve-to-liability reconciliation was retrieved. The 100% slice denotes the entire unclassified book, not a measured allocation or backing ratio; the advertised 102% is an issuer assertion and receives no measured collateralization credit. Medium legacy risk records uncertainty in the unsplit basket rather than assuming Treasury-only backing.",
+    "rationale": "Issuer terms, whitepaper and reserve FAQ were reopened on 2026-10-15. They describe same-currency cash and high-quality liquid financial assets in segregated accounts, without a dated itemized portfolio, named current banks or signed reserve-to-liability reconciliation. The FAQ's 30% minimum deposit requirement is a legal floor, not measured allocation. The 100% slice denotes the entire unclassified book, not a backing ratio; advertised 102% remains an issuer assertion without measured collateralization credit. The signed supply feed reports liabilities and the reports API provides customer statements, neither reserve composition nor financial assurance. Medium legacy risk retains unsplit-basket uncertainty rather than assuming Treasury-only backing.",
     "compositionBasis": "Issuer-disclosed asset-class mandate; no measured current weights",
     "scope": "classification-only",
-    "knownUnknownExposure": "The whole reserve book lacks itemized assets, counterparty weights and a independently reconciled liability denominator.",
+    "knownUnknownExposure": "The whole reserve book lacks itemized assets, counterparty weights and an independently reconciled liability denominator.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [{ "reserveIndex": 0, "reserveName": "Undisclosed mix of USD cash deposits and high-quality liquid assets", "pct": 100, "disposition": "basket-needs-split", "rationale": "No public current cash/HQLA weights or tracked stablecoin exposure were established." }]
   },
@@ -22,8 +25,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "prohibited",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
     "confidence": "manual-review",
     "sources": [{ "label": "USDSM whitepaper, reserve patrimony", "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html" }, { "label": "Stable Mint reserve segregation disclosure", "url": "https://stablemint.io/stablecoins/" }],
     "uncertainty": "Whitepaper D.3 describes a distinct patrimony and the issuer says reserves are separate, not lent or commingled. Actual banks, account agreements, allocation, replacement mechanics and practical insolvency enforceability are not public in the retrieved material. The whole-book custody summary therefore remains unknown.",

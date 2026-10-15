@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
     "confidence": "verified",
     "sources": [
       {
@@ -42,11 +42,15 @@
       {
         "label": "M0 liquidity routes and issuer onboarding",
         "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+        "url": "https://rpc.risechain.com"
       }
     ],
-    "rationale": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. USDR JMI totalAssets() returned zero, so no non-M asset slice is assigned.",
-    "compositionBasis": "Verified immediate parent-token custody and liability conservation at pinned block 23375290",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At RISE block 24455282 (2026-10-15T10:44:01Z), the extension held 4,191,272.318305 M against 4,166,891.817608 USDR, and JMI totalAssets() was zero. Token and facility EIP-1967 implementations remain 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b and 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e; both runtimes match the explorer verified bytecode. For unprivileged sample address 0x0000000000000000000000000000000000000001, canSwapViaPath(USDR,wM) returned true and canSwapViaPath(USDR,M) returned false. The former is an extension-to-extension conversion; direct M output requires approved-swapper status. These eligibility reads establish neither a completed transaction, same-notional output capacity nor a cash redemption right. No non-M reserve slice is assigned because totalAssets() is zero. Parent-token inventory is a technical custody observation, not independent upstream financial assurance; accrued M yield can be claimed for RISE.",
+    "compositionBasis": "Verified immediate parent-token custody and zero accounted non-M inventory at RISE block 24455282 (2026-10-15T10:44:01Z)",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The immediate parent-token custody is identified; whole-book upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority are not established by this local balance observation.",
     "knownUnknownExposurePct": 0
@@ -62,8 +66,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
     "confidence": "manual-review",
     "sources": [
       {
@@ -85,6 +89,10 @@
       {
         "label": "M0 liquidity routes and issuer onboarding",
         "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+        "url": "https://rpc.risechain.com"
       }
     ],
     "uncertainty": "The immediate parent-token custody is identified; whole-book upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority are not established by this local balance observation."

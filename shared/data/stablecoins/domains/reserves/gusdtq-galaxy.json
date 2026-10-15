@@ -2,7 +2,7 @@
   "id": "gusdtq-galaxy",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "sourceKey": "erc4626-single-asset:ethereum:0x71ffb6a81786ec285d429d531cf655107b9d878d:deployed",
       "name": "USDT deposited into Galaxy-curated Morpho lending markets",
       "pct": 100,
       "risk": "high",
@@ -13,20 +13,25 @@
       "issuerOrObligor": "Galaxy-curated Morpho lending markets and their borrowers",
       "riskFactors": [
         "credit",
-        "liquidity",
         "counterparty",
+        "liquidity",
         "smart-contract",
         "market",
+        "custody",
         "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "PilotVaults exact-vault reserve denominator review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_GusdtqGalaxy primary-source review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
       {
         "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
         "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
@@ -52,9 +57,9 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b4bcdd43778df87befb011a27debf5e48a78b71"
       }
     ],
-    "rationale": "At Ethereum block 26114818, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7 and totalAssets()=11027158770559 atomic USDT. adaptersLength()=1; adapters(0)=0x0b4bcdd43778df87befb011a27debf5e48a78b71. Its realAssets()=11026909133583 plus USDT.balanceOf(vault)=249636976 exactly equals totalAssets(). The unchanged 100% row represents the whole USDT-denominated idle-and-lending-position envelope, not a claim that every unit is deployed or idle, ownership of borrower collateral, or an independently signed financial reconciliation. No borrower collateral weights, borrowing absence, insolvency protection or stressed liquidity are inferred from this denominator check.",
+    "rationale": "At Ethereum block 26197374 (2026-10-15T10:39:59Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=10478891992770618122577723 raw 18-decimal shares and totalAssets()=10659854285013 raw 6-decimal USDT. The sole adapter 0x0b4bcdd43778df87befb011a27debf5e48a78b71 enumerates four positive lender positions with summed expectedSupplyAssets=10659854285013; idle USDT=0 and realAssets()=totalAssets(). Local positions have zero borrow shares and zero posted collateral. Lender-claim allocation weights (rounded to three decimal places) are WBTC 92.670%, cbBTC 5.449%, XAUt 1.879% and wstETH 0.001%; these are not borrower-collateral reserve ownership weights. The unchanged 100% slice is the full USDT-denominated idle-and-lending claim envelope, not holdings of borrower collateral or a financial assurance report. All eleven capped adapter, collateral and market IDs, including a zero-allocation weETH collateral ID and weETH/USDT market, are uint128-max/100%; caps do not establish diversification. No stressed full-book cash-realization bound is inferred.",
     "compositionBasis": "Whole USDT-denominated envelope reconciled from the complete adapter roster plus idle underlying at one pinned block",
-    "compositionAsOf": "2026-10-03",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
     "knownUnknownExposurePct": 0
@@ -72,15 +77,23 @@
       {
         "name": "Morpho Blue Ethereum lending markets",
         "role": "other"
+      },
+      {
+        "name": "Coinbase (look-through cbBTC backing custodian)",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_GusdtqGalaxy primary-source review",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
       {
         "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
         "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
@@ -104,8 +117,24 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b4bcdd43778df87befb011a27debf5e48a78b71"
+      },
+      {
+        "label": "WBTC: Bitcoin reserves held through custodians",
+        "url": "https://wbtc.network/"
+      },
+      {
+        "label": "Coinbase cbBTC: one-to-one Bitcoin held in Coinbase custody",
+        "url": "https://www.coinbase.com/cbbtc"
+      },
+      {
+        "label": "Tether Gold: token backed by physical gold",
+        "url": "https://gold.tether.to/"
+      },
+      {
+        "label": "Galaxy Curation terms: claim, liquidity and custody limitations",
+        "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
       }
     ],
-    "uncertainty": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=10849240390816215589153603 raw 18-decimal shares and totalAssets()=11026389722645 raw 6-decimal USDT. One adapter 0x0b4bcdd43778df87befb011a27debf5e48a78b71 enumerates 4 current market IDs; summed expectedSupplyAssets=11026140085669, idle underlying=249636976; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification."
+    "uncertainty": "At Ethereum block 26197374 (2026-10-15T10:39:59Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=10478891992770618122577723 raw 18-decimal shares and totalAssets()=10659854285013 raw 6-decimal USDT. The sole adapter 0x0b4bcdd43778df87befb011a27debf5e48a78b71 enumerates four positive lender positions with summed expectedSupplyAssets=10659854285013; idle USDT=0 and realAssets()=totalAssets(). Local positions have zero borrow shares and zero posted collateral. Lender-claim allocation weights (rounded to three decimal places) are WBTC 92.670%, cbBTC 5.449%, XAUt 1.879% and wstETH 0.001%; these are not borrower-collateral reserve ownership weights. Immediate vault, adapter and lender claims are on-chain. WBTC/cbBTC-collateral markets account for approximately 98.119% of lending allocation and XAUt adds custodial gold exposure, so the whole-book custody summary is mixed rather than onchain. This percentage weights lender claims, not custodian reserve assets. Parent USDT reserve custody is also separate. Borrowed USDT is intentionally deployed by borrowers; this does not establish downstream custodian reuse rights, legal segregation, bankruptcy remoteness or enforceable insolvency priority. Those safeguards remain unknown."
   }
 }

@@ -2,9 +2,10 @@
   "id": "frnt-wyoming",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-reconciled",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
-    "summary": "Commission-operated role holders can mint native liabilities on seven EVM-compatible deployments, including Hedera, and through the Solana Token-2022 mint authority. UUPS upgraders can replace EVM issuance rules. Fireblocks HSM custody is disclosed, but full live membership and signing independence are not verified.",
+    "summary": "Commission role holders can mint native liabilities across seven EVM-compatible deployments and a Solana Token-2022 one-of-two mint multisig. EVM upgraders can immediately replace issuance logic. Current memberships and implementations are refreshed at October 15 pins; backend signing independence, complete transfer execution reach and independently reviewed reserve-to-liability reconciliation remain unresolved. The September 14 issuer/provider dispute over historical production-key control is not bound to an affected mint authority; no FRNT exploit or loss is established. Announced AT-C 205 examinations support attestation-only oversight, not prudential issuer supervision.",
+    "headline": "Commission-controlled minting and immediate upgrades are economically unbounded; independent signing safeguards and reserve-to-liability reconciliation remain unverified.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -28,7 +29,7 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "FRNT ethereum UUPS upgrader",
-      "observedAt": "2026-10-02",
+      "observedAt": "2026-10-15",
       "sources": [
         {
           "label": "Commission current technology and Fireblocks HSM disclosure",
@@ -71,8 +72,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197310,
         "sources": [
           {
             "label": "ethereum exact deployment",
@@ -95,7 +96,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At ethereum block 26107704, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At ethereum block 26197310 (2026-10-15T10:27:11Z), pinned hasRole confirms this native minter membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. Verified mint source has no reserve-value gate; UPGRADER_ROLE can replace mint logic without a built-in delay. Backend signing independence and recovery policy remain undisclosed."
       },
       {
         "chain": "ethereum",
@@ -119,8 +120,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197310,
         "sources": [
           {
             "label": "ethereum exact deployment",
@@ -143,7 +144,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At ethereum block 26107704, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At ethereum block 26197310 (2026-10-15T10:27:11Z), pinned hasRole confirms this role administrator membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. Verified mint source has no reserve-value gate; UPGRADER_ROLE can replace mint logic without a built-in delay. Backend signing independence and recovery policy remain undisclosed."
       },
       {
         "chain": "ethereum",
@@ -167,8 +168,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197310,
         "sources": [
           {
             "label": "ethereum exact deployment",
@@ -191,7 +192,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At ethereum block 26107704, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At ethereum block 26197310 (2026-10-15T10:27:11Z), pinned hasRole confirms this UUPS upgrader membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. Verified mint source has no reserve-value gate; UPGRADER_ROLE can replace mint logic without a built-in delay. Backend signing independence and recovery policy remain undisclosed."
       },
       {
         "chain": "avalanche",
@@ -215,8 +216,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 96633151,
+        "observedAt": "2026-10-15",
+        "observedBlock": 97609763,
         "sources": [
           {
             "label": "avalanche exact deployment",
@@ -239,7 +240,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At avalanche block 96633151, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At avalanche block 97609763 (2026-10-15T10:45:47Z), pinned hasRole confirms this native minter membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "avalanche",
@@ -263,8 +264,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 96633151,
+        "observedAt": "2026-10-15",
+        "observedBlock": 97609763,
         "sources": [
           {
             "label": "avalanche exact deployment",
@@ -287,7 +288,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At avalanche block 96633151, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At avalanche block 97609763 (2026-10-15T10:45:47Z), pinned hasRole confirms this role administrator membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "avalanche",
@@ -311,8 +312,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 96633151,
+        "observedAt": "2026-10-15",
+        "observedBlock": 97609763,
         "sources": [
           {
             "label": "avalanche exact deployment",
@@ -335,7 +336,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At avalanche block 96633151, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At avalanche block 97609763 (2026-10-15T10:45:47Z), pinned hasRole confirms this UUPS upgrader membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "base",
@@ -359,8 +360,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095853,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635845,
         "sources": [
           {
             "label": "base exact deployment",
@@ -383,7 +384,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At base block 52095853, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At base block 52635845 (2026-10-15T10:43:57Z), pinned hasRole confirms this native minter membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "base",
@@ -407,8 +408,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095853,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635845,
         "sources": [
           {
             "label": "base exact deployment",
@@ -431,7 +432,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At base block 52095853, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At base block 52635845 (2026-10-15T10:43:57Z), pinned hasRole confirms this role administrator membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "base",
@@ -455,8 +456,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095853,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635845,
         "sources": [
           {
             "label": "base exact deployment",
@@ -479,7 +480,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At base block 52095853, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At base block 52635845 (2026-10-15T10:43:57Z), pinned hasRole confirms this UUPS upgrader membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "polygon",
@@ -503,8 +504,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 94850610,
+        "observedAt": "2026-10-15",
+        "observedBlock": 95570508,
         "sources": [
           {
             "label": "polygon exact deployment",
@@ -527,7 +528,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At polygon block 94850610, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At polygon block 95570508 (2026-10-15T10:44:48Z), pinned hasRole confirms this native minter membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "polygon",
@@ -551,8 +552,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 94850610,
+        "observedAt": "2026-10-15",
+        "observedBlock": 95570508,
         "sources": [
           {
             "label": "polygon exact deployment",
@@ -575,7 +576,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At polygon block 94850610, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At polygon block 95570508 (2026-10-15T10:44:48Z), pinned hasRole confirms this role administrator membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "polygon",
@@ -599,8 +600,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 94850610,
+        "observedAt": "2026-10-15",
+        "observedBlock": 95570508,
         "sources": [
           {
             "label": "polygon exact deployment",
@@ -623,7 +624,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At polygon block 94850610, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At polygon block 95570508 (2026-10-15T10:44:48Z), pinned hasRole confirms this UUPS upgrader membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "arbitrum",
@@ -647,8 +648,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123897,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515036378,
         "sources": [
           {
             "label": "arbitrum exact deployment",
@@ -671,7 +672,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At arbitrum block 511123897, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At arbitrum block 515036378 (2026-10-15T10:46:50Z), pinned hasRole confirms this native minter membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "arbitrum",
@@ -695,8 +696,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123897,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515036378,
         "sources": [
           {
             "label": "arbitrum exact deployment",
@@ -719,7 +720,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At arbitrum block 511123897, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At arbitrum block 515036378 (2026-10-15T10:46:50Z), pinned hasRole confirms this role administrator membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "arbitrum",
@@ -743,8 +744,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123897,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515036378,
         "sources": [
           {
             "label": "arbitrum exact deployment",
@@ -767,7 +768,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At arbitrum block 511123897, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At arbitrum block 515036378 (2026-10-15T10:46:50Z), pinned hasRole confirms this UUPS upgrader membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "optimism",
@@ -791,8 +792,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 157691139,
+        "observedAt": "2026-10-15",
+        "observedBlock": 158231131,
         "sources": [
           {
             "label": "optimism exact deployment",
@@ -815,7 +816,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At optimism block 157691139, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At optimism block 158231131 (2026-10-15T10:43:59Z), pinned hasRole confirms this native minter membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "optimism",
@@ -839,8 +840,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 157691139,
+        "observedAt": "2026-10-15",
+        "observedBlock": 158231131,
         "sources": [
           {
             "label": "optimism exact deployment",
@@ -863,7 +864,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At optimism block 157691139, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At optimism block 158231131 (2026-10-15T10:43:59Z), pinned hasRole confirms this role administrator membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "optimism",
@@ -887,8 +888,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 157691139,
+        "observedAt": "2026-10-15",
+        "observedBlock": 158231131,
         "sources": [
           {
             "label": "optimism exact deployment",
@@ -911,7 +912,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At optimism block 157691139, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At optimism block 158231131 (2026-10-15T10:43:59Z), pinned hasRole confirms this UUPS upgrader membership. The implementation remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c with runtime identical to the verified Ethereum implementation. Native minting has no reserve-value gate and upgrade authorization has no built-in delay. Backend signing independence remains undisclosed."
       },
       {
         "chain": "hedera",
@@ -935,8 +936,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 100653016,
+        "observedAt": "2026-10-15",
+        "observedBlock": 101150335,
         "sources": [
           {
             "label": "hedera exact deployment",
@@ -959,7 +960,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At hedera block 100653016, hasRole confirms this native minter membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At Hedera mirror block 101150335 (2026-10-15T10:48:38Z; consensus timestamp 1792061318.029882082), historical hasRole confirms this native minter. The complete 85-log token history through that timestamp retains implementation 0x87b589879ab3e22de54c980396bd944ac2b5dc6c and the known issuer roles plus a local pool minter. No signing-independence, full pool execution-reach or prudential-supervision claim is inferred."
       },
       {
         "chain": "hedera",
@@ -983,8 +984,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 100653016,
+        "observedAt": "2026-10-15",
+        "observedBlock": 101150335,
         "sources": [
           {
             "label": "hedera exact deployment",
@@ -1007,7 +1008,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At hedera block 100653016, hasRole confirms this role administrator membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At Hedera mirror block 101150335 (2026-10-15T10:48:38Z; consensus timestamp 1792061318.029882082), historical hasRole confirms this role administrator. The complete 85-log token history through that timestamp retains implementation 0x87b589879ab3e22de54c980396bd944ac2b5dc6c and the known issuer roles plus a local pool minter. No signing-independence, full pool execution-reach or prudential-supervision claim is inferred."
       },
       {
         "chain": "hedera",
@@ -1031,8 +1032,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 100653016,
+        "observedAt": "2026-10-15",
+        "observedBlock": 101150335,
         "sources": [
           {
             "label": "hedera exact deployment",
@@ -1055,7 +1056,7 @@
             "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf"
           }
         ],
-        "evidence": "At hedera block 100653016, hasRole confirms this UUPS upgrader membership. The implementation slot remains 0x87b589879ab3e22de54c980396bd944ac2b5dc6c. ERC20F mint has no reserve-value check and UUPS authorization is UPGRADER_ROLE without a built-in execution delay. This does not prove complete membership or signing independence."
+        "evidence": "At Hedera mirror block 101150335 (2026-10-15T10:48:38Z; consensus timestamp 1792061318.029882082), historical hasRole confirms this UUPS upgrader. The complete 85-log token history through that timestamp retains implementation 0x87b589879ab3e22de54c980396bd944ac2b5dc6c and the known issuer roles plus a local pool minter. No signing-independence, full pool execution-reach or prudential-supervision claim is inferred."
       },
       {
         "chain": "solana",
@@ -1073,8 +1074,8 @@
         "failureDomainKeys": [
           "issuer-backend:frnt-wyoming:commission"
         ],
-        "observedAt": "2026-10-05",
-        "observedBlock": 453519819,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457210029,
         "sources": [
           {
             "label": "solana exact deployment",
@@ -1089,7 +1090,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized getMultipleAccounts context slot 453519819 re-verifies W3R03's approved Token-2022 identity: exact FRNT mint authority DsRa7mCpCfcTxdNJvaTzbRe73FuBbrs8U8NEAxFunWnr is non-executable, owned by TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, and an initialized native multisig requiring one of two signers: 7VhCbqKQEz3RNLSuAuiRmBVEVWdgcFqGHMiVPPo2KjHy and G15NrcKeqQoPG5ERcTLN1SNWZWv7BqbjvnnyQ1vJyAKf. The first signer account is absent and the second is a non-executable system account. Native multisig account data has no module or guard mechanism; this is not a custom executable controller. The same response includes the distinct scaled-UI authority 3FL7iZaerXVygpPAFtXyxoCGdoUt11eiSBYkko6mMD8x, multiplier 1, and the Token-2022 program and ProgramData account. Cryptographic topology does not establish operator independence, private key custody, recovery policy, historical incident attribution or complete program execution reach."
+        "evidence": "Exact Alchemy Account Archive reads at finalized Solana slot 457210029 (2026-10-15T10:49:21Z) verify the FRNT Token-2022 mint and its non-executable mint authority DsRa7mCpCfcTxdNJvaTzbRe73FuBbrs8U8NEAxFunWnr at the same slot. The initialized native multisig still requires one of two signers, 7VhCbqKQEz3RNLSuAuiRmBVEVWdgcFqGHMiVPPo2KjHy and G15NrcKeqQoPG5ERcTLN1SNWZWv7BqbjvnnyQ1vJyAKf. Its native account layout has no custom module or guard mechanism. Freeze authority, permanent delegate and pausable authority remain CBxsYp2sByWC5AgrEjze7Z8QTdDX56JJRgSEX7BUWady; the mint is not paused. The distinct scaled-UI authority is 3FL7iZaerXVygpPAFtXyxoCGdoUt11eiSBYkko6mMD8x with current and scheduled multipliers 1. Fresh jsonParsed archive reads also identify that address as metadata-pointer authority and token-metadata update authority; the metadata pointer targets the FRNT mint itself. Those separate authority roles, mint authority, freeze authority and unpaused state are identical in archived snapshots at slot 446564317 (2026-09-13T00:20:05Z), slot 447384813 (2026-09-16T00:20:41Z) and slot 457210029. These snapshots bracket the September 14 disclosure but are not a complete intervening transaction census. The June 3 receipt changes only scaled-UI authority; common ownership of separate metadata or OFT authorities does not establish that those other powers were affected. This refresh does not re-certify signer account ownership, operator independence, private-key custody, recovery policy or the Commission's disputed incident attribution."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -1142,13 +1143,13 @@
           "url": "https://stabletoken.wyo.gov/assets/media/token.pdf"
         }
       ],
-      "evidence": "Prior W2R23 complete RoleGranted/RoleRevoked history from genesis remains pinned to October 3 blocks Ethereum 26110208, Avalanche 96655718, Base 52110947, Polygon 94870735, Arbitrum 511231213 and Optimism 157706232. All six identified sole DEFAULT_ADMIN_ROLE 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b, sole UPGRADER_ROLE 0x7f6cc8151ac948429911dab959d9e305501079ba, issuer MINTER_ROLE 0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a and a chain-local CCIP pool minter; admin/upgrader membership was corroborated by pinned hasRole. Verified ERC20F._authorizeUpgrade is UPGRADER_ROLE-only with no contract delay. Prior Hedera census retrieved 85 logs through Unix second 1791071400 with links.next=null, reconstructing those same issuer roles plus minter 0xb9e7e53ad3f4bbc352a55c33db7bcf25e0da3f03. R02 re-verifies W3R03's BurnMintTokenPool 1.6.1 identity and enumerates its seven remote configurations, both directional rate buckets, router, RMN proxy, owner and router off-ramps at one mirror block 100747953; these view observations are not executable-source correspondence or full mutable permission closure. R02 finalized Solana slot 453519819 re-verifies the approved Token-2022 one-of-two native mint multisig and separate scaled-UI authority. The provider's primary September 14 response now supplies a historical receipt: finalized slot 424090107, June 3 2026 19:29:21 UTC, changes only scaledUiAmount authority on exact FRNT, with no mint, burn or mint-authority-change instruction. This dates the display-authorization transfer, not the Commission CISO's separately worded private-key allegation or a mint incident resolution. Searched current Commission technology, news and meeting bundles, January 14 cryptographic-management rules, CISO disclosure, provider response, official August 2025 audit archive and rekt.news coverage. No independently mapped active/resolved native-mint incident or incident-free finding is asserted. Signer independence, custody and recovery policy remain undisclosed; public required procedures do not prove deployed enforcement. Existing TNF FRNT dashboard evidence identifies issued AT-C 205 examinations, a daily archive through October 3 and independently collected circulating balances/daily Fiduciary Trust statements, supporting attestation-only issuer oversight, not prudential licensing or a reviewed report opinion. Signed reports were not retrieved by this control review; reconciliation remains unknown. Every prior controller and adverse mint/upgrade fact is preserved, with incomplete aggregate review explicit.",
-      "reviewer": "W2R23 authority census; W3R03 authenticated identity review; R02 exact historical receipt and pinned Hedera reach narrowing",
-      "reviewedAt": "2026-10-05",
+      "evidence": "October 15 refresh pins Ethereum 26197310, Avalanche 97609763, Base 52635845, Polygon 95570508, Arbitrum 515036378, Optimism 158231131, Hedera mirror 101150335 and exact archived Solana slot 457210029; timestamps and keyless endpoints are retained in the review ledger. The six EVM implementation slots remain 0x87b589879ab3e22de54c980396bd944ac2b5dc6c and their implementation runtime hashes match the verified Ethereum source. The seven EVM-compatible deployments retain issuer minter 0x83465b1bac70dc63c0d6b72e9f012af4a1e7138a, administrator 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b and upgrader 0x7f6cc8151ac948429911dab959d9e305501079ba. Current complete explorer role censuses were retrieved for Ethereum, Avalanche, Polygon, Arbitrum and Optimism; Hedera's complete 85-log history ends at consensus timestamp 1792061318.029882082 with no next page. They identify the issuer and local CCIP pool as minters, issuer burner 0x90a6fb5a18181ddf6a7bce622caf7cabd93ce707 and local pool as burners, pauser 0x12ea9a1a575a4377f42e23622c3cab3ab2437d34, recovery 0x5707c91b00a0bd34440b33461ca617a685e764c4, contract administrator 0xb3b045c0744b22f7d8dddb133cc6c8cd2fdf9719 and salvager 0x8a1ad123f6fa9b964b89f7d892639dd30f14a4bf; ADAPTER_ROLE has no extant member in those censuses. Base's known memberships are freshly confirmed, but its current complete explorer census was unavailable. Prior W2R23 full six-chain history remains dated October 3 at blocks 26110208, 96655718, 52110947, 94870735, 511231213 and 157706232; empty incremental RPC results are not used as proof of a complete current census. Verified ERC20F mint and UUPS upgrade powers remain economically unbounded with no built-in execution delay. Current Hedera pool views retain BurnMintTokenPool 1.6.1, seven remote peers and directional buckets, known router/RMN/owner identities and 14 router off-ramps; source/execution correspondence remains open, preserving R02's prior block-100747953 limitation. The native Solana one-of-two multisig and distinct multiplier-one scaled-UI authority are freshly verified; R02's slot-453519819 observation remains historical. The June 3 scaled-UI authority transfer is independently re-read at exact finalized slot 424090107, 2026-06-03T19:29:21Z: it contains only the scaledUiAmount setAuthority and ComputeBudget instructions, not a mint, burn or mint-authority change. The September 14 issuer private-key allegation and provider display-authority explanation remain unbound to an exact affected native control; neither resolution nor incident absence is inferred. Public signing/incident-response rules, CISO/provider statements, August 2025 audit archive, current issuer materials, ReKt, DefiLlama hacks and CCIP advisories retain the bounded unknown incident and operator-independence findings. The daily TNF report archive now extends to October 14; only issued AT-C 205 reports carry examination conclusions, while dashboard metrics are supplemental and expressly not FRNT's accounting or internal-control system. Current signed report retrieval remains unavailable, so whole-liability reconciliation remains unknown and oversight attestation-only, not prudential. The posture annotation is corrected from unbounded-reconciled to unbounded-adverse to match that unchanged evidence tuple under the current rules; it is not a finding of an active incident or proven non-reconciliation.",
+      "reviewer": "Pharos batch-64 review (Rev_FrntWyoming; FrntKeyControlIncident); preserving W2R23, W3R03 and R02 historical evidence",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [
-        "At mirror block 100747953 the additional Hedera minter 0xb9e7e53ad3f4bbc352a55c33db7bcf25e0da3f03 returns BurnMintTokenPool 1.6.1 and exact FRNT getToken. Its seven remote token/pool entries, enabled inbound/outbound buckets, owner 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b, router 0x87b400b4d4f5fe2fdb6fbea66c38003ced565b76 and RMN proxy 0x09d9c9a2ba147654fb40e217b68f2874775271b9 are enumerated. Router getOffRamps returns 14 entries and owner 0x04c632720dd676e1443a93a52ac919c236866ea9. Public view results do not certify executable correspondence or close mutable router/off-ramp and permission-change reach; Sourcify v2 has no verified match and the files endpoint returns 403. Native-versus-transfer liability reach remains unresolved.",
-        "Solana mint authority remains an initialized Token-2022 one-of-two multisig at finalized slot 453519819. Which independently evidenced operator and recovery policies govern signer keys 7VhCbqKQEz3RNLSuAuiRmBVEVWdgcFqGHMiVPPo2KjHy and G15NrcKeqQoPG5ERcTLN1SNWZWv7BqbjvnnyQ1vJyAKf, and how does that cryptographic quorum relate to Chapter 2's required multiple-signer operating procedures?",
+        "At mirror block 101150335 the additional Hedera minter 0xb9e7e53ad3f4bbc352a55c33db7bcf25e0da3f03 returns BurnMintTokenPool 1.6.1 and exact FRNT getToken. All seven remote token/pool entries and directional rate buckets are refreshed. Owner remains 0x5e3372f9a1c04e789ef86df9ec35f87e000bb15b, router 0x87b400b4d4f5fe2fdb6fbea66c38003ced565b76 and RMN proxy 0x09d9c9a2ba147654fb40e217b68f2874775271b9. Router getOffRamps still returns 14 entries and owner 0x04c632720dd676e1443a93a52ac919c236866ea9. Reciprocal peers and the issuer CCIP designation corroborate transfer-pool identity, now authored in Bridge Risk, but do not certify executable-source correspondence or complete mutable router/off-ramp and permission-change reach. R02's failed Sourcify lookup remains historical, not proof that no source can ever be published. What complete execution evidence excludes a non-transfer liability-creation path?",
+        "At exact archived Solana slot 457210029, the native mint authority remains an initialized Token-2022 one-of-two multisig. Which independently evidenced operator and recovery policies govern signer keys 7VhCbqKQEz3RNLSuAuiRmBVEVWdgcFqGHMiVPPo2KjHy and G15NrcKeqQoPG5ERcTLN1SNWZWv7BqbjvnnyQ1vJyAKf, and how does that cryptographic quorum relate to Chapter 2's required multiple-signer operating procedures?",
         "Finalized transaction 4D3VgoF9YjFh6LXkuvPu5aK5aL3yuxUMiSuwHqRBHJvgGKAW7gnjDQ6gHkvBBxNVHbDFYMaw1V952fDX7u5F3atg at slot 424090107, June 3 2026 19:29:21 UTC, transfers only scaledUiAmount authority from DLP5sGaLm596Fa8PCNPYNofFK1cZxzME7csK3xBsABCT to 3FL7iZaerXVygpPAFtXyxoCGdoUt11eiSBYkko6mMD8x; it has no mint, burn or mint-authority-change instruction. The provider calls this the disputed authorization; the Commission CISO does not identify the affected key or transaction in its September 14 disclosure. Does the Commission's separate critical-private-key allegation refer to this same display authority or another production control, and what exact incident/resolution evidence applies? This receipt is not a resolved mint incident or incident-free aggregate review."
       ],
       "scopedQuestions": [
@@ -1170,10 +1171,10 @@
         {"controlRef": "FRNT optimism native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
         {"controlRef": "FRNT optimism role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
         {"controlRef": "FRNT optimism UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT hedera native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter? The separate whole-deployment role census remains open.", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT hedera role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator? The separate whole-deployment role census remains open.", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT hedera UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader? The separate whole-deployment role census remains open.", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03 (Refine01)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT Solana Token-2022 mint authority", "question": "Native Token-2022 signing quorum is one of two at finalized slot 453407053. What independently evidenced operator independence and key-recovery policy governs those signer keys, and what exact deployed mint/control authority was affected by the disclosed production-key incident?", "subject": "execution-scope", "reviewedAt": "2026-10-04", "reviewer": "W3R03 authenticated Solana identity review", "sources": [{"label": "Exact Solana FRNT mint", "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"}, {"label": "Commission current custody disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}, {"label": "Solana finalized same-context authority census", "url": "https://api.mainnet-beta.solana.com"}]}
+        {"controlRef": "FRNT hedera native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.", "subject": "key-custody-independence", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review (Rev_FrntWyoming)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT hedera role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.", "subject": "key-custody-independence", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review (Rev_FrntWyoming)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT hedera UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.", "subject": "key-custody-independence", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review (Rev_FrntWyoming)", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
+        {"controlRef": "FRNT Solana Token-2022 mint authority", "question": "Unresolved: native Token-2022 signing quorum remains one of two at exact archived finalized slot 457210029. What independently evidenced operator independence and key-recovery policy governs those signer keys? Separately, does the Commission's September 14, 2026 allegation concern this native mint control, the distinct scaled-UI authority transferred on June 3, or another production key? Identify the affected chain, address, authority type, exposure period and issuer-confirmed remediation before attributing a mint incident. The provider's display-authority explanation does not close that attribution gap.", "subject": "execution-scope", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review (FrntKeyControlIncident)", "sources": [{"label": "Exact Solana FRNT mint", "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"}, {"label": "Commission current custody disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}, {"label": "Exact archived mint and authority accounts at one finalized slot", "url": "https://solana-mainnet.g.alchemy.com/v2/"}, {"label": "Commission CISO production-key disclosure, September 14, 2026", "url": "https://www.linkedin.com/pulse/why-wyoming-stable-token-commission-migrated-frnt-from-keith-lawhorn-jcdpe"}, {"label": "LayerZero CEO disputed-key response, September 14, 2026", "url": "https://x.com/PrimordialAA/status/2099556388708270081"}]}
       ]
     }
   }

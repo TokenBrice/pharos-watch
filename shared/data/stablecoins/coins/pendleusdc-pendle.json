@@ -2,7 +2,7 @@
   "id": "pendleusdc-pendle",
   "name": "Pendle Ecosystem USDC",
   "symbol": "pendleUSDC",
-  "oneLiner": "pendleUSDC is Pendle Ecosystem's USDC lending vault on Ethereum; shares redeem at NAV when liquidity is available and bear strategy losses.",
+  "oneLiner": "pendleUSDC is a Pendle and Armitage co-curated USDC vault on Ethereum; shares accrue lending interest, bear losses and redeem subject to liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC lender positions in three Morpho markets secured by PT-reUSD-10DEC2026, PT-sUSDS-26NOV2026 and PT-sUSDE-26NOV2026",
-  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. In-kind deallocation retains underlying lending-position exposure.",
+  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC. Ordinary redemption burns shares for idle USDC and liquidity from the configured liquidity adapter. Force-deallocation can access other liquid markets; an in-kind exit instead retains underlying lending-position exposure. Vault V2 maxWithdraw and maxRedeem deliberately return zero and do not measure available liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Pendle Ecosystem USDC at ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05 is an ERC-4626 share over USDC with a code-enforced pro-rata claim on the current Morpho lending inventory. The claim bears lending losses and liquidity constraints, so protocol-position intentionally differs from the fiat-cash parent and older Morpho precedents. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=57223770882007511486234678 atomic shares; accrueInterestView returned assets=57750429995940, pending performance shares=41086454487993768052, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 57750429995940 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1009202 USDC atomic units. ",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_PendleusdcPendle, batch64 primary-source review",
+    "rationale": "The exact Ethereum vault 0x55c1b6e461a6334b567baf0feb5d728715446f05 issues ERC-4626 shares representing USDC-denominated Morpho lender positions. Shares absorb lending losses and accrue interest; ordinary redemption depends on idle USDC and selected adapter-market liquidity, which differs from the fiat-cash parent. At Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de; timestamp 2026-10-15T10:43:11Z), totalSupply=54428789336656703110422943 atomic shares and accrueInterestView assets=55037908277824 atomic USDC, pending performance shares=1632717121445232583 and management shares=0. Idle USDC=0; the complete one-adapter, three-market inventory sums exactly to totalAssets. Share decimals=18, asset decimals=6 and convertToAssets(1e18)=1011191. This establishes protocol-position claim identity and accounting, not a fixed-dollar obligation, full-liquidity guarantee or financial attestation.",
     "sources": [
       {
         "label": "Pendle Ecosystem USDC exact vault identity and accounting",
@@ -39,8 +39,8 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum block 26197390, 2026-10-15T10:43:11Z; exact share identity, accounting and complete lending inventory",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       {
         "label": "Exact VaultV2 partial source with matching deployed bytecode",
@@ -59,12 +59,36 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0x55c1b6e461a6334b567baf0feb5d728715446f05"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Strategy docs",
+      "url": "https://armitage.wintermute.com/docs/vaults/ecosystem"
+    },
+    {
+      "label": "Armitage: Terms of use",
+      "url": "https://armitage.wintermute.com/terms-of-use"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/token/0x55c1b6e461a6334b567baf0feb5d728715446f05"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/pendle_fi"
+    },
+    {
+      "label": "Launch announcement",
+      "url": "https://x.com/pendle_fi/status/2087524601203212383"
     }
   ],
   "contracts": [
@@ -75,7 +99,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Pendle Ecosystem USDC Morpho USDC lending vault",
@@ -83,7 +107,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "pendleusdc-pendle",
     "display": {
@@ -106,9 +130,9 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
       "deployedExposure": {
-        "basis": "Pinned complete adapter inventory consists of USDC-denominated lender positions, not idle cash: USDC lender positions in three Morpho markets secured by PT-reUSD-10DEC2026, PT-sUSDS-26NOV2026 and PT-sUSDE-26NOV2026",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://api.morpho.org/graphql"
+        "basis": "Complete fixed-block census at Ethereum block 26197390 (2026-10-15T10:43:11Z) identifies zero idle USDC and 55037908277824 atomic USDC of lender claims across PT-reUSD-10DEC2026, PT-sUSDS-26NOV2026 and PT-sUSDE-26NOV2026 Morpho markets. Borrower collateral is not directly owned by the vault.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",
@@ -116,5 +140,12 @@
       }
     }
   },
-  "implementationLaunchDate": "2026-08-04"
+  "notices": [
+    {
+      "type": "info",
+      "title": "Curator terms restrict UK and US access",
+      "message": "Armitage's terms prohibit UK and US persons from accessing or using its covered vaults, including through third-party interfaces. Direct contract permissions do not override those terms; withdrawals remain subject to market liquidity."
+    }
+  ],
+  "launchDate": "2026-08-12"
 }

@@ -8,8 +8,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Ethereum block 26197000, 2026-10-15T09:24:59Z; local gate and abdication state",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -28,15 +28,15 @@
         "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
       }
     ],
-    "evidence": "At ethereum block 26107706, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Exact immutable VaultV2 code forbids executing abdicated setters. Local share transfer and withdrawal gates are disabled; upstream PYUSD blacklist/pause or reserve-access powers remain inherited from pyusd-paypal. Allocator liquidity configuration and lending losses are distinct risks.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), receiveSharesGate, sendSharesGate and receiveAssetsGate remained zero, and their setters remained permanently abdicated. Immutable VaultV2 code forbids executing abdicated setters. Local share-transfer and withdrawal gates cannot be reinstated; upstream PYUSD blacklist/pause and reserve-access powers remain inherited. sendAssetsGate was zero but remains configurable for deposits only. Allocation, liquidity routing and lending losses are separate risks.",
+    "reviewer": "Rev_SenpyusdmwinSentora",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only the exact native ethereum vault-share deployment is authored. No share bridge representation is evidenced; upstream parent routes are separate inherited exposure.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SenpyusdmwinSentora",
     "confidence": "verified",
     "sources": [
       {
@@ -78,8 +78,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Exact immutable vault share totalSupply is created by deposit/mint and accrual fee accounting in this deployment. No share bridge or remote mint entrypoint appears in the reviewed implementation; parent-token bridge exposure remains inherited separately.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107706,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "sources": [
           {
             "label": "Exact Sentora vault",
@@ -113,9 +113,9 @@
     "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Exact MorphoChainlinkOracleV2 has a single composite pricing path with no fallback; its verified ChainlinkDataFeedLib ignores updatedAt and does not reject stale answers. At block 26114898 the configured mWIN BASE_FEED_1 and PYUSD QUOTE_FEED_1 matched the earlier inventory. Sentora discloses business-day mWIN NAV and weekend staleness. This establishes single-source/laggy topology, not feed-administrator or custody closure.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown resolver W1R33",
+    "summary": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), the immutable MorphoChainlinkOracleV2 retained one mWIN/USD over PYUSD/USD path, no vault conversion and no fallback. Its library ignores updatedAt. The mWIN input is a manually updated Midas feed behind an upgradeable proxy; PYUSD uses a mutable Chainlink aggregator proxy. Current implementations and their administrative routes are identified below; signer independence and whole-book custody are not established.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SenpyusdmwinSentora",
     "confidence": "verified",
     "sources": [
       {
@@ -123,8 +123,8 @@
         "url": "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment"
       },
       {
-        "label": "Pinned feed configuration block 26114898",
-        "url": "https://etherscan.io/block/26114898"
+        "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, 2026-10-15T09:24:59Z; feeds, rounds, proxy slots and administrators",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Exact Sentora vault",
@@ -161,6 +161,26 @@
       {
         "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4e24e266fd7836fd8edf8f5ddb5578e4b7bf4d20"
+      },
+      {
+        "label": "Active Midas mWIN custom feed implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7156b140aad6999f48767db6687f46e8df331c4c"
+      },
+      {
+        "label": "Active Chainlink PYUSD/USD OCR2 aggregator",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x39e31761911b9aabaef5fb81b18fd1c24a60e884"
+      },
+      {
+        "label": "mWIN feed transparent proxy",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1725a66d810c0775f6b3b0fd85646d371da19517"
+      },
+      {
+        "label": "Chainlink PYUSD/USD proxy and owner-controlled aggregator replacement",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8f1df6d7f2db73eece86a18b4381f4707b918fb1"
+      },
+      {
+        "label": "mWIN ProxyAdmin owner MidasTimelockController",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe3eee3e0d2398799c884a47fc40c029c8e241852"
       }
     ],
     "branchApplicability": {
@@ -243,10 +263,10 @@
         "branchId": "0xeecbfa4b6caa83c5000ce68a77808c80504e2ff56e81095c7742a615ecd9c774",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SenpyusdmwinSentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107706 binds this oracle to collateral 0x4e72025984424e52838cf8953e2863eff036b67a with 77% LLTV and 25439444510025 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at Ethereum block 26197000 binds this oracle to mWIN collateral 0x4e72025984424e52838cf8953e2863eff036b67a at 77% LLTV; the sole adapter's current expected lender assets are 9592754991797 raw PYUSD.",
           "sources": [
             {
               "label": "Exact Sentora vault",
@@ -281,7 +301,7 @@
         "id": "0xeecbfa4b6caa83c5000ce68a77808c80504e2ff56e81095c7742a615ecd9c774",
         "label": "Morpho market 0xeecbfa4b6caa83c5000ce68a77808c80504e2ff56e81095c7742a615ecd9c774",
         "tier": "single-source-or-laggy",
-        "summary": "Exact market oracle 0x4e24e266fd7836fd8edf8f5ddb5578e4b7bf4d20: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x1725a66d810c0775f6b3b0fd85646d371da19517\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "summary": "At Ethereum block 26197000 the sole funded market uses immutable MorphoChainlinkOracleV2 0x4e24e266fd7836fd8edf8f5ddb5578e4b7bf4d20, BASE_FEED_1 0x1725a66d810c0775f6b3b0fd85646d371da19517 and QUOTE_FEED_1 0x8f1df6d7f2db73eece86a18b4381f4707b918fb1. BASE_FEED_2, QUOTE_FEED_2, BASE_VAULT and QUOTE_VAULT are zero. The mWIN/USD NAV feed proxy 0x1725a66d810c0775f6b3b0fd85646d371da19517 implementation is 0x7156b140aad6999f48767db6687f46e8df331c4c; this is distinct from mWIN token proxy 0x4e72025984424e52838cf8953e2863eff036b67a and its implementation 0x3421478bde3ce905d85fe24682fa8cafdff3e44a. ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac is owned by MidasTimelockController 0xe3eee3e0d2398799c884a47fc40c029c8e241852 with getMinDelay() 172800 seconds. Midas accessControl is 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b; feed role 0x6989ff27a71951af85f5a9d9a72606358a057abc9e1305b5986b338da72927b4 administers manual answers. Current Chainlink PYUSD aggregator 0x39e31761911b9aabaef5fb81b18fd1c24a60e884 and its proxy share owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; proposedAggregator is zero. These facts identify mutable upstream authority, not independent signer custody or a complete execution certificate.",
         "collateralAssets": [
           "0x4e72025984424e52838cf8953e2863eff036b67a"
         ],
@@ -294,29 +314,29 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x4e24e266fd7836fd8edf8f5ddb5578e4b7bf4d20",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107706
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Midas custom mWIN/USD NAV feed; role-administered manual updates behind an upgradeable proxy",
             "path": "BASE_FEED_1",
             "address": "0x1725a66d810c0775f6b3b0fd85646d371da19517",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107706
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink EACAggregatorProxy, current PYUSD/USD AccessControlledOCR2Aggregator",
             "path": "QUOTE_FEED_1",
             "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107706
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107706,
+        "fallbackBehavior": "Morpho's fixed feed path has no alternate fallback; ChainlinkDataFeedLib rejects negative answers but ignores updatedAt and does not enforce staleness or min/max bounds. The active Midas implementation has setRoundDataSafe with an hour cooldown and deviation guard, but the same feed-admin role can call setRoundData directly without those two guards. At block 26197000, mWIN round 67 returned answer 13115873583340, updatedAt 1791990383; PYUSD round 36893488147419104092 returned answer 100001387, updatedAt 1792007699, both with 8 feed decimals. Those timestamps are observations, not promised heartbeats or hard freshness limits.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x4e72025984424e52838cf8953e2863eff036b67a",
@@ -333,8 +353,8 @@
             "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
           },
           {
-            "label": "Pinned RPC identity, accounting and controls",
-            "url": "https://eth-mainnet.g.alchemy.com/v2"
+            "label": "Ethereum block 26197000, 2026-10-15T09:24:59Z; feed and token EIP-1967 implementation slots",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho Vault V2 documentation",

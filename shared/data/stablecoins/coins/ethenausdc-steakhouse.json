@@ -12,15 +12,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC in the Ethena x Steakhouse-curated Morpho Vault V2 on base, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
-  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "collateral": "USDC in the Steakhouse-curated Morpho Vault V2 on Base, designed for Ethena balance sheet allocation; assets are held idle or lent through its MorphoMarketV1AdapterV2, with lending losses passed to shares",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.001% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Ethena x Steakhouse USDC (ethenaUSDC) at base:0xbeeff0be997cca5b1c13a7433c2004637975739e is the current public ERC-4626 VaultV2 share over USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x8c47e3c9a99b819222e37b91635bb9fed29c5319 holds 3 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications. Exact deployment creationTimestamp=1781286711 (2026-06-12T17:51:51Z), creationBlockNumber=47248682, independently read from Morpho vaultV2ByAddress.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+    "rationale": "Ethena x Steakhouse USDC (ethenaUSDC) is the Base ERC-4626 VaultV2 share at 0xbeeff0be997cca5b1c13a7433c2004637975739e, with USDC 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 as its accounting and redemption asset. Deposits transfer USDC before minting; configured fees can mint shares and adapter losses reduce NAV. Holder rights are proportional code-enforced NAV redemption, not direct beneficial ownership of Circle reserves or a fixed-dollar issuer promise. At Base block 52635700 (2026-10-15T10:39:07.000Z), one adapter 0x8c47e3c9a99b819222e37b91635bb9fed29c5319 retained only market 0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354, against USDe collateral, with 0.000500 USDC supplied and 131918.894879 USDC idle. This protocol-position archetype intentionally differs from the fiat-cash parent. The exact deployment was created at block 47248682 on 2026-06-12T17:51:51Z; creation does not establish a separate commercial launch announcement.",
     "sources": [
       {
         "label": "Exact Morpho Vault V2 deployment",
@@ -31,8 +31,8 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
-        "label": "Pinned base block 52095852",
-        "url": "https://basescan.org/block/52095852"
+        "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+        "url": "https://basescan.org/block/52635700"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -49,22 +49,42 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+      },
+      {
+        "label": "Exact deployment creation transaction, June 12 2026",
+        "url": "https://base.blockscout.com/api/v2/transactions/0x45ec2d6550b99e15c820b19169a1af462e97d24051634fdfc4467ba4cefe177e"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho vault",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
     },
     {
-      "label": "Vault mechanics",
+      "label": "Morpho: Vault asset flows",
       "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
     },
     {
-      "label": "Gate documentation",
+      "label": "Morpho: Gate documentation",
       "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    },
+    {
+      "label": "Steakhouse: Vault terms",
+      "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+    },
+    {
+      "label": "Base contract and source",
+      "url": "https://basescan.org/address/0xbeeff0be997cca5b1c13a7433c2004637975739e#code"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Steakhouse Supervisor V2 controls",
+      "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
     }
   ],
   "contracts": [
@@ -83,7 +103,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "ethenausdc-steakhouse",
     "display": {
@@ -106,8 +126,8 @@
         "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
       },
       "deployedExposure": {
-        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
-        "reviewedAt": "2026-10-02",
+        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete current market census; only non-idle supplied USDC is a lending position, while vault-held USDC is a separate idle balance",
+        "reviewedAt": "2026-10-15",
         "sourceUrl": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       "redemptionLiquidity": {

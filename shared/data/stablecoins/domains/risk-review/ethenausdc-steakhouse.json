@@ -12,8 +12,8 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
-        "label": "Pinned base block 52095852",
-        "url": "https://basescan.org/block/52095852"
+        "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+        "url": "https://basescan.org/block/52635700"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -32,15 +32,15 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
       }
     ],
-    "evidence": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Base block 52635700 (2026-10-15T10:39:07.000Z), receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were irreversibly abdicated. sendAssetsGate was zero; its setter remains mutable with a 604800-second selector delay. Verified VaultV2 transfer/transferFrom and withdraw/redeem check the first three gates; deposit/mint checks sendAssetsGate. Deposit-dependent in-kind exits can still be constrained. USDC freeze exposure is inherited from usdc-circle, not a direct share blacklist.",
+    "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "One reviewed native base VaultV2 share deployment; no bridge or separate confidential receipt supply is included. This does not prove absence of uncatalogued integrations.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
     "confidence": "probable",
     "sources": [
       {
@@ -52,8 +52,8 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
-        "label": "Pinned base block 52095852",
-        "url": "https://basescan.org/block/52095852"
+        "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+        "url": "https://basescan.org/block/52635700"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -86,8 +86,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Native asset-backed ERC-4626 share issuance on the sole authored deployment.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635700,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -98,8 +98,8 @@
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
           },
           {
-            "label": "Pinned base block 52095852",
-            "url": "https://basescan.org/block/52095852"
+            "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+            "url": "https://basescan.org/block/52635700"
           },
           {
             "label": "Morpho complete current vault inventory",
@@ -122,102 +122,130 @@
     ]
   },
   "oracleRisk": {
-    "tier": "standard-external",
+    "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
-    "summary": "Complete pinned adapter census: 3 Morpho markets, 3 distinct borrower oracle paths, plus separately reviewed oracle-free share accounting. External pricing branches cannot inherit the share-accounting exemption. No measured debt/liability shares, independent failover or heartbeat budget is invented.",
+    "summary": "The complete pinned current inventory contains one residual USDe-collateralized Morpho market, using a fixed-par primary with delayed Chainlink fallback. Its 0.000500 USDC exposure is retained separately from the overwhelmingly idle USDC. Oracle-free share accounting does not exempt borrower liquidation pricing; no independent two-live-feed redundancy or freshness guarantee is inferred.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
-      "rationale": "Every current adapter market ID was enumerated and resolved to exact collateral, oracle and LLTV at the pinned block; borrower liquidation remains economically applicable.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+      "rationale": "Current marketIdsLength() is one; marketIds(0), idToMarketParams and expectedSupplyAssets at Base block 52635700 bind the residual USDe lending claim to the exact oracle and LLTV. Current exposure is nonzero, so it remains an applicable borrower branch despite sub-material NAV weight.",
       "sources": [
         {
-          "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-          "url": "https://basescan.org/block/52095852"
+          "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+          "url": "https://basescan.org/block/52635700"
         },
         {
-          "label": "Exact VaultV2 role-grant log history through pinned block",
-          "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-        },
-        {
-          "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-        },
-        {
-          "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
+          "label": "Exact current adapter market inventory",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
         },
         {
-          "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
+          "label": "Verified Morpho liquidation and supplier loss accounting",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+        },
+        {
+          "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+        },
+        {
+          "label": "MetaOracleDeviationTimelock implementation source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+        },
+        {
+          "label": "Immutable fixed-par primary oracle composer",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+        },
+        {
+          "label": "Chainlink-backed fallback oracle composer",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+        },
+        {
+          "label": "Exact backup Chainlink USDe / USD feed",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-        "url": "https://basescan.org/block/52095852"
+        "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+        "url": "https://basescan.org/block/52635700"
       },
       {
-        "label": "Exact VaultV2 role-grant log history through pinned block",
-        "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-      },
-      {
-        "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-      },
-      {
-        "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
+        "label": "Exact current adapter market inventory",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
       },
       {
-        "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
+        "label": "Verified Morpho liquidation and supplier loss accounting",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
       },
       {
-        "label": "Morpho public oracle classification; opaque rows return type Unknown",
-        "url": "https://api.morpho.org/graphql"
+        "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
       },
       {
-        "label": "Sourcify functional VaultV2 runtime match (matchId 30034094); independent exact-deployment equality after only declared immutable/CBOR masks; immutables checked via getters",
-        "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+        "label": "MetaOracleDeviationTimelock implementation source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+      },
+      {
+        "label": "Immutable fixed-par primary oracle composer",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+      },
+      {
+        "label": "Chainlink-backed fallback oracle composer",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+      },
+      {
+        "label": "Exact backup Chainlink USDe / USD feed",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
       }
     ],
     "branches": [
       {
-        "id": "oracle-0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
-        "label": "Morpho borrower oracle 0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
-        "tier": "standard-external",
-        "summary": "Exact adapter market census binds 0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109 to this oracle and the recorded collateral/LLTV. Pinned composer getters identify the listed external feed inputs; zero inputs use the documented neutral factor. This is external pricing, not independently redundant failover. Heartbeats and an end-to-end protective freshness bound are not established.",
+        "id": "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47",
+        "label": "USDe market fixed-par primary with delayed Chainlink fallback",
+        "tier": "single-source-or-laggy",
+        "summary": "The complete current adapter inventory has one market 0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354 with only 0.000500 USDC supplied. Its immutable LLTV is 91.5%, with Base USDe collateral 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34. The EIP-1167 meta-oracle delegates to MetaOracleDeviationTimelock 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e. Pinned primary/current composer 0xf243538bc89634b0abb5686a5b72e21282a54695 has no feed or vault inputs and returns fixed par; backup composer 0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a reads Chainlink USDe / USD 0x790181e93e9f4eedb5b864860c12e4d2cfffe73b. This is a fixed-par primary with one external backup, not two independently observed live prices.",
         "collateralAssets": [
-          "0xcb585250f852c6c6bf90434ab21a00f02833a4af"
+          "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
         ],
         "chains": [
           "base"
         ],
         "feeds": [
           {
-            "provider": "EACAggregatorProxy",
-            "path": "BASE_FEED_1: XRP / USD",
-            "address": "0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34",
+            "provider": "MorphoChainlinkOracleV2 fixed-par composer",
+            "path": "Primary/current: all feed/vault inputs zero; SCALE_FACTOR=1e24",
+            "address": "0xf243538bc89634b0abb5686a5b72e21282a54695",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
+            "observedAt": "2026-10-15",
+            "observedBlock": 52635700,
             "failureDomainKeys": [
-              "feed:base:0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+              "fixed-par:USDe/USDC"
+            ]
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy",
+            "path": "Backup BASE_FEED_1: USDe / USD; remaining composer inputs zero",
+            "address": "0x790181e93e9f4eedb5b864860c12e4d2cfffe73b",
+            "chain": "base",
+            "observedAt": "2026-10-15",
+            "observedBlock": 52635700,
+            "failureDomainKeys": [
+              "feed:base:0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635700,
         "collateralParameters": [
           {
-            "asset": "0xcb585250f852c6c6bf90434ab21a00f02833a4af",
-            "note": "market 0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109 immutable LLTV 62.5%"
+            "asset": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+            "maximumLtvPct": 91.5,
+            "note": "Immutable Morpho LLTV for market 0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354; this is liquidation collateral, not vault-owned reserve USDe."
           }
         ],
         "liquidationMechanism": "Permissionless Morpho liquidate checks the market oracle price and immutable LLTV, seizes collateral with the protocol incentive and requires loan-token repayment; actual transaction execution still depends on price-call success and liquidator funding.",
@@ -225,169 +253,39 @@
         "shutdownOrBadDebtBehavior": "When liquidation exhausts borrower collateral, residual borrow shares/assets are removed and badDebtAssets reduces that market totalSupplyAssets. Vault adapter realAssets then carries supplier losses into share NAV; there is no guaranteed par redemption.",
         "sources": [
           {
-            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-            "url": "https://basescan.org/block/52095852"
+            "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+            "url": "https://basescan.org/block/52635700"
           },
           {
-            "label": "Exact VaultV2 role-grant log history through pinned block",
-            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-          },
-          {
-            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
+            "label": "Exact current adapter market inventory",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
           },
           {
-            "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
+            "label": "Verified Morpho liquidation and supplier loss accounting",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
           },
           {
-            "label": "Exact deployed market oracle source / verification availability",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde"
+            "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
           },
           {
-            "label": "Exact BASE_FEED_1 downstream feed: XRP / USD",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+            "label": "MetaOracleDeviationTimelock implementation source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Immutable fixed-par primary oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+          },
+          {
+            "label": "Chainlink-backed fallback oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+          },
+          {
+            "label": "Exact backup Chainlink USDe / USD feed",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
           }
         ],
-        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
-      },
-      {
-        "id": "oracle-0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
-        "label": "Morpho borrower oracle 0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
-        "tier": "standard-external",
-        "summary": "Exact adapter market census binds 0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d to this oracle and the recorded collateral/LLTV. Pinned composer getters identify the listed external feed inputs; zero inputs use the documented neutral factor. This is external pricing, not independently redundant failover. Heartbeats and an end-to-end protective freshness bound are not established.",
-        "collateralAssets": [
-          "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"
-        ],
-        "chains": [
-          "base"
-        ],
-        "feeds": [
-          {
-            "provider": "EACAggregatorProxy",
-            "path": "BASE_FEED_1: CBETH / USD",
-            "address": "0xd7818272b9e248357d13057aab0b417af31e817d",
-            "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
-            "failureDomainKeys": [
-              "feed:base:0xd7818272b9e248357d13057aab0b417af31e817d"
-            ]
-          }
-        ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
-        "collateralParameters": [
-          {
-            "asset": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
-            "note": "market 0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d immutable LLTV 77.0%"
-          }
-        ],
-        "liquidationMechanism": "Permissionless Morpho liquidate checks the market oracle price and immutable LLTV, seizes collateral with the protocol incentive and requires loan-token repayment; actual transaction execution still depends on price-call success and liquidator funding.",
-        "backstop": "Reviewed Morpho liquidate has no protocol-funded insurance payment or mandatory external rescuer. No independent insurer or guaranteed liquidator capacity is established.",
-        "shutdownOrBadDebtBehavior": "When liquidation exhausts borrower collateral, residual borrow shares/assets are removed and badDebtAssets reduces that market totalSupplyAssets. Vault adapter realAssets then carries supplier losses into share NAV; there is no guaranteed par redemption.",
-        "sources": [
-          {
-            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-            "url": "https://basescan.org/block/52095852"
-          },
-          {
-            "label": "Exact VaultV2 role-grant log history through pinned block",
-            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-          },
-          {
-            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
-          },
-          {
-            "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
-          },
-          {
-            "label": "Exact deployed market oracle source / verification availability",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295"
-          },
-          {
-            "label": "Exact BASE_FEED_1 downstream feed: CBETH / USD",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xd7818272b9e248357d13057aab0b417af31e817d"
-          }
-        ],
-        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
-      },
-      {
-        "id": "oracle-0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
-        "label": "Morpho borrower oracle 0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
-        "tier": "standard-external",
-        "summary": "Exact adapter market census binds 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836 to this oracle and the recorded collateral/LLTV. Pinned composer getters identify the listed external feed inputs; zero inputs use the documented neutral factor. This is external pricing, not independently redundant failover. Heartbeats and an end-to-end protective freshness bound are not established.",
-        "collateralAssets": [
-          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
-        ],
-        "chains": [
-          "base"
-        ],
-        "feeds": [
-          {
-            "provider": "EACAggregatorProxy",
-            "path": "BASE_FEED_1: BTC / USD",
-            "address": "0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f",
-            "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095852,
-            "failureDomainKeys": [
-              "feed:base:0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
-            ]
-          }
-        ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095852,
-        "collateralParameters": [
-          {
-            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
-            "note": "market 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836 immutable LLTV 86.0%"
-          }
-        ],
-        "liquidationMechanism": "Permissionless Morpho liquidate checks the market oracle price and immutable LLTV, seizes collateral with the protocol incentive and requires loan-token repayment; actual transaction execution still depends on price-call success and liquidator funding.",
-        "backstop": "Reviewed Morpho liquidate has no protocol-funded insurance payment or mandatory external rescuer. No independent insurer or guaranteed liquidator capacity is established.",
-        "shutdownOrBadDebtBehavior": "When liquidation exhausts borrower collateral, residual borrow shares/assets are removed and badDebtAssets reduces that market totalSupplyAssets. Vault adapter realAssets then carries supplier losses into share NAV; there is no guaranteed par redemption.",
-        "sources": [
-          {
-            "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-            "url": "https://basescan.org/block/52095852"
-          },
-          {
-            "label": "Exact VaultV2 role-grant log history through pinned block",
-            "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-          },
-          {
-            "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
-          },
-          {
-            "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
-          },
-          {
-            "label": "Exact deployed market oracle source / verification availability",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x663becd10dae6c4a3dcd89f1d76c1174199639b9"
-          },
-          {
-            "label": "Exact BASE_FEED_1 downstream feed: BTC / USD",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
-          }
-        ],
-        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
+        "fallbackBehavior": "MetaOracleDeviationTimelock price() tries the selected oracle and immediately tries the other on revert. A price deviation over 0.5% permits a permissionless challenge, with a 57600-second delay before accepting the backup while still deviant; healing requires an 86400-second delay after reconvergence. Current state was primary=true, backup=false, challenged=false, healing=false. The fixed-par primary cannot observe a depeg itself; switching requires external callers and the one Chainlink backup. The composers check nonnegative answers, not updatedAt freshness; no protective heartbeat, sequencer check or guaranteed switch completion is established."
       }
     ],
     "paths": [
@@ -398,18 +296,18 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
           "confidence": "verified",
-          "rationale": "This exact share-accounting path computes assets/share from underlying balances, adapter realAssets and configured fee accrual; it has no price-feed input. This exemption does NOT cover borrower markets: every enumerated market oracle remains a separate applicable path. Exact executable correspondence to the Sourcify recompiled VaultV2 runtime and all deployment-specific immutable occurrences were independently checked; metadata equality is not required for this functional-path determination.",
+          "rationale": "The immutable root share-accounting path computes assets/share from idle USDC, adapter realAssets and fee accrual, with no external price-feed input. Current runtime bytes match the prior functional-compiler-correspondence pin. This path-only exemption does not cover the separately enumerated borrower-market oracle.",
           "sources": [
             {
-              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-              "url": "https://basescan.org/block/52095852"
+              "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+              "url": "https://basescan.org/block/52635700"
             },
             {
-              "label": "Exact VaultV2 role-grant log history through pinned block",
-              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
+              "label": "Exact VaultV2 role-grant history from creation through the pinned block",
+              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=47248682&toBlock=52635700&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
             },
             {
               "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
@@ -431,136 +329,274 @@
         }
       },
       {
-        "id": "oracle-0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
+        "id": "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47",
         "chain": "base",
-        "address": "0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
+        "address": "0xf4b17c79492d68775e22e8dd0a2bb22854a39a47",
         "pricingAuthority": "external-price",
-        "branchId": "oracle-0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
+        "branchId": "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
           "confidence": "verified",
-          "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
+          "rationale": "Complete current market enumeration binds USDe borrower valuation and liquidation to the fixed-par/Chainlink-fallback meta-oracle; the vault is a supplier and bears any resulting loss through its residual lender claim.",
           "sources": [
             {
-              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-              "url": "https://basescan.org/block/52095852"
+              "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+              "url": "https://basescan.org/block/52635700"
             },
             {
-              "label": "Exact VaultV2 role-grant log history through pinned block",
-              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-            },
-            {
-              "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-            },
-            {
-              "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
+              "label": "Exact current adapter market inventory",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
             },
             {
-              "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
+              "label": "Verified Morpho liquidation and supplier loss accounting",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
             },
             {
-              "label": "Exact deployed market oracle source / verification availability",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde"
+              "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
             },
             {
-              "label": "Exact BASE_FEED_1 downstream feed: XRP / USD",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+              "label": "MetaOracleDeviationTimelock implementation source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+            },
+            {
+              "label": "Immutable fixed-par primary oracle composer",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+            },
+            {
+              "label": "Chainlink-backed fallback oracle composer",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+            },
+            {
+              "label": "Exact backup Chainlink USDe / USD feed",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
             }
           ]
         }
+      }
+    ],
+    "branchKindReviews": [
+      {
+        "kind": "feed",
+        "branchIds": [
+          "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+        ],
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+        "confidence": "verified",
+        "rationale": "Exact EIP-1167 implementation, all primary/backup composer inputs, current selection, challenge/healing parameters and backup feed description were read at the same pin; fixed-par primary and delayed backup are distinguished from live redundant pricing.",
+        "sources": [
+          {
+            "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+            "url": "https://basescan.org/block/52635700"
+          },
+          {
+            "label": "Exact current adapter market inventory",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+          },
+          {
+            "label": "Verified Morpho liquidation and supplier loss accounting",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+          },
+          {
+            "label": "MetaOracleDeviationTimelock implementation source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Immutable fixed-par primary oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+          },
+          {
+            "label": "Chainlink-backed fallback oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+          },
+          {
+            "label": "Exact backup Chainlink USDe / USD feed",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
+          }
+        ]
       },
       {
-        "id": "oracle-0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
-        "chain": "base",
-        "address": "0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
-        "pricingAuthority": "external-price",
-        "branchId": "oracle-0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
-        "applicability": {
-          "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
-          "confidence": "verified",
-          "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
-          "sources": [
-            {
-              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-              "url": "https://basescan.org/block/52095852"
-            },
-            {
-              "label": "Exact VaultV2 role-grant log history through pinned block",
-              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-            },
-            {
-              "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-            },
-            {
-              "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
-            },
-            {
-              "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
-            },
-            {
-              "label": "Exact deployed market oracle source / verification availability",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295"
-            },
-            {
-              "label": "Exact BASE_FEED_1 downstream feed: CBETH / USD",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xd7818272b9e248357d13057aab0b417af31e817d"
-            }
-          ]
-        }
+        "kind": "collateral-parameter",
+        "branchIds": [
+          "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+        ],
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+        "confidence": "verified",
+        "rationale": "Pinned complete market census establishes USDe collateral, USDC loan asset, immutable 91.5% LLTV and a 0.000500 USDC supplied position; no liability-share percentage is inferred.",
+        "sources": [
+          {
+            "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+            "url": "https://basescan.org/block/52635700"
+          },
+          {
+            "label": "Exact current adapter market inventory",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+          },
+          {
+            "label": "Verified Morpho liquidation and supplier loss accounting",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+          },
+          {
+            "label": "MetaOracleDeviationTimelock implementation source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Immutable fixed-par primary oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+          },
+          {
+            "label": "Chainlink-backed fallback oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+          },
+          {
+            "label": "Exact backup Chainlink USDe / USD feed",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
+          }
+        ]
       },
       {
-        "id": "oracle-0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
-        "chain": "base",
-        "address": "0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
-        "pricingAuthority": "external-price",
-        "branchId": "oracle-0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
-        "applicability": {
-          "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
-          "confidence": "verified",
-          "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
-          "sources": [
-            {
-              "label": "Exact base block 52095852; independent role, Safe, gate and market census re-read 2026-10-03",
-              "url": "https://basescan.org/block/52095852"
-            },
-            {
-              "label": "Exact VaultV2 role-grant log history through pinned block",
-              "url": "https://base.blockscout.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=52095852&address=0xbeeff0be997cca5b1c13a7433c2004637975739e"
-            },
-            {
-              "label": "Pinned VaultV2 deposit, fee share, role and loss-accounting source; partial deployment compiler correspondence",
-              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-            },
-            {
-              "label": "Exact current adapter market-ID inventory and immutable Morpho market parameters",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
-            },
-            {
-              "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
-            },
-            {
-              "label": "Exact deployed market oracle source / verification availability",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x663becd10dae6c4a3dcd89f1d76c1174199639b9"
-            },
-            {
-              "label": "Exact BASE_FEED_1 downstream feed: BTC / USD",
-              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
-            }
-          ]
-        }
+        "kind": "liquidation",
+        "branchIds": [
+          "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+        ],
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+        "confidence": "verified",
+        "rationale": "Exact Morpho runtime bytes match the published deployment source. liquidate checks oracle price and LLTV, repays USDC and seizes collateral; no actual execution, guaranteed liquidator capacity or zero-second completion is asserted.",
+        "sources": [
+          {
+            "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+            "url": "https://basescan.org/block/52635700"
+          },
+          {
+            "label": "Exact current adapter market inventory",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+          },
+          {
+            "label": "Verified Morpho liquidation and supplier loss accounting",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+          },
+          {
+            "label": "MetaOracleDeviationTimelock implementation source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Immutable fixed-par primary oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+          },
+          {
+            "label": "Chainlink-backed fallback oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+          },
+          {
+            "label": "Exact backup Chainlink USDe / USD feed",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
+          }
+        ]
+      },
+      {
+        "kind": "backstop",
+        "branchIds": [
+          "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+        ],
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+        "confidence": "verified",
+        "rationale": "The reviewed exact Morpho liquidate path contains no protocol-funded insurance payment or mandatory rescuer. This is a code-path review, not a claim that a separate external guarantee was found.",
+        "sources": [
+          {
+            "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+            "url": "https://basescan.org/block/52635700"
+          },
+          {
+            "label": "Exact current adapter market inventory",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+          },
+          {
+            "label": "Verified Morpho liquidation and supplier loss accounting",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+          },
+          {
+            "label": "MetaOracleDeviationTimelock implementation source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Immutable fixed-par primary oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+          },
+          {
+            "label": "Chainlink-backed fallback oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+          },
+          {
+            "label": "Exact backup Chainlink USDe / USD feed",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
+          }
+        ]
+      },
+      {
+        "kind": "shutdown-bad-debt",
+        "branchIds": [
+          "oracle-0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+        ],
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
+        "confidence": "verified",
+        "rationale": "Exact Morpho code reduces totalSupplyAssets by badDebtAssets after exhausting collateral, and the exact adapter reports expectedSupplyAssets into root realAssets; this establishes lender-loss transmission, not guaranteed par recovery.",
+        "sources": [
+          {
+            "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+            "url": "https://basescan.org/block/52635700"
+          },
+          {
+            "label": "Exact current adapter market inventory",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
+          },
+          {
+            "label": "Verified Morpho liquidation and supplier loss accounting",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "EIP-1167 borrower meta-oracle and pinned implementation",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf4b17c79492d68775e22e8dd0a2bb22854a39a47"
+          },
+          {
+            "label": "MetaOracleDeviationTimelock implementation source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Immutable fixed-par primary oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf243538bc89634b0abb5686a5b72e21282a54695"
+          },
+          {
+            "label": "Chainlink-backed fallback oracle composer",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a"
+          },
+          {
+            "label": "Exact backup Chainlink USDe / USD feed",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x790181e93e9f4eedb5b864860c12e4d2cfffe73b"
+          }
+        ]
       }
     ]
   }

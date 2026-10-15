@@ -27,10 +27,25 @@
       }
     ]
   },
+  "proofOfReserves": {
+    "type": "self-reported",
+    "url": "https://www.moonpay.com/legal/pyusdx_terms",
+    "provider": "MoonPay PYUSDx terms define 1:1 PYUSD backing; no named attestor, reserve report, wallet census or PYUSDx liability reconciliation was retrieved",
+    "attestorTier": "undisclosed",
+    "cadence": "undisclosed"
+  },
   "links": [
     {
       "label": "Website",
       "url": "https://www.moonpay.com/enterprise/pyusdx"
+    },
+    {
+      "label": "Docs",
+      "url": "https://dev.enterprise.moonpay.com/issuance/pyusdx"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.m0.org/resources/audits#pyusdx"
     },
     {
       "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -76,10 +91,16 @@
       "chain": "base",
       "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
       "decimals": 6
+    },
+    {
+      "chain": "0g",
+      "address": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
   "infrastructures": [
     "m0"
   ],

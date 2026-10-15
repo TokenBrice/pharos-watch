@@ -4,32 +4,50 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Maple syrupUSDG legal claim and risk disclosures",
+        "label": "Exact syrupUSDG disclosure: variable pooled-credit share, not a stablecoin or one-to-one USDG backing",
+        "url": "https://docs.maple.finance/legal/syrupusdg-product-disclosures-and-disclaimers.md"
+      },
+      {
+        "label": "Maple risk disclosures: proportional pool value, principal losses and liquidity-dependent exits",
         "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
       },
       {
-        "label": "MiCA Regulation (EU) 2023/1114, scope and definitions",
+        "label": "Verified native share mechanics: asset-denominated conversion, totalAssets and manager accounting",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+      },
+      {
+        "label": "MiCA Regulation (EU) 2023/1114, ART and EMT definitions",
         "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX:32023R1114"
+      },
+      {
+        "label": "Structural ART/EMT exclusion for variable-value shares; not a statement on EU offering, securities or CASP law",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
   },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "Maple expressly describes syrupUSDG as a proportional pooled-credit/strategy share and denies one-to-one USDG backing. Redemption of the original deposited principal is not guaranteed. The token's variable pool value supports the non-payment-token classification, consistent with the independently reviewed syrupUSDC sibling.",
+      "summary": "Maple identifies syrupUSDG as a proportional share of a dynamic loan and strategy portfolio, expressly states that it is not a stablecoin and disclaims one-to-one USDG backing or guaranteed return of principal. Its variable NAV and USDG-denominated exit do not establish the fixed monetary-value redemption obligation required by GENIUS Act section 2(22). This is a scope finding about Maple's token, not a finding about Paxos USDG.",
       "references": [
         {
           "label": "GENIUS Act section 2 payment-stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
+          "accessedAt": "2026-10-15",
           "sourceDate": "2025-07-18"
         },
         {
           "label": "Maple syrupUSDG legal claim and risk disclosures",
           "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-15"
+        },
+        {
+          "label": "Maple exact syrupUSDG issuer and proportional investment claim",
+          "url": "https://docs.maple.finance/legal/syrupusdg-product-disclosures-and-disclaimers.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-15"
         }
       ]
     },
@@ -37,28 +55,28 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "This is an informational payment-stablecoin scope finding, not a securities-law opinion or an authorization claim. The token name and tracked USDG parent can obscure its pooled-credit exposure. No issuer license, GENIUS approval or MiCA finding is inferred from the parent.",
+    "notes": "Maple's exact-product disclosure identifies Maple International Operations SPC acting on behalf of and for the account of Maple USDG Segregated Portfolio 1 as the issuer and manager. This informational payment-stablecoin scope finding is not a securities-law opinion or an authorization claim. No parent issuer licence, GENIUS approval or MiCA finding is inherited.",
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "reviewedAt": "2026-10-15",
     "references": [
       {
         "label": "GENIUS Act section 2 payment-stablecoin definition",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
+        "accessedAt": "2026-10-15",
         "sourceDate": "2025-07-18"
       },
       {
         "label": "Maple syrupUSDG legal claim and risk disclosures",
         "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
+        "accessedAt": "2026-10-15",
         "sourceDate": "2026-02-25"
       }
     ]

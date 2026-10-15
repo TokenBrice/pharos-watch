@@ -10,26 +10,30 @@
       {
         "label": "Ondo prospectus: ledger-based securities",
         "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
+      },
+      {
+        "label": "ESMA MiCA Article 2(4)(a): financial-instrument exclusion, not an EMT/ART authorization (accessed 2026-10-15)",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
   },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "GLDON is a security debt instrument tracking GLD ETF exposure, not a fixed monetary-value payment stablecoin.",
+      "summary": "GLDon is a security debt instrument tracking GLD ETF exposure, not a fixed monetary-value payment stablecoin.",
       "references": [
         {
           "label": "GENIUS Act section 2(22) payment stablecoin definition",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
+          "accessedAt": "2026-10-15",
           "sourceDate": "2025-07-18"
         },
         {
           "label": "Exact token product claim",
           "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
+          "accessedAt": "2026-10-15",
           "sourceDate": "2026-03-26"
         }
       ]
@@ -38,18 +42,18 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "Explicit scope clarification for a gold-family catalog addition; no GENIUS authorization asserted.",
+    "notes": "GLDon is an open-ended secured tracker debt instrument under Swiss securities law, not a fixed-monetary-value payment stablecoin. The KID states that FMA prospectus approval does not constitute prudential supervision of the issuer. Neither custodian regulation nor prospectus approval is a GENIUS payment-stablecoin authorization; none is asserted.",
     "references": [
       {
         "label": "Exact token product claim",
         "url": "https://cdn.sanity.io/files/8k2tqa6n/production/a598be5156bcda440276f01eea9258f82f851bd0.pdf",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
+        "accessedAt": "2026-10-15",
         "sourceDate": "2026-03-26"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "reviewer": "Rev_GldonOndo primary-source compliance review",
+    "reviewedAt": "2026-10-15",
     "issuerEntity": "Ondo Global Markets (BVI) Limited",
     "issuerDomicile": "British Virgin Islands"
   }

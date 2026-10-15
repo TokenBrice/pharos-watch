@@ -13,22 +13,22 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "pyusd-paypal",
   "collateral": "PYUSD held idle in an immutable Morpho Vault V2 and supplied by a MorphoMarketV1AdapterV2 to a Huma PST-collateralized lending market. Allocations can change under curator controls.",
-  "pegMechanism": "ERC-4626 shares convert to PYUSD at the live assets-per-share rate. Interest, fees and recognized losses change share value. liquidityAdapter() is zero at pinned block 26107706; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity does not promise full-size cash redemption.",
+  "pegMechanism": "ERC-4626 shares convert to PYUSD at the live assets-per-share rate. Interest, fees and recognized losses change share value. At Ethereum block 26197000 (2026-10-15T09:24:59Z), liquidityAdapter() was zero, so ordinary cash redemptions used idle PYUSD unless assets were first deallocated. Permissionless forceDeallocate carries a 1% penalty on the deallocated amount and remains subject to market liquidity. An in-kind position exit does not promise full-size cash redemption. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current exact holder instrument ethereum:0x8381a156958711e230f325428b5eb4b6555c75d9 is an immutable ERC-4626 operational claim on idle PYUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 67088184134955, totalSupply raw 66674549755026886856443154, idle raw 2115765190647, sole adapter market assets raw 64972418944308, with an exact zero accounting difference. The only funded market lent PYUSD against Huma PST at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=25755916, creationTimestamp=1786742303 (2026-08-14T21:18:23.000Z); independently retrieved 2026-10-03.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
+    "rationale": "The exact holder instrument ethereum:0x8381a156958711e230f325428b5eb4b6555c75d9 is an immutable ERC-4626 operational claim on idle PYUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint transfers underlying before issuing shares; accrual can separately issue fee shares. At Ethereum block 26197000 (hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d; 2026-10-15T09:24:59Z), asset() was PYUSD 0x6c3ea9036406852006290770bedfcaba0e23a0e8; share decimals were 18 and underlying decimals 6. totalAssets raw 68353678138750 and totalSupply raw 67815111844226194785652874; idle PYUSD raw 3237009198161 plus sole adapter realAssets raw 65116668940589 reconciled exactly. Adapter 0x39ad1c6152c09de4598a4f39c7b0a85f7b03326b supplied the single Huma PST-collateralized market at 86% LLTV, with zero adapter borrowShares and posted collateral. convertToAssets(1e18) returned 1007940 raw PYUSD. Constructor event and creation transaction independently establish block 25755916, timestamp 2026-08-14T21:18:23Z.",
     "sources": [
       {
         "label": "Exact Sentora vault",
         "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z: identity, accounting and controls",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -47,24 +47,44 @@
         "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
       },
       {
-        "label": "Exact Morpho Vault V2 creation block and timestamp",
-        "url": "https://api.morpho.org/graphql"
+        "label": "Exact VaultV2 creation transaction, block 25755916",
+        "url": "https://eth.blockscout.com/api/v2/transactions/0x94356f40a7175de6465231d0a27ade92a79be3bde9a11b4933456bbdfe98a4c1"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
     },
     {
-      "label": "Sentora",
+      "label": "Curator",
       "url": "https://sentora.com/"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Risk disclosure",
+      "url": "https://sentora.com/asset-risk-reviews/huma"
+    },
+    {
+      "label": "Sentora: Terms of use",
+      "url": "https://sentora.com/legal/terms-of-use"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0x8381a156958711e230f325428b5eb4b6555c75d9"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/SentoraHQ"
     }
   ],
   "contracts": [
@@ -75,7 +95,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Sentora Huma PST Main Morpho lending interest net of vault fees",
@@ -83,7 +103,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "senpyusdpst-sentora",
     "display": {
@@ -99,16 +119,16 @@
     },
     "params": {
       "slice": {
-        "name": "PYUSD held idle and supplied to Sentora Huma PST Main Morpho lending positions",
+        "name": "PYUSD supplied to Sentora Huma PST Main Morpho lending positions",
         "risk": "high",
         "coinId": "pyusd-paypal",
         "depType": "wrapper",
         "expectedAssetAddress": "0x6c3ea9036406852006290770bedfcaba0e23a0e8"
       },
       "deployedExposure": {
-        "basis": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 67088184134955, totalSupply raw 66674549755026886856443154, idle raw 2115765190647, sole adapter market assets raw 64972418944308, with an exact zero accounting difference. The only funded market lent PYUSD against Huma PST at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. The reviewed descriptor is the entire parent-denominated strategy claim; 100% denotes denomination, not 100% idle cash.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
+        "basis": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), totalAssets raw 68353678138750 equaled idle PYUSD raw 3237009198161 plus sole adapter realAssets raw 65116668940589. totalSupply raw was 67815111844226194785652874. The sole adapter supplied PYUSD to market 0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512 against Huma PST at 86% LLTV; its borrowShares and posted collateral were zero. The reviewed descriptor covers non-idle parent-denominated lender claims; idle cash is measured separately, and neither observation is a financial assurance opinion.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

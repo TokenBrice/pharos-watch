@@ -107,18 +107,20 @@
         "implementationIdentity": "sha256:cfcf9dd2608be58c3ebef42c5a0612faf4b5027176714591e9c02df904b60dae"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-05T08:16:14.604Z",
-      "expiresAt": "2026-11-04T00:00:00.000Z",
+      "reviewedAt": "2026-10-15T11:06:12.928Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:a88c4af6ed0e48aac8b07023d6aa75bd422295d88faba772a3624e1da03cf406",
-        "pinned-identity:ethereum:26124913:0x5890875780baab06ea4c7d7e93a0eaf51485484d56d7e48004d925efe60ef386",
-        "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
+        "pinned-identity:ethereum:26197000:0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d",
+        "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c",
+        "pinned-ordinary-holder-simulation:ethereum:26197000:0x2bf5d9a2326ad3c5ef8208f91af79c3ca1f0f67c:redeem(1000000000000000000)"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
         "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/"
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://api-ethereum-mainnet.n.dwellir.com"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -304,7 +306,7 @@
       ],
       "sourceUrls": [
         "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
-        "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+        "https://app.morpho.org/base/vault/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
         "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
       ],
       "producer": {
@@ -384,18 +386,19 @@
         "implementationIdentity": "sha256:cfcf9dd2608be58c3ebef42c5a0612faf4b5027176714591e9c02df904b60dae"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-05T08:16:17.599Z",
-      "expiresAt": "2026-11-04T00:00:00.000Z",
+      "reviewedAt": "2026-10-15T11:03:54.592Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:b06f31064270ac46092e4c641fb1214e47400295a778f402610b53882fcd1af1",
-        "pinned-identity:ethereum:26124913:0x5890875780baab06ea4c7d7e93a0eaf51485484d56d7e48004d925efe60ef386",
+        "pinned-identity:ethereum:26196664:0x1d9a5e0db4037391462bf5be8686b4ad1e0077cb253c7d200e91bfe5e2d39e04",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22",
         "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/"
+        "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "https://etherscan.io/block/26196664"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -1165,11 +1168,11 @@
         "implementationIdentity": "sha256:1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-05T08:16:24.105Z",
-      "expiresAt": "2026-11-04T00:00:00.000Z",
+      "reviewedAt": "2026-10-15T11:05:25.008Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e1ca61d45152c191cd01e076271d83e705009119b1ab760af413f59e697a5766",
-        "pinned-identity:base:52199413:0xe511912db28661d258bc80001aaa227b7fe46bdff59a04430b3ef388ce0cc68a",
+        "pinned-identity:base:52635700:0x575c2e96d5013319df33994db190f388c2bdc65841a234652bc2c6ac8dc96aff",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -2370,16 +2373,17 @@
         "implementationIdentity": "sha256:3a090cb03bc4708c50986acd44093c4b5220646139a0229bad1e12fb2aabecef"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-05T08:46:33.441Z",
-      "expiresAt": "2026-11-04T00:00:00.000Z",
+      "reviewedAt": "2026-10-15T10:53:20.930Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:070312ba4115d4f21b8ec57ce745d3ef53d23f234b0e3dce864787bb04c87df8",
-        "pinned-identity:gnosis:48598409:0x3ee4bafa973a41d0ef9052b4143bf2e75aca431c5718f480baa2534a714d806e",
+        "pinned-identity:gnosis:48768019:0x6156be96ae63c062ae767ed99ccbbcfe6c805b73a7b64c44034b14efc2dc249f",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000"
       ],
       "sourceUrls": [
         "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
-        "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        "https://gnosis.blockscout.com/block/48768019",
+        "https://rpc.gnosischain.com"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -2458,11 +2462,11 @@
         "implementationIdentity": "sha256:af776564ec38c02b2f33ee399b3143662c83da1a2c6343b191eedb79a7281323"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-05T08:54:59.235Z",
-      "expiresAt": "2026-11-04T00:00:00.000Z",
+      "reviewedAt": "2026-10-15T10:42:35.000Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:4516170552d6e5f5650ae4bcecf62e39b96dc6b6aba829ff3f5699c89f436d79",
-        "pinned-identity:ethereum:26125105:0x01ca6082f4f07f5c6d3882a481b8820803d5ea34a47a0dd7f893cd02e05242cb",
+        "pinned-identity:ethereum:26197387:0x530cc1059f89d04e8a499a738ba8a4983a6a5695ffe0fa29d5bd25934b8dd702",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
@@ -2482,6 +2486,194 @@
           "address": "0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba",
           "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
           "codeSha256": "af776564ec38c02b2f33ee399b3143662c83da1a2c6343b191eedb79a7281323"
+        },
+        "balanceStorage": {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "susdc-spark-v1",
+        "deployment": "arbitrum:0x940098b108fb7d0a7e374f6eded7760787464609",
+        "endpoint": "arbitrum:0x940098b108fb7d0a7e374f6eded7760787464609",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:07a2322940d8cc0470097e309bce5eb0a5f4df4b64411468925f35ff85f57b43"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-15T10:49:28.000Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
+      "evidenceIds": [
+        "official-legacy-l2-source:arbitrum:0xdc8df20be448e41fde88e2478d6bc4d3c9a092d6",
+        "pinned-identity:arbitrum:515036950:0x041d8ded9ee1fc965cc161453fed3beb01a5c79040985df7bac6bf31fc875784",
+        "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
+      ],
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Arbitrum.sol"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "arbitrum",
+        "chainId": 42161,
+        "contract": "0x940098b108fb7d0a7e374f6eded7760787464609",
+        "outputToken": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+        "inputDecimals": 18,
+        "outputDecimals": 6,
+        "codeSha256": "7a31397310e9e3c9a0c594e107afd952f78f2dd34e65337c0f8eb457256e6faf",
+        "implementation": {
+          "address": "0xdc8df20be448e41fde88e2478d6bc4d3c9a092d6",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "07a2322940d8cc0470097e309bce5eb0a5f4df4b64411468925f35ff85f57b43"
+        },
+        "balanceStorage": {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "susdc-spark-v1",
+        "deployment": "base:0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+        "endpoint": "base:0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:635c368c462e8af0fea9abfa239765cadf05bf8a6c8a06db779f14fe51de014b"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-15T10:49:11.000Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
+      "evidenceIds": [
+        "official-legacy-l2-source:base:0x6acc02ddd82206a44ff4ec13977e63d1a29c7723",
+        "pinned-identity:base:52636002:0xc41e0ed5e8085c521c443f4d18237486aadcfc36ff0c62ce7170e92c8efdde74",
+        "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
+      ],
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Base.sol"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "base",
+        "chainId": 8453,
+        "contract": "0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+        "outputToken": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "inputDecimals": 18,
+        "outputDecimals": 6,
+        "codeSha256": "7a31397310e9e3c9a0c594e107afd952f78f2dd34e65337c0f8eb457256e6faf",
+        "implementation": {
+          "address": "0x6acc02ddd82206a44ff4ec13977e63d1a29c7723",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "635c368c462e8af0fea9abfa239765cadf05bf8a6c8a06db779f14fe51de014b"
+        },
+        "balanceStorage": {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "susdc-spark-v1",
+        "deployment": "optimism:0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+        "endpoint": "optimism:0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:409c668b9fa54496b2355e7bbdadc05331032b5841f0bd3e8c9f4bcf9f217845"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-15T10:48:47.000Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
+      "evidenceIds": [
+        "official-legacy-l2-source:optimism:0x3a1d3a9b0ed182d7b17aa61393d46a4f4ee0cea5",
+        "pinned-identity:optimism:158231275:0x372869d98921784f0c187300ed7901b0cc996f4d947af5872861c3633712a1c2",
+        "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
+      ],
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Optimism.sol"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "optimism",
+        "chainId": 10,
+        "contract": "0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+        "outputToken": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+        "inputDecimals": 18,
+        "outputDecimals": 6,
+        "codeSha256": "7a31397310e9e3c9a0c594e107afd952f78f2dd34e65337c0f8eb457256e6faf",
+        "implementation": {
+          "address": "0x3a1d3a9b0ed182d7b17aa61393d46a4f4ee0cea5",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "409c668b9fa54496b2355e7bbdadc05331032b5841f0bd3e8c9f4bcf9f217845"
+        },
+        "balanceStorage": {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "keyOrder": "account-slot"
+        },
+        "maxFunctions": "binding",
+        "unrestrictedGateSelectors": [],
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+      }
+    },
+    {
+      "modelId": "erc4626-instant",
+      "identity": {
+        "assetId": "susdc-spark-v1",
+        "deployment": "unichain:0x14d9143becc348920b68d123687045db49a016c6",
+        "endpoint": "unichain:0x14d9143becc348920b68d123687045db49a016c6",
+        "outputAssetKeys": [
+          "usdc-circle"
+        ],
+        "implementationIdentity": "sha256:5fce49a41e8695c38ccbc89136fdec38cd83f6a4bf20cf27ee958193259cbeeb"
+      },
+      "holder": "any-holder",
+      "reviewedAt": "2026-10-15T10:49:17.000Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
+      "evidenceIds": [
+        "official-legacy-l2-source:unichain:0x1fcc6bdfb541580d39e57d0531ab0f68d0914c79",
+        "pinned-identity:unichain:61312998:0xe3bfef6819cf5bca778b83073f3700d88acea657465b744e480b3a8111c861b2",
+        "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
+      ],
+      "sourceUrls": [
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol",
+        "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Unichain.sol"
+      ],
+      "producer": {
+        "kind": "erc4626-instant",
+        "chain": "unichain",
+        "chainId": 130,
+        "contract": "0x14d9143becc348920b68d123687045db49a016c6",
+        "outputToken": "0x078d782b760474a361dda0af3839290b0ef57ad6",
+        "inputDecimals": 18,
+        "outputDecimals": 6,
+        "codeSha256": "7a31397310e9e3c9a0c594e107afd952f78f2dd34e65337c0f8eb457256e6faf",
+        "implementation": {
+          "address": "0x1fcc6bdfb541580d39e57d0531ab0f68d0914c79",
+          "slot": "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+          "codeSha256": "5fce49a41e8695c38ccbc89136fdec38cd83f6a4bf20cf27ee958193259cbeeb"
         },
         "balanceStorage": {
           "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",

@@ -10,43 +10,10 @@
       {
         "label": "MiCA Article 3: EMT and ART definitions",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
-      }
-    ]
-  },
-  "genius": {
-    "applicability": "non-payment-token",
-    "applicabilityBasis": {
-      "summary": "This exact token is a yield-accruing ERC-4626 savings share redeemable into its tracked parent, rather than a fixed-dollar payment claim.",
-      "references": [
-        {
-          "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
-          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        }
-      ]
-    },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "notes": "Exact-token savings-share assessment. The share redeems for a variable quantity of the tracked parent asset and does not promise a fixed amount of national currency or a national-currency deposit. The parent token's authorization posture is assessed separately and is not copied to this share. No security or deposit exemption is asserted.",
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
-    "references": [
-      {
-        "label": "OCC Bulletin 2026-3: GENIUS Act proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-02-25"
       },
       {
-        "label": "GENIUS Act Public Law 119-27",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2025-07-18"
+        "label": "Gnosis variable share-price mechanics: structural ART/EMT exclusion; not a statement on EU offering, securities or CASP law",
+        "url": "https://docs.analytics.gnosis.io/protocols/savings/"
       }
     ]
   }

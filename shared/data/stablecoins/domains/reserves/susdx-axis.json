@@ -17,8 +17,8 @@
   ],
   "reserveReview": {
     "compositionSource": "live-adapter",
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4C01Aave)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review 2026-10-15 (Rev_SusdxAxis)",
     "confidence": "verified",
     "sources": [
       { "label": "Axis staking accounting and solvency invariant", "url": "https://docs.axis.to/reference/staking-contracts.md" },
@@ -27,29 +27,35 @@
       { "label": "Canonical V2 vault deployment", "url": "https://docs.axis.to/reference/contract-addresses.md" },
       { "label": "Ethereum block 26107703 used for asset and accounting reads", "url": "https://etherscan.io/block/26107703" },
       { "label": "StakedUSDx vault", "url": "https://etherscan.io/address/0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4#code" },
-      { "label": "Active-share accounting and claim-book checkpoint at Ethereum block 26143058, 2026-10-07T20:59:59Z; keyless Dwellir observations accessed 2026-10-07T21:00:37.560Z and 2026-10-07T21:01:21.675Z", "url": "https://etherscan.io/block/26143058" }
+      { "label": "Historical active-share accounting and claim-book checkpoint at Ethereum block 26143058, 2026-10-07T20:59:59Z", "url": "https://etherscan.io/block/26143058" },
+      { "label": "Fresh Ethereum block 26197360, 2026-10-15T10:37:11Z: asset, active-share accounting, claim book, reward state and pause flags", "url": "https://etherscan.io/block/26197360" },
+      { "label": "Keyless Dwellir pinned Ethereum observations at block 26197360, captured 2026-10-15T10:46:17.371Z", "url": "https://api-ethereum-mainnet.n.dwellir.com" }
     ],
-    "rationale": "At Ethereum block 26107703 (October 2, 2026, 22:43:59 UTC), asset() returned canonical USDx 0xa1fa7777974312f7d801a8880714a218f76233f8, totalAssets() returned 38,968,347.92779699 USDx, totalSupply() returned 37,749,108.3697981 shares, and exchangeRate() returned 1.032298499505073350 USDx per share. Pending and claimable liabilities were 1,703,978.4035580596 and 4,837.895991089497 USDx. The single-asset wrapper dependency is 100% USDx; liability buckets and unvested rewards are excluded from active-share totalAssets. These observations are accounting evidence, not a second portfolio or independent financial assurance. Legacy risk is high because the parent is a venue-dependent synthetic dollar.",
+    "rationale": "At Ethereum block 26197360 (2026-10-15T10:37:11Z), asset() returned canonical USDx 0xa1fa7777974312f7d801a8880714a218f76233f8. totalAssets() was 36,018,311.186761451471271827 USDx; totalSupply() was 34,697,103.474753935170938607 shares; exchangeRate() was 1.038078328727608177 USDx per share. getVaultState() and USDx.balanceOf(vault) agreed on assetBalance=requiredAssets=45,534,526.553486274453968047 USDx, with solvent=true. Pending liabilities were 9,494,452.838503114589099543 USDx, claimable liabilities 539.148592078763963117 USDx and unvested rewards 21,223.379629629629633560 USDx. These three buckets are excluded from active-share totalAssets. The direct wrapper dependency is 100% USDx; accounting solvency is not independent financial assurance of the parent's offchain portfolio.",
     "compositionBasis": "Exact single-asset ERC-4626/ERC-7540 claim confirmed by asset() and published vault accounting; active shares are backed by USDx principal and vested rewards.",
-    "compositionAsOf": "2026-10-07",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified direct wrapper asset is asserted. All underlying portfolio, hedge, custody and legal uncertainty remains on usdx-axis; asynchronous servicing and upgrade risk are local wrapper exposures. Liquidity classification reviewed October 9, 2026: the seven-day cooldown establishes request eligibility only; REDEMPTION_SERVICER_ROLE must make the request claimable. Terms clause 5.3 expressly guarantees no processing timeframe. No finite realization horizon is established, so liquidityHorizon remains unknown. This classification review does not refresh the October 7 composition checkpoint or the original accounting observations.",
+    "knownUnknownExposure": "No unidentified direct wrapper asset is asserted. All underlying portfolio, hedge, custody and legal uncertainty remains on usdx-axis; asynchronous servicing and upgrade risk are local wrapper exposures. The seven-day cooldown establishes request eligibility only; REDEMPTION_SERVICER_ROLE must make the request claimable. Terms clause 5.3 guarantees no processing timeframe, and clause 6 permits variable service fees. No finite realization horizon is established, so liquidityHorizon remains unknown. At the fresh October 15 checkpoint requests, servicing and claims were unpaused but pending-request cancellation was paused; neither the active assets nor liability reserves establish completion capacity for new requests.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
-      { "name": "Axis StakedUSDx Ethereum vault 0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4", "role": "other" }
+      { "name": "Axis StakedUSDx Ethereum vault 0xeb892628d1e58bc475a6dcb7f5dbc4f591632aa4", "role": "other" },
+      { "name": "Upstream Axis USDx exchanges, trading venues and other disclosed capital-location categories; providers and constituent weights unresolved", "role": "other" }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review 2026-10-15 (Rev_SusdxAxis)",
     "confidence": "verified",
     "sources": [
       { "label": "Axis in-vault principal, reward and redemption accounting", "url": "https://docs.axis.to/reference/staking-contracts.md" },
-      { "label": "Ethereum block 26107703 accounting observation", "url": "https://etherscan.io/block/26107703" }
+      { "label": "Historical Ethereum block 26107703 accounting observation", "url": "https://etherscan.io/block/26107703" },
+      { "label": "Fresh Ethereum block 26197360 accounting and pause observation, 2026-10-15T10:37:11Z", "url": "https://etherscan.io/block/26197360" },
+      { "label": "Axis upstream on-venue custody disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
+      { "label": "Axis capital-location reporting and management-classification boundary", "url": "https://app.axis.to/transparency" }
     ],
-    "uncertainty": "The onchain label covers direct USDx custody in the canonical vault, including its pending and claimable liability buckets; V2 has no separate silo. It does not describe or upgrade upstream USDx venue custody. The vault is upgradeable, the queue is permissioned and pausable, and no enforceable holder segregation or insolvency priority is established. No provider allocation or independent reserve assurance is inferred."
+    "uncertainty": "The direct USDx claim and its pending, claimable and unvested buckets are held in the canonical onchain V2 vault; there is no separate silo or local lending strategy in the verified implementation. Whole-book custody stays unknown, matching usdx-axis: the wrapper's own claim is onchain, but the USDx backing materially depends on centralized venues and other offchain positions whose aggregate custody tier is unestablished. No named-provider allocation, enforceable holder segregation, insolvency priority or independent financial assurance is inferred. Parent docs state no off-exchange custody, while the capital-location dashboard assigns a qualified-custody category; the exact provider and legal safeguards remain unresolved upstream. The vault is upgradeable, restrictable and permissioned for queue servicing."
   }
 }

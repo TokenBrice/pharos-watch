@@ -1,16 +1,16 @@
 {
   "id": "syrupusdg-maple",
   "blacklistabilityReview": {
-    "evidence": "At finalized Solana slot 452748856, the exact syrupUSDG SPL mint CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f has non-null freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp. This establishes a direct holder-freeze capability on an authored representation, despite its current zero supply; it does not claim a past freeze. Ethereum transfer permissions depend on the mutable manager and USDG issuer freeze exposure remains upstream. The active Solana freeze authority supersedes the packet unresolved-authority gap.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "evidence": "At exact archived Solana slot 457211351 (2026-10-15T10:54:02Z), the syrupUSDG SPL mint CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f retains freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp, decimals 6 and zero supply. This proves direct holder-freeze capability on an authored representation, not a past freeze. Ethereum transfer permissions remain manager-gated; parent USDG issuer freeze exposure is separate.",
+    "reviewer": "Rev_SyrupusdgMaple",
+    "reviewedAt": "2026-10-15",
     "sources": [
       {
         "label": "Chainlink exact syrupUSDG deployments and pools",
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
       },
       {
-        "label": "Finalized Solana mint supply and authorities at slot 452748856",
+        "label": "Exact archived Solana mint at slot 457211351, 2026-10-15T10:54:02Z",
         "url": "https://solana-mainnet.g.alchemy.com/v2/"
       },
       {
@@ -49,8 +49,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SyrupusdgMaple",
     "confidence": "limited",
     "sources": [
       {
@@ -62,16 +62,16 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z: current pool accounting and LoanManager binding",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow, not additional canonical issuance. Maple's September 28, 2026 migration disclosure confirms unchanged holder token addresses and replacement CCIP pools rolling out through Q4. At Ethereum block 26155000, the directory-listed escrow owner is verified RBACTimelock 0x44835bbba9d40deda9b64858095ecfb2693c9449, with a 10800-second ordinary delay and an active ManyChainMultiSig bypasser that avoids that delay. This partial Ethereum owner census does not establish a complete execution certificate or replacement-pool authority. Remote EVM findings, remaining lane controls, Solana execution and runtime materiality retain their separately dated findings and bounded gaps.",
-    "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L34SyrupUSDT)",
+    "summary": "Ethereum is canonical Maple share issuance; Robinhood, Arbitrum, Ink and Solana are CCIP BurnMint representations backed through Ethereum LockRelease escrow. Fresh October 15 pins confirm the five token identities, four EVM pool owners, full enumerable RBACTimelock roles and nested bypass configurations. All four pool-owner timelocks now show a 10800-second ordinary delay, with immediate bypass paths. Separate Maple GovernorTimelocks hold token-admin roles on Arbitrum and Ink; Arbitrum's live registry administrator is its CCIP pool-owner timelock, distinct from the token's CCIP registration getter. Solana retains a 1-of-2 mint multisig and direct holder-freeze key. Migration completion, full validator/program execution reach and runtime supply materiality remain separately unresolved.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SyrupusdgMaple",
     "confidence": "manual-review",
     "sources": [
       {
@@ -107,23 +107,23 @@
         "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z: pool, owner, full enumerable roles and bypass config",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
-        "label": "Finalized Solana mint supply and authorities at slot 452748856",
+        "label": "Exact archived Solana mint/controller accounts at slot 457211351, 2026-10-15T10:54:02Z",
         "url": "https://solana-mainnet.g.alchemy.com/v2/"
       },
       {
-        "label": "arbitrum read-only RPC deployment and pool observation",
+        "label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: token, pool, owner roles, bypass config and registry",
         "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
       },
       {
-        "label": "ink read-only RPC deployment and pool observation",
+        "label": "Ink block 58563029, 2026-10-15T10:50:40Z: token, pool, owner roles and bypass configs",
         "url": "https://api-ink-mainnet.n.dwellir.com"
       },
       {
-        "label": "robinhood read-only RPC deployment and pool observation",
+        "label": "Robinhood block 89167787, 2026-10-15T10:52:57Z: token, pool, owner roles and bypass config",
         "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
       },
       {
@@ -153,7 +153,7 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
@@ -164,15 +164,15 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
           },
           {
-            "label": "Ethereum RPC observation at block 26107703",
-            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z: native share and escrow identity",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ],
         "failureDomainKeys": [
           "issuer:maple"
         ],
         "reviewNote": "Verified MaplePool native share issuance; remote representations are collateralized through the Ethereum LockRelease pool, not extra canonical supply.",
-        "observedBlock": 26107703
+        "observedBlock": 26197300
       },
       {
         "id": "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7",
@@ -188,14 +188,14 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "robinhood RPC deployment and pool pin",
+            "label": "Robinhood block 89167787, 2026-10-15T10:52:57Z: exact token and pool",
             "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
           }
         ],
@@ -204,7 +204,7 @@
           "issuer:maple"
         ],
         "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted.",
-        "observedBlock": 78600073
+        "observedBlock": 89167787
       },
       {
         "id": "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
@@ -220,14 +220,14 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "arbitrum RPC deployment and pool pin",
+            "label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: exact token and pool",
             "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
           }
         ],
@@ -236,7 +236,7 @@
           "issuer:maple"
         ],
         "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted.",
-        "observedBlock": 511124614
+        "observedBlock": 515037637
       },
       {
         "id": "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018",
@@ -252,14 +252,14 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "ink RPC deployment and pool pin",
+            "label": "Ink block 58563029, 2026-10-15T10:50:40Z: exact token and pool",
             "url": "https://api-ink-mainnet.n.dwellir.com"
           }
         ],
@@ -268,7 +268,7 @@
           "issuer:maple"
         ],
         "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted.",
-        "observedBlock": 57482843
+        "observedBlock": 58563029
       },
       {
         "id": "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f",
@@ -284,14 +284,14 @@
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Finalized Solana mint supply and authorities at slot 452748856",
+            "label": "Exact archived Solana mint at slot 457211351, 2026-10-15T10:54:02Z",
             "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ],
@@ -299,7 +299,8 @@
           "bridge:chainlink-ccip",
           "issuer:maple"
         ],
-        "reviewNote": "Directory identifies this exact token and BurnMint representation; the Ethereum home pool is LockRelease, so the end-to-end route is lock-mint. No independent native monetary supply is asserted."
+        "reviewNote": "Exact archived slot 457211351 confirms the authored six-decimal SPL mint and its authorities; the directory binds the BurnMint representation to the Ethereum LockRelease route. Zero current supply does not remove its authority capability.",
+        "observedBlock": 457211351
       }
     ],
     "controls": [
@@ -323,19 +324,19 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Ethereum RPC observation at block 26107703",
-            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z: escrow, owner, router and RMN",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ],
-        "evidence": "At block 26107703, getToken() bound this escrow to the canonical syrupUSDG pool; typeAndVersion() returned LockReleaseTokenPool 1.6.1 and owner() was 0x44835bbba9d40deda9b64858095ecfb2693c9449. Canonical escrow cannot be summed as additional monetary supply. Full limits, pause, router, owner execution and upgrade census remains unresolved."
+        "evidence": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), getToken() binds this escrow to the canonical share; typeAndVersion() remains LockReleaseTokenPool 1.6.1 and owner() is 0x44835bbba9d40deda9b64858095ecfb2693c9449. getRouter() is 0x80226fc0ee2b096224eeac085bb9a8cba1146f7d and getRmnProxy() is 0x411de17f12d1a34ecc7f45f49844626267c75e81. Four supported remote selectors are enumerated. Canonical escrow is not additional supply. Complete lane limits, validator execution and upgrade census remain unresolved."
       },
       {
         "id": "ethereum-ccip-escrow-owner",
@@ -354,8 +355,8 @@
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
         "failureDomainKeys": ["controller:ethereum:0x44835bbba9d40deda9b64858095ecfb2693c9449", "bridge:chainlink-ccip"],
-        "observedAt": "2026-10-10",
-        "observedBlock": 26155000,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "Exact syrupUSDG home escrow binding",
@@ -378,7 +379,7 @@
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-11 (L34SyrupUSDT) observed the exact directory-listed Ethereum LockRelease escrow owner at block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z. owner() resolves to this verified RBACTimelock. getMinDelay() is 10800 seconds, but live ADMIN count is one (self) and BYPASSER count is one (0x117ec8ad107976e1dbcc21717ff78407bc36aadc). Verified bypasserExecuteBatch executes arbitrary target calls without delay or blocked-selector checks; the verified ManyChainMultiSig bypasser enforces signed roots and nonce ordering, not a minimum execution delay. Zero is the owner path's delay floor, not a uniform signer quorum, independent-human proof or guaranteed reaction time. Supplemental successful reads observed 2026-10-11T01:02:48Z by Sol curation campaign 2026-10-11 (C32UTY) at block 26162000, hash 0x063085f1059ae473860f4e88dbb5ba903e3440b3f0b92c4082716ab6fbae2987, timestamp 2026-10-10T12:21:35Z, confirm the same escrow owner and 10800-second ordinary delay. The bypass MCM owner() is this timelock and pendingOwner() is zero. getConfig() (selector 0xc3f909d4) returns 69 indexed signer leaves with a nested 32-group quorum/parent tree, root quorum 3; this is not a conventional 3-of-69 multisig. Verified owner-only setConfig can replace that signer tree, so configuration authority loops through the timelock rather than an independently established owner. Proposer/executor/canceller roles, live bypass authorization at the later pin, executable correspondence, router/RMN/limits, replacement pools and complete downstream liability reach remain unresolved."
+        "evidence": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), escrow owner remains this RBACTimelock and getMinDelay() is 10800 seconds. Full enumerable census: ADMIN self; PROPOSER 0xe53289f32c8e690b7173aa33affe9b6b0cb0012f, 0xd6597750bf74dcaec57e0f9ad2ec998d837005bf, 0xd9757aa52907798d1af2fda7a6c0cc733e5acf7e; EXECUTOR 0xf3e54a1fda3d4351c8bd5065678c0f5ddd0d7bcb; CANCELLER those three proposers, 0xad97c0270a243270136e40278155c12ce7c7f87b and 0x117ec8ad107976e1dbcc21717ff78407bc36aadc; BYPASSER solely 0x117ec8ad107976e1dbcc21717ff78407bc36aadc. Verified bypasserExecuteBatch bypasses the ordinary delay and blocked-selector checks. Bypasser owner() is this timelock and pendingOwner() is zero. Full getConfig() retains 69 signer leaves, 32 groups and root quorum 3, not a conventional 3-of-69 multisig. Thus the execution-delay floor remains zero. Runtime/source correspondence, signer custody, validator execution, complete liability reach and replacement-pool migration history are not certified."
       },
       {
         "id": "arbitrum-ccip-burn-mint-pool",
@@ -397,19 +398,19 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511124614,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515037637,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "arbitrum RPC pool identity and owner",
+            "label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: pool identity, owner and token roles",
             "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
           }
         ],
-        "evidence": "At block 511124614, pool getToken() returned the exact authored syrupUSDG token and typeAndVersion() returned BurnMintTokenPool 2.0.0. The directory identifies its burn/mint transfer role. Token decimals() was 6; pool owner() was 0x8a89770722c84b60ce02989aedb22ac4791f8c7f. Exhaustive role events and owner execution routes were not established."
+        "evidence": "At Arbitrum block 515037637 (2026-10-15T10:52:40Z), getToken() returns the authored six-decimal syrupUSDG token and typeAndVersion() remains BurnMintTokenPool 2.0.0. owner() remains 0x8a89770722c84b60ce02989aedb22ac4791f8c7f. Token hasRole confirms this pool holds MINTER_ROLE and BURNER_ROLE. totalSupply() was 35502109.844552 shares. Complete token role history, validator execution and migration history remain unresolved."
       },
       {
         "id": "arbitrum-ccip-pool-owner",
@@ -422,15 +423,15 @@
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
         "failureDomainKeys": ["controller:arbitrum:0x8a89770722c84b60ce02989aedb22ac4791f8c7f", "bridge:chainlink-ccip"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 511233538,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515037637,
         "sources": [
           {"label": "Exact directory pool binding", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"},
           {"label": "Verified RBACTimelock owner and bypass semantics", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x8a89770722c84b60ce02989aedb22ac4791f8c7f"},
           {"label": "Verified bypasser ManyChainMultiSig", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xf4c257b5c6c526d56367a602e87b1932d13e67cb"},
-          {"label": "Pinned owner, enumerable roles, ordinary delay and bypasser getConfig", "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"}
+          {"label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: complete owner role census, bypass config and live registry", "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"}
         ],
-        "evidence": "Fresh pool owner pin at Arbitrum block 511233538 (hash 0xfccae74e17a86037e5c5269dc6c543a9366b8656b78a13f173dd1caabda3f626) identifies verified RBACTimelock. Live enumerable census: ADMIN self; PROPOSER 0x69b798425cfff3ae962f6118fd6d6646c829a8c5, 0x5972428082b6e1b6670014cf373b3e42b42aef13 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; EXECUTOR 0x36af00c67605a4891c065d54d1ab5af877197a6a; CANCELLER those three proposers, 0x4ea3f791511d35aa859455bd60af526537040bb3 and 0xf4c257b5c6c526d56367a602e87b1932d13e67cb; BYPASSER solely 0xf4c257b5c6c526d56367a602e87b1932d13e67cb. Ordinary getMinDelay()=86400, but ADMIN/BYPASSER bypass delay and blocked functions. Verified ManyChainMultiSig bypasser getConfig contains 69 signers and a nested 32-group threshold tree with root quorum 3, not a conventional 3-of-69 Safe. No human independence, custody or complete validator/limit census is inferred."
+        "evidence": "At Arbitrum block 515037637 (2026-10-15T10:52:40Z), full enumerable census confirms ADMIN self; PROPOSER 0x69b798425cfff3ae962f6118fd6d6646c829a8c5, 0x5972428082b6e1b6670014cf373b3e42b42aef13 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; EXECUTOR 0x36af00c67605a4891c065d54d1ab5af877197a6a; CANCELLER those proposers, 0x4ea3f791511d35aa859455bd60af526537040bb3 and 0xf4c257b5c6c526d56367a602e87b1932d13e67cb; BYPASSER solely 0xf4c257b5c6c526d56367a602e87b1932d13e67cb. Ordinary getMinDelay() is now 10800 seconds, superseding the old 86400 observation; ADMIN/BYPASSER execute without that delay. Bypasser owner() is this timelock, pendingOwner() zero and full getConfig() retains 69 leaves, 32 groups and root quorum 3. Live TokenAdminRegistry 0x39ae1032cf4b334a1ed41cdd0833bdd7c7e7751e also identifies this timelock as syrupUSDG administrator, zero pending administrator and the authored pool mapping. No conventional Safe quorum, signer-custody or complete execution certificate is inferred."
       },
       {
         "id": "ink-ccip-burn-mint-pool",
@@ -449,19 +450,19 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 57482843,
+        "observedAt": "2026-10-15",
+        "observedBlock": 58563029,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "ink RPC pool identity and owner",
+            "label": "Ink block 58563029, 2026-10-15T10:50:40Z: pool identity, owner and token roles",
             "url": "https://api-ink-mainnet.n.dwellir.com"
           }
         ],
-        "evidence": "At block 57482843, pool getToken() returned the exact authored syrupUSDG token and typeAndVersion() returned BurnMintTokenPool 2.0.0. The directory identifies its burn/mint transfer role. Token decimals() was 6; pool owner() was 0x13ac97663d19ff20fe467bfa580748505e664beb. Exhaustive role events and owner execution routes were not established."
+        "evidence": "At Ink block 58563029 (2026-10-15T10:50:40Z), getToken() returns the authored six-decimal syrupUSDG token and typeAndVersion() remains BurnMintTokenPool 2.0.0. owner() remains 0x13ac97663d19ff20fe467bfa580748505e664beb. Token hasRole confirms this pool holds MINTER_ROLE and BURNER_ROLE; totalSupply() was zero. Complete token role history and owner/validator execution reach remain unresolved; zero supply is not renunciation."
       },
       {
         "id": "ink-ccip-pool-owner",
@@ -474,16 +475,16 @@
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
         "failureDomainKeys": ["controller:ink:0x13ac97663d19ff20fe467bfa580748505e664beb", "bridge:chainlink-ccip"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 57513503,
+        "observedAt": "2026-10-15",
+        "observedBlock": 58563029,
         "sources": [
           {"label": "Exact directory pool binding", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"},
           {"label": "Verified RBACTimelock owner and bypass semantics", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x13ac97663d19ff20fe467bfa580748505e664beb"},
           {"label": "First verified ManyChainMultiSig bypasser", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x8d9001df517fd5f88d8bbb8efed5b08de174386e"},
           {"label": "Second verified ManyChainMultiSig bypasser", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x3237c0d7b58bec8dc17f00103b784bd6678f789e"},
-          {"label": "Pinned owner, enumerable roles, ordinary delay and bypasser getConfig", "url": "https://api-ink-mainnet.n.dwellir.com"}
+          {"label": "Ink block 58563029, 2026-10-15T10:50:40Z: complete owner role census and both bypass configs", "url": "https://api-ink-mainnet.n.dwellir.com"}
         ],
-        "evidence": "Fresh owner pin at Ink block 57513503 (hash 0xb6786dcff623a76adc6c8d613206beaaf0be58e184900c644bb91d22cdc18f23) identifies verified RBACTimelock. Live enumerable census: ADMIN self; PROPOSER 0x9c65f4bf2da23892345505eb92823e0ec30018a6 and 0x26d3681dfc9e4c8c79cfbf461adec8a21d5d73c5; EXECUTOR 0x3b1efc61edba80b02d79819a088f7d795df789c2; CANCELLER both proposers, both bypassers, 0xaa2b6500981c8a05b7a391c526ff0dd77ab8748f and 0x06fc836cf9839b1cd891c440a0a45242da6ae1c9; BYPASSER 0x8d9001df517fd5f88d8bbb8efed5b08de174386e and 0x3237c0d7b58bec8dc17f00103b784bd6678f789e. Ordinary getMinDelay()=10800, but ADMIN/BYPASSER execute without delay or blocked-function checks. Both verified ManyChainMultiSig bypasser configs contain 69 signers, distinct nested 32-group threshold trees and root quorum 3; no simple Safe quorum or human-independence credit. Non-bypass configuration and lane controls remain scoped gaps."
+        "evidence": "At Ink block 58563029 (2026-10-15T10:50:40Z), full enumerable census confirms ADMIN self; PROPOSER 0x9c65f4bf2da23892345505eb92823e0ec30018a6 and 0x26d3681dfc9e4c8c79cfbf461adec8a21d5d73c5; EXECUTOR 0x3b1efc61edba80b02d79819a088f7d795df789c2; CANCELLER both proposers, both bypassers, 0xaa2b6500981c8a05b7a391c526ff0dd77ab8748f and 0x06fc836cf9839b1cd891c440a0a45242da6ae1c9; BYPASSER 0x8d9001df517fd5f88d8bbb8efed5b08de174386e and 0x3237c0d7b58bec8dc17f00103b784bd6678f789e. Ordinary getMinDelay() remains 10800 seconds; ADMIN/BYPASSER bypass delay and blocked functions. Both bypassers' owner() is this timelock, pendingOwner() is zero and full getConfig() retains 69 leaves and distinct 32-group trees with root quorum 3. No simple Safe quorum or human-independence credit is inferred. Complete lane/validator execution remains unresolved."
       },
       {
         "id": "robinhood-ccip-burn-mint-pool",
@@ -502,19 +503,19 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 78600073,
+        "observedAt": "2026-10-15",
+        "observedBlock": 89167787,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "robinhood RPC pool identity and owner",
+            "label": "Robinhood block 89167787, 2026-10-15T10:52:57Z: pool identity, owner and token roles",
             "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
           }
         ],
-        "evidence": "At block 78600073, pool getToken() returned the exact authored syrupUSDG token and typeAndVersion() returned BurnMintTokenPool 1.6.1. The directory identifies its burn/mint transfer role. Token decimals() was 6; pool owner() was 0xf09afe78d3c7d359b334d7cb88995751f7ec5e13. Exhaustive role events and owner execution routes were not established."
+        "evidence": "At Robinhood block 89167787 (2026-10-15T10:52:57Z), getToken() returns the authored six-decimal syrupUSDG token and typeAndVersion() remains BurnMintTokenPool 1.6.1. owner() remains 0xf09afe78d3c7d359b334d7cb88995751f7ec5e13. Token hasRole confirms this pool holds MINTER_ROLE and BURNER_ROLE. Router is 0x06fc836cf9839b1cd891c440a0a45242da6ae1c9 and RMN proxy is 0xe8464c353210cc398a45db2454fbc5bcd25fff20. Complete token-role and validator execution census remains unresolved."
       },
       {
         "id": "robinhood-ccip-pool-owner",
@@ -527,15 +528,15 @@
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
         "failureDomainKeys": ["controller:robinhood:0xf09afe78d3c7d359b334d7cb88995751f7ec5e13", "bridge:chainlink-ccip"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 78901755,
+        "observedAt": "2026-10-15",
+        "observedBlock": 89167787,
         "sources": [
           {"label": "Exact directory pool binding", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"},
           {"label": "Verified RBACTimelock owner and bypass semantics", "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0xf09afe78d3c7d359b334d7cb88995751f7ec5e13"},
           {"label": "Bypasser ManyChainMultiSig verified source retrieved 2026-10-11 by Sol curation campaign 2026-10-11 (C32UTY); runtime correspondence and current config ownership not established", "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x0cff501cdb93e72221231ca5b6b1a3321a338b14"},
-          {"label": "Pinned owner, enumerable roles, ordinary delay and bypasser getConfig", "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"}
+          {"label": "Robinhood block 89167787, 2026-10-15T10:52:57Z: complete owner role census and bypass config/ownership", "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"}
         ],
-        "evidence": "Fresh owner pin at Robinhood block 78901755 (hash 0x8115d0bfce44cdfec69c89004ca2bc142eec5ae6dc258101ca67e1c80eb224ee) identifies verified RBACTimelock. Live enumerable census: ADMIN self; PROPOSER 0x76a443768a5e3b8d1aed0105fc250877841deb40; EXECUTOR 0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9; CANCELLER proposer, 0x70003d849a20e33997fea69bbc8a366d6ab0e131 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; BYPASSER solely 0x0cff501cdb93e72221231ca5b6b1a3321a338b14. Ordinary getMinDelay()=10800; ADMIN/BYPASSER bypass delay and blocked functions. Bypasser getConfig is ManyChainMultiSig-compatible with 69 signers, nested 32-group threshold tree and root quorum 3. Supplemental 2026-10-11 retrieval by Sol curation campaign 2026-10-11 (C32UTY) found this bypasser's verified ManyChainMultiSig source on the same explorer, with nested root-signature validation, nonce-ordered raw target CALL execution and owner-only setConfig. This source retrieval does not establish executable correspondence or current configuration-owner reach. No ordinary multisig, independent-human or execution-complete certificate is asserted."
+        "evidence": "At Robinhood block 89167787 (2026-10-15T10:52:57Z), full enumerable census confirms ADMIN self; PROPOSER 0x76a443768a5e3b8d1aed0105fc250877841deb40; EXECUTOR 0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9; CANCELLER proposer, 0x70003d849a20e33997fea69bbc8a366d6ab0e131 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; BYPASSER solely 0x0cff501cdb93e72221231ca5b6b1a3321a338b14. Ordinary getMinDelay() remains 10800 seconds; ADMIN/BYPASSER bypass it. Bypasser owner() is this timelock, pendingOwner() zero and full getConfig() retains 69 leaves and a 32-group tree with root quorum 3. Previously retrieved verified ManyChainMultiSig source describes nested signatures and nonce-ordered raw target calls; the fresh configuration does not establish runtime/source correspondence, independent humans or an execution-complete certificate."
       },
       {
         "id": "solana-syrupusdg-mint-authority",
@@ -555,19 +556,19 @@
         "failureDomainKeys": [
           "bridge:chainlink-ccip"
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 453072541,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457211351,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Finalized atomic Solana mint and controller accounts at slot 453072541",
+            "label": "Exact archived Solana mint and multisig at slot 457211351, 2026-10-15T10:54:02Z",
             "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Atomic finalized getMultipleAccounts at slot 453072541 identified the exact syrupUSDG SPL mint (supply zero, decimals 6) with mintAuthority Di9oiB9DRXG7vrvUKapLeXmiZX2GebRXDAsZ6tWmEcrE. That Tokenkeg-owned account parses as an SPL multisig: numRequiredSigners=1, numValidSigners=2, signers BAusSkCwqvpS598vn9dxxnotvngeqavcumYnKVnach9c and 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp. This is a direct 1-of-2 threshold, not proof of independence or complete PDA/program execution reach."
+        "evidence": "Exact archived account reads at finalized Solana slot 457211351 (2026-10-15T10:54:02Z) confirm the syrupUSDG SPL mint has zero supply, decimals 6 and mintAuthority Di9oiB9DRXG7vrvUKapLeXmiZX2GebRXDAsZ6tWmEcrE. The Tokenkeg-owned controller parses as an initialized SPL multisig with numRequiredSigners=1, numValidSigners=2 and signers BAusSkCwqvpS598vn9dxxnotvngeqavcumYnKVnach9c and 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp. The 1-of-2 threshold is direct evidence, not proof of independent humans or complete program/PDA execution reach."
       },
       {
         "id": "solana-syrupusdg-freeze-authority",
@@ -585,28 +586,66 @@
         "failureDomainKeys": [
           "authority:solana:76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp"
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 453072541,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457211351,
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {
-            "label": "Finalized atomic Solana mint and controller accounts at slot 453072541",
+            "label": "Exact archived Solana mint at slot 457211351, 2026-10-15T10:54:02Z",
             "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Atomic finalized getMultipleAccounts at slot 453072541 returned freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp for the exact syrupUSDG SPL mint. The authority itself returned null (no allocated account), and its base58 public key is a valid Ed25519 curve point, establishing a key-signing rather than SPL multisig/program authority. This is direct holder-freeze power; key custody, signer independence and historical freezes are not inferred."
+        "evidence": "At exact archived Solana slot 457211351 (2026-10-15T10:54:02Z), the mint retains freezeAuthority 76QpxAGtsrbwP5nmdCVHyQe2AHVML7cqhxF9FpBxLJjp. This is the same valid Ed25519 curve-point key documented in the historical slot-453072541 review, rather than the SPL mint multisig address. It proves current direct holder-freeze authority; key custody, signer independence and past freezes remain unestablished."
+      },
+      {
+        "id": "arbitrum-maple-token-admin",
+        "routeRefs": ["arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"],
+        "capabilities": ["admin"],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+        "label": "syrupUSDG Arbitrum Maple token-role administrator",
+        "authorityType": "timelock",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": ["issuer:maple"],
+        "observedAt": "2026-10-15",
+        "observedBlock": 515037637,
+        "sources": [
+          {"label": "Maple exact-product Arbitrum Token Admin disclosure", "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"},
+          {"label": "Verified Arbitrum BurnMintERC20 role semantics", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"},
+          {"label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: token admin role and separate registry mapping", "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"}
+        ],
+        "evidence": "Pinned hasRole(DEFAULT_ADMIN_ROLE, this governor) is true. Verified BurnMintERC20 lets that role grant/revoke MINTER_ROLE and BURNER_ROLE and setCCIPAdmin; maxSupply() is zero (no token-level maximum). The token's getCCIPAdmin() is instead 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9, a registration getter that has no other special powers in verified code. Live TokenAdminRegistry administrator is 0x8a89770722c84b60ce02989aedb22ac4791f8c7f and its pool mapping matches the authored pool, so Maple's Token Admin label does not identify the live registry administrator. This chain-local GovernorTimelock's default delay/window are 259200/172800 seconds; full role history, per-function execution and custody remain unresolved. Ethereum governor signers are not copied onto this deployment."
+      },
+      {
+        "id": "ink-maple-token-admin",
+        "routeRefs": ["ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018"],
+        "capabilities": ["admin"],
+        "controllerChain": "ink",
+        "controllerAddress": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+        "label": "syrupUSDG Ink Maple token-role administrator",
+        "authorityType": "timelock",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": ["issuer:maple"],
+        "observedAt": "2026-10-15",
+        "observedBlock": 58563029,
+        "sources": [
+          {"label": "Maple exact-product Ink Token Admin disclosure", "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"},
+          {"label": "Verified Ink BurnMintERC20 role semantics", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0xebe9ed66efe0948d0c1b72b0157fc17733667018"},
+          {"label": "Ink block 58563029, 2026-10-15T10:50:40Z: current admin role and CCIP getter", "url": "https://api-ink-mainnet.n.dwellir.com"}
+        ],
+        "evidence": "Pinned hasRole(DEFAULT_ADMIN_ROLE, this governor) is true and getCCIPAdmin() returns this address. Verified BurnMintERC20 lets the admin grant/revoke MINTER_ROLE and BURNER_ROLE and setCCIPAdmin; maxSupply() is zero (no token-level maximum). The authored pool retains both mint/burn roles. This chain-local GovernorTimelock's default delay/window are 259200/172800 seconds; complete governor role history, registry configuration, per-function execution and custody remain unresolved. The identical Ethereum address is a separate chain deployment and supplies no signer or execution proof for Ink."
       }
     ],
     "scopedQuestions": [
       {
         "controlRef": "ethereum-ccip-escrow",
-        "question": "At Ethereum block 26162000 the escrow owner and ordinary delay are confirmed, and the immediate-bypass MCM's owner is the same RBACTimelock with zero pendingOwner and a full 69-leaf, 32-group nested config. Which non-bypass roles and configuration-replacement authorization paths, current bypass membership, runtime/source correspondence, router/RMN-validator and live rate-limit/pause/upgrade controls cover every historical and replacement CCIP lane? The owner/config cycle and arbitrary-call code do not prove an independently executable global-claim impairment path or a complete execution certificate.",
+        "question": "Fresh Ethereum block 26197300 identifies every enumerable escrow-owner role, the immediate bypasser and its full nested config/owner. Which runtime/source correspondence, configuration-replacement authorization, router/RMN-validator, live rate-limit/pause/upgrade and historical/replacement-pool execution paths complete the entire lane census? The owner/config cycle and arbitrary-call source alone do not prove a complete execution certificate.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-11",
-        "reviewer": "Sol curation campaign 2026-10-11 (C32UTY)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Rev_SyrupusdgMaple",
         "sources": [
           {
             "label": "Chainlink exact syrupUSDG deployments and pools",

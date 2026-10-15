@@ -34,13 +34,17 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review (Rev_GbpaAgant)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Nephos GBPA reserve attestation as of September 30, 2026",
         "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+      },
+      {
+        "label": "Agant public monthly reserve-report archive",
+        "url": "https://security.agant.io/resources"
       }
     ],
     "rationale": "The retrieved September 30, 2026 Nephos report identifies GBP 597,711.32 cash at Griffin Bank and GBP 1,306,302.77 State Street MMF holdings, totaling GBP 1,904,014.09 against 1,900,346.94 issued GBPA across five networks. Percentages divide each reported balance by that reserve total and round to six decimals. The report confirms direct bank-statement observation, but its no-formal-assurance disclaimer conflicts with its examination opening; composition is retained without audit-grade assurance. Low legacy risk is conservative for named regulated bank/MMF exposure with incomplete legal and fund details.",
@@ -83,8 +87,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review (Rev_GbpaAgant)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -94,8 +98,12 @@
       {
         "label": "Agant business platform terms",
         "url": "https://app.agant.io/terms-of-service"
+      },
+      {
+        "label": "Agant public monthly reserve-report archive",
+        "url": "https://security.agant.io/resources"
       }
     ],
-    "uncertainty": "Provider percentages reflect the September 30 report, not a live feed. Nephos describes holder-benefit trust accounts segregated from operating funds and calls the designated reserve accounts unencumbered. No public trust deed, full Holder Terms, specific State Street fund/share class, successor-custody agreement or independent legal insolvency opinion was retrieved; report language alone is not proof of bankruptcy remoteness."
+    "uncertainty": "Provider percentages reflect the September 30 report, not a live feed. The October 15 public archive lists June-September 2026 reports with no newer period. Nephos describes holder-benefit trust accounts segregated from operating funds and calls the designated reserve accounts unencumbered. Griffin is identified as the bank; State Street is identified only as the MMF provider, without an exact fund/share class, legal custody entity or underlying custody chain. The whole-book custody tier therefore remains unknown rather than institutional-regulated. No public trust deed, full Holder Terms, successor-custody agreement or independent legal insolvency opinion was retrieved; report language alone is not proof of bankruptcy remoteness."
   }
 }

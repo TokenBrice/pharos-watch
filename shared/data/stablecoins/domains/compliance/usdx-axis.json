@@ -107,14 +107,14 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "Federal Register exact issuer-name records through October 7, 2026",
-        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+        "label": "Federal Register exact issuer-name records through October 15, 2026",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-15&per_page=100&order=newest",
         "sourceKind": "federal-register",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "reviewer": "Batch-64 review 2026-10-15 (Rev_UsdxAxis)",
+    "reviewedAt": "2026-10-15",
     "daspOfferSaleStatus": "not-yet-restricted",
     "negativeEvidenceReview": {
       "sourcesChecked": [
@@ -128,11 +128,11 @@
         "https://docs.axis.to/resources-and-legal/compliance.md",
         "https://docs.axis.to/resources-and-legal/eligibility-and-onboarding.md",
         "2026-10-07 indexed exact-name authorization/application and enforcement searches across OCC, Treasury, FDIC, Federal Reserve, NCUA and NYDFS domains for Coordinate Origin Limited / Axis USDx",
-        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest"
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-15&per_page=100&order=newest"
       ],
-      "summary": "As of 2026-10-07, no public GENIUS PPSI approval, state-qualified approval, official PPSI application or registered foreign exception naming Coordinate Origin Limited / Axis USDx was located in the opened OCC licensing tracker, Federal Register exact issuer-name query, NYDFS directory, regulator proposals and issuer documents. The Federal Register query through the review date returned zero documents for Coordinate Origin Limited. Exact-name government-domain authorization searches supplied no qualifying record. This is a bounded public-evidence finding, not proof that no private or unindexed application exists. The ordinary bank-charter tracker and NYDFS licensing directory are not comprehensive GENIUS registers; proposed issuer rules and SCRC procedural forms do not authorize an issuer.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-10-07",
+      "summary": "The October 7 review found no public GENIUS PPSI approval, state-qualified approval, official PPSI application or registered foreign exception naming Coordinate Origin Limited / Axis USDx in the opened licensing tracker, regulator proposals, directories and issuer documents. The October 15 follow-up reopened issuer legal/compliance disclosures, OCC and Federal Reserve proposals, Treasury materials and the NYDFS directory; no exact issuer authorization was found. The Federal Register exact-name query through October 15 returned zero documents. BVI register access was blocked and MAS filtering was inconclusive, neither proving absence of a licence. This bounded public-evidence finding does not exclude private or unindexed applications. Bank-charter and NYDFS directories are not comprehensive GENIUS registers; proposals and procedural forms do not authorize an issuer.",
+      "reviewer": "Batch-64 review 2026-10-15 (Rev_UsdxAxis)",
+      "reviewedAt": "2026-10-15",
       "references": [
         {
           "label": "OCC GENIUS proposed rule",
@@ -175,10 +175,10 @@
           "accessedAt": "2026-10-07"
         },
         {
-          "label": "Federal Register exact issuer-name records through October 7, 2026",
-          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-07&per_page=100&order=newest",
+          "label": "Federal Register exact issuer-name records through October 15, 2026",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Coordinate%20Origin%20Limited%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-15&per_page=100&order=newest",
           "sourceKind": "federal-register",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-15"
         }
       ]
     }

@@ -20,7 +20,7 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
+        "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
@@ -30,17 +30,21 @@
       {
         "label": "Sentora PRIME residential-credit case study",
         "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
+      },
+      {
+        "label": "Paxos PYUSD freeze, seizure and redemption restrictions",
+        "url": "https://www.paxos.com/terms-and-conditions/illegal-activity"
       }
     ],
-    "evidence": "Block 26107702: sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock; this gates deposits, not cash redemptions. receiveAssetsGate() is zero with a permanently abdicated setter. Parent PYUSD issuer freeze exposure remains inherited.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "Block 26197388 (2026-10-15T10:42:47Z): sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock; this gates deposits, not cash redemptions. receiveAssetsGate() is zero with a permanently abdicated setter. Parent PYUSD issuer freeze exposure remains inherited.",
+    "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only this native Ethereum vault-share deployment is authored. Reviewed exact deployment and issuer materials do not establish a vault-share bridge representation.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -60,7 +64,7 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
+        "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
@@ -86,8 +90,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Exact immutable vault share totalSupply is created by deposit/mint and accrual fee accounting in this deployment. No share bridge or remote mint entrypoint appears in the reviewed implementation; parent-token bridge exposure remains inherited separately.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
         "sources": [
           {
             "label": "Sentora PRIME Main exact vault",
@@ -106,7 +110,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -125,9 +129,9 @@
     "tier": "standard-external",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Ethereum block 26122338 confirms one current funded market and the exact bytecode-matched MorphoChainlinkOracleV2, with fixed PRIME/WYLDS and PYUSD/USD Chainlink OCR2 feeds and no embedded vault or second-feed inputs. Chainlink's exact Ethereum feed directory publishes 86400-second heartbeats for both addresses. This is ordinary external signed-feed pricing, not independent fallback/redundancy or a financial NAV attestation. Morpho's library does not enforce freshness or min/max bounds. Upstream PRIME uses a role-mutable UUPS StakingVault and Chainlink Data Streams FeedVerifier; issuer upgrade, rewards and oracle-role powers are not asserted absent.",
-    "reviewedAt": "2026-10-04",
-    "reviewer": "Unknown-resolver wave 3 (W3R15), exact feed directory and pinned runtime review",
+    "summary": "Ethereum block 26197388 (2026-10-15T10:42:47Z) confirms one current funded market and the exact bytecode-matched MorphoChainlinkOracleV2, with fixed PRIME/WYLDS and PYUSD/USD Chainlink OCR2 feeds and no embedded vault or second-feed inputs. Chainlink's exact Ethereum feed directory publishes 86400-second heartbeats for both addresses. This is ordinary external signed-feed pricing, not independent fallback/redundancy or a financial NAV attestation. Morpho's library does not enforce freshness or min/max bounds. Upstream PRIME uses a role-mutable UUPS StakingVault and Chainlink Data Streams FeedVerifier; issuer upgrade, rewards and oracle-role powers are not asserted absent.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -147,7 +151,7 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
+        "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
@@ -189,12 +193,16 @@
       {
         "label": "Ethereum exact feed, role and implementation observation",
         "url": "https://etherscan.io/block/26122338"
+      },
+      {
+        "label": "Ethereum exact-market and feed observation, block 26197388, 2026-10-15T10:42:47Z",
+        "url": "https://etherscan.io/block/26197388"
       }
     ],
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
       "rationale": "Vault conversion is accounting-only, but every current funded lending market uses collateral-price-dependent liquidation. The borrower branches cannot be exempted merely because the wrapper is ERC-4626.",
       "sources": [
         {
@@ -214,7 +222,7 @@
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
         },
         {
-          "label": "Ethereum RPC, pinned block 26107702",
+          "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
           "url": "https://ethereum-rpc.publicnode.com"
         },
         {
@@ -235,8 +243,8 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
           "confidence": "verified",
           "rationale": "Exact VaultV2 conversion reads underlying token balance plus adapter realAssets and accrued fee shares; it calls no external spot-price feed. This exemption is limited to the vault accounting entrypoint, not its borrowers.",
           "sources": [
@@ -257,7 +265,7 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
+              "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
               "url": "https://ethereum-rpc.publicnode.com"
             },
             {
@@ -279,10 +287,10 @@
         "branchId": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x19ebb35279a16207ec4ba82799cc64715065f7f6 with 86% LLTV and 208834337230498 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197388 binds this oracle to collateral 0x19ebb35279a16207ec4ba82799cc64715065f7f6 with 86% LLTV and 209825258128934 raw lender assets.",
           "sources": [
             {
               "label": "Sentora PRIME Main exact vault",
@@ -301,7 +309,7 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
+              "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
               "url": "https://ethereum-rpc.publicnode.com"
             },
             {
@@ -321,7 +329,7 @@
         "id": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
         "label": "Morpho market 0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
         "tier": "standard-external",
-        "summary": "Block 26122338: sole funded market 0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa uses immutable MorphoChainlinkOracleV2 0x335e5718bc20028d5e357473a3736c187ca6b07e. BASE_FEED_1 is Chainlink PRIME/WYLDS proxy 0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1, aggregator 0x48f9a46ba852b5c22d4153d0534397b59abfdef5; QUOTE_FEED_1 is Chainlink PYUSD/USD proxy 0x8f1df6d7f2db73eece86a18b4381f4707b918fb1, aggregator 0x39e31761911b9aabaef5fb81b18fd1c24a60e884. Both published heartbeats are 86400 seconds. Both proxy/aggregator owners are 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. BASE/QUOTE_FEED_2 and BASE/QUOTE_VAULT are zero, so there is no independent fallback. PRIME's current StakingVault reads signed Schema-v7 NAV reports through FeedVerifier 0xdf4ab20fa7752be52e41e42f1fd667f37964d6a3, selected feedId 0x0007c8ed155d952e003b1e15ce7666fea785cfbe216577d578fce3920e997271. Its mutable default-admin/upgrader is 0x4acd2c83616d42b87788ecef4039e7355dd23a39; no key-independence, immutable-NAV or financial-assurance finding is inferred.",
+        "summary": "Block 26197388 (2026-10-15T10:42:47Z): sole funded market 0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa uses immutable MorphoChainlinkOracleV2 0x335e5718bc20028d5e357473a3736c187ca6b07e. BASE_FEED_1 is Chainlink PRIME/WYLDS proxy 0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1, aggregator 0x48f9a46ba852b5c22d4153d0534397b59abfdef5; QUOTE_FEED_1 is Chainlink PYUSD/USD proxy 0x8f1df6d7f2db73eece86a18b4381f4707b918fb1, aggregator 0x39e31761911b9aabaef5fb81b18fd1c24a60e884. Both published heartbeats are 86400 seconds. Both proxy/aggregator owners are 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. BASE/QUOTE_FEED_2 and BASE/QUOTE_VAULT are zero, so there is no independent fallback. PRIME's current StakingVault reads signed Schema-v7 NAV reports through FeedVerifier 0xdf4ab20fa7752be52e41e42f1fd667f37964d6a3, selected feedId 0x0007c8ed155d952e003b1e15ce7666fea785cfbe216577d578fce3920e997271. Its mutable default-admin/upgrader is 0x4acd2c83616d42b87788ecef4039e7355dd23a39; no key-independence, immutable-NAV or financial-assurance finding is inferred.",
         "collateralAssets": [
           "0x19ebb35279a16207ec4ba82799cc64715065f7f6"
         ],
@@ -334,8 +342,8 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x335e5718bc20028d5e357473a3736c187ca6b07e",
             "chain": "ethereum",
-            "observedAt": "2026-10-04",
-            "observedBlock": 26122338
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197388
           },
           {
             "provider": "Chainlink OCR2 PRIME / WYLDS Exchange Rate",
@@ -343,8 +351,8 @@
             "address": "0xf17c0edcaa28371e9c8012d7699bf40ecf0f58d1",
             "chain": "ethereum",
             "heartbeatSec": 86400,
-            "observedAt": "2026-10-04",
-            "observedBlock": 26122338
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197388
           },
           {
             "provider": "Chainlink OCR2 PYUSD / USD",
@@ -352,13 +360,13 @@
             "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
             "chain": "ethereum",
             "heartbeatSec": 86400,
-            "observedAt": "2026-10-04",
-            "observedBlock": 26122338
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197388
           }
         ],
-        "fallbackBehavior": "No alternate price path or fallback exists. ChainlinkDataFeedLib consumes latestRoundData and only rejects negative answers; it explicitly omits staleness and min/max checks. Published 86400-second feed heartbeats are update promises, not an enforced age bound. At block 26122338 the base answer age is 68340 seconds and quote age 13692 seconds. Separately, PRIME's native FeedVerifier enforces its current 3600-second NAV report age; that check is not applied by the Morpho borrower oracle. Feed administrators can replace OCR2 aggregators and Hastra's default admin/upgrader can change its upstream NAV implementation; neither control is claimed absent.",
-        "observedAt": "2026-10-04",
-        "observedBlock": 26122338,
+        "fallbackBehavior": "No alternate price path or fallback exists. ChainlinkDataFeedLib consumes latestRoundData and only rejects negative answers; it explicitly omits staleness and min/max checks. Published 86400-second feed heartbeats are update promises, not an enforced age bound. At block 26197388 the base answer age is 21504 seconds and quote age 53268 seconds. Separately, PRIME's native FeedVerifier enforces its current 3600-second NAV report age; that check is not applied by the Morpho borrower oracle. Feed administrators can replace OCR2 aggregators and Hastra's default admin/upgrader can change its upstream NAV implementation; neither control is claimed absent.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
         "collateralParameters": [
           {
             "asset": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
@@ -387,7 +395,7 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
+            "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
@@ -429,6 +437,10 @@
           {
             "label": "Ethereum current market, implementation, roles and feed observation",
             "url": "https://etherscan.io/block/26122338"
+          },
+          {
+            "label": "Ethereum exact-market and feed observation, block 26197388, 2026-10-15T10:42:47Z",
+            "url": "https://etherscan.io/block/26197388"
           }
         ]
       }

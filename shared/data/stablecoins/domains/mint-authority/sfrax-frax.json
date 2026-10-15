@@ -5,16 +5,33 @@
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "Local share issuance is asset-backed and accounting-mediated; the parameter administrator does not have arbitrary share mint authority. Base FRAX issuance remains inherited from frax-frax.",
+    "headline": "Deposits mint asset-backed shares; a three-of-six Safe controls reward parameters, without arbitrary share minting or an enforced delay.",
     "inheritedFrom": "frax-frax",
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "The exact immutable StakedFrax deployment only mints shares after transferring legacy FRAX into the vault through deposit or mint. Rewards distribute existing FRAX rather than creating unbacked shares. The parameter Safe may change the reward-rate cap and reassign its own authority, but cannot replace code, withdraw backing arbitrarily or authorize a native share minter. Parent FRAX issuance and reserve exposure remain inherited separately.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
+      "sources": [
+        {
+          "label": "Complete verified StakedFrax and inherited ERC-4626 issuance source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+        },
+        {
+          "label": "Ethereum block 26197388, matching deployed bytecode and authority state at 2026-10-15T10:42:47Z",
+          "url": "https://etherscan.io/block/26197388"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "Staked FRAX immutable asset-backed share contract",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107702,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197388,
       "sources": [
         {
           "label": "Frax sFRAX staking and redemption documentation",
@@ -25,8 +42,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
         },
         {
-          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-          "url": "https://etherscan.io/block/26107702"
+          "label": "Ethereum block 26197388, vault accounting and complete Safe census at 2026-10-15T10:42:47Z",
+          "url": "https://etherscan.io/block/26197388"
         },
         {
           "label": "Pinned Frax reward accounting implementation",
@@ -38,14 +55,17 @@
       {
         "chain": "ethereum",
         "address": "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
+        "deploymentRefs": [
+          "ethereum:0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+        ],
         "label": "Staked FRAX immutable asset-backed share contract",
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
         "sources": [
           {
             "label": "Frax sFRAX staking and redemption documentation",
@@ -56,8 +76,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
           },
           {
-            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-            "url": "https://etherscan.io/block/26107702"
+            "label": "Ethereum block 26197388, vault accounting and complete Safe census at 2026-10-15T10:42:47Z",
+            "url": "https://etherscan.io/block/26197388"
           },
           {
             "label": "Pinned Frax reward accounting implementation",
@@ -69,6 +89,9 @@
       {
         "chain": "ethereum",
         "address": "0x831822660572bd54ebaa065c2acef662a6277d40",
+        "deploymentRefs": [
+          "ethereum:0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+        ],
         "label": "Staked FRAX parameter-control Safe",
         "role": "governor",
         "authorityType": "safe",
@@ -89,12 +112,12 @@
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26107702,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26197388,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
         "sources": [
           {
             "label": "Frax sFRAX staking and redemption documentation",
@@ -105,8 +128,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
           },
           {
-            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-            "url": "https://etherscan.io/block/26107702"
+            "label": "Ethereum block 26197388, vault accounting and complete Safe census at 2026-10-15T10:42:47Z",
+            "url": "https://etherscan.io/block/26197388"
           },
           {
             "label": "Pinned Frax reward accounting implementation",
@@ -121,7 +144,7 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd9db270c1b5e3bd161e8c8503c55ceabee709552"
           }
         ],
-        "evidence": "At block 26107702, current Safe threshold/owner enumeration, empty getModulesPaginated result and zero guard were re-read. timelockAddress() identifies this Safe. It can change the reward distribution cap. delay() and getMinDelay() revert; its name does not establish an execution delay. Signer independence and offchain key custody are not established. Independent masterCopy() read identifies GnosisSafe singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552; verified execTransaction checks quorum signatures and executes without a mandatory scheduling delay. With no enabled modules and zero guard at this pin, the named timelockAddress is immediate Safe parameter control, not a delayed timelock.",
+        "evidence": "At Ethereum block 26197388 (2026-10-15T10:42:47Z), timelockAddress() identifies this Safe, pendingTimelockAddress() is zero, and the complete census remains three signatures from six owners, no enabled modules and zero guard. maxDistributionPerSecondPerAsset()=393915243; the Safe may set this reward-rate cap up to the hard-coded uint64 maximum or transfer/renounce its parameter authority. These powers cannot create arbitrary shares or transfer vault backing. masterCopy() identifies GnosisSafe singleton 0xd9db270c1b5e3bd161e8c8503c55ceabee709552; verified execTransaction checks quorum and executes without mandatory scheduling. The controller's timelock name does not establish a delay. Signer independence and offchain key custody remain unestablished.",
         "timelockDelaySec": 0
       }
     ],
@@ -136,8 +159,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
         },
         {
-          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-          "url": "https://etherscan.io/block/26107702"
+          "label": "Ethereum block 26197388, vault accounting and complete Safe census at 2026-10-15T10:42:47Z",
+          "url": "https://etherscan.io/block/26197388"
         },
         {
           "label": "Pinned Frax reward accounting implementation",
@@ -148,9 +171,9 @@
           "url": "https://eth.blockscout.com/tx/0xecd4ab27bc3b4c300b11405fc6a156ee316ad3f4c24f63130cbcbc49ae6bef55"
         }
       ],
-      "evidence": "At Ethereum block 26107702, totalAssets=65181542.209163 FRAX, totalSupply=56157359.111527 sFRAX, convertToAssets(1e18)=1.160694577530153970 FRAX and FRAX balance=65471813.491358. Balance exceeds accounted assets by 290271.282195 FRAX; the pinned LinearRewards implementation classifies undistributed balance as rewards rather than external deployed assets. Exact-deployment source and current Safe state establish the local share and parameter paths; parent native mint authority is inherited separately. Exact implementation creation transaction 0xecd4ab27bc3b4c300b11405fc6a156ee316ad3f4c24f63130cbcbc49ae6bef55, block 18378085, timestamp 2023-10-18T15:19:11+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Offchain key custody and independence of the six Safe signer addresses remain unestablished; onchain quorum/source census cannot identify independent human or institutional key holders. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes.",
-      "reviewer": "Sol refinement Refine11",
-      "reviewedAt": "2026-10-03",
+      "evidence": "At Ethereum block 26197388 (2026-10-15T10:42:47Z), totalAssets=65186215.726247797657894678 FRAX, totalSupply=56157267.572398470199713069 sFRAX, convertToAssets(1e18)=1.160779691465741700 FRAX and FRAX balance=65471707.234792952722772903. The 285491.508545155064878225 FRAX balance surplus is undistributed rewards, not an external strategy. REWARDS_CYCLE_LENGTH=604800 seconds; the stored cycle ended 2026-10-08T00:00:00Z and lastRewardsDistribution was 2026-10-07T23:04:35Z. Lazy permissionless synchronization, also invoked by deposits/redemptions, governs when new cycles begin; neither a yield target nor excess balance guarantees continuous accrual. Exact runtime bytecode matches the complete verified implementation. Creation receipt at block 18378085 confirms 2023-10-18T15:19:11Z. Local reconciliation=not-applicable describes deposit-backed share accounting, not independent financial assurance or parent reserve reconciliation; supervision=none grants no prudential credit. Safe signer/key custody remains a separately scoped unresolved question.",
+      "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -158,8 +181,8 @@
           "controlRef": "ethereum:0x831822660572bd54ebaa065c2acef662a6277d40",
           "question": "For Staked FRAX parameter-control Safe (ethereum:0x831822660572bd54ebaa065c2acef662a6277d40): Offchain key custody and independence of the six Safe signer addresses remain unestablished; onchain quorum/source census cannot identify independent human or institutional key holders.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
           "sources": [
             {
               "label": "Frax sFRAX staking and redemption documentation",
@@ -170,8 +193,8 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
             },
             {
-              "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-              "url": "https://etherscan.io/block/26107702"
+              "label": "Ethereum block 26197388, vault accounting and complete Safe census at 2026-10-15T10:42:47Z",
+              "url": "https://etherscan.io/block/26197388"
             },
             {
               "label": "Pinned Frax reward accounting implementation",

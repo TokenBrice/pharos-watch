@@ -4,8 +4,8 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "zarsc-supercoin",
-    "display": { "url": "https://www.supercoin.co.za/assurance-reports", "label": "Supercoin reviewed reserve-report index" },
-    "inputs": { "primary": { "kind": "http-html", "url": "https://www.supercoin.co.za/assurance-reports" } },
+    "display": { "url": "https://www.supercoin.co.za/proof-of-reserves-reports", "label": "Supercoin reviewed reserve-report index" },
+    "inputs": { "primary": { "kind": "http-html", "url": "https://www.supercoin.co.za/proof-of-reserves-reports" } },
     "params": {
       "reviewedReport": {
         "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf",
@@ -41,7 +41,7 @@
     ]
   },
   "detailProvider": "coingecko",
-  "implementationLaunchDate": "2025-08-19",
+  "launchDate": "2025-08-19",
   "contracts": [
     {
       "chain": "solana",
@@ -50,9 +50,12 @@
     }
   ],
   "jurisdiction": {
-    "country": "South Africa"
+    "country": "South Africa",
+    "regulator": "Financial Sector Conduct Authority (FSCA)",
+    "license": "Category I and II CASP, FSP 53458; Super Money SA (Pty) Ltd, FSCA March 2026 list. Not a GENIUS or MiCA authorization."
   },
-  "custodyModel": "unknown",
+  "custodyModel": "institutional-regulated",
+  "governanceQuality": "single-entity",
   "collateralQuality": "rwa",
   "links": [
     {
@@ -68,15 +71,46 @@
       "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
     },
     {
-      "label": "Monthly Moore assurance report archive",
-      "url": "https://www.supercoin.co.za/assurance-reports"
+      "label": "Monthly Moore agreed-upon-procedures report archive",
+      "url": "https://www.supercoin.co.za/proof-of-reserves-reports"
     },
     {
       "label": "Solana mint creation and initialization, slot 361067527",
       "url": "https://solscan.io/tx/3PacyyoqY8ik8smXoNF6ED6MLUt9Jxk9w7ie7vcrVqYouxcLwtyn5xdsRGKrMwV17xfjLWShhraik7Yb95Xdrx3r"
+    },
+    {
+      "label": "Docs",
+      "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Supercoinxyz"
+    },
+    {
+      "label": "Compliance",
+      "url": "https://www.supercoin.co.za/compliance"
+    },
+    {
+      "label": "Solana mint explorer",
+      "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+    },
+    {
+      "label": "Token-2022 program security audits, not a ZARsc-specific audit",
+      "url": "https://www.solana-program.com/docs/token-2022#security-audits"
+    },
+    {
+      "label": "FSCA licensed CASP list, March 2026, page 30, row 259",
+      "url": "https://www.fsca.co.za/_api/cr3ad_regulatoryframes%2894942cc4-0238-f111-88b3-000d3a64fb06%29/cr3ad_document/$value"
     }
   ],
   "geckoId": "zar-supercoin",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Direct app redemption is not yet live",
+      "message": "Supercoin's terms make direct issuer redemption and the two-business-day bank-payment promise conditional on the app's launch. Current exchange sales and off-ramps have no issuer-guaranteed price, liquidity or settlement time."
+    }
+  ],
   "proofOfReserves": {
     "type": "agreed-upon-procedures",
     "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf",

@@ -12,23 +12,23 @@
   "variantOf": "pyusd-paypal",
   "variantKind": "strategy-vault",
   "pegReferenceId": "pyusd-paypal",
-  "collateral": "PYUSD held idle in an immutable Morpho Vault V2 and supplied by a MorphoMarketV1AdapterV2 to a mWIN-collateralized lending market. Allocations can change under curator controls.",
-  "pegMechanism": "ERC-4626 shares convert to PYUSD at the live assets-per-share rate. Interest, fees and recognized losses change share value. liquidityAdapter() is zero at pinned block 26107706; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity does not promise full-size cash redemption.",
+  "collateral": "PYUSD held idle in an immutable Morpho Vault V2 and supplied through a MorphoMarketV1AdapterV2 to a mWIN-collateralized lending market. Sentora describes mWIN as tokenized Wellington-managed structured credit, including bonds, CLOs and asset-backed credit. Those assets are borrower collateral, not directly owned reserves of the vault-share holder. Allocations can change under curator controls.",
+  "pegMechanism": "ERC-4626 shares convert to PYUSD at the current assets-per-share rate. Interest, fees and recognized losses change share value. At Ethereum block 26197000, liquidityAdapter() was zero, so ordinary cash redemptions used idle PYUSD unless assets were first deallocated. Permissionless forceDeallocate carries a 1% penalty on deallocated assets; an in-kind lending-position exit is not guaranteed cash redemption. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current exact holder instrument ethereum:0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57 is an immutable ERC-4626 operational claim on idle PYUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=25654512, creationTimestamp=1785521015 (2026-07-31T18:03:35.000Z); independently retrieved 2026-10-03.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SenpyusdmwinSentora",
+    "rationale": "The exact holder instrument ethereum:0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57 is an immutable ERC-4626 operational claim on idle PYUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint transfers underlying assets before issuing shares; accrual can issue fee shares. At Ethereum block 26197000 (hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d; 2026-10-15T09:24:59Z), asset() was PYUSD, share decimals 18 and underlying decimals 6; totalAssets raw 12701894517329, totalSupply raw 12671472046590045530313548, idle raw 3109139525532 and sole adapter realAssets raw 9592754991797 reconciled exactly. The only funded market lent PYUSD against mWIN at 77% LLTV; the adapter position had zero borrowShares and posted collateral. convertToAssets(1e18) returned 1002399 raw PYUSD. Morpho vaultV2ByAddress independently retrieved on 2026-10-15 identifies creationBlockNumber 25654512 and creationTimestamp 1785521015 (2026-07-31T18:03:35Z).",
     "sources": [
       {
         "label": "Exact Sentora vault",
         "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Ethereum block 26197000, 2026-10-15T09:24:59Z; identity, accounting and controls",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -55,16 +55,32 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
     },
     {
-      "label": "Sentora",
+      "label": "Curator",
       "url": "https://sentora.com/"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57#code"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "mWIN risk assessment",
+      "url": "https://sentora.com/asset-risk-reviews/mwin-risk-structuring-assessment"
+    },
+    {
+      "label": "Sentora: Terms of use",
+      "url": "https://sentora.com/legal/terms-of-use"
     }
   ],
   "contracts": [
@@ -75,7 +91,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Sentora mWIN Main Morpho lending interest net of vault fees",
@@ -83,7 +99,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "senpyusdmwin-sentora",
     "display": {
@@ -99,16 +115,16 @@
     },
     "params": {
       "slice": {
-        "name": "PYUSD held idle and supplied to Sentora mWIN Main Morpho lending positions",
+        "name": "PYUSD supplied to Sentora mWIN Main Morpho lending positions",
         "risk": "high",
         "coinId": "pyusd-paypal",
         "depType": "wrapper",
         "expectedAssetAddress": "0x6c3ea9036406852006290770bedfcaba0e23a0e8"
       },
       "deployedExposure": {
-        "basis": "At ethereum block 26107706, asset() was 0x6c3ea9036406852006290770bedfcaba0e23a0e8, share decimals 18 and underlying decimals 6; totalAssets raw 25441975740170, totalSupply raw 25389250769299894397889057, idle raw 2531230145, sole adapter market assets raw 25439444510025, with an exact zero accounting difference. The only funded market lent PYUSD against mWIN at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. The reviewed descriptor is the entire parent-denominated strategy claim; 100% denotes denomination, not 100% idle cash.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+        "basis": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), PYUSD idle raw 3109139525532 plus sole adapter 0x0d7d615c2d3b9d3656a045d8e584aada84910c8b realAssets raw 9592754991797 equaled totalAssets raw 12701894517329 exactly. adaptersLength and marketIdsLength were both 1. Market 0xeecbfa4b6caa83c5000ce68a77808c80504e2ff56e81095c7742a615ecd9c774 lent PYUSD against mWIN at 77% LLTV; adapter borrowShares and collateral were zero. The reviewed descriptor covers non-idle PYUSD-denominated lender claims, not idle cash or ultimate collateral ownership.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

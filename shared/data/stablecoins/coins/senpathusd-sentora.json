@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "pathusd-bridge",
   "collateral": "pathUSD held idle in an immutable Morpho Vault V2 and supplied by a MorphoMarketV1AdapterV2 to a cbBTC-collateralized lending market. Allocations can change under curator controls.",
-  "pegMechanism": "ERC-4626 shares convert to pathUSD at the live assets-per-share rate. Interest increases and recognized losses reduce share value; withdrawals use idle assets and configured adapter liquidity rather than a fixed dollar promise.",
+  "pegMechanism": "ERC-4626 shares convert to pathUSD at the live assets-per-share rate. Interest increases and recognized losses reduce share value; withdrawals use idle assets and configured adapter liquidity rather than a fixed dollar promise. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.01% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current exact holder instrument tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626 is an immutable ERC-4626 operational claim on idle pathUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=18585504, creationTimestamp=1778092871 (2026-05-06T18:41:11.000Z); independently retrieved 2026-10-03.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SenpathusdSentora batch64 primary-evidence review",
+    "rationale": "The exact Tempo holder instrument is an immutable ERC-4626 claim on idle pathUSD and Morpho lender positions, not a direct fiat reserve claim. At Tempo block 44247051 (2026-10-15T10:43:13Z; hash 0x024caf7e7fb2f3a3c7956a291666e5da42248b41fc2774e2d196605e88b4400d), asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6. totalAssets was 36848708806636 raw, totalSupply 18427933572000507348471599 raw, idle assets 36668441836389 raw and the sole adapter's lender assets 180266970247 raw, reconciling exactly. The sole funded market lent pathUSD against cbBTC at 77% LLTV; the adapter had zero borrowing and posted collateral. convertToAssets(1e18) returned 1999611 raw pathUSD. Deposits transfer underlying assets before share issuance; fee accrual can issue bounded fee shares. Runtime keccak256 remains 0x9b591194d111d61e4a5c17bcdb5c0306af93003568a03bf1ac45be4b3f53bdb3. Morpho vaultV2ByAddress rechecked on 2026-10-15 reports creation block 18585504 and timestamp 1778092871 (2026-05-06T18:41:11Z).",
     "sources": [
       {
         "label": "Exact Sentora vault",
@@ -55,16 +55,28 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
     },
     {
-      "label": "Sentora",
+      "label": "Curator",
       "url": "https://sentora.com/"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Sentora: Terms of use",
+      "url": "https://sentora.com/legal/terms-of-use"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/SentoraHQ"
     }
   ],
   "contracts": [
@@ -75,7 +87,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Sentora pathUSD Morpho lending interest net of vault fees",
@@ -83,7 +95,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "senpathusd-sentora",
     "display": {
@@ -99,15 +111,15 @@
     },
     "params": {
       "slice": {
-        "name": "pathUSD held idle and supplied to Sentora pathUSD Morpho lending positions",
+        "name": "pathUSD supplied to Sentora pathUSD Morpho lending positions",
         "risk": "high",
         "coinId": "pathusd-bridge",
         "depType": "wrapper",
         "expectedAssetAddress": "0x20c0000000000000000000000000000000000000"
       },
       "deployedExposure": {
-        "basis": "At tempo block 42323768, asset() was 0x20c0000000000000000000000000000000000000, share decimals 18 and underlying decimals 6; totalAssets raw 38668628815373, totalSupply raw 19338159753529440843074671, idle raw 38165213421856, sole adapter market assets raw 503415393517, with an exact zero accounting difference. The only funded market lent pathUSD against cbBTC at 77% LLTV. The adapter position had zero borrowing and zero posted collateral. The reviewed descriptor is the entire parent-denominated strategy claim; 100% denotes denomination, not 100% idle cash.",
-        "reviewedAt": "2026-10-02",
+        "basis": "Tempo block 44247051 (2026-10-15T10:43:13Z): totalAssets 36848708806636 raw pathUSD equals idle 36668441836389 plus sole adapter lender assets 180266970247. The only funded market lends pathUSD against cbBTC at 77% LLTV; the adapter has zero borrowing and posted collateral. The reviewed descriptor covers non-idle parent-denominated lender claims; idle cash is measured separately, without asserting wholly on-chain underlying custody.",
+        "reviewedAt": "2026-10-15",
         "sourceUrl": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
       },
       "redemptionLiquidity": {

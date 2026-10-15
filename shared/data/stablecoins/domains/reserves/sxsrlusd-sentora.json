@@ -3,13 +3,29 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
-      "name": "RLUSD held idle and supplied to Sentora x Spark RLUSD Morpho lending positions",
-      "pct": 100,
+      "name": "Sentora x Spark RLUSD idle underlying",
+      "pct": 90.2632,
+      "risk": "medium",
+      "coinId": "rlusd-ripple",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Ripple",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22:deployed",
+      "name": "RLUSD supplied to Sentora x Spark RLUSD Morpho lending positions",
+      "pct": 9.7368,
       "risk": "high",
       "coinId": "rlusd-ripple",
       "depType": "wrapper",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Sentora x Spark RLUSD, Morpho lending borrowers and the RLUSD issuer",
+      "issuerOrObligor": "Sentora-curated Morpho markets and their borrowers",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -21,8 +37,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SxsrlusdSentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -48,11 +64,15 @@
       {
         "label": "Ripple RLUSD terms, section 11.5",
         "url": "https://ripple.com/legal/stablecoin/"
+      },
+      {
+        "label": "Ethereum block 26196664, 2026-10-15T08:17:23Z; complete vault and market accounting",
+        "url": "https://etherscan.io/block/26196664"
       }
     ],
-    "rationale": "At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. The single 100% slice records the verified denomination and position claim, not an invented allocation or underlying borrower-credit rating.",
-    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; single parent-denominated strategy dependency",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26196664 (2026-10-15T08:17:23Z; hash 0x1d9a5e0db4037391462bf5be8686b4ad1e0077cb253c7d200e91bfe5e2d39e04), asset() is RLUSD and both share and underlying decimals are 18. totalAssets raw 250002437209784679354180777 equals idle 225660145550835413975226982 plus sole adapter realAssets 24342291658949265378953795, with zero residual. totalSupply is 249983429194786753537742203 raw. The sole funded market lends RLUSD against WBTC at 86% LLTV; the adapter has zero borrow shares and zero collateral. Idle assets are 90.2632% of NAV and the lender position 9.7368%; these are accounting weights, not borrower-collateral reserve weights. Reserve rows split measured idle RLUSD (90.2632% of totalAssets) from the deployed lender claim (9.7368%) at the same pin, matching the measured idle/deployed runtime split.",
+    "compositionBasis": "Complete pinned idle-plus-sole-adapter accounting; measured idle and deployed shares of totalAssets, rounded to four decimals",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Current immediate asset and adapter inventory are identified. Borrower legal recovery, default liquidation proceeds and future allocations remain uncertain.",
     "knownUnknownExposurePct": 0
@@ -61,21 +81,23 @@
     "providers": [
       {
         "name": "Sentora x Spark RLUSD VaultV2",
-        "role": "other",
-        "jurisdiction": "ethereum"
+        "role": "other"
       },
       {
         "name": "MorphoMarketV1AdapterV2 0x743c8eb5de31e41def9048da268ebd036567cd4e",
-        "role": "other",
-        "jurisdiction": "ethereum"
+        "role": "other"
+      },
+      {
+        "name": "WBTC authorized custodians, backing the sole market's borrower collateral",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "verified",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SxsrlusdSentora)",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Exact Sentora vault",
@@ -100,8 +122,16 @@
       {
         "label": "Ripple RLUSD terms, section 11.5",
         "url": "https://ripple.com/legal/stablecoin/"
+      },
+      {
+        "label": "WBTC authorized merchant and custodian mint/burn model",
+        "url": "https://www.wbtc.network/faq"
+      },
+      {
+        "label": "Ethereum block 26196664, 2026-10-15T08:17:23Z; exact WBTC market and accounting",
+        "url": "https://etherscan.io/block/26196664"
       }
     ],
-    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts; borrower collateral and upstream stablecoin reserve custody are separate exposures. No exact-share legal insolvency priority or whole-book off-chain collateral-custody safeguards were established. Lending reuse is explicit."
+    "uncertainty": "Immediate assets are held in on-chain vault and lender-position contracts, but the sole funded lending market uses custodial WBTC collateral. WBTC's official FAQ requires authorized custodians to hold and release BTC. This material downstream custody layer prevents an exclusively on-chain whole-book label; the reviewed model is mixed. Parent RLUSD reserve custody is inherited separately. No exact-share legal insolvency priority, borrower-collateral segregation or funded recovery guarantee is established. Lending reuse is explicit. Contract deployment on Ethereum is not a legal jurisdiction. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

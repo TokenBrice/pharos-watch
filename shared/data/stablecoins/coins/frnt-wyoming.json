@@ -1,7 +1,7 @@
 {
   "liveReservesConfig": {
     "adapter": "frnt-ledgerlens",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "frnt-wyoming",
     "display": { "url": "https://dashboard.ledgerlens.io/c/wystc", "label": "LedgerLens supplemental FRNT dashboard" },
@@ -13,8 +13,19 @@
   "oneLiner": "FRNT is Wyoming's dollar token, backed by a holder-benefit reserve trust and redeemable through approved service providers without a state guarantee.",
   "flags": { "backing": "rwa-backed", "governance": "centralized", "rwa": true },
   "collateral": "U.S. Treasury bills, repurchase agreements and USD cash in holder-benefit trust accounts managed by Franklin Advisers and held by Fiduciary Trust International",
-  "pegMechanism": "The Wyoming Stable Token Commission issues and redeems FRNT at USD par through KYB-approved Licensed Service Providers. Reserve rules require ordinary redemption within two business days subject to specified exceptions; direct token-holder fallback is conditional. FRNT is a special obligation limited to trust assets, not Wyoming's general obligation or federally insured money. Native deployment liabilities share the reserve book; current cross-chain transfers use Chainlink CCIP.",
+  "pegMechanism": "The Wyoming Stable Token Commission issues and redeems FRNT at USD par through KYB-approved Licensed Service Providers. For authenticated in-hours LSP redemption requests, the rules require payment submission within two business days, subject to delay exceptions; they do not guarantee bank-credit timing. Direct holder redemption is conditional on specified LSP unavailability or a qualifying court order and compliance review. FRNT is a special obligation limited to trust assets, without Wyoming's full faith and credit or federal deposit insurance. Eight native deployment liabilities share the reserve book; cross-chain transfers use Chainlink CCIP.",
   "mechanismArchetype": "fiat-cash",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_FrntWyoming)",
+    "rationale": "FRNT is a transferable fixed USD-par issuer liability, not a fund share or borrower-issued token. The current rules establish LSP-gated issuance and redemption against segregated holder-benefit trust assets; the October 14 LedgerLens inventory identifies Treasury bills, Treasury repos and USD cash. Reserve income does not accrue to holders.",
+    "sources": [
+      { "label": "Commission reserve and redemption rules effective September 23, 2026", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf" },
+      { "label": "Commission FRNT identity and holder rights", "url": "https://stabletoken.wyo.gov/frnt" },
+      { "label": "FRNT supplemental reserve inventory", "url": "https://dashboard.ledgerlens.io/c/wystc" }
+    ]
+  },
   "llamaId": "441",
   "detailProvider": "defillama",
   "geckoId": "frontier-stable-token",
@@ -23,7 +34,12 @@
     { "label": "Website", "url": "https://stabletoken.wyo.gov/" },
     { "label": "Transparency dashboard", "url": "https://dashboard.ledgerlens.io/c/wystc" },
     { "label": "Reserve and redemption rules", "url": "https://stabletoken.wyo.gov/assets/media/reserves.pdf" },
-    { "label": "Contracts", "url": "https://github.com/wyostable/frontier-stable-token" }
+    { "label": "Contracts", "url": "https://github.com/wyostable/frontier-stable-token" },
+    { "label": "Technology and security", "url": "https://stabletoken.wyo.gov/tech" },
+    { "label": "Audits (2025 LayerZero deployments)", "url": "https://github.com/wyostable/audits" },
+    { "label": "Terms", "url": "https://stabletoken.wyo.gov/assets/media/terms.pdf" },
+    { "label": "Token administration rules", "url": "https://stabletoken.wyo.gov/assets/media/token.pdf" },
+    { "label": "X", "url": "https://x.com/wyostable" }
   ],
   "jurisdiction": { "country": "United States", "regulator": "Wyoming Stable Token Commission", "license": "Wyoming Stable Token Act statutory public issuer" },
   "contracts": [
@@ -35,6 +51,13 @@
     { "chain": "optimism", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
     { "chain": "hedera", "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc", "decimals": 6 },
     { "chain": "solana", "address": "FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog", "decimals": 6 }
+  ],
+  "notices": [
+    {
+      "type": "info",
+      "title": "Supplemental reserve metrics are not an assurance report",
+      "message": "LedgerLens balances and composition are supplemental, non-assured information. Only separately issued AT-C 205 examination reports carry The Network Firm's opinion; dashboard figures do not establish a state guarantee or insured deposits."
+    }
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",

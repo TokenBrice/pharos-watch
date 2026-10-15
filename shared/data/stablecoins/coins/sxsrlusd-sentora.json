@@ -14,14 +14,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "rlusd-ripple",
   "collateral": "RLUSD held idle in an immutable Morpho Vault V2 and supplied by a MorphoMarketV1AdapterV2 to a WBTC-collateralized lending market. Allocations can change under curator controls.",
-  "pegMechanism": "ERC-4626 shares convert to RLUSD at the live assets-per-share rate. Interest increases and recognized losses reduce share value; withdrawals use idle assets and configured adapter liquidity rather than a fixed dollar promise.",
+  "pegMechanism": "ERC-4626 shares convert to RLUSD at the live assets-per-share rate. Interest, fees and recognized losses change share value. At the pinned review liquidityAdapter() is zero, so ordinary withdrawals use idle RLUSD; force-deallocation is separate and depends on market liquidity. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.01% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current exact holder instrument ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22 is an immutable ERC-4626 operational claim on idle RLUSD plus Morpho lender positions, not a direct fiat reserve claim. Deposit/mint requires underlying assets and accrual can issue fee shares. At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SxsrlusdSentora)",
+    "rationale": "The exact Ethereum vault is an immutable ERC-4626 operational claim on idle RLUSD plus Morpho lender positions, not a direct fiat reserve claim. At block 26196664 (2026-10-15T08:17:23Z; hash 0x1d9a5e0db4037391462bf5be8686b4ad1e0077cb253c7d200e91bfe5e2d39e04), asset() is 0x8292bb45bf1ee4d140127049757c2e0ff06317ed and both share and underlying decimals are 18. totalAssets is 250002437209784679354180777 raw, totalSupply 249983429194786753537742203, idle RLUSD 225660145550835413975226982 and sole adapter assets 24342291658949265378953795; idle plus adapter reconciles exactly. The sole market lends RLUSD against WBTC at 86% LLTV; the adapter has no borrow shares or posted collateral. convertToAssets(1e18) returns 1000075796110981091 raw RLUSD. Deposit/mint requires assets; fees accrue as shares and recognized lending losses reduce NAV.",
     "sources": [
       {
         "label": "Exact Sentora vault",
@@ -52,20 +52,36 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
     },
     {
-      "label": "Sentora",
+      "label": "Curator",
       "url": "https://sentora.com/"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
     },
     {
       "label": "Exact immutable VaultV2 creation, block 25884177 (2026-09-01T18:18:23Z)",
       "url": "https://etherscan.io/tx/0x3b058e09d1c1c04d15955d0fa488863a93c808e8d7789a44f1ecaa3655d4a128"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Sentora: Terms of use",
+      "url": "https://sentora.com/legal/terms-of-use"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/SentoraHQ"
     }
   ],
   "contracts": [
@@ -76,7 +92,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Sentora x Spark RLUSD Morpho lending interest net of vault fees",
@@ -84,7 +100,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "sxsrlusd-sentora",
     "display": {
@@ -100,16 +116,16 @@
     },
     "params": {
       "slice": {
-        "name": "RLUSD held idle and supplied to Sentora x Spark RLUSD Morpho lending positions",
+        "name": "RLUSD supplied to Sentora x Spark RLUSD Morpho lending positions",
         "risk": "high",
         "coinId": "rlusd-ripple",
         "depType": "wrapper",
         "expectedAssetAddress": "0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
       },
       "deployedExposure": {
-        "basis": "At ethereum block 26107706, asset() was 0x8292bb45bf1ee4d140127049757c2e0ff06317ed, share decimals 18 and underlying decimals 18; totalAssets raw 250001199783394711178689552, totalSupply raw 249994918735505772044961482, idle raw 225673066061791758611500399, sole adapter market assets raw 24328133721602952567189153, with an exact zero accounting difference. The only funded market lent RLUSD against WBTC at 86% LLTV. The adapter position had zero borrowing and zero posted collateral. The reviewed descriptor is the entire parent-denominated strategy claim; 100% denotes denomination, not 100% idle cash.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22"
+        "basis": "Ethereum block 26196664 (2026-10-15T08:17:23Z; hash 0x1d9a5e0db4037391462bf5be8686b4ad1e0077cb253c7d200e91bfe5e2d39e04): totalAssets raw 250002437209784679354180777 equals idle RLUSD 225660145550835413975226982 plus sole adapter assets 24342291658949265378953795. The one market lends RLUSD against WBTC at 86% LLTV, with zero adapter borrowing or posted collateral. The reviewed descriptor covers non-idle RLUSD-denominated lender claims; idle cash is measured separately. The market's 10% relative cap and zero liquidity adapter explain the predominantly idle balance and liquidity-bounded ordinary exit.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

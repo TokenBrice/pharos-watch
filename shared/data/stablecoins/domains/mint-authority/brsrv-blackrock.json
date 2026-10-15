@@ -5,6 +5,7 @@
     "authorityPosture": "unbounded-reconciled",
     "confidence": "unknown",
     "summary": "Native fund issuance is privileged and administrator-controlled; current role-member independence and complete control closure are not publicly established.",
+    "headline": "Securitize-controlled issuance and immediate upgrades remain privileged; complete issuer authorization and independent signing safeguards are unestablished.",
     "controls": [
       {
         "label": "BRSRV EVM master and upgrade owner",
@@ -22,8 +23,8 @@
         "failureDomainKeys": [
           "eoa:evm:0xe01605f6b6dc593b7d2917f4a0940db2a625b09e"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197405,
         "sources": [
           {
             "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -38,11 +39,15 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"
           },
           {
+            "label": "Ethereum block 26197405, 2026-10-15T10:46:11Z: owner, MASTER role and runtime; Tempo block 44247376, 2026-10-15T10:46:13Z corroborates the same authority",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
             "label": "Ethereum token deployment",
             "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
           }
         ],
-        "evidence": "Ethereum block 26110197: token owner and TrustService 0x6c0e8dfb1682a1659a1ab9add9d43058be132921 MASTER role both resolve to this code-empty EOA. It can call native issueTokens directly, change services and replace token/trust logic immediately. Full trust role-event replay and getRole confirm this sole MASTER; previous masters were removed. Tempo's earlier pin reports the same owner but not an exhaustive chain-local role census."
+        "evidence": "At Ethereum block 26197405 (2026-10-15T10:46:11Z), owner() and the bound TrustService getRole() retain this owner/MASTER, role 1; eth_getCode returns 0x. Tempo block 44247376 (2026-10-15T10:46:13Z) independently returns the same owner and MASTER. Verified native token code permits MASTER issuance and immediate token/trust upgrades. Historical exhaustive role replay is retained in the issuance-service reviews; current code-empty observations do not prove off-chain key custody or independent human approval."
       },
       {
         "label": "BRSRV Ethereum native issuance service surface",
@@ -56,8 +61,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197405,
         "sources": [
           {
             "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -72,11 +77,15 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"
           },
           {
+            "label": "Ethereum block 26197405, 2026-10-15T10:46:11Z: getDSService, eight role/code checks and issuer implementation slots",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
             "label": "Ethereum token deployment",
             "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
           }
         ],
-        "evidence": "At block 26110197 the exact Ethereum TrustService role census has sole MASTER 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e; six ISSUERs: 0x2160509a7cecf79a12f1fbbce1c8574fdc8a3154, 0xbead86b75e62fbb62fc9c58f15a4f6836639a681, 0x6c1662bb346f80fda68e970331ef5cb4803de733, 0xfd08aaf0366dab1ccb398f88ee433d058f0eb0d5, 0x3bef25a65d55e1a77a92a3b55c5b8c010130e8e4 and 0x5072ed40eba6be38c2370cad1cb1df0202924e53; TRANSFER_AGENT 0xa9994621f1c3ee59846df756488229e8efdcb8bf. All getRole values match exhaustive add/remove-event replay. First four issuers are proxies; latter two, MASTER and TRANSFER_AGENT have empty code. Proxies resolve to TokenIssuer 0x4ef34664ccbf1979180a9f3cb21f033e069713ba, WalletRegistrar 0xb886f567219a39b49a68115207787dce0a10b9e6, and unverified implementations 0x9394de9e0e1c7274da58a6b6ae246182a23c347f / 0x77305a8503a576f61f6c8639c8cb287b6b751840. Full proxy execution closure is not established."
+        "evidence": "Ethereum block 26197405 (2026-10-15T10:46:11Z) rebinds getDSService(1) to TrustService 0x6c0e8dfb1682a1659a1ab9add9d43058be132921 and rechecks all eight historical census members: MASTER 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e; ISSUERs 0x2160509a7cecf79a12f1fbbce1c8574fdc8a3154, 0xbead86b75e62fbb62fc9c58f15a4f6836639a681, 0x6c1662bb346f80fda68e970331ef5cb4803de733, 0xfd08aaf0366dab1ccb398f88ee433d058f0eb0d5, 0x3bef25a65d55e1a77a92a3b55c5b8c010130e8e4 and 0x5072ed40eba6be38c2370cad1cb1df0202924e53; TRANSFER_AGENT 0xa9994621f1c3ee59846df756488229e8efdcb8bf. Roles remain 1, six 2s and 8 respectively. The first four issuers retain 170-byte proxy runtimes and implementation slots 0x4ef34664ccbf1979180a9f3cb21f033e069713ba, 0xb886f567219a39b49a68115207787dce0a10b9e6, 0x9394de9e0e1c7274da58a6b6ae246182a23c347f and 0x77305a8503a576f61f6c8639c8cb287b6b751840. Latter issuers, MASTER and TRANSFER_AGENT return empty code. Historical creation-to-26110197 role replay is retained; the complete intervening 26110198..26197405 token/trust log read returned 21 ordinary Issue/Transfer/TxShares events. The latter two implementations remain unverified on Blockscout as accessed October 15. Full proxy/upstream authorization and signing closure remain unestablished."
       },
       {
         "label": "BRSRV Tempo native issuance service surface",
@@ -90,8 +99,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 42323853,
+        "observedAt": "2026-10-15",
+        "observedBlock": 44247376,
         "sources": [
           {
             "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -106,11 +115,15 @@
             "url": "https://explore.tempo.xyz/address/0xe36e2e79beb1b7f618201eead6106a7d737695e3#code"
           },
           {
+            "label": "Tempo block 44247376, 2026-10-15T10:46:13Z: native identity, owner, eight role/code checks and implementation slots",
+            "url": "https://api-tempo-mainnet.n.dwellir.com"
+          },
+          {
             "label": "Tempo creation-to-block-42641165 role census independently re-verified October 5",
             "url": "https://rpc.tempo.xyz"
           }
         ],
-        "evidence": "W3R25's Tempo block 42641165 (hash 0xb493b1920838f0a607624e1d666d4daee4cf80a1ef40011583956ceabce93a5c) census was independently re-verified on 2026-10-05: all 229 creation-to-pin 50000-block windows from TrustService creation 31237322 return the same 11 RoleAdded/RoleRemoved events, and every replayed getRole/code result reconciles. Token getDSService(1) binds TrustService 0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275; sole MASTER is code-empty 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e, TRANSFER_AGENT is code-empty 0xa9994621f1c3ee59846df756488229e8efdcb8bf, and six ISSUERs are 0x5072ed40eba6be38c2370cad1cb1df0202924e53, 0x7c8b1e4e9fecda57b6107278bab614e67f3a8bf4 (both code-empty), 0x84d37dfa4e6a1395faceab1120506718a9eeac86, 0xb7d43cd861eee4f3b3c4cd69b853c7f5525d4dc4, 0xb8707668acf4c3e025a90e88515b923529e10a69 and 0xfbdd6a4f828c4d29aa8dafc4570a241907660fc0. The four 170-byte issuer proxies resolve respectively to implementations 0x73357bbf4f1670797e77a930c491261a84971057, 0xc414c9f26364c1411188e724eb9c576c3070f722, 0x4411b9d82f4e854d573d5838da7a1d1711d0c122 and 0x4e8c97b9759c2e12b0c27dc1a2e35a09ec5c23b8. Token/trust implementation slots bind 0x0fc27145a78be5eeb133aca8a20569c90b389c56 and 0x0ea6d8ef1e8b9efd9395e9bd8288a24f2754f02d. This closes only the role census; executable/upstream authorization, key custody and incident closure remain unresolved."
+        "evidence": "Tempo block 44247376 (2026-10-15T10:46:13Z) rebinds getDSService(1) to TrustService 0xe2eb9d836e488dbbd9fa0baa391ff4034eeac275 and rechecks the historical census: MASTER 0xe01605f6b6dc593b7d2917f4a0940db2a625b09e; TRANSFER_AGENT 0xa9994621f1c3ee59846df756488229e8efdcb8bf; six ISSUERs 0x5072ed40eba6be38c2370cad1cb1df0202924e53, 0x7c8b1e4e9fecda57b6107278bab614e67f3a8bf4, 0x84d37dfa4e6a1395faceab1120506718a9eeac86, 0xb7d43cd861eee4f3b3c4cd69b853c7f5525d4dc4, 0xb8707668acf4c3e025a90e88515b923529e10a69 and 0xfbdd6a4f828c4d29aa8dafc4570a241907660fc0. Roles remain 1, 8 and six 2s. The first two issuers, MASTER and TRANSFER_AGENT return empty code; four issuer proxies retain 170-byte runtimes and implementations 0x73357bbf4f1670797e77a930c491261a84971057, 0xc414c9f26364c1411188e724eb9c576c3070f722, 0x4411b9d82f4e854d573d5838da7a1d1711d0c122 and 0x4e8c97b9759c2e12b0c27dc1a2e35a09ec5c23b8. Token/trust slots retain 0x0fc27145a78be5eeb133aca8a20569c90b389c56 and 0x0ea6d8ef1e8b9efd9395e9bd8288a24f2754f02d. W3R25's creation-to-42641165 census, independently reverified October 5 across 229 windows and eleven role events, remains historical evidence. The fresh finite 42641166..44247376 log read returned empty; that result alone does not certify absence or new execution closure. Complete upstream authorization and key custody remain unresolved."
       },
       {
         "label": "BRSRV Solana Token-2022 mint authority",
@@ -124,8 +137,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748384,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209999,
         "sources": [
           {
             "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -140,11 +153,11 @@
             "url": "https://solscan.io/token/9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N"
           },
           {
-            "label": "Solana finalized authority and upgradeable-program reads",
+            "label": "Solana atomic finalized getMultipleAccounts at slot 457209999, block time 2026-10-15T10:49:14Z, blockhash 5kGxBMVyhvb3AWb5jL9pZkRyyT5AnTQgimtbXjx8Zyp",
             "url": "https://solana-rpc.publicnode.com"
           }
         ],
-        "evidence": "Earlier finalized slot 452748384 reports this mint/freeze authority and permanent delegate on the Token-2022 mint. Finalized slot 452863785 getAccountInfo establishes this as a 73-byte non-executable program-owned authority account, owned by 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP. Slot 452863819 identifies that executable program as BPF-upgradeable with ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1; slot 452863856 identifies upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. Program source, signing rules and upgrade-authority quorum remain unestablished; no EOA or immutability inference is made."
+        "evidence": "Atomic finalized getMultipleAccounts at slot 457209999 (2026-10-15T10:49:14Z; blockhash 5kGxBMVyhvb3AWb5jL9pZkRyyT5AnTQgimtbXjx8Zyp) reports the exact Token-2022 mint, six decimals, zero supply and this mint/freeze/permanent-delegate authority. It also controls metadata, mint close and the transfer hook; transfer-hook program is FsE8mCJyvgMzqJbfHbJQm3iuf3cRZC6n2vZi1Q8rQCy2. The same atomic snapshot identifies this as a 73-byte non-executable account owned by program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP, its BPF-upgradeable ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1 and upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. Program source, signing rules and upgrade-authority quorum remain unestablished; account ownership is not proof of signing policy or immutability."
       }
     ],
     "economicCapSemantics": "unknown",
@@ -222,13 +235,21 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0x4ef34664ccbf1979180a9f3cb21f033e069713ba?fields=all"
         },
         {
+          "label": "Ethereum block 26197405, 2026-10-15T10:46:11Z: current native identity, supply, owner, roles and implementation bindings",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Tempo block 44247376, 2026-10-15T10:46:13Z: current native identity, supply, owner, roles and implementation bindings",
+          "url": "https://api-tempo-mainnet.n.dwellir.com"
+        },
+        {
           "label": "Verified Ethereum WalletRegistrar compiler-declared self-address immutable ranges: Tempo issuer correspondence",
           "url": "https://sourcify.dev/server/v2/contract/1/0xb886f567219a39b49a68115207787dce0a10b9e6?fields=all"
         }
       ],
       "evidence": "Ethereum block 26110197 native TrustService RoleAdded/RoleRemoved replay and getRole/code checks resolve one MASTER, six ISSUERs and one TRANSFER_AGENT. Four issuer contracts are ERC-1967 proxies, two with unverified implementations; full authorization/bypass closure is not established. MASTER can mint and immediately upgrade token and trust service. Solana account reads bind the authority to upgradeable program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP and ProgramData upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, not a signing policy. W4 R12 independently re-verified the complete W3R25 Tempo role census on 2026-10-05 at block 42641165, closing only that aggregate question. Tempo token/trust implementations additionally match the verified Ethereum references outside compiler-declared self-address immutable and TokenLibrary link ranges, including metadata; the linked Tempo TokenLibrary matches its verified Ethereum reference outside compiler-declared library callProtection bytes. This is bounded executable correspondence, not full issuer/proxy/upstream authorization or signing closure. The SEC 485BPOS filed 31 July 2026, accession 0001193125-26-327203, and its EDGAR register were independently verified on 2026-10-04: BlackRock Funds is an Investment Company Act of 1940 registered open-end management investment company (40 Act file 811-05742), and its issuing series BlackRock Daily Reinvestment Stablecoin Reserve Vehicle is a government money market fund under Rule 2a-7. The prospectus's Use of the Blockchain section expressly subjects this exact OnChain Shares class (CUSIP 09261A839, ticker RSVXX), including its native multi-network ownership records, to the same fund investment requirements. Ongoing SEC Rule 2a-7 quality, diversification, liquidity and maturity requirements over this issuing fund support prudential supervision; this is not a claim based on transfer-agent licensing, custodian regulation, BUIDL coverage, SEC endorsement or a reserve guarantee. Deloitte & Touche LLP is named independent accountant, but appointment does not establish a dated completed attestation or audit history. The SAI also says the transfer agent typically reconciles records with blockchain transactions at least daily, and BNY reconciles securities/cash with the custodian. These separate register and portfolio processes do not establish all on/off-chain token liabilities reconciled to backing on one common clock; reconciliation remains unknown. Chronicle BUIDL coverage cannot be inherited by this separate fund. The unverified Ethereum implementations, complete Tempo authority reach and Solana deployed-runtime correspondence remain independently unresolved.",
-      "reviewer": "Sol v10.06 availability-invariant campaign (BEvidence)",
-      "reviewedAt": "2026-10-04",
+      "reviewer": "Rev_BrsrvBlackrock batch-64 review",
+      "reviewedAt": "2026-10-15",
       "unresolvedQuestions": [
         "Complete issuance execution and upstream authorization paths of the four identified Ethereum ISSUER proxies remain unestablished, including unverified implementations 0x9394de9e0e1c7274da58a6b6ae246182a23c347f and 0x77305a8503a576f61f6c8639c8cb287b6b751840; no deployed-runtime equivalence proof to a verified reference closes those paths.",
         "Complete execution and upstream authorization of Tempo issuer implementations 0x4411b9d82f4e854d573d5838da7a1d1711d0c122 and 0x4e8c97b9759c2e12b0c27dc1a2e35a09ec5c23b8 remains unestablished. Their compiler-metadata CIDs QmYQ6K5jHsJZ9g85VpvMaC5g6LFFqLBxnyaCpdhzuaRphv and QmU6drM9FUVXiWZeW5jfhFE3sL48L7Ci9dj488ixSVRBWf were not recovered through three alternate gateways. At block 42641165 all six 170-byte token/trust/issuer proxy wrappers exactly match verified Ethereum ERC1967Proxy. Token/trust/TokenLibrary and issuer implementations 0x73357bbf4f1670797e77a930c491261a84971057 (TokenIssuer) and 0xc414c9f26364c1411188e724eb9c576c3070f722 (WalletRegistrar) match verified Ethereum source outside compiler-declared self-address/link/callProtection ranges, including metadata. The full issuer/master census is independently re-verified. Complete reachable service/upgrader and signing closure remains unresolved; census, native proxy correspondence and those four implementation sources are no longer missing ingredients.",
@@ -269,7 +290,7 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "BRSRV EVM master and upgrade owner",
-      "observedAt": "2026-10-02",
+      "observedAt": "2026-10-15",
       "sources": [
         {
           "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -282,6 +303,10 @@
         {
           "label": "Verified deployed token implementation",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"
+        },
+        {
+          "label": "Ethereum block 26197405, 2026-10-15T10:46:11Z, and Tempo block 44247376, 2026-10-15T10:46:13Z: unchanged owner and implementation slots",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         },
         {
           "label": "Ethereum token deployment",

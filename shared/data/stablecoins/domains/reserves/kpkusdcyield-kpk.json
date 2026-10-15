@@ -2,7 +2,7 @@
   "id": "kpkusdcyield-kpk",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "sourceKey": "erc4626-single-asset:ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13:deployed",
       "name": "USDC deposited into KPK-curated Morpho lending markets",
       "pct": 100,
       "risk": "high",

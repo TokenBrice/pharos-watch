@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
   "collateral": "USDC lender positions in a single Morpho market secured by cirBTC on Arc",
-  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. In-kind deallocation retains underlying lending-position exposure.",
+  "pegMechanism": "ERC-4626 shares accrue lending interest and bear losses against USDC. Redemption uses idle USDC and the configured liquidity adapter, subject to market liquidity. Force-deallocation currently charges 0.5%; in-kind exit retains lending-position exposure. VaultV2 maxWithdraw and maxRedeem deliberately return zero, not measured exit capacity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Keyrock Prime USDC at arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123 is an ERC-4626 share over USDC with a code-enforced pro-rata claim on the current Morpho lending inventory. The claim bears lending losses and liquidity constraints, so protocol-position intentionally differs from the fiat-cash parent and older Morpho precedents. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=75004490745099738925640035 atomic shares; accrueInterestView returned assets=75012317730434, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 75012317730434 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1000104 USDC atomic units. ",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_KrusdcKeyrock)",
+    "rationale": "Keyrock Prime USDC is an ERC-4626 pro-rata claim on USDC-denominated Morpho lending positions, bearing credit losses and liquidity constraints rather than a fixed fiat redemption obligation. At Arc block 26080279 (0xd45fba23210a5662823d06f1e292ca0e0798748413f29663b523b30568b955cf; 2026-10-15T10:44:09Z), totalSupply=75022024133358070384877635 raw 18-decimal shares and totalAssets=75080951234671 raw 6-decimal USDC. One adapter holds one cirBTC/USDC market; its realAssets and expectedSupplyAssets equal totalAssets, idle USDC is zero, and pending performance/management fee shares are zero. convertToAssets(1e18)=1000785 raw USDC. protocol-position intentionally differs from the fiat-cash parent.",
     "sources": [
       {
         "label": "Keyrock Prime USDC exact vault identity and accounting",
@@ -39,7 +39,7 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "arc fixed-block RPC observation 23952285",
+        "label": "Arc block 26080279, 2026-10-15T10:44:09Z; complete accounting and role census",
         "url": "https://rpc.mainnet.arc.io"
       },
       {
@@ -51,12 +51,28 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/arc/vault/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://arc.etherscan.io/address/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123#code"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Curator",
+      "url": "https://keyrock.com/about-us/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/KeyrockTrading"
     }
   ],
   "contracts": [
@@ -67,7 +83,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Keyrock Prime USDC Morpho USDC lending vault",
@@ -75,7 +91,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "krusdc-keyrock",
     "display": {
@@ -98,9 +114,9 @@
         "expectedAssetAddress": "0x3600000000000000000000000000000000000000"
       },
       "deployedExposure": {
-        "basis": "Pinned complete adapter inventory consists of USDC-denominated lender positions, not idle cash: USDC lender positions in a single Morpho market secured by cirBTC on Arc",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://api.morpho.org/graphql"
+        "basis": "Complete Arc block 26080279 census (2026-10-15T10:44:09Z; hash 0xd45fba23210a5662823d06f1e292ca0e0798748413f29663b523b30568b955cf): one adapter, one cirBTC/USDC Morpho lender position, zero idle USDC; realAssets=expectedSupplyAssets=totalAssets=75080951234671 raw USDC. Borrower collateral is custodial cirBTC, not direct vault cash.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://rpc.mainnet.arc.io"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",
@@ -108,5 +124,5 @@
       }
     }
   },
-  "implementationLaunchDate": "2026-08-10"
+  "launchDate": "2026-08-10"
 }

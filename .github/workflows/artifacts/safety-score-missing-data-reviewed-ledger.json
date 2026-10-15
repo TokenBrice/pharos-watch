@@ -47933,7 +47933,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01:keyCustody",
+          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:29603b0cab1dac38012d:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -48031,7 +48031,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82:keyCustody",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -61622,7 +61622,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "steakusdg-steakhouse:gap:deployment-control:mint-meta:steakusdg-steakhouse:4ad5173b4eb0551ab87b",
+          "doneWhenGapIdAbsent": "steakusdg-steakhouse:gap:deployment-control:mint-meta:steakusdg-steakhouse:3498c60c6128e2b064d9",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -62377,12 +62377,12 @@
       "reviewedAt": "2026-10-07T15:11:31Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (KEY_CUSTODY_2)",
       "evidence": [
-        "https://docs.frax.com/protocol/crosschain/somnia (Network Constants: exact Somnia chain5031 Admin Safe; undated)",
+        "https://api.infra.mainnet.somnia.network (provenance repair 2026-10-15: somnia block 439069606, 2026-10-15T10:43:10Z, hash 0x716403bfe03e376c5ccebe2421103e0defcf068386a4a60fb17ff454719dc15f; token/factory ProxyAdmin owner() and custodian beacon owner() identify Safe 0x9527e19f55d1afce9f1e9edcea79552bf41983f9; Safe getOwners()/getThreshold() confirm six owners and threshold three; this does not establish offchain signer-key custody or independence)",
         "shared/data/stablecoins/domains/mint-authority/usdso-somnia.json (existing pinned3/6 owner/module/guard census)",
         "https://somnia.network/usdso-terms-of-service (last updated2026-05-05, issuer Frax Inc/affiliates; Somnia no technical operation control); https://docs.frax.finance/governance/how-it-works (general Safe/governance topology not exact Somnia Safe membership/policy)",
         "agents/wave5/scratch/KEY_CUSTODY_2/EVIDENCE-B.md (CustodyAuditB read-only primary excerpt findings; no exact-controller closure)"
       ],
-      "rationale": "Frax official Somnia docs bind Admin Safe0x9527e19f55d1afce9f1e9edcea79552bf41983f9, and onchain3/6 topology is already pinned. No beneficial human signer identities, hardware/MPC key residence or recovery/approval policy bound to this exact USDso ProxyAdmin owner is established; reserve custody/Frax attribution cannot substitute. The fresh key-custody-independence question overrides existing custody attestations (extension.ts:1137); Safe topology, contract owner census and vendor features cannot answer missing offchain policy. No observed KPI closure claimed. Supplemental independent source-class search completed: https://somnia.network/usdso-terms-of-service (last updated2026-05-05, issuer Frax Inc/affiliates; Somnia no technical operation control); https://docs.frax.finance/governance/how-it-works (general Safe/governance topology not exact Somnia Safe membership/policy). No source supplies current exact signer/quorum/recovery binding. Retain earlier2026-11-07 trigger; child suggested longer rechecks do not defer that scheduled review.",
+      "rationale": "Provenance repair on 2026-10-15: the former Frax Somnia documentation citation returns HTTP 404. Direct Somnia block 439069606 owner() reads instead bind the token/factory ProxyAdmins and custodian beacon to Safe 0x9527e19f55d1afce9f1e9edcea79552bf41983f9; getOwners()/getThreshold() confirm the three-of-six topology. This repairs provenance without renewing the historical decision or closing offchain custody evidence. No beneficial human signer identities, hardware/MPC key residence or recovery/approval policy bound to this exact USDso ProxyAdmin owner is established; reserve custody/Frax attribution cannot substitute. The fresh key-custody-independence question overrides existing custody attestations (extension.ts:1137); Safe topology, contract owner census and vendor features cannot answer missing offchain policy. No observed KPI closure claimed. Supplemental independent source-class search completed: https://somnia.network/usdso-terms-of-service (last updated2026-05-05, issuer Frax Inc/affiliates; Somnia no technical operation control); https://docs.frax.finance/governance/how-it-works (general Safe/governance topology not exact Somnia Safe membership/policy). No source supplies current exact signer/quorum/recovery binding. Retain earlier2026-11-07 trigger; child suggested longer rechecks do not defer that scheduled review.",
       "changeRefs": [],
       "sentinels": [
         {
@@ -62424,7 +62424,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:946fa094ef021970c955:keyCustody",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:837bec1693d9879c4f77:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -63933,7 +63933,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "armusdcs-wintermute:gap:reserve:reserve:c99936da6a52cb955b1b8d35:liquidity",
+          "doneWhenGapIdAbsent": "armusdcs-wintermute:gap:reserve:reserve:d1dc0fbeea75a8293d53a4d9:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -64275,7 +64275,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:29603b0cab1dac38012d:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -64283,7 +64283,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:deployment-control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01",
+          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:deployment-control:mint-meta:sparkusdc-spark:29603b0cab1dac38012d",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -64426,19 +64426,19 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:58b1d2677783096dda96:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:20f437472bb89c674188:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:deployment-control:mint-meta:sparkusdtbc-spark:58b1d2677783096dda96",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:deployment-control:mint-meta:sparkusdtbc-spark:20f437472bb89c674188",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:deployment-control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:deployment-control:mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -65128,7 +65128,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "skymoneyusdtsavings-sky:gap:reserve:reserve:59709ff6bcf4a35db16b90ec:liquidity",
+          "doneWhenGapIdAbsent": "skymoneyusdtsavings-sky:gap:reserve:reserve:7a4b36606279199f96624221:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -65154,7 +65154,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "skymoneyusdsflagship-sky:gap:reserve:reserve:e02400f8462a114871222ddb:liquidity",
+          "doneWhenGapIdAbsent": "skymoneyusdsflagship-sky:gap:reserve:reserve:d6c8219ac3dd265b89ae1c22:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -65939,7 +65939,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sxsrlusd-sentora:gap:reserve:reserve:e3b1fb8a74fb6d9b8b059d21:liquidity",
+          "doneWhenGapIdAbsent": "sxsrlusd-sentora:gap:reserve:reserve:42248b0d7ad988f4726ea297:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -66132,7 +66132,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdpst-sentora:gap:reserve:reserve:b52575f909bf946b51ece17f:liquidity",
+          "doneWhenGapIdAbsent": "senpyusdpst-sentora:gap:reserve:reserve:2e75962a809144bdb0618eb4:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -66257,7 +66257,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpathusd-sentora:gap:reserve:reserve:1e2e44890906a1e503f9d8ac:liquidity",
+          "doneWhenGapIdAbsent": "senpathusd-sentora:gap:reserve:reserve:06c33eaabb5d9765376e9543:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -66393,7 +66393,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdmwin-sentora:gap:reserve:reserve:b52575f909bf946b51ece17f:liquidity",
+          "doneWhenGapIdAbsent": "senpyusdmwin-sentora:gap:reserve:reserve:45932da5711e4f45bb9a1b5c:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -66499,7 +66499,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "gusdtq-galaxy:gap:reserve:reserve:59709ff6bcf4a35db16b90ec:liquidity",
+          "doneWhenGapIdAbsent": "gusdtq-galaxy:gap:reserve:reserve:78fb8d1e362a1af2d0a958aa:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -66550,7 +66550,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "gusdcq-galaxy:gap:reserve:reserve:c99936da6a52cb955b1b8d35:liquidity",
+          "doneWhenGapIdAbsent": "gusdcq-galaxy:gap:reserve:reserve:c60a4180b48ae5817da0929a:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -67055,11 +67055,11 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915:incidentState",
+          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:6e802d84a80d477e3ec4:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914:path:maximal-execution:incidentState",
+          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -67079,11 +67079,11 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:deployment-control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915",
+          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:deployment-control:mint-meta:senrlusdv2-sentora:6e802d84a80d477e3ec4",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:deployment-control:mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914:path:maximal-execution",
+          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:deployment-control:mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -67180,11 +67180,11 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada:path:maximal-execution:incidentState",
+          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:5fe96ee55ec0810c61bb:incidentState",
+          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:a895122d089b7395ca9d:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -67208,11 +67208,11 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:deployment-control:mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada:path:maximal-execution",
+          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:deployment-control:mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:deployment-control:mint-meta:senpyusdmain-sentora:5fe96ee55ec0810c61bb",
+          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:deployment-control:mint-meta:senpyusdmain-sentora:a895122d089b7395ca9d",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -67627,7 +67627,7 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:946fa094ef021970c955:incidentState",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:837bec1693d9879c4f77:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -67647,7 +67647,7 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:deployment-control:mint-meta:gbpa-agant:946fa094ef021970c955",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:deployment-control:mint-meta:gbpa-agant:837bec1693d9879c4f77",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -74227,7 +74227,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "brsrv-blackrock:gap:reserve:reserve:d5795b3beca7d8d732d6ea73:liquidity",
+          "doneWhenGapIdAbsent": "brsrv-blackrock:gap:reserve:reserve:a39f481fe86e36e7c73cd31b:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -75384,7 +75384,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915:keyCustody",
+          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:6e802d84a80d477e3ec4:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -75425,7 +75425,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sirloinusdc-steakhouse:gap:control:mint-meta:sirloinusdc-steakhouse:79cd565b7c69daeb3994:keyCustody",
+          "doneWhenGapIdAbsent": "sirloinusdc-steakhouse:gap:control:mint-meta:sirloinusdc-steakhouse:7b903ab6be2495ebe1d3:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -75459,7 +75459,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:5fe96ee55ec0810c61bb:keyCustody",
+          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:a895122d089b7395ca9d:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -75497,11 +75497,11 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sxsrlusd-sentora:gap:control:mint-meta:sxsrlusd-sentora:5bbd44669fbacc4c85e9:keyCustody",
+          "doneWhenGapIdAbsent": "sxsrlusd-sentora:gap:control:mint-meta:sxsrlusd-sentora:c1182c3279eb7bdb3d46:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sxsrlusd-sentora:gap:control:mint-meta:sxsrlusd-sentora:f859e712e8c911a96558:keyCustody",
+          "doneWhenGapIdAbsent": "sxsrlusd-sentora:gap:control:mint-meta:sxsrlusd-sentora:d9979bccf3f3efb45fae:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -75535,7 +75535,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdprimev2-sentora:gap:control:mint-meta:senpyusdprimev2-sentora:7f7faab82dd411f7eb89:keyCustody",
+          "doneWhenGapIdAbsent": "senpyusdprimev2-sentora:gap:control:mint-meta:senpyusdprimev2-sentora:b4ac1d31669427246c0c:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -75572,7 +75572,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "steakeurcv-steakhouse:gap:control:mint-meta:steakeurcv-steakhouse:e80e53b199ecea4960cb:keyCustody",
+          "doneWhenGapIdAbsent": "steakeurcv-steakhouse:gap:control:mint-meta:steakeurcv-steakhouse:eff8a0aa7937e21e928b:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -75610,11 +75610,11 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdpst-sentora:gap:control:mint-meta:senpyusdpst-sentora:b7310f8ffc318dc58be7:keyCustody",
+          "doneWhenGapIdAbsent": "senpyusdpst-sentora:gap:control:mint-meta:senpyusdpst-sentora:ea1d34be044d88a42a63:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "senpyusdpst-sentora:gap:control:mint-meta:senpyusdpst-sentora:c2c2e21589eb38c9ac47:keyCustody",
+          "doneWhenGapIdAbsent": "senpyusdpst-sentora:gap:control:mint-meta:senpyusdpst-sentora:ea544498e6d9a5504cac:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -75647,11 +75647,11 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "bbqusdc-steakhouse-v2:gap:control:mint-meta:bbqusdc-steakhouse-v2:c348c199677256761a39:keyCustody",
+          "doneWhenGapIdAbsent": "bbqusdc-steakhouse-v2:gap:control:mint-meta:bbqusdc-steakhouse-v2:6d7178c63149443f4a43:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "bbqusdc-steakhouse-v2:gap:control:mint-meta:bbqusdc-steakhouse-v2:f7b87c86c58cec1709c3:keyCustody",
+          "doneWhenGapIdAbsent": "bbqusdc-steakhouse-v2:gap:control:mint-meta:bbqusdc-steakhouse-v2:592b1d6f378d690a78db:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -75685,11 +75685,11 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpathusd-sentora:gap:control:mint-meta:senpathusd-sentora:0be9de1df3571f0fc4f8:keyCustody",
+          "doneWhenGapIdAbsent": "senpathusd-sentora:gap:control:mint-meta:senpathusd-sentora:b7e570640dbf0cbdc0c5:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "senpathusd-sentora:gap:control:mint-meta:senpathusd-sentora:f129e922d91358168744:keyCustody",
+          "doneWhenGapIdAbsent": "senpathusd-sentora:gap:control:mint-meta:senpathusd-sentora:fc66d0e2c868865b105d:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -75726,7 +75726,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "steakcusdc-steakhouse:gap:control:mint-meta:steakcusdc-steakhouse:d576e5bcf7a8f52be299:keyCustody",
+          "doneWhenGapIdAbsent": "steakcusdc-steakhouse:gap:control:mint-meta:steakcusdc-steakhouse:2b6e1a4cd82e42c5c19d:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -75767,7 +75767,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "ethenausdc-steakhouse:gap:control:mint-meta:ethenausdc-steakhouse:372b401fb0fdf9652468:keyCustody",
+          "doneWhenGapIdAbsent": "ethenausdc-steakhouse:gap:control:mint-meta:ethenausdc-steakhouse:19eaf935a6d75e215b00:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -75817,11 +75817,11 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdmwin-sentora:gap:control:mint-meta:senpyusdmwin-sentora:1be9607c721d81c35ac8:keyCustody",
+          "doneWhenGapIdAbsent": "senpyusdmwin-sentora:gap:control:mint-meta:senpyusdmwin-sentora:4e82590576720b4c86e4:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "senpyusdmwin-sentora:gap:control:mint-meta:senpyusdmwin-sentora:f188864829dfe0fe3ccd:keyCustody",
+          "doneWhenGapIdAbsent": "senpyusdmwin-sentora:gap:control:mint-meta:senpyusdmwin-sentora:fe5d32a27119699e01ad:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -76505,11 +76505,11 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "krusdc-keyrock:gap:control:mint-meta:krusdc-keyrock:d54cc75c337c3c60e507:keyCustody",
+          "doneWhenGapIdAbsent": "krusdc-keyrock:gap:control:mint-meta:krusdc-keyrock:40da881dd74e60c6b7e4:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "krusdc-keyrock:gap:control:mint-meta:krusdc-keyrock:fe24dc683177afe51d19:keyCustody",
+          "doneWhenGapIdAbsent": "krusdc-keyrock:gap:control:mint-meta:krusdc-keyrock:6b2632d44e91bdda707e:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -76535,7 +76535,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sfrax-frax:gap:control:mint-meta:sfrax-frax:b171ea6fe9a928d28347:keyCustody",
+          "doneWhenGapIdAbsent": "sfrax-frax:gap:control:mint-meta:sfrax-frax:f4a300d3b2023c620dc5:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -76592,11 +76592,11 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:25d76d98888243be8ce5:keyCustody",
+          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:b94bb86f823314a5ba52:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:318cc897dbb629955b7e:keyCustody",
+          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:6e372fb796247f8fdd63:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -76604,11 +76604,11 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:8cbb1cf7bb9c7c939d6c:keyCustody",
+          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:412b9eec00b34f397bda:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:db2a318b6f30367507d3:keyCustody",
+          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:control:mint-meta:pendleusdc-pendle:f386ca6ea56cdb9e615d:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -76674,7 +76674,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "cscbusdc-clearstar:gap:control:mint-meta:cscbusdc-clearstar:5e045de5b5b7bab798a0:keyCustody",
+          "doneWhenGapIdAbsent": "cscbusdc-clearstar:gap:control:mint-meta:cscbusdc-clearstar:3b05e05ea9fb0b7f54b9:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -76962,7 +76962,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "steakusdg-steakhouse:gap:reserve:reserve:151fe5376aaec43258061c57:liquidity",
+          "doneWhenGapIdAbsent": "steakusdg-steakhouse:gap:reserve:reserve:51dad8cbb09a4d9dfe79d581:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -77021,7 +77021,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sirloinusdc-steakhouse:gap:reserve:reserve:35d7b67d6b6e48e9c8def09d:liquidity",
+          "doneWhenGapIdAbsent": "sirloinusdc-steakhouse:gap:reserve:reserve:aba2e513b3bc8a269615eb9d:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -77075,7 +77075,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "steakeurcv-steakhouse:gap:reserve:reserve:0674859ef4815d0522b82c29:liquidity",
+          "doneWhenGapIdAbsent": "steakeurcv-steakhouse:gap:reserve:reserve:d8f8f20ed8354ca09e516cef:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -83903,7 +83903,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "arcusdc-galaxy:gap:control:mint-meta:arcusdc-galaxy:a7b70a9e0ff37c712886:keyCustody",
+          "doneWhenGapIdAbsent": "arcusdc-galaxy:gap:control:mint-meta:arcusdc-galaxy:aca9a502769510a61343:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -84019,11 +84019,11 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "hyperusdca-hyperithm:gap:control:mint-meta:hyperusdca-hyperithm:5c4db6d8a3a833064ca3:keyCustody",
+          "doneWhenGapIdAbsent": "hyperusdca-hyperithm:gap:control:mint-meta:hyperusdca-hyperithm:a104a71fcd01fefcdb1a:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "hyperusdca-hyperithm:gap:control:mint-meta:hyperusdca-hyperithm:5f8aee042308e75a1a98:keyCustody",
+          "doneWhenGapIdAbsent": "hyperusdca-hyperithm:gap:control:mint-meta:hyperusdca-hyperithm:8dd51b933d90b07dad8e:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -84084,7 +84084,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "umint-ubs:gap:control:mint-meta:umint-ubs:01f2b50d026c7545e719:keyCustody",
+          "doneWhenGapIdAbsent": "umint-ubs:gap:control:mint-meta:umint-ubs:08f2fe126a3ec8373e57:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -84320,7 +84320,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "mantrausd-mantra:gap:control:mint-meta:mantrausd-mantra:99fdbae56966af916943:keyCustody",
+          "doneWhenGapIdAbsent": "mantrausd-mantra:gap:control:mint-meta:mantrausd-mantra:88106c24748fb667ac5a:keyCustody",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -85128,7 +85128,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:reserve:reserve:59709ff6bcf4a35db16b90ec:liquidity",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:reserve:reserve:bd3db68db6ec7fafad7b38e4:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -85217,7 +85217,7 @@
       "changeRefs": [],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:reserve:reserve:c99936da6a52cb955b1b8d35:liquidity",
+          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:reserve:reserve:8447ddf3edfc7c8891eeded2:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -94186,7 +94186,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "gtusdtp-gauntlet:gap:reserve:reserve:59709ff6bcf4a35db16b90ec:liquidity",
+          "doneWhenGapIdAbsent": "gtusdtp-gauntlet:gap:reserve:reserve:c8a5c818c97f1b834a3cb9d6:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -98187,7 +98187,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:reserve:reserve:59709ff6bcf4a35db16b90ec:liquidity",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:reserve:reserve:bd3db68db6ec7fafad7b38e4:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -98275,7 +98275,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:reserve:reserve:c99936da6a52cb955b1b8d35:liquidity",
+          "doneWhenGapIdAbsent": "pendleusdc-pendle:gap:reserve:reserve:8447ddf3edfc7c8891eeded2:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -99424,7 +99424,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:946fa094ef021970c955:incidentState",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:837bec1693d9879c4f77:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -101612,11 +101612,11 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:703345b7103b2cf26915:incidentState",
+          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:6e802d84a80d477e3ec4:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914:path:maximal-execution:incidentState",
+          "doneWhenGapIdAbsent": "senrlusdv2-sentora:gap:control:mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -101665,11 +101665,11 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada:path:maximal-execution:incidentState",
+          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:5fe96ee55ec0810c61bb:incidentState",
+          "doneWhenGapIdAbsent": "senpyusdmain-sentora:gap:control:mint-meta:senpyusdmain-sentora:a895122d089b7395ca9d:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
@@ -101729,7 +101729,7 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:29603b0cab1dac38012d:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         }
       ],
@@ -101827,11 +101827,11 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:58b1d2677783096dda96:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:20f437472bb89c674188:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         }
       ],
@@ -102164,7 +102164,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:946fa094ef021970c955:incidentState",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:837bec1693d9879c4f77:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -102597,7 +102597,7 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:29603b0cab1dac38012d:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         }
       ],
@@ -102632,11 +102632,11 @@
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:58b1d2677783096dda96:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:20f437472bb89c674188:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263:incidentState",
           "doneWhenScoreReasonAbsent": "unresolved-control-identity"
         }
       ],
@@ -102771,7 +102771,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:946fa094ef021970c955:incidentState",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:837bec1693d9879c4f77:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -102972,7 +102972,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:946fa094ef021970c955:incidentState",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:837bec1693d9879c4f77:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -103026,7 +103026,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:836f8253a7150ceeed01:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdc-spark:gap:control:mint-meta:sparkusdc-spark:29603b0cab1dac38012d:incidentState",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -103068,11 +103068,11 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:58b1d2677783096dda96:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:20f437472bb89c674188:incidentState",
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:c1b6ffe83625f92cee82:incidentState",
+          "doneWhenGapIdAbsent": "sparkusdtbc-spark:gap:control:mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263:incidentState",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -114563,7 +114563,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "steakusdg-steakhouse:gap:deployment-control:mint-meta:steakusdg-steakhouse:4ad5173b4eb0551ab87b",
+          "doneWhenGapIdAbsent": "steakusdg-steakhouse:gap:deployment-control:mint-meta:steakusdg-steakhouse:3498c60c6128e2b064d9",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -116132,7 +116132,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "umint-ubs:gap:control:mint-meta:umint-ubs:01f2b50d026c7545e719:keyCustody",
+          "doneWhenGapIdAbsent": "umint-ubs:gap:control:mint-meta:umint-ubs:08f2fe126a3ec8373e57:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -156804,7 +156804,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "armusdcs-wintermute:gap:reserve:reserve:c99936da6a52cb955b1b8d35:liquidity",
+          "doneWhenGapIdAbsent": "armusdcs-wintermute:gap:reserve:reserve:d1dc0fbeea75a8293d53a4d9:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -161570,7 +161570,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "steakeurcv-steakhouse:gap:reserve:reserve:0674859ef4815d0522b82c29:liquidity",
+          "doneWhenGapIdAbsent": "steakeurcv-steakhouse:gap:reserve:reserve:d8f8f20ed8354ca09e516cef:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -163140,7 +163140,7 @@
           "doneWhenScoreReasonAbsent": null
         },
         {
-          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:946fa094ef021970c955:keyCustody",
+          "doneWhenGapIdAbsent": "gbpa-agant:gap:control:mint-meta:gbpa-agant:837bec1693d9879c4f77:keyCustody",
           "doneWhenScoreReasonAbsent": null
         },
         {
@@ -231615,7 +231615,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "brsrv-blackrock:gap:reserve:reserve:d5795b3beca7d8d732d6ea73:liquidity",
+          "doneWhenGapIdAbsent": "brsrv-blackrock:gap:reserve:reserve:a39f481fe86e36e7c73cd31b:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -231769,7 +231769,7 @@
       ],
       "sentinels": [
         {
-          "doneWhenGapIdAbsent": "gusdtq-galaxy:gap:reserve:reserve:59709ff6bcf4a35db16b90ec:liquidity",
+          "doneWhenGapIdAbsent": "gusdtq-galaxy:gap:reserve:reserve:78fb8d1e362a1af2d0a958aa:liquidity",
           "doneWhenScoreReasonAbsent": null
         }
       ],
@@ -269088,7 +269088,7 @@
         "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json"
       ],
       "sentinels": [
-        "oned-gennius:gap:reserve:reserve:36dcfecb8d90096b6725ef30:liquidity"
+        "oned-gennius:gap:reserve:reserve:59c3fd913f4faed38451e14f:liquidity"
       ],
       "nextReviewTrigger": "New public binding reserve-realization maximum or admitted amount-specific realization/withdrawal proof matched to the full USDC reserve claim.",
       "factsClosed": 0

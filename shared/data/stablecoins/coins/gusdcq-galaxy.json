@@ -12,15 +12,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC-denominated idle balances and lender positions in Galaxy-curated Morpho markets. Borrower collateral, valuation and market liquidity vary; the share does not represent cash held solely at the parent issuer.",
-  "pegMechanism": "ERC-4626 deposits exchange USDC for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDC and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets.",
+  "collateral": "USDC-denominated lender positions in Galaxy-curated Morpho markets targeting blue-chip borrower collateral. At the reviewed Ethereum block, claims were about 71.29% against WBTC, 26.24% cbBTC and 2.47% weETH, plus wstETH dust; these are lending allocations, not direct collateral holdings. Custodial BTC backing creates mixed look-through custody.",
+  "pegMechanism": "ERC-4626 deposits exchange USDC for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDC and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum 0x91600e31fbedc72433d4a57f16639cfe661be7d8 issues a proportional operational position in Morpho lending strategies over USDC. VaultV2 exit code burns shares against available assets and recognizes losses; holder exposure differs from the fiat-cash parent. At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=10004999210318959713616421 raw 18-decimal shares and totalAssets()=10191951404573 raw 6-decimal USDC. One adapter 0x7df529c92b5744b13be10f06e0c0846186a24f79 enumerates 4 current market IDs; summed expectedSupplyAssets=10191682371355, idle underlying=269033218; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
+    "rationale": "At Ethereum block 26197000 (2026-10-15T09:24:59Z; hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d), asset() is USDC, totalSupply()=9981619073650174219359686 raw 18-decimal shares and totalAssets()=10183216864889 raw 6-decimal USDC. adaptersLength()=1 and adapters(0)=0x7df529c92b5744b13be10f06e0c0846186a24f79. Its four market IDs reconcile expectedSupplyAssets to realAssets()=10183216864889; idle USDC=0. Lender-claim allocations are WBTC 71.29467103%, cbBTC 26.23508602%, weETH 2.47024295% and wstETH 2 atomic USDC units. These are USDC lender-claim weights by borrower collateral, not holdings of the collateral tokens. All four adapter positions have zero borrow shares and zero posted collateral; immutable market LLTV is 86%. Shares represent a proportional operational lending position whose NAV can fall with losses, rather than direct ownership of Circle reserves. Immediate vault and adapter custody is on-chain. About 97.53% of the lender claims are against custodial WBTC/cbBTC collateral, so whole-book custody is mixed. Coinbase identifies itself as cbBTC backing custodian; WBTC discloses custodial BTC reserves without allocating this vault to named reserve custodians. No custody-provider share, legal segregation, insolvency priority, independent vault financial assurance or guaranteed stressed realization is inferred. Existing exact-deployment functional compiler correspondence is retained; freshly read runtime matches the explorer deployed bytes and the previously reviewed runtime hex-string SHA-256 80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3. Blockscout still reports is_fully_verified=false; functional correspondence is distinct from complete metadata/compiler verification.",
     "sources": [
       {
         "label": "Exact Galaxy USDC Quality Morpho Vault V2 deployment",
@@ -45,6 +45,10 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df529c92b5744b13be10f06e0c0846186a24f79"
+      },
+      {
+        "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ]
   },
@@ -52,12 +56,28 @@
   "geckoId": "galaxy-usdc-quality",
   "links": [
     {
-      "label": "Exact Galaxy USDC Quality Morpho Vault V2 deployment",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Curation documentation",
       "url": "https://docs.morpho.org/curate/"
+    },
+    {
+      "label": "Galaxy Curation: USDC Quality",
+      "url": "https://curation.galaxy.com/vaults/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+    },
+    {
+      "label": "Galaxy Curation docs",
+      "url": "https://docs.curation.galaxy.com/products/deployed-vaults"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/token/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+    },
+    {
+      "label": "Galaxy Curation: Terms of use",
+      "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
     }
   ],
   "contracts": [
@@ -68,7 +88,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Galaxy USDC Quality Morpho V2 lending interest",
@@ -76,7 +96,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "gusdcq-galaxy",
     "display": {
@@ -99,9 +119,9 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
       "deployedExposure": {
-        "basis": "Complete current adapter census at Ethereum block 26107704 identifies USDC-denominated lender positions, not idle cash; credit, collateral and liquidity risks remain local.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
+        "basis": "At Ethereum block 26197000 (2026-10-15T09:24:59Z; hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d), asset() is USDC, totalSupply()=9981619073650174219359686 raw 18-decimal shares and totalAssets()=10183216864889 raw 6-decimal USDC. adaptersLength()=1 and adapters(0)=0x7df529c92b5744b13be10f06e0c0846186a24f79. Its four market IDs reconcile expectedSupplyAssets to realAssets()=10183216864889; idle USDC=0. Lender-claim allocations are WBTC 71.29467103%, cbBTC 26.23508602%, weETH 2.47024295% and wstETH 2 atomic USDC units. These are USDC lender-claim weights by borrower collateral, not holdings of the collateral tokens. All four adapter positions have zero borrow shares and zero posted collateral; immutable market LLTV is 86%. Credit, collateral custody and market liquidity remain local risks; the displayed 100% USDC row is the denomination envelope.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

@@ -18,8 +18,8 @@
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 23405374,
+        "observedAt": "2026-10-15",
+        "observedBlock": 24455282,
         "sources": [
           {
             "label": "RISE Dollar product documentation (accessed 2026-10-02)",
@@ -44,14 +44,18 @@
           {
             "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 23405374, 2026-10-03",
             "url": "https://rpc.risechain.com"
+          },
+          {
+            "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+            "url": "https://rpc.risechain.com"
           }
         ],
-        "evidence": "At block 23375290, token EIP-1967 admin is 0x286944bbf99ee9a2f631d821e8dc2212ddbd7e69, whose owner() returns 0xc588c10a90c942ee3476877c4bac3d798e724856. Safe threshold and owner count were read at the same block; complete modules, guards, signer independence and key custody remain unresolved. Independent 2026-10-03 census at block 23405374: getOwners returned the authored 8 owners; threshold 4; getModulesPaginated(0x1,100) returned [] and terminal next=0x1; fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Guard storage returned a zero word. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
+        "evidence": "At RISE block 24455282 (2026-10-15T10:44:01Z), the token admin slot is 0x286944bbf99ee9a2f631d821e8dc2212ddbd7e69 and owner() returns this Safe. getOwners() confirms the retained eight-owner roster and getThreshold() is 4. getModulesPaginated(0x1,100) returns [] with terminal next=0x1. Guard and module-guard slots are zero; fallback handler remains 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. These are current topology facts, not independent human control or key-custody certification. The owner can replace mint-critical implementation logic.",
         "canRaiseCap": true,
         "safe": {
           "threshold": 4,
-          "observedBlock": 23405374,
-          "observedAt": "2026-10-03",
+          "observedBlock": 24455282,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "owners": [
             "0x6ce8a2b735884d00dfc8be9457392e6d49193dec",
@@ -81,8 +85,8 @@
         "authorityType": "contract",
         "directMintAbility": "cap-limited",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 23375290,
+        "observedAt": "2026-10-15",
+        "observedBlock": 24455282,
         "sources": [
           {
             "label": "RISE Dollar product documentation (accessed 2026-10-02)",
@@ -107,9 +111,13 @@
           {
             "label": "Wave-2 verified facility TimelockController and pinned nested Safe census at RISE block 23465435",
             "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xcacc556744a9c8de12a627d570156aaa156edf4b"
+          },
+          {
+            "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+            "url": "https://rpc.risechain.com"
           }
         ],
-        "evidence": "Verified wrap transfers the parent M claim before minting child balances. The facility is the constructor-bound caller of wrap/unwrap; direct M input/output is approved-swapper-gated. The route does not create base M liabilities. Wave-2 block 23465435: the facility ProxyAdmin owner 0xcacc556744a9c8de12a627d570156aaa156edf4b is a verified OpenZeppelin TimelockController; getMinDelay() is 259200 seconds, its sole proposer/canceller is Safe 0xcfb72f136102559008e960aa33b94b2da94f3f88 (2-of-10), execution is open, and DEFAULT_ADMIN_ROLE is held only by the timelock itself. Facility role-admin Safe 0x8c645e201dd944677864479357f8255ea943b18b is 3-of-5. Both Safes return terminal empty module lists, zero guard words and fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. These observations establish nested controller identities, not complete runtime/fallback noninterference or human key custody.",
+        "evidence": "The source-bound M wrap transfers parent M before minting nominal child balances, subject to parent rounding; the JMI non-M wrap checks actual received assets. At RISE block 24455282 (2026-10-15T10:44:01Z), the facility implementation and admin slots remain 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e and 0x0f38d8a5583f9316084e9c40737244870c565924. That ProxyAdmin owner() is timelock 0xcacc556744a9c8de12a627d570156aaa156edf4b with getMinDelay()=259200 seconds. The retained self-admin, open executor and proposer/canceller Safe memberships are confirmed. Proposer Safe 0xcfb72f136102559008e960aa33b94b2da94f3f88 remains 2-of-10; facility DEFAULT_ADMIN holder 0x8c645e201dd944677864479357f8255ea943b18b remains 3-of-5. Both retain their prior owner rosters, terminal empty modules, zero guard/module-guard slots and handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Sample direct-M eligibility is false while USDR-to-wM is true. Membership checks do not establish human independence, key custody or a new exhaustive role-history census.",
         "canRaiseCap": "unknown",
         "capDescription": "Parent-token inventory gates the reviewed M wrapping path; upgradeable local logic and route permissioning are not immutable limits."
       },
@@ -124,8 +132,8 @@
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 23405374,
+        "observedAt": "2026-10-15",
+        "observedBlock": 24455282,
         "sources": [
           {
             "label": "RISE Dollar product documentation (accessed 2026-10-02)",
@@ -150,13 +158,17 @@
           {
             "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 23405374, 2026-10-03",
             "url": "https://rpc.risechain.com"
+          },
+          {
+            "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+            "url": "https://rpc.risechain.com"
           }
         ],
-        "evidence": "Fresh hasRole(DEFAULT_ADMIN_ROLE,Safe)=true. The Safe can grant/change the roles defined by the reviewed extension; JMI allowed-asset/cap administration can change eligible non-M inventory, but totalAssets() for current non-M inventory is zero. Independent 2026-10-03 census at block 23405374: getOwners returned the authored 3 owners; threshold 2; getModulesPaginated(0x1,100) returned [] and terminal next=0x1; fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Guard storage returned a zero word. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
+        "evidence": "Complete explorer RoleGranted history has five deployment grants and terminal pagination; RoleRevoked history is empty. At RISE block 24455282 (2026-10-15T10:44:01Z), hasRole confirms this Safe holds DEFAULT_ADMIN_ROLE, ASSET_CAP_MANAGER_ROLE, FREEZE_MANAGER_ROLE, PAUSER_ROLE and YIELD_RECIPIENT_MANAGER_ROLE; every getRoleAdmin returns DEFAULT_ADMIN_ROLE. It can manage roles and non-M asset caps, freeze holders, pause and redirect accrued yield, but deposited-asset mint checks remain. totalAssets() is zero and yieldRecipient() is this Safe. getOwners() confirms the retained three owners, threshold 2, terminal empty modules, zero guard/module-guard slots and handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Independent humans, signing policy and key custody remain unestablished.",
         "safe": {
           "threshold": 2,
-          "observedBlock": 23405374,
-          "observedAt": "2026-10-03",
+          "observedBlock": 24455282,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "owners": [
             "0x9b4010e9a203d8024f46c04f87edd69e77f37744",
@@ -188,8 +200,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "USDR token ProxyAdmin owner",
-      "observedAt": "2026-10-02",
-      "observedBlock": 23375290,
+      "observedAt": "2026-10-15",
+      "observedBlock": 24455282,
       "sources": [
         {
           "label": "RISE Dollar product documentation (accessed 2026-10-02)",
@@ -210,6 +222,10 @@
         {
           "label": "M0 liquidity routes and issuer onboarding",
           "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+          "url": "https://rpc.risechain.com"
         }
       ]
     },
@@ -217,12 +233,16 @@
     "capSemanticsReview": {
       "verdict": "raiseable-collateral-only",
       "rationale": "Verified JMIExtension _wrap(asset,account,recipient,amount) requires the immutable SwapFacility, transfers the admitted asset, checks the actual balance increase, and only then mints decimal-normalized extension units; the inherited M wrap path transfers matching M first. The operational Safe can assign asset-cap managers and admit/raise non-M asset caps, but these powers do not bypass asset transfer. Collateral admission/value risk is Backing, not arbitrary issuance. Parent M issuance belongs to the inherited serial-claim edge; proxy upgrades are separate from D14.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
       "sources": [
         {
           "label": "Verified JMIExtension and deposited-asset mint checks, D14 reviewed 2026-10-03",
           "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+        },
+        {
+          "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+          "url": "https://rpc.risechain.com"
         }
       ]
     },
@@ -289,11 +309,15 @@
         {
           "label": "Verified active SwapFacility implementation, runtime matched at block 23553199",
           "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e"
+        },
+        {
+          "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+          "url": "https://rpc.risechain.com"
         }
       ],
-      "evidence": "Historical observation at RISE block 23375290: 4,186,507.178834 M backing against 4,166,902.771484 USDR supply; M-extension wrapping conserves deposited M. D14/D29 source review established that JMIExtension transfers the admitted asset and checks the actual balance increase before minting; cap managers may admit assets and raise caps, not bypass transfers. Continuous reconciliation describes this local wrap accounting, not upstream fiat/Treasury assurance or insolvency rights. Wave-3 RISE block 23553199 (0xa5bfb930fb08da99be8444001422f1bfcc74d389089ed3a1c9c1ed791aed14b3): token and facility EIP-1967 implementations remain 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b and 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e, both bytecode-matched to verified source. Their ProxyAdmins still belong to token-owner Safe 0xc588c10a90c942ee3476877c4bac3d798e724856 and facility timelock 0xcacc556744a9c8de12a627d570156aaa156edf4b respectively. The timelock retains 259200 seconds, self-admin, open execution and proposer/canceller Safe 0xcfb72f136102559008e960aa33b94b2da94f3f88. Facility role-admin Safe 0x8c645e201dd944677864479357f8255ea943b18b is 3-of-5; proposer Safe is 2-of-10. Both proxies bytecode-match SafeProxy and resolve to Sourcify exact-match SafeL2 0x29fcb43b46531bca003ddc8fcb67ffe91900c762; all 15 owners have empty code, both complete module lists are empty, and guard/module-guard slots are zero. Their handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 bytecode-matches verified CompatibilityFallbackHandler: signature methods delegate validation to the Safe quorum, callbacks return acceptance selectors, and simulate calls simulateAndRevert, which unconditionally reverts all effects. Owner, threshold, module, guard and handler reconfiguration require Safe self-calls; generic quorum-authorized CALL/DELEGATECALL reach remains, not an issuance-only allowlist. Incremental token/facility/timelock role-grant and revoke census from 23465436 through 23553199 finds no changes, extending wave-2 complete histories. This answers the formerly missing nested runtime/fallback binding without asserting independent humans, custody, immutability or a governor-only issuance envelope. Incident review covers RISE-USDR token and these local mint/upgrade paths from May 2026 deployment through this pin: issuer product/blog security searches, M0 audit archive, exact-address incident search and prior role/control histories locate no known relevant mint incident. StablR/Tangible USDR are different assets. The August 3 RISEx XLP report concerns a separate USDC.e strategy; its canonical receipt 0xc52560bec154a3d5533a321bd9805305a5076194573ddb2fbb059059ace3e987 contains none of the USDR token/facility/controller addresses. Reviewed absence is not a guarantee against undisclosed incidents. Dedicated scoped human-independence and key-custody questions remain unanswered. No transaction was sent and no governed-issuance qualification is claimed.",
-      "reviewer": "W3R33 exact runtime/fallback and local incident review; historical D14/D29 findings retained",
-      "reviewedAt": "2026-10-05",
+      "evidence": "Historical observation at RISE block 23375290: 4,186,507.178834 M backing against 4,166,902.771484 USDR supply; M-extension wrapping conserves deposited M. D14/D29 source review established that JMIExtension transfers the admitted asset and checks the actual balance increase before minting; cap managers may admit assets and raise caps, not bypass transfers. Continuous reconciliation describes this local wrap accounting, not upstream fiat/Treasury assurance or insolvency rights. Wave-3 RISE block 23553199 (0xa5bfb930fb08da99be8444001422f1bfcc74d389089ed3a1c9c1ed791aed14b3): token and facility EIP-1967 implementations remain 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b and 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e, both bytecode-matched to verified source. Their ProxyAdmins still belong to token-owner Safe 0xc588c10a90c942ee3476877c4bac3d798e724856 and facility timelock 0xcacc556744a9c8de12a627d570156aaa156edf4b respectively. The timelock retains 259200 seconds, self-admin, open execution and proposer/canceller Safe 0xcfb72f136102559008e960aa33b94b2da94f3f88. Facility role-admin Safe 0x8c645e201dd944677864479357f8255ea943b18b is 3-of-5; proposer Safe is 2-of-10. Both proxies bytecode-match SafeProxy and resolve to Sourcify exact-match SafeL2 0x29fcb43b46531bca003ddc8fcb67ffe91900c762; all 15 owners have empty code, both complete module lists are empty, and guard/module-guard slots are zero. Their handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 bytecode-matches verified CompatibilityFallbackHandler: signature methods delegate validation to the Safe quorum, callbacks return acceptance selectors, and simulate calls simulateAndRevert, which unconditionally reverts all effects. Owner, threshold, module, guard and handler reconfiguration require Safe self-calls; generic quorum-authorized CALL/DELEGATECALL reach remains, not an issuance-only allowlist. Incremental token/facility/timelock role-grant and revoke census from 23465436 through 23553199 finds no changes, extending wave-2 complete histories. This answers the formerly missing nested runtime/fallback binding without asserting independent humans, custody, immutability or a governor-only issuance envelope. Incident review covers RISE-USDR token and these local mint/upgrade paths from May 2026 deployment through this pin: issuer product/blog security searches, M0 audit archive, exact-address incident search and prior role/control histories locate no known relevant mint incident. StablR/Tangible USDR are different assets. The August 3 RISEx XLP report concerns a separate USDC.e strategy; its canonical receipt 0xc52560bec154a3d5533a321bd9805305a5076194573ddb2fbb059059ace3e987 contains none of the USDR token/facility/controller addresses. Reviewed absence is not a guarantee against undisclosed incidents. Dedicated scoped human-independence and key-custody questions remain unanswered. No transaction was sent and no governed-issuance qualification is claimed. October 15 refresh: At RISE block 24455282 (2026-10-15T10:44:01Z), the extension held 4,191,272.318305 M against 4,166,891.817608 USDR, and JMI totalAssets() was zero. Token and facility EIP-1967 implementations remain 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b and 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e; both runtimes match the explorer verified bytecode. For unprivileged sample address 0x0000000000000000000000000000000000000001, canSwapViaPath(USDR,wM) returned true and canSwapViaPath(USDR,M) returned false. The former is an extension-to-extension conversion; direct M output requires approved-swapper status. These eligibility reads establish neither a completed transaction, same-notional output capacity nor a cash redemption right. Current operational five-role memberships and role admins, both token Safe rosters/thresholds/modules/guards/handler addresses, nested facility Safe rosters/thresholds and timelock membership/delay were re-read at this pin. This refresh does not extend the historical incident-search window or re-certify every historical runtime/fallback analysis; those dated findings are retained with their original scope. No transaction was sent. The additional claimYield() path is permissionless but mints only the computed excess M backing to the configured yieldRecipient; it is not a general holder-yield or unbacked-mint right. At this pin the recipient is the operational Safe.",
+      "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "scopedQuestions": [
         {
@@ -363,6 +387,7 @@
           ]
         }
       ]
-    }
+    },
+    "headline": "M-backed issuance with separate upgrade and operational multisigs; direct M conversion requires approved swappers."
   }
 }

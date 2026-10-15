@@ -1,7 +1,7 @@
 {
   "id": "gldon-ondo",
   "name": "SPDR Gold Shares (Ondo Tokenized)",
-  "symbol": "GLDON",
+  "symbol": "GLDon",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -33,11 +33,11 @@
     }
   ],
   "mechanismArchetype": "rwa-credit-fund",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "implementationLaunchDate": "2025-12-10",
-  "oneLiner": "GLDON is Ondo’s NAV-style SPDR Gold Shares tracker, redeemable by eligible investors through issuer stablecoin rails without ETF delivery rights.",
-  "collateral": "SPDR Gold Shares (GLD) ETF exposure and cash in transit held for Ondo Global Markets (BVI) Limited; tokenholders hold a debt-security claim rather than direct ETF shares.",
-  "pegMechanism": "Total-return tracker of SPDR Gold Shares with issuer-calculated NAV and eligible-investor subscription/redemption. Ordinary redemption is to USDon; conversion to USDC depends on stablecoin-swapper liquidity. No fixed $1 peg or physical-gold redemption.",
+  "oneLiner": "GLDon is Ondo’s NAV-style SPDR Gold Shares tracker, redeemable by eligible investors through issuer stablecoin rails without ETF delivery rights.",
+  "collateral": "SPDR Gold Shares (GLD) ETF exposure and cash in transit secure a debt claim on Ondo Global Markets (BVI) Limited. Final Terms also permit Other and Additional Collateral; current GLDon-specific weights are undisclosed.",
+  "pegMechanism": "Total-return tracker of SPDR Gold Shares with issuer-calculated NAV and eligible-investor subscription/redemption. Ordinary redemption is to USDon; conversion to USDC depends on whitelist access and stablecoin-swapper liquidity. No fixed $1 peg or physical-gold redemption.",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
@@ -57,7 +57,7 @@
   "proofOfReserves": {
     "type": "attestation",
     "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency.md",
-    "provider": "Ankura Trust Company. The October 6, 2026 daily report (8pm ET), recovered from the issuer-linked archive and reviewed 2026-10-09T11:53:28Z by Sol curation campaign 2026-10-09 (W2L04Ondo), reconciles aggregate Ondo Stocks, USDY and USDon assets and obligations; it does not identify GLDON-specific GLD shares, cash or liabilities. Aggregate reference evidence does not establish exact-token financial assurance.",
+    "provider": "Ankura Trust Company, LLC. The October 12, 2026 daily report (8pm ET), recovered from the issuer-linked archive and reviewed 2026-10-15 by Rev_GldonOndo, reports aggregate Ondo Stocks, USDY and USDon assets and obligations. It does not identify GLDon-specific GLD shares, cash or liabilities and does not establish exact-token financial assurance.",
     "attestorTier": "niche",
     "cadence": "daily-nav"
   },
@@ -101,13 +101,33 @@
     {
       "label": "Important Notes",
       "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.ondo.finance/audits.md"
+    },
+    {
+      "label": "Technical deployments",
+      "url": "https://docs.ondo.finance/ondo-stocks/technical.md"
+    },
+    {
+      "label": "Ethereum Explorer",
+      "url": "https://etherscan.io/address/0x423d42e505e64f99b6e277eb7ed324cc5606f139"
+    },
+    {
+      "label": "Daily verification archive (program-wide)",
+      "url": "https://www.dropbox.com/scl/fo/jzkrw308mrhsasauqrjqq/AJxJak0F90kcwkADSN3DCD4?rlkey=nik1v5slekrzx5fbi0zan5sk3&dl=1"
+    },
+    {
+      "label": "August 2026 Base Prospectus Supplement",
+      "url": "https://www.mfsa.mt/wp-content/uploads/2026/09/Ondo-Global-Markets-BVI-Limited-Supplement-Document-dated-28-August-2026.pdf"
     }
   ],
   "notices": [
     {
       "type": "info",
       "title": "Tokenized ETF exposure",
-      "message": "GLDON provides economic exposure to SPDR Gold Shares. Holders have no right to receive ETF shares or physical gold; investor eligibility and issuer redemption restrictions apply."
+      "message": "GLDon provides economic exposure to SPDR Gold Shares. Holders have no right to receive ETF shares or physical gold; investor eligibility and issuer redemption restrictions apply."
     }
   ]
 }

@@ -20,9 +20,9 @@
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
     "branchModel": "single-path",
-    "summary": "Issuer MINTER sets CUMIU NAV; at block 26107703 latestNAV 1045891 divided by NAVScalingFactor 10000 equals USD 104.5891. This is administered fund NAV, not an independent oracle.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "Issuer MINTER sets CUMIU NAV; at Ethereum block 26197403 (2026-10-15T10:45:47Z), latestNAV 1047397 divided by NAVScalingFactor 10000 equals USD 104.7397. This is administered fund NAV, not an independent oracle. Pinned RPC: https://api-ethereum-mainnet.n.dwellir.com.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_CumiuChinaamc batch64 pinned-source review",
     "confidence": "verified",
     "sources": [
       {

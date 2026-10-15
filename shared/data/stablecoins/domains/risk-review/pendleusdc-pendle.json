@@ -34,17 +34,21 @@
       {
         "label": "Wintermute Armitage exact Pendle Ecosystem USDC vault attribution",
         "url": "https://armitage.wintermute.com/vaults/ethereum/pendle-ecosystem-usdc"
+      },
+      {
+        "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; fresh role, gate, adapter, market and oracle topology census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; Blockscout supplied partial VaultV2 source with deployed bytecode matching RPC, not a full compiler/source verification.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197390 (2026-10-15T10:43:11Z), all four gate addresses are zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate are abdicated. setSendAssetsGate remains mutable with a 259200-second delay and gates deposits/mints, not ordinary withdraw/redeem. A deposit-funded in-kind exit may still be affected by deposit gating. Underlying USDC freeze powers are inherited. Fresh runtime hash matches the reviewed exact ERC-4626 exit identity; historical functional compiler correspondence is retained separately and is not a financial audit.",
+    "reviewer": "Rev_PendleusdcPendle, batch64 primary-source review",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Pendle Ecosystem USDC has one reviewed native vault-share deployment; no second share deployment or bridge representation is established. Underlying collateral bridge/custody exposure is separate.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_PendleusdcPendle, batch64 primary-source review",
     "confidence": "probable",
     "sources": [
       {
@@ -74,6 +78,10 @@
       {
         "label": "Exact adapter partial source with matching deployed bytecode",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+      },
+      {
+        "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; fresh role, gate, adapter, market and oracle topology census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
     "routes": [
@@ -90,8 +98,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Exact native ERC-4626 asset-backed share deployment; parent USDC and borrower collateral bridge/custody exposures are separate. No share bridge representation is established by this inventory.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
         "sources": [
           {
             "label": "Pendle Ecosystem USDC exact vault identity and accounting",
@@ -124,6 +132,10 @@
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
+          },
+          {
+            "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; fresh role, gate, adapter, market and oracle topology census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ]
       }
@@ -131,7 +143,7 @@
   },
   "oracleRisk": {
     "tier": "single-source-or-laggy",
-    "summary": "Exact oracle topology traced at Ethereum block 26114891: PT-reUSD uses the minimum of a 900-second Pendle TWAP and a fixed linear-discount price; PT-sUSDS uses the same Ojo minimum behind a deviation-timelock selector; PT-sUSDE uses a fixed linear-discount primary behind that selector. Backup paths share the PT pricing leg and add an underlying Chainlink/USD leg with a constant-one USDC quote. No independent live USDC depeg feed is selected. These are known synthetic/single-market pricing paths, not independently redundant dollar feeds. Share NAV remains internal accounting; funded liquidation recovery is not established.",
+    "summary": "Exact oracle topology traced at Ethereum block 26197390 (2026-10-15T10:43:11Z): PT-reUSD uses the minimum of a 900-second Pendle TWAP and a fixed linear-discount price; PT-sUSDS uses the same Ojo minimum behind a deviation-timelock selector; PT-sUSDE uses a fixed linear-discount primary behind that selector. Backup paths share the PT pricing leg and add an underlying Chainlink/USD leg with a constant-one USDC quote. No independent live USDC depeg feed is selected. These are known synthetic/single-market pricing paths, not independently redundant dollar feeds. Share NAV remains internal accounting; funded liquidation recovery is not established. Both selector roots use their primary oracle at this pin; challengeExpiresAt and healingExpiresAt are zero. MorphoChainlinkOracleV2 rejects negative feed answers but accepts zero, and the selector does not add a positive-price check.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -182,8 +194,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R11 exact oracle source and block-pinned topology review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_PendleusdcPendle, batch64 primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -245,6 +257,14 @@
       {
         "label": "Exact adapter partial source with matching deployed bytecode",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
+      },
+      {
+        "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; fresh role, gate, adapter, market and oracle topology census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Verified MorphoChainlinkOracleV2 accepts zero answers and rejects negative answers only",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x217d6ddcdb95112c51657f6270e8c079cfdb51f0"
       }
     ],
     "branches": [
@@ -252,7 +272,7 @@
         "id": "market-1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
         "label": "PT-reUSD-10DEC2026 / USDC",
         "tier": "single-source-or-laggy",
-        "summary": "Block 26114891 reconfirmed the exact market oracle 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0. Its only nonzero pricing input is OjoPTFeed 0x77ee147391eac11c92817e771860ff4aad265d89, an immutable clone of 0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585. Ojo selects the lower of the 900-second Pendle TWAP at 0x570ea68f11e63a9108514eb73dc4f88232c9e7f6 and a 6%-annualized fixed linear-discount feed at 0x8e42d93eac7dfef8d061dd18a2acfc839e724309 through timestamp adapter 0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994. The adapter replaces updatedAt with block.timestamp; this is not proof of external feed freshness. USDC is assumed one, not externally priced.",
+        "summary": "Block 26197390 reconfirmed the exact market oracle 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0. Its only nonzero pricing input is OjoPTFeed 0x77ee147391eac11c92817e771860ff4aad265d89, an immutable clone of 0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585. Ojo selects the lower of the 900-second Pendle TWAP at 0x570ea68f11e63a9108514eb73dc4f88232c9e7f6 and a 6%-annualized fixed linear-discount feed at 0x8e42d93eac7dfef8d061dd18a2acfc839e724309 through timestamp adapter 0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994. The adapter replaces updatedAt with block.timestamp; this is not proof of external feed freshness. USDC is assumed one, not externally priced. Refreshed at 2026-10-15T10:43:11Z; exact root price()=982764805571600317000000000000000000.",
         "collateralAssets": [
           "PT-reUSD-10DEC2026"
         ],
@@ -265,18 +285,19 @@
             "path": "Collateral/USDC price() for market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
             "address": "0x217d6ddcdb95112c51657f6270e8c079cfdb51f0",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26114891
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197390
           },
           {
             "provider": "Ojo minimum of 900-second Pendle TWAP and synthetic linear discount",
             "path": "baseFeedOne of 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0 ; API decimals=18",
             "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197390
           }
         ],
-        "fallbackBehavior": "No alternate root price source: Ojo calls both feeds and chooses the minimum. Its 24-hour stale check applies only to nonzero updatedAt; the linear feed is wrapped to stamp current block time. A failed feed call reverts Ojo. The outer Morpho oracle checks positive answers but does not enforce updatedAt. No live USDC/USD feed is selected.",
+        "fallbackBehavior": "No alternate root price source: Ojo calls both feeds and chooses the minimum. Its 24-hour stale check applies only to nonzero updatedAt; the linear feed is wrapped to stamp current block time. A failed feed call reverts Ojo. The outer Morpho oracle rejects negative feed answers but accepts zero, and does not enforce updatedAt. No live USDC/USD feed is selected.",
         "collateralParameters": [
           {
             "asset": "PT-reUSD-10DEC2026",
@@ -312,16 +333,20 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; fresh role, gate, adapter, market and oracle topology census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26114891
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390
       },
       {
         "id": "market-22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9",
         "label": "PT-sUSDS-26NOV2026 / USDC",
         "tier": "single-source-or-laggy",
-        "summary": "Block 26114891 binds this market to immutable MetaOracleDeviationTimelock clone 0x3464a61a68c486241fe07201c913f055bdce35bf. Primary 0x89dae86eb86cbc4dd2f52031c997a21ab9a950c5 uses Ojo 0x16bdf4c1a1fbd0d3a181dcee4141bb106e22b002: minimum of 900-second Pendle TWAP 0xe7d40a9a3d09108bb9119e0133b99ac02471c100 and 13%-annualized fixed discount 0xf5532b1df22f97a0660386958b5dcdb94be8533c. Backup 0x77ae9b629096d0ae0206878b163cca232276c88e shares that Ojo leg and adds underlying/USD Chainlink 0xff30586cd0f29ed462364c7e81375fc0c71219b1 over constant-one USDC feed 0xc3866d726c204c0836e0677a31973c649888973d. Correlated backup is not independent PT or USDC price discovery.",
+        "summary": "Block 26197390 binds this market to immutable MetaOracleDeviationTimelock clone 0x3464a61a68c486241fe07201c913f055bdce35bf. Primary 0x89dae86eb86cbc4dd2f52031c997a21ab9a950c5 uses Ojo 0x16bdf4c1a1fbd0d3a181dcee4141bb106e22b002: minimum of 900-second Pendle TWAP 0xe7d40a9a3d09108bb9119e0133b99ac02471c100 and 13%-annualized fixed discount 0xf5532b1df22f97a0660386958b5dcdb94be8533c. Backup 0x77ae9b629096d0ae0206878b163cca232276c88e shares that Ojo leg and adds underlying/USD Chainlink 0xff30586cd0f29ed462364c7e81375fc0c71219b1 over constant-one USDC feed 0xc3866d726c204c0836e0677a31973c649888973d. Correlated backup is not independent PT or USDC price discovery. Refreshed at 2026-10-15T10:43:11Z; exact root price()=985200178526128869000000.",
         "collateralAssets": [
           "PT-sUSDS-26NOV2026"
         ],
@@ -334,11 +359,11 @@
             "path": "Collateral/USDC price() for market 0x22fe4c688161863c73571a2b8db65cc11a4a6bceee4f0dea4aa83e4b784f1bd9",
             "address": "0x3464a61a68c486241fe07201c913f055bdce35bf",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26114891
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197390
           }
         ],
-        "fallbackBehavior": "Primary selected at the pin. Deviation threshold is 0.75%; permissionless challenge lasts 57600 seconds and healing 86400 seconds. price() immediately tries the other configured oracle on a revert. Both paths share Ojo PT pricing; the backup alone adds underlying/USD Chainlink. Ojo ignores zero updatedAt, so its unwrapped fixed-discount feed has no external timestamp requirement.",
+        "fallbackBehavior": "Primary selected at the pin. Deviation threshold is 0.75%; permissionless challenge lasts 57600 seconds and healing 86400 seconds. price() immediately tries the other configured oracle on a revert. Both paths share Ojo PT pricing; the backup alone adds underlying/USD Chainlink. Ojo ignores zero updatedAt, so its unwrapped fixed-discount feed has no external timestamp requirement. At the refreshed pin both challenge and healing expiration timestamps are zero; no active transition is inferred.",
         "collateralParameters": [
           {
             "asset": "PT-sUSDS-26NOV2026",
@@ -374,16 +399,20 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; fresh role, gate, adapter, market and oracle topology census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26114891
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390
       },
       {
         "id": "market-5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
         "label": "PT-sUSDE-26NOV2026 / USDC",
         "tier": "single-source-or-laggy",
-        "summary": "Block 26114891 binds this market to immutable MetaOracleDeviationTimelock clone 0xf8b29e7e9c00ce531434775f7923cc9fbca01b08. Primary 0x8fca98c9abee4dcb33ba9f3d17db4ad57f72706d uses only fixed 6%-annualized PT linear-discount oracle 0xa572dad7db3d975e9ce780db1cf3bf959401cd35; this is a maturity/time formula, not a live collateral or USDC dollar price. Backup 0xe2f4cfe07aecd7fd8fb0d293a22cde7d08175465 shares the same PT leg and adds underlying/USD Chainlink 0xa569d910839ae8865da8f8e70fffb0cba869f961 over constant-one USDC feed 0xc3866d726c204c0836e0677a31973c649888973d. Formula independence and live USDC depeg detection are not asserted.",
+        "summary": "Block 26197390 binds this market to immutable MetaOracleDeviationTimelock clone 0xf8b29e7e9c00ce531434775f7923cc9fbca01b08. Primary 0x8fca98c9abee4dcb33ba9f3d17db4ad57f72706d uses only fixed 6%-annualized PT linear-discount oracle 0xa572dad7db3d975e9ce780db1cf3bf959401cd35; this is a maturity/time formula, not a live collateral or USDC dollar price. Backup 0xe2f4cfe07aecd7fd8fb0d293a22cde7d08175465 shares the same PT leg and adds underlying/USD Chainlink 0xa569d910839ae8865da8f8e70fffb0cba869f961 over constant-one USDC feed 0xc3866d726c204c0836e0677a31973c649888973d. Formula independence and live USDC depeg detection are not asserted. Refreshed at 2026-10-15T10:43:11Z; exact root price()=993169313165905632000000.",
         "collateralAssets": [
           "PT-sUSDE-26NOV2026"
         ],
@@ -396,11 +425,11 @@
             "path": "Collateral/USDC price() for market 0x5613b170ded221c588b6e9637b910f49e5508680ceede207f44aa72e5c46cb05",
             "address": "0xf8b29e7e9c00ce531434775f7923cc9fbca01b08",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26114891
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197390
           }
         ],
-        "fallbackBehavior": "Primary selected at the pin. Deviation threshold is 0.75%; challenge lasts 57600 seconds and healing 86400 seconds, with permissionless state transitions. price() tries the other configured oracle on a revert. The fixed linear-discount feed returns zero round timestamps; outer Morpho reads a positive answer without timestamp rejection. Backup shares the PT formula and adds one underlying/USD feed, not a live USDC feed.",
+        "fallbackBehavior": "Primary selected at the pin. Deviation threshold is 0.75%; challenge lasts 57600 seconds and healing 86400 seconds, with permissionless state transitions. price() tries the other configured oracle on a revert. The fixed linear-discount feed returns zero round timestamps; outer Morpho accepts zero as well as positive feed answers, without timestamp rejection. Backup shares the PT formula and adds one underlying/USD feed, not a live USDC feed. At the refreshed pin both challenge and healing expiration timestamps are zero; no active transition is inferred.",
         "collateralParameters": [
           {
             "asset": "PT-sUSDE-26NOV2026",
@@ -436,10 +465,14 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; fresh role, gate, adapter, market and oracle topology census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26114891
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390
       }
     ],
     "paths": [

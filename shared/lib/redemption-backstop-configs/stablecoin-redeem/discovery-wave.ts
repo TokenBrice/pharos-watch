@@ -56,7 +56,7 @@ const morphoVaultRoutes = defineConfigFamily(
         sourceRef("Morpho Vault V2 withdrawal mechanics", MORPHO_V2_DOCS, ["route", "access", "settlement", "fees"]),
       ],
       notes: [
-        "The native holder or allowance-authorized spender can withdraw when receiveShares, sendShares and receiveAssets gates and underlying-token controls permit. The sendAssets gate governs deposits, not withdrawals; interface jurisdiction restrictions are separate from the direct holder route.",
+        "The native holder or allowance-authorized spender can withdraw when sendShares and receiveAssets gates and underlying-token controls permit. The sendAssets gate governs deposits, not withdrawals; interface jurisdiction restrictions are separate from the direct holder route.",
         "Capacity requires current ordinary executable underlying liquidity: idle assets plus the selected liquidity adapter only, without adding overlapping force-deallocatable or in-kind positions. Vault V2 maxWithdraw/maxRedeem intentionally return zero and are not capacity probes.",
         "The configured erc4626-single-asset adapter checks liquidityAdapter() on the exact vault in this run before using morpho-vault-v2 API liquidity. A zero or unreadable adapter bounds capacity to independently observed idle underlying; unreadable idle, stale or rejected telemetry leaves capacity unrated. No static buffer, recorded API observation or full-supply fallback is used.",
       ],

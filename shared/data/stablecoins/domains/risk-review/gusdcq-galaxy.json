@@ -26,17 +26,21 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df529c92b5744b13be10f06e0c0846186a24f79"
+      },
+      {
+        "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=1. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), all four gate addresses are zero and all four setter selectors are permanently abdicated. VaultV2 transfer checks sendSharesGate and receiveSharesGate; withdrawals check sendSharesGate and receiveAssetsGate. sendAssetsGate controls deposits. No local transfer blacklist can be enabled through these abdicated setters. Underlying USDC freeze exposure remains inherited. The exact reviewed immutable runtime is unchanged; functional source correspondence does not assert full compiler metadata identity.",
+    "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "One exact native Ethereum vault-share deployment; no token-specific bridge representation is authored. Parent and borrower collateral bridge risks remain separate.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
     "confidence": "probable",
     "sources": [
       {
@@ -62,6 +66,10 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df529c92b5744b13be10f06e0c0846186a24f79"
+      },
+      {
+        "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
     "routes": [
@@ -76,8 +84,8 @@
         "riskTier": "single-chain-or-native",
         "semantics": "native-mint",
         "scope": "canonical",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "sources": [
           {
             "label": "Exact ethereum block 26107704; independent role, Safe, gate and market census re-read 2026-10-03",
@@ -98,6 +106,10 @@
           {
             "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+          },
+          {
+            "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "reviewDisposition": "reviewed",
@@ -108,12 +120,12 @@
   "oracleRisk": {
     "tier": "standard-external",
     "role": "collateral-pricing",
-    "summary": "Complete pinned adapter census: 4 Morpho markets, 4 distinct borrower oracle paths, plus separately reviewed oracle-free share accounting. External pricing branches cannot inherit the share-accounting exemption. No measured debt/liability shares, independent failover or heartbeat budget is invented.",
+    "summary": "Complete Ethereum block 26197000 adapter census: four borrower-oracle branches for cbBTC, WBTC, wstETH dust and weETH, each at 86% LLTV, plus separately reviewed oracle-free share accounting. At Ethereum block 26197000 (2026-10-15T09:24:59Z; hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d), asset() is USDC, totalSupply()=9981619073650174219359686 raw 18-decimal shares and totalAssets()=10183216864889 raw 6-decimal USDC. adaptersLength()=1 and adapters(0)=0x7df529c92b5744b13be10f06e0c0846186a24f79. Its four market IDs reconcile expectedSupplyAssets to realAssets()=10183216864889; idle USDC=0. Lender-claim allocations are WBTC 71.29467103%, cbBTC 26.23508602%, weETH 2.47024295% and wstETH 2 atomic USDC units. These are USDC lender-claim weights by borrower collateral, not holdings of the collateral tokens. All four adapter positions have zero borrow shares and zero posted collateral; immutable market LLTV is 86%. External feed branches do not inherit the share-accounting exemption. No independent failover or end-to-end heartbeat enforcement is established.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
       "rationale": "Every current adapter market ID was enumerated and resolved to exact collateral, oracle and LLTV at the pinned block; borrower liquidation remains economically applicable.",
       "sources": [
         {
@@ -135,11 +147,15 @@
         {
           "label": "Verified exact Morpho liquidation and supplier bad-debt accounting",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+        },
+        {
+          "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
     "confidence": "verified",
     "sources": [
       {
@@ -169,6 +185,10 @@
       {
         "label": "Sourcify functional VaultV2 runtime match (matchId 30034094); independent exact-deployment equality after only declared immutable/CBOR masks; immutables checked via getters",
         "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+      },
+      {
+        "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
     "branches": [
@@ -189,15 +209,15 @@
             "path": "BASE_FEED_1: BTC / USD",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107704,
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
             "failureDomainKeys": [
               "feed:ethereum:0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
@@ -235,6 +255,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: BTC / USD",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
+          },
+          {
+            "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -256,8 +280,8 @@
             "path": "BASE_FEED_1: WBTC / BTC",
             "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107704,
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
             "failureDomainKeys": [
               "feed:ethereum:0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23"
             ]
@@ -267,8 +291,8 @@
             "path": "BASE_FEED_2: BTC / USD",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107704,
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
             "failureDomainKeys": [
               "feed:ethereum:0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
             ]
@@ -278,15 +302,15 @@
             "path": "QUOTE_FEED_1: USDC / USD",
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107704,
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
             "failureDomainKeys": [
               "feed:ethereum:0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
@@ -332,6 +356,10 @@
           {
             "label": "Exact QUOTE_FEED_1 downstream feed: USDC / USD",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
+          },
+          {
+            "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -340,7 +368,7 @@
         "id": "oracle-0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2",
         "label": "Morpho borrower oracle 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2",
         "tier": "standard-external",
-        "summary": "Exact adapter market census binds 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc to this oracle and the recorded collateral/LLTV. Pinned composer getters identify the listed external feed inputs; zero inputs use the documented neutral factor. This is external pricing, not independently redundant failover. Heartbeats and an end-to-end protective freshness bound are not established.",
+        "summary": "Exact adapter census binds the wstETH market and 86% LLTV to this oracle; its remaining lender claim is 2 atomic USDC units at Ethereum block 26197000. Compound WstETHPriceFeed combines Chainlink STETH/ETH with wstETH.tokensPerStEth(), then the composer divides by Chainlink USDC/ETH. The external stETH price leg observes market discount, unlike an issuer-rate-only pricing path. No composer failover or enforced updatedAt freshness bound is established.",
         "collateralAssets": [
           "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
         ],
@@ -349,14 +377,25 @@
         ],
         "feeds": [
           {
-            "provider": "WstETHPriceFeed",
-            "path": "BASE_FEED_1: Custom price feed for wstETH / ETH",
+            "provider": "Compound WstETHPriceFeed",
+            "path": "BASE_FEED_1: wstETH / ETH; Chainlink STETH/ETH combined with the wstETH wrapping conversion",
             "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107704,
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
             "failureDomainKeys": [
               "feed:ethereum:0x4f67e4d9bd67efa28236013288737d39aef48e79"
+            ]
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy",
+            "path": "BASE_FEED_1.stETHtoETHPriceFeed: STETH / ETH; decimals=18; the Compound wrapper preserves this feed's round timestamps",
+            "address": "0x86392dc19c0b719886221c78ab11eb8cf5c52812",
+            "chain": "ethereum",
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
+            "failureDomainKeys": [
+              "feed:ethereum:0x86392dc19c0b719886221c78ab11eb8cf5c52812"
             ]
           },
           {
@@ -364,15 +403,15 @@
             "path": "QUOTE_FEED_1: USDC / ETH",
             "address": "0x986b5e1e1755e3c2440e960477f25201b0a8bbd4",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107704,
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
             "failureDomainKeys": [
               "feed:ethereum:0x986b5e1e1755e3c2440e960477f25201b0a8bbd4"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
@@ -414,6 +453,10 @@
           {
             "label": "Exact QUOTE_FEED_1 downstream feed: USDC / ETH",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x986b5e1e1755e3c2440e960477f25201b0a8bbd4"
+          },
+          {
+            "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -422,7 +465,7 @@
         "id": "oracle-0x5635a2f38c5dfd1d8fdb176d9cb5aefa07bf6a68",
         "label": "Morpho borrower oracle 0x5635a2f38c5dfd1d8fdb176d9cb5aefa07bf6a68",
         "tier": "standard-external",
-        "summary": "Exact adapter market census binds 0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664 to this oracle and the recorded collateral/LLTV. Pinned composer getters identify the listed external feed inputs; zero inputs use the documented neutral factor. This is external pricing, not independently redundant failover. Heartbeats and an end-to-end protective freshness bound are not established.",
+        "summary": "Exact adapter census binds the weETH market and 86% LLTV to this oracle. BASE_FEED_1 is the Redstone weETH feed at a transparent proxy. Ethereum block 26197000 pins implementation 0x0c2c7ded01ccdfab16f04aff82af766b23d6be0a and proxy admin 0x8223a6271d1e0bda019ee55d545d7b86eff1f573. The reviewed implementation accepts signed external Redstone data through authorized updaters; a proxy admin can replace it. These are external pricing and upgrade-control dependencies, not independent failover. No composer-enforced updatedAt freshness bound is established.",
         "collateralAssets": [
           "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee"
         ],
@@ -431,19 +474,19 @@
         ],
         "feeds": [
           {
-            "provider": "TransparentUpgradeableProxy",
-            "path": "BASE_FEED_1: Redstone Price Feed",
+            "provider": "Redstone MergedAdapterWithRoundsWeethV1 via TransparentUpgradeableProxy",
+            "path": "BASE_FEED_1: Redstone weETH / USD; decimals=8; external signed data, with a separately privileged upgradeable proxy",
             "address": "0xddb6f90ffb4d3257dd666b69178e5b3c5bf41136",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107704,
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000,
             "failureDomainKeys": [
               "feed:ethereum:0xddb6f90ffb4d3257dd666b69178e5b3c5bf41136"
             ]
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
@@ -481,6 +524,10 @@
           {
             "label": "Exact BASE_FEED_1 downstream feed: Redstone Price Feed",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xddb6f90ffb4d3257dd666b69178e5b3c5bf41136"
+          },
+          {
+            "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. A reverting downstream call reverts price(); no L2 sequencer or independent failover claim is made."
@@ -494,8 +541,8 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
           "confidence": "verified",
           "rationale": "This exact share-accounting path computes assets/share from underlying balances, adapter realAssets and configured fee accrual; it has no price-feed input. This exemption does NOT cover borrower markets: every enumerated market oracle remains a separate applicable path. Exact executable correspondence to the Sourcify recompiled VaultV2 runtime and all deployment-specific immutable occurrences were independently checked; metadata equality is not required for this functional-path determination.",
           "sources": [
@@ -522,6 +569,10 @@
             {
               "label": "Sourcify functional VaultV2 runtime match (matchId 30034094); independent exact-deployment equality after only declared immutable/CBOR masks; immutables checked via getters",
               "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+            },
+            {
+              "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ]
         }
@@ -534,8 +585,8 @@
         "branchId": "oracle-0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -566,6 +617,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: BTC / USD",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
+            },
+            {
+              "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ]
         }
@@ -578,8 +633,8 @@
         "branchId": "oracle-0xdddd770badd886df3864029e4b377b5f6a2b6b83",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -618,6 +673,10 @@
             {
               "label": "Exact QUOTE_FEED_1 downstream feed: USDC / USD",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
+            },
+            {
+              "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ]
         }
@@ -630,8 +689,8 @@
         "branchId": "oracle-0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -666,6 +725,10 @@
             {
               "label": "Exact QUOTE_FEED_1 downstream feed: USDC / ETH",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x986b5e1e1755e3c2440e960477f25201b0a8bbd4"
+            },
+            {
+              "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ]
         }
@@ -678,8 +741,8 @@
         "branchId": "oracle-0x5635a2f38c5dfd1d8fdb176d9cb5aefa07bf6a68",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
           "confidence": "verified",
           "rationale": "Exact adapter marketIds enumeration and Morpho idToMarketParams bind borrower collateral valuation/liquidation to this oracle, even though this vault is a supplier rather than a borrower.",
           "sources": [
@@ -710,6 +773,10 @@
             {
               "label": "Exact BASE_FEED_1 downstream feed: Redstone Price Feed",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xddb6f90ffb4d3257dd666b69178e5b3c5bf41136"
+            },
+            {
+              "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ]
         }

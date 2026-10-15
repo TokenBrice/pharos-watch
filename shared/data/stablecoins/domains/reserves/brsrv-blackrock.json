@@ -2,8 +2,9 @@
   "id": "brsrv-blackrock",
   "reserves": [
     {
+      "sourceKey": "blackrock-brsrv-holdings:asset-type:treasury-debt",
       "name": "U.S. Treasury bills",
-      "pct": 63.98676053200351,
+      "pct": 61.88737842590144,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -12,8 +13,9 @@
       "maturityDaysMax": 93
     },
     {
+      "sourceKey": "blackrock-brsrv-holdings:asset-type:treasury-repo",
       "name": "Overnight Treasury-secured tri-party repurchase agreements",
-      "pct": 36.01323946799649,
+      "pct": 38.11262157409856,
       "risk": "low",
       "assetClass": "repo",
       "issuerOrObligor": "J.P. Morgan Securities, Credit Agricole CIB, BofA Securities and Mizuho Securities USA",
@@ -23,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L02ONyc)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_BrsrvBlackrock batch-64 review",
     "confidence": "verified",
     "sources": [
       {
@@ -44,28 +46,44 @@
         "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
       },
       {
-        "label": "BlackRock complete holdings CSV as of October 8, 2026; observed 2026-10-10T23:32:24Z",
+        "label": "September 30, 2026 N-MFP3: exact BRSRV series and sole share class, portfolio securities, cash, other assets, liabilities and outstanding shares",
+        "url": "https://www.sec.gov/Archives/edgar/data/844779/000119312526416626/primary_doc.xml"
+      },
+      {
+        "label": "Ethereum block 26197405, 2026-10-15T10:46:11Z: native BRSRV shares total 50,355,489.68; not the securities denominator",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Tempo block 44247376, 2026-10-15T10:46:13Z: zero native BRSRV stock",
+        "url": "https://api-tempo-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Solana atomic finalized slot 457209999, 2026-10-15T10:49:14Z: zero exact native BRSRV mint stock",
+        "url": "https://solana-rpc.publicnode.com"
+      },
+      {
+        "label": "BlackRock complete holdings CSV as of October 14, 2026; accessed October 15, 2026",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund"
       }
     ],
-    "rationale": "Observed 2026-10-10T23:32:24Z: the October 8, 2026 holdings CSV publishes eleven Treasury bills with market value USD 31,981,618.61 and four overnight Treasury repos totaling USD 18,000,000, for USD 49,981,618.61 total listed securities. Both slice weights use these published market values without favourable rounding or substituting par percentages. Repo counterparties are J.P. Morgan Securities (USD 7m), Credit Agricole CIB (USD 5m), BofA Securities (USD 5m) and Mizuho Securities USA (USD 1m), with October 9 maturities. Bills mature October 13 through December 24, 2026; the 93-day maximum remains the prospectus mandate, not WAM. The listed-securities denominator is not represented as current whole-token liabilities or total fund net assets; no collateralization ratio, financial assurance, account-level custody or executable redemption capacity is inferred.",
-    "compositionBasis": "October 8, 2026 itemized securities holdings, normalized by the exactly summed published security market values; not a reserve-to-liability reconciliation",
-    "compositionAsOf": "2026-10-08",
+    "rationale": "The October 14, 2026 holdings CSV publishes eleven Treasury bills with market value USD 32,476,054.32 and four overnight Treasury repos totaling USD 20,000,000, for USD 52,476,054.32 total listed securities. Both slice weights use these published market values, not rounded par percentages. Repo counterparties are J.P. Morgan Securities, Credit Agricole CIB, BofA Securities and Mizuho Securities USA, each USD 5m, with October 15 maturities. Bills mature October 15, 2026 through January 14, 2027; the 93-day maximum is the prospectus mandate, not WAM. Stable source keys bind the two disclosed asset-type categories to the live adapter despite its different display names. Listed securities are not represented as total fund net assets: October 14 fund reporting rounds class/fund assets to USD 50.4m, while the October 15 Ethereum pin reports 50,355,489.68 shares and Tempo/Solana report zero. The gross-securities/net-assets difference is unreconciled, not a measured reserve surplus or shortfall. No whole-token financial assurance, account-level custody or executable redemption capacity is inferred.",
+    "compositionBasis": "October 14, 2026 itemized securities holdings, normalized by exactly summed published security market values; excludes unreported cash and liabilities and is not a reserve-to-liability reconciliation",
+    "compositionAsOf": "2026-10-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current whole-token liability reconciliation and account-level custody, collateral and recovery agreements remain unavailable. Portfolio and token stock have different observation dates; their difference is not a measured shortfall. Named auditors do not establish a signed financial report.",
+    "knownUnknownExposure": "Current whole-token liability reconciliation and account-level custody, collateral and recovery agreements remain unavailable. The October 14 disclosed securities total exceeds rounded fund net assets, but cash, other assets and liabilities are not included in the CSV. The September 30 N-MFP3 separately reports portfolio securities, cash, other assets, liabilities and shares; it does not reconcile the October observations. Named auditors do not establish a signed financial report.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "U.S. Treasury bills",
-        "pct": 63.98676053200351,
+        "pct": 61.88737842590144,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Itemized U.S. Treasury securities are exogenous assets, not tracked stablecoins."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Overnight Treasury-secured tri-party repurchase agreements",
-        "pct": 36.01323946799649,
+        "pct": 38.11262157409856,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Itemized off-chain secured repo claims are exogenous assets, not tracked stablecoins."
       }
@@ -81,8 +99,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_BrsrvBlackrock batch-64 review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -92,9 +110,13 @@
       {
         "label": "BlackRock BRSRV fund reporting",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
+      },
+      {
+        "label": "July 31, 2026 SAI Part I: fund-titled custody accounts and accounting responsibilities",
+        "url": "https://www.blackrock.com/cash/literature/sai/sai-brsrv.pdf"
       }
     ],
-    "uncertainty": "The prospectus names BNY Mellon as fund custodian and accounting-services provider. The October 1 holdings identify BofA Securities, Credit Agricole CIB and J.P. Morgan Securities repo counterparties, but subcustody, collateral-account safeguards, complete segregation and recovery agreements remain unestablished.",
+    "uncertainty": "The prospectus names BNY Mellon as fund custodian and accounting-services provider. SAI Part I states that BNY maintains custody accounts in the Fund's name and reconciles securities and cash positions with the custodian. These disclosed arrangements do not establish complete legal segregation, subcustody, account-level repo collateral safeguards or recovery rights across the whole book. October 14 holdings identify BofA Securities, Credit Agricole CIB, J.P. Morgan Securities and Mizuho Securities USA repo counterparties; complete custody shares and agreements remain unestablished.",
     "knownUnknownExposurePct": 100
   }
 }

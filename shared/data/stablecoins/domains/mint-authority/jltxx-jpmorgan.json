@@ -2,9 +2,10 @@
   "id": "jltxx-jpmorgan",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
+    "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "The complete Ethereum role-event census identifies one TOKENIZATION_AGENT LightAccount, controlled by an EOA, and a separate EOA-owned LightAccount as TOKEN_ADMIN/diamond owner. Verified LightAccount execute permits its owner to call mint or diamondCut immediately; no cryptographic quorum, collateral cap or local timelock is enforced. Beneficial key custody and fund-to-token reconciliation remain undisclosed.",
+    "summary": "Ethereum role history identifies one Tokenization Agent LightAccount and a separate Token Admin/diamond-owner LightAccount. Fresh pinned role, owner and implementation reads confirm the recorded controllers. Verified LightAccount execute permits its owner to call mint or diamondCut immediately; no cryptographic quorum, collateral cap or local timelock is enforced. Beneficial key custody and fund-to-token reconciliation remain undisclosed.",
+    "headline": "Single-owner accounts can mint or replace issuance logic immediately; no on-chain collateral ceiling or independent signing quorum is established.",
     "upgradeability": {
       "model": "diamond",
       "deploymentRefs": ["ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8"],
@@ -12,11 +13,12 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "FactTokenDiamond owner controller",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107698,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197393,
       "sources": [
         { "label": "Token diamond owner read", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=read_contract" },
-        { "label": "Verified DiamondCutFacet", "url": "https://eth.blockscout.com/address/0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295?tab=contract" }
+        { "label": "Verified DiamondCutFacet", "url": "https://eth.blockscout.com/address/0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295?tab=contract" },
+        { "label": "Pinned owner, facet and controller reads at Ethereum block 26197393, 2026-10-15T10:43:47Z", "url": "https://api-ethereum-mainnet.n.dwellir.com" }
       ]
     },
     "controls": [
@@ -31,15 +33,15 @@
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": "unknown",
         "failureDomainKeys": ["jpmorgan-morgan-money-fact-token-control"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110192,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197393,
         "sources": [
-          { "label": "Complete JLTXX role-event census, 878 logs and pagination end", "url": "https://eth.blockscout.com/api/v2/addresses/0x09864f52b035ae22ee739dfa5c748fa080d07bd8/logs" },
+          { "label": "JLTXX role-event history", "url": "https://eth.blockscout.com/api/v2/addresses/0x09864f52b035ae22ee739dfa5c748fa080d07bd8/logs" },
           { "label": "Verified common LightAccount implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8e8e658e22b12ada97b402ff0b044d6a325013c7" },
           { "label": "Verified live FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
           { "label": "Verified MintableFacet", "url": "https://eth.blockscout.com/address/0xe70c597957e542209ed44f2fbae58370089e59be?tab=contract" }
         ],
-        "evidence": "At Ethereum block 26110192, complete role grant/revoke replay and hasRole identify this sole TOKENIZATION_AGENT (role 0x540c734aafaf1f630d09977ce4a0da2359f2cd3e024121ba0dd1f84e6b4590f7). Its EIP-1967 slot binds verified LightAccount 0x8e8e658e22b12ada97b402ff0b044d6a325013c7, whose deployed runtime exactly matches source verification. owner() is no-code EOA 0x40e06b1daae4a4910a66617ee4197026019b6c6c. Verified owner-authorized execute can invoke the token's Tokenization Agent-gated mint(bytes32,address,uint256) directly; request IDs are idempotence, not collateral caps. Recipient/activity/pause conditions remain enforced on this mint entrypoint. The separate diamond owner can replace the facet; no beneficial signing/key-custody independence is inferred."
+        "evidence": "At Ethereum block 26197393 (0xecbf2725b507c952ede92d3161c1eed163f3e2adf32cc70b0e541f381ad82cbb; 2026-10-15T10:43:47Z), hasRole confirms this TOKENIZATION_AGENT (role 0x540c734aafaf1f630d09977ce4a0da2359f2cd3e024121ba0dd1f84e6b4590f7), matching the historical role census. Its EIP-1967 slot binds verified LightAccount 0x8e8e658e22b12ada97b402ff0b044d6a325013c7, whose deployed runtime exactly matches pinned eth_getCode. owner() remains 0x40e06b1daae4a4910a66617ee4197026019b6c6c, with empty code at this pin. The token's mint selector still binds 0xe70c597957e542209ed44f2fbae58370089e59be. Verified owner-authorized execute can invoke mint(bytes32,address,uint256) directly; request IDs prevent duplicate requests but do not impose collateral caps. Recipient/activity/pause conditions remain enforced. The separate diamond owner can replace the facet; no beneficial signing/key-custody independence is inferred."
       },
       {
         "chain": "ethereum",
@@ -53,14 +55,14 @@
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": "unknown",
         "failureDomainKeys": ["jpmorgan-morgan-money-fact-token-control"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110192,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197393,
         "sources": [
           { "label": "Verified common LightAccount implementation and execute/upgrade authorization", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8e8e658e22b12ada97b402ff0b044d6a325013c7" },
           { "label": "Verified DiamondCutFacet", "url": "https://eth.blockscout.com/address/0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295?tab=contract" },
           { "label": "Token diamond owner read", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=read_contract" }
         ],
-        "evidence": "At Ethereum block 26110192 token owner() remains this LightAccount and the complete grant/revoke census confirms it is the sole TOKEN_ADMIN. Its EIP-1967 implementation is 0x8e8e658e22b12ada97b402ff0b044d6a325013c7; verified LightAccount runtime exactly matches eth_getCode. Its owner() is no-code EOA 0xbb30949145942aa7a5bdcd358160a8d6ced119cc. LightAccount owner-authorized execute can call owner-only diamondCut without a local delay, and its own UUPS upgrade is owner-authorized. This is a single-key control path, not an unresolved contract quorum or an asserted multisig; off-chain key custody remains unknown."
+        "evidence": "At Ethereum block 26197393 (2026-10-15T10:43:47Z), token owner() remains this LightAccount and hasRole confirms TOKEN_ADMIN, matching the historical role census. Its EIP-1967 implementation remains 0x8e8e658e22b12ada97b402ff0b044d6a325013c7, whose verified deployed runtime exactly matches pinned eth_getCode. Its owner() remains 0xbb30949145942aa7a5bdcd358160a8d6ced119cc, with empty code at this pin. The diamondCut selector still binds 0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295. Verified LightAccount execute can call owner-only diamondCut immediately; the account's own UUPS upgrade is also owner-authorized. Beneficial key custody remains unknown."
       },
       {
         "label": "JLTXX Tokenization Agent EOA owner",
@@ -68,9 +70,9 @@
         "deploymentRefs": ["ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8"],
         "role": "direct-minter", "authorityType": "eoa", "directMintAbility": "direct",
         "canRaiseCap": "unknown", "modulesOrGuardsStatus": "not-applicable", "timelockDelaySec": 0,
-        "observedAt": "2026-10-03", "observedBlock": 26110192,
-        "evidence": "Current sole TOKENIZATION_AGENT LightAccount 0x9f5252058521e7458195a0350a0dc361c225857a owner() is this no-code EOA. Verified immediate execute and signature validation let this single owner exercise native mint through the agent account. No cryptographic threshold, reserve cap or key-custody attestation is established.",
-        "sources": [{ "label": "Verified LightAccount signer and immediate execution semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8e8e658e22b12ada97b402ff0b044d6a325013c7" }, { "label": "Pinned owner/code/role reads at Ethereum block 26110192", "url": "https://ethereum-rpc.publicnode.com" }]
+        "observedAt": "2026-10-15", "observedBlock": 26197393,
+        "evidence": "At Ethereum block 26197393 (2026-10-15T10:43:47Z), TOKENIZATION_AGENT LightAccount 0x9f5252058521e7458195a0350a0dc361c225857a owner() remains this address; eth_getCode returns empty code. Verified immediate execute and owner-signature validation permit the owner to exercise native mint through the agent account. No cryptographic threshold, reserve cap or key-custody attestation is established.",
+        "sources": [{ "label": "Verified LightAccount signer and immediate execution semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8e8e658e22b12ada97b402ff0b044d6a325013c7" }, { "label": "Pinned owner/code/role reads at Ethereum block 26197393, 2026-10-15T10:43:47Z", "url": "https://api-ethereum-mainnet.n.dwellir.com" }]
       },
       {
         "label": "JLTXX diamond-owner EOA signer",
@@ -78,9 +80,9 @@
         "deploymentRefs": ["ethereum:0x09864f52b035ae22ee739dfa5c748fa080d07bd8"],
         "role": "proxy-admin", "authorityType": "eoa", "directMintAbility": "upgrade-only",
         "canRaiseCap": true, "modulesOrGuardsStatus": "not-applicable", "timelockDelaySec": 0,
-        "observedAt": "2026-10-03", "observedBlock": 26110192,
-        "evidence": "The token owner/TOKEN_ADMIN LightAccount 0x5ae5d4ada523985dbab22cf046599979897c8418 owner() is this no-code EOA. Verified execute permits immediate owner-only diamondCut and replacement of mint logic; the account itself is owner-upgradeable. Beneficial key custody is unknown.",
-        "sources": [{ "label": "Verified LightAccount signer and immediate execution semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8e8e658e22b12ada97b402ff0b044d6a325013c7" }, { "label": "Pinned owner/code/implementation reads at Ethereum block 26110192", "url": "https://ethereum-rpc.publicnode.com" }]
+        "observedAt": "2026-10-15", "observedBlock": 26197393,
+        "evidence": "At Ethereum block 26197393 (2026-10-15T10:43:47Z), token owner/TOKEN_ADMIN LightAccount 0x5ae5d4ada523985dbab22cf046599979897c8418 owner() remains this address; eth_getCode returns empty code. Verified execute permits immediate owner-only diamondCut and replacement of mint logic; the account itself is owner-upgradeable. Beneficial key custody is unknown.",
+        "sources": [{ "label": "Verified LightAccount signer and immediate execution semantics", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8e8e658e22b12ada97b402ff0b044d6a325013c7" }, { "label": "Pinned owner/code/implementation reads at Ethereum block 26197393, 2026-10-15T10:43:47Z", "url": "https://api-ethereum-mainnet.n.dwellir.com" }]
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -89,15 +91,16 @@
     "review": {
       "disposition": "scoreable",
       "sources": [
-        { "label": "SEC-filed JLTXX prospectus, Investor Register and daily reconciliation", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" },
+        { "label": "Current exact-CUSIP JLTXX prospectus, legal Investor Register and business-day transaction registration", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/P?site=JPMorganv3" },
         { "label": "Verified MintableFacet", "url": "https://eth.blockscout.com/address/0xe70c597957e542209ed44f2fbae58370089e59be?tab=contract" },
         { "label": "Verified DiamondCutFacet", "url": "https://eth.blockscout.com/address/0x6e4d1a8b0a6b2ed26c50873c2c75feac77385295?tab=contract" },
         { "label": "Issuer JLTXX launch", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" },
-        { "label": "Exact Ethereum FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" }
+        { "label": "Exact Ethereum FactTokenDiamond", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
+        { "label": "Pinned role, facet, owner, implementation and code reads at Ethereum block 26197393, 2026-10-15T10:43:47Z", "url": "https://api-ethereum-mainnet.n.dwellir.com" }
       ],
-      "evidence": "Complete Ethereum role-event history and current hasRole reads identify TOKEN_ADMIN/diamond owner 0x5ae5d4ada523985dbab22cf046599979897c8418, ACCOUNT_ADMIN 0x20aab6c346ac47f6b7f8c5d76f1f85d7367197d8, TOKENIZATION_AGENT 0x9f5252058521e7458195a0350a0dc361c225857a and BURNER EOA 0xfb448891b3c1628b0e6b7b0c92b9e0013e28b5a9. The first three share verified LightAccount code, with current owner EOAs 0xbb30949145942aa7a5bdcd358160a8d6ced119cc, 0x09d3a27bc30cf916ccfaa80a878b3e46098b8147 and 0x40e06b1daae4a4910a66617ee4197026019b6c6c respectively. This closes the observed role/quorum identity, not off-chain custody or financial reconciliation. The legal Investor Register is reconciled daily to tokens (internal-ledger only). Solana expansion remains an unbound deployment signal, not an invented mint or current liability partition.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Refine05 primary-source and pinned-RPC review"
+      "evidence": "Historical Ethereum role-event census and fresh hasRole reads at block 26197393 (0xecbf2725b507c952ede92d3161c1eed163f3e2adf32cc70b0e541f381ad82cbb; 2026-10-15T10:43:47Z) identify TOKEN_ADMIN/diamond owner 0x5ae5d4ada523985dbab22cf046599979897c8418, ACCOUNT_ADMIN 0x20aab6c346ac47f6b7f8c5d76f1f85d7367197d8, TOKENIZATION_AGENT 0x9f5252058521e7458195a0350a0dc361c225857a and BURNER 0xfb448891b3c1628b0e6b7b0c92b9e0013e28b5a9. The first three retain the verified LightAccount implementation and current owners 0xbb30949145942aa7a5bdcd358160a8d6ced119cc, 0x09d3a27bc30cf916ccfaa80a878b3e46098b8147 and 0x40e06b1daae4a4910a66617ee4197026019b6c6c respectively; all four owner/burner addresses return empty code. The known uncapped native-mint and immediate logic-replacement paths support unbounded-adverse, without asserting a compromise. The current prospectus makes the off-chain Investor Register determinative of share ownership and requires successfully processed transactions to be registered at least daily on business days under normal conditions, followed by token-balance updates. This supports internal-ledger recordkeeping only, not independent backing reconciliation or a complete financial liability census. Solana expansion remains unbound. Fresh token totalSupply is 74137863437 raw units at two decimals; this does not certify the complete legal/native-share perimeter or circulating supply.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch64 primary-source and pinned-RPC review"
     }
   }
 }

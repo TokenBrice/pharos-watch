@@ -14,19 +14,24 @@
       {
         "label": "GoldZip issuance claim",
         "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      },
+      {
+        "label": "Ethereum block 26197360 (2026-10-15T10:37:11Z), current implementation, owner freeze/burn roles and paused=false",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "The current proxy EIP-1967 implementation slot binds verified HKGXToken. Its ABI exposes freezeAccount, unfreezeAccount, isFrozen and forceBurn with privileged freeze/burn roles; direct holder controls are distinct from mint authority.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "Ethereum block 26197360 (2026-10-15T10:37:11Z) binds the proxy to verified HKGXToken 0x29ed41cb1013a4df63d87b82346b384847db7511, with paused() false and owner authorized for FREEZE_ROLE and BURN_ROLE. Source freezeAccount/unfreezeAccount controls transfers to and from frozen addresses; forceBurn can destroy frozen balances without holder approval. The owner can also pause all token updates and upgrade these controls.",
+    "reviewer": "Rev_XgzGoldzip",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
-    "tier": "oracleless",
+    "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
-    "summary": "The exact HKGXToken mint and transfer code operates on token quantities and has no price-feed or price-based liquidation path. Physical issuance and delivery are defined in grams (1 gram per token; 1,000-token minimum delivery), not an oracle-valued collateral debt position. Market quotes do not govern the token's native issuance or physical claim.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine06 primary-source review",
+    "summary": "HKGXToken uses token quantities and has no external price-feed or borrower liquidation path. Ordinary terms let the administrator set and change the token-to-bar Exchange Rate. The 15 October 2026 special USDT exit uses the deadline-date Hong Kong weighted-average traded price, with issuer discretion over sources and a fair-price fallback if data are insufficient. Pricing sources and detailed methodology remain confidential. Both exits therefore depend on privileged off-chain pricing rather than an immutable conversion ratio.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_XgzGoldzip",
     "confidence": "verified",
+    "branchModel": "single-path",
     "sources": [
       {
         "label": "Exact HKGXToken source; quantity mint and transfers",
@@ -35,32 +40,40 @@
       {
         "label": "GoldZip fixed-gram physical issuance and delivery terms",
         "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      },
+      {
+        "label": "GoldZip primary legal terms: Exchange Rate definition and clause 6.1.2",
+        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+      },
+      {
+        "label": "GoldZip special exit valuation discretion and confidential pricing methodology",
+        "url": "https://goldzip.info/news/notice-change-of-issuer-special-redemption-option/"
       }
     ],
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Refine06 primary-source review",
-      "rationale": "Physical gold claim uses fixed grams and the token code has no borrower markets, collateral-price comparison or liquidation entrypoint. Absence of an oracle does not verify actual gold allocation or backing.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_XgzGoldzip",
+      "rationale": "Administrator discretion governs ordinary token-to-bar pricing and the issuer determines special-exit USDT valuation. These are top-level redemption-pricing powers without borrower, collateral-price or liquidation branches.",
       "sources": [{
-        "label": "Exact HKGXToken source",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=sources,abi"
+        "label": "GoldZip primary legal terms: administrator-set Exchange Rate",
+        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
       }]
     },
     "paths": [{
       "id": "xgz-fixed-gram-claim",
       "chain": "ethereum",
       "address": "0x69af64f409c08e9076bf7f3ed9db3a7409717161",
-      "pricingAuthority": "none",
+      "pricingAuthority": "internal-price",
       "applicability": {
-        "disposition": "not-applicable",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Refine06 primary-source review",
+        "disposition": "top-level-only",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Rev_XgzGoldzip",
         "confidence": "verified",
-        "rationale": "Exact quantity-only token implementation and fixed-gram redemption terms contain no price-sensitive collateral or borrower branch.",
+        "rationale": "The canonical Ethereum token's physical exit uses an administrator-set token-to-bar Exchange Rate under clauses 1.1 and 6.1.2; quantity-only on-chain accounting does not remove that off-chain pricing authority.",
         "sources": [{
-          "label": "GoldZip fixed-gram terms",
-          "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+          "label": "GoldZip primary legal terms: Exchange Rate definition and clause 6.1.2",
+          "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
         }]
       }
     }]

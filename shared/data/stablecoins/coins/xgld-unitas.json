@@ -63,7 +63,7 @@
   "pegReferenceId": "xaut-tether",
   "archetypeOverride": true,
   "collateral": "XAUt collateral supporting USDT borrowing through BYBIT Stake & Borrow and a basket of delta-neutral strategies; OES mirrors collateral for exchange execution.",
-  "pegMechanism": "Transferable Unitas strategy position whose NAV reflects XAUt and net strategy returns. Whitelisted users mint and redeem on BNB Chain; redemption releases XAUt after a 7-day cooldown and charges 0.1%. Base holders bridge to BNB Chain. Regular users rely on swaps.",
+  "pegMechanism": "Transferable Unitas strategy position whose NAV reflects XAUt and net strategy returns. Whitelisted users mint and redeem on BNB Chain for XAUt, with a 7-day eligibility cooldown and 0.1% redemption fee; no end-to-end settlement guarantee is established. Base holders bridge to BNB Chain. Regular users rely on swaps.",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-10-02",
@@ -117,7 +117,7 @@
     "type": "real-time",
     "url": "https://accountable.unitas.so/?type=xgld",
     "provider": "Accountable direct-source cryptographic verification dashboard; gross reserves are not independent financial assurance or a fully netted debt reconciliation.",
-    "attestorTier": "undisclosed",
+    "attestorTier": "niche",
     "cadence": "real-time"
   },
   "links": [
@@ -136,6 +136,26 @@
     {
       "label": "Reserve dashboard",
       "url": "https://accountable.unitas.so/?type=xgld"
+    },
+    {
+      "label": "XGLD app",
+      "url": "https://evm.unitas.so/xgld"
+    },
+    {
+      "label": "Primary and secondary access guide",
+      "url": "https://docs.unitas.so/guides/how-to-buy-xgld.md"
+    },
+    {
+      "label": "Base-to-BNB bridge guide",
+      "url": "https://docs.unitas.so/guides/how-to-bridge-xgld.md"
+    },
+    {
+      "label": "Program audits (exact XGLD coverage unverified)",
+      "url": "https://docs.unitas.so/resources/audits.md"
+    },
+    {
+      "label": "Verified BNB token source",
+      "url": "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=sources,abi,proxyResolution"
     }
   ],
   "notices": [
@@ -143,6 +163,11 @@
       "type": "info",
       "title": "Leveraged gold strategy position",
       "message": "NAV depends on XAUt and borrowed-USDT strategies. Direct XAUt redemption requires whitelisting and a 7-day cooldown; full debt and custody allocation are not disclosed."
+    },
+    {
+      "type": "info",
+      "title": "Deployment and interface coverage differ",
+      "message": "Issuer guides support BNB Chain and Base. Ethereum and Mantle OFTs are independently verified on-chain, but issuer-interface access and direct redemption on those chains are not established."
     }
   ]
 }

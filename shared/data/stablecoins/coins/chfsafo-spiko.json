@@ -12,13 +12,13 @@
     "navToken": true
   },
   "collateral": "CHF accumulation share class FR0014015LG6 of Spiko Amundi Overnight Swap Fund. Physical securities are hedged through portfolio-wide total-return swaps, with a possible unswapped money-market UCITS sleeve. CACEIS Bank is depositary; counterparty default can expose underlying security and currency risks.",
-  "pegMechanism": "CHF-denominated accumulation NAV targeting SARON + 0.50% before class fees. KYC-gated subscriptions and redemptions use daily fund NAV, a 15:00 Paris cutoff and ordinary D+1 business-day settlement. Exceptional gates, suspension and swing pricing can limit or delay exit.",
+  "pegMechanism": "CHF-denominated accumulation NAV targeting SARON + 0.50% before class fees. KYC-gated dealing uses daily fund NAV and a 15:00 Paris cutoff; subscriptions ordinarily settle on D and redemptions on D+1, subject to the relevant currency market being open. Exceptional gates, suspension and swing pricing can limit or delay exit.",
   "mechanismArchetype": "ucits-trs-fund",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact CHF share FR0014015LG6 in fund 59c2c924-ebf8-492d-a4b0-72d72ebf61e6 is proportional UCITS portfolio ownership with portfolio-wide total-return swaps, possible unswapped money-market UCITS and legal separation. The current chfSAFO API lists eight native registers, including Ethereum 0x18b5c15e5196a38a162b1787875295b76e4313fb and zero-supply Solana 6Gst8o3L5uNtkUvhEg23HpDLpYRdNQTgdn1Bc7jnCM5c. Identity, current signed inventory and exact KID support ucits-trs-fund; full NAV/collateral/default reconciliation remains unavailable.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
+    "rationale": "Exact CHF share FR0014015LG6 in fund 59c2c924-ebf8-492d-a4b0-72d72ebf61e6 is proportional UCITS portfolio ownership with portfolio-wide total-return swaps, possible unswapped money-market UCITS and legal separation. The issuer API and September prospectus identify eight native registers. The 14 October inventory contains 107 signed equity, swap and cash rows; negative derivative values are not normalized to positive reserve weights. Fresh Ethereum block 26197328 confirms five decimals and 6009355.28609 shares; finalized Solana slot 457209716 confirms five decimals and zero supply. These observations support ucits-trs-fund, not complete current NAV, collateral, netting or default-recovery reconciliation.",
     "sources": [
       {
         "label": "Spiko SICAV prospectus, 1 September 2026",
@@ -33,34 +33,38 @@
         "url": "https://public-api.spiko.io/share-classes/chfSAFO"
       },
       {
-        "label": "CHF shares, assets and NAV at 2 October 2026",
+        "label": "CHF shares, assets and NAV valued 14 October 2026, reviewed 15 October",
         "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
       },
       {
-        "label": "SAFO physical and signed derivative inventory at 2 October 2026",
+        "label": "SAFO signed equity, swap and cash inventory valued 14 October 2026",
         "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
       },
       {
         "label": "AMF-hosted June 2026 SAFO semiannual report, not an audit opinion",
         "url": "https://geco.amf-france.org/back-office/document/download/429960"
+      },
+      {
+        "label": "Exact CHF product terms and issuer launch date",
+        "url": "https://www.spiko.io/spiko-swiss-franc"
       }
     ]
   },
   "detailProvider": "coingecko",
   "geckoId": "spiko-amundi-overnight-swap-fund-chf",
   "proofOfReserves": {
-    "type": "independent-audit",
+    "type": "self-reported",
     "url": "https://geco.amf-france.org/back-office/document/download/429960",
-    "provider": "PricewaterhouseCoopers Audit is the named statutory auditor. The retrieved June 2026 SAFO semiannual report contains fund assets and liabilities, but no audit opinion or CHF-token liability reconciliation; no current SAFO-specific financial audit opinion was established.",
-    "attestorTier": "big4",
-    "cadence": "annual",
+    "provider": "Issuer-filed SPIKO SICAV semiannual financial disclosure covering SAFO, not a signed audit opinion. PricewaterhouseCoopers Audit is the named statutory auditor, and the CHF product page claims four audits annually, but no corresponding SAFO financial audit opinions or current CHF all-register liability reconciliation were retrieved. The 30 June report contains no CHF share-class row.",
+    "attestorTier": "self",
+    "cadence": "semi-annual",
     "attestorJurisdiction": "France",
     "latestReport": {
       "periodEnd": "2026-06-30",
       "assuranceMethod": "unknown",
       "scope": "unknown",
       "liabilityReconciliation": "unknown",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
       "confidence": "verified",
       "sources": [
         {
@@ -81,7 +85,7 @@
     },
     {
       "label": "Website",
-      "url": "https://www.spiko.io/"
+      "url": "https://www.spiko.io/spiko-swiss-franc"
     },
     {
       "label": "Docs",
@@ -94,12 +98,24 @@
     {
       "label": "CoinGecko",
       "url": "https://www.coingecko.com/en/coins/spiko-amundi-overnight-swap-fund-chf"
+    },
+    {
+      "label": "SICAV prospectus",
+      "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+    },
+    {
+      "label": "AMF fund approval certificate",
+      "url": "https://cdn.spiko.finance/legal_docs/EN/SAFO_Letter_EN.pdf"
+    },
+    {
+      "label": "Smart-contract security audit, Trail of Bits (2023)",
+      "url": "https://github.com/trailofbits/publications/blob/master/reviews/2023-10-spiko-securityreview.pdf"
     }
   ],
   "jurisdiction": {
     "country": "France",
     "regulator": "AMF",
-    "license": "UCITS SICAV sub-fund"
+    "license": "French UCITS SICAV sub-fund SCV20260075"
   },
   "contracts": [
     {
@@ -144,9 +160,9 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "institutional-regulated",
+  "custodyModel": "unknown",
   "governanceQuality": "regulated-entity",
-  "launchDate": "2026-02-26",
+  "launchDate": "2026-03-03",
   "yieldConfig": {
     "yieldSource": "Spiko Amundi Overnight Swap Fund CHF NAV",
     "yieldType": "nav-appreciation"

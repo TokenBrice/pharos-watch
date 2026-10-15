@@ -2,7 +2,7 @@
   "id": "susdd-tron-dao-reserve",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0x4f8e5de400de08b164e7421b3ee387f461becd1a",
+      "sourceKey": "erc4626-single-asset:ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930:deployed",
       "name": "Savings USDD deployed strategy positions",
       "pct": 100,
       "risk": "high",

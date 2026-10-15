@@ -12,8 +12,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
       },
       {
-        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-        "url": "https://etherscan.io/block/26107702"
+        "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), pinned vault, adapter and Safe reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       {
         "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -24,15 +24,15 @@
         "url": "https://api.morpho.org/graphql"
       }
     ],
-    "evidence": "At block 26107702, the exact deployed source exposes ordinary ERC-20 share transfers and no administrator-only holder blacklist, seizure or forced burn. sendSharesGate, receiveSharesGate and receiveAssetsGate are zero; current Morpho API records their setter abdications. The deposit gate is distinct. The tracked child inherits usdt-tether token/reserve/control exposure; absence of a local blacklist is not an exemption from inherited wrapper semantics.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), the exact verified runtime source exposes ordinary ERC-20 share transfers and no administrator-only holder blacklist, seizure or forced burn. sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are abdicated by pinned reads. The send-assets gate (sendAssetsGate), which gates deposits, is also zero but its setter remains active. A pinned eth_call from actual holder 0xb11c93f04bb7cc8d2d4aba47fcf73170bcea940d transferring one share to a nonzero recipient succeeds. This simulation proves neither real settlement nor a future liquidity guarantee. The child retains inherited usdt-tether freeze and reserve exposure.",
+    "reviewer": "Rev_SkymoneyusdtsavingsSky",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only the exact native Ethereum ERC-4626 deployment is authored; no share bridge representation is claimed.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SkymoneyusdtsavingsSky",
     "confidence": "verified",
     "sources": [
       {
@@ -44,8 +44,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
       },
       {
-        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-        "url": "https://etherscan.io/block/26107702"
+        "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), pinned vault, adapter and Safe reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       {
         "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -60,12 +60,12 @@
   "oracleRisk": {
     "tier": "standard-external",
     "role": "collateral-pricing",
-    "summary": "Exact block-26107702 complete adapter marketIds census identifies 2 borrower-price branches. Local share accounting has no price read; borrower health and bad-debt liquidation remain oracle-sensitive. Feed/vault identities and unknown executable paths are itemized without inheriting parent oracle quality.",
+    "summary": "Complete adapter marketIds census at Ethereum block 26196563 identifies two sUSDS borrower-price branches. Local shares use loan-unit accounting; borrower health, liquidation and lender losses depend on external feeds and sUSDS conversion. Feed identities are pinned separately from parent oracle quality.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement Refine11",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SkymoneyusdtsavingsSky",
       "rationale": "The complete current native lending-market census is oracle-sensitive even though local ERC-4626 mint/NAV/redemption is loan-unit accounting. Unknown feed paths remain explicitly unresolved.",
       "sources": [
         {
@@ -78,8 +78,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine11",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SkymoneyusdtsavingsSky",
     "confidence": "verified",
     "sources": [
       {
@@ -89,6 +89,10 @@
       {
         "label": "Morpho core market, liquidation and bad-debt source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+      },
+      {
+        "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), complete market census and oracle feed reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
     "branches": [
@@ -96,7 +100,7 @@
         "id": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
         "label": "Borrower market 1 (0x3274643d)",
         "tier": "standard-external",
-        "summary": "Pinned market 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b at block 26107702: collateral 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd, loan 0xdac17f958d2ee523a2206206994597c13d831ec7, LLTV=965000000000000000/1e18. Oracle 0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79.",
+        "summary": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z): market 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b has sUSDS collateral 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd, USDT loan 0xdac17f958d2ee523a2206206994597c13d831ec7 and 96.5% LLTV. Oracle 0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79 composes sUSDS conversion with Chainlink DAI/USD and USDT/USD. BASE_FEED_2, QUOTE_FEED_2 and QUOTE_VAULT are zero. Expected lender claim is 0.020572 USDT; this residual branch remains in the complete census.",
         "collateralAssets": [
           "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
         ],
@@ -109,37 +113,37 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0x0c426d174fc88b7a25d59945ab2f7274bf7b4c79",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
-            "provider": "EACAggregatorProxy",
+            "provider": "Chainlink EACAggregatorProxy (DAI / USD)",
             "path": "BASE_FEED_1()",
             "address": "0xaed0c38402a5d19df6e4c03f4e2dced6e29c1ee9",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
-            "provider": "EACAggregatorProxy",
+            "provider": "Chainlink EACAggregatorProxy (USDT / USD)",
             "path": "QUOTE_FEED_1()",
             "address": "0x3e7d1eab13ad0104d2750b8863b489d65364e32d",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
             "provider": "ERC-4626 vault conversion",
             "path": "BASE_VAULT()",
             "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "collateralParameters": [
           {
             "asset": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
@@ -180,7 +184,7 @@
         "id": "0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96",
         "label": "Borrower market 2 (0x26b178d4)",
         "tier": "standard-external",
-        "summary": "Pinned market 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 at block 26107702: collateral 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd, loan 0xdac17f958d2ee523a2206206994597c13d831ec7, LLTV=965000000000000000/1e18. Oracle 0x1c7dbd66df93594ba08af8e72c75ba2004d92f9c. CappedOracleFeed immutable/current parameters: {\"source\":\"0x3e7d1eab13ad0104d2750b8863b489d65364e32d\",\"maxPrice\":100000000}.",
+        "summary": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z): market 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 has sUSDS collateral 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd, USDT loan 0xdac17f958d2ee523a2206206994597c13d831ec7 and 96.5% LLTV. Oracle 0x1c7dbd66df93594ba08af8e72c75ba2004d92f9c composes sUSDS conversion with Chainlink USDS/USD and capped USDT/USD. CappedOracleFeed 0x533244d8b685a9ca031f06130b38d718c489e4c6 reads source 0x3e7d1eab13ad0104d2750b8863b489d65364e32d with maxPrice=100000000. BASE_FEED_2, QUOTE_FEED_2 and QUOTE_VAULT are zero. Expected lender claim is 59582229.807103 USDT.",
         "collateralAssets": [
           "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
         ],
@@ -193,37 +197,37 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0x1c7dbd66df93594ba08af8e72c75ba2004d92f9c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
-            "provider": "EACAggregatorProxy",
+            "provider": "Chainlink EACAggregatorProxy (USDS / USD)",
             "path": "BASE_FEED_1()",
             "address": "0xff30586cd0f29ed462364c7e81375fc0c71219b1",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
             "provider": "CappedOracleFeed",
             "path": "QUOTE_FEED_1()",
             "address": "0x533244d8b685a9ca031f06130b38d718c489e4c6",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
             "provider": "ERC-4626 vault conversion",
             "path": "BASE_VAULT()",
             "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "collateralParameters": [
           {
             "asset": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
@@ -269,8 +273,8 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SkymoneyusdtsavingsSky",
           "confidence": "verified",
           "rationale": "The immutable local ERC-4626 share exchange rate uses deposited loan assets, accrued lending interest and fee shares rather than a price oracle. This exemption is local accounting only; every enumerated borrower market is reviewed separately.",
           "sources": [
@@ -289,8 +293,8 @@
         "branchId": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SkymoneyusdtsavingsSky",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [
@@ -329,8 +333,8 @@
         "branchId": "0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SkymoneyusdtsavingsSky",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [

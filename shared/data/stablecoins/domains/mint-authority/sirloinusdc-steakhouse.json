@@ -16,8 +16,8 @@
       ],
       "canChangeMintLogic": false,
       "controlRef": "sirloinUSDC immutable VaultV2 share issuance",
-      "observedAt": "2026-10-02",
-      "observedBlock": 52095842,
+      "observedAt": "2026-10-15",
+      "observedBlock": 52630636,
       "sources": [
         {
           "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
@@ -26,6 +26,10 @@
         {
           "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
           "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+        },
+        {
+          "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
         }
       ]
     },
@@ -42,8 +46,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
@@ -52,9 +56,13 @@
           {
             "label": "Exact verified VaultV2 source (base, 0xbeeff2490feffa212fac2f6553682c219e6a8845)",
             "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ],
-        "evidence": "Exact verified VaultV2 enter() transfers deposited USDC before creating user shares; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and EIP-1967 implementation slot was zero. Performance fee 25% of interest; management fee 0% at block 52095842."
+        "evidence": "Source-matched immutable VaultV2 enters only after USDC transfer and can mint fee shares on accrual. EIP-1967 implementation slot is zero. At Base block 52630636, performance fee=25%, management fee=0%; receiveShares, sendShares and receiveAssets gates are zero and their setters abdicated. Ordinary exits have no separate withdrawal fee; forceDeallocatePenalty(adapter)=10000000000000/1e18 (0.001%), not an ordinary withdrawal haircut."
       },
       {
         "chain": "base",
@@ -63,13 +71,13 @@
           "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
         ],
         "label": "sirloinUSDC vault owner",
-        "role": "other",
+        "role": "governor",
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
@@ -86,9 +94,13 @@
           {
             "label": "Verified VaultV2Supervisor",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x639bfa26472906ccd40513408284a8ad292bc5d6"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ],
-        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved. Independently verified VaultV2Supervisor.owner()=0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd and TIMELOCK()=1209600 at Base block 52095842. Verified source applies that delay only to setOwner and removeGuardian; setCurator is explicitly immediate. getGuardians(vault) returns 0x9e0fddda790651e6a05cd2de69e624b94c04eaf5, whose source-defined veto cannot mint. No universal 14-day execution delay is claimed."
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), VaultV2Supervisor.owner() remains 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd, TIMELOCK()=1209600 seconds and getGuardians(vault) contains 0x9e0fddda790651e6a05cd2de69e624b94c04eaf5. Supervisor and that guardian are both vault sentinels. Exact supervisor source delays setOwner and removeGuardian, while setCurator is immediate; no universal 14-day delay is asserted. Native issuance remains asset-backed."
       },
       {
         "chain": "base",
@@ -97,31 +109,34 @@
           "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
         ],
         "label": "sirloinUSDC curator",
-        "role": "governor",
+        "role": "other",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "threshold": 2,
-        "signerCount": 6,
+        "threshold": 3,
+        "signerCount": 9,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
-            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
-            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
-            "0xcc771952fde840e30c6802734e5ad20479c2959f",
-            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
-            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120"
+            "0x1710932cf538f38e7bcfc30aaae389b24dd004f6",
+            "0xfb3e98b5d59505ceb259e9874b4553fd27fcce3c",
+            "0x44e6e4152a60d594c175bfed42e68ad62ffb5871",
+            "0x1936552b58be97ffd9c7c1dd28e675b7b022f16d",
+            "0x7307bf07641a794fdbc2391d0983a7f1cfa36e4b",
+            "0xd824031d4a115590e6ff26e4e23fc346ab4cb2db",
+            "0x4c23e86a9d8506a43046c15be1b7fa0b6f3427de",
+            "0x5868aaa8d66023137365adae9634a9d8834d488d",
+            "0x1dc4354b39554251d4a2c4b571906e7ebae535a3"
           ],
-          "threshold": 2,
+          "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095842,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact current Safe controller",
@@ -130,9 +145,13 @@
           {
             "label": "Exact vault source and native authorization",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ],
-        "evidence": "Independently re-read at block 52095842 on 2026-10-03: getOwners and getThreshold give the listed quorum; getModulesPaginated(0x1,100) returned empty with terminal next=0x1, and the Safe guard slot was zero. This identifies cryptographic owners, not independent people or attested key custody. Parameter scope does not create native underlying stablecoin liabilities."
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), getOwners() and getThreshold() establish 3-of-9 current cryptographic owners; getModulesPaginated(0x1,100) is terminal and empty, and the Safe guard slot is zero. This does not establish independent beneficial signers, offchain key custody or the entire maximal-execution surface. Parameter authority cannot create native USDC."
       },
       {
         "chain": "base",
@@ -164,12 +183,12 @@
           "threshold": 5,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095842,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact current Safe controller",
@@ -178,9 +197,233 @@
           {
             "label": "Exact vault source and native authorization",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ],
-        "evidence": "Independently re-read at block 52095842 on 2026-10-03: getOwners and getThreshold give the listed quorum; getModulesPaginated(0x1,100) returned empty with terminal next=0x1, and the Safe guard slot was zero. This identifies cryptographic owners, not independent people or attested key custody. Parameter scope does not create native underlying stablecoin liabilities."
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), getOwners() and getThreshold() establish 5-of-10 current cryptographic owners; getModulesPaginated(0x1,100) is terminal and empty, and the Safe guard slot is zero. This does not establish independent beneficial signers, offchain key custody or the entire maximal-execution surface. Parameter authority cannot create native USDC."
+      },
+      {
+        "chain": "base",
+        "address": "0x0000aeb716a0df7a9a1aad119b772644bc089da8",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC allocator",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact vault authorization source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Exact allocator Safe proxy",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x0000aeb716a0df7a9a1aad119b772644bc089da8?fields=all"
+          }
+        ],
+        "evidence": "Pinned isAllocator(address)=true. Exact source-resolved GnosisSafeProxy; at Base block 52630636, getOwners/getThreshold establish 1-of-6, getModulesPaginated(0x1,100) is terminal and empty, and the Safe guard slot is zero. This is an allocator quorum, separate from the 3-of-9 curator and 5-of-10 supervisor-owner. Native USDC cannot be minted. Signer independence and offchain key custody remain unestablished.",
+        "threshold": 1,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0xfc615395336aade67fd853a0157001a215ea1279",
+            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
+            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120",
+            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
+            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
+            "0xcc771952fde840e30c6802734e5ad20479c2959f"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        }
+      },
+      {
+        "chain": "base",
+        "address": "0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC allocator",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact vault authorization source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          }
+        ],
+        "evidence": "SetIsAllocator event-index census from creation through Base block 52630636 identifies this candidate; pinned isAllocator(address)=true. Allocators allocate only through approved adapters subject to caps, set maxRate and select the liquidity adapter/data. No unrestricted native USDC mint follows. Internal controller authorization and key-custody independence are not inferred."
+      },
+      {
+        "chain": "base",
+        "address": "0x1be9b8c406120b2c2b8990d0522cd226a3d60e36",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact vault authorization source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Exact UUPS allocator implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xc5a845985bdf088f44e3ddf2bd1a79b08dbe9611?fields=all"
+          }
+        ],
+        "evidence": "Pinned isAllocator(address)=true. At Base block 52630636, the VaultV2AllocatorProxy EIP-1967 implementation is 0xc5a845985bdf088f44e3ddf2bd1a79b08dbe9611 and admin slot is zero. Exact implementation runtime matches verified UUPS VaultV2Allocator: allocation actions require OPERATOR_ROLE or DEFAULT_ADMIN_ROLE and upgrades require DEFAULT_ADMIN_ROLE. The current curator Safe has DEFAULT_ADMIN_ROLE=true. This helper can be upgraded but cannot replace the immutable vault core or mint native USDC. A full historical internal role-candidate census and maximal-execution certificate are not asserted."
+      },
+      {
+        "chain": "base",
+        "address": "0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC allocator",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact vault authorization source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Exact source-matched delegated BatchExecutor",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef1d6cf4f7bd10c1f2cd45864a7ce53888beef?fields=all"
+          }
+        ],
+        "evidence": "SetIsAllocator event-index census from creation through Base block 52630636 identifies this candidate; pinned isAllocator(address)=true. Runtime is an EIP-7702 delegation designator to 0xbeef1d6cf4f7bd10c1f2cd45864a7ce53888beef, not an empty-code EOA. Allocators allocate through approved adapters subject to caps, set maxRate and select the liquidity adapter/data. No unrestricted native USDC mint follows. Delegated execution authority and key-custody independence remain unresolved. At the same pin the delegated target runtime matches verified BatchExecutor: execute modes require the account itself as caller and ERC-1271 signatures recover the account key. The EOA may change its delegation; protected key custody is not established."
+      },
+      {
+        "chain": "base",
+        "address": "0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC allocator",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact vault authorization source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Exact source-matched delegated BatchExecutor",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeef1d6cf4f7bd10c1f2cd45864a7ce53888beef?fields=all"
+          }
+        ],
+        "evidence": "SetIsAllocator event-index census from creation through Base block 52630636 identifies this candidate; pinned isAllocator(address)=true. Runtime is an EIP-7702 delegation designator to 0xbeef1d6cf4f7bd10c1f2cd45864a7ce53888beef, not an empty-code EOA. Allocators allocate through approved adapters subject to caps, set maxRate and select the liquidity adapter/data. No unrestricted native USDC mint follows. Delegated execution authority and key-custody independence remain unresolved. At the same pin the delegated target runtime matches verified BatchExecutor: execute modes require the account itself as caller and ERC-1271 signatures recover the account key. The EOA may change its delegation; protected key custody is not established."
+      },
+      {
+        "chain": "base",
+        "address": "0xaed282b8ad9257bb1272e93ae63a32a53621e412",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Exact vault authorization source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all"
+          },
+          {
+            "label": "Exact immutable public allocator source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xaed282b8ad9257bb1272e93ae63a32a53621e412?fields=all"
+          }
+        ],
+        "evidence": "Pinned isAllocator(address)=true. Verified BluePublicAllocator exposes permissionless reallocate/allocateFromIdle subject to active adapter, pull-permission and its own absolute-cap configuration; underlying VaultV2 caps still bind. Vault allocators set those public-allocator parameters. This opens permissionless routing within configured limits, not arbitrary native USDC minting; no independent offchain signing quorum is invented."
+      },
+      {
+        "chain": "base",
+        "address": "0x9e0fddda790651e6a05cd2de69e624b94c04eaf5",
+        "deploymentRefs": [
+          "base:0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        ],
+        "label": "sirloinUSDC guardian and sentinel",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Verified supervisor guardian permissions",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x639bfa26472906ccd40513408284a8ad292bc5d6?fields=all"
+          }
+        ],
+        "evidence": "Pinned isSentinel(address)=true and supervisor getGuardians(vault) includes this address; eth_getCode is empty at Base block 52630636. Source-defined permissions reduce caps, deallocate and revoke pending changes, and provide supervisor guardian vetoes; no native stablecoin mint capability."
       }
     ],
     "review": {
@@ -204,11 +447,15 @@
         {
           "label": "Exact deployment creation transaction and timestamp",
           "url": "https://base.blockscout.com/tx/0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7"
+        },
+        {
+          "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
         }
       ],
-      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at base block 52095842. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption. Exact implementation creation transaction 0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7, block 45427904, timestamp 2026-05-01T14:19:15+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Current exact owner-to-Safe, curator-to-Safe and guardian census is recorded. Absence of independent financial assurance is retained in Backing research and is not an unresolved local share-issuance reconciliation question. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key-custody attestations are not published; onchain ownership and quorum do not resolve those facts. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes.",
-      "reviewer": "Sol refinement Refine11",
-      "reviewedAt": "2026-10-03",
+      "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), exact source-matched immutable vault and adapter, share/asset identities, owner/supervisor, all three Safe quorums and all event-indexed allocator/sentinel candidates were independently read. Curator Safe changed from 2-of-6 to 3-of-9; ultimate supervisor-owner remains 5-of-10, both with empty terminal modules and zero guard. Owner is also a sentinel. The allocator Safe is separately 1-of-6 with terminal empty modules and zero guard; the UUPS allocator helper resolves to the source-matched VaultV2Allocator implementation and the curator Safe is a default admin. Two EIP-7702 bot accounts delegate to the source-matched self-call-only BatchExecutor; the BluePublicAllocator has permissionless, configuration-bounded routing. Selector-specific (delay seconds, abdicated) census: {\"addAdapter(address)\":[259200,0],\"increaseAbsoluteCap(bytes,uint256)\":[259200,0],\"increaseRelativeCap(bytes,uint256)\":[259200,0],\"removeAdapter(address)\":[604800,0],\"setAdapterRegistry(address)\":[604800,1],\"setForceDeallocatePenalty(address,uint256)\":[0,0],\"setIsAllocator(address,bool)\":[0,0],\"setManagementFee(uint256)\":[0,0],\"setPerformanceFee(uint256)\":[0,0],\"setReceiveAssetsGate(address)\":[0,1],\"setReceiveSharesGate(address)\":[0,1],\"setSendAssetsGate(address)\":[604800,0],\"setSendSharesGate(address)\":[0,1]}. Current force-deallocation penalty is 0.001%. Allocation caps are strategy exposure caps, not authority to create native USDC. Prior setup allocator 0xc7cf133140a6af6c2379be2b353ed5b66511fe04 is disabled. Source-matched creation receipt at Base block 45427904, 2026-05-01T14:19:15Z, emits the exact vault Constructor event. Independent signer identity, controller execution scope and offchain custody remain unproven.",
+      "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -216,8 +463,8 @@
           "controlRef": "base:0x827e86072b06674a077f592a531dce4590adecdb",
           "question": "For sirloinUSDC curator (base:0x827e86072b06674a077f592a531dce4590adecdb): Safe signer independence and offchain key-custody attestations are not published; onchain ownership and quorum do not resolve those facts.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "sources": [
             {
               "label": "Exact current Safe controller",
@@ -233,8 +480,8 @@
           "controlRef": "base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
           "question": "For sirloinUSDC ultimate supervisor-owner Safe (base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd): Safe signer independence and offchain key-custody attestations are not published; onchain ownership and quorum do not resolve those facts.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "sources": [
             {
               "label": "Exact current Safe controller",
@@ -245,8 +492,117 @@
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
             }
           ]
+        },
+        {
+          "controlRef": "base:0x827e86072b06674a077f592a531dce4590adecdb",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x0000aeb716a0df7a9a1aad119b772644bc089da8",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x1be9b8c406120b2c2b8990d0522cd226a3d60e36",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0xaed282b8ad9257bb1272e93ae63a32a53621e412",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "base:0x9e0fddda790651e6a05cd2de69e624b94c04eaf5",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "sources": [
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            }
+          ]
         }
       ]
-    }
+    },
+    "headline": "Deposits back user shares; fee dilution and curator-controlled strategy parameters remain, while native USDC issuance stays upstream."
   }
 }

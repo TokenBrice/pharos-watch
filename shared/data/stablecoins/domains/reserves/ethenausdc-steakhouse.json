@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
       "name": "Ethena x Steakhouse USDC idle USDC",
-      "pct": 0.0,
+      "pct": 99.99999962097924,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "erc4626-single-asset:base:0xbeeff0be997cca5b1c13a7433c2004637975739e:deployed",
       "name": "Ethena x Steakhouse USDC deployed strategy positions",
-      "pct": 100.0,
+      "pct": 3.790207601143955e-07,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -40,8 +40,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
     "confidence": "verified",
     "sources": [
       {
@@ -53,8 +53,8 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
-        "label": "Pinned base block 52095852",
-        "url": "https://basescan.org/block/52095852"
+        "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+        "url": "https://basescan.org/block/52635700"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -73,9 +73,9 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
       }
     ],
-    "rationale": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.793112+00:00, totalAssets was 30921935.563958 USDC, totalSupply 30564796.655168615282 shares, idle USDC 0.000000; all 3 adapter market IDs and expectedSupplyAssets were enumerated. Idle and deployed percentages use the same-block totalAssets denominator. The itemized market balances plus idle USDC reconcile to totalAssets. These slices classify the direct USDC-denominated claim; they do not reclassify all borrower collateral as cash.",
-    "compositionBasis": "Pinned ERC-4626 accounting assets and idle USDC, complete sole-adapter market census",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Base block 52635700 (2026-10-15T10:39:07.000Z), totalAssets() was 131918.895379 USDC, totalSupply() 130220.390662052565814633 shares, convertToAssets(1e18) 1.013043 USDC and USDC.balanceOf(vault) 131918.894879. The sole adapter realAssets() and expectedSupplyAssets() were both 500 raw USDC units (0.000500 USDC), entirely in market 0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354, with USDe collateral 0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34, oracle 0xf4b17c79492d68775e22e8dd0a2bb22854a39a47 and LLTV 91.5%. Its Morpho position had 493863751 supply shares, zero borrow shares and zero posted collateral. Idle plus supplied assets reconcile exactly to totalAssets. The recorded percentages retain the nonzero residual instead of labelling the book wholly idle or wholly deployed; these slices classify direct USDC-denominated claims, not borrower-owned reserve assets.",
+    "compositionBasis": "Pinned vault idle USDC plus complete sole-adapter current market inventory, same-block exact asset reconciliation",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Direct idle and deployed categories are classified. Borrower collateral custody, legal priority and future allocations remain unresolved, and USDC parent reserve quality is not vault financial assurance.",
     "knownUnknownExposurePct": 0
@@ -97,9 +97,9 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 primary-source review (Rev_EthenausdcSteakhouse)",
     "confidence": "probable",
     "sources": [
       {
@@ -111,8 +111,8 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
       },
       {
-        "label": "Pinned base block 52095852",
-        "url": "https://basescan.org/block/52095852"
+        "label": "Base block 52635700, 2026-10-15T10:39:07.000Z; exact vault, market, gates, timelocks and Safe reads",
+        "url": "https://basescan.org/block/52635700"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -131,6 +131,6 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x8c47e3c9a99b819222e37b91635bb9fed29c5319"
       }
     ],
-    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel remains unknown rather than inheriting an all-onchain claim from older precedents."
+    "uncertainty": "The current direct inventory is almost entirely USDC held by the vault, plus a nonzero 0.000500 USDC Morpho lending claim through the sole adapter. The underlying USDC remains exposed to Circle reserve custody and freezing. Onchain possession does not establish legal segregation, borrower-collateral whole-book custody, private signer safeguards or statutory holder insolvency priority. The aggregate custodyModel remains unknown; lending and future reallocation remain permitted. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

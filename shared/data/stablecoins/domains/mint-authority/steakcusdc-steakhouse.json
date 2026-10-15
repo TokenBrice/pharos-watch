@@ -13,8 +13,8 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "steakcUSDC VaultV2 share issuer",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107704,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26196563,
       "sources": [
         {
           "label": "Exact Morpho Vault V2 deployment",
@@ -25,8 +25,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
         },
         {
-          "label": "Pinned ethereum block 26107704",
-          "url": "https://etherscan.io/block/26107704"
+          "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+          "url": "https://etherscan.io/block/26196563"
         },
         {
           "label": "Morpho complete current vault inventory",
@@ -56,8 +56,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -68,8 +68,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
           },
           {
-            "label": "Pinned ethereum block 26107704",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Morpho complete current vault inventory",
@@ -88,7 +88,7 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
           }
         ],
-        "evidence": "Steakhouse Confidential Prime USDC (steakcUSDC) at ethereum:0xbeef00a59b577423653a1526c7009bde103f542b is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x17bc9aa135cef1a5c3a91925e0f865d526318718 holds 3 enumerated Morpho market IDs. Performance fee 0% of gains, management fee 0%; fee-share accrual is not discretionary minting of underlying USDC. EIP-1967 implementation, admin and beacon slots were zero.",
+        "evidence": "Exact immutable VaultV2 creates shares only after transferring USDC and through code-enforced fee accrual. At Ethereum block 26196563 (2026-10-15T07:57:11Z), asset=USDC, decimals=18, performanceFee=0 and managementFee=0; implementation/admin/beacon slots are zero. Vault runtime UTF-8-hex SHA-256 is 80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3. The sole MorphoMarketV1AdapterV2 holds three lender positions, with no borrowing. This is bounded local share issuance, not privileged minting of underlying USDC.",
         "deploymentRefs": [
           "ethereum:0xbeef00a59b577423653a1526c7009bde103f542b"
         ]
@@ -101,8 +101,8 @@
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -113,8 +113,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
           },
           {
-            "label": "Pinned ethereum block 26107704",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Morpho complete current vault inventory",
@@ -137,48 +137,51 @@
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
           },
           {
-            "label": "ethereum pinned block 26110187, owner/curator, Guardian list and Safe getters",
-            "url": "https://etherscan.io/block/26110187"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Steakhouse Supervisor v2 exact action delays and Guardian veto",
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
           }
         ],
-        "evidence": "Pinned owner() at ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.796565+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 604800, \"increaseAbsoluteCap(bytes,uint256)\": 604800, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Supervisor owner 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; TIMELOCK 1209600 seconds applies to ownership/guardian removal, but curator replacement is immediate. Exact supervisor owner()=0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; getGuardians(vault)=0xf6fb282039fb4daae070902293d7934bc74df35e, 0x0000aeb716a0df7a9a1aad119b772644bc089da8. Guardians can revoke pending owner/curator actions, including their own removal, but cannot expand native minting. No depositor-voting assertion is made from the default documentation alone.",
+        "evidence": "Pinned at Ethereum block 26196563 (2026-10-15T07:57:11Z). addAdapter, increaseAbsoluteCap and increaseRelativeCap wait 604800 seconds; setPerformanceFee and setManagementFee have zero delay. Fee authority is local share economics, not USDC issuance. Share-send, share-receive and asset-receive gate setters are abdicated; the deposit sendAssetsGate setter remains live with 604800-second delay. The force-deallocation penalty is 10000000000000 WAD (0.001%), separate from ordinary withdraw/redeem. Owner is Supervisor v2, owned by 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd. Its fixed TIMELOCK=1209600 seconds applies to setOwner/removeGuardian; curator replacement is immediate. Guardians remain 0xf6fb282039fb4daae070902293d7934bc74df35e and 0x0000aeb716a0df7a9a1aad119b772644bc089da8. Guardian veto is separate from mint authority. isSentinel(0x4d7bd498bb24098ca281c05519629c605407f71d) is also true at block 26196563.",
         "deploymentRefs": [
           "ethereum:0xbeef00a59b577423653a1526c7009bde103f542b"
-        ]
+        ],
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
         "address": "0x827e86072b06674a077f592a531dce4590adecdb",
         "label": "steakcUSDC curator",
-        "role": "governor",
+        "role": "other",
         "authorityType": "safe",
         "safe": {
           "owners": [
-            "0xfc615395336aade67fd853a0157001a215ea1279",
-            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
-            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
-            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
-            "0xcc771952fde840e30c6802734e5ad20479c2959f",
-            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
-            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120"
+            "0x1710932cf538f38e7bcfc30aaae389b24dd004f6",
+            "0x44e6e4152a60d594c175bfed42e68ad62ffb5871",
+            "0xfb3e98b5d59505ceb259e9874b4553fd27fcce3c",
+            "0x7307bf07641a794fdbc2391d0983a7f1cfa36e4b",
+            "0x1936552b58be97ffd9c7c1dd28e675b7b022f16d",
+            "0xd824031d4a115590e6ff26e4e23fc346ab4cb2db",
+            "0x4c23e86a9d8506a43046c15be1b7fa0b6f3427de",
+            "0x5868aaa8d66023137365adae9634a9d8834d488d",
+            "0x1dc4354b39554251d4a2c4b571906e7ebae535a3"
           ],
-          "threshold": 2,
+          "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "observedBlock": 26110187,
-          "observedAt": "2026-10-03",
+          "observedBlock": 26196563,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -189,8 +192,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
           },
           {
-            "label": "Pinned ethereum block 26107704",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Morpho complete current vault inventory",
@@ -209,16 +212,17 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
           },
           {
-            "label": "ethereum pinned block 26110187, owner/curator, Guardian list and Safe getters",
-            "url": "https://etherscan.io/block/26110187"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           }
         ],
-        "evidence": "Pinned curator() at ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.796565+00:00. Parameter and allocation control does not confer discretionary underlying USDC minting. Adapter addition and cap-increase delays: {\"addAdapter(address)\": 604800, \"increaseAbsoluteCap(bytes,uint256)\": 604800, \"setPerformanceFee(uint256)\": 0, \"setManagementFee(uint256)\": 0}. Fee selectors have their own zero delays; no blanket all-action timelock or signer independence is claimed. Safe threshold 2/7, enabled-module count 0, guard zero. Current pinned getOwners/getThreshold and getModulesPaginated(0x1,100) resolve the 2/7 Safe; pagination ends at 0x1 with no modules, transaction guard and module-guard slots zero. Fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Human independence and operational key custody remain unproven.",
-        "threshold": 2,
-        "signerCount": 7,
+        "evidence": "Pinned at Ethereum block 26196563 (2026-10-15T07:57:11Z). addAdapter, increaseAbsoluteCap and increaseRelativeCap wait 604800 seconds; setPerformanceFee and setManagementFee have zero delay. Fee authority is local share economics, not USDC issuance. Share-send, share-receive and asset-receive gate setters are abdicated; the deposit sendAssetsGate setter remains live with 604800-second delay. The force-deallocation penalty is 10000000000000 WAD (0.001%), separate from ordinary withdraw/redeem. Complete current Safe roster is 3-of-9, replacing the previous 2-of-7 roster. Empty enabled-module pagination ends at sentinel 0x1; guard and module-guard storage are zero; fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Human independence and key custody remain undisclosed.",
+        "threshold": 3,
+        "signerCount": 9,
         "deploymentRefs": [
           "ethereum:0xbeef00a59b577423653a1526c7009bde103f542b"
-        ]
+        ],
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
@@ -244,30 +248,212 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "observedBlock": 26110187,
-          "observedAt": "2026-10-03",
+          "observedBlock": 26196563,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
         "directMintAbility": "parameter-only",
         "threshold": 5,
         "signerCount": 10,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "sources": [
           {
-            "label": "ethereum pinned block 26110187, owner/curator, Guardian list and Safe getters",
-            "url": "https://etherscan.io/block/26110187"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Steakhouse Supervisor v2 exact action delays and Guardian veto",
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
           }
         ],
-        "evidence": "Pinned supervisor owner() resolves to this 5-of-10 Safe, whose complete owner list is recorded. Empty enabled-module pagination reaches sentinel 0x1; guard/module-guard slots are zero, fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Material owner/Guardian-removal actions wait 14 days; curator replacement is immediate. Parameter and fee authority can affect share economics but does not mint underlying tokens. No independent-human or key-custody credit is asserted.",
+        "evidence": "Pinned at Ethereum block 26196563 (2026-10-15T07:57:11Z), Supervisor owner remains the recorded 5-of-10 Safe with the same complete owner roster. Empty module pagination ends at sentinel 0x1, transaction guard and module guard remain zero, and fallback handler remains 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Supervisor setOwner/removeGuardian wait 14 days; setCurator is immediate. This identifies signing topology, not independent humans or operational key custody.",
         "deploymentRefs": [
           "ethereum:0xbeef00a59b577423653a1526c7009bde103f542b"
-        ]
+        ],
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0000aeb716a0df7a9a1aad119b772644bc089da8",
+        "label": "steakcUSDC allocator and sentinel Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), isAllocator(0x0000aeb716a0df7a9a1aad119b772644bc089da8) is true on steakcUSDC 0xbeef00a59b577423653a1526c7009bde103f542b. getOwners/getThreshold return a 1-of-7 roster; getModulesPaginated(0x1,100) is empty with terminal cursor 0x1. isSentinel is also true, so it can revoke pending actions, decrease caps and deallocate. Allocators can allocate and deallocate within admitted adapters and caps and set liquidityAdapter/liquidityData and maxRate without delay; they cannot raise caps, appoint a curator, replace immutable share logic or create shares or USDC.",
+        "threshold": 1,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xfc615395336aade67fd853a0157001a215ea1279",
+            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120",
+            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
+            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
+            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
+            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
+            "0xcc771952fde840e30c6802734e5ad20479c2959f"
+          ],
+          "threshold": 1,
+          "guard": "0x0000000000000000000000000000000000000000",
+          "enabledModules": [],
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 26196563,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
+        "label": "steakcUSDC allocator EOA",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), isAllocator(0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a) is true on steakcUSDC 0xbeef00a59b577423653a1526c7009bde103f542b. The address has no code. Allocators can allocate and deallocate within admitted adapters and caps and set liquidityAdapter/liquidityData and maxRate without delay; they cannot raise caps, appoint a curator, replace immutable share logic or create shares or USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaad84c80b013c34d70e54fb343d0c2f309f635e7",
+        "label": "steakcUSDC VaultV2AllocatorProxy allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), isAllocator(0xaad84c80b013c34d70e54fb343d0c2f309f635e7) is true on steakcUSDC 0xbeef00a59b577423653a1526c7009bde103f542b. UUPS allocator proxy administered by the curator Safe (bbqusdc/steakeurcv sibling census). Allocators can allocate and deallocate within admitted adapters and caps and set liquidityAdapter/liquidityData and maxRate without delay; they cannot raise caps, appoint a curator, replace immutable share logic or create shares or USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
+        "label": "steakcUSDC EIP-7702 bot allocator",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), isAllocator(0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827) is true on steakcUSDC 0xbeef00a59b577423653a1526c7009bde103f542b. 23-byte EIP-7702 delegation code. Allocators can allocate and deallocate within admitted adapters and caps and set liquidityAdapter/liquidityData and maxRate without delay; they cannot raise caps, appoint a curator, replace immutable share logic or create shares or USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
+        "label": "steakcUSDC EIP-7702 bot allocator",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), isAllocator(0xbbf1ad10455eed600cd78a1702f7aca41c9abceb) is true on steakcUSDC 0xbeef00a59b577423653a1526c7009bde103f542b. 23-byte EIP-7702 delegation code. Allocators can allocate and deallocate within admitted adapters and caps and set liquidityAdapter/liquidityData and maxRate without delay; they cannot raise caps, appoint a curator, replace immutable share logic or create shares or USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x00b8e1509398ed692c3f326cbaf1694f9a881e27",
+        "label": "steakcUSDC BluePublicAllocator allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), isAllocator(0x00b8e1509398ed692c3f326cbaf1694f9a881e27) is true on steakcUSDC 0xbeef00a59b577423653a1526c7009bde103f542b. Public reallocation remains bounded by its own configuration and vault caps. Allocators can allocate and deallocate within admitted adapters and caps and set liquidityAdapter/liquidityData and maxRate without delay; they cannot raise caps, appoint a curator, replace immutable share logic or create shares or USDC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xbeef5f9f39e684cf39e0770fa57a43fa46a3beef",
+        "label": "steakcUSDC SteakhouseOperator allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
+          },
+          {
+            "label": "Morpho share accounting and loss realization",
+            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          }
+        ],
+        "evidence": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), isAllocator(0xbeef5f9f39e684cf39e0770fa57a43fa46a3beef) is true on steakcUSDC 0xbeef00a59b577423653a1526c7009bde103f542b. owner() is 0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827. Allocators can allocate and deallocate within admitted adapters and caps and set liquidityAdapter/liquidityData and maxRate without delay; they cannot raise caps, appoint a curator, replace immutable share logic or create shares or USDC."
       }
     ],
     "review": {
@@ -282,8 +468,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
         },
         {
-          "label": "Pinned ethereum block 26107704",
-          "url": "https://etherscan.io/block/26107704"
+          "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+          "url": "https://etherscan.io/block/26196563"
         },
         {
           "label": "Morpho complete current vault inventory",
@@ -302,8 +488,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
         },
         {
-          "label": "ethereum pinned block 26110187, owner/curator, Guardian list and Safe getters",
-          "url": "https://etherscan.io/block/26110187"
+          "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+          "url": "https://etherscan.io/block/26196563"
         },
         {
           "label": "Steakhouse Supervisor v2 exact action delays and Guardian veto",
@@ -318,21 +504,21 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf6fb282039fb4daae070902293d7934bc74df35e"
         }
       ],
-      "evidence": "Steakhouse Confidential Prime USDC (steakcUSDC) at ethereum:0xbeef00a59b577423653a1526c7009bde103f542b is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x17bc9aa135cef1a5c3a91925e0f865d526318718 holds 3 enumerated Morpho market IDs. At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.796565+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was the whitelist 0x47c591a3bc346913d0b6bdd96fb50e34efa268aa with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim. Local fee/curator authority is not USDC issuer supervision or reserve-liability reconciliation. Refinement pin 26110187: supervisor getGuardians(vault) returned 0xf6fb282039fb4daae070902293d7934bc74df35e, 0x0000aeb716a0df7a9a1aad119b772644bc089da8. Supervisor TIMELOCK=1209600 seconds applies to setOwner/removeGuardian; setCurator remains immediate. Guardian veto is verified. Exact Guardian 0xf6fb282039fb4daae070902293d7934bc74df35e is an ERC1967Proxy whose current EIP-1967 implementation is the verified Aragon DAO 0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29. Its complete voting-plugin/permission census and depositor-weighting configuration remain unverified; the documentation default is not treated as exact-vault proof. Morpho creationTimestamp=1781867411 and creationBlockNumber=25351236 identify this exact vault, not the issuer founding date. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: Human independence and operational key-custody procedures behind the enumerated signing addresses are not publicly established. No exact-vault independent financial assurance or enforceable statutory holder priority has been published.",
-      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Current same-block source and RPC census establishes immutable USDC-funded share issuance, unchanged owner/curator addresses, current 3-of-9 curator and 5-of-10 Supervisor-owner Safe rosters, and exact action-specific delays. Pinned at Ethereum block 26196563 (2026-10-15T07:57:11Z). addAdapter, increaseAbsoluteCap and increaseRelativeCap wait 604800 seconds; setPerformanceFee and setManagementFee have zero delay. Fee authority is local share economics, not USDC issuance. Share-send, share-receive and asset-receive gate setters are abdicated; the deposit sendAssetsGate setter remains live with 604800-second delay. The force-deallocation penalty is 10000000000000 WAD (0.001%), separate from ordinary withdraw/redeem. Complete SetIsAllocator/SetIsSentinel history from creation block 25351236 through block 26196563 was replayed and every candidate reconciled against current getters. Active allocators: 0x0000aeb716a0df7a9a1aad119b772644bc089da8, 0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a, 0xaad84c80b013c34d70e54fb343d0c2f309f635e7, 0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827, 0xbbf1ad10455eed600cd78a1702f7aca41c9abceb, 0x00b8e1509398ed692c3f326cbaf1694f9a881e27, 0xbeef5f9f39e684cf39e0770fa57a43fa46a3beef. Active sentinels: 0x4d7bd498bb24098ca281c05519629c605407f71d, 0x0000aeb716a0df7a9a1aad119b772644bc089da8. Revoked allocator 0x25fc16504b809ff3c730000544b8583011ee7545 is false. Allocators can select liquidityAdapter/liquidityData and maxRate and reallocate within caps; sentinels can revoke and reduce caps, not issue USDC. Guardian proxy implementation remains verified Aragon DAO 0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29; exact voting-plugin permissions and depositor weighting remain unverified. No exact-vault statutory holder priority or independent financial assurance is established. Current allocation-cap census (raw USDC absolute amounts; relative WAD; allocation is stored accounting, not necessarily interest-accrued): {\"0xd73ce5700abe302a0830f83f0d6d7c276f7914c31e3376b1c81c78ab688f1f68\":{\"absoluteCap(bytes32)\":\"1000000000000000000000\",\"relativeCap(bytes32)\":\"1000000000000000000\",\"allocation(bytes32)\":\"35320180797549\"},\"0x13ff47043c4f28ff9eb52ff2a760b64b77707c842acabb83558f6415c9cb4797\":{\"absoluteCap(bytes32)\":\"500000000000000\",\"relativeCap(bytes32)\":\"1000000000000000000\",\"allocation(bytes32)\":\"25092856276781\"},\"0x71109d136235b43a57b1b4146bdddbdd1f958579ad3a562d87c03da118c9f3bd\":{\"absoluteCap(bytes32)\":\"500000000000000\",\"relativeCap(bytes32)\":\"1000000000000000000\",\"allocation(bytes32)\":\"25092856276781\"},\"0x7fec14a26d24d99916f8800202b21d034d3b543349fc0e6632a4bd78a2891a20\":{\"absoluteCap(bytes32)\":\"500000000000000\",\"relativeCap(bytes32)\":\"1000000000000000000\",\"allocation(bytes32)\":\"9931025048414\"},\"0xfc3a1d248c2407a65a8e1a46ccb548c691941d960c19e02bd31a0425b18904af\":{\"absoluteCap(bytes32)\":\"500000000000000\",\"relativeCap(bytes32)\":\"1000000000000000000\",\"allocation(bytes32)\":\"9931025048414\"},\"0xf0ddb417e582871da18d79b79974e52d1762a5d092c92b9e44d2c9932bb0c73a\":{\"absoluteCap(bytes32)\":\"500000000000000\",\"relativeCap(bytes32)\":\"1000000000000000000\",\"allocation(bytes32)\":\"296299472354\"},\"0xc747609c07378dfbe4ab86d5bf7ed379da36ce3f1b5c7c8b713888a479afdf89\":{\"absoluteCap(bytes32)\":\"500000000000000\",\"relativeCap(bytes32)\":\"1000000000000000000\",\"allocation(bytes32)\":\"296299472354\"}}.",
+      "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
+      "reviewedAt": "2026-10-15",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "steakcUSDC curator",
-          "question": "At Ethereum block 26110187 the on-chain signing roster and 2-of-7 threshold for 0x827e86072b06674a077f592a531dce4590adecdb are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
+          "question": "At Ethereum block 26196563 the complete onchain roster and 3-of-9 threshold for 0x827e86072b06674a077f592a531dce4590adecdb are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
           "sources": [
             {
-              "label": "Enumerated exact Safe roster and threshold at Ethereum block 26110187",
-              "url": "https://etherscan.io/block/26110187"
+              "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+              "url": "https://etherscan.io/block/26196563"
             },
             {
               "label": "Steakhouse Supervisor v2 authorization and Guardian roles",
@@ -342,22 +528,36 @@
         },
         {
           "controlRef": "steakcUSDC supervisor owner Safe",
-          "question": "At Ethereum block 26110187 the on-chain signing roster and 5-of-10 threshold for 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
+          "question": "At Ethereum block 26196563 the on-chain signing roster and 5-of-10 threshold for 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
           "sources": [
             {
-              "label": "Enumerated exact Safe roster and threshold at Ethereum block 26110187",
-              "url": "https://etherscan.io/block/26110187"
+              "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+              "url": "https://etherscan.io/block/26196563"
             },
             {
               "label": "Steakhouse Supervisor v2 authorization and Guardian roles",
               "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
             }
           ]
+        },
+        {
+          "controlRef": "steakcUSDC allocator and sentinel Safe",
+          "question": "At Ethereum block 26196563 the 1-of-7 roster of 0x0000aeb716a0df7a9a1aad119b772644bc089da8 is enumerated. What establishes human signer independence, operational key custody and signing policy for this single-signature allocator and sentinel Safe?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Fam_SteakhouseClearstarMorphoV",
+          "sources": [
+            {
+              "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+              "url": "https://etherscan.io/block/26196563"
+            }
+          ]
         }
       ]
-    }
+    },
+    "headline": "USDC-backed shares with inherited Circle issuance risk and local curator, allocation and fee controls."
   }
 }

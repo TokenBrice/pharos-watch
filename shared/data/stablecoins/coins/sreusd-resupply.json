@@ -14,14 +14,14 @@
   "variantKind": "savings-passthrough",
   "pegReferenceId": "reusd-resupply",
   "collateral": "REUSD held in the Ethereum sreUSD ERC-4626 savings vault; upstream backing and issuer risk remain with reusd-resupply",
-  "pegMechanism": "Deposit REUSD to mint sreUSD shares; weekly protocol revenue is streamed through seven-day reward cycles and increases the REUSD exchange rate. Native withdraw/redeem burns shares for REUSD without a local cooldown or penalty fee. Conversion into other stablecoins remains a separate parent REUSD route, including its communal redemption fee and stress risks.",
+  "pegMechanism": "Deposit REUSD to mint sreUSD shares; protocol revenue streams through seven-day reward cycles, subject to a governance-set distribution cap, and increases the REUSD exchange rate. Native withdraw/redeem burns shares for REUSD without a local cooldown or penalty fee. At reward-cycle rollover, these operations may call the registry-selected fee distributor before completing. Conversion into other stablecoins remains a separate parent REUSD route, including its communal redemption fee and stress risks.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The exact Ethereum deployment 0x557ab1e003951a73c12d16f0fea8490e39c33c35 is a current ERC-4626 operational share claim on REUSD. At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. Local vault conservation, custody and recovery differ from the parent's CDP lending collateral, so protocol-position is an intentional local archetype override; upstream economic risks remain inherited through the 100% wrapper dependency.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
+    "rationale": "The exact Ethereum deployment 0x557ab1e003951a73c12d16f0fea8490e39c33c35 is an immutable ERC-4626 operational share claim on REUSD. At Ethereum block 26197384 (2026-10-15T10:41:59Z; hash 0xfe4eaf54384aae47b1a503ea6fb142c136e5297bc6cf4a8f59ded1f0fafe36bb), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; shares and underlying use 18 decimals. totalSupply() is 27165447.700558279620805063 shares, totalAssets() is 28125190.204358710744242153 REUSD, and REUSD.balanceOf(vault) is 28133386.982657864034636304 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.035329530158293962 REUSD. Runtime code matches the verified nonproxy source. Local custody, reward accounting and recovery differ from the parent's CDP lending collateral, justifying the protocol-position override. The 100% parent dependency retains upstream economic risks; direct token balances do not prove whole-book custody or legal recovery priority.",
     "sources": [
       {
         "label": "Resupply savings documentation",
@@ -36,8 +36,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
       },
       {
-        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; pinned identity, accounting, custody and runtime correspondence via https://ethereum-rpc.publicnode.com",
+        "url": "https://etherscan.io/block/26197384"
       }
     ]
   },
@@ -60,6 +60,30 @@
     {
       "label": "Deployment roster",
       "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
+    },
+    {
+      "label": "Savings app",
+      "url": "https://resupply.finance/savings-reusd/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
+    },
+    {
+      "label": "Audits (parent protocol scope)",
+      "url": "https://docs.resupply.finance/faq/audits.md"
+    },
+    {
+      "label": "Governance and admin permissions",
+      "url": "https://docs.resupply.finance/faq/multisig-and-admin-permissions.md"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/resupplyfi/resupply"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/Resupplyfi"
     }
   ],
   "contracts": [
@@ -70,7 +94,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "onchain",
+  "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Resupply savings (sreUSD)",

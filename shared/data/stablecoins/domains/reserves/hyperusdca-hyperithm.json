@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:monad:0x754704bc059f8c67012fed69bc8a327a5aafb603",
       "name": "Hyperithm USDC Apex idle USDC",
-      "pct": 8.354013857323368,
+      "pct": 5.67569383548116,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "erc4626-single-asset:monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371:deployed",
       "name": "Hyperithm USDC Apex deployed strategy positions",
-      "pct": 91.64598614267663,
+      "pct": 94.32430616451884,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -40,8 +40,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_HyperusdcaHyperithm)",
     "confidence": "verified",
     "sources": [
       {
@@ -75,11 +75,15 @@
       {
         "label": "Hyperithm issuer-book Accountable signed attestation, exact vault mapping unresolved",
         "url": "https://accountable.hyperithm.com/"
+      },
+      {
+        "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+        "url": "https://monadscan.com/block/113592449"
       }
     ],
-    "rationale": "At monad block 110016412 (0x68eb79c), observed 2026-10-02T22:44:15.638184+00:00, totalAssets was 50691589.059679 USDC, totalSupply 48736516.967017028579124844 shares, idle USDC 4234782.374543; all 7 adapter market IDs and expectedSupplyAssets were enumerated. Idle and deployed percentages use the same-block totalAssets denominator. The itemized market balances plus idle USDC reconcile to totalAssets. These slices classify the direct USDC-denominated claim; they do not reclassify all borrower collateral as cash. Independent archive totalSupply() reread on 2026-10-03 returned raw 48736516967017028579124844 at the same block, correcting the transcription. The Accountable dashboard publishes Hyperithm-book collateralization and signed merkle/Nitro attestations, but its payload does not identify this vault address; no exact-vault financial assurance is inferred.",
-    "compositionBasis": "Pinned ERC-4626 accounting assets and idle USDC, complete sole-adapter market census",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: totalAssets=51602639731900 raw USDC, totalSupply=49509318045258374224287906 raw shares, idle USDC=2928807842209, sole-adapter realAssets=48673831889691. All nine marketIds, expectedSupplyAssets and Morpho positions were read at the same pin; their sum equals realAssets and idle plus realAssets equals totalAssets with zero residual. All adapter positions have zero borrow shares and posted collateral; this does not establish borrower-level financing limits. The two curated slices distinguish immediate cash from lending claims, with dated weights of 5.67569383548116% idle and 94.32430616451884% deployed. The live adapter measures and publishes these categories separately under the corresponding curated sourceKeys; reviewed classification enrichment remains subject to the consumer's unique-match and freshness gates. Do not copy the idle slice's stablecoin/immediate-liquidity facts onto deployed positions or add an overlapping 100% aggregate slice to this composition. Live source-native dependency facts and the separately observed lender book retain their own evidence and admission requirements. Borrower collateral custody, legal priority and future allocations remain unresolved. Hyperithm Accountable book-level evidence is not mapped to this vault and provides no exact-vault financial assurance.",
+    "compositionBasis": "Pinned idle USDC and complete sole-adapter lender census; disjoint measured idle/deployed categories match the live adapter sourceKeys, subject to unique-match and freshness gates",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Direct idle and deployed categories are classified. Borrower collateral custody, legal priority and future allocations remain unresolved, and USDC parent reserve quality is not vault financial assurance.",
     "knownUnknownExposurePct": 0
@@ -101,9 +105,9 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_HyperusdcaHyperithm)",
     "confidence": "probable",
     "sources": [
       {
@@ -133,8 +137,12 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
+      },
+      {
+        "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+        "url": "https://monadscan.com/block/113592449"
       }
     ],
-    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel remains unknown rather than inheriting an all-onchain claim from older precedents."
+    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel remains unknown rather than inheriting an all-onchain claim from older precedents. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

@@ -24,9 +24,9 @@
         "url": "https://etherscan.io/address/0xc06036793272219179f846ef6bfc3b16e820df0b#code"
       }
     ],
-    "evidence": "At Ethereum block 26107703 the exact verified CMTAT_EVCC supports role-protected freeze under ENFORCER_ROLE and forceTransfer under TA_ROLE. ruleEngine() remains 0xe7884738e60967e5d35882a4bceb2d6bc843b61e; paused() is false. These are direct holder controls, not an inference from mint authority.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197389 (2026-10-15T10:42:59Z), the verified standalone CMTAT_EVCC supports role-protected freeze under ENFORCER_ROLE and forceTransfer under TA_ROLE. Default admin 0xdac87349d8afd2989515deadb3692bb8edf749c4 has both roles through AuthorizationModule inheritance. The separate minter/burner has neither role. ruleEngine() is 0xe7884738e60967e5d35882a4bceb2d6bc843b61e and paused() is false. Pinned RPC: https://api-ethereum-mainnet.n.dwellir.com. These are direct holder controls, not an inference from mint authority.",
+    "reviewer": "Rev_UmintUbs batch64 pinned holder-control review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",

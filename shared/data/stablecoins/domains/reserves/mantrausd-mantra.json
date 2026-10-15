@@ -19,12 +19,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 Rev_MantrausdMantra primary-source review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Mantra USD product documentation (accessed 2026-10-02)",
+        "label": "Mantra USD product documentation (accessed 2026-10-15)",
         "url": "https://mantrausd.com/"
       },
       {
@@ -32,7 +32,7 @@
         "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
       },
       {
-        "label": "Pinned mantra RPC at block 18531313",
+        "label": "Pinned mantra RPC at block 18858665",
         "url": "https://evm.mantrachain.io"
       },
       {
@@ -44,9 +44,9 @@
         "url": "https://docs.m0.org/build/accessing-liquidity"
       }
     ],
-    "rationale": "At mantra block 18531313, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 439,646.447844 M against 434,703.845695 mantraUSD supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
-    "compositionBasis": "Verified immediate parent-token custody and liability conservation at pinned block 18531313",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At MANTRA block 18858665, hash 0x3b827926013ded60b6eb0f1702689a63b7668ae0bb0511887dffa1cbcb4a67be, timestamp 2026-10-15T10:35:30Z, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 440,148.155415 M against 434,703.845695 mantraUSD supply. The verified implementation transfers M before minting and burns the matching nominal child amount on unwrap. The unprivileged sample canSwapViaPath(0x1,child,wM) returned true and child-to-M returned false; SwapFacility paused() was false. These calls establish conditional technical path eligibility, not a sent transaction, measured full-position capacity or a cash-redemption right.",
+    "compositionBasis": "Verified immediate parent-token custody and liability conservation at pinned block 18858665",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "The immediate parent-token custody is identified; whole-book upstream legal segregation, custodian allocation, independent financial reconciliation and holder seniority are not established by this local balance observation.",
     "knownUnknownExposurePct": 0
@@ -62,12 +62,12 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 Rev_MantrausdMantra primary-source review",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Mantra USD product documentation (accessed 2026-10-02)",
+        "label": "Mantra USD product documentation (accessed 2026-10-15)",
         "url": "https://mantrausd.com/"
       },
       {
@@ -75,7 +75,7 @@
         "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
       },
       {
-        "label": "Pinned mantra RPC at block 18531313",
+        "label": "Pinned mantra RPC at block 18858665",
         "url": "https://evm.mantrachain.io"
       },
       {

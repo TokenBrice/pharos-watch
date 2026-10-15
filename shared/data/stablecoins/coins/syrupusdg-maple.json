@@ -1,7 +1,6 @@
 {
   "id": "syrupusdg-maple",
-  "launchDate": "2026-05-25",
-  "implementationLaunchDate": "2026-05-25",
+  "launchDate": "2026-07-01",
   "name": "Maple syrupUSDG",
   "symbol": "syrupUSDG",
   "oneLiner": "syrupUSDG is Maple's USDG-denominated lending share; credit and strategy returns accrue to NAV, with exits served through a liquidity-dependent FIFO queue.",
@@ -20,9 +19,9 @@
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The exact Ethereum MaplePool 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a is a USDG-denominated pooled-credit share, not a one-to-one USDG reserve claim. Maple names Maple International Operations SPC acting for Maple USDG Segregated Portfolio 1 and limits lender recourse to that ring-fenced portfolio. Institutional loans and supporting futures-basis/DeFi strategies earn yield and share pro-rata impairment/default losses. At block 26107703, asset() was USDG, decimals() was 6, totalSupply() was 188334976.708895 shares and totalAssets() was 190837163.740225 USDG. The rwa-credit-fund override mirrors syrupUSDC's credit claim rather than the fiat-cash parent.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SyrupusdgMaple",
+    "rationale": "The exact Ethereum MaplePool 0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a is a USDG-denominated pooled-credit share, not a one-to-one USDG reserve claim. Maple names Maple International Operations SPC acting for Maple USDG Segregated Portfolio 1 and limits lender recourse to that ring-fenced portfolio. Institutional loans and supporting futures-basis/DeFi strategies earn yield and share pro-rata impairment/default losses. At Ethereum block 26197300 (2026-10-15T10:25:11Z), asset() was USDG, decimals() was 6, totalSupply() was 216014803.093997 shares and totalAssets() was 219249755.996068 USDG. The pool had one LoanManager with 213043086.307244 USDG in accounting assets and 6206669.688824 idle USDG; those observations do not reconcile borrower collateral or custody. The rwa-credit-fund override mirrors syrupUSDC's credit claim rather than the fiat-cash parent. Maple's public product launch was July 1, 2026; the May 25 contract deployment predates that launch and does not establish an earlier product track record.",
     "sources": [
       {
         "label": "Maple syrupUSDG legal claim and risk disclosures",
@@ -45,8 +44,12 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z: native share identity, pool accounting and manager strategy census",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Maple syrupUSDG public launch, July 1, 2026",
+        "url": "https://maple.finance/insights/syrupusdg"
       }
     ]
   },
@@ -62,8 +65,40 @@
       "url": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
     },
     {
-      "label": "Exact syrupUSDG pool implementation launch, block 25173105 (2026-05-25T15:06:35Z); reusable manager code predates this product",
+      "label": "Ethereum contract deployment, May 25, 2026; predates the July 1 product launch",
       "url": "https://etherscan.io/tx/0x222aa17f8d67a806a5118feb5dc43233f05326f4fd8f423e072158ef7d25b70b"
+    },
+    {
+      "label": "Product launch",
+      "url": "https://maple.finance/insights/syrupusdg"
+    },
+    {
+      "label": "Terms",
+      "url": "https://docs.maple.finance/legal/interface-terms-of-use-syrupusdc-and-syrupusdt.md"
+    },
+    {
+      "label": "Product disclosures",
+      "url": "https://docs.maple.finance/legal/syrupusdg-product-disclosures-and-disclaimers.md"
+    },
+    {
+      "label": "Audits",
+      "url": "https://docs.maple.finance/technical-resources/security"
+    },
+    {
+      "label": "Crosschain deployments",
+      "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/token/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/maplefinance"
+    },
+    {
+      "label": "Issuer company domicile (same SPC identified in April 2025 terms)",
+      "url": "https://docs.maple.finance/legal/syrupusdc-rewards-prize-draw-terms-and-conditions.md"
     }
   ],
   "contracts": [
@@ -93,6 +128,9 @@
       "decimals": 6
     }
   ],
+  "jurisdiction": {
+    "country": "Cayman Islands"
+  },
   "custodyModel": "unknown",
   "governanceQuality": "wrapper",
   "yieldConfig": {
@@ -100,8 +138,8 @@
     "yieldType": "nav-appreciation"
   },
   "dependencyReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SyrupusdgMaple",
     "confidence": "verified",
     "sources": [
       {
@@ -113,8 +151,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x87b65c4aaffa76881f9e96f3e7ed945ddfc3cd7a"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z: asset() USDG and native share identity",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
     "rationale": "USDG is the verified pool denomination and deposit/redemption asset, not an asserted 100% cash reserve allocation. The tracked parent relationship covers the wrapper exposure; the portfolio remains a separate pooled claim.",
@@ -127,6 +165,13 @@
       }
     ]
   },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Credit losses and unbounded withdrawal queue",
+      "message": "syrupUSDG is a share of Maple's loan and strategy portfolio. Principal can decline through defaults or impairments, including while a withdrawal is pending. FIFO withdrawals depend on available liquidity and have no guaranteed maximum wait."
+    }
+  ],
   "collateralQuality": "rwa",
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
@@ -152,7 +197,7 @@
       },
       "pooledClaim": {
         "basis": "Reviewed whole-token pooled claim on Maple loans and strategies; USDG denomination and pool cash are not a reconciled underlying-asset allocation",
-        "reviewedAt": "2026-10-02",
+        "reviewedAt": "2026-10-15",
         "sourceUrl": "https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks.md"
       }
     }

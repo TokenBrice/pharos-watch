@@ -1,7 +1,7 @@
 {
   "liveReservesConfig": {
     "adapter": "liquity-native-active-pool",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "usdfc-secured-finance",
     "display": { "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md", "label": "USDFC active FIL collateral" },
@@ -21,7 +21,7 @@
       "tcrSelector": "0xb82f263d",
       "mcrSelector": "0x794e5724",
       "borrowerOperationsAddress": "0x5ab87c2398454125dd424425e39c8909bbe16022",
-      "redemptionRateSelector": "0x1f68f20a",
+      "redemptionRateSelector": "0xc52861f2",
       "redemptionRateDecimals": 18,
       "sourceUrls": ["https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md", "https://docs.secured.finance/usdfc-stablecoin/core-mechanics/redemption.md"],
       "rpcUrl": "https://api.node.glif.io/rpc/v1"
@@ -40,9 +40,9 @@
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine03",
-    "rationale": "The exact Filecoin token is a native FIL-collateralized Trove liability with borrower issuance, liquidations, Stability Pool and protocol redemptions, supporting CDP classification despite mutable token control. Proxy creation at block 4807452 dates native launch to 2025-03-21; current DebtToken implementation creation at block 5282290 dates the reviewed code to 2025-09-02, not issuer founding. Partial Blockscout source verification does not establish full runtime equivalence.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfcSecuredFinance",
+    "rationale": "The Filecoin token is a native FIL-collateralized Trove liability with borrower issuance, liquidations, Stability Pool and protocol redemptions, supporting CDP classification despite mutable token control. Proxy creation at block 4807452 dates native launch to 2025-03-21; current DebtToken implementation creation at block 5282290 dates the reviewed code to 2025-09-02. Filecoin block 6458485 (2026-10-15T10:42:30Z) confirms the same implementation and control graph. Sourcify matches the implementation's executable runtime without an exact metadata match; this does not verify every other core implementation.",
     "sources": [
       {
         "label": "USDFC native FIL Trove mechanism and security inventory",
@@ -55,6 +55,10 @@
       {
         "label": "Current DebtToken implementation creation",
         "url": "https://filecoin.blockscout.com/tx/0x1901268ce7b039f342030e2a8edc6f9924ffdd7f47787800c5c0a736deb1d86d"
+      },
+      {
+        "label": "Sourcify executable DebtToken runtime match",
+        "url": "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation,sources,proxyResolution"
       }
     ]
   },
@@ -99,6 +103,18 @@
     {
       "label": "Published contract upgrade history",
       "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts/contract-upgrade-history.md"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://filecoin.blockscout.com/address/0x80b98d3aa09ffff255c3ba4a241111ff1262f045"
+    },
+    {
+      "label": "Risk Disclaimer",
+      "url": "https://docs.secured.finance/resources/legal/risk-disclaimer.md"
+    },
+    {
+      "label": "Terms of Use",
+      "url": "https://docs.secured.finance/resources/legal/terms-of-use.md"
     }
   ],
   "contracts": [
@@ -108,7 +124,7 @@
       "decimals": 18
     }
   ],
-  "collateralQuality": "native",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
   "infrastructures": [

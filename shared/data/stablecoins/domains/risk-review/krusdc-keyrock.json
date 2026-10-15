@@ -20,7 +20,7 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "arc fixed-block RPC observation 23952285",
+        "label": "Arc block 26080279, 2026-10-15T10:44:09Z; all gates and abdication selectors",
         "url": "https://rpc.mainnet.arc.io"
       },
       {
@@ -28,15 +28,15 @@
         "url": "https://explorer.arc.io/api/v2/smart-contracts/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
       }
     ],
-    "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; exact-deployment compiler/source completeness is unestablished on Arc. On 2026-10-03 Arc explorer returned partial exact VaultV2 source whose deployed bytecode equals pinned RPC; full compiler verification remains unproven.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Arc block 26080279 (hash 0xd45fba23210a5662823d06f1e292ca0e0798748413f29663b523b30568b955cf; 2026-10-15T10:44:09Z), all four gate addresses are zero. setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate are permanently abdicated; setAdapterRegistry is also abdicated. setSendAssetsGate remains mutable with zero delay and controls deposits/mints, not direct withdraw/redeem. In-kind exit requires funding the underlying market before force-deallocation; the vault's deposit gate is not that market-supply gate. Underlying USDC and cirBTC issuer freeze/pause powers remain inherited collateral/settlement exposures, not direct share blacklist authority. The exact vault runtime hex-string SHA-256 remains 785aabab2906e799636c4b424bb35c04fd2d74bf35b5dff761b492b3f0afb274, preserving the prior functional source correspondence.",
+    "reviewer": "Sol batch64 review (Rev_KrusdcKeyrock)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Keyrock Prime USDC has one reviewed native vault-share deployment; no second share deployment or bridge representation is established. Underlying collateral bridge/custody exposure is separate.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_KrusdcKeyrock)",
     "confidence": "probable",
     "sources": [
       {
@@ -56,7 +56,7 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "arc fixed-block RPC observation 23952285",
+        "label": "Arc block 26080279, 2026-10-15T10:44:09Z; native share deployment",
         "url": "https://rpc.mainnet.arc.io"
       }
     ],
@@ -74,8 +74,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Exact native ERC-4626 asset-backed share deployment; parent USDC and borrower collateral bridge/custody exposures are separate. No share bridge representation is established by this inventory.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 24012549,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26080279,
         "sources": [
           {
             "label": "Keyrock Prime USDC exact vault identity and accounting",
@@ -94,7 +94,7 @@
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
           },
           {
-            "label": "arc fixed-block RPC observation 23952285",
+            "label": "Arc block 26080279, 2026-10-15T10:44:09Z; native share deployment",
             "url": "https://rpc.mainnet.arc.io"
           },
           {
@@ -106,8 +106,8 @@
     ]
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "Exact Arc borrower pricing uses one BTC/USD EACAggregatorProxy through MorphoChainlinkOracleV2, with no quote feed or vault conversion. Matched deployed runtimes prove the adapter ignores round timestamps and supplies no independent fallback. At block 24129915 the feed's updatedAt was 70884 seconds before the block. Both feed proxy and DualAggregator have owner 0x73877fe34aa2b162430cef680fea268b8ec1c4f1; owner can replace/configure pricing. Internal vault NAV accounting does not remove this borrower-price dependence.",
+    "tier": "standard-external",
+    "summary": "The sole cirBTC/USDC market uses one BTC/USD feed proxy through MorphoChainlinkOracleV2, with no quote feed, vault conversion or independent adapter fallback. Its source ignores round timestamps. At Arc block 26080279 (2026-10-15T10:44:09Z), updatedAt=1792049925 was 11124 seconds before the block, replacing the earlier 70884-second snapshot. Feed proxy and DualAggregator owner remain 0x73877fe34aa2b162430cef680fea268b8ec1c4f1; that authority can replace/configure pricing. Internal vault NAV does not remove borrower-price or cirBTC reserve/custody risk.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -150,8 +150,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R06 exact Arc oracle runtime and fixed-block review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_KrusdcKeyrock)",
     "confidence": "verified",
     "sources": [
       {
@@ -195,7 +195,7 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "arc fixed-block RPC observation 23952285",
+        "label": "Arc block 26080279, 2026-10-15T10:44:09Z; complete current market/feed topology and round data",
         "url": "https://rpc.mainnet.arc.io"
       }
     ],
@@ -203,8 +203,8 @@
       {
         "id": "market-c2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
         "label": "cirBTC / USDC",
-        "tier": "single-source-or-laggy",
-        "summary": "At Arc block 24129915 (0xd755d2e123d1f69118ad86c43f110c35afb1fc518a73c4a909d409fe26c00702), exact MorphoChainlinkOracleV2, feed proxy and current DualAggregator runtimes equal explorer source-bound deployed bytecode. The immutable borrower adapter has only BASE_FEED_1=0x7777547914e03bcbb04ae034942765a0dbb26ae3; other feeds/vaults are zero. ChainlinkDataFeedLib reads answer and ignores updatedAt, with no adapter fallback or staleness rejection. Proxy latestRoundData updatedAt=1791000284 versus block timestamp=1791071168. The proxy and aggregator owner is 0x73877fe34aa2b162430cef680fea268b8ec1c4f1. The aggregator's secondary-report logic is not an independent valuation feed; no redundant-with-failover protection is asserted.",
+        "tier": "standard-external",
+        "summary": "At Arc block 26080279 (hash 0xd45fba23210a5662823d06f1e292ca0e0798748413f29663b523b30568b955cf; 2026-10-15T10:44:09Z), the market oracle remains 0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab. BASE_FEED_1=0x7777547914e03bcbb04ae034942765a0dbb26ae3; BASE_FEED_2, QUOTE_FEED_1, QUOTE_FEED_2, BASE_VAULT and QUOTE_VAULT are zero. latestRoundData returns round 36893488147419104710, answer=8113365500000 at 8 decimals, updatedAt=1792049925; block timestamp=1792061049, age=11124 seconds. price()=811336550000000000000000000000000000000. The proxy's aggregator remains 0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362; proxy and aggregator owner both remain 0x73877fe34aa2b162430cef680fea268b8ec1c4f1. Source-bound ChainlinkDataFeedLib ignores updatedAt and has no independent fallback. Secondary reports inside the same owner-controlled aggregator do not prove independent valuation. No cirBTC reserve-adequacy or depeg feed is present in this immutable adapter topology.",
         "collateralAssets": [
           "cirBTC"
         ],
@@ -213,19 +213,20 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
+            "provider": "MorphoChainlinkOracleV2 with one BTC/USD base feed",
             "path": "Collateral/USDC price() for market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
             "address": "0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab",
             "chain": "arc",
-            "observedAt": "2026-10-03",
-            "observedBlock": 24012549
+            "observedAt": "2026-10-15",
+            "observedBlock": 26080279
           },
           {
             "provider": "BTC/USD EACAggregatorProxy to owner-controlled DualAggregator",
             "path": "baseFeedOne of 0x2aa87ff48933ce6aba240bee916fc2e6ec1e51ab ; API decimals=8",
             "address": "0x7777547914e03bcbb04ae034942765a0dbb26ae3",
             "chain": "arc",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26080279
           }
         ],
         "fallbackBehavior": "Exact deployed Morpho adapter has a single BTC/USD feed and no independent fallback. ChainlinkDataFeedLib checks only nonnegative answer, not timestamp freshness. EACAggregatorProxy delegates to owner-replaceable DualAggregator; its primary/secondary report handling is not proof of independent price sources.",
@@ -266,12 +267,12 @@
             "url": "https://docs.morpho.org/learn/concepts/liquidation/"
           },
           {
-            "label": "arc idToMarketParams and exact price() archive calls at block 24012549, read 2026-10-03; credentials omitted",
+            "label": "Arc block 26080279, 2026-10-15T10:44:09Z; market params, oracle getters and latestRoundData",
             "url": "https://rpc.mainnet.arc.io"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 24012549
+        "observedAt": "2026-10-15",
+        "observedBlock": 26080279
       }
     ],
     "paths": [

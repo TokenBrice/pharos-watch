@@ -31,9 +31,10 @@
   "variantKind": "pure-wrapper",
   "pegReferenceId": "m-m0",
   "collateral": "M0 M tokens held by the chain-local extension; the M parent provides the Treasury-backed issuance and custody layer.",
-  "pegMechanism": "M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
+  "pegMechanism": "M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers: an unprivileged sample address qualified to swap the child token into wM but not directly into M. This is technical conversion eligibility, not a sent transaction or a cash redemption right.",
   "mechanismArchetype": "tbill",
   "llamaId": "435",
+  "geckoId": "usdr",
   "detailProvider": "defillama",
   "links": [
     {
@@ -43,6 +44,18 @@
     {
       "label": "Token explorer",
       "url": "https://explorer.risechain.com/address/0x62b7f5a5be488ea58f660c5aff465647213bc6e9"
+    },
+    {
+      "label": "Website",
+      "url": "https://www.risechain.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/risechain"
+    },
+    {
+      "label": "Audits (M0 framework)",
+      "url": "https://docs.m0.org/resources/audits"
     }
   ],
   "contracts": [
@@ -54,6 +67,7 @@
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
+  "governanceQuality": "multisig",
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://explorer.risechain.com/address/0x62b7f5a5be488ea58f660c5aff465647213bc6e9",
@@ -61,8 +75,8 @@
     "cadence": "real-time"
   },
   "dependencyReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07 primary-source review 2026-10-03",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
     "confidence": "verified",
     "sources": [
       {
@@ -96,9 +110,13 @@
       {
         "label": "Exact USDR first-code block 10977621 (2026-05-12T10:56:20Z); block 10977620 code=0x",
         "url": "https://rpc.risechain.com"
+      },
+      {
+        "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+        "url": "https://rpc.risechain.com"
       }
     ],
-    "rationale": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. M-extension wrapping and unwrapping conserve the deposited M claim. The current SwapFacility restricts direct M output to approved swappers; an unprivileged sample canSwapViaPath(child,wM) returned true while child-to-M returned false. This is technical conversion eligibility, not a sent transaction or a cash redemption right. The exact deployment launch date is 2026-05-12, established by the first-code block boundary. The Guardian report dated 2025-12-12 covers JMI and changes to MYieldToOne, Freezable and SwapFacility at its named audit commits; this is framework corroboration, not exact deployed-commit certification, custody assurance or reserve-to-liability audit.",
+    "rationale": "At RISE block 24455282 (2026-10-15T10:44:01Z), the extension held 4,191,272.318305 M against 4,166,891.817608 USDR, and JMI totalAssets() was zero. Token and facility EIP-1967 implementations remain 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b and 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e; both runtimes match the explorer verified bytecode. For unprivileged sample address 0x0000000000000000000000000000000000000001, canSwapViaPath(USDR,wM) returned true and canSwapViaPath(USDR,M) returned false. The former is an extension-to-extension conversion; direct M output requires approved-swapper status. These eligibility reads establish neither a completed transaction, same-notional output capacity nor a cash redemption right. The immediate serial claim remains M, rather than a direct off-chain Treasury allocation. The inherited M wrap mints the nominal transferred amount and can incur parent-token rounding; JMI non-M wraps separately check actual received balances. The May 12 deployment/initialization date and Guardian December 12, 2025 framework-audit scope remain historical facts, not a public-launch announcement or exact-deployment financial assurance.",
     "relationships": [
       {
         "id": "m-m0",
@@ -110,5 +128,21 @@
   },
   "infrastructures": [
     "m0"
-  ]
+  ],
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
+    "rationale": "USDR is a non-rebasing M0 M wrapper whose immediate reserve is M, with Treasury exposure inherited from the parent. RISE retains reserve yield; holders do not own a separate Treasury fund share. The tbill archetype matches the tracked M parent and does not assert direct fund-holder seniority.",
+    "sources": [
+      {
+        "label": "RISE Dollar backing and revenue model",
+        "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+      },
+      {
+        "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+        "url": "https://rpc.risechain.com"
+      }
+    ]
+  }
 }

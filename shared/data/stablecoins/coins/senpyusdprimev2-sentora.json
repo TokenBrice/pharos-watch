@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "pyusd-paypal",
   "collateral": "PYUSD loans against the Hastra PRIME token (0x19ebb35279a16207ec4ba82799cc64715065f7f6; on-chain name Hastra PRIME), described by Sentora as Figure home-equity credit exposure. Enforceable collateral recovery priority remains unresolved.",
-  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for PYUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at the pinned review; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity and an in-kind position exit do not promise full-size cash redemption.",
+  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for PYUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. At Ethereum block 26197388 (2026-10-15), liquidityAdapter() is zero, so ordinary cash redemptions use idle PYUSD unless assets are first deallocated. Holder-initiated forceDeallocate through the current adapter calls Morpho.withdraw and charges a 1% penalty on assets deallocated; it still requires market cash liquidity. This exact adapter does not transfer lender positions to the holder. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum deployment 0xc21b08c16458202593d4d9b26b9984ee67b38bbd is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=25052763, creationTimestamp=1778272391 (2026-05-08T20:33:11.000Z); independently retrieved 2026-10-03.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
+    "rationale": "Exact Ethereum deployment 0xc21b08c16458202593d4d9b26b9984ee67b38bbd is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. At block 26197388 (2026-10-15T10:42:47Z), asset() is PYUSD, decimals()=18, totalSupply()=105776048725271220285649074 and convertToAssets(10^18)=2027558 PYUSD base units. Vault and sole adapter runtime match their exact verified sources and all three EIP-1967 proxy slots are zero. The original one-share redeem simulation remains evidence at block 26107702 only; no new execution measurement is claimed. The protocol-position archetype intentionally differs from the fiat-cash parent. Morpho exact-vault creation metadata and the factory creation transaction confirm block 25052763, timestamp 1778272391 (2026-05-08T20:33:11Z).",
     "sources": [
       {
         "label": "Sentora PRIME Main exact vault",
@@ -39,7 +39,7 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
+        "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
@@ -55,16 +55,32 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
     },
     {
-      "label": "Issuer",
+      "label": "Curator",
       "url": "https://sentora.com"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Sentora: Terms of use",
+      "url": "https://sentora.com/legal/terms-of-use"
+    },
+    {
+      "label": "Strategy",
+      "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
     }
   ],
   "contracts": [
@@ -75,7 +91,7 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Sentora PRIME Main Morpho lending vault",
@@ -83,7 +99,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "senpyusdprimev2-sentora",
     "display": {
@@ -99,11 +115,16 @@
     },
     "params": {
       "slice": {
-        "name": "PYUSD deposited into Sentora-curated Morpho lending markets",
-        "risk": "medium",
+        "name": "PYUSD supplied to Sentora PRIME Main Morpho lending positions",
+        "risk": "high",
         "coinId": "pyusd-paypal",
         "depType": "wrapper",
         "expectedAssetAddress": "0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+      },
+      "deployedExposure": {
+        "basis": "At Ethereum block 26197870 (2026-10-15T12:19:35Z), idle PYUSD raw 4642078872057 plus sole adapter 0x93d6393e66b56449b7926b9abfeb37606732de89 realAssets raw 209826927944235 equaled totalAssets raw 214469006816292 exactly. The adapter held one Morpho lender market position against PRIME collateral, each with zero borrowShares and posted collateral. The reviewed descriptor covers non-idle PYUSD-denominated lender claims, not idle cash or borrower-collateral ownership.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

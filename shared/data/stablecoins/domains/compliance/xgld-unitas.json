@@ -4,62 +4,25 @@
     "status": "out-of-scope",
     "references": [
       {
-        "label": "Unitas XGLD: XAUt collateral, borrowed-USDT strategies and NAV appreciation",
+        "label": "Unitas XGLD: variable gold-strategy NAV with borrowed-USDT returns",
         "url": "https://docs.unitas.so/overview/xgld.md"
+      },
+      {
+        "label": "Exact XGLDMinting source: XAUt conversion divides by the administered share exchange rate",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x2a9e3ea72575e05337a7703c8fad65a82a5b5865?fields=sources,abi"
+      },
+      {
+        "label": "Exact XGLDExchangeRate source: changing XAUt-per-XGLD NAV, not a fixed-ounce claim",
+        "url": "https://sourcify.dev/server/v2/contract/56/0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7?fields=sources,abi"
       },
       {
         "label": "ESMA MiCA Article 3: EMT and ART stable-value definitions",
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      },
+      {
+        "label": "Structural ART/EMT exclusion for variable-value shares; not a statement on EU offering, securities or CASP law",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
-  },
-  "genius": {
-    "applicability": "non-payment-token",
-    "applicabilityBasis": {
-      "summary": "The token references physical gold or gold-strategy NAV rather than a fixed amount of national-currency monetary value.",
-      "references": [
-        {
-          "label": "GENIUS Act section 2(22) payment stablecoin definition",
-          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-          "sourceKind": "statute",
-          "accessedAt": "2026-10-07"
-        },
-        {
-          "label": "Exact token product claim",
-          "url": "https://docs.unitas.so/overview/xgld.md",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
-        }
-      ]
-    },
-    "authorizationStatus": "not-applicable",
-    "issuerPathway": "not-applicable",
-    "foreignExceptionStatus": "not-applicable",
-    "daspOfferSaleStatus": "not-applicable",
-    "notes": "Explicit scope clarification for a gold-family catalog addition; no GENIUS authorization asserted.",
-    "references": [
-      {
-        "label": "Exact token product claim",
-        "url": "https://docs.unitas.so/overview/xgld.md",
-        "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator",
-        "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
-      },
-      {
-        "label": "GENIUS Act section 2(22) payment stablecoin definition",
-        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
-        "sourceKind": "statute",
-        "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
-      }
-    ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
   }
 }

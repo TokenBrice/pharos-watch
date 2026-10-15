@@ -5,6 +5,7 @@
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Native issuance remains under issuer authority. ZARsc uses a System Program Solana mint signer; Fireblocks custody does not prove an on-chain threshold.",
+    "headline": "Issuer-controlled minting has no on-chain cap or delay; monthly reserve reconciliation does not establish independent signing operators.",
     "controls": [
       {
         "chain": "solana",
@@ -36,15 +37,15 @@
             }
           ]
         },
-        "observedAt": "2026-10-03",
-        "observedBlock": 452860529,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457200000,
         "sources": [
           {
-            "label": "Solana mint and authority observation",
-            "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+            "label": "Exact-slot Alchemy mint and signer reads, Solana slot 457200000, 2026-10-15T10:13:19Z",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "Finalized mint read at slot 452860529 retains mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, decimals 6 and supply 8,177,042 ZARsc. Authority read at slot 452861255 is nonexecutable, zero-data and System Program owned, not an SPL multisig or PDA. Token-2022 minting has no issuer-authored numeric supply cap to raise and no code-enforced time delay. Creation transaction 3PacyyoqY8ik8smXoNF6ED6MLUt9Jxk9w7ie7vcrVqYouxcLwtyn5xdsRGKrMwV17xfjLWShhraik7Yb95Xdrx3r creates and initializes the exact mint at slot 361067527 on 2025-08-19. This is implementation age, not exchange-listing age."
+        "evidence": "Exact-slot Alchemy Account Archive reads at finalized Solana slot 457200000 (2026-10-15T10:13:19Z; block hash CkfH8u58XAk7qq4cQAuGFuJn8VkdXYGhN39wSRHQKN8Y) retain mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, decimals 6 and total issued supply 8,177,042 ZARsc. The authority is nonexecutable, zero-data and System Program owned, not an SPL multisig or PDA. Token-2022 minting has no issuer-authored numeric supply cap to raise and no code-enforced time delay. The same signer holds mint-close and metadata-update authority; closing a mint requires zero supply. Transfer restrictions, fee and interest-display controls do not create additional native mint authorities and are inventoried in the blacklistability review. Pinned getTransaction at slot 361067527 (2025-08-19T09:09:10Z) confirms successful creation and initialization of the exact mint."
       }
     ],
     "upgradeability": {
@@ -55,11 +56,12 @@
       "canChangeMintLogic": false,
       "sources": [
         {
-          "label": "Token-2022 issuer deployment",
-          "url": "https://www.supercoin.co.za/assurance-reports"
+          "label": "Token-2022 mint owner and configured extension census, Solana slot 457200000",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
         }
       ],
-      "observedAt": "2026-10-02"
+      "observedAt": "2026-10-15",
+      "observedBlock": 457200000
     },
     "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
@@ -72,24 +74,24 @@
         },
         {
           "label": "Retrieved independent reserve report",
-          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf"
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7affed6a421dc6a08490d_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20Aug%20Snapshot%202026-08-31%201400%20UTC.pdf"
         },
         {
           "label": "Moore monthly ZARsc AUP: July 31, 2026 snapshot, signed August 18, 2026",
-          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6a854e37a0b02cf6fc733b82_ZARSC%20JULY%202026%20Stablecoin%20Attestation%2031072026%20FINAL%20SIGNED.pdf"
+          "url": "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6ac7afd78683dde1d69a50bb_ZARsc%20Proof%20of%20Reserves%20Report%20(Agreed-Upon%20Procedures)%20-%20July%20Snapshot%202026-07-31%201400%20UTC.pdf"
         },
         {
-          "label": "Solana mint and authority observation",
-          "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+          "label": "Exact-slot mint, all four authority accounts and issuer treasury, Solana slot 457200000, 2026-10-15T10:13:19Z",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
         },
         {
-          "label": "Issuer compliance disclosures; Sol curation campaign 2026-10-09 (Lane18Ember), accessed 2026-10-09T10:30:53Z",
+          "label": "Issuer compliance disclosures",
           "url": "https://www.supercoin.co.za/compliance"
         }
       ],
-      "evidence": "The sole native Solana mint authority and its ordinary-signature execution were independently re-read on 2026-10-03; issuer Fireblocks statements do not establish independent MPC operators, a cryptographic onchain quorum or hold period. Moore's monthly AUP reports reconcile independently obtained complete Absa reserve balances for Super Money SA (Pty) Ltd against the exhaustive native Solana ZARsc token-account population for mint 5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ. Four consecutive snapshots (1 June, 30 June, 31 July and 31 August 2026) establish recurring cadence; the July report was signed 18 August and the August report 16 September 2026, and the primary reports were independently verified on 2026-10-04. At the August snapshot, slot 443168735, Procedures 3, 8, 9, 11 and 12 match all 8,177,042 issued tokens to token accounts, then exclude 467,883.071866 issuer-controlled treasury tokens and an equal ZAR467,883.07 reserve allocation: ZAR7,944,582.89 remaining backing versus 7,709,158.928134 circulating liabilities, reported coverage 103.05%. Under the reviewed circulation-as-liability interpretation this supports periodic reconciliation over the sole native Solana issuance population; no other current issuance chain or bridged supply was identified in the reviewed documents. Treasury non-circulation and reserve attribution rely on signed management representations, not a technical transfer lock or independently bank-segregated allocation. Earlier month labels repeat the same January report URL and are not counted as distinct engagements. ISRS 4400 AUP gives factual findings, not an assurance opinion, and no prudential issuer mandate is established; supervision remains unknown. Legal trust and bankruptcy protection remain unproved. Current issuer direct app redemption is not live; the two-business-day promise is future-only. Exchange liquidity and par execution are not guaranteed: the observed Orca pool was approximately USD16,000 with no observed 24-hour volume, and VALR volumes were small. Independent operators and Fireblocks key custody for the identified ordinary signer remain unverified; there is no onchain multisig threshold or timelock. Observed CoinGecko circulation differs from the historical report and issued total; retain fresh provider market cap rather than a raw minted-supply override. The requested 90-day chart covered only about nine days; ZAR FX normalization is required before depeg conclusions. FSP53458 remains an issuer/parent claim without an independently pinned regulator row. These key-custody, Backing, exit, market-data and supervision qualifications do not leave an unidentified native mint control.",
-      "reviewer": "Sol v10.06 availability-invariant campaign (BEvidence)",
-      "reviewedAt": "2026-10-04",
+      "evidence": "The sole native Solana mint authority and all configured extension authorities were re-read through Alchemy's exact-slot Account Archive at finalized slot 457200000 (2026-10-15T10:13:19Z). All four authority accounts are nonexecutable, zero-data System Program accounts. Fireblocks and issuer disclosures bind MPC custody to ZARsc issuance, but do not disclose beneficial human operators, independent organizational approvals or an on-chain quorum or delay. Token-2022 is the standard governing program rather than an issuer-authored upgradeable proxy; the immutable classification describes that issuer-local mint-code boundary, not immutability of Solana's shared token program or a prohibition on the migration reserved by terms section 12.2. Moore's July 31 and August 31 monthly AUP reports reconcile the exhaustive native Solana token-account population to total issued supply, then compare circulation after management-designated treasury exclusions with independently obtained Absa reserve balances for Super Money SA (Pty) Ltd. The July report was signed August 18 and the August report September 16, 2026; both current archive PDFs were reviewed on October 15. This supports periodic reconciliation over the sole disclosed native issuance population, not continuous whole-supply controls or an assurance opinion. At the August snapshot, slot 443168735, total issued supply was 8,177,042 tokens; 467,883.071866 management-designated treasury tokens and ZAR467,883.07 of reserve allocation were excluded, leaving ZAR7,944,582.89 against 7,709,158.928134 circulating tokens and reported coverage of 103.05%. Treasury classification and reserve attribution are management representations, not technical transfer locks or independently verified bank-level segregation. The current archive publishes distinct November and December 2025 and January through August 2026 PDF links; the prior repeated-link caveat no longer describes that archive. The fresh pinned mint supply remains 8,177,042, while the report's treasury account now contains 309,559.939154 tokens; neither observation refreshes the August bank balances or establishes a complete current non-circulating census. The production on-chain-total-supply fallback values issued tokens in USD and is not the report's historical circulation denominator. Current direct app redemption remains future-only under binding terms; exchange prices, liquidity and settlement are not guaranteed. Historical pool depth, volume and short chart observations are not current measurements. Legal trust, bankruptcy priority, token-issuance-specific prudential supervision and exact mint-key human independence remain unproved. None of these qualifications leaves an unidentified native mint authority.",
+      "reviewer": "Rev_ZarscSupercoin primary-source and pinned RPC review",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -97,8 +99,8 @@
           "controlRef": "Solana Token-2022 mint authority",
           "question": "Issuer and Fireblocks disclosures establish MPC custody for ZARsc Solana issuance, but do not identify the beneficial human signing operators, their organizational independence, or the approval-policy boundary for the exact ordinary mint signer UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk. Which people and approval policy govern this key? MPC key-share separation does not itself establish independent humans; the on-chain account still enforces neither a multisig quorum nor a timelock.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-05",
-          "reviewer": "Pharos wave-4 scoped custody research (K08)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_ZarscSupercoin primary-source and pinned RPC review",
           "sources": [
             {"label": "Issuer whitepaper: exact Solana mint/burn MPC and general oversight, not beneficial-human independence", "url": "https://cdn.prod.website-files.com/6a43ab66ff171ec1aca79e9b/6a47cf673480e0371e2fc333_White_Paper_Supercoin_2026.pdf"},
             {"label": "Issuer ZARsc minting and MPC custody disclosure", "url": "https://www.supercoin.co.za/insights-news/every-zarsc-token-is-minted-held-and-redeemed-on-fireblocks-here-is-why-that-matters"},

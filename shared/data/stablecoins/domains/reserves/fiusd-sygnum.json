@@ -3,54 +3,54 @@
   "reserves": [
     {
       "name": "Fidelity ILF USD Fund — cash",
-      "pct": 1.5,
+      "pct": 1.48,
       "risk": "medium",
       "assetClass": "cash",
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Fidelity ILF USD Fund — certificates of deposit",
-      "pct": 38.53,
+      "pct": 35.12,
       "risk": "medium",
       "assetClass": "bank-deposit",
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Fidelity ILF USD Fund — commercial paper",
-      "pct": 37.56,
+      "pct": 34.27,
       "risk": "medium",
       "assetClass": "public-credit",
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Fidelity ILF USD Fund — corporate bonds",
-      "pct": 9.97,
+      "pct": 10.13,
       "risk": "medium",
       "assetClass": "public-credit",
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Fidelity ILF USD Fund — repurchase agreements",
-      "pct": 3.87,
+      "pct": 5.9,
       "risk": "medium",
       "assetClass": "repo",
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Fidelity ILF USD Fund — time deposits",
-      "pct": 8.57,
+      "pct": 13.1,
       "risk": "medium",
       "assetClass": "bank-deposit",
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-07",
-    "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_8)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_FiusdSygnum primary-source review",
     "confidence": "manual-review",
     "sources": [
       {
-        "label": "Fidelity ILF official USD Fund holdings, September 25, 2026, page 3",
+        "label": "Fidelity ILF official USD Fund holdings, October 2, 2026, pages 3-4",
         "url": "https://www.fidelity.ie/media/Ireland/PDF/Liquidity%20Funds/ilf-fund-holdings.pdf"
       },
       {
@@ -64,54 +64,66 @@
       {
         "label": "Verified deployed Arbitrum implementation",
         "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x7616b08676117e1aab542e53fe3f7b12f7596d37"
+      },
+      {
+        "label": "Fidelity daily USD workbook: October 14, 2026, Class G Acc ISIN IE00BNKLND78",
+        "url": "https://www.fidelity.ie/media/Ireland/Excel/lvnav-usd-daily-price.xlsx"
+      },
+      {
+        "label": "zkSync block 72500706, 2026-10-15T10:46:11Z: native totalSupply 1,517.66 units",
+        "url": "https://mainnet.era.zksync.io"
+      },
+      {
+        "label": "Arbitrum block 515025442, 2026-10-15T09:57:04Z: native totalSupply zero",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
       }
     ],
-    "rationale": "Sygnum identifies each FIUSD as one unit of Fidelity Institutional Liquidity Fund USD Fund Class G Acc. The official September 25, 2026 USD Fund holdings report, page 3, supplies a complete $10,331,299,067.20 fund-portfolio denominator and six reported security-type percentages totaling 100.00%. These are dated per-unit look-through fund allocations, not a FIUSD-token-supply-to-held-fund-units reconciliation or token-scoped assurance. They are not the separate Fidelity USD Treasury Fund, GBP Fund, or a maturity/redemption guarantee. Existing medium risk classifications are retained; issuer-specific exposure, whole-position liquidation and contractual maturity maxima are not inferred from aggregate categories, WAM, or WAL.",
+    "rationale": "Sygnum identifies each FIUSD as one unit of Fidelity Institutional Liquidity Fund USD Fund Class G Acc. The official October 2, 2026 USD Fund holdings report, pages 3-4, supplies a complete $10,163,457,885.50 fund-portfolio denominator and six reported security-type percentages totaling 100.00%. These are dated per-unit look-through fund allocations, not a FIUSD-token-supply-to-held-fund-units reconciliation or token-scoped assurance. The October 14 daily workbook independently identifies Class G Acc ISIN IE00BNKLND78, NAV $12,061.69 and 1,518.17 outstanding share-class units. The fresh native token census is 1,517.66 zkSync plus zero Arbitrum units; a whole-share-class total does not identify Sygnum's fiduciary holdings or explain the 0.51-unit difference. Neither source is the separate Fidelity USD Treasury Fund, a liquidity guarantee or a token-level recovery contract. Existing medium risk classifications are retained; issuer-specific exposure, whole-position liquidation and contractual maturity maxima are not inferred from aggregate categories, WAM, or WAL.",
     "compositionBasis": "Exact FIUSD Class G fund-unit claim; dated full USD Fund portfolio security-type allocation, without token-unit reconciliation or assurance inference",
-    "compositionAsOf": "2026-09-25",
+    "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
-    "knownUnknownExposure": "The dated September 25 Fidelity USD Fund report classifies security types; exact current FIUSD unit-to-token attribution, custody/subcustody allocation, executable liquidity and instrument-specific exposure remain unresolved. Source-maintenance check 2026-10-07: the official fidelity.ie ILF holdings PDF is reachable despite other Fidelity/Sygnum 403 responses. Parse the USD fund section, not separate GBP/EUR or USD Treasury funds. This whole-fund security inventory does not establish token-scoped shares or reconciliation. Preserve configured portfolio-scope exclusion and existing 48-hour source/fetch fallback; report publication cadence is independently unverified. General fund-unit descriptions do not authorize a scope change or fresh composition claim.",
+    "knownUnknownExposure": "The dated October 2 Fidelity USD Fund report classifies all six security types, so zero here means no unclassified underlying-fund category, not zero token-level uncertainty. Exact current FIUSD fiduciary unit-to-token attribution, custody/subcustody allocation and executable liquidity remain unresolved. Source-maintenance review 2026-10-15 retrieved official holdings, the August Class G factsheet and the October 14 daily NAV/share-class workbook. The latter reports 1,518.17 whole-class units but does not allocate them to FIUSD; it is not a token-to-unit reconciliation. The central Fidelity document library and prospectus returned HTTP 403 through static retrieval; the library's browser view requires client-category self-certification, and direct prospectus navigation did not yield readable evidence. Parse the USD fund section, not GBP/EUR or USD Treasury funds. Preserve configured portfolio-scope scoring exclusion and existing 48-hour source/fetch fallback; the historical issuer application describes monthly holdings publication but does not establish the current cadence.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Fidelity ILF USD Fund — cash",
-        "pct": 1.5,
+        "pct": 1.48,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The exact dated USD Fund holdings report identifies cash, not a tracked stablecoin."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Fidelity ILF USD Fund — certificates of deposit",
-        "pct": 38.53,
+        "pct": 35.12,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reported bank certificates of deposit are exogenous financial instruments, not tracked stablecoins."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Fidelity ILF USD Fund — commercial paper",
-        "pct": 37.56,
+        "pct": 34.27,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reported commercial-paper instruments are exogenous credit claims, not tracked stablecoins."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Fidelity ILF USD Fund — corporate bonds",
-        "pct": 9.97,
+        "pct": 10.13,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reported corporate bonds are exogenous credit claims, not tracked stablecoins."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Fidelity ILF USD Fund — repurchase agreements",
-        "pct": 3.87,
+        "pct": 5.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reported repurchase agreements are exogenous contractual claims; no stablecoin dependency is asserted."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Fidelity ILF USD Fund — time deposits",
-        "pct": 8.57,
+        "pct": 13.1,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reported bank time deposits are exogenous financial instruments, not tracked stablecoins."
       }

@@ -1,9 +1,9 @@
 {
   "id": "earnusd-lido",
   "blacklistabilityReview": {
-    "evidence": "The exact earnUSD implementation has account-level isBlacklisted checks and role-gated setAccountInfo, plus configurable mint/burn/transfer pause and whitelist flags. At block 26107703, current flags were zero; absence of an active pause does not remove configurable holder restrictions. The implementation is upgradeable. Because the full current role-grant/execution census is not closed, direct holder blacklisting is recorded as possible, not an observed historical freeze or an inference from the USDC parent.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "evidence": "The exact earnUSD implementation has account-level isBlacklisted checks and role-gated setAccountInfo, plus configurable mint/burn/transfer pause and whitelist flags. At Ethereum block 26196064 (2026-10-15T06:16:59Z), all six decoded share flags remain zero. The full 15-role top-level vault census and eight unpaused queues were re-read; zero current flags do not remove configurable restrictions or the 5-of-8 Safe's proxy-upgrade power. Complete alternate execution and downstream control scope remains unclosed. Holder blacklisting therefore remains possible, not an observed historical freeze or an inference from USDC.",
+    "reviewer": "Rev_EarnusdLido",
+    "reviewedAt": "2026-10-15",
     "sources": [
       {
         "label": "Lido ShareManager holder controls",
@@ -18,22 +18,22 @@
         "url": "https://docs.lido.fi/earn/deployment-contracts"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; share flags, roles and queues",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
     "reviewedStatus": "possible"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
-    "summary": "earnUSD queue and share valuation uses the deployed Lido internal Oracle reporting model: trusted roles submit prices, accept suspicious reports and alter validation intervals. The actor registry names an Oracle Updater Safe, observed 3-of-8, but no independent external-feed or global protective-delay claim is made. The known privileged top-level report path is not a verified exemption for the earnUSDc/earnUSDe downstream strategy pricing; those remain explicitly unresolved.",
+    "summary": "earnUSD uses privileged internal Oracle reports for queue and share valuation. The deployment registry names a 3-of-8 Oracle Updater Safe, whose quorum was re-read at the October 15 pin; the documented Timelock has zero minimum delay. The two named Ethereum underlying Oracle proxies still use the shared internal-price implementation. Current material downstream lending, collateral and cross-chain pricing paths and their weights remain unreconciled, including the additional earnUSDe Robinhood deployment in Lido's current registry.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "rationale": "Review covers the exact earnUSD Oracle 0x827044735c9708a2cf850e7ea37eba43bc786028 and holder-share conversion. A complete position/collateral oracle branch census is not established.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_EarnusdLido",
+      "rationale": "Review covers exact earnUSD Oracle 0x827044735c9708a2cf850e7ea37eba43bc786028, its pinned implementation and USDC/USDT/USDe reports. A complete position/collateral oracle branch census and matched material strategy weights remain unestablished.",
       "sources": [
         {
           "label": "Lido internal Oracle reporting and privileged roles",
@@ -45,8 +45,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_EarnusdLido",
     "confidence": "verified",
     "sources": [
       {
@@ -58,8 +58,8 @@
         "url": "https://docs.lido.fi/earn/deployment-contracts"
       },
       {
-        "label": "Ethereum RPC observation at block 26107703",
-        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; root and two downstream Oracle proxies",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Mellow named underlying conservative and experimental vaults",
@@ -74,8 +74,8 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_EarnusdLido",
           "confidence": "verified",
           "rationale": "This path is the exact privileged internal Oracle that reports shares per deposited asset to queues and share valuation. It is not a borrower liquidation engine; downstream vault pricing is separately enumerated as unresolved rather than globally exempted.",
           "sources": [
@@ -101,10 +101,10 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "unresolved",
-          "reviewedAt": "2026-10-09",
-          "reviewer": "Sol curation campaign 2026-10-09 (Lane13Lido)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_EarnusdLido",
           "confidence": "limited",
-          "rationale": "The exact earnUSDc Ethereum proxy identifies verified Oracle implementation 0x0000000f0d3d1c31b72368366a4049c05e291d58, whose trusted roles submit internal prices to the linked vault. This resolves the named path's pricing authority only. Complete current downstream lending markets, collateral oracle branches, cross-chain strategy pricing and matched material weights remain unestablished; applicability stays unresolved and no global borrower-oracle exemption is granted.",
+          "rationale": "At Ethereum block 26196064 (2026-10-15T06:16:59Z), this exact earnUSDc Oracle proxy still points to implementation 0x0000000f0d3d1c31b72368366a4049c05e291d58 and vault() returns 0xdf0fb76df2c21f79798949a4e886cd22d1c085d7. Trusted roles submit internal prices. This resolves the named path's authority only; complete current downstream lending markets, collateral branches, cross-chain pricing and matched material weights remain unestablished. Applicability stays unresolved.",
           "sources": [
             {
               "label": "Lido Oracle reporting and privileged roles",
@@ -125,6 +125,10 @@
             {
               "label": "Verified shared role-gated internal Oracle implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000f0d3d1c31b72368366a4049c05e291d58"
+            },
+            {
+              "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; exact implementation slot and vault binding",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -136,10 +140,10 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "unresolved",
-          "reviewedAt": "2026-10-09",
-          "reviewer": "Sol curation campaign 2026-10-09 (Lane13Lido)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_EarnusdLido",
           "confidence": "limited",
-          "rationale": "The exact earnUSDe Ethereum proxy identifies verified Oracle implementation 0x0000000f0d3d1c31b72368366a4049c05e291d58, whose trusted roles submit internal prices to the linked vault. This resolves the named path's pricing authority only. Complete current downstream lending markets, collateral oracle branches, cross-chain strategy pricing and matched material weights remain unestablished; applicability stays unresolved and no global borrower-oracle exemption is granted.",
+          "rationale": "At Ethereum block 26196064 (2026-10-15T06:16:59Z), this exact earnUSDe Oracle proxy still points to implementation 0x0000000f0d3d1c31b72368366a4049c05e291d58 and vault() returns 0x0cc65147bf7f615a8dd9e78e2c53158f8e01754d. Trusted roles submit internal prices. This resolves the named path's authority only; complete current downstream lending markets, collateral branches, cross-chain pricing and matched material weights remain unestablished. Applicability stays unresolved.",
           "sources": [
             {
               "label": "Lido Oracle reporting and privileged roles",
@@ -160,6 +164,10 @@
             {
               "label": "Verified shared role-gated internal Oracle implementation",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000f0d3d1c31b72368366a4049c05e291d58"
+            },
+            {
+              "label": "Ethereum block 26196064, 2026-10-15T06:16:59Z; exact implementation slot and vault binding",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -168,9 +176,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "The exact earnUSD ShareManager deployment is tracked only on Ethereum. The current Lido Earn deployment registry identifies its vault, queues and two subvaults but no holder-token bridge representation is authored.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "The exact earnUSD ShareManager holder token is deployed only on Ethereum in the reviewed Lido registry and CoinGecko platform record. Other-chain earnUSDc/earnUSDe contracts are distinct underlying strategy-vault instruments, not holder-token representations. No earnUSD bridge representation is authored.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_EarnusdLido",
     "confidence": "verified",
     "sources": [
       {

@@ -13,15 +13,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC lender positions in a single Morpho market secured by cirBTC on Arc",
-  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. In-kind deallocation retains underlying lending-position exposure.",
+  "collateral": "USDC lender positions in one Morpho market secured by custodial cirBTC on Arc; borrower defaults and cirBTC custody risk can impair the lending claim.",
+  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. A separate in-kind redemption route retains underlying lending-position exposure; forceDeallocate itself withdraws available cash to the vault. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07 primary-source review 2026-10-03",
-    "rationale": "Galaxy USDC at arc:0x8e357432cc12ff425c36432f312968aeb16112af is an ERC-4626 share over USDC with a code-enforced pro-rata claim on the current Morpho lending inventory. The claim bears lending losses and liquidity constraints, so protocol-position intentionally differs from the fiat-cash parent and older Morpho precedents. At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units.  The exact deployment launch date is 2026-06-12, established by Morpho creationTimestamp for this chain-qualified vault address (1781277053). Published VaultV2 framework security audits corroborate the referenced semantics; source-to-bytecode completeness and financial assurance are separate facts. Exact official Arc explorer partial VaultV2 source and deployed bytecode matching pinned RPC are now available; full compiler verification remains unclaimed.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
+    "rationale": "Galaxy USDC is an ERC-4626 proportional position in Morpho lending over USDC, with interest, fees, realized lending losses and liquidity-dependent redemption. This supports protocol-position rather than the fiat-cash parent archetype. At Arc block 26080262 (0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6), timestamp 2026-10-15T10:44:00Z, totalSupply=89769364193500333705669420 raw 18-decimal shares; accrueInterestView returns assets=89794160053854 raw 6-decimal USDC and zero pending performance/management shares. Idle USDC=0. adaptersLength=1; sole adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c has marketIdsLength=1. Its sole market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d has expectedSupplyAssets=realAssets=89794160053854, exactly reconciling totalAssets. convertToAssets(1e18)=1000276 raw USDC. liquidityAdapter is now that same adapter, and liquidityData encodes the sole cirBTC/USDC market at 86% LLTV. This supersedes earlier unset-liquidity-adapter observations; it does not guarantee complete or stressed cash realization. Morpho creationTimestamp=1781277053 establishes deployment on 2026-06-12. Fresh source/runtime correspondence reproduces normalized vault SHA-256 cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e and adapter SHA-256 355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113 against independently verified templates, excluding only declared immutables and CBOR. Framework security audits do not establish financial assurance or legal holder priority.",
     "sources": [
       {
         "label": "Galaxy USDC exact vault identity and accounting",
@@ -58,18 +58,42 @@
       {
         "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
         "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+      },
+      {
+        "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+        "url": "https://rpc.mainnet.arc.io"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/arc/vault/0x8e357432cc12ff425c36432f312968aeb16112af"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://explorer.arc.io/address/0x8e357432cc12ff425c36432f312968aeb16112af"
+    },
+    {
+      "label": "Galaxy Curation: Terms of use",
+      "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
+    },
+    {
+      "label": "Curator",
+      "url": "https://curation.galaxy.com/"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/galaxyhq"
     }
   ],
   "contracts": [
@@ -80,7 +104,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Galaxy USDC Morpho USDC lending vault",
@@ -88,7 +112,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "arcusdc-galaxy",
     "display": {
@@ -111,9 +135,9 @@
         "expectedAssetAddress": "0x3600000000000000000000000000000000000000"
       },
       "deployedExposure": {
-        "basis": "Pinned complete adapter inventory consists of USDC-denominated lender positions, not idle cash: USDC lender positions in a single Morpho market secured by cirBTC on Arc",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://api.morpho.org/graphql"
+        "basis": "Complete inventory at Arc block 26080262 (2026-10-15T10:44:00Z): all 89794160053854 raw USDC of NAV is the sole adapter's USDC lending claim in the cirBTC/USDC market; idle USDC is zero. Borrower collateral is custodial BTC, not a direct vault-owned reserve asset.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://explorer.arc.io/block/26080262"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

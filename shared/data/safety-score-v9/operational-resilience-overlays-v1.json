@@ -2957,10 +2957,10 @@
     },
     {
       "assetId": "mantrausd-mantra",
-      "reviewedAt": "2026-10-03T22:47:31Z",
+      "reviewedAt": "2026-10-15T11:38:47.044586Z",
       "expiresAt": "2027-10-03T22:47:10Z",
-      "reviewer": "Unknown-wave W1R49",
-      "notes": "Exact token live-operation lower bound from dated primary announcement; age only. No throughput, stress recovery, financial reconciliation or incident-free history is claimed.",
+      "reviewer": "Batch64 Rev_MantrausdMantra r1 primary-source adjudication",
+      "notes": "The dated-operation source retains its original age-only lower bound and observation date. The separately reviewed MANTRA postmortem reports unauthorized native-MANTRA balance transfers, a chain halt at 2026-08-20T23:13Z and block production resuming at 2026-08-22T05:26Z, a 30-hour-13-minute (108780-second) chain outage affecting mantraUSD's sole authored deployment chain. No application contract was debited and no validator/admin/governance/multisig keys were compromised according to the issuer. The control-category incident records chain-level native-accounting and availability failure, not a mantraUSD mint-key compromise or token loss. Resolved refers only to the patched chain restart; stolen native-token recovery remained outstanding in the postmortem. The stress episode retains unknown mantraUSD redemption continuity and recovery metrics: chain restoration duration does not establish redemption or peg recovery and earns no stress-recovery credit. No measured redemption throughput, financial reconciliation, later incident-free history or whole-asset loss conclusion is asserted.",
       "sources": [
         {
           "sourceId": "dated-operation",
@@ -2968,6 +2968,14 @@
           "publisher": "MANTRA",
           "publishedAt": "2025-12-01",
           "url": "https://mantrachain.io/resources/announcements/mantra-november-recap",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "mantra-chain-incident-postmortem-2026-08",
+          "label": "MANTRA postmortem of the August 20, 2026 chain incident",
+          "publisher": "MANTRA",
+          "publishedAt": "2026-08-28",
+          "url": "https://mantrachain.io/resources/announcements/20th-august-2026-full-incident-post-mortem",
           "confidence": "issuer-reported"
         }
       ],
@@ -2982,10 +2990,39 @@
         }
       },
       "redemptionThroughput": null,
-      "stressEpisodes": [],
+      "stressEpisodes": [
+        {
+          "episodeKey": "mantra-chain-halt-2026-08-20",
+          "name": "MANTRA chain halt and restart; mantraUSD redemption outcome unestablished",
+          "observedMonth": "2026-08",
+          "redemptionContinued": null,
+          "recoveredWithinSec": null,
+          "sourceIds": [
+            "mantra-chain-incident-postmortem-2026-08"
+          ]
+        }
+      ],
       "reserveReconciliation": null,
       "incidentReview": {
-        "state": "not-reviewed"
+        "state": "reviewed",
+        "windowStart": "2026-08-20",
+        "windowEnd": "2026-08-22",
+        "incidents": [
+          {
+            "incidentKey": "mantra-chain-halt-2026-08-20",
+            "name": "MANTRA chain halt following unauthorized native-token transfers",
+            "category": "control",
+            "state": "resolved",
+            "occurredAt": "2026-08-20",
+            "resolvedAt": "2026-08-22",
+            "sourceIds": [
+              "mantra-chain-incident-postmortem-2026-08"
+            ]
+          }
+        ],
+        "sourceIds": [
+          "mantra-chain-incident-postmortem-2026-08"
+        ]
       }
     },
     {
@@ -3320,10 +3357,10 @@
     },
     {
       "assetId": "hyperusdca-hyperithm",
-      "reviewedAt": "2026-10-03T22:46:01Z",
+      "reviewedAt": "2026-10-15T10:44:23.638Z",
       "expiresAt": "2027-10-03T22:00:00Z",
-      "reviewer": "W1R55 primary-source unknown review",
-      "notes": "Exact asset live-history lower bound only; no independently verified throughput, stress recovery, financial reconciliation or incident-free history asserted.",
+      "reviewer": "Pharos batch64 review (Rev_HyperusdcaHyperithm)",
+      "notes": "Exact creation block 47497571 has timestamp 2026-01-09T03:33:06Z, independently pinned via the public Monad RPC and matching Morpho creationTimestamp=1767929586. Nine completed months precede this review. Live-history eligibility only: no throughput, stressed recovery, financial reconciliation or incident-free history is asserted.",
       "sources": [
         {
           "sourceId": "dated-live-operation",
@@ -3332,15 +3369,24 @@
           "publishedAt": "2026-01-09",
           "url": "https://blue-api.morpho.org/graphql",
           "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "pinned-creation-header",
+          "label": "Exact creation block 47497571, timestamp 2026-01-09T03:33:06Z",
+          "publisher": "Monad",
+          "publishedAt": "2026-01-09",
+          "url": "https://monadscan.com/block/47497571",
+          "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 8,
-          "observedAt": "2026-10-03",
+          "minimumLiveHistoryMonths": 9,
+          "observedAt": "2026-10-15",
           "treatment": "eligibility-only",
           "sourceIds": [
-            "dated-live-operation"
+            "dated-live-operation",
+            "pinned-creation-header"
           ]
         }
       },
@@ -6455,24 +6501,24 @@
     },
     {
       "assetId": "pendleusdc-pendle",
-      "reviewedAt": "2026-10-03T22:47:24Z",
+      "reviewedAt": "2026-10-15T10:58:43.055Z",
       "expiresAt": "2027-10-03T22:46:17Z",
-      "reviewer": "W1R11 primary-source unknown resolver",
-      "notes": "Only a dated exact-token operating/deployment-history lower bound is established. No independent continuous verification, stress throughput, redemption performance, reconciliation cadence or incident-free claim is made.",
+      "reviewer": "Rev_PendleusdcPendle, batch64 primary-source review",
+      "notes": "Official exact-vault live announcement on 2026-08-12 establishes a two-month operating-history lower bound as of 2026-10-15. Contract creation on August 4 is a separate deployment event, not proof of public operation. This is eligibility-only evidence; continuous uptime, stress throughput, reconciliation cadence, incident absence and withdrawal performance remain unestablished.",
       "sources": [
         {
           "sourceId": "dated-live-operation",
-          "label": "Exact pendleUSDC deployment transaction",
-          "publisher": "Ethereum / Blockscout",
-          "publishedAt": "2026-08-04",
-          "url": "https://eth.blockscout.com/api/v2/transactions/0xebf70c7ce9f67d48351c149db5f34d1d8e51f7f2fbe412e214def4a6cc32cde0",
+          "label": "Pendle official exact-vault live launch announcement",
+          "publisher": "Pendle",
+          "publishedAt": "2026-08-12",
+          "url": "https://x.com/pendle_fi/status/2087524601203212383",
           "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 1,
-          "observedAt": "2026-10-03",
+          "minimumLiveHistoryMonths": 2,
+          "observedAt": "2026-10-15",
           "treatment": "eligibility-only",
           "sourceIds": [
             "dated-live-operation"
@@ -7082,9 +7128,9 @@
     },
     {
       "assetId": "senpyusdprimev2-sentora",
-      "reviewedAt": "2026-10-03T22:46:01Z",
+      "reviewedAt": "2026-10-15T10:55:17Z",
       "expiresAt": "2027-10-03T22:46:01Z",
-      "reviewer": "Unknown wave W1R24 primary-source review",
+      "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
       "notes": "Exact wrapper contract creation establishes a conservative deployment-history lower bound only. No continuous independent operation, settled stress redemptions, whole-supply reserve reconciliation or incident-free history is asserted. Parent-token history is excluded.",
       "sources": [
         {
@@ -7098,8 +7144,8 @@
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 4,
-          "observedAt": "2026-10-03",
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-15",
           "treatment": "eligibility-only",
           "sourceIds": [
             "exact-vault-creation"
@@ -8039,10 +8085,10 @@
     },
     {
       "assetId": "senpathusd-sentora",
-      "reviewedAt": "2026-10-03T22:50:06Z",
+      "reviewedAt": "2026-10-15T11:06:53Z",
       "expiresAt": "2027-10-03T22:50:06Z",
-      "reviewer": "Unknown wave W1R29 primary-source research",
-      "notes": "Exact Tempo VaultV2 creation timestamp 1778092871, block 18585504, is a lower bound of four full calendar months to review. Current exact-vault deposits and accounting were observed at Tempo block 42479418. This is issuer/protocol-reported operating evidence only; no stress redemption performance, financial reconciliation, or incident-free history is asserted.",
+      "reviewer": "Rev_SenpathusdSentora batch64 primary-evidence review",
+      "notes": "Morpho vaultV2ByAddress rechecked 2026-10-15 reports creation timestamp 1778092871 and block 18585504 (2026-05-06T18:41:11Z). This supports five completed calendar months to this review. Positive supply, deposits and accounting were rechecked at Tempo block 44247051 (2026-10-15T10:43:13Z). This is operating-history eligibility only; no stress-redemption performance, independent financial assurance or incident-free history is asserted. The existing expiry is not extended.",
       "sources": [
         {
           "sourceId": "exact-vault-creation",
@@ -8055,8 +8101,8 @@
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 4,
-          "observedAt": "2026-10-03",
+          "minimumLiveHistoryMonths": 5,
+          "observedAt": "2026-10-15",
           "treatment": "eligibility-only",
           "sourceIds": [
             "exact-vault-creation"
@@ -8666,10 +8712,10 @@
     },
     {
       "assetId": "gldon-ondo",
-      "reviewedAt": "2026-10-03T22:47:03Z",
+      "reviewedAt": "2026-10-15T10:48:03.147Z",
       "expiresAt": "2027-10-03T22:47:03Z",
-      "reviewer": "W1R54 primary-source review",
-      "notes": "Canonical token creation establishes implementation history only, not public offering inception or independently verified uninterrupted operation. No throughput, stress recovery, reconciliation or incident-free claim.",
+      "reviewer": "Rev_GldonOndo exact implementation-age review",
+      "notes": "Canonical initialization at Ethereum block 23984676 (2025-12-10T20:27:11Z; hash 0xdd546239f027e7425e6d7fc82805386ad28f5e352928855a241a1fe3ead216be) establishes ten complete months of implementation history as of 2026-10-15, not public offering inception or independently verified uninterrupted operation. No throughput, stress recovery, reconciliation or incident-free claim. The original expiry is retained.",
       "sources": [
         {
           "sourceId": "canonical-creation",
@@ -8682,8 +8728,8 @@
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 9,
-          "observedAt": "2026-10-03",
+          "minimumLiveHistoryMonths": 10,
+          "observedAt": "2026-10-15",
           "treatment": "eligibility-only",
           "sourceIds": [
             "canonical-creation"
@@ -11876,24 +11922,33 @@
       "reviewedAt": "2026-10-03T23:05:09Z",
       "expiresAt": "2027-10-03T23:05:09Z",
       "reviewer": "Pharos unknown-wave W1R85",
-      "notes": "Documented exact-token deployment/live operation on 2026-01-25 supplies only a conservative completed-calendar-month lower bound as of 2026-10-03. Deployment is not independent verification of operating continuity. No settled stress redemptions, lifetime throughput, continuous report sequence, recovery performance or incident-free history is asserted.",
+      "notes": "Agant's June 2, 2026 announcement describes its first live issuance as forthcoming. Pinned Ethereum totalSupply at block 25380451 (2026-06-23T12:56:11Z) is 100 GBPA. These June product-launch and issued-liability observations support only three completed calendar months at the retained 2026-10-03 observation. January 25 proxy creation is deployment history, not live issuance; the separate July 1 implementation boundary is unchanged. No exact customer-launch day, uninterrupted operation, settled stress redemptions, lifetime throughput, continuous report sequence, recovery performance or incident-free history is asserted.",
       "sources": [
         {
-          "sourceId": "dated-live-token",
-          "label": "Ethereum GBPA creation at block 24312390",
-          "publisher": "Ethereum explorer",
-          "publishedAt": "2026-01-25",
-          "url": "https://etherscan.io/tx/0x2104d4b08186624b758335bc4938c070438e81874feff7a2dd1535b900a4a954",
+          "sourceId": "issuer-preissuance-announcement",
+          "label": "Agant June 2 announcement describes first live issuance as forthcoming",
+          "publisher": "Agant",
+          "publishedAt": "2026-06-02",
+          "url": "https://www.agant.io/news/agant-clear-junction-partnership/",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "ethereum-issued-supply",
+          "label": "Ethereum GBPA positive totalSupply at block 25380451, June 23, 2026",
+          "publisher": "Ethereum onchain state",
+          "publishedAt": "2026-06-23",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com",
           "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 8,
+          "minimumLiveHistoryMonths": 3,
           "observedAt": "2026-10-03",
           "treatment": "eligibility-only",
           "sourceIds": [
-            "dated-live-token"
+            "issuer-preissuance-announcement",
+            "ethereum-issued-supply"
           ]
         }
       },
@@ -12684,10 +12739,10 @@
     },
     {
       "assetId": "zaru-blocktower",
-      "reviewedAt": "2026-10-03T23:05:33Z",
+      "reviewedAt": "2026-10-15T11:00:47Z",
       "expiresAt": "2027-10-03T23:59:59Z",
-      "reviewer": "Unknown-wave W1R67 primary-source review",
-      "notes": "Exact-token operating or deployment age lower bound only. No verified operational performance, redemption throughput, report continuity or incident-free history is asserted. Creation date is deployment history, not first customer distribution.",
+      "reviewer": "Rev_ZaruBlocktower primary-source launch review",
+      "notes": "The issuer announcement's body dates qualifying-institution launch to February 3, 2026 and states ZARU is live on Solana through Luno and EasyEquities desks; the retrieved page's publication metadata is October 13, 2026. Eight complete calendar months since the documented customer launch is a conservative lower bound on October 15; the October 2025 mint creation is kept separate from customer launch. This establishes age eligibility only, not redemption throughput, uninterrupted report continuity, stress performance or incident-free operation.",
       "sources": [
         {
           "sourceId": "dated-operation",
@@ -12696,15 +12751,24 @@
           "publishedAt": "2026-08-28",
           "url": "https://framerusercontent.com/assets/KsEvbTwWi32ctr1xYbVodL5yA8.pdf",
           "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "official-institutional-launch",
+          "label": "ZARU institutional launch, February 3, 2026",
+          "publisher": "ZAR Universal Network",
+          "publishedAt": "2026-10-13",
+          "url": "https://zaru.network/blog/leading-south-african-financial-institutions-launch-rand-stablecoin",
+          "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
         "liveHistory": {
-          "minimumLiveHistoryMonths": 2,
-          "observedAt": "2026-10-03",
+          "minimumLiveHistoryMonths": 8,
+          "observedAt": "2026-10-15",
           "treatment": "eligibility-only",
           "sourceIds": [
-            "dated-operation"
+            "dated-operation",
+            "official-institutional-launch"
           ]
         }
       },

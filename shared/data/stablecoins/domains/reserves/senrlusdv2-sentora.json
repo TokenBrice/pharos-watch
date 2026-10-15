@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
       "name": "Sentora RLUSD Main idle underlying",
-      "pct": 10.9915,
+      "pct": 4.9721,
       "risk": "medium",
       "coinId": "rlusd-ripple",
       "depType": "wrapper",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf:deployed",
       "name": "Sentora RLUSD Main deployed strategy positions",
-      "pct": 89.0085,
+      "pct": 95.0279,
       "risk": "high",
       "coinId": "rlusd-ripple",
       "depType": "wrapper",
@@ -38,8 +38,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_Senrlusdv2Sentora",
     "confidence": "verified",
     "sources": [
       {
@@ -59,8 +59,8 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho exact-vault portfolio API",
@@ -71,9 +71,9 @@
         "url": "https://sentora.com/legal/terms-of-use"
       }
     ],
-    "rationale": "At block 26107702, asset()=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets=451873322385272395066245035, idle underlying=49667525480716097356989360, current adapter realAssets=402205796904556297709255675, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets. The 10 current pinned lender positions have zero borrow shares and zero posted collateral. RLUSD lending positions against cbBTC, FXRP, syrupUSDC, wstETH, USDe, weETH, kBTC and WBTC, plus 1-wei lender dust positions against PT-sUSDE-13AUG2026 and WETH. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
+    "rationale": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), asset()=0x8292bb45bf1ee4d140127049757c2e0ff06317ed; totalAssets=454517126800634570805195842, idle underlying=22599096677134371116903586, sole adapter realAssets=431918030123500199688292256, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets, and the sum of all 10 expectedSupplyAssets values exactly equals adapter realAssets. All 10 positions have zero borrow shares and zero posted collateral. The largest borrower collateral exposures are kBTC (54.0610% of vault NAV), weETH (21.4082%) and USDe (13.6074%); cbBTC, FXRP, syrupUSDC and wstETH account for the remaining substantive lending positions. WBTC, PT-sUSDE-13AUG2026 and WETH each retain only 1 wei of lender assets. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
     "compositionBasis": "Pinned exact vault underlying balance and sole adapter realAssets; percentages of totalAssets, rounded to four decimals",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Current vault/adapter accounting is identified. Collateral custody, enforceable insolvency priority, borrower losses and stressed liquidation capacity are not established across every underlying layer.",
     "knownUnknownExposurePct": 0
@@ -96,7 +96,7 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
+    "rehypothecation": "unknown",
     "reviewedAt": "2026-10-03",
     "reviewer": "Sol refinement 2026-10-03 (Refine10)",
     "confidence": "probable",
@@ -134,6 +134,6 @@
         "url": "https://docs.morpho.org/get-started/resources/audits/"
       }
     ],
-    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
+    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

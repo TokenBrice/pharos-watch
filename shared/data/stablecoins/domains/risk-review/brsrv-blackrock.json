@@ -20,9 +20,9 @@
         "url": "https://etherscan.io/address/0x3078bcf707e457d3af2f938a2a478bbeea50a942#code"
       }
     ],
-    "evidence": "The prospectus authorizes wallet whitelisting, restriction/rejection/freezing, erroneous-transfer burn/reissue and lost-key remedies. Finalized Solana slot 452748384 corroborates a freeze authority and permanent delegate. A zero blacklist-manager service does not remove transfer-agent controls.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "The prospectus authorizes wallet whitelisting, restriction/rejection/freezing, erroneous-transfer burn/reissue and lost-key remedies. New subscription and dividend-reinvestment tokens have a 24-hour peer-transfer lock, with redemption and same-investor wallet relocation exceptions. Atomic finalized Solana slot 457209999 (2026-10-15T10:49:14Z; https://solana-rpc.publicnode.com) corroborates the mint's freeze authority, permanent delegate and transfer hook. A zero blacklist-manager service does not remove transfer-agent controls.",
+    "reviewer": "Rev_BrsrvBlackrock batch-64 review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
@@ -31,8 +31,8 @@
     "summary": "Primary subscription and redemption use issuer-administered fund NAV. Public quote or oracle publication does not remove the fund valuation authority; no collateral-liquidation mechanism is modeled.",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_BrsrvBlackrock batch-64 review",
       "rationale": "The token is a direct NAV fund-share claim, with no evidenced borrower-vault or liquidation-price branches. Primary NAV authority applies to the share price and redemption.",
       "sources": [
         {
@@ -45,8 +45,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_BrsrvBlackrock batch-64 review",
     "confidence": "verified",
     "sources": [
       {
@@ -66,11 +66,11 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine04 exact native fund pricing review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_BrsrvBlackrock batch-64 review",
           "confidence": "verified",
-          "rationale": "This native OnChain share uses the fund's administered daily NAV and dividend/reinvestment policy. Verified DSToken is an issuance/transfer register, not a borrower collateral-vault liquidation path. October 2 fund reporting gives $1 NAV; sponsor support is not assured. This pricing classification does not close controller/quorum or financial reconciliation questions.",
-          "sources": [{"label": "Exact Ethereum token implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"}, {"label": "OnChain prospectus and common-class NAV", "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"}]
+          "rationale": "This native OnChain share uses the fund's administered daily NAV and dividend/reinvestment policy. Verified DSToken is an issuance/transfer register, not a borrower collateral-vault liquidation path. October 14 fund reporting gives $1 NAV; sponsor support is not assured. This pricing classification does not close controller/quorum or financial reconciliation questions.",
+          "sources": [{"label": "Exact Ethereum token implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc4ecf0307ff0c45c0546e0debedbbd0e47ac3354"}, {"label": "OnChain prospectus and common-class NAV", "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"}, {"label": "October 14 fund NAV reporting, accessed October 15", "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"}]
         }
       },
       {
@@ -80,8 +80,8 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine04 common-class NAV scope review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_BrsrvBlackrock batch-64 review",
           "confidence": "verified",
           "rationale": "The prospectus authorizes Tempo as a native register rail for the same OnChain class. Fund-administered NAV is common across rails; no separate borrower market or liquidation-price branch is evidenced. Zero stock at the earlier pin does not remove this deployment from scope. This legal pricing-scope conclusion does not assert Tempo implementation/signing closure.",
           "sources": [{"label": "OnChain class supported rails and NAV policy", "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"}]
@@ -94,8 +94,8 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine04 common-class NAV scope review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_BrsrvBlackrock batch-64 review",
           "confidence": "verified",
           "rationale": "This native Solana Token-2022 share is a supported rail of the same fund class and common administered NAV, not a collateralized wrapper or borrower liquidation branch. Zero stock at the earlier pin does not make native pricing inapplicable. Program signing/upgrade details remain Mint Authority questions, not a claim of independent NAV computation.",
           "sources": [{"label": "OnChain class supported rails and NAV policy", "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"}, {"label": "Exact native Solana mint", "url": "https://solscan.io/token/9rX4yuAirQkm5JC26v3oSfGencsxwjB8kkmgf2dwWe9N"}]
@@ -106,8 +106,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "All three registered BRSRV deployments are direct native OnChain fund-share issuance rails of Securitize's common shareholder register. The July 31 prospectus authorizes direct mint/burn on Ethereum, Tempo and Solana, rather than canonical-token lock/release or bridge receipts. Reviewed for complete exact-input independent-liability transfer census; zero-stock rails remain in scope and no static shares are authored. Native issuance authorization and upgrade questions remain in Mint Authority.",
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4T02Avant)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_BrsrvBlackrock batch-64 review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -119,15 +119,15 @@
         "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
       },
       {
-        "label": "Ethereum pinned BRSRV identity at block 26110197",
-        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        "label": "Ethereum BRSRV identity and supply at block 26197405, 2026-10-15T10:46:11Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
-        "label": "Tempo pinned BRSRV identity at block 42641165",
+        "label": "Tempo BRSRV identity and supply at block 44247376, 2026-10-15T10:46:13Z",
         "url": "https://api-tempo-mainnet.n.dwellir.com"
       },
       {
-        "label": "Solana finalized exact mint identities at slot 454891046",
+        "label": "Solana finalized atomic mint and authority snapshot at slot 457209999, 2026-10-15T10:49:14Z",
         "url": "https://solana-rpc.publicnode.com"
       }
     ],
@@ -144,10 +144,10 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native liability: the July 31 prospectus pages 4-5 defines Ethereum, Tempo and Solana records plus the off-chain register as the official shareholder register; page 7 issues shares directly through the transfer agent. Verified DSToken issueTokensWithMultipleLocks/burn creates and destroys fund shares rather than escrowing another chain's canonical token. The token's compliance locks are shareholder transfer restrictions, not bridge escrow. Pinned October 9 identity read at Ethereum block 26110197 confirms symbol BRSRV and 6 decimals. Existing role/implementation pins are retained; no new signing-policy closure or runtime supply allocation is claimed.",
+        "reviewNote": "Independent native liability: the July 31 prospectus defines Ethereum, Tempo and Solana records plus the off-chain register as the official shareholder register and issues shares directly through the transfer agent. Verified DSToken issueTokensWithMultipleLocks/burn creates and destroys fund shares rather than escrowing another chain's canonical token. Compliance locks restrict shareholder transfers, not bridge escrow. Ethereum block 26197405 (2026-10-15T10:46:11Z; hash 0x1a0e0f54df56f87d6e865386a990f131c44f247726192e8e336fb722cbf4135e) confirms exact name, BRSRV, six decimals and 50,355,489.68 shares. No new signing-policy closure or complete off-chain liability reconciliation is claimed.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197405,
         "sources": [
           {
             "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -179,10 +179,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native liability on the same legally definitive fund-share register, not a receipt against Ethereum escrow. The July 31 prospectus expressly names Tempo and authorizes direct mint/burn, with off-chain redemption regardless of network availability. Existing October 5 reviewed runtime correspondence binds the Tempo DSToken/TokenLibrary issuance implementation to verified Ethereum source; unresolved issuer authorization remains separate. October 9 pinned identity at Tempo block 42641165 confirms BRSRV and 6 decimals. The earlier zero stock does not remove this registered deployment from the required complete census.",
+        "reviewNote": "Independent native liability on the same legally definitive fund-share register, not a receipt against Ethereum escrow. The July 31 prospectus names Tempo and authorizes direct mint/burn, with off-chain redemption regardless of network availability. Historical October 5 DSToken/TokenLibrary runtime correspondence is retained; unresolved issuer authorization remains separate. Tempo block 44247376 (2026-10-15T10:46:13Z; hash 0x604ae0a96e3b0531ac5ee157b2db0ac0414e44160b7a6009d4084e2defaa5e01) confirms exact name, BRSRV, six decimals and zero supply. Observed zero stock does not remove this registered deployment from the complete census.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 42323853,
+        "observedAt": "2026-10-15",
+        "observedBlock": 44247376,
         "sources": [
           {
             "label": "BlackRock July 31, 2026 OnChain share prospectus",
@@ -210,10 +210,10 @@
         "semantics": "native-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native Solana fund-share issuance under the prospectus's common shareholder register, with direct mint and burn rather than escrow receipts or a LockRelease adapter. Finalized atomic mint snapshot at slot 454891046 (blockhash CmkAxc1dMUfs2Uuszipv2Wfo8GDtVTJwBQU1ThPzX6Kc, blockTime 1791555521) confirms exact BRSRV mint, name, 6 decimals and Securitize program-controlled mint authority J8hicFRuULsSJQXyK828gtszFjh1odeAxYJtx9R1DL12. Its observed zero supply does not exempt this leg from a complete current census. Program signing and upgrade questions remain unresolved in Mint Authority.",
+        "reviewNote": "Independent native Solana fund-share issuance under the prospectus's common shareholder register, with direct mint/burn rather than escrow receipts or a LockRelease adapter. Atomic finalized getMultipleAccounts snapshot at slot 457209999 (2026-10-15T10:49:14Z; blockhash 5kGxBMVyhvb3AWb5jL9pZkRyyT5AnTQgimtbXjx8Zyp) confirms exact BRSRV mint, name, six decimals, zero supply and program-controlled mint/freeze/permanent-delegate authority J8hicFRuULsSJQXyK828gtszFjh1odeAxYJtx9R1DL12. Zero supply does not exempt this leg from the census. Signing and upgrade-authorization questions remain unresolved in Mint Authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748384,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209999,
         "sources": [
           {
             "label": "BlackRock July 31, 2026 OnChain share prospectus",
