@@ -240,6 +240,8 @@ export function materializeEvmQuotePoint(input: {
 export function createEvmQuotePlanMulticallExecutor(options: {
   gas?: string;
   maxBatchSize?: number;
+  /** Split reviewed multi-call quote aggregates on deterministic OOG; singleton failover is unchanged. */
+  splitOnExecutionBudgetError?: boolean;
 }): (input: EvmQuotePlanBatchInput) => Promise<EvmMulticall3Result[] | null> {
   return ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
     fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
@@ -254,6 +256,7 @@ export function createEvmQuotePlanMulticallExecutor(options: {
         return consumed;
       } } : {}),
       maxRetries: 0,
+      stopOnExecutionBudgetError: options.splitOnExecutionBudgetError === true && calls.length > 1,
       ...(options.gas ? { gas: options.gas } : {}),
       multicallBatchSize: options.maxBatchSize == null
         ? calls.length

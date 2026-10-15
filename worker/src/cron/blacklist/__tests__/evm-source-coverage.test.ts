@@ -174,15 +174,15 @@ describe("EVM blacklist contiguous coverage", () => {
     }
   });
 
-  describe("batch3 Dwellir blacklist log routing", () => {
-    function setup(chainId: "base" | "optimism" | "avalanche", disabled = false, alchemy = true) {
+  describe("reviewed Dwellir blacklist log routing", () => {
+    function setup(chainId: "arbitrum" | "base" | "optimism" | "avalanche", disabled = false, alchemy = true) {
       const config = makeConfig(chainId, [TOPIC_A, TOPIC_B]);
-      config.chain.evmChainId = chainId === "base" ? 8453 : chainId === "optimism" ? 10 : 43114;
+      config.chain.evmChainId = chainId === "arbitrum" ? 42161 : chainId === "base" ? 8453 : chainId === "optimism" ? 10 : 43114;
       const chainRpcs = buildChainRpcs(alchemy ? "alchemy" : undefined, undefined, {
         dwellirApiKey: "dwellir", dwellirRoutingDisabledChains: disabled ? new Set([chainId]) : undefined,
       });
       vi.mocked(getChainRpc).mockReturnValue(chainRpcs.get(chainId));
-      vi.mocked(getAlchemyBlockNumber).mockResolvedValue(20_000_450);
+      vi.mocked(getAlchemyBlockNumber).mockResolvedValue(chainId === "arbitrum" ? 20_003_600 : 20_000_450);
       vi.mocked(fetchAlchemyLogs).mockImplementation(async (_rpc, _address, _topics, _from, to, budget) => {
         budget.count++;
         return { logs: [], complete: true, scannedToBlock: to, calls: 1, maxDepth: 0 };
@@ -190,7 +190,7 @@ describe("EVM blacklist contiguous coverage", () => {
       return { config, chainRpcs };
     }
 
-    it.each(["base", "optimism", "avalanche"] as const)(
+    it.each(["arbitrum", "base", "optimism", "avalanche"] as const)(
       "scans %s Dwellir first in 10,000-block pages under the existing catch-up allowance", async (chainId) => {
         const { config, chainRpcs } = setup(chainId);
         const budget = createBlacklistRunBudget({ subrequestLimit: 2_000, runtimeBudgetMs: 600_000 });
@@ -203,7 +203,7 @@ describe("EVM blacklist contiguous coverage", () => {
           expect(call[7]?.maxSplitCalls).toBe(600 - index);
         }
         expect(result).toMatchObject({ scannedToBlock: 6_000_000, safeHead: 20_000_000,
-          coverageOutcome: "incomplete", providerCalls: 600, coveredTopicCount: 2 });
+          coverageOutcome: "incomplete", providerCalls: chainId === "arbitrum" ? 601 : 600, coveredTopicCount: 2 });
       },
     );
 

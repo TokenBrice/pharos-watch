@@ -34,9 +34,9 @@ function admitted(chainId = "base"): readonly RpcEndpoint[] {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe("mint/burn ordered RPC fallback", () => {
-  it("keeps unadmitted contexts and 50k windows byte-identical", async () => {
-    const endpoint = mintBurnRpcEndpoints("base", "alchemy-test");
-    const registry = mintBurnRpcEndpoints("base", "alchemy-test", buildChainRpcs("alchemy-test"));
+  it.each(["ethereum", "arbitrum", "base"])("keeps unadmitted %s contexts and 50k windows byte-identical", async (chain) => {
+    const endpoint = mintBurnRpcEndpoints(chain, "alchemy-test");
+    const registry = mintBurnRpcEndpoints(chain, "alchemy-test", buildChainRpcs("alchemy-test"));
     expect(JSON.stringify(registry)).toBe(JSON.stringify(endpoint));
     const fetcher = recorder(() => ({ result: [] }));
     const budget = createBudget(20);
@@ -45,7 +45,7 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(JSON.parse(String(fetcher.mock.calls[0][1].body)).params[0]).toMatchObject({ fromBlock: "0x1", toBlock: "0xc350" });
   });
 
-  it.each(["base", "arbitrum"])("falls back from Alchemy to metered 10k pages on %s", async (chain) => {
+  it.each(["ethereum", "base", "arbitrum"])("falls back from Alchemy to metered 10k pages on %s", async (chain) => {
     const endpoints = admitted(chain);
     expect(endpoints.map((endpoint) => endpoint.operator)).toEqual(["alchemy", "dwellir"]);
     const meter = vi.spyOn(credits, "recordDwellirCredits");
@@ -60,6 +60,16 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(budget.count).toBe(8);
     expect(meter.mock.calls).toEqual([[1], [1], [1], [1], [1], [1]]);
     expect(new Headers(fetcher.mock.calls[2][1].headers).get("X-Api-Key")).toBe("dwellir-test");
+  });
+
+  it.each(["ethereum", "arbitrum", "base"])("keeps successful %s scans Alchemy-only even after Dwellir admission", async (chain) => {
+    const endpoints = admitted(chain);
+    const meter = vi.spyOn(credits, "recordDwellirCredits");
+    const fetcher = recorder((_, call) => ({ result: call.method === "eth_blockNumber" ? "0xc350" : [] }));
+    expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, createBudget(20)))
+      .toMatchObject({ complete: true, scannedToBlock: 50_000, calls: 1 });
+    expect(fetcher.mock.calls.every(([url]) => url === endpoints[0].url)).toBe(true);
+    expect(meter).not.toHaveBeenCalled();
   });
 
   it("preserves the contiguous frontier when a provider switch fails mid-scan", async () => {
@@ -80,8 +90,8 @@ describe("mint/burn ordered RPC fallback", () => {
       .map((call) => Number(logRange(call).fromBlock))).toEqual([25_001, 35_001]);
   });
 
-  it("does not advance an empty-scan cursor past a fallback head lagging by more than the safety margin", async () => {
-    const endpoints = admitted();
+  it.each(["ethereum", "arbitrum", "base"])("does not advance %s's empty-scan cursor past a fallback head lagging by more than the safety margin", async (chain) => {
+    const endpoints = admitted(chain);
     const fallbackHead = 49_900; // Primary head is 100 blocks ahead; the lane safety margin is only 75.
     const fetcher = recorder((url, call) => {
       if (call.method === "eth_blockNumber") {
@@ -90,9 +100,9 @@ describe("mint/burn ordered RPC fallback", () => {
       // This provider would silently accept a future toBlock and return empty logs.
       return url === endpoints[0].url ? unavailable : { result: [] };
     });
-    const config = MINT_BURN_CONFIGS.find((config) => config.chain.chainId === "base")!;
+    const config = MINT_BURN_CONFIGS.find((config) => config.chain.chainId === chain)!;
     const result = await syncMintBurnConfig({
-      db: mockD1([{ match: "INSERT INTO cache", rows: [] }]), config, key: "base-fixture", tier: "critical", fromBlock: 1, scanTo: 50_000,
+      db: mockD1([{ match: "INSERT INTO cache", rows: [] }]), config, key: `${chain}-fixture`, tier: "critical", fromBlock: 1, scanTo: 50_000,
       chainHead: 50_000, rpcEndpoints: endpoints, configBudgetLimit: 60, runTimestamp: 1100,
       priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
       txContextCache: new Map(), affectedHours: new Map(), safetyMarginBlocks: 75,
@@ -105,14 +115,25 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(fallbackPages.every((call) => Number(logRange(call).toBlock) <= fallbackHead)).toBe(true);
   });
 
-  it.each(["ethereum", "base"])("never reaches disabled/unreviewed %s Dwellir", async (chain) => {
-    const map = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test", dwellirRoutingDisabledChains: new Set(["base"]) });
+  it.each(["ethereum", "base", "arbitrum", "optimism"])("never reaches disabled or unreviewed %s Dwellir", async (chain) => {
+    const map = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test", dwellirRoutingDisabledChains: new Set(["ethereum", "base", "arbitrum"]) });
     const endpoints = mintBurnRpcEndpoints(chain, "alchemy-test", map);
     expect(endpoints).toHaveLength(1);
     const fetcher = recorder(() => unavailable);
     expect(await getMintBurnBlockNumber(endpoints, createBudget(20))).toBeNull();
     await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, createBudget(20));
     expect(fetcher.mock.calls.every(([url]) => !url.includes("dwellir"))).toBe(true);
+  });
+
+  it.each(["ethereum", "arbitrum", "base"])("requires archive state and full logs for %s fallback", (chain) => {
+    const map = buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test" });
+    const config = map.get(chain)!;
+    for (const capabilities of [{ stateHistory: "recent" as const }, { logsHistory: "none" as const }]) {
+      const restricted = new Map(map);
+      restricted.set(chain, { ...config, endpoints: config.endpoints.map((endpoint) =>
+        endpoint.operator === "dwellir" ? { ...endpoint, ...capabilities } : endpoint) });
+      expect(mintBurnRpcEndpoints(chain, "alchemy-test", restricted).map((endpoint) => endpoint.operator)).toEqual(["alchemy"]);
+    }
   });
 
   it("falls back for heads and hash-bound timestamps, rejecting a mismatching fork", async () => {

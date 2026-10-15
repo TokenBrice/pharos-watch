@@ -176,11 +176,17 @@ async function transportRpcEndpoint(input: {
     if (input.signal.aborted) {
       return { status: "aborted", result: null, latencyMs, errorClass: null, httpStatus: null };
     }
+    const errorClass = classifyRpcParityTransportError(error);
+    // The lane, not the provider, imposed a shorter request budget. Timer
+    // callbacks may fire just before the wall clock reaches the deadline.
+    if (errorClass === "timeout" && input.timeoutMs < RPC_PARITY_REQUEST_TIMEOUT_MS) {
+      return { status: "deadline", result: null, latencyMs, errorClass: null, httpStatus: null };
+    }
     return {
       status: "error",
       result: null,
       latencyMs,
-      errorClass: classifyRpcParityTransportError(error),
+      errorClass,
       httpStatus: null,
       message: toErrorMessage(error),
     };
@@ -977,13 +983,10 @@ export async function probeRpcProviderParityRun(input: {
         result.aborted = true;
       }
       result.skipped.push({ chainId: target.chainId, reason: probe.stop });
-      if (probe.stop === "aborted") {
-        for (let remaining = index + 1; remaining < targets.length; remaining++) {
-          result.skipped.push({ chainId: targets[(offset + remaining) % targets.length].chainId, reason: "aborted" });
-        }
-        break;
+      for (let remaining = index + 1; remaining < targets.length; remaining++) {
+        result.skipped.push({ chainId: targets[(offset + remaining) % targets.length].chainId, reason: probe.stop });
       }
-      continue;
+      break;
     }
     result.samples.push(probe.sample);
     result.attempted += 1;

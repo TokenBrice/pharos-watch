@@ -1161,15 +1161,31 @@ describe("evm-rpc helpers", () => {
     expect(attemptedUrls()).toEqual([publicUrl]);
   });
 
-  it("excludes promoted Dwellir from unreviewed log batches", async () => {
+  it.each([["ethereum", false], ["arbitrum", true]] as const)(
+    "applies independent global log admission for state-primary %s", async (chainId, logAdmitted) => {
+      const dwellirUrl = `https://api-${chainId}-log-test.n.dwellir.com`;
+      const publicUrl = `https://${chainId}-log-public.example`;
+      const chainRpcs = chainRpcsWith(chainId, [
+        { ...dwellirEndpoint(dwellirUrl), position: "registry", maxLogBlockSpan: 10_000 },
+        registryEndpoint(publicUrl),
+      ]);
+      fetchWithRetryMock.mockResolvedValue(null);
+      await fetchEvmRpcBatch(chainId, [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2" }] }],
+        { chainRpcs, maxRetries: 0 });
+      expect(attemptedUrls()).toEqual(logAdmitted ? [dwellirUrl, publicUrl] : [publicUrl]);
+    },
+  );
+
+  it("skips Arbitrum Dwellir before sending a log batch over its inclusive 10k span", async () => {
+    const publicUrl = "https://arbitrum-log-public.example";
     const chainRpcs = chainRpcsWith("arbitrum", [
-      { ...dwellirEndpoint("https://api-arbitrum-log-test.n.dwellir.com"), position: "registry" },
-      registryEndpoint("https://arbitrum-log-public.example"),
+      { ...dwellirEndpoint("https://api-arbitrum-log-test.n.dwellir.com"), position: "registry", maxLogBlockSpan: 10_000 },
+      registryEndpoint(publicUrl),
     ]);
     fetchWithRetryMock.mockResolvedValue(null);
-    await fetchEvmRpcBatch("arbitrum", [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2" }] }],
+    await fetchEvmRpcBatch("arbitrum", [{ method: "eth_getLogs", params: [{ fromBlock: "0x1", toBlock: "0x2711" }] }],
       { chainRpcs, maxRetries: 0 });
-    expect(attemptedUrls()).toEqual(["https://arbitrum-log-public.example"]);
+    expect(attemptedUrls()).toEqual([publicUrl]);
   });
 
   it("keeps log lanes on registry endpoints when supplemental RPC is excluded", async () => {
