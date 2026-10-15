@@ -44,7 +44,10 @@ export async function runCriticalCoverageShard({
       ),
       env,
     ),
-  ]), { reporter: {}, runCommandImpl: runCommand });
+  ]), {
+    reporter: {}, runCommandImpl: runCommand,
+    getCommandEnv: () => ({ PHAROS_V9_RESOURCE_LANE: "0" }),
+  });
   if (timingsFile) publishShardTimings(timingsFile, parseShardCoordinates(rest), Date.now() - startedAt, env, "critical-coverage");
   return result.status;
 }

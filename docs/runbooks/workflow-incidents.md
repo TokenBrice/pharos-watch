@@ -12,6 +12,7 @@ The final `report-failures` job in these workflows owns CI incidents:
 - `.github/workflows/protocol-api-mechanism-refresh.yml`
 - `.github/workflows/deploy-cloudflare.yml`
 - `.github/workflows/rebuild-pages.yml`
+- `.github/workflows/worker-memory-monitor.yml` (mandatory job `memory`; distinct **Heavy kill observed** and **Collection incomplete** step incidents; [memory runbook](./cron-slot-abandonment.md#first-checks))
 
 It runs with `always()` after the mandatory jobs, only on `refs/heads/main` for push, schedule, or manual dispatch. It never reports PRs or non-main dispatches. The shared action is `.github/actions/report-workflow-failure/action.yml`; the dependency-free Node 24 entrypoint is `scripts/ci/report-workflow-failure.ts`. Reporting installs Node but not the npm workspace, so an install failure in a producer can still become an issue.
 
@@ -43,4 +44,4 @@ Focused contract coverage:
 npx vitest run scripts/__tests__/report-workflow-failure.test.ts
 ```
 
-The mocked-client suite covers creation, repeat comments, recovery closure, recurrence reopening, named/matrix/reusable leaves, advisory exclusion, main/event guards, cancellation/skips, stale recorded state, GitHub provider boundaries, pagination, and all eight workflow reporting dependencies. It does not mutate GitHub issues. Production issue/recovery behavior requires an Actions observation.
+The mocked-client suite covers creation, repeat comments, recovery closure, recurrence reopening, named/matrix/reusable leaves, advisory exclusion, main/event guards, cancellation/skips, stale recorded state, GitHub provider boundaries, pagination, and all nine workflow reporting dependencies. It does not mutate GitHub issues. Production issue/recovery behavior requires an Actions observation. The memory monitor's green recovery means no currently observed alerting heavy kill with fresh available required Analytics evidence, not proof of capacity or a fixed runtime defect; public kills and public broad-sample incompleteness remain report-only initially.

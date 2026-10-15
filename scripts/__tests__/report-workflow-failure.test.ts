@@ -304,14 +304,15 @@ describe("incident provider boundaries", () => {
 
 describe("workflow reporting wiring", () => {
   const mandatory: Record<string, string[]> = {
-    "nightly-validation.yml": ["full-static", "full-tests"],
-    "weekly-validation.yml": ["audit", "html-fixture-age", "gitleaks", "all-critical-ratchet", "telegram-load", "compare-account-state", "dependency-coverage"],
+    "nightly-validation.yml": ["full-static", "full-tests", "v9-resource"],
+    "weekly-validation.yml": ["audit", "html-fixture-age", "gitleaks", "all-critical-ratchet", "v9-resource", "telegram-load", "compare-account-state", "dependency-coverage"],
     "dependency-scenarios-refresh.yml": ["scenarios"],
     "safety-map-refresh.yml": ["plan", "render"],
     "curation-expiry-sweep.yml": ["sweep"],
     "protocol-api-mechanism-refresh.yml": ["refresh"],
     "deploy-cloudflare.yml": ["plan", "deploy-worker", "pages-prepare", "pages-release", "post-deploy-acceptance"],
     "rebuild-pages.yml": ["pages-prepare", "pages-release"],
+    "worker-memory-monitor.yml": ["memory"],
   };
   it.each(Object.entries(mandatory))("reports all mandatory jobs in %s", (file, jobs) => {
     const workflow = parseYaml(readFileSync(`.github/workflows/${file}`, "utf8"));

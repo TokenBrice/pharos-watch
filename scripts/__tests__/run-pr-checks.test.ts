@@ -39,6 +39,7 @@ describe("local PR check orchestration", () => {
       "agents-doc-artifact",
       "pr-static",
       "pr-tests",
+      "v9-resource",
       "pages-artifact",
     ]);
   });

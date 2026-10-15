@@ -52,6 +52,7 @@ export type PrCheckLane =
   | "agents-doc-artifact"
   | "pr-static"
   | "pr-tests"
+  | "v9-resource"
   | "pages-artifact"
   | "critical-coverage";
 
@@ -120,7 +121,7 @@ export function buildPrCheckPlan(
   if (classification.docsChanged) {
     lanes.push(...DOC_CHECK_LANES);
   }
-  lanes.push("pr-static", "pr-tests");
+  lanes.push("pr-static", "pr-tests", "v9-resource");
   if (classification.pagesArtifactRequired && flags.withPages) lanes.push("pages-artifact");
 
   if (classification.criticalCoverageChanged && flags.withCoverage) {
@@ -217,9 +218,11 @@ export function createLaneCommand(
             ? "docs"
             : lane === "pr-tests"
               ? "tests"
-              : lane === "pages-artifact"
-                ? "pages-artifact"
-                : "critical-coverage",
+              : lane === "v9-resource"
+                ? "v9-resource"
+                : lane === "pages-artifact"
+                  ? "pages-artifact"
+                  : "critical-coverage",
       ).commands.find((command) => command.id === lane);
   if (!manifestCommand) throw new Error(`Missing PR lane command: ${lane}`);
   const command = manifestCommand.program === "npm"
@@ -253,15 +256,20 @@ export function createLaneCommand(
     case "agents-doc-artifact":
       return withLane(command, { PR_BASE_SHA: resolvedBaseSha, PR_HEAD_SHA: head });
     case "pr-static":
+    case "v9-resource":
     case "pages-artifact":
       return withLane(command);
     case "pr-tests":
       // Always explicit: an inherited "1" must not drop owner tests when no coverage leaf runs them.
-      return withLane(command, { PR_TESTS_DEFER_CRITICAL_OWNERS: deferCriticalOwners ? "1" : "0" });
+      return withLane(command, {
+        PR_TESTS_DEFER_CRITICAL_OWNERS: deferCriticalOwners ? "1" : "0",
+        PHAROS_V9_RESOURCE_LANE: "0",
+      });
     case "critical-coverage":
       return withLane(command, {
         ...(env as Record<string, string>),
         CRITICAL_COVERAGE_COMPARE_REF: resolvedBaseSha,
+        PHAROS_V9_RESOURCE_LANE: "0",
       });
   }
 }
@@ -414,7 +422,7 @@ export async function runPrChecks(
     // Classifier-selected Pages/coverage lanes that this run did not opt into
     // stay required on GitHub; they are deferred, not skipped.
     const ciRequired = { "pages-artifact": classification.pagesArtifactRequired, "critical-coverage": classification.criticalCoverageChanged };
-    for (const lane of [...DOC_CHECK_LANES, "pr-tests", "pages-artifact", "critical-coverage"] as const) {
+    for (const lane of [...DOC_CHECK_LANES, "pr-tests", "v9-resource", "pages-artifact", "critical-coverage"] as const) {
       if (!lanes.includes(lane)) leaves.push({
         id: lane, command: createLaneCommand(lane, context).cmd,
         status: (lane === "pages-artifact" || lane === "critical-coverage") && ciRequired[lane] ? "deferred-to-ci" : "not-selected",
@@ -477,7 +485,7 @@ export async function runPrChecks(
     const runTrack = async (track: readonly PrCheckCommand[]) => {
       for (const command of track) executed.set(command, await runLeaf(command));
     };
-    const testTrack = commands.filter((command) => command.lane === "pr-tests" || command.lane === "critical-coverage");
+    const testTrack = commands.filter((command) => command.lane === "pr-tests" || command.lane === "v9-resource" || command.lane === "critical-coverage");
     const pagesTrack = commands.filter((command) => command.lane === "pages-artifact");
     await Promise.all([
       runTrack(testTrack),

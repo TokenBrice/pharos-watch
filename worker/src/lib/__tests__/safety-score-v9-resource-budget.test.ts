@@ -16,6 +16,7 @@ import {
 import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget";
 import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
+import { createResourceProbeEnv } from "./safety-score-v9-resource-env.test-support";
 
 describe("Safety Score V9 compile admission", () => {
   it.each([
@@ -68,6 +69,31 @@ describe("Safety Score V9 compile admission", () => {
       inputCapBytes: null, catalogMaxAssets: null, platformOutcome: null, platformOutcomeSource: null,
     });
   });
+
+  it.each([
+    {},
+    { contagion: true },
+    { capturePath: "/explicit/capture.json" },
+  ])("isolates probe children from poisoned ambient instrumentation: %j", (protocol) => {
+    const env = createResourceProbeEnv({
+      PATH: process.env.PATH, HOME: process.env.HOME, LANG: "C", LC_ALL: "C",
+      NODE_V8_COVERAGE: "/poison/coverage", NODE_OPTIONS: "--require=/poison/preload.cjs",
+      VITEST: "true", VITEST_WORKER_ID: "1", COVERAGE: "1",
+      CONTAGION_MATRIX: "poison", SAFETY_SCORE_V9_RESOURCE_CAPTURE: "/poison/capture.json",
+      PHAROS_V9_RESOURCE_LANE: "1",
+    }, protocol);
+    const child = spawnSync(process.execPath, ["-e", "process.stdout.write(JSON.stringify(process.env))"], {
+      env, encoding: "utf8",
+    });
+    expect(child.status, child.stderr).toBe(0);
+    expect(JSON.parse(child.stdout)).toEqual({
+      ...(process.env.PATH === undefined ? {} : { PATH: process.env.PATH }),
+      ...(process.env.HOME === undefined ? {} : { HOME: process.env.HOME }),
+      LANG: "C", LC_ALL: "C",
+      ...("contagion" in protocol ? { CONTAGION_MATRIX: "1" } : {}),
+      ...("capturePath" in protocol ? { SAFETY_SCORE_V9_RESOURCE_CAPTURE: protocol.capturePath } : {}),
+    });
+  });
 });
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
@@ -101,7 +127,7 @@ let temporaryDirectory = "";
 let bundledProbe = "";
 let bundledInputs: string[] = [];
 
-describe("Safety Score V9 canonical publication resource budget", {
+describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 canonical publication resource budget", {
   timeout: 210_000,
 }, () => {
   beforeAll(() => {
@@ -406,7 +432,7 @@ describe("Safety Score V9 canonical publication resource budget", {
         // runs near the 128 MiB ceiling, and the GC-bound child exceeded 100s inside a
         // fully parallel test:pr run while taking ~30s alone.
         timeout: 180_000,
-        env: { ...process.env, SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
+        env: createResourceProbeEnv(process.env),
       },
     );
     if (result.status !== 0) console.error({ probe: "canonical-publication-failure", stdout: result.stdout, stderr: result.stderr });
@@ -449,7 +475,10 @@ describe("Safety Score V9 canonical publication resource budget", {
   it.skipIf(!process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE)("keeps the frozen same-capture production envelope within both byte budgets", () => {
     const result = spawnSync(process.execPath, [
       `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
-    ], { cwd: ROOT, encoding: "utf8", timeout: 60_000 });
+    ], {
+      cwd: ROOT, encoding: "utf8", timeout: 60_000,
+      env: createResourceProbeEnv(process.env, { capturePath: process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE }),
+    });
     expect(result.status, result.stderr).toBe(0);
     const output = JSON.parse(result.stdout) as { candidateBytes: number; baseInputGenerationId: string };
     expect(output.baseInputGenerationId).toBe(FROZEN_BASE.inputGenerationId);
@@ -465,7 +494,7 @@ describe("Safety Score V9 canonical publication resource budget", {
       // Wall-clock guard only (memory is the asserted bound): v10.01 cause
       // tracing raises evaluation CPU, and shared CI runners exceeded 45s.
       cwd: ROOT, encoding: "utf8", timeout: 100_000,
-      env: { ...process.env, CONTAGION_MATRIX: "1", SAFETY_SCORE_V9_RESOURCE_CAPTURE: "" },
+      env: createResourceProbeEnv(process.env, { contagion: true }),
     });
     expect(result.error).toBeUndefined();
     expect(result.status, result.stderr).toBe(0);
@@ -476,6 +505,7 @@ describe("Safety Score V9 canonical publication resource budget", {
     console.info({
       probe: "nine-scenario-matrix", oldSpaceLimitMiB: CONTAGION_HEAP_LIMIT_MIB, ...output,
     });
+    expect(output.expected).toBeGreaterThan(300);
     expect(output.counts).toHaveLength(9);
     for (const count of output.counts) {
       expect(count.evaluated).toBe(output.expected);

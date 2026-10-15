@@ -168,6 +168,10 @@ describe("CI-shaped readiness leaves on the merge checkout", () => {
     expect(f.runSecrets).toHaveBeenCalledWith({ baseSha: BASE, headSha: HEAD, mergeSha: MERGE, repoRoot });
     expect(f.calls.find((call) => call.id === "classifier-smoke")?.env).toMatchObject({ DEPLOY_BASE_SHA: BASE, DEPLOY_HEAD_SHA: HEAD, DEPLOY_EVENT_NAME: "push" });
     expect(f.calls.some((call) => call.id === "prerequisite:firefox")).toBe(false);
+    const resource = f.calls.filter((call) => call.id === "v9-resource");
+    expect(resource).toHaveLength(1);
+    expect(resource[0].args).toEqual(["run", "test:v9-resource"]);
+    expect(f.calls.indexOf(resource[0])).toBeGreaterThan(f.calls.indexOf(shards.at(-1)!));
   });
 
   it("uses the eight-partition rule for more than 800 selected files", async () => {
@@ -218,6 +222,7 @@ describe("CI-shaped readiness leaves on the merge checkout", () => {
     expect(f.calls.some((call) => call.id === "test-plan" || call.id.startsWith("static-"))).toBe(false);
     expect(receipt.leaves).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "pr-tests", status: "not-selected" }),
+      expect.objectContaining({ id: "v9-resource", status: "not-selected" }),
       expect.objectContaining({ id: "pages-artifact", status: "not-selected" }),
       expect.objectContaining({ id: "critical-coverage", status: "not-selected" }),
     ]));

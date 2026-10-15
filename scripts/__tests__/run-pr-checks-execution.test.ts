@@ -5,6 +5,7 @@ import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { inspectPrCheckout, runPrChecks, type RunPrChecksOptions } from "../maintenance/run-pr-checks.ts";
 import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receipt.mts";
+import { assertRequiredResourceCases, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
 
@@ -121,6 +122,92 @@ describe("receipt explanation dispatch", () => {
       expect(h.receipts).toEqual([]);
       expect(readFileSync(path, "utf8")).toBe("{invalid");
     } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+});
+
+describe("isolated V9 resource execution", () => {
+  const publication = "publishes the full registry within 128 MiB of old-space";
+  const contagion = "evaluates a bounded nine-scenario matrix within 256 MiB of old-space";
+  const report = (cases: Array<{ title: string; status: string }>) => ({
+    testResults: [{ name: resolve(repoRoot, RESOURCE_TEST_FILE), assertionResults: cases }],
+  });
+
+  it("requires both named passes, never an arbitrary pass count or optional capture", () => {
+    const passed = [publication, contagion].map((title) => ({ title, status: "passed" }));
+    expect(() => assertRequiredResourceCases(report([
+      ...passed, { title: "keeps the frozen same-capture production envelope within both byte budgets", status: "pending" },
+    ]))).not.toThrow();
+    for (const status of ["pending", "skipped", "failed", "todo"]) {
+      expect(() => assertRequiredResourceCases(report([passed[0], { title: contagion, status }]))).toThrow(contagion);
+    }
+    expect(() => assertRequiredResourceCases(report([passed[0], { title: "unrelated", status: "passed" }]))).toThrow(contagion);
+    expect(() => assertRequiredResourceCases({ testResults: [] })).toThrow(publication);
+    expect(() => assertRequiredResourceCases(report([...passed, passed[0]]))).toThrow(publication);
+  });
+
+  it("removes stale evidence and fails closed when a launch produces no JSON", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/pharos-resource-launch-`);
+    try {
+      writeFileSync(resolve(directory, "vitest.json"), JSON.stringify(report(
+        [publication, contagion].map((title) => ({ title, status: "passed" })),
+      )));
+      await expect(runV9ResourceLane({
+        argv: [], outputDirectory: directory, runCommand: async () => 0,
+      })).rejects.toThrow();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it("keeps admission covered without probes under test:all despite ambient opt-in", () => {
+    const directory = mkdtempSync(`${tmpdir()}/pharos-resource-default-off-`);
+    const output = resolve(directory, "vitest.json");
+    try {
+      execFileSync("npm", ["run", "test:all", "--", RESOURCE_TEST_FILE,
+        "--maxWorkers=1", "--no-file-parallelism", "--reporter=json", `--outputFile=${output}`,
+        "--coverage.enabled", "--coverage.include=worker/src/lib/safety-score-v9/resource-budget.ts",
+        "--coverage.reporter=json", `--coverage.reportsDirectory=${directory}`,
+      ], {
+        cwd: repoRoot, encoding: "utf8", timeout: 60_000,
+        env: { ...process.env, PHAROS_V9_RESOURCE_LANE: "1", CONTAGION_MATRIX: "poison",
+          SAFETY_SCORE_V9_RESOURCE_CAPTURE: "/missing/poison-capture.json" },
+        stdio: "pipe",
+      });
+      const result = JSON.parse(readFileSync(output, "utf8"));
+      const coverage = JSON.parse(readFileSync(resolve(directory, "coverage-final.json"), "utf8")) as Record<string, { s: Record<string, number> }>;
+      const admission = coverage[resolve(repoRoot, "worker/src/lib/safety-score-v9/resource-budget.ts")];
+      expect(admission).toBeDefined();
+      expect(Object.values(admission.s).some((hits) => hits > 0)).toBe(true);
+      const cases = result.testResults.flatMap((file: { assertionResults: Array<{ title: string; status: string }> }) => file.assertionResults);
+      expect(cases.find((test: { title: string }) => test.title === "uses the codec expanded-byte ceiling and preserves unknown measurement")?.status).toBe("passed");
+      for (const title of [publication, contagion]) {
+        expect(["skipped", "pending"]).toContain(cases.find((test: { title: string }) => test.title === title)?.status);
+      }
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  }, 65_000);
+
+  it("runs the resource lane once after ordinary tests settle and records its outcome", async () => {
+    const h = harness();
+    let testing = false;
+    const resourceCalls: string[] = [];
+    h.runCommandImpl.mockImplementation(async (command) => {
+      if (command.cmd.startsWith("git rev-parse")) return { status: 0, aborted: false, output: baseSha };
+      if (command.cmd.startsWith("git show")) return { status: 0, aborted: false, output: "0" };
+      if (command.cmd.includes("npm run test:pr")) {
+        testing = true;
+        await Promise.resolve();
+        testing = false;
+      }
+      if (command.cmd === "npm run test:v9-resource") {
+        expect(testing).toBe(false);
+        resourceCalls.push(command.cmd);
+        return { status: 1, aborted: false, output: "resource probe failed" };
+      }
+      return { status: 0, aborted: false, output: "" };
+    });
+    expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(1);
+    expect(resourceCalls).toHaveLength(1);
+    expect(h.receipts[0].leaves.filter((leaf) => leaf.id === "v9-resource")).toEqual([
+      expect.objectContaining({ status: "failed", command: "npm run test:v9-resource" }),
+    ]);
   });
 });
 

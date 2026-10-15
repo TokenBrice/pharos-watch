@@ -26,6 +26,30 @@ The synthetic child row retains `progressSnapshot`; the abandonment event expose
 
 ## First checks
 
+**Confirm an OOM independently.** Open the hourly **Worker Memory Monitor** Action, its step summary and 30-day `worker-memory-<run>-<attempt>` artifact (`report.json`, `report.md`, `samples.ndjson`, `exceeded-memory.ndjson`, `queries.json`). Its separate **Heavy kill observed** and **Collection incomplete** steps use the [standard GitHub incident lifecycle](./workflow-incidents.md). A collection failure is unavailable evidence, not a zero-kill finding. Locally export `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN` (Account Analytics: Read) and `CLOUDFLARE_ACCOUNT_ID`, then run:
+
+```bash
+npm run ops:worker-memory -- --from 2026-10-13T00:00:00Z --to 2026-10-15T00:00:00Z
+```
+
+The independent Adaptive `status:"exceededMemory"` query is kill authority; a broad success/memory query can miss rare kills. Scheduled can label the same event `internalError` or `clientDisconnected`. Correlation requires the same script and invocation second, CPU difference **strictly under 2 µs**, `sum.requests === 1` and `avg.sampleInterval === 1`, with a unique forward and reverse match. Grouped, sampled/unknown, ambiguous and unjoined kills remain in the inventory. Slot normalization uses `scheduledDatetime`, not invocation/child start. The collector revision's registry supplies **candidate jobs**, not historical execution or culprit proof; a `:16` shared-lane kill is not a canonical `:22/:52` compiler kill. Unattributed public kills do not identify an HTTP route.
+
+For deeper corroboration, use the reported execution `scheduleKey` and `slotStartedAt` with approved read-only D1 access (replace the example identity, retain `LIMIT`):
+
+```sql
+SELECT s.slot_key, s.slot_started_at, s.worker_version AS current_slot_version,
+       a.*, r.status, r.degraded_reason, r.metadata
+FROM cron_slot_executions AS s
+JOIN scheduled_child_attempts AS a
+  ON a.execution_schedule_key = s.slot_key
+ AND a.execution_slot_started_at = s.slot_started_at
+LEFT JOIN cron_runs AS r ON r.idempotency_key = a.attempt_key
+WHERE s.slot_key = 'halfHourlyChartsOffset' AND s.slot_started_at = 1791940560
+ORDER BY a.attempt_key LIMIT 50;
+```
+
+Compare the Adaptive version to the **attempt's** execution version/invocation/generation, not just the slot's current owner after takeover. Preserve producer identity separately and inspect `child_marker_version`, `childDisposition`, `progressSnapshot`, `failureCategory` and `degraded_reason`. `not_started` is not a culprit; legacy `execution_unknown` is not nonexecution proof. Slot/attempt retention is 14 days and ordinary cron history seven days; bounded recent `/api/status` rows cannot establish historical absence.
+
 Before treating a downstream `not_started` row as required work, check its exact job/schedule pair against `CONDITIONALLY_ADMITTED_SCHEDULED_TASKS` in `shared/lib/scheduled-runner-registry.ts`. PSI/public daily catch-up, hourly yield/benchmark catch-up, and digest polls need demand admission beyond the slot clock. Current reconciliation does not synthesize missing-start failures for these lanes; status also excludes the narrowly identified historical false failures without deleting database evidence. Their canonical scheduled runs and any actually started attempts remain subject to failure and publication-freshness checks.
 
 Run the Wrangler SQL examples below from `worker/`, where `wrangler.toml` declares `stablecoin-db`.
@@ -75,6 +99,7 @@ Inspect `cron_slot_executions.child_marker_version` and the attempt ledger befor
 - **Genuinely too much work for one invocation.** Reduce per-invocation CPU, or move the offending leg to its own logical schedule key and runner plan. Adding another alias to an existing key does not separate the jobs — every alias resolves to the same chain.
 - **Memory rather than CPU.** The isolate limit is 128 MB and is shared by every job in the chain. `worker/src/lib/v9-slot-window.ts` already serializes the Safety Score V9 heap lane for this reason. Reorder so a large graph is built after any capture that must survive it, and import heavy modules only at the point of use.
 - **Do not clear a lease to "fix" this.** Reconciliation already releases or expires the dead slot's lease. Clearing a live lease while `/api/status` shows a fresh `inFlight` progress row for the same job risks a concurrent second writer.
+- **Observed memory kill versus telemetry unavailable.** The collector alerts on heavy kills in its trailing 24-hour window and incomplete required collection; public kills and incomplete public broad sampling are report-only initially (review after one week of baseline). Preserve source/version/lane evidence before changing code. Do not retry/rebalance automatically, infer OOM from abandonment alone, or subtract sampled bytes from 128 MiB; shared sampled isolate memory is not live phase headroom.
 
 ## Prevention
 
@@ -83,6 +108,7 @@ Inspect `cron_slot_executions.child_marker_version` and the attempt ledger befor
 - Watch the tail, not the average. The sentinel's duration source (`worker/src/cron/cron-duration-watchdog.ts`) excludes synthetic reconciled rows from duration statistics and counts slot abandonment separately, so a lane can look healthy on duration while losing a quarter of its runs.
 - Prefer durable queues for delivery work, but distinguish retryable pending rows from claimed deliveries. `dispatch-telegram-alerts` retries eligible `pending` rows; a delivery claim that expires in `sending` becomes terminal `execution_unknown` and is never retried. An abandoned slot can therefore lose or ambiguously deliver alerts; see [ADR-24](../architecture.md#adr-24) and `worker/src/cron/telegram-pending/drain.ts`. One-shot writers such as time-series snapshot jobs have no equivalent pending-queue retry path.
 - Keep abandonment thresholds source-owned by `resolveScheduledSlotPolicy()` in `worker/src/lib/scheduled-slot-policy.ts`: 60-second heartbeat, 300-second slot silence (360 seconds for existing long runners), 300-second child silence and a 960-second hard-dead backstop. Same-key and global sweeps apply the same policy before candidate limits and again in CAS.
+- Retain the external memory reports alongside first post-deploy lane/publication observations. A green monitor means only no currently observed alerting kills with fresh available required query evidence, not established heap margin, runway or proof a production defect is fixed.
 - Carry one event-entry `SlotDeadline` through child waits and replay; clip local enrichment caps with `childCeilingMs()` rather than rebuilding a deadline from the producer slot or granting fresh time after admission waits. Readiness and output freshness clocks remain separate.
 
 ## Related

@@ -5,6 +5,7 @@ export type PrLaneId =
   | "static-compile"
   | "static-guards"
   | "tests"
+  | "v9-resource"
   | "critical-coverage-shards"
   | "critical-coverage"
   | "pages-artifact"
@@ -76,6 +77,12 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     shards: 8,
     timeoutMinutes: 15,
     commands: [{ id: "pr-tests", program: "npm", args: ["run", "test:pr", "--"] }],
+  },
+  {
+    id: "v9-resource",
+    selector: "code",
+    timeoutMinutes: 10,
+    commands: [{ id: "v9-resource", program: "npm", args: ["run", "test:v9-resource"] }],
   },
   {
     id: "critical-coverage-shards",

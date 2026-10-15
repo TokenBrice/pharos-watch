@@ -28,6 +28,7 @@ runExecutionUnit(createExecutionUnit([
   createSpawnCommand(process.execPath, ["--import", "tsx", "scripts/ci/check-critical-coverage.ts"]),
 ]), {
   reporter: {},
+  getCommandEnv: () => ({ PHAROS_V9_RESOURCE_LANE: "0" }),
   runCommandImpl: runSpawnCommand,
 }).then((result) => {
   process.exit(result.status);

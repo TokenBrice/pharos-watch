@@ -26,10 +26,9 @@ import {
  */
 export const FULL_REGISTRY_CLOCK_SEC = v9TestClockSec();
 
-const CLOCK_SEC = FULL_REGISTRY_CLOCK_SEC;
-const DEX_UPDATED_AT_SEC = CLOCK_SEC - 100;
 
-function resourceRoute(assetId: string) {
+function resourceRoute(assetId: string, clockSec: number) {
+  const dexUpdatedAtSec = clockSec - 100;
   const requestedNotionalUsd = 100_000;
   return {
     routeId: `dex:resource:${assetId}`,
@@ -49,8 +48,8 @@ function resourceRoute(assetId: string) {
     evidenceKind: "reserve-based-amm-simulation" as const,
     confidence: "high" as const,
     scoreEligible: true,
-    observedAt: DEX_UPDATED_AT_SEC,
-    freshnessSeconds: CLOCK_SEC - DEX_UPDATED_AT_SEC,
+    observedAt: dexUpdatedAtSec,
+    freshnessSeconds: clockSec - dexUpdatedAtSec,
     commonModeKeys: ["chain:ethereum", "protocol:resource-fixture"],
     capacityCurve: [100_000, 1_000_000, 10_000_000, 100_000_000].map((notional) => ({
       requestedNotionalUsd: notional,
@@ -66,21 +65,22 @@ function resourceRoute(assetId: string) {
  * registry overlay with deterministic peg, reserve, supply, and route rows
  * without coupling the gate to a production read.
  */
-export function createSafetyScoreV9FullRegistryInput() {
+export function createSafetyScoreV9FullRegistryInput(clockSec = FULL_REGISTRY_CLOCK_SEC) {
+  const dexUpdatedAtSec = clockSec - 100;
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
-    capturedAt: new Date(CLOCK_SEC * 1_000).toISOString(),
-    sourceGeneration: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`,
-    dexGenerationId: `dex-liquidity-${DEX_UPDATED_AT_SEC}`,
+    capturedAt: new Date(clockSec * 1_000).toISOString(),
+    sourceGeneration: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${clockSec}`,
+    dexGenerationId: `dex-liquidity-${dexUpdatedAtSec}`,
     redemptionGenerationId: "redemption-backstops-unavailable",
     registryRevision: "safety-score-v9-resource-fixture",
     methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-    clockSec: CLOCK_SEC,
-    updatedAt: CLOCK_SEC,
+    clockSec,
+    updatedAt: clockSec,
     liquidityStale: false,
     redemptionStale: true,
     inputFreshness: {
-      dexLiquidity: { updatedAt: DEX_UPDATED_AT_SEC, ageSeconds: 100, stale: false },
+      dexLiquidity: { updatedAt: dexUpdatedAtSec, ageSeconds: 100, stale: false },
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
     pegDataById: Object.fromEntries(
@@ -96,7 +96,7 @@ export function createSafetyScoreV9FullRegistryInput() {
           currentDeviationBps: 1,
           pegScore: 100,
           priceSource: "resource-fixture",
-          priceObservedAt: DEX_UPDATED_AT_SEC,
+          priceObservedAt: dexUpdatedAtSec,
           pegPct: 100,
           severityScore: 100,
           spreadPenalty: 0,
@@ -106,7 +106,7 @@ export function createSafetyScoreV9FullRegistryInput() {
           lastEventAt: null,
           trackingSpanDays: 365,
           historyCoverage: {
-            startedAt: CLOCK_SEC - 365 * 24 * 60 * 60,
+            startedAt: clockSec - 365 * 24 * 60 * 60,
             source: "asset-age",
             status: "assumed",
           },
@@ -130,7 +130,7 @@ export function createSafetyScoreV9FullRegistryInput() {
           effectiveTvlUsd: 10_000_000,
           balanceMeasuredTvlUsd: 10_000_000,
           organicMeasuredTvlUsd: 10_000_000,
-          exitRouteObservations: [resourceRoute(coin.id)],
+          exitRouteObservations: [resourceRoute(coin.id, clockSec)],
           exitRouteObservationCoverage: {
             status: "populated",
             capabilityMatrixVersion: "p4a.4",
@@ -144,7 +144,7 @@ export function createSafetyScoreV9FullRegistryInput() {
             unsupportedReasons: {},
           },
           methodologyVersion: "resource-fixture",
-          updatedAt: DEX_UPDATED_AT_SEC,
+          updatedAt: dexUpdatedAtSec,
         },
       ]),
     ),
@@ -173,7 +173,7 @@ export function createSafetyScoreV9FullRegistryInput() {
     liveReserveProvenanceMap: Object.fromEntries(
       ACTIVE_STABLECOINS.map((coin) => [
         coin.id,
-        { source: "resource-fixture", fetchedAt: DEX_UPDATED_AT_SEC },
+        { source: "resource-fixture", fetchedAt: dexUpdatedAtSec },
       ]),
     ),
     chainCirculatingById: Object.fromEntries(
@@ -200,8 +200,10 @@ export function createSafetyScoreV9FullRegistryInput() {
  * from the v3 fixture rather than duplicated so both stay in lockstep while the
  * retained v3 lane still has V8-bound consumers.
  */
-export function createNativeSafetyScoreV9FullRegistryInput(): NativeSafetyScoreV9Input {
-  const legacy = createSafetyScoreV9FullRegistryInput();
+export function createNativeSafetyScoreV9FullRegistryInput(
+  clockSec = FULL_REGISTRY_CLOCK_SEC,
+): NativeSafetyScoreV9Input {
+  const legacy = createSafetyScoreV9FullRegistryInput(clockSec);
   const {
     schemaVersion: _schemaVersion,
     captureKind: _captureKind,

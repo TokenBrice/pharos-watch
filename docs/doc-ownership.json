@@ -766,6 +766,12 @@
         "worker/src/lib/public-health-assessment.ts",
         "src/lib/status/**",
         "src/lib/status-dashboard-model.ts",
+        "scripts/maintenance/monitor-worker-memory.ts",
+        "scripts/maintenance/__tests__/monitor-worker-memory.test.ts",
+        "scripts/maintenance/__tests__/fixtures/worker-memory/**",
+        "scripts/maintenance/cron-delivery.mjs",
+        ".github/workflows/worker-memory-monitor.yml",
+        "scripts/__tests__/report-workflow-failure.test.ts",
         "docs/runbooks/**",
         "docs/runbooks/blacklist-sync.md",
         "docs/runbooks/dated-source-age-caps.md",
@@ -776,6 +782,13 @@
         {"path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus"},
         {"path": "docs/status-dashboard.md", "anchor": "cron-health-model"},
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "health--status-endpoints"},
+        {"path": "docs/worker-and-api-limits.md", "anchor": "per-job-resource-evidence"},
+        {"path": "docs/runbooks/cron-slot-abandonment.md", "anchor": "first-checks"},
+        {"path": "docs/runbooks/cron-delivery-stall.md", "anchor": "evidence-and-prerequisite"},
+        {"path": "docs/runbooks/workflow-incidents.md", "anchor": "scope-and-ownership"},
+        {"path": "docs/status-dashboard.md", "anchor": "resource-pressure-evidence"},
+        {"path": "docs/deployment-process.md", "anchor": "github-deploy-inputs"},
+        {"path": "docs/scripts.md", "anchor": "operator-cli-contract"},
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
       "background": [
@@ -790,7 +803,17 @@
         { "path": "docs/runbooks/blacklist-sync.md", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
         { "path": "docs/runbooks/review-renewal.md", "runbook": { "label": "Scoped review renewal", "kind": "procedure" } }
       ],
-      "checks": ["npx vitest run src/lib/status worker/src/lib/status"],
+      "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts scripts/__tests__/report-workflow-failure.test.ts"],
+      "testOwnership": [
+        {
+          "sources": ["scripts/maintenance/monitor-worker-memory.ts", "scripts/maintenance/__tests__/fixtures/worker-memory/**", ".github/workflows/worker-memory-monitor.yml"],
+          "tests": ["scripts/maintenance/__tests__/monitor-worker-memory.test.ts"]
+        },
+        {
+          "sources": [".github/workflows/worker-memory-monitor.yml"],
+          "tests": ["scripts/__tests__/report-workflow-failure.test.ts"]
+        }
+      ],
       "rules": ["Status causes, recommended actions, public-health floors, and runbooks must remain aligned."]
     },
     {
@@ -815,6 +838,7 @@
         "scripts/maintenance/run-critical-*.ts",
         "scripts/maintenance/merge-critical-coverage.ts",
         "scripts/maintenance/run-all-tests.ts",
+        "scripts/maintenance/run-v9-resource-lane.ts",
         "scripts/maintenance/run-generated-artifacts.ts",
         "scripts/maintenance/run-bootstrap-rehearsal.ts",
         "scripts/maintenance/prepare-workspace.ts",
@@ -843,6 +867,7 @@
       ],
       "docs": [
         { "path": "docs/testing.md", "anchor": "ci-pipeline" },
+        { "path": "docs/testing.md", "anchor": "critical-coverage-gate" },
         { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" },
         { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
       ],

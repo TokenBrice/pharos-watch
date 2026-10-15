@@ -82,6 +82,28 @@ jobs:
       - uses: $/.github/actions/setup-workspace
       - run: npm run coverage:critical
 
+  v9-resource:
+    name: V9 resource budget
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+      - run: npm run test:v9-resource
+      - name: Retain V9 resource results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: v9-resource
+          path: .tmp/v9-resource-lane/
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
+
   telegram-load:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 15
@@ -162,7 +184,7 @@ jobs:
 
   report-failures:
     name: Report main workflow incidents
-    needs: [audit, html-fixture-age, gitleaks, all-critical-ratchet, telegram-load, compare-account-state, dependency-coverage]
+    needs: [audit, html-fixture-age, gitleaks, all-critical-ratchet, v9-resource, telegram-load, compare-account-state, dependency-coverage]
     if: >-
       ${{ always() && github.ref == 'refs/heads/main' &&
           (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
@@ -183,4 +205,5 @@ jobs:
         with:
           workflow-file: weekly-validation.yml
           needs-json: ${{ toJSON(needs) }}
+          job-names-json: '{"v9-resource":"V9 resource budget"}'
           github-token: ${{ github.token }}
