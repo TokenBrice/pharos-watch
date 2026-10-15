@@ -1114,7 +1114,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
-      "sha256": "422a636ef1e50348fa01f603435562d450a2d611f88a42767c73d765c238250a"
+      "sha256": "8fdd2351ac4ce78fa2e8e184a2e7f70bbc9d32de424e7413625a501d4cdeda81"
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
@@ -1186,7 +1186,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-allocation.ts",
-      "sha256": "0d45cf5a2432a31281c5898004c2ff5d7d9bdbc818a78d918fabdbb840645405"
+      "sha256": "af07f9c1c15c9a0710434e8bdc1b2589409641520914bccec701d4b0826707fc"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
@@ -1202,7 +1202,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-control.ts",
-      "sha256": "d31deebbddcaa211365014492266ec08aff77e9e2b543dde7268117d2b3f1d07"
+      "sha256": "2ef1b80bd0a35b9997249c44fc395c1beae3aa891cdf56e7a80484e1f15d2d5e"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-exit.ts",
@@ -1230,7 +1230,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set.ts",
-      "sha256": "730737f1687590be622ea2798b39ddb2a8d8a9a2e790a24ef28fcdcc3389abe4"
+      "sha256": "3804ef2f5947cf318c8f2f85f3df87b3cb796e8554225b7d1cc888b46beaed7a"
     },
     {
       "path": "worker/src/lib/safety-score-v9/native-input.ts",
@@ -1299,7 +1299,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-15-block-26196659-shock-coverage.json.gz"
     }
   ],
-  "digest": "8662145fbcbf2d96be3f42e1c222c602b24296024d558559547d933f9b49a808"
+  "digest": "6fbda0728d04e5c3a2c7d762b18f96eeda69d1b69c1e901940ddffa6caef9ff2"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

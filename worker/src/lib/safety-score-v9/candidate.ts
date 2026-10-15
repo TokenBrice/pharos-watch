@@ -684,12 +684,6 @@ function buildSafetyScoreV9CandidatePipeline(
   // never drift from the bound the exit evidence itself was judged against;
   // the extension graph is released below.
   const dexExitRouteMaxAgeSec = extension.routeFreshness.dexMaxAgeSec;
-  let compilation: SafetyScoreV9FactCompilationResult | null =
-    compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
-      fixedInput,
-      extension,
-    );
-  let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
   const bridgeJoinDiagnostics = extension.assets
     .flatMap((asset) => {
       const diagnostics = asset.economicControlReview?.bridge.diagnostics;
@@ -698,6 +692,14 @@ function buildSafetyScoreV9CandidatePipeline(
         : [{ assetId: asset.assetId, ...diagnostics }];
     })
     .sort((left, right) => compareText(left.assetId, right.assetId));
+  let compilation: SafetyScoreV9FactCompilationResult | null =
+    compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
+      fixedInput,
+      extension,
+      undefined,
+      !retainIntermediates,
+    );
+  let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
   const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
@@ -750,6 +752,7 @@ function buildSafetyScoreV9CandidatePipeline(
           fixedInput,
           retryExtension,
           evaluationFailures,
+          !retainIntermediates,
         );
       compiledFacts = compilation.factSet;
       quarantines = compilation.quarantines;

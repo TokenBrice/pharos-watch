@@ -118,6 +118,7 @@ function buildAssetFacts(
   context: AssetBuildContext,
   dependencies: V9EffectiveDependenciesV3,
   reserves: ReturnType<typeof buildReserves>,
+  parentDeploymentKeys: ReadonlyMap<string, readonly string[]>,
 ): V9AssetFactsV3 {
   const implementation = buildImplementation(context);
   const mechanismRiskReview = buildMechanismReview(context);
@@ -139,7 +140,7 @@ function buildAssetFacts(
   }) : undefined;
   const lenderBook = buildLenderBookFact(context);
   const allocationScopeFacts = buildAllocationScopeFacts(context, {
-    dependencies, reserveStatus: reserves.reserveStatus, reserveExposures: reserves.reserveExposures,
+    dependencies, reserveStatus: reserves.reserveStatus, reserveExposures: reserves.reserveExposures, parentDeploymentKeys,
   });
   const wrapperLocalFacts = applySafetyScoreV9WrapperIncidentRoutes(
     context,
@@ -494,6 +495,7 @@ function compileAssetOutcome(
   extension: SafetyScoreV9FactSetExtensionV2,
   asset: AssetExtension,
   researchPayloadSha256: string,
+  parentDeploymentKeys: ReadonlyMap<string, readonly string[]>,
 ): {
   facts: V9AssetFactsV3;
   quarantine: V9AssetQuarantine | null;
@@ -531,7 +533,7 @@ function compileAssetOutcome(
         reserves.reserveExposures,
       ),
     );
-    facts = buildAssetFacts(context, dependencies, reserves);
+    facts = buildAssetFacts(context, dependencies, reserves, parentDeploymentKeys);
   } catch (error) {
     return quarantinedAssetOutcome(
       context,
@@ -592,6 +594,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   extension: SafetyScoreV9FactSetExtensionV2,
   evaluationFailures: ReadonlyMap<string, string> = new Map(),
+  consumeExtensionAssets = false,
 ): Readonly<SafetyScoreV9FactCompilationResult> {
   if (!materializedExtensions.has(extension)) {
     throw new Error("Trusted Safety Score v9 compilation requires an in-process materialized extension");
@@ -608,10 +611,11 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
     );
   }
   assertSafetyScoreV9ExactExtensionAssets(fixedInput, extension);
-  const researchPayloadSha256 = domainDigest(
+  // Keep the digest-only projection out of this frame while facts accumulate.
+  const researchPayloadSha256 = (() => domainDigest(
     "safety-score-v9.research-overlay.v1",
     projectResearchOverlayPayload(extension.assets),
-  );
+  ))();
   const redemptionObservedAtSec =
     fixedInput.inputFreshness.redemptionBackstops.updatedAt ?? extension.sources.unavailableRedemptionObservedAtSec;
   const shockCoveragePayload = extension.assets.flatMap((asset) =>
@@ -624,23 +628,24 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
     (latest, entry) => Math.max(latest, entry.cdpStressCoverage.source?.block.timestampUnix ?? 0),
     0,
   );
-  const outcomes = extension.assets.map((asset) => {
+  // This is the only cross-asset extension read needed by asset compilation.
+  // Preserve parent identity independently before publication releases source rows.
+  const parentDeploymentKeys = new Map(extension.assets.map((asset) => [
+    asset.assetId, asset.allocationScopeIdentityReview?.registeredDeploymentKeys ?? [],
+  ] as const));
+  if (consumeExtensionAssets) materializedExtensions.delete(extension);
+  const outcomes: { facts: V9AssetFactsV3; quarantine: V9AssetQuarantine | null }[] = new Array(extension.assets.length);
+  for (let index = 0; index < extension.assets.length; index++) {
+    const asset = extension.assets[index]!;
     const evaluationFailure = evaluationFailures.get(asset.assetId);
-    return evaluationFailure === undefined
-      ? compileAssetOutcome(
-          fixedInput,
-          extension,
-          asset,
-          researchPayloadSha256,
-        )
-      : evaluationQuarantineOutcome(
-          fixedInput,
-          extension,
-          asset,
-          researchPayloadSha256,
-          evaluationFailure,
-        );
-  });
+    outcomes[index] = evaluationFailure === undefined
+      ? compileAssetOutcome(fixedInput, extension, asset, researchPayloadSha256, parentDeploymentKeys)
+      : evaluationQuarantineOutcome(fixedInput, extension, asset, researchPayloadSha256, evaluationFailure);
+    // The materializer owns this array; assets themselves remain immutable.
+    // Leave indices stable until the loop ends, without copying the remaining cohort.
+    if (consumeExtensionAssets) delete extension.assets[index];
+  }
+  if (consumeExtensionAssets) extension.assets.length = 0;
   const factSet = compileV9FactSetV3({
     schemaVersion: 4,
     baseInputGenerationId: fixedInput.baseInputGenerationId,

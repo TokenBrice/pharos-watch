@@ -4,7 +4,7 @@ import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/saf
 import type { V9ScopedAllocationClaim } from "@shared/types/safety-score-v9-allocation";
 import type { CompiledV9FactSetV3, V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import type { AssetExtension, SafetyScoreV9FactSetExtensionV2 } from "../safety-score-v9/fact-set-schema";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
+import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
 import { buildAllocationScopeFacts, resolveAllocationDimensionCoverage } from "../safety-score-v9/fact-set-allocation";
 import { createAssetBuildContext } from "../safety-score-v9/fact-set-context";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
@@ -69,6 +69,30 @@ function legalBorrowing(input: AllocationFixture, layer: "borrower-spv" | "lende
 }
 
 describe("dimension-scoped allocation consumer boundaries", () => {
+  it("consumes only owned publication rows while preserving allocation facts and parent identities", () => {
+    const input = fixture();
+    if (input.claim.target.kind !== "deployment") throw new Error("Expected deployment");
+    input.claim.target.idleCustodyProof = { mechanism: "burn-parent-mint-parent", upstreamAssetId: "beta", parentTokenAddress: "0x4444444444444444444444444444444444444444", burnSourceUrl: "https://example.com/code", mintSourceUrl: "https://example.com/code" };
+    const fixed = normalizeSafetyScoreV9CompilerInput(input.fixed);
+    const retained = materializeSafetyScoreV9FactSetExtension(fixed, input.extension);
+    const consumed = materializeSafetyScoreV9FactSetExtension(fixed, input.extension);
+    const expected = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, retained);
+    const actual = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, consumed, undefined, true);
+    expect(actual).toEqual(expected);
+    expect(consumed.assets).toEqual([]);
+    expect(retained.assets).toHaveLength(2);
+    expect(input.extension.assets).toHaveLength(2);
+    expect(() => compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, consumed)).toThrow("in-process materialized extension");
+    const context = createAssetBuildContext(fixed, input.extension, input.asset, "a".repeat(64));
+    const compiled = expected.factSet.assets.find(asset => asset.assetId === "alpha")!;
+    const facts = { dependencies: compiled.dependencies, reserveStatus: compiled.reserveStatus, reserveExposures: compiled.reserveExposures,
+      parentDeploymentKeys: new Map(retained.assets.map(asset => [asset.assetId, asset.allocationScopeIdentityReview?.registeredDeploymentKeys ?? []] as const)) };
+    const before = buildAllocationScopeFacts(context, facts);
+    context.extension.assets.length = 0;
+    expect(buildAllocationScopeFacts(context, facts)).toEqual(before);
+    expect(before.some(fact => fact.admitted)).toBe(true);
+  });
+
   it.each([99.99999999999999, 99.9999])("applies denominator completion consistently at %s percent", (pct) => {
     const input = fixture();
     const draft = structuredClone(input.fixed);
@@ -307,7 +331,8 @@ describe("dimension-scoped allocation consumer boundaries", () => {
     const input = fixture();
     const compiled = compile(input).asset;
     const context = createAssetBuildContext(normalizeSafetyScoreV9CompilerInput(input.fixed), input.extension, input.asset, "a".repeat(64));
-    const factInput = { dependencies: compiled.dependencies, reserveStatus: compiled.reserveStatus, reserveExposures: compiled.reserveExposures };
+    const factInput = { dependencies: compiled.dependencies, reserveStatus: compiled.reserveStatus, reserveExposures: compiled.reserveExposures,
+      parentDeploymentKeys: new Map(input.extension.assets.map(asset => [asset.assetId, asset.allocationScopeIdentityReview?.registeredDeploymentKeys ?? []] as const)) };
     const baseline = buildAllocationScopeFacts(context, factInput);
     expect(resolveAllocationDimensionCoverage(baseline, "leverage")).toMatchObject({ complete: true, assessment: "none" });
     const requiredPolicy = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
