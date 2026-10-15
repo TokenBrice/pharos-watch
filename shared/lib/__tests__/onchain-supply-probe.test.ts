@@ -297,6 +297,11 @@ describe("curated on-chain supply paths", () => {
     { id: "ntbill-nest", chains: ["ethereum", "plume", "arbitrum", "bsc", "solana"],
       mint: "2sA2jW9e8EYJkLFpq9hkhxfVUQBwVGJwq6iP4TmTKrL4", zeroFlags: [undefined, undefined, true, true, undefined],
       endpoints: { plume: "https://rpc.plume.org" } },
+    { id: "susdc-spark-v1", chains: ["ethereum", "arbitrum", "base", "optimism", "unichain"],
+      zeroFlags: [true, true, true, true, true], endpoints: { unichain: "https://mainnet.unichain.org" } },
+    { id: "sfrax-frax", chains: ["ethereum", "arbitrum", "avalanche", "base", "blast", "bsc", "fraxtal", "metis", "optimism"],
+      canonical: "ethereum", zero: ["avalanche"],
+      endpoints: { blast: "https://rpc.blast.io", fraxtal: "https://rpc.frax.com", metis: "https://andromeda.metis.io/?owner=1088" } },
 
   ])("selects reviewed aggregate policy for $id", ({ id, chains, canonical, mint, zero, zeroFlags, endpoints, fallback, runtime }) => {
     const contracts = chains.map((chain, index) => ({
@@ -379,7 +384,7 @@ describe("curated on-chain supply paths", () => {
     },
     {
       id: "pyusdx-moonpay",
-      contracts: ["ethereum", "arbitrum", "monad", "base"].map((chain) => ({
+      contracts: ["ethereum", "arbitrum", "monad", "base", "0g"].map((chain) => ({
         chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
       })),
     },
@@ -406,17 +411,53 @@ describe("curated on-chain supply paths", () => {
     ], id))).toBeNull();
   });
 
-  it("cannot silently omit 0G when PYUSDx metadata gains the fifth native deployment", () => {
+  it("cannot silently omit the reviewed 0G PYUSDx native deployment", () => {
     const meta = TRACKED_META_BY_ID.get("pyusdx-moonpay")!;
     expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
-    const expandedMeta = {
-      ...meta,
-      contracts: [...meta.contracts!, {
-        chain: "0g", address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
-      }],
-    };
-    expect(selectCuratedAggregateOnchainSupplyProbeContracts(expandedMeta)).toBeNull();
-    expect(hasRuntimeOnchainSupplyPath(expandedMeta)).toBe(false);
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.map((entry) => entry.config.chain))
+      .toEqual(["ethereum", "arbitrum", "monad", "base", "0g"]);
+    expect(selected?.[4]?.config).toMatchObject({
+      rpcUrl: "https://evmrpc.0g.ai", allowZeroSupply: true,
+    });
+    const incompleteMeta = { ...meta, contracts: meta.contracts!.filter((contract) => contract.chain !== "0g") };
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(incompleteMeta)).toBeNull();
+    expect(hasRuntimeOnchainSupplyPath(incompleteMeta)).toBe(false);
+  });
+
+  it("requires every native Legacy sUSDC deployment from the coin registry", () => {
+    const meta = TRACKED_META_BY_ID.get("susdc-spark-v1")!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.map(({ contract }) => contract.chain))
+      .toEqual(["ethereum", "arbitrum", "base", "optimism", "unichain"]);
+    expect(selected?.map(({ contract }) => contract)).toEqual(meta.contracts);
+    expect(selected?.map(({ config }) => config.allowZeroSupply)).toEqual([true, true, true, true, true]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBeUndefined();
+    expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
+    for (const missing of meta.contracts!) {
+      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
+      })).toBeNull();
+    }
+  });
+
+  it("conserves the native sFRAX denominator across all nine reviewed deployments", () => {
+    const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.map(({ contract }) => contract.chain))
+      .toEqual(["ethereum", "arbitrum", "avalanche", "base", "blast", "bsc", "fraxtal", "metis", "optimism"]);
+    expect(selected?.map(({ contract }) => contract)).toEqual(meta.contracts);
+    expect(selected?.map(({ contract }) => contract.decimals)).toEqual(Array(9).fill(18));
+    expect(selected?.filter(({ config }) => config.allowZeroSupply).map(({ config }) => config.chain))
+      .toEqual(["avalanche"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBe("ethereum");
+    expect(CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id]).toBeUndefined();
+    expect(hasRuntimeOnchainSupplyPath(meta)).toBe(true);
+    for (const missing of meta.contracts!) {
+      expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+        ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
+      })).toBeNull();
+    }
   });
 
   // Shape: Centrifuge V3 burn/mint share bridge. Every reviewed deployment is

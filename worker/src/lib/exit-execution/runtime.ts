@@ -140,7 +140,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
       const point = observed.points.find((entry) => entry.requestedNotionalUsd === request.requestedNotionalUsd)!;
       const scoreEligible = admission.state !== "unavailable";
       observations.push(ExitRouteObservationSchema.parse({
-        routeId: externalShares?.primaryRedemptionRouteId ?? `execution:${exitExecutionReviewDigest(review)}`, routeFamily: "issuer-redemption",
+        routeId: externalShares?.primaryRedemptionRouteId ?? `execution:${exitExecutionReviewDigest(review)}`, routeFamily: isVault && !externalShares ? "protocol-redemption" : "issuer-redemption",
         scope: { kind: "chain-contract", chain: review.producer.chain, contractOrPoolId: review.producer.contract, protocol: isVault ? "erc4626-instant" : "securitize-offramp" },
         requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps, settlementHorizonSec: Math.max(1, settlementMaximumSec ?? request.comparisonWindowSec),
         ...(settlementMaximumSec === null ? { settlementBoundUnproven: true } : {}), executableUsd: point.executableUsd, completionRatio: point.executableUsd / point.requestedNotionalUsd,

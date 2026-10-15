@@ -656,6 +656,16 @@ describe("curation-expanded complete supply rosters", () => {
       canonical: "plasma",
       supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25 },
     },
+    {
+      id: "susdc-spark-v1",
+      canonical: undefined,
+      supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
+    },
+    {
+      id: "sfrax-frax",
+      canonical: "ethereum",
+      supplies: { ethereum: 100, arbitrum: 10, avalanche: 0, base: 10, blast: 10, bsc: 10, fraxtal: 10, metis: 10, optimism: 10 },
+    },
   ];
 
   beforeEach(() => {
@@ -713,6 +723,25 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
+  it.each(["ethereum", "arbitrum", "base", "optimism", "unichain"])(
+    "retains an observed zero for Legacy sUSDC on %s",
+    async (chain) => {
+      const meta = TRACKED_META_BY_ID.get("susdc-spark-v1")!;
+      const supplies = { ...cases[3].supplies, [chain]: 0 };
+      installSupplyReads(meta, supplies);
+      const result = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
+      expect(result?.mcap).toBe(Object.values(supplies).reduce((sum, units) => sum + units, 0) * 1.25);
+      expect(Object.values(result?.chainCirculating ?? {}).find((row) => row.chainId === chain)?.current).toBe(0);
+    },
+  );
+
+  it.each([100, 110])("withholds sFRAX when representation stock (%s) exhausts the native denominator", async (remote) => {
+    const meta = TRACKED_META_BY_ID.get("sfrax-frax")!;
+    const supplies = { ...cases[4].supplies, arbitrum: remote - 60 };
+    installSupplyReads(meta, supplies);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs())).resolves.toBeNull();
+  });
+
   it.each(["decimals", "exception"])("fails syzUSD closed on Aptos %s failure", async (failure) => {
     const meta = TRACKED_META_BY_ID.get("syzusd-yuzu")!;
     installSupplyReads(meta, cases[2].supplies);
@@ -753,11 +782,11 @@ describe("discovery native supply aggregates", () => {
     },
     {
       id: "pyusdx-moonpay",
-      contracts: ["ethereum", "arbitrum", "monad", "base"].map((chain) => ({
+      contracts: ["ethereum", "arbitrum", "monad", "base", "0g"].map((chain) => ({
         chain, address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d", decimals: 6,
       })),
-      supplies: [91_882_981_224_535n, 443_583_150_573n, 1_000_000n, 100_000n],
-      units: 92_326_565.475108,
+      supplies: [96_535_071_818_024n, 443_589_530_573n, 1_000_000n, 100_000n, 7_000_000n],
+      units: 96_978_669.448597,
     },
   ];
 
@@ -768,7 +797,7 @@ describe("discovery native supply aggregates", () => {
   });
 
   function installReads(contracts: NonNullable<StablecoinMeta["contracts"]>, supplies: (bigint | null)[]): void {
-    const read = (chain: string) => chain === "0g" ? 0n : supplies[contracts.findIndex((contract) => contract.chain === chain)] ?? null;
+    const read = (chain: string) => supplies[contracts.findIndex((contract) => contract.chain === chain)] ?? null;
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => read(input.chain));
     fetchErc20TotalSupplyMock.mockImplementation(async (input) => read(input.chain));
     fetchSolanaTokenSupplyMock.mockImplementation(async () => read("solana"));
@@ -806,39 +835,31 @@ describe("discovery native supply aggregates", () => {
     }
   });
 
-  it.each([
-    { raw: 0n, reason: null },
-    { raw: 1n, reason: "zero-supply-guard-positive" },
-    { raw: null, reason: "zero-supply-guard-unavailable" },
-    { raw: new Error("RPC unavailable"), reason: "zero-supply-guard-unavailable" },
-  ])("publishes PYUSDx only after a same-run 0G zero read ($raw)", async ({ raw, reason }) => {
+  it.each([0n, 7_000_000n])("includes observed 0G stock, including a real zero (%s)", async (raw) => {
     const { id, contracts, supplies, units } = cases[1];
+    const observed = [...supplies];
+    observed[4] = raw;
+    installReads(contracts, observed);
+    const meta = makeMeta({ id, name: id, symbol: id, contracts });
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
+    const expected = (units - Number(supplies[4]) / 1e6 + Number(raw) / 1e6) * 1.25;
+    expect(result?.mcap).toBeCloseTo(expected, 6);
+    expect(Object.values(result?.chainCirculating ?? {}).find((row) => row.chainId === "0g")?.current)
+      .toBeCloseTo(Number(raw) / 1e6 * 1.25, 6);
+    expect(Object.values(result?.chainCirculating ?? {}).reduce((sum, row) => sum + row.current, 0))
+      .toBeCloseTo(expected, 6);
+  });
+
+  it("withholds the complete PYUSDx aggregate on a 0G RPC exception", async () => {
+    const { id, contracts, supplies } = cases[1];
     installReads(contracts, supplies);
     const nativeRead = fetchErc20TotalSupplyMock.getMockImplementation()!;
     fetchErc20TotalSupplyMock.mockImplementation(async (input, ...args) => {
-      if (input.chain !== "0g") return nativeRead(input, ...args);
-      if (raw instanceof Error) throw raw;
-      return raw;
+      if (input.chain === "0g") throw new Error("0G RPC unavailable");
+      return nativeRead(input, ...args);
     });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      const meta = makeMeta({ id, name: id, symbol: id, contracts });
-      const result = await fetchCuratedAggregateOnChainMcap(meta, 1.25, buildChainRpcs());
-      if (reason === null) {
-        expect(result?.mcap).toBeCloseTo(units * 1.25, 6);
-        expect(Object.values(result?.chainCirculating ?? {}).reduce((sum, row) => sum + row.current, 0))
-          .toBeCloseTo(units * 1.25, 6);
-      } else {
-        expect(result).toBeNull();
-        const events = warn.mock.calls.map(([line]) => JSON.parse(String(line)));
-        expect(events).toContainEqual(expect.objectContaining({
-          event: "onchain-supply-aggregate-withheld",
-          metadata: expect.objectContaining({ stablecoinId: id, chain: "0g", reason }),
-        }));
-      }
-      expect(fetchErc20TotalSupplyMock.mock.calls.filter(([input]) => input.chain === "0g")).toHaveLength(1);
-    } finally {
-      warn.mockRestore();
-    }
+    await expect(fetchCuratedAggregateOnChainMcap(
+      makeMeta({ id, name: id, symbol: id, contracts }), 1.25, buildChainRpcs(),
+    )).resolves.toBeNull();
   });
 });

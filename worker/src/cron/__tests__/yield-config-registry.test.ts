@@ -103,7 +103,7 @@ describe("yield config registry", () => {
     );
   });
 
-  it("keeps deterministic on-chain configs unique and attached to tracked contracts", () => {
+  it("keeps deterministic on-chain configs unique and attached to tracked contracts or reviewed rate providers", () => {
     const ids = ON_CHAIN_RATE_CONFIGS.map((config) => config.stablecoinId);
     expect(new Set(ids).size).toBe(ids.length);
 
@@ -114,6 +114,17 @@ describe("yield config registry", () => {
         const variant = YIELD_VARIANT_MAP[config.stablecoinId];
         expect(variant?.variantAddress?.toLowerCase(), config.stablecoinId).toBe(config.contract.toLowerCase());
         expect(variant?.variantChain, config.stablecoinId).toBe(config.chain);
+      } else if (config.stablecoinId === "xgld-unitas") {
+        // XGLD's reviewed provider is separate from the tracked token; its rate
+        // measures XAUt per XGLD, and gold-denominated assets are not USD TVL.
+        expect(config).toEqual({
+          stablecoinId: "xgld-unitas",
+          chain: "bsc",
+          contract: "0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7",
+          selector: "0x3ba0b9a9",
+          decimals: 6,
+          inputAmount: `0x${"0".repeat(64)}`,
+        });
       } else {
         const contract = coin.contracts?.find(
           (entry) => entry.chain === config.chain

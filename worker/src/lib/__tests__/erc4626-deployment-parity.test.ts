@@ -29,8 +29,8 @@ const digest = (value: unknown) => createHash("sha256").update(JSON.stringify(ca
 
 describe("ERC-4626 deployment parity", () => {
   it("preserves every rate field and deployment order, including Axis and independent precisions", () => {
-    expect(ON_CHAIN_RATE_CONFIGS).toHaveLength(57);
-    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("5c6da92b39712731decd942e2a77647876babc8c9c003ad0dfd0917eaace94d7");
+    expect(ON_CHAIN_RATE_CONFIGS).toHaveLength(58);
+    expect(digest(ON_CHAIN_RATE_CONFIGS)).toBe("4ae6464d8bed053c45989df8ad6430db51e4c96e50839081719e4d224e8789a0");
   });
 
   it("preserves every NAV deployment triple, trust flag and route order", () => {

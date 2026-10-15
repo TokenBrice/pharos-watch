@@ -11,6 +11,10 @@ import {
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   baseLiveReserveConfigSchema,
 } from "../live-reserve-adapters";
+import mxnt from "../../data/stablecoins/coins/mxnt-tether.json";
+import usdfc from "../../data/stablecoins/coins/usdfc-secured-finance.json";
+import meusd from "../../data/stablecoins/coins/meusd-mezo.json";
+import frnt from "../../data/stablecoins/coins/frnt-wyoming.json";
 
 describe("baseLiveReserveConfigSchema", () => {
   it("accepts a non-empty breakerScope", () => {
@@ -252,6 +256,48 @@ describe("LiveReservesConfigSchema URL validation", () => {
 });
 
 describe("LiveReservesConfigSchema adapter policy validation", () => {
+  it("classifies MXNT Tether telemetry as detail-only", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["tether-transparency-mxnt"]).toMatchObject({
+      sourceModel: "validated-static",
+      evidenceClass: "static-validated",
+      sourceOriginClass: "issuer-attested",
+    });
+    expect(getReserveDisplayBadgeKindForAdapter("tether-transparency-mxnt")).toBe("curated-validated");
+    expect(LiveReservesConfigSchema.safeParse(mxnt.liveReservesConfig).success).toBe(true);
+    const config = LiveReservesConfigSchema.parse(mxnt.liveReservesConfig);
+    expect(computeLiveReserveConfigFingerprint(config)).not.toBe(
+      computeLiveReserveConfigFingerprint({ ...config, adapter: "tether-transparency" }),
+    );
+    expect(() => parseLiveReserveAdapterParams("tether-transparency-mxnt", {
+      currencyIso: "usdt", slices: [{ name: "Cash", pct: 100, risk: "very-low" }],
+    })).toThrow();
+  });
+
+  it("declares native ActivePool fee telemetry without unsupported direct capacity", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["liquity-native-active-pool"].redemptionTelemetry).toEqual({
+      capacity: "none",
+      fee: "current-bps",
+    });
+  });
+
+  it("admits both ERC-4626 config generations for the measured exposure cutover", () => {
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["erc4626-single-asset"].configValidation.allowedVersions).toEqual([1, 2]);
+  });
+
+  it.each(["spark-usdc-v1-inventory", "forest-road-reserve-manager"] as const)(
+    "requires a new config fingerprint for corrected %s reserve accounting",
+    (adapterKey) => {
+      expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].configValidation.allowedVersions).toEqual([2]);
+    },
+  );
+
+  it.each([usdfc, meusd, frnt])("invalidates retained pre-correction snapshots for $id", (coin) => {
+    const config = LiveReservesConfigSchema.parse(coin.liveReservesConfig);
+    expect(config.version).toBe(2);
+    const previous = { ...config, version: 1 };
+    expect(LiveReservesConfigSchema.safeParse(previous).success).toBe(false);
+    expect(computeLiveReserveConfigFingerprint(config)).not.toBe(computeLiveReserveConfigFingerprint(previous));
+  });
 
   it("classifies reviewed issuer feeds without changing their score-bearing evidence class", () => {
     const issuerAdapters = [
@@ -348,13 +394,13 @@ describe("identity-bound reserve reader configuration", () => {
     tokenAddress: "0xcc07e7c4e5e35affd47b351e420a22c667d7f83d",
   };
   it("rejects legacy Spark RPC params and non-collateral semantics", () => {
-    const config = { adapter: "spark-usdc-v1-inventory", version: 1, semantics: "collateral-mix", inputs: input };
+    const config = { adapter: "spark-usdc-v1-inventory", version: 2, semantics: "collateral-mix", inputs: input };
     expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
     expect(LiveReservesConfigSchema.safeParse({ ...config, params: { rpcUrl: "https://example.com" } }).success).toBe(false);
     expect(LiveReservesConfigSchema.safeParse({ ...config, semantics: "single-asset" }).success).toBe(false);
   });
   it("requires the complete exact Forest controller/accounting identity", () => {
-    const config = { adapter: "forest-road-reserve-manager", version: 1, semantics: "collateral-mix", inputs: input, params: forestParams };
+    const config = { adapter: "forest-road-reserve-manager", version: 2, semantics: "collateral-mix", inputs: input, params: forestParams };
     expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
     for (const field of Object.keys(forestParams)) {
       expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...forestParams, [field]: "0x1111111111111111111111111111111111111111" } }).success).toBe(false);
@@ -362,7 +408,7 @@ describe("identity-bound reserve reader configuration", () => {
     }
   });
   it.each(["rpcUrl", "fallbackRpcUrl"])("requires HTTPS for Forest %s without changing other adapter policies", (field) => {
-    const config = { adapter: "forest-road-reserve-manager", version: 1, semantics: "collateral-mix", inputs: input };
+    const config = { adapter: "forest-road-reserve-manager", version: 2, semantics: "collateral-mix", inputs: input };
     expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...forestParams, [field]: "http://rpc.example.com" } }).success).toBe(false);
     expect(LiveReservesConfigSchema.safeParse({ ...config, params: { ...forestParams, [field]: "https://rpc.example.com" } }).success).toBe(true);
   });

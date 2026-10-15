@@ -18,11 +18,13 @@ interface CoinSource {
   contracts?: Array<{ chain: string; address: string }>;
   liveReservesConfig?: {
     adapter: keyof typeof LIVE_RESERVE_ADAPTER_DEFINITIONS;
+    version: number;
     scoring?: { maxSourceAgeSec?: number };
     suspended?: { reason: string; since: string };
     inputs?: { primary?: { chain?: string } };
     params?: {
       slice?: { expectedAssetAddress?: string };
+      deployedExposure?: { basis: string; reviewedAt: string };
       pooledClaim?: { basis: string; reviewedAt: string; sourceUrl: string };
       liabilityScope?: LiabilityScope;
     };
@@ -46,18 +48,18 @@ interface ReserveSource {
   reserves?: Array<{ sourceKey?: string }>;
 }
 
-let erc4626SidecarKeys: Map<string, Set<string>> | undefined;
+let erc4626SidecarKeys: Map<string, string[]> | undefined;
 
-function getErc4626SidecarKeys(): Map<string, Set<string>> {
+function getErc4626SidecarKeys(): Map<string, string[]> {
   return (erc4626SidecarKeys ??= new Map(
     readdirSync(RESERVE_SOURCE_DIR)
       .filter((fileName) => fileName.endsWith(".json"))
       .map((fileName) => {
         const sidecar = JSON.parse(readFileSync(join(RESERVE_SOURCE_DIR, fileName), "utf8")) as ReserveSource;
         const keys = (sidecar.reserves ?? [])
-          .map((row) => row.sourceKey?.toLowerCase() ?? "")
+          .map((row) => row.sourceKey ?? "")
           .filter((sourceKey) => sourceKey.startsWith("erc4626-single-asset:"));
-        return [fileName.slice(0, -5), new Set(keys)] as const;
+        return [fileName.slice(0, -5), keys] as const;
       }),
   ));
 }
@@ -150,9 +152,31 @@ describe("live reserve catalog integrity", () => {
           ? [`erc4626-single-asset:${chain}:${asset}`, `erc4626-single-asset:${chain}:${vault}:deployed`]
           : [];
       const reviewedKeys = sidecarKeys.get(id);
-      if (!sourceKeys.some((sourceKey) => reviewedKeys?.has(sourceKey))) {
+      if (!sourceKeys.some((sourceKey) => reviewedKeys?.includes(sourceKey))) {
         failures.push(`${id}: no reserve slice keyed ${sourceKeys.join(" or ") || "erc4626-single-asset:<chain>:<underlying-or-vault>"}`);
       }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("requires unique deployed classification keys and versioned cutover for every reviewed ERC-4626 binding", () => {
+    const failures: string[] = [];
+    const sidecarKeys = getErc4626SidecarKeys();
+    for (const [id, source] of getCoinSources()) {
+      const config = source.liveReservesConfig;
+      if (config?.adapter !== "erc4626-single-asset" || !config.params?.deployedExposure) continue;
+      const chain = config.inputs?.primary?.chain;
+      const vault = source.contracts?.find((contract) => contract.chain === chain)?.address.toLowerCase();
+      const asset = config.params.slice?.expectedAssetAddress?.toLowerCase();
+      const deployedKey = `erc4626-single-asset:${chain}:${vault}:deployed`;
+      const idleKey = `erc4626-single-asset:${chain}:${asset}`;
+      const keys = sidecarKeys.get(id) ?? [];
+      if (config.version !== 2) failures.push(`${id}: reviewed split requires config version 2`);
+      if (keys.filter((key) => key === deployedKey).length !== 1) {
+        failures.push(`${id}: expected exactly one reviewed deployed key ${deployedKey}`);
+      }
+      if (keys.filter((key) => key === idleKey).length > 1) failures.push(`${id}: duplicate idle classification key`);
+      if (keys.some((key) => key !== deployedKey && key !== idleKey)) failures.push(`${id}: obsolete or unrelated category key`);
     }
     expect(failures).toEqual([]);
   });

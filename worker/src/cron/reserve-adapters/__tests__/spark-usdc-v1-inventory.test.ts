@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
+import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
 import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension";
 import { fetchSparkUsdcV1InventoryReserves } from "../spark-usdc-v1-inventory";
+import type { AdapterContext } from "../types";
 import { installAdapterNetwork, type AdapterRpcValue } from "./reserve-adapter.test-support";
+import { SPARK_INVENTORY_NETWORK, SPARK_L2_ZERO_RPC } from "./fixtures/identity-bound-reserve-readers";
 
 const VAULT = "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe";
 const SUSDS = "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd";
@@ -18,10 +21,16 @@ const WAD = 10n ** 18n;
 const FLOOR = 10n ** 12n;
 const BALANCE = `0x70a08231${VAULT.slice(2).padStart(64, "0")}`;
 const conversion = (value: bigint) => `0x07a2d13a${value.toString(16).padStart(64, "0")}`;
-const coin = { id: "susdc-spark-v1", contracts: [{ chain: "ethereum", address: VAULT, decimals: 18 }] };
+const coin = { id: "susdc-spark-v1", contracts: [
+  { chain: "ethereum", address: VAULT, decimals: 18 },
+  { chain: "arbitrum", address: "0x940098b108fb7d0a7e374f6eded7760787464609", decimals: 18 },
+  { chain: "base", address: "0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858", decimals: 18 },
+  { chain: "optimism", address: "0xcf9326e24ebffbef22ce1050007a43a3c0b6db55", decimals: 18 },
+  { chain: "unichain", address: "0x14d9143becc348920b68d123687045db49a016c6", decimals: 18 },
+] };
 const config = { inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } } } as const;
 
-// Raw eth_call results from spark-pinned-{identity,receipt,dust}.json, captured
+// Embedded historical raw eth_call captures:
 // 2026-10-07T21:13:46Z..21:15:17Z via https://api-ethereum-mainnet-erigon.n.dwellir.com.
 // All state reads: block 26143056, hash 0x89f40231094f9e32ac24584fe0e0410dadfa93508d21d99b3397a9fcfca72b39.
 const RAW_PIN: Record<string, AdapterRpcValue> = {
@@ -44,9 +53,13 @@ const RAW_PIN: Record<string, AdapterRpcValue> = {
   [`${DAI}:${BALANCE}`]: "0x0000000000000000000000000000000000000000000000000000000000000000",
 };
 
-function read(overrides: Record<string, AdapterRpcValue> = {}) {
+function read(
+  overrides: Record<string, AdapterRpcValue> = {},
+  observedBlock?: AdapterContext["observedBlock"],
+) {
   const network = installAdapterNetwork({
-    rpc: { ...RAW_PIN, ...overrides },
+    chains: SPARK_INVENTORY_NETWORK.chains,
+    rpc: { ...RAW_PIN, ...SPARK_L2_ZERO_RPC, ...overrides },
     block: {
       number: 26143056,
       timestamp: 1791406775,
@@ -58,6 +71,7 @@ function read(overrides: Record<string, AdapterRpcValue> = {}) {
     result: fetchSparkUsdcV1InventoryReserves(coin, config, new AbortController().signal, {
       chainRpcs: network.chainRpcs,
       nowSec: 1791407717,
+      observedBlock,
     }),
   };
 }
@@ -65,6 +79,120 @@ function read(overrides: Record<string, AdapterRpcValue> = {}) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("Spark V1 local receipt inventory", () => {
+  it("invalidates retained Ethereum-only snapshots with the version-two catalog binding", () => {
+    const authored = TRACKED_SOURCE_COINS.find((entry) => entry.id === coin.id)?.liveReservesConfig;
+    if (!authored) throw new Error("Missing Spark live reserve binding");
+    expect(authored.version).toBe(2);
+    expect(LiveReservesConfigSchema.safeParse(authored).success).toBe(true);
+    const previous = { ...authored, version: 1 };
+    expect(LiveReservesConfigSchema.safeParse(previous).success).toBe(false);
+    expect(computeLiveReserveConfigFingerprint(authored)).not.toBe(computeLiveReserveConfigFingerprint(previous));
+  });
+
+  it("uses each chain's own numbered state and the oldest pin, even with a primary anchor", async () => {
+    // Deliberately different synthetic headers expose accidental Ethereum-anchor reuse.
+    const anchors = coin.contracts.map(({ chain }, index) => ({
+      chain,
+      number: 30_000_000 + index,
+      timestamp: 1791406775 - index * 60,
+    }));
+    const overrides: Record<string, AdapterRpcValue> = {};
+    for (const anchor of anchors.slice(1)) {
+      overrides[`${anchor.chain}:eth_blockNumber`] = BigInt(anchor.number);
+      overrides[`${anchor.chain}:eth_getBlockByNumber`] = anchor;
+    }
+    const { result, network } = read(overrides, anchors[0]);
+    const observed = await result;
+    expect(observed.metadata?.sourceTimestamp).toBe(anchors[4].timestamp);
+    expect(observed.metadata?.details?.observedBlocks).toEqual(anchors);
+    for (const anchor of anchors) {
+      const calls = network.rpcCalls.filter((call) => call.method === "eth_call" && call.chain === anchor.chain);
+      expect(new Set(calls.map((call) => call.block))).toEqual(new Set([`0x${anchor.number.toString(16)}`]));
+    }
+  });
+
+  it.each(coin.contracts)("rejects a missing $chain deployment before reading any partial book", async ({ chain }) => {
+    const network = installAdapterNetwork({});
+    await expect(fetchSparkUsdcV1InventoryReserves({
+      ...coin,
+      contracts: coin.contracts.filter((entry) => entry.chain !== chain),
+    }, config, new AbortController().signal, { chainRpcs: network.chainRpcs })).rejects.toThrow(/deployment roster/);
+  });
+
+  it.each(coin.contracts.slice(1))("withholds the entire book for missing $chain receipt custody", async ({ address }) => {
+    const susds = SPARK_L2_ZERO_RPC[`${address}:0x58b8f19c`];
+    if (typeof susds !== "string") throw new Error("Missing reviewed L2 receipt");
+    const token = `0x${susds.slice(-40)}`;
+    const balance = `0x70a08231${address.slice(2).padStart(64, "0")}`;
+    await expect(read({ [`${token}:${balance}`]: null }).result).rejects.toThrow();
+  });
+
+  it.each(coin.contracts.slice(1))("withholds mismatched $chain implementation or NAV", async ({ address }) => {
+    await expect(read({ [`${address}:0xaaf10f42`]: "0x1111111111111111111111111111111111111111" }).result).rejects.toThrow();
+    await expect(read({ [`${address}:0x01e1d114`]: 1n }).result).rejects.toThrow();
+    await expect(read({ [`${address}:0x18160ddd`]: null }).result).rejects.toThrow();
+  });
+
+  it("values a positive L2 position through local USDC conversion rather than Ethereum sUSDS arithmetic", async () => {
+    const address = "0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858";
+    const receipt = "0x5875eee11cf8398102fdad704c9e96607675467a";
+    const shares = 10n * WAD;
+    const balance = `0x70a08231${address.slice(2).padStart(64, "0")}`;
+    const { result } = read({
+      [`${address}:0x18160ddd`]: shares,
+      [`${address}:0x01e1d114`]: 11_128_860n,
+      [`${address}:${conversion(shares)}`]: 11_128_860n,
+      [`${receipt}:${balance}`]: shares,
+    });
+    const observed = await result;
+    expect(observed.slices.find((row) => row.sourceKey === "spark-usdc-v1:base:susds")?.pct).toBeGreaterThan(0);
+    expect(observed.metadata?.navUsd).toBeCloseTo(178319360.712216 + 11.12886, 6);
+  });
+
+  it.each(coin.contracts.slice(1))("retains $chain idle cash and independently converts surplus receipts", async ({ chain, address }) => {
+    const receipt = SPARK_L2_ZERO_RPC[`${address}:0x58b8f19c`];
+    const usdc = SPARK_L2_ZERO_RPC[`${address}:0x3e413bee`];
+    if (typeof receipt !== "string" || typeof usdc !== "string") throw new Error("Missing L2 identities");
+    const balance = `0x70a08231${address.slice(2).padStart(64, "0")}`;
+    const shares = 10n * WAD;
+    const held = shares + WAD;
+    const { result } = read({
+      [`${address}:0x18160ddd`]: shares,
+      [`${address}:0x01e1d114`]: 11_000_000n,
+      [`${address}:${conversion(shares)}`]: 11_000_000n,
+      [`${address}:${conversion(held)}`]: 12_100_000n,
+      [`${receipt}:${balance}`]: held,
+      [`${usdc}:${balance}`]: 2_000_000n,
+    });
+    const observed = await result;
+    expect(observed.metadata?.navUsd).toBeCloseTo(178319360.712216 + 11, 6);
+    expect(observed.metadata?.totalReserveUsd).toBeCloseTo(178319361.71986894 + 14.1, 6);
+    expect(observed.slices.find((row) => row.sourceKey === `spark-usdc-v1:${chain}:usdc`)?.pct).toBeGreaterThan(0);
+  });
+
+  it("withholds an L2 receipt deficit despite excess idle cash and rejects missing surplus conversion", async () => {
+    const address = coin.contracts[2].address;
+    const receipt = "0x5875eee11cf8398102fdad704c9e96607675467a";
+    const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const balance = `0x70a08231${address.slice(2).padStart(64, "0")}`;
+    const shares = WAD;
+    const base = {
+      [`${address}:0x18160ddd`]: shares,
+      [`${address}:0x01e1d114`]: 1_100_000n,
+      [`${address}:${conversion(shares)}`]: 1_100_000n,
+    };
+    await expect(read({
+      ...base,
+      [`${receipt}:${balance}`]: shares - 1n,
+      [`${usdc}:${balance}`]: 1_000_000_000_000n,
+    }).result).rejects.toThrow(/receipt\/NAV mismatch/);
+    await expect(read({
+      ...base,
+      [`${receipt}:${balance}`]: shares + 1n,
+      [`${address}:${conversion(shares + 1n)}`]: null,
+    }).result).rejects.toThrow();
+  });
+
   it("replays the exact raw pin, retains dust, and values the receipt once rather than as USDC custody", async () => {
     const { result: pending, network } = read();
     const result = await pending;
@@ -145,12 +273,15 @@ describe("Spark V1 local receipt inventory", () => {
     const observed = await result;
     const liveDai = observed.slices.find((row) => row.coinId === "dai-makerdao");
     const meta = TRACKED_SOURCE_COINS.find((entry) => entry.id === coin.id);
-    if (!meta || !liveDai) throw new Error("Missing Spark catalog metadata or measured DAI");
+    if (!meta?.reserveReview || !liveDai) throw new Error("Missing Spark catalog review or measured DAI");
     const reviewedDai = meta.reserves?.find((row) => row.sourceKey === liveDai.sourceKey);
     expect(reviewedDai?.pct).toBe(0);
     expect(liveDai.pct).toBeGreaterThan(0);
     const measured = { ...liveDai, name: "Measured implementation-linked DAI" };
-    const [classification] = buildReviewedReserveClassifications([measured], meta, 1791406775);
+    // Historical RPC replay predates the current authored review: evaluate the
+    // category join only after that review, without changing the measured weight.
+    const reviewClock = Date.parse(`${meta.reserveReview.reviewedAt}T00:00:00Z`) / 1000 + 86400;
+    const [classification] = buildReviewedReserveClassifications([measured], meta, reviewClock);
     expect(classification).toMatchObject({
       trackedAssetId: "dai-makerdao",
       assetClass: "stablecoin",
@@ -161,7 +292,7 @@ describe("Spark V1 local receipt inventory", () => {
     const [unmatched] = buildReviewedReserveClassifications(
       [{ ...measured, sourceKey: "spark-usdc-v1:ethereum:unreviewed-dai" }],
       meta,
-      1791406775,
+      reviewClock,
     );
     expect(unmatched.classificationKey).toMatch(/^source-native:/);
     expect(unmatched.liquidityHorizon).toBeNull();

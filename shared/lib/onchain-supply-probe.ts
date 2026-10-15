@@ -68,6 +68,16 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // supply is admitted only after the Worker reconciles it to the matching
   // Ethereum xReserve domain balance within one basis point.
   "usdcx-movement": [{ chain: "movement" }],
+  // Reviewed 2026-10-15: five independently deposit-backed Legacy sUSDC vaults.
+  // Local held sUSDS equals each local sUSDC supply. These native liabilities
+  // sum; they are not remote tokens minted against Ethereum sUSDC escrow.
+  "susdc-spark-v1": [
+    { chain: "ethereum", allowZeroSupply: true },
+    { chain: "arbitrum", allowZeroSupply: true },
+    { chain: "base", allowZeroSupply: true },
+    { chain: "optimism", allowZeroSupply: true },
+    supplyProbeChain("unichain", { allowZeroSupply: true }),
+  ],
   // DefiLlama currently lists these active assets but intermittently reports a
   // zero supply row. Use only verified live deployments and fail closed if any
   // configured chain cannot be read, so this cannot silently undercount.
@@ -102,12 +112,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   ],
   // PYUSDx native Portal burn/mint supplies sum. Extension-held balances are
   // already in these totalSupply reads, so never add CUSD/ConcUSD separately.
-  // The unregistered 0G deployment must pass the same-run zero guard below.
+  // Include the positive 0G native deployment in the complete five-chain roster.
   "pyusdx-moonpay": [
     { chain: "ethereum" },
     { chain: "arbitrum" },
     supplyProbeChain("monad"),
     { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("0g", { allowZeroSupply: true }),
   ],
   // Sygnum's native fund-unit tokens sum; Arbitrum is a live zero-supply leg.
   // Use the reviewed zkSync supply profile, not an inferred chain RPC.
@@ -355,6 +366,21 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // ~3.21M units implied by CoinGecko's last (09-26) market cap, so no holder
   // exclusion applies.
   "hbusdt-hyperbeat": [supplyProbeChain("hyperevm")],
+  // Legacy sFRAX keeps the native Ethereum ERC-4626 share denominator.
+  // Eight registered representations are read only for conserved chain
+  // attribution, never summed into new native liabilities. Verified 2026-10-15;
+  // Avalanche reports an explicit zero, not an unavailable observation.
+  "sfrax-frax": [
+    { chain: "ethereum" },
+    { chain: "arbitrum" },
+    { chain: "avalanche", allowZeroSupply: true },
+    { chain: "base" },
+    supplyProbeChain("blast"),
+    { chain: "bsc" },
+    supplyProbeChain("fraxtal"),
+    supplyProbeChain("metis"),
+    { chain: "optimism" },
+  ],
   // IAUon and SLVon are Ondo tokenized-commodity shares with no canonical-chain
   // escrow: verified 2026-07-29 that the Ethereum holder set contains no bridge
   // or adapter contract near the remote supplies, and CoinGecko's total supply
@@ -807,21 +833,6 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 
 };
 
-/**
- * Known native deployments outside the product-chain catalog cannot be silently
- * omitted from a fresh aggregate. Require exactly zero in the same run; positive
- * or unavailable stock withholds publication until its chain can join the roster.
- */
-export const CURATED_AGGREGATE_ZERO_SUPPLY_GUARDS: Readonly<
-  Record<string, { chain: string; address: string; rpcUrl: string }>
-> = {
-  "pyusdx-moonpay": {
-    chain: "0g",
-    address: "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
-    ...SUPPLY_RPC_DEFAULTS["0g"],
-  },
-};
-
 // These canonical-chain totalSupply values already include tokens escrowed for
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
@@ -829,6 +840,7 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "dusd-dialectic": "ethereum",
   "gldt-gold-dao": "icp",
   "susds-sky": "ethereum",
+  "sfrax-frax": "ethereum",
   "sdai-sky": "ethereum",
   "susde-ethena": "ethereum",
   "wsrusd-reservoir": "ethereum",

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { applyConsensusResults, createValidationContextResolver } from "../sync-stablecoins/pricing";
+import { applyConsensusResults, buildDlListPrices, createValidationContextResolver } from "../sync-stablecoins/pricing";
 import { validatePrimaryPriceCandidate } from "../../lib/price-publish-policy";
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
@@ -32,6 +32,24 @@ function makePriceResult(overrides: Partial<PrimaryPriceResult> = {}): PrimaryPr
     ...overrides,
   };
 }
+
+describe("DefiLlama list quote origin", () => {
+  it.each([undefined, "defillama", "defillama-list"])("retains upstream list quotes with source %s", (priceSource) => {
+    const asset = makeAsset({ id: "usdt-tether", supplySource: undefined, price: 1,
+      priceSource, priceObservedAt: 1_700_000_000, priceObservedAtMode: "upstream" });
+    expect(buildDlListPrices([asset]).get(asset.id)).toEqual({
+      price: 1, observedAt: 1_700_000_000, observedAtMode: "upstream",
+    });
+  });
+
+  it.each(["defillama-contract", "coingecko", "coingecko-mirror", "coingecko-low-volume", "protocol-redeem"])(
+    "does not relabel supplemental %s prices when supply is onchain", (priceSource) => {
+      const asset = makeAsset({ id: "sreusd-resupply", supplySource: "onchain-total-supply",
+        price: 1.024822430690978, priceSource, priceObservedAt: 1_700_000_000 });
+      expect(buildDlListPrices([asset]).has(asset.id)).toBe(false);
+    },
+  );
+});
 
 describe("pricing application helpers", () => {
   beforeEach(() => {

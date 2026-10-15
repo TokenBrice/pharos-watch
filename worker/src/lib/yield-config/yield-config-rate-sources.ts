@@ -96,6 +96,19 @@ export const ON_CHAIN_RATE_CONFIGS: OnChainRateConfig[] = [
     inputAmount:
       "0x0000000000000000000000000000000000000000000000000000000000000000",
   },
+  // XAUt per XGLD, not USD price: exact/padded exchangeRate() both return
+  // 1010111 at BSC 127773112 (2026-10-15); RATE_PRECISION is 1000000.
+  // This is issuer-administered NAV: RATE_UPDATER_ROLE permits increases of
+  // at most 5 bps per update with no minimum interval, not reconciled strategy profit.
+  {
+    stablecoinId: "xgld-unitas",
+    chain: "bsc",
+    contract: "0x7bbe7fdcd6bdffd7f767a9531b6210b87b3e46e7",
+    selector: "0x3ba0b9a9",
+    decimals: 6,
+    inputAmount:
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+  },
   erc4626Rate("hyperusdca-hyperithm", "monad", "0x78999cc96d2ba0341588c60ccb0e91c6c33cf371", 18, 6, 6),
   erc4626Rate("gusdcq-galaxy", "ethereum", "0x91600e31fbedc72433d4a57f16639cfe661be7d8", 18, 6, 6),
   erc4626Rate("susdc-spark-v1", "ethereum", "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe", 18, 6, 6),
@@ -290,7 +303,7 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "brsrv-blackrock": {
     code: "issuer-distributed-yield",
     since: "2026-10-03",
-    note: "BlackRock reinvests income in additional shares at a stable $1 NAV; no reviewed share-distribution return adapter is wired, and NAV growth cannot measure holder income",
+    note: "BlackRock publishes a dated RSVXX seven-day SEC yield and daily distribution factor, with daily share reinvestment unless cash dividends are elected; no reviewed distribution-return reader is wired, and stable $1 NAV growth cannot measure holder income",
   },
   // https://www.matrixdock.com/stbt
   "stbt-matrixdock": {
@@ -303,12 +316,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     code: "issuer-distributed-yield",
     since: "2026-10-03",
     note: "JLTXX reinvests daily dividends in same-class shares; the stable $1 NAV feed does not measure distributions, and no reviewed dividend-return adapter consumes the issuer's quoted fund yield",
-  },
-  // https://docs.unitas.so/overview/xgld.md
-  "xgld-unitas": {
-    code: "no-public-yield-source",
-    since: "2026-10-03",
-    note: "XGLD combines gold exposure with borrowed-USDT strategy returns; no verified principal-adjusted rate endpoint or deterministic conversion separates yield from gold-price appreciation",
   },
   // https://public-api.spiko.io/share-classes/chfSAFO/totals
   "chfsafo-spiko": {

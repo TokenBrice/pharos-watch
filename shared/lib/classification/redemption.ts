@@ -52,7 +52,7 @@ export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<RedemptionOutputAssetType, s
   "bluechip-collateral": "Blue-chip collateral",
   "physical-commodity-delivery": "Physical commodity delivery",
   "mixed-collateral": "Mixed collateral",
-  nav: "NAV / non-cash",
+  nav: "NAV-priced output",
 };
 
 type CoverageTone = "emerald" | "sky" | "amber" | "violet" | "rose" | "slate";

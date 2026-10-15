@@ -210,10 +210,11 @@ export async function buildRedemptionBackstopEntry(
     observedOutputKeys.length === requiredOutputKeys.length &&
     requiredOutputKeys.every((key) => observedOutputKeys.includes(key))
   );
-  // Source-owned adverse route observations are separate from favorable payout
-  // terms; rejecting a positive claim must not hide an observed pause.
-  const preserveAdverseStatus = observedLiveMetadata.routeStatus != null &&
-    observedLiveMetadata.routeStatus !== "open" && observedLiveMetadata.routeStatusSource != null;
+  // A shared input-token/facility pause remains adverse independently of payout
+  // terms. Cohort restrictions belong to the exact output path and cannot cross
+  // a rejected payout identity (for example, approved M output versus public wM).
+  const preserveAdverseStatus = observedLiveMetadata.routeStatus === "paused" &&
+    observedLiveMetadata.routeStatusSource != null;
   const liveMetadata = outputBound ? observedLiveMetadata : {
     ...observedLiveMetadata,
     canUseCapacity: false,
@@ -333,19 +334,18 @@ export async function buildRedemptionBackstopEntry(
     routeStatusSource: routeSuspension ? "operator-notice" : "static-config",
     ...(routeSuspension ? { routeStatusReason: routeSuspension.reason, routeStatusReviewedAt: routeSuspension.reviewedAt } : {}),
   };
+  // Fee-only reserve readers can still observe route status independently of
+  // the unquantified capacity model. Keep the already-admitted evidence and
+  // its reserve generation without reviving any historical capacity amount.
+  const reserveRouteStatus = config.capacityModel.kind === "unquantified" ? liveMetadata : capacity;
+  const statusEvidence = directObservation ? liveMetadata : reserveRouteStatus;
   const liveRouteStatus: RedemptionRouteStatusEvidence | null =
-    directObservation && liveMetadata.routeStatus && liveMetadata.routeStatusSource
+    statusEvidence.routeStatus && statusEvidence.routeStatusSource
       ? {
-          routeStatus: liveMetadata.routeStatus,
-          routeStatusSource: liveMetadata.routeStatusSource,
-          ...(liveMetadata.routeStatusReason ? { routeStatusReason: liveMetadata.routeStatusReason } : {}),
-        }
-      : capacity.routeStatus && capacity.routeStatusSource
-      ? {
-          routeStatus: capacity.routeStatus,
-          routeStatusSource: capacity.routeStatusSource,
-          ...(capacity.routeStatusReason ? { routeStatusReason: capacity.routeStatusReason } : {}),
-          ...(capacity.routeStatusReviewedAt ? { routeStatusReviewedAt: capacity.routeStatusReviewedAt } : {}),
+          routeStatus: statusEvidence.routeStatus,
+          routeStatusSource: statusEvidence.routeStatusSource,
+          ...(statusEvidence.routeStatusReason ? { routeStatusReason: statusEvidence.routeStatusReason } : {}),
+          ...(statusEvidence.routeStatusReviewedAt ? { routeStatusReviewedAt: statusEvidence.routeStatusReviewedAt } : {}),
         }
       : null;
   const mergedRouteStatus = mergeRedemptionRouteStatus({
@@ -455,10 +455,11 @@ export async function buildRedemptionBackstopEntry(
     ...(!observerModel && options.reserveInput && (
       (!routeSuspension && capacity.consumedReserveCapacity)
       || staticFields.selectedLiveFee
-      || (capacity.consumedReserveRouteStatus && !routeSuspension && mergedRouteStatus.routeStatus === capacity.routeStatus && (
-        mergedRouteStatus.routeStatusSource === capacity.routeStatusSource
-        || (capacity.routeStatus === "unknown" && !capacity.routeStatusSource && mergedRouteStatus.routeStatusSource === "static-config")
-      ))
+      || ((capacity.consumedReserveRouteStatus || config.capacityModel.kind === "unquantified") &&
+        !routeSuspension && mergedRouteStatus.routeStatus === reserveRouteStatus.routeStatus && (
+          mergedRouteStatus.routeStatusSource === reserveRouteStatus.routeStatusSource
+          || (reserveRouteStatus.routeStatus === "unknown" && !reserveRouteStatus.routeStatusSource && mergedRouteStatus.routeStatusSource === "static-config")
+        ))
       || (!routeSuspension && exitRouteObservation && (liveMetadata.v9SfrxusdCrosschainRouteState || liveMetadata.v9FpiControllerRouteState || liveMetadata.v9OutputValuation))
     ) ? { reserveInput: options.reserveInput } : {}),
     score,

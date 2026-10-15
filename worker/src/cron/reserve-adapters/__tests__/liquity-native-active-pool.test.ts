@@ -1,6 +1,7 @@
 import type { AdapterNetworkSpec } from "./reserve-adapter.test-support";
 import { describe, expect, it } from "vitest";
 import { runAdapter } from "./reserve-adapter.test-support";
+import usdfc from "@shared/data/stablecoins/coins/usdfc-secured-finance.json";
 
 const ACTIVE_POOL = "0x3012C2fE1240e3754E5C200A0946bb0E07474876";
 const PRICE_FEED = "0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88";
@@ -41,7 +42,7 @@ function fetchPool(network = networkFor()) {
 }
 
 describe("fetchLiquityNativeActivePoolReserves", () => {
-  it("emits native active-pool collateral slices and bounded direct capacity", async () => {
+  it("emits native collateral and route telemetry without equating gross debt to executable capacity", async () => {
     const { result } = await fetchPool();
 
     expect(result.slices).toEqual([
@@ -56,8 +57,6 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
       totalCollateralRatio: 1.67,
       minimumCollateralRatio: 1.1,
       redemption: {
-        capacityUsd: 3_500_000,
-        capacityKind: "live-direct-bounded",
         freshnessKind: "same-run-onchain",
         routeStatus: "open",
         routeStatusSource: "onchain",
@@ -70,6 +69,44 @@ describe("fetchLiquityNativeActivePoolReserves", () => {
         collateralRaw: "90000000000000000000",
       },
     });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityKind");
+  });
+
+  it("retains USDFC FIL backing and TroveManager fee telemetry without gross-debt capacity", async () => {
+    const params = usdfc.liveReservesConfig.params;
+    const { result } = await runAdapter("liquity-native-active-pool", "usdfc-secured-finance", {
+      nowSec: 1_800_000_000,
+      network: {
+        chains: { filecoin: params.rpcUrl },
+        block: { number: 6_458_485, timestamp: 1_800_000_000 },
+        rpc: {
+          [`filecoin:${params.activePoolAddress}:${params.debtSelector}`]: 1_000_000n * WAD,
+          [`filecoin:${params.activePoolAddress}:${params.collateralBalanceSelector}`]: 2_000_000n * WAD,
+          [`filecoin:${params.priceFeedAddress}:${params.priceSelector}`]: WAD,
+          [`filecoin:${params.troveManagerAddress}:${params.mcrSelector}`]: 110n * 10n ** 16n,
+          [`filecoin:${params.troveManagerAddress}:${params.tcrSelector}`]: 2n * WAD,
+          [`filecoin:${params.borrowerOperationsAddress}:${params.redemptionRateSelector}`]: 50n * WAD / 10_000n,
+        },
+      },
+    });
+    expect(result.slices).toMatchObject([{
+      sourceKey: `liquity-native-active-pool:${params.activePoolAddress}`,
+      pct: 100, risk: "medium",
+    }]);
+    expect(result.metadata).toMatchObject({
+      totalDebtUsd: 1_000_000,
+      totalReserveUsd: 2_000_000,
+      collateralizationRatio: 2,
+      redemption: {
+        routeStatus: "open", routeStatusSource: "onchain",
+        freshnessKind: "same-run-onchain", holderEligibility: "any-holder",
+        settlementDelaySec: 0, feeBps: 50,
+      },
+    });
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityUsd");
+    expect(result.metadata?.redemption).not.toHaveProperty("capacityKind");
+    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
   });
 
   it.each([

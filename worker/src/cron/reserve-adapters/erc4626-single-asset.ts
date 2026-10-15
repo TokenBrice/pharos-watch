@@ -366,15 +366,17 @@ export async function fetchErc4626SingleAssetReserves(
       "Vault underlying holdings could not be measured; reserve exposure is unattributed",
     ));
   }
-  const heldRaw = idleUnderlyingBalanceRaw == null
+  // MetaMorpho V1 totalAssets excludes skimmable wallet donations. They are
+  // contextual balances, not idle assets in the holder's accounted reserve book.
+  const excludesWalletCash = sliceConfig.redemptionLiquidity?.source === "morpho-vault-v1";
+  const heldRaw = idleUnderlyingBalanceRaw == null || excludesWalletCash
     ? 0n
     : idleUnderlyingBalanceRaw < totalAssetsRaw ? idleUnderlyingBalanceRaw : totalAssetsRaw;
   const idlePct = Number(heldRaw * 100_000_000_000_000n / totalAssetsRaw) / 1_000_000_000_000;
-  // A reviewed `deployedExposure` attests that the configured slice descriptor
-  // already covers the vault's non-idle positions, so one reviewed slice is
-  // published instead of a vault-named high-risk remainder. It never applies
-  // when the idle balance is unreadable: an unmeasured holding stays
-  // unattributed.
+  // A reviewed `deployedExposure` covers the non-idle positions, not idle
+  // holdings. Publish measured shares under distinct keys; classification
+  // enrichment remains subject to the consumer's unique-match and age gates.
+  // An unreadable holding stays unattributed.
   const reviewedDeployedExposure = idleUnderlyingBalanceRaw == null ? null : sliceConfig.deployedExposure ?? null;
   const deployedPct = Number((totalAssetsRaw - heldRaw) * 100_000_000_000_000n / totalAssetsRaw) / 1_000_000_000_000;
   const unknownExposurePct = sliceConfig.pooledClaim ? 100 : reviewedDeployedExposure ? 0 : 100 - idlePct;
@@ -392,14 +394,26 @@ export async function fetchErc4626SingleAssetReserves(
       "Whole-token pooled claim has unknown look-through; accounting asset and observed idle cash do not establish reserve allocation or token dependencies.",
     ));
   } else if (reviewedDeployedExposure) {
-    slices.push({
-      sourceKey: `erc4626-single-asset:${primaryInput.chain}:${assetAddress}`,
-      name: sliceConfig.name,
-      pct: 100,
-      risk: sliceConfig.risk,
-      ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
-      ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
-    });
+    if (idlePct > 0) {
+      slices.push({
+        sourceKey: `erc4626-single-asset:${primaryInput.chain}:${assetAddress}`,
+        name: `${coin.name} idle underlying`,
+        pct: idlePct,
+        risk: sliceConfig.risk,
+        ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
+        ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
+      });
+    }
+    if (deployedPct > 0) {
+      slices.push({
+        sourceKey: `erc4626-single-asset:${primaryInput.chain}:${contractAddress.toLowerCase()}:deployed`,
+        name: sliceConfig.name,
+        pct: deployedPct,
+        risk: sliceConfig.risk,
+        ...(sliceConfig.coinId ? { coinId: sliceConfig.coinId } : {}),
+        ...(sliceConfig.depType ? { depType: sliceConfig.depType } : {}),
+      });
+    }
     warnings.push(reserveInfoWarning(
       "erc4626-deployed-exposure-reviewed",
       `Deployed share ${deployedPct.toFixed(2)}% of totalAssets() is attributed to the reviewed slice: ${reviewedDeployedExposure.basis}`,

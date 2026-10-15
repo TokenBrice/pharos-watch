@@ -22,18 +22,20 @@ The output is the cached `price`, `priceSource`, `priceConfidence`, `priceObserv
 
 When an asset still has no usable current price after validation and fallback recovery, Pharos keeps `price = null`, `priceConfidence = null`, and serializes `priceSource = "missing"` so the cache payload stays structurally valid while still making the missing-price state explicit.
 
+USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exact Filecoin token identity is verified against issuer deployments and CoinGecko metadata; sparse trading can leave an observed quote older than primary consensus permits. Recovery retains the original upstream clock and fallback confidence under the existing seven-day budget, without changing DefiLlama supply or treating the FIL collateral oracle as a USDFC market price.
+
 Supplemental on-chain supply failures identify the asset, chain, contract and machine-readable subreason in `onchain-supply-contract-withheld` events. An unreadable `totalSupply` is distinct from a nonpositive read or unsupported amount encoding; a missing admitted NAV is reported separately as `supplemental-supply-withheld` / `nav-price-unavailable`, before any supply probe. Complete native aggregates still reject every unreadable leg and preserve the same-run zero-supply guards. Caller cancellation propagates rather than being reported as a completed unavailable observation. These diagnostics do not change supply admission or refresh carried observation clocks.
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.50`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.51`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
 
-The 2026-10-13 `v6.50` release adds Crown BRLV to the CoinGecko low-volume fallback on the v6.49 terms below, effective October 14.
+The `v6.51` release binds DefiLlama-list consensus inputs to their actual source and adds USDFC to the reviewed low-volume CoinGecko fallback. Named supplemental prices cannot become a second DefiLlama observation. USDFC retains fallback confidence, its original observation clock and the existing seven-day age budget; source weights, depeg authority and supply admission are unchanged. Activation is provisionally **2026-10-16 00:00 UTC (`1792108800`)**, to be re-dated at release. Fixed-clock comparison and fresh publication remain required; this record does not establish production recovery.
 
-The 2026-10-12 `v6.49` release admits NXUSD and Hermetica USDh to the existing CoinGecko low-volume fallback cohort. Only missing prices can recover, with fallback confidence and their original upstream clock; the seven-day age budget, future-skew gate, peg validation and supply rules are unchanged. Historical lookup activates at the next UTC midnight (October 13), preserving earlier publications. Fresh production publication remains required to establish recovery.
+The [low-volume release record](./process/pricing-pipeline-appendix.md#coingecko-low-volume-lane) retains the v6.49/v6.50 cohort decisions and their original activation dates.
 
 The historical-bucket conservation change checks each CoinGecko missing-chain gap-fill window independently. A missing chain receives the historical `CG − DL` remainder only when every existing canonical chain has an observed value and their sum conserves that DefiLlama bucket within `max($0.01, DL bucket × 1e-6)`. Otherwise the missing chain's historical field is `null` and optional `supplyGapFill.withheldHistoricalBuckets` names `"day"`, `"week"`, and/or `"month"`. Existing chain observations are never scaled; admitted aggregate buckets retain the single CoinGecko series, while a bucket DefiLlama did not observe stays unavailable under the existing admission rule. Current-bucket conservation, ratio bounds and hysteresis are unchanged. See [DEC-01 supply admission](./supply-snapshot.md#coingecko-aggregate-gap-fill-limits-dec-01).
 
@@ -52,6 +54,8 @@ The [v6.43–v6.46 release details](./process/pricing-pipeline-appendix.md#v643v
 ## Primary Consensus
 
 `fetchPrimaryPrices()` keeps the established depeg-protective consensus in the critical 15-minute publication path. It combines DefiLlama intake observations with CoinGecko, curated exchange tickers, RedStone, Curve, reserve NAV telemetry, and promoted DEX observations, then applies the pool challenge. Registered authoritative protocol/NAV overrides run afterward and may replace the selected market price. Only the five missing-price fallback passes and exact-address providers are detached to hourly corroboration.
+
+The DefiLlama-list consensus input accepts only intake prices with an absent source or an explicit `defillama` / `defillama-list` origin, and still excludes `coingecko-fallback` supply rows. Supplemental contract quotes and other named price sources retain their own provenance and cannot be relabeled `defillama-list`, including when their supply comes from an on-chain read.
 
 ### Source Weights
 

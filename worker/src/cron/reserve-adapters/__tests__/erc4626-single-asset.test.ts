@@ -6,6 +6,8 @@ import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation"
 import { computeLiveReserveConfigFingerprint, parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../../../lib/live-reserves/store-shared";
+import { buildReviewedReserveClassifications } from "../../../lib/safety-score-v9/extension-reserves";
+import { computeSafetyScoreV9ReserveExposureKey } from "../../../lib/safety-score-v9/fact-set";
 import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
 import type { AdapterResult } from "../types";
 import {
@@ -722,6 +724,56 @@ describe("fetchErc4626SingleAssetReserves", () => {
     expect(morphoVariables).toEqual([{ address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b", chainId: 1 }]);
   });
 
+  it.each([30_000_000n, 0n])("does not promote donated MetaMorpho V1 wallet assets above API liquidity %s", async (liquidityRaw) => {
+    installErc4626Network({ idleBalance: 50_000_000, extraHandlers: [({ url }) => {
+      if (url !== "https://api.morpho.org/graphql") return undefined;
+      return jsonResponse({ data: { vaultByAddress: {
+        address: "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        listed: true,
+        asset: { address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+        chain: { id: 1 },
+        liquidity: { underlying: liquidityRaw.toString(), usd: Number(liquidityRaw) / 1e6 },
+        warnings: [],
+      } } });
+    }] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v1", chainId: 1 }));
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "50000000",
+      redemptionCapacityRaw: liquidityRaw.toString(),
+      redemptionCapacitySource: "morpho-vault-v1-liquidity",
+    });
+  });
+
+  it("withholds MetaMorpho V1 capacity when API liquidity is unavailable despite donated wallet assets", async () => {
+    installErc4626Network({ idleBalance: 50_000_000, extraHandlers: [({ url }) => {
+      if (url !== "https://api.morpho.org/graphql") return undefined;
+      return jsonResponse({ data: { vaultByAddress: null } });
+    }] });
+    const result = await runTrackedVault("syrupusdc-maple", withRedemptionLiquidity({ source: "morpho-vault-v1", chainId: 1 }));
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+    expect(result.metadata).toMatchObject({ redemption: { capacityKind: "documented-eventual" } });
+  });
+
+  it("keeps MetaMorpho V1 donated wallet cash outside the accounted reserve composition", async () => {
+    const id = "sparkusdc-spark";
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const params = parseLiveReserveAdapterParams("erc4626-single-asset", coin.liveReservesConfig!.params);
+    const vault = coin.contracts!.find((contract) => contract.chain === "base")!.address;
+    installErc4626Network({
+      chain: "base", vault, asset: params.slice.expectedAssetAddress, idleBalance: 150_000_000n,
+      extraHandlers: [({ url }) => url === "https://api.morpho.org/graphql"
+        ? jsonResponse({ data: { vaultByAddress: null } })
+        : undefined],
+    });
+    const result = await runTrackedVault(id);
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0]).toMatchObject({
+      sourceKey: `erc4626-single-asset:base:${vault.toLowerCase()}:deployed`, pct: 100,
+    });
+    expect(result.metadata?.deployedPct).toBe(100);
+    expect(result.metadata).not.toHaveProperty("redemptionCapacityRaw");
+  });
+
   it("falls back to idle capacity and degrades when Morpho V2 identity validation fails", async () => {
     installErc4626Network({ extraHandlers: [({ url, call }) => {
       if (call?.data === "0xad468d11") return jsonResponse({ result: uint256Result(1) });
@@ -927,6 +979,70 @@ describe("fetchErc4626SingleAssetReserves", () => {
 });
 
 describe("Morpho V2 operational conditions and composition admission", () => {
+  it.each([0n, 25_000_000n, 99_990_000n, 99_999_999n, 100_000_000n])(
+    "keeps reviewed Ethena USDC idle and deployed composition distinct at idle %s",
+    async (idleBalance) => {
+      const id = "ethenausdc-steakhouse";
+      installTrackedMorphoV2(id, null, { idleBalance });
+      const result = await runTrackedVault(id);
+      const coin = TRACKED_META_BY_ID.get(id)!;
+      const idleKey = "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+      const deployedKey = "erc4626-single-asset:base:0xbeeff0be997cca5b1c13a7433c2004637975739e:deployed";
+      const idle = result.slices.find((slice) => slice.sourceKey === idleKey);
+      const deployed = result.slices.find((slice) => slice.sourceKey === deployedKey);
+      expect(result.slices).toHaveLength(idleBalance === 0n || idleBalance === 100_000_000n ? 1 : 2);
+      if (idleBalance > 0n) {
+        expect(idle).toMatchObject({ pct: Number(idleBalance) / 1_000_000, coinId: "usdc-circle" });
+      } else {
+        expect(idle).toBeUndefined();
+      }
+      if (idleBalance < 100_000_000n) {
+        expect(deployed).toMatchObject({
+          pct: Number(100_000_000n - idleBalance) / 1_000_000,
+          coinId: "usdc-circle", depType: "wrapper",
+        });
+      } else {
+        expect(deployed).toBeUndefined();
+      }
+      // Only the consumer may enrich classifications, after checking review
+      // age and exactly one candidate on both sides of the explicit key join.
+      const clock = Date.parse("2026-10-16T00:00:00Z") / 1000;
+      const classifications = buildReviewedReserveClassifications(result.slices, coin, clock);
+      for (const slice of result.slices) {
+        expect(coin.reserves?.filter((reviewed) => reviewed.sourceKey === slice.sourceKey)).toHaveLength(1);
+        const classification = classifications.find((row) => row.exposureKey === computeSafetyScoreV9ReserveExposureKey(slice));
+        expect(classification?.classificationKey).toMatch(/^registry-reviewed:/);
+        expect(classification?.assetClass).toBe(slice.sourceKey === idleKey ? "stablecoin" : "protocol-position");
+      }
+      expect(result.metadata?.unknownExposurePct).toBe(0);
+      expectValidAdapterOutput("erc4626-single-asset", result, { subjectId: id });
+    },
+  );
+
+  it("fails closed on duplicate reviewed keys instead of copying arbitrary curated metadata", async () => {
+    const id = "ethenausdc-steakhouse";
+    installTrackedMorphoV2(id, null, { idleBalance: 0n });
+    const result = await runTrackedVault(id);
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const reviewed = coin.reserves!.find((row) => row.sourceKey === result.slices[0]!.sourceKey)!;
+    const classifications = buildReviewedReserveClassifications(
+      result.slices, { ...coin, reserves: [reviewed, reviewed] }, Date.parse("2026-10-16T00:00:00Z") / 1000,
+    );
+    expect(classifications[0]?.classificationKey).toMatch(/^source-native:/);
+    expect(result.slices[0]).not.toHaveProperty("issuerOrObligor");
+  });
+
+  it("fails closed when multiple live rows compete for one reviewed category", async () => {
+    const id = "ethenausdc-steakhouse";
+    installTrackedMorphoV2(id, null, { idleBalance: 0n });
+    const result = await runTrackedVault(id);
+    const classifications = buildReviewedReserveClassifications(
+      [result.slices[0]!, { ...result.slices[0]!, name: "Competing deployed observation" }],
+      TRACKED_META_BY_ID.get(id)!, Date.parse("2026-10-16T00:00:00Z") / 1000,
+    );
+    expect(classifications.every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
+  });
+
   it.each([
     { id: "steakusdg-steakhouse", type: "deposit_disabled", level: "RED", code: "morpho-vault-v2-deposit-disabled", status: "unknown" },
     { id: "krusdc-keyrock", type: "low_liquidity", level: "YELLOW", code: "morpho-vault-v2-low-liquidity", status: "degraded" },
@@ -935,8 +1051,9 @@ describe("Morpho V2 operational conditions and composition admission", () => {
     const result = await runTrackedVault(id);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code, effect: "info" }));
     expect(nonInfoWarnings(result.warnings)).toEqual([]);
-    expect(result.slices).toHaveLength(1);
-    expect(result.slices[0]).toMatchObject({ pct: 100, risk: "high", depType: "wrapper" });
+    expect(result.slices).toHaveLength(2);
+    expect(result.slices.map((slice) => slice.pct)).toEqual([25, 75]);
+    expect(result.slices[1]).toMatchObject({ risk: "high", depType: "wrapper" });
     expect(result.metadata).toMatchObject({
       unknownExposurePct: 0,
       redemptionCapacityRaw: "25000000",

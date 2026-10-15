@@ -44,6 +44,27 @@ function decodeDeliveryActive(raw: `0x${string}`): boolean {
   return active;
 }
 
+/** Effective liabilities include streamed claims not yet materialized as USDfr. */
+function decodeAccruedUnissued(raw: `0x${string}`): bigint {
+  if (!/^0x[0-9a-fA-F]{576}$/.test(raw)) {
+    throw new Error(`${ADAPTER_KEY}: malformed accrualSnapshot`);
+  }
+  const unissued = decodeUint256Word(decodeAbiWordAt(raw, 2));
+  const senior = decodeUint256Word(decodeAbiWordAt(raw, 3));
+  const fee = decodeUint256Word(decodeAbiWordAt(raw, 4));
+  const recipient = decodeStrictAddressWord(decodeAbiWordAt(raw, 5));
+  const accruedThrough = decodeUint256Word(decodeAbiWordAt(raw, 6));
+  const enabled = decodeStrictBoolWord(decodeAbiWordAt(raw, 7));
+  const fresh = decodeStrictBoolWord(decodeAbiWordAt(raw, 8));
+  if (unissued == null || senior == null || fee == null || recipient == null ||
+      accruedThrough == null || accruedThrough > (1n << 64n) - 1n || enabled == null || fresh == null ||
+      unissued !== senior + fee || (!enabled && unissued !== 0n)) {
+    throw new Error(`${ADAPTER_KEY}: malformed accrualSnapshot`);
+  }
+  if (enabled && !fresh) throw new Error(`${ADAPTER_KEY}: stale accrualSnapshot`);
+  return unissued;
+}
+
 const STATE_FIELDS = [
     addressObservation({ label: "usdc", contract: MANAGER, data: "0x3e413bee",
       verify: (value) => value === USDC ? null : "USDC identity drift" }),
@@ -60,6 +81,7 @@ const STATE_FIELDS = [
     uint256Observation({ label: "impairment", contract: MANAGER, data: "0xb5984016" }),
     uint256Observation({ label: "totalBacking", contract: MANAGER, data: "0x02df9274" }),
     uint256Observation({ label: "recognizedBacking", contract: MANAGER, data: "0xd0a6c794" }),
+    customObservation({ label: "accruedUnissued", contract: MANAGER, data: "0x79a50278", decode: decodeAccruedUnissued }),
     uint256Observation({ label: "supply", contract: TOKEN, data: "0x18160ddd" }),
     uint256Observation({ label: "actualUSDC", contract: USDC, data: encodeBalanceOfCallData(MANAGER) }),
   ] as const;
@@ -132,8 +154,9 @@ export async function fetchForestRoadReserveManagerReserves(
     throw new Error(`${ADAPTER_KEY}: zero backing or supply`);
   }
   const totalReserveUsd = decimalNumberFromBigInt(values.recognizedBacking, 18);
-  const supplyTokens = decimalNumberFromBigInt(values.supply, 18);
-  const collateralizationRatio = collateralizationRatioFromTokenAmounts(values.recognizedBacking, 18, values.supply, 18);
+  const effectiveSupply = values.supply + values.accruedUnissued;
+  const supplyTokens = decimalNumberFromBigInt(effectiveSupply, 18);
+  const collateralizationRatio = collateralizationRatioFromTokenAmounts(values.recognizedBacking, 18, effectiveSupply, 18);
   if (!Number.isFinite(totalReserveUsd) || totalReserveUsd <= 0 || !Number.isFinite(supplyTokens) ||
       supplyTokens <= 0 || collateralizationRatio == null || !Number.isFinite(collateralizationRatio)) {
     throw new Error(`${ADAPTER_KEY}: nonfinite accounting`);
@@ -142,8 +165,8 @@ export async function fetchForestRoadReserveManagerReserves(
   const warnings = snapshot.warnings;
   if (values.impairment > 0n) warnings.push(reserveDegradedWarning(
     "forest-road-credit-impairment", "The accrued credit book carries a recognized principal impairment, subtracted once from backing."));
-  if (values.recognizedBacking < values.supply) warnings.push(reserveDegradedWarning(
-    "forest-road-backing-shortfall", "Recognized accounting backing is below USDfr supply; the measured shortfall is retained."));
+  if (values.recognizedBacking < effectiveSupply) warnings.push(reserveDegradedWarning(
+    "forest-road-backing-shortfall", "Recognized accounting backing is below physical USDfr plus accrued unissued liabilities; the measured shortfall is retained."));
   if (values.paused) warnings.push(reserveInfoWarning(
     "forest-road-manager-paused", "ReserveManager is paused; composition does not certify an executable holder exit."));
   const surplus = values.actualUSDC - values.idleUSDC;
@@ -176,7 +199,9 @@ export async function fetchForestRoadReserveManagerReserves(
         idleReserve18Raw: values.idleReserve.toString(), accruedDeployedCredit18Raw: values.deployedPrincipal.toString(),
         principalImpairment18Raw: values.impairment.toString(), netPrivateCredit18Raw: netCredit.toString(),
         totalBacking18Raw: values.totalBacking.toString(), recognizedBacking18Raw: values.recognizedBacking.toString(),
-        supply18Raw: values.supply.toString(), unrecognizedUSDC6Raw: surplus.toString(),
+        physicalSupply18Raw: values.supply.toString(), accruedUnissued18Raw: values.accruedUnissued.toString(),
+        effectiveSupply18Raw: effectiveSupply.toString(), liabilityBasis: "physical-plus-accrued-unissued",
+        unrecognizedUSDC6Raw: surplus.toString(),
         creditBorrowerIdentity: "unknown", creditValuation: "unverified", holderPriority: "unknown",
       },
     },

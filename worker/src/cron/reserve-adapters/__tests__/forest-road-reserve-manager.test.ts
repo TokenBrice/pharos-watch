@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@shared/lib/live-reserve-adapters";
 import { fetchForestRoadReserveManagerReserves } from "../forest-road-reserve-manager";
 import type { OnchainMulticall3Call } from "../onchain";
 import type * as EvmRpc from "../../../lib/evm-rpc";
@@ -27,15 +28,17 @@ const coin: ReserveAdapterCoin = {
   flags: { backing: "rwa-backed", governance: "centralized", rwa: true, pegCurrency: "USD", yieldBearing: false, navToken: false },
   contracts: [{ chain: "ethereum", address: TOKEN, decimals: 18 }],
 };
-// Wave A deliberately does not register the adapter key; the callable reader consumes the profile directly.
 const config: LiveReservesConfig = {
-  adapter: "curated-validated", version: 1, semantics: "collateral-mix",
+  adapter: "forest-road-reserve-manager", version: 2, semantics: "collateral-mix",
   inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
   params: { managerAddress: MANAGER, managerImplementation: IMPLEMENTATION, usdcAddress: USDC, tokenAddress: TOKEN },
 };
 
 // Raw outputs saved at Ethereum 26143056, 2026-10-07T20:59:35Z (keyless Dwellir).
-// Accounting and identity records: agents/lrr/evidence/RS5/usdfr-pinned-{accounting,identity}.json.
+// Historical accounting and identity outputs are embedded below.
+// Same-block accrualSnapshot recaptured 2026-10-15T11:01:39.687Z; retained in
+// agents/2026-10-15-batch64-review/usdfr-historical-accrual-snapshot.json.
+// Endpoint: https://api-ethereum-mainnet.n.dwellir.com. It is not a zero fixture.
 const RAW_ACCOUNTING = {
   "0x11af8243": "0x000000000000000000000000000000000000000000001d68658ba1111eb8a000",
   "0x6af2fa06": "0x00000000000000000000000000000000000000000000000000000020558f466a",
@@ -49,9 +52,15 @@ const RAW_ACCOUNTING = {
   "0x3e413bee": "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
   "0x5c975abb": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "0xe2d252ad": `0x${"0".repeat(1152)}`,
+  "0x79a50278": "0x0000000000000000000000000000000000000000000007046ab2561e3e9a7a7a000000000000000000000000000000000000000000000548f592dcd8199d16ee00000000000000000000000000000000000000000000041d97fedacc856068cd000000000000000000000000000000000000000000000369f3b9d22fe584295b0000000000000000000000000000000000000000000000b3a445089c9fdc3f720000000000000000000000009fa085bfd15e5f80d7df056e7cd654c1dea4d297000000000000000000000000000000000000000000000000000000006ac6b2b700000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001",
 };
 function word(value: bigint): `0x${string}` {
   return `0x${value.toString(16).padStart(64, "0")}`;
+}
+function accrualSnapshot(unissued: bigint, enabled = true, fresh = true, senior = unissued): `0x${string}` {
+  // Synthetic boundary fixture; the base RAW_ACCOUNTING tuple above is the pinned capture.
+  return `0x${[0n, 0n, unissued, senior, 0n, 0n, BigInt(BLOCK.timestamp), enabled ? 1n : 0n, fresh ? 1n : 0n]
+    .map((value) => word(value).slice(2)).join("")}`;
 }
 let overrides: Record<string, string | null>;
 function run(target = coin, profile = config) {
@@ -75,11 +84,24 @@ beforeEach(() => {
 });
 
 describe("Forest Road measured accounting", () => {
+  it("invalidates retained physical-only liability snapshots with the version-two binding", () => {
+    expect(LiveReservesConfigSchema.safeParse(config).success).toBe(true);
+    const previous = { ...config, version: 1 };
+    expect(LiveReservesConfigSchema.safeParse(previous).success).toBe(false);
+    expect(computeLiveReserveConfigFingerprint(config)).not.toBe(computeLiveReserveConfigFingerprint(previous));
+  });
+
   it("replays accrued face and reconciles 6/18 units without treating credit as USDC", async () => {
     const result = await run();
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(5164083.856308362, 6);
-    expect(result.metadata?.supplyTokens).toBeCloseTo(5144648.48236683, 6);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.00377778462574, 12);
+    expect(result.metadata?.supplyTokens).toBeCloseTo(5164083.856308362, 6);
+    expect(result.metadata?.details).toMatchObject({
+      physicalSupply18Raw: "5144648482366829991308833",
+      accruedUnissued18Raw: "19435373941531915348173",
+      effectiveSupply18Raw: "5164083856308361906657006",
+      liabilityBasis: "physical-plus-accrued-unissued",
+    });
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 12);
     expect(result.metadata?.sourceTimestamp).toBe(BLOCK.timestamp);
     expect(result.metadata?.ratioSkewSec).toBe(0);
     expect(result.metadata?.details?.accruedDeployedCredit18Raw).toBe("5025209449802361906657006");
@@ -131,7 +153,7 @@ describe("Forest Road measured accounting", () => {
     const result = await run();
     expect(result.metadata?.details?.unrecognizedUSDC6Raw).toBe("10000000");
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(5164083.856308362, 6);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.00377778462574, 12);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 12);
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "forest-road-unrecognized-usdc-surplus", effect: "info" }));
   });
 
@@ -145,7 +167,7 @@ describe("Forest Road measured accounting", () => {
     await expect(run()).rejects.toThrow();
   });
 
-  it.each(["idleUSDC", "actualUSDC", "deployedPrincipal", "impairment", "supply", "recognizedBacking", "deliveryActive"])(
+  it.each(["idleUSDC", "actualUSDC", "deployedPrincipal", "impairment", "supply", "recognizedBacking", "deliveryActive", "accruedUnissued"])(
     "never turns an absent %s getter into zero", async (label) => {
       overrides[label] = null;
       await expect(run()).rejects.toThrow();
@@ -198,7 +220,7 @@ describe("Forest Road measured accounting", () => {
   it("retains a pure liability shortfall without clamping the ratio to par", async () => {
     overrides.supply = word(6_000_000n * 10n ** 18n);
     const result = await run();
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(5164083.856308362 / 6_000_000, 12);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(5164083.856308362 / (6_000_000 + 19435.373941531914), 12);
     expect(result.metadata?.details?.principalImpairment18Raw).toBe("0");
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "forest-road-backing-shortfall", effect: "degraded" }));
   });
@@ -208,6 +230,45 @@ describe("Forest Road measured accounting", () => {
       overrides[label] = `${word(0n)}${word(0n).slice(2)}`;
       await expect(run()).rejects.toThrow(/malformed uint256/);
     });
+
+  it("keeps liability coverage unchanged when accrued claims become physical supply", async () => {
+    const before = await run();
+    overrides = { supply: RAW_ACCOUNTING["0x02df9274"], accruedUnissued: accrualSnapshot(0n) };
+    const after = await run();
+    expect(after.metadata?.supplyTokens).toBe(before.metadata?.supplyTokens);
+    expect(after.metadata?.collateralizationRatio).toBe(before.metadata?.collateralizationRatio);
+    expect(after.metadata?.details?.accruedUnissued18Raw).toBe("0");
+  });
+
+  it("retains an adverse shortfall caused only by accrued unissued liabilities", async () => {
+    overrides.accruedUnissued = accrualSnapshot(100_000n * 10n ** 18n);
+    const result = await run();
+    expect(result.metadata?.collateralizationRatio).toBeLessThan(1);
+    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "forest-road-backing-shortfall", effect: "degraded" }));
+  });
+
+  it("rejects an empty required accrued-liability result before custom decoding", async () => {
+    overrides.accruedUnissued = "0x";
+    await expect(run()).rejects.toThrow(/observation failed: accruedUnissued/);
+  });
+
+  it.each([word(0n), accrualSnapshot(1n, true, true, 0n), accrualSnapshot(1n, false),
+    `0x${"0".repeat(7 * 64)}${word(2n).slice(2)}${word(1n).slice(2)}`])(
+    "rejects malformed accrued liabilities %s", async (raw) => {
+      overrides.accruedUnissued = raw;
+      await expect(run()).rejects.toThrow(/malformed accrualSnapshot/);
+    });
+
+  it("withholds stale enabled accrual rather than assuming unissued claims are zero", async () => {
+    overrides.accruedUnissued = accrualSnapshot(0n, true, false);
+    await expect(run()).rejects.toThrow(/stale accrualSnapshot/);
+  });
+
+  it("accepts an explicitly disabled zero-accrual snapshot", async () => {
+    overrides.accruedUnissued = accrualSnapshot(0n, false, false);
+    const result = await run();
+    expect(result.metadata?.details?.effectiveSupply18Raw).toBe(result.metadata?.details?.physicalSupply18Raw);
+  });
 
   it("rejects a foreign-chain anchor instead of reading an unrelated block height", async () => {
     await expect(fetchForestRoadReserveManagerReserves(coin, config, new AbortController().signal, {
@@ -226,6 +287,6 @@ describe("Forest Road measured accounting", () => {
       ...config, params: { ...config.params, [key]: "https://ethereum-rpc.publicnode.com" },
     });
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(5164083.856308362, 6);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1.00377778462574, 12);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 12);
   });
 });

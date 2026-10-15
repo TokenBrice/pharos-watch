@@ -945,6 +945,7 @@
         "src/**",
         "data/logos.json",
         "public/logos/**",
+        "public/chains/**",
         "shared/lib/public-docs.ts",
         "shared/lib/og-route-cards.ts",
         "shared/lib/og-route-glyphs.ts",

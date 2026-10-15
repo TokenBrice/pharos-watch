@@ -58,6 +58,9 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   "cgusd-cygnus-finance",
   "wm-m0",
   "mxne-real-mxn",
+  // 2026-10-15: exact Filecoin identity retains an observed sparse-trading quote
+  // inside the existing seven-day budget; strict primary freshness rejects it.
+  "usdfc-secured-finance",
 ]);
 
 export async function runCoingeckoLowVolumePass(

@@ -648,7 +648,7 @@ function makeUnavailableObservation(
   diagnostics: Record<string, unknown> = {},
 ): Erc4626CapacityObservation {
   const unavailableDiagnostics = { ...diagnostics, routeOpennessUnproven: true };
-  if (idleCapacityRaw != null && underlyingDecimals != null) {
+  if (source !== "morpho-vault-v1-liquidity" && idleCapacityRaw != null && underlyingDecimals != null) {
     return makeObservation("erc4626-idle-underlying", idleCapacityRaw, underlyingDecimals, warnings,
       { ...route, freshnessKind: "same-run-onchain" }, unavailableDiagnostics, undefined, v9RouteAttempt);
   }
@@ -883,11 +883,12 @@ export function finalizeErc4626RedemptionCapacity(input: {
   }
 
   const idleRaw = idleCapacityRaw ?? 0n;
-  // The two-chain route never falls back to one-chain idle or loses its
-  // completion-bound marker because a larger idle balance wins.
-  const crosschain = configured.source === "fraxtal-hop-withdrawable";
-  let capacitySource: Erc4626CapacitySource = crosschain ? configured.source : "erc4626-idle-underlying";
-  let uncappedCapacityRaw = crosschain ? configured.capacityRaw : idleRaw;
+  // These source-bound routes cannot use wallet cash as an executable floor.
+  // MetaMorpho V1/V1.1 ordinary withdrawals source market claims, not donations.
+  const sourceBound = configured.source === "fraxtal-hop-withdrawable" ||
+    configured.source === "morpho-vault-v1-liquidity";
+  let capacitySource: Erc4626CapacitySource = sourceBound ? configured.source : "erc4626-idle-underlying";
+  let uncappedCapacityRaw = sourceBound ? configured.capacityRaw : idleRaw;
   if (
     configured.source !== "erc4626-idle-underlying" &&
     configured.capacityRaw > uncappedCapacityRaw

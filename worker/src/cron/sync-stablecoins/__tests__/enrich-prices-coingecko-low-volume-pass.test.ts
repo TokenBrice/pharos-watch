@@ -112,6 +112,7 @@ describe("runCoingeckoLowVolumePass", () => {
     ["cgusd-cygnus-finance", "cygnus-finance-global-usd", 0.991614, 1791903934, "peggedUSD"],
     ["wm-m0", "wrappedm-by-m0", 0.999229, 1792012792, "peggedUSD"],
     ["mxne-real-mxn", "real-mxn", 0.054597, 1792021431, "peggedMXN"],
+    ["usdfc-secured-finance", "usdfc", 0.950358, 1792002424, "peggedUSD"],
   ] as const)("recovers reviewed %s price without upgrading supply, confidence, or observation time", async (id, geckoId, price, observedAt, pegType) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",

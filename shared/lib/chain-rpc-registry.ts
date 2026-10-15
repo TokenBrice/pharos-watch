@@ -83,8 +83,8 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
 // profile (notably Monad and Blast); neither profile implicitly expands the other.
 export const SUPPLY_RPC_DEFAULTS = {
   "aptos": { rpcUrl: APTOS_PUBLIC_REST_URL },
-  // 0G mainnet (16661 / 0x4115), eth_chainId and PYUSDx totalSupply verified
-  // 2026-10-03. Supply-only guard profile; 0G is not a registered product chain.
+  // 0G mainnet (16661 / 0x4115), exact PYUSDx deployment and decimals verified
+  // 2026-10-15. Supply-only profile; no archive/log routing is inferred.
   "0g": { rpcUrl: "https://evmrpc.0g.ai" },
   "plume": { rpcUrl: PUBLIC_RPC_URLS["plume"], fallbackRpcUrl: "https://plume.drpc.org" },
   "plasma": { rpcUrl: PUBLIC_RPC_URLS["plasma"], fallbackRpcUrl: "https://plasma.drpc.org" },
