@@ -1,5 +1,3 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { basename, resolve } from "node:path";
 import { ESLint } from "eslint";
 import { expect, it } from "vitest";
 
@@ -41,34 +39,31 @@ export function decode(raw: string): string {
 `;
 
 it("blocks unsafe external-data operations while permitting a reviewed unknown decoder", async () => {
-  const fixtureDirectory = mkdtempSync(resolve(process.cwd(), "src/lib/typed-lint-fixture-"));
-  const unsafePath = resolve(fixtureDirectory, "unsafe.ts");
-  const safePath = resolve(fixtureDirectory, "safe.ts");
-  writeFileSync(unsafePath, UNSAFE_EXTERNAL_DATA);
-  writeFileSync(safePath, REVIEWED_UNKNOWN_DECODER);
+  const eslint = new ESLint({
+    cache: false,
+    cwd: process.cwd(),
+    overrideConfigFile: "eslint.typed.config.mjs",
+    overrideConfig: {
+      languageOptions: {
+        // Watch programs typecheck lintText's input, not the on-disk source, even in CI.
+        parserOptions: { disallowAutomaticSingleRunInference: true },
+      },
+    },
+  });
+  // Reuse an existing project member for scope/type information without changing the source tree.
+  const filePath = "src/lib/utils.ts";
+  const [unsafeResult] = await eslint.lintText(UNSAFE_EXTERNAL_DATA, { filePath });
+  const [safeResult] = await eslint.lintText(REVIEWED_UNKNOWN_DECODER, { filePath });
 
-  try {
-    const eslint = new ESLint({
-      cache: false,
-      cwd: process.cwd(),
-      overrideConfigFile: "eslint.typed.config.mjs",
-    });
-    const results = await eslint.lintFiles([unsafePath, safePath]);
-    const unsafeResult = results.find((result) => basename(result.filePath) === "unsafe.ts");
-    const safeResult = results.find((result) => basename(result.filePath) === "safe.ts");
+  expect(unsafeResult).toBeDefined();
+  expect(safeResult).toBeDefined();
 
-    expect(unsafeResult).toBeDefined();
-    expect(safeResult).toBeDefined();
-
-    const unsafeMessages = unsafeResult?.messages ?? [];
-    for (const ruleId of UNSAFE_RULES) {
-      expect(
-        unsafeMessages.some((message) => message.ruleId === ruleId && message.severity === 2),
-        `${ruleId} must reject its unsafe operation`,
-      ).toBe(true);
-    }
-    expect(safeResult?.messages.filter((message) => message.severity === 2)).toEqual([]);
-  } finally {
-    rmSync(fixtureDirectory, { recursive: true, force: true });
+  const unsafeMessages = unsafeResult?.messages ?? [];
+  for (const ruleId of UNSAFE_RULES) {
+    expect(
+      unsafeMessages.some((message) => message.ruleId === ruleId && message.severity === 2),
+      `${ruleId} must reject its unsafe operation`,
+    ).toBe(true);
   }
+  expect(safeResult?.messages.filter((message) => message.severity === 2)).toEqual([]);
 });

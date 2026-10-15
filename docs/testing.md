@@ -563,6 +563,8 @@ Use the actual [`blacklist.test.ts`](../worker/src/api/__tests__/blacklist.test.
 
 [`eslint.config.mjs`](../eslint.config.mjs) and [`eslint.typed.config.mjs`](../eslint.typed.config.mjs) own scopes, rules and exclusions; do not duplicate their rule tables, allowlists or ignored-path arrays. Typed unsafe-value and promise rules remain blocking in configured scopes. Decode external data as `unknown` and validate it at the typed boundary.
 
+Typed-lint regression probes use `ESLint.lintText` with an existing in-scope project member and disable automatic single-run inference so the parser typechecks the supplied text even when `CI=true`. Never create transient fixtures under `src/`: concurrent readiness scanners can enumerate them before cleanup and then fail when the files disappear.
+
 Suppressions require a scoped justification, never a blanket subsystem exemption. Flat-config rule options replace rather than merge; use existing composed constants when extending restrictions. Import boundaries, nullable supply admission and React purity remain governed by the root rules and their executable lint authorities.
 
 ### Zod Runtime Validation
