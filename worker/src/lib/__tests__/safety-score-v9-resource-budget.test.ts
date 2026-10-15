@@ -73,7 +73,7 @@ describe("Safety Score V9 compile admission", () => {
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
 const HEAP_LIMIT_MIB = 128;
-// The 7.1 MB ceiling leaves 11.25% raw headroom under the unchanged 8 MB publication limit.
+// Keep this synthetic fixture's 7.1 MB regression ceiling below the 9 MB publication limit.
 // The 2026-10-10 same-registry probe measured 7,029,184 B: retained bridge questions add
 // 9,995 B and independently admitted aggregate oracle evidence adds 2,086 B.
 // Both are required cause-bearing disclosures; the 128 MiB compile guard stays unchanged.

@@ -40,10 +40,14 @@ function diagnosticGap(context: AssetBuildContext, args: {
     rejectionCode: args.reason, reason: args.reason, contentSha256: args.contentSha256,
   }) : undefined;
   if (runtime) addEvidence(context, runtime.evidence);
+  // A stale producer verdict alone is not last-known data. Keep it missing
+  // unless the retained source evidence independently exceeded its own budget.
+  const stale = (args.reason === "stale" || args.reason === "accepted-source-stale") &&
+    (args.evidenceRefIds ?? []).some((id) => context.evidence.get(id)?.freshness.state === "stale");
   return addGap(context, createV9FactGapV3({
     gapId: `${context.asset.assetId}:gap:${args.componentKey}`,
     reasonCode: "partial-reserve-review", ownerDomain: "backing", policyRuleId: RULE,
-    observationState: args.reason === "stale" ? "stale" : "missing",
+    observationState: stale ? "stale" : "missing",
     responsibility: runtime ? "producer-failed" : "unresearched",
     ...(runtime ? { causeProof: runtime.verdict.proof } : {}),
     causeScope, path: { kind: "local-component", componentKey: args.componentKey },
@@ -132,7 +136,7 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
     const gap = context.gaps.get(gapId)!;
     return {
       status: createV9FactStatus({ applicability: requiredV9Applicability(RULE),
-        observationState: reason === "stale" ? "stale" : "missing",
+        observationState: gap.observationState,
         evidenceRefIds: gap.evidenceRefIds, gapIds: [gapId] }),
       observation: observation ?? null, collaterals: [],
       ...(latestAttemptStatus ? { latestAttemptStatus, latestAttemptFailure } : {}),
@@ -189,15 +193,27 @@ export function buildLenderBookFact(context: AssetBuildContext): V1019LenderBook
         }, context.fixedInput.clockSec)));
       }
       if (acceptedSourceStatus === undefined && sourceReason !== null && trackedAssetId !== null) {
+        const sourceContentSha256 = bundle ? domainDigest("safety-score-v10.19.accepted-collateral-source.v1", bundle) : null;
+        const sourceEvidenceRefIds: string[] = [];
+        if (sourceReason === "accepted-source-stale" && bundle &&
+            bundle.publishedAtSec !== null && bundle.publicationGenerationId !== null &&
+            context.fixedInput.clockSec - bundle.publishedAtSec > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+          sourceEvidenceRefIds.push(addEvidence(context, createV9EvidenceReference({
+            evidenceId: `${context.asset.assetId}:lender-collateral-accepted-source:${sourceContentSha256}`,
+            sourceId: "previous-accepted-backing", sourceGenerationId: bundle.publicationGenerationId,
+            disposition: "published", observedAtSec: bundle.publishedAtSec, publishedAtSec: bundle.publishedAtSec,
+            contentSha256: sourceContentSha256, maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+          }, context.fixedInput.clockSec)));
+        }
         const gapId = diagnosticGap(context, { componentKey: "lender-collateral-accepted-source", reason: sourceReason,
           sourceGenerationId: bundle?.publicationGenerationId ?? context.fixedInput.sourceGeneration,
-          contentSha256: bundle ? domainDigest("safety-score-v10.19.accepted-collateral-source.v1", bundle) : null,
+          contentSha256: sourceContentSha256,
           observedAtSec: bundle?.publishedAtSec ?? context.fixedInput.clockSec,
-          attempted: bundle !== undefined });
+          attempted: bundle !== undefined, evidenceRefIds: sourceEvidenceRefIds });
         const gap = context.gaps.get(gapId)!;
         acceptedSourceStatus = createV9FactStatus({
           applicability: requiredV9Applicability(RULE),
-          observationState: sourceReason === "accepted-source-stale" ? "stale" : "missing",
+          observationState: gap.observationState,
           gapIds: [gapId], evidenceRefIds: gap.evidenceRefIds,
         });
       }

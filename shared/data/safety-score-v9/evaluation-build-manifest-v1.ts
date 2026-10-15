@@ -1210,7 +1210,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-lender-book.ts",
-      "sha256": "b5c962cb64804d69bee09b3c1e7613cc6f504d4cde353e6b2e03f633282555af"
+      "sha256": "172b9bdb39836d4bc7ab729e54c83e546e22a8f79d777307263865cfba661b28"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-operational-resilience.ts",
@@ -1299,7 +1299,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-15-block-26196659-shock-coverage.json.gz"
     }
   ],
-  "digest": "d7766ece56dacec052d3b09449ddaa4b0ffc98f5ec7c9ca013027c2efcae38de"
+  "digest": "89970e84d508bfac9e6411f08143e01272b1d21d6323858ccf503a076a4a77e6"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
