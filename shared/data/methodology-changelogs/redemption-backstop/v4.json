@@ -1,5 +1,22 @@
 [
   {
+    "version": "4.51",
+    "title": "Output-bound route status and measured capacity corrections",
+    "date": "2026-10-15",
+    "effectiveAt": 1792108800,
+    "summary": "Redemption v4.51 binds cohort restrictions to the exact payout path, removes unsupported capacity assumptions and corrects reviewed output and access inputs. Component weights, score ladders and freshness budgets are unchanged.",
+    "impact": [
+      "When observed output identity does not match the configured payout, only a separately sourced paused status survives as an adverse facility/input-token observation. Restricted or other cohort status cannot cross to a different output path.",
+      "MetaMorpho V1 wallet donations no longer floor or replace validated executable-capacity API evidence. Unavailable API capacity stays unavailable. Liquity v1 gross ActivePool debt remains a backing diagnostic, not quantified executable eligible-Trove debt.",
+      "GBPA and MXNT explicitly retain unquantified capacity rather than inherited full-supply assumptions. FILQ and Sygnum FIUSD cash-output classifications are separated from NAV input pricing. strUSD uses permissionless on-chain submission with issuer-discretionary holder eligibility, not an inferred address whitelist or unconditional access.",
+      "The shared NAV label now reads NAV-priced output; this wording correction alone does not change scoring. Refreshed holder documents and source pins do not establish missing funded capacity, completed settlement or all-in costs.",
+      "Changed admission and route-score inputs require a fixed-clock route comparison and fresh producer observations where applicable. No equivalence, score movement or production acceptance is claimed.",
+      "Activation is provisionally 2026-10-16 00:00 UTC (1792108800); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.5",
     "title": "Withdraw unsupported route capacity and completion claims",
     "date": "2026-10-14",

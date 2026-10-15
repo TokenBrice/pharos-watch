@@ -204,6 +204,17 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   },
   {
     chain: ETHEREUM,
+    stablecoinId: "brsrv-blackrock",
+    contractSource: "primary",
+    dustThreshold: 10_000,
+    startBlock: 25_590_451,
+    tier: "extended",
+    startBlockSource: "ethereum-creation-receipt-0x2eef66c3a1df6f83f1230fc67074103675653df308a0437439fb36b5344bc0a1-reviewed-2026-10-15",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+  {
+    chain: ETHEREUM,
     stablecoinId: "fdusd-first-digital",
     dustThreshold: 10_000,
     startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,
@@ -422,6 +433,18 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     events: transferMintBurn(),
   },
 
+  // CHFSAFO native Ethereum register only; other native registers remain outside flow scope.
+  {
+    chain: ETHEREUM,
+    stablecoinId: "chfsafo-spiko",
+    dustThreshold: 10_000,
+    startBlock: 24_540_949,
+    startBlockSource: "https://eth.blockscout.com/tx/0x6d98798a86bde1112b6b3b905ddb86d7c4969278f6e69cc732bd988aa004c22a",
+    startBlockConfidence: "high",
+    tier: "extended",
+    events: transferMintBurn(),
+  },
+
   // --- Top-50/100/150 supported expansion (Ethereum only) ---
   // Mechanical default-block entries live in EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.
   ...EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.map(
@@ -436,6 +459,19 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
       events: transferMintBurn(),
     }),
   ),
+  {
+    chain: ETHEREUM,
+    stablecoinId: "gldon-ondo",
+    dustThreshold: 10,
+    startBlock: 23_984_676,
+    tier: "extended",
+    bridgeDetection: layerZeroOftBridgeDetection([
+      "0x6d119ebada730583ef8dc7b8506fa317a374796a",
+    ]),
+    startBlockSource: "exact-gldon-initialization-2025-12-10-etherscan-0xd44893c63ea157f403239cb968ffee492e53423c283b42c222260882e5a1e2a1",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
   // DefiLlama's Ethereum BUIDL supply sums both registered share-class tokens.
   // Keep the second token explicit: default identity resolution selects the first.
   {

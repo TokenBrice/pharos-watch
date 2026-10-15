@@ -419,8 +419,9 @@ export function PricingPipelineMethodologySection() {
               <li><span className="text-foreground font-medium">Pass 2:</span> CoinMarketCap category plus exact-slug quotes; truncated category pages ignore returned rows until the exact targeted lane validates active status, contracts, volume, freshness, and peg bounds</li>
               <li><span className="text-foreground font-medium">Pass 3:</span> Jupiter Price API for tracked Solana mints (authenticated when configured, block-freshness checked, peg-aware, and able to add bounded soft evidence to agreeing low-depth Solana prices)</li>
               <li><span className="text-foreground font-medium">Pass 4:</span> DexScreener exact token-address pools only; the older unique-symbol search fallback is retired, and each run makes at most one same-chain batch of 30 exact addresses with rotating chain and within-chain coverage</li>
-              <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery, including reviewed NXUSD, Hermetica USDh and Crown BRLV observations, published only with fallback confidence and the original observation clock inside the seven-day freshness budget</li>
+              <li><span className="text-foreground font-medium">Pass 5:</span> Allowlisted low-volume CoinGecko recovery, including reviewed NXUSD, Hermetica USDh, Crown BRLV and USDFC observations, published only with fallback confidence and the original observation clock inside the seven-day freshness budget</li>
             </ol>
+            <p>DefiLlama-list consensus inputs must retain a DefiLlama origin or an absent legacy source label. Named supplemental prices cannot be relabeled as a second DefiLlama observation; CoinGecko-fallback supply rows remain excluded from this input.</p>
           </div>
 
           <div className="space-y-2">

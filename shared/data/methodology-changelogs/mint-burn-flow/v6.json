@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.26",
+    "title": "Reviewed Ethereum issuance coverage for BRSRV, CHFSAFO and GLDon",
+    "date": "2026-10-15",
+    "effectiveAt": 1792108800,
+    "summary": "BRSRV, CHFSAFO and GLDon join the extended Ethereum mint/burn lane through reviewed contract identities and start blocks. Flow formulas and aggregate weighting are unchanged.",
+    "impact": [
+      "BRSRV begins at Ethereum block 25,590,451 and CHFSAFO at block 24,540,949, each using the existing zero-address Transfer decoder and a 10,000-token dust threshold. CHFSAFO coverage is its Ethereum register only, not its other native chains.",
+      "GLDon begins at Ethereum block 23,984,676 with a 10-token threshold and its reviewed LayerZero OFT adapter binding. Existing bridge classification separates matched bridge transfers from economic issuance; other GLDon chains remain outside this flow configuration.",
+      "The bump records the admitted issuance-source cohort, following earlier native-flow coverage releases. Pressure formulas, closed-hour windows, event-time valuation, bridge classifier logic and Bank Run Gauge weighting are unchanged.",
+      "Configured start blocks do not prove completed historical scans. Backfill, coverage maturity and fresh producer observations remain necessary; no historical completeness, production flow or gauge movement is claimed.",
+      "Activation is provisionally 2026-10-16 00:00 UTC (1792108800); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.25",
     "title": "One-sided bounds on partially valued nets",
     "date": "2026-10-11",

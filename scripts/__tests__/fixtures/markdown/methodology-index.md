@@ -18,6 +18,8 @@ Fallback enrichment is bounded. CoinMarketCap, Jupiter, DexScreener, audited low
 
 Price coverage is evaluated independently from row publication. A stablecoin can remain visible with supply and lifecycle data while its unusable price degrades cron and public health; the incident remains explicit instead of blocking the full cache or being hidden behind a nominal peg fill.
 
+Pricing v6.51 prevents named supplemental prices from re-entering consensus as DefiLlama-list observations and adds USDFC to the reviewed low-volume CoinGecko fallback. USDFC retains fallback confidence and the original observation clock within the existing seven-day budget. Source weights, depeg authority and supply admission are unchanged; fresh publication is required to establish recovery.
+
 Pricing v6.48 retires SOFID's nominal protocol-par override so existing exact-identity CoinGecko/Kraken consensus reaches price and peg consumers. Observed discounts or premiums keep their original value and clock; Kraken remains local-fetch and confirm_required. Missing quotes and carried nominal references stay unavailable, not $1. Source weights, freshness and liquidity gates are unchanged; production gap closure requires a fresh admitted publication.
 
 Pricing v6.43 requires JLTXX's full pinned native-share admission even with positive CoinGecko market cap: finalized EIP-1898 raw shares, observed decimals, original canonical hash/time and original NAV dealing date must fit a reviewed temporal/legal perimeter. Class assets are never circulating supply. Staged bootstrap captures evidence only and cannot activate JLTXX or publish scores; quarantine remains until approved runtime price/market-cap admission.
@@ -253,12 +255,16 @@ Methodology v4.49 keeps fractional observed fees unrounded through the existing 
 
 Redemption v4.5 withdraws unsupported capacity, completion and eligibility assumptions on reviewed routes. Avalon, Youves, hyUSD and wARS retain unquantified capacity; Solayer's USDC holder path is queued QLP fulfillment, not atomic redemption. pathUSD processing terms do not guarantee completed payout. The existing-route review grants no new config-only bound. Safety v10.18 smaller-probe receipts prove only executed input, not full-request completion or exhaustion. Weights and ladders remain unchanged; fresh observations and final fixed-clock comparison remain required. Activation: 2026-10-14 12:40 UTC (release cut; 1791981600).
 
+Redemption v4.51 binds cohort restrictions to exact payout identity while preserving separately sourced pauses. MetaMorpho V1 donations cannot replace validated API capacity, and Liquity v1 gross ActivePool debt is a backing diagnostic rather than executable capacity. GBPA and MXNT retain unquantified capacity; FILQ and Sygnum FIUSD cash output is distinct from NAV share pricing. strUSD separates permissionless submission from issuer-discretionary holder eligibility. Weights and ladders are unchanged; fixed-clock comparison and fresh producer observations remain required. Activation is provisional for 2026-10-16 00:00 UTC, to be re-dated at release.
+
 
 ## Mint/Burn Flow Scoring
 
 Mint/burn flow scoring tracks issuance and redemption pressure across supported token contracts. Pharos classifies transfers into mint, burn, bridge-mint, bridge-burn, atomic roundtrip, and ignored noise so the gauge reflects meaningful supply movement instead of mechanical churn.
 
 The score compares recent net flow against trailing closed-day baselines, distinguishes canonical-chain activity from bridge effects, and flags pressure shifts when risky outflows and safer inflows diverge.
+
+Mint/Burn v6.26 adds reviewed Ethereum BRSRV, CHFSAFO and GLDon issuance sources to the extended lane with explicit start blocks and token thresholds. GLDon uses its reviewed OFT adapter binding; other chains are not implicitly covered. Pressure formulas, closed-hour windows, valuation and gauge weights are unchanged. Configured history is not completed backfill or a mature observed baseline.
 
 Coverage is intentionally explicit. Unsupported chains, deferred configs, null-price repair, and stale lanes are surfaced as metadata rather than hidden behind a clean-looking aggregate. Quiet assets retain mature coverage from completed block-scan evidence even after old event rows age out.
 
@@ -276,6 +282,8 @@ External opportunities — lending markets, fixed-yield products, and structured
 Warnings explain why a venue is risky, missing, stale, modeled, or benchmark-adjusted so yield pages do not promote fragile opportunities as clean income. Calculation mode is separate from evidence class: deterministic proxy math is still estimated evidence. Expired or critically incomplete evidence remains visible as NR context but cannot carry an exact current PYS, and new history points retain the versioned formula inputs needed for exact recomputation.
 
 Yield v8.48 requires receipt-symbol ownership alongside address evidence, rejects contradictory underlying sets and prevents generic PT/LP attribution to wrappers. Royco requires critical market, reviewed-venue and measured-size evidence, and cannot replace explicit NR or missing underlying safety with a rated tranche grade; incomplete otherwise eligible rows retain APY with null PYS. Signed holder returns preserve losing constituents in weighted denominators. Midas uses oracle observation intervals, Zephyr counts each hourly observation once across publication/backfill, and Hashnote excludes reports beyond five-minute future skew. Structured benchmarks retain unknown clocks, and EFFR admission applies observation bounds before provider fallback. PYS weights and freshness budgets are unchanged.
+
+Yield v8.49 admits XGLD's reviewed BNB Chain exchange-rate provider to the existing Tier 1 reader. XAUt per XGLD measures issuer-administered gold-denominated NAV separately from gold's USD appreciation, not reconciled strategy profit. The auxiliary provider supplies no measured TVL; existing comparison-anchor, freshness, sanity and publication gates remain. PYS weights and benchmark selection are unchanged, and source admission alone does not establish a current APY.
 
 
 ## PegScore and Depeg Early Warning Score (DEWS)

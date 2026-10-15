@@ -8,11 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.48`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.49`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
+
+The `v8.49` source-roster release admits XGLD's reviewed BNB Chain `exchangeRate()` provider to the existing Tier 1 rate-delta path. XAUt per XGLD isolates gold-denominated NAV from gold's USD appreciation; it remains issuer-administered NAV, not reconciled strategy profit. No TVL is inferred from the auxiliary provider. Existing anchor, freshness, sanity and publication gates apply, with PYS weights and benchmark selection unchanged. Activation is provisionally **2026-10-16 00:00 UTC (`1792108800`)**, to be re-dated at release; fresh observations and a valid comparison anchor are still required.
 
 The v8.48 release tightens receipt-symbol ownership and contradictory-address admission, preserves Royco's critical-evidence and underlying-unrating gates, and retains valid negative holder returns in weighted portfolios. Midas annualization uses actual oracle observation intervals; Zephyr counts each hourly source observation once, and Hashnote rejects future reports beyond the existing five-minute allowance. Benchmark provider selection respects source observation bounds independently of fetch age or fallback mode. These input and history corrections can move or withhold PYS without changing its weights.
 
@@ -40,6 +42,8 @@ Source ownership, projection, provider order, publication guards, and compatibil
 Every stablecoin with `flags.yieldBearing: true` in `shared/lib/stablecoins/registry.ts` is inventoried by the yield manifest. Live cron resolution operates on the active subset (`status !== "pre-launch"`), while pre-launch or intentionally uncovered assets remain visible to operators through explicit manifest entries instead of silently disappearing from coverage accounting. Pre-launch status is declared in the asset's per-coin file under `shared/data/stablecoins/coins/*.json`, loaded through `shared/data/stablecoins/coins.generated.json`, and skipped by explicit lending override publication until the per-coin entry moves into the active lifecycle. The sync also supports deterministic custom sources for select non-yield-bearing coins, exact-pool curated overrides for select non-stablecoin assets, plus automatic lending pool discovery for tracked non-gold/silver stablecoins rated C- or above (safety score >= 50), including coins already flagged `yieldBearing`. `yieldConfig` is used when present to provide canonical source/type labels; auto-discovered lending rows synthesize protocol-derived labels when the source is `defillama-auto`. Tracked savings wrappers own their own runtime pool/on-chain readers and history. When a tracked wrapper has a live native/wrapper yield source, the publisher may also expose that source on the active parent stablecoin with a `linked-variant:<variantId>:<sourceKey>` key for comparison and coverage context; this does not mark the parent `yieldBearing` purely because the wrapper exists, and external opportunity rows (`lending-opportunity`, `fixed-yield`, or `structured-tranche`) are not projected from variants to parents.
 
 Open USD (`ousd-open-standard`) is not a holder-yield asset: the [issuer reserve page](https://reserves.bridge.xyz/ousd) describes underlying earnings shared with participating platforms, not an on-chain holder return. The 2026-09-30 report-only coverage audit found no Open USD gap, so no `INTENTIONAL_GAP_REASONS` entry is needed. Origin Dollar's `OUSD` native pool remains pinned to `ousd-origin-protocol`; generic yield matching requires exact address evidence or an unambiguous chain-scoped symbol and cannot transfer that native source to Open USD. Revisit if a public holder-return instrument or an identity-bound lending market appears.
+
+BRSRV (`brsrv-blackrock`) retains an `issuer-distributed-yield` gap, not a finding of no public yield evidence. [BlackRock's fund page](https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle) publishes dated RSVXX seven-day SEC yield and daily distribution factors; the [prospectus](https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf) provides daily share reinvestment unless cash dividends are elected. No reviewed distribution-return reader consumes those observations, and stable $1 NAV growth cannot measure holder income.
 
 | Field         | Type        | Description                                                                                   |
 | ------------- | ----------- | --------------------------------------------------------------------------------------------- |
@@ -92,9 +96,10 @@ interface OnChainRateConfig {
 The generic-vault inventory, exact contracts, chain assignments, selectors, and lifecycle state are owned by
 `ON_CHAIN_RATE_CONFIGS` and its typed rate-source registry. Do not copy that changing roster here. ERC-4626 entries
 use `convertToAssets(uint256)` with one whole share in the vault's share decimals, then decode the result in underlying-asset
-decimals. Axis sUSDx instead reads `exchangeRate()`; its deployment accepts the generic reader's trailing zero word.
+decimals. Axis sUSDx and Unitas XGLD instead read `exchangeRate()`; both deployments accept the generic reader's trailing zero word.
+XGLD's rate is denominated in XAUt per token, so its growth measures the administered gold-unit return rather than changes in gold's USD price. It is an issuer-published NAV figure, not independently reconciled strategy profit: the privileged rate updater can increase it by up to 5 bps per update with no minimum update interval. The existing seven-day anchor, bootstrap rules and generic 300% APY sanity bound still apply; they do not independently verify realized income.
 Protocol-specific assets use the dedicated paths described below. Optional
-`totalAssets` reads are USD venue TVL only for USD-denominated underlyings; EURCV assets are not reported as USD TVL.
+`totalAssets` reads are USD venue TVL only for USD-denominated underlyings; EURCV and gold-denominated assets are not reported as USD TVL.
 
 `scrvusd-curve` is permanently excluded from the generic Tier 1 reader: its trailing 7-day `convertToAssets(1e18)` delta understates Curve's current profit-unlock APY. The dedicated scrvUSD current-rate estimator and independent DeFiLlama alternative remain active. `ustb-superstate` is also permanently excluded because USTB does not implement ERC-4626; its issuer-fund DeFiLlama pin remains available. A future dedicated Superstate NAV reader requires separate identity, freshness, units, and historical-anchor evidence.
 

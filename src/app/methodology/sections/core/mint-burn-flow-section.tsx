@@ -79,7 +79,7 @@ export function MintBurnFlowMethodologySection() {
             title={MINT_BURN_FLOW_SECTION_CONTENT.title}
             versionBadge={{ label: MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL }}
             changelogPath={MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH}
-            versionNote="Version increments when flow scoring logic, tracked event semantics, or ingestion attribution policies change."
+            versionNote="Version increments when admitted issuance coverage, flow scoring logic, tracked event semantics, or ingestion attribution policies change."
             changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.mintBurnFlow.changelogHover}
           >
               <p>
@@ -88,6 +88,12 @@ export function MintBurnFlowMethodologySection() {
                 signals: raw net flow for current direction, and a baseline-relative pressure score for context. Counted
                 flow excludes bridge transfers, review-required burns, atomic roundtrips, and individually reviewed
                 protocol-internal movements such as an issuer deploying reserves into its own loan book.
+              </p>
+              <p>
+                Reviewed issuance coverage includes Ethereum BRSRV, CHFSAFO and GLDon. Exact start blocks and
+                token thresholds remain explicit in the contract registry; GLDon&apos;s reviewed OFT adapter
+                preserves bridge-transfer classification. Other native deployments are not implicitly covered,
+                and configured history does not establish a completed backfill or a mature flow baseline.
               </p>
               <p>
                 An N-hour flow window covers N closed UTC hours ending at the current hour boundary, not a rolling

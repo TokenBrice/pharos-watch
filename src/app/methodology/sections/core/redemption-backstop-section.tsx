@@ -92,6 +92,17 @@ export function RedemptionBackstopMethodologySection() {
           capacity model remain source-reviewed but unconfigured.
         </p>
         <p>
+          MetaMorpho V1 wallet donations do not establish accounted idle cash or replace validated executable
+          capacity from its API. Liquity v1 gross ActivePool debt remains a backing diagnostic, not executable
+          redemption capacity. A rejected payout identity also rejects its cohort restrictions; only a
+          separately sourced facility or input-token pause survives that mismatch.
+        </p>
+        <p>
+          GBPA and MXNT retain unquantified capacity. FILQ and Sygnum FIUSD distinguish cash payouts from
+          NAV-based share pricing; strUSD separates permissionless on-chain submission from issuer-discretionary
+          holder eligibility. These corrections do not establish missing completion or all-in cost bounds.
+        </p>
+        <p>
           Direct executable observers are a separate route-evidence source, not proof of reserve composition.
           Lido, Monetrix and Saturn retain diagnostic-only null capacity; USDfr measures a restricted par-state
           USDC controller, and apyUSD measures funded apxUSD receipts only with current payout valuation.
