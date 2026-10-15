@@ -4,10 +4,12 @@ import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
+import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import {
   makeWorkerSafetyScoreV9Publication,
 } from "../../test-helpers/report-cards-v9";
 import {
+  admitAndSerializeSafetyScoreV9Publication,
   parseSafetyScoreV9Publication,
   publicationIdentityFromStorageEnvelope,
   serializeSafetyScoreV9Publication,
@@ -33,6 +35,33 @@ function authenticatedBytes(envelope: Record<string, unknown>, payload: Buffer) 
 }
 
 describe("Safety Score V9 publication codec", () => {
+  it("encodes the same canonical envelope while reusing only frozen schema-equal cards", async () => {
+    const publication = deepFreeze(makeWorkerSafetyScoreV9Publication());
+    const { publication: admitted, stored } = await admitAndSerializeSafetyScoreV9Publication(publication);
+    expect(admitted.cards[0]).toBe(publication.cards[0]);
+    expect(Object.isFrozen(admitted)).toBe(true);
+    expect(Object.isFrozen(admitted.cards)).toBe(true);
+    expect(stored).toBe(await serializeSafetyScoreV9Publication(publication));
+    const envelope = JSON.parse(stored);
+    const raw = Buffer.from(stableJsonStringifyV1(publication));
+    expect(envelope.payloadSha256).toBe(createHash("sha256").update(raw).digest("hex"));
+    expect(envelope.payload).toBe(bytesToBase64(gzipSync(raw)));
+  });
+
+  it("snapshots mutable callers before compression and leaves their graph unfrozen", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const original = structuredClone(publication);
+    const pending = admitAndSerializeSafetyScoreV9Publication(publication);
+    publication.cards[0]!.sharedBookId = "mutated-during-compression";
+    publication.sourceGenerations.registry = "mutated-registry";
+    const { publication: admitted, stored } = await pending;
+    expect(admitted).toEqual(original);
+    expect(Object.isFrozen(admitted.cards[0]!.scoreTrace)).toBe(true);
+    expect(Object.isFrozen(publication)).toBe(false);
+    expect(Object.isFrozen(publication.cards[0])).toBe(false);
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(original);
+  });
+
   it("validates each producer card without mutating the caller-owned cohort", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const original = structuredClone(publication);

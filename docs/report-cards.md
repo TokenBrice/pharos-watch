@@ -93,6 +93,8 @@ The outer API report is schema v8 (`model: "v9"`), carrying public publication s
 
 The [report schema implementation contract](./process/report-cards-appendix.md#report-schema-v8) retains lossless witness interning, obligation accounting, supply/dependency projections, common-mode effects and exact Exit identity/freshness rules.
 
+Accepted publication's [private writer-side read models](./process/report-cards-appendix.md#accepted-publication-read-models) are Release A writers only; public API and score-index schema 2 are unchanged.
+
 ## Publication journal and movement attribution
 
 `worker/src/lib/safety-score-v9/publication-journal.ts` retains compact attribution evidence in two D1 tables:
@@ -182,7 +184,7 @@ Selector creation recomputes against the live V9 publication (`functions/lib/sel
 
 The compiler admits each asset's local extension and validates each asset's facts independently. An attributable asset-local build, admission, schema, evaluation, or public-card failure publishes that asset as a technical `pipeline-gap` with null score/grade, not issuer NR. Unaffected assets continue only when at least 90% of active assets remain unaffected, counting quarantined assets and their affected dependents, and all other publication gates pass. Unattributable dependency-graph, aggregate, evaluator, identity, and other global failures still hold the whole publication.
 
-Frozen captures taken before 9.07 retain supported read-only schema v3/cache-envelope v1 parsing in `npm run safety-score-v9:replay`; `--input` accepts raw or envelope v3 and native v4. This is input-format compatibility into one current evaluator, not a legacy publisher, V8 engine or live-input fallback: live prepare/compute require native v4/envelope v2. Format preservation does not guarantee historical byte-identical scores under current code/curation. Capture-time registry replay freezes registry inputs, not historical evaluator/overlays. Strict historical reproduction additionally names the intended source ref, frozen registry, exact input, publication clock and expected output; accepted-publication equivalence binds the accepted base plus both reserve-evidence and supply-attribution enrichments. Both journals carry captured cause/responsibility/rejection evidence despite exclusion from the base-input digest, without implying a scalar score effect on every capture.
+Frozen pre-9.07 captures retain [read-only format compatibility and strict historical reproduction requirements](./process/report-cards-appendix.md#historical-capture-compatibility), not a legacy publisher or live-input fallback.
 
 `snapshot-safety-grade-history` appends identified V9 organic transitions and suppresses writes while publication is held. During a partial publication it also suppresses transitions for quarantined assets and their affected dependents, including the subsequent recovery, so technical pipeline gaps are not recorded as organic rating changes. Each V2 row records model, methodology, policy, evaluation-build, base-input, publication generation, and transition kind.
 

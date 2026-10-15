@@ -8,6 +8,7 @@ import {
 } from "@shared/types/safety-score-v9-public";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
+import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { z } from "zod";
 import { throwIfAborted } from "../abort";
 import { gunzipBytesBounded, gzipCanonicalJson } from "../canonical-json-gzip";
@@ -218,12 +219,12 @@ function compressedStorageCandidate(value: unknown): boolean {
   );
 }
 
-export async function serializeSafetyScoreV9Publication(
+export async function admitAndSerializeSafetyScoreV9Publication(
   value: SafetyScoreV9CurrentResponse,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<{ publication: Readonly<SafetyScoreV9CurrentResponse>; stored: string }> {
   throwIfAborted(signal);
-  const publication = admitPublicationPayload({ ...value, cards: [...value.cards] }, true);
+  const publication = deepFreeze(admitPublicationPayload({ ...value, cards: [...value.cards] }, true));
   const compressed = await gzipCanonicalJson(stableJsonStringifyChunksV1(publication), {
     label: "Safety Score v9 publication",
     maximumCompressedBytes:
@@ -251,7 +252,14 @@ export async function serializeSafetyScoreV9Publication(
     );
   }
   throwIfAborted(signal);
-  return stored;
+  return { publication, stored };
+}
+
+export async function serializeSafetyScoreV9Publication(
+  value: SafetyScoreV9CurrentResponse,
+  signal?: AbortSignal,
+): Promise<string> {
+  return (await admitAndSerializeSafetyScoreV9Publication(value, signal)).stored;
 }
 
 export async function parseSafetyScoreV9Publication(

@@ -38,6 +38,7 @@ import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureI
 import { SafetyScoreV9SchemaCutoverPendingError } from "./publication-codec";
 import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./publication-journal";
 import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from "./capture-archive";
+import { buildSafetyScoreV9AcceptedProjections } from "./accepted-projections";
 
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
@@ -579,6 +580,7 @@ export async function runSafetyScoreV9Publication(
     }
     const acceptedCacheRows = await persistSafetyScoreV9Publication(input.db, {
       publication,
+      buildAcceptedProjections: buildSafetyScoreV9AcceptedProjections,
       publicationReplayCaptureValue: replayCaptureValue,
       publicationReplayBaseValue: replayCaptureValue === undefined ? undefined : input.fixedInputCacheValue,
       publicationHealth: {
