@@ -723,6 +723,18 @@ describe("curation-expanded complete supply rosters", () => {
     },
   );
 
+  it.each(cases.slice(3).flatMap(({ id, supplies }) => Object.keys(supplies).map((missing) => ({ id, supplies, missing }))))(
+    "withholds $id rather than publishing a subtotal when $missing is absent from the contract roster",
+    async ({ id, supplies, missing }) => {
+      const meta = TRACKED_META_BY_ID.get(id)!;
+      installSupplyReads(meta, supplies);
+      await expect(fetchCuratedAggregateOnChainMcap({
+        ...meta,
+        contracts: meta.contracts!.filter((contract) => contract.chain !== missing),
+      }, 1.25, buildChainRpcs())).resolves.toBeNull();
+    },
+  );
+
   it.each(["ethereum", "arbitrum", "base", "optimism", "unichain"])(
     "retains an observed zero for Legacy sUSDC on %s",
     async (chain) => {
@@ -835,7 +847,7 @@ describe("discovery native supply aggregates", () => {
     }
   });
 
-  it.each([0n, 7_000_000n])("includes observed 0G stock, including a real zero (%s)", async (raw) => {
+  it.each([0n, 1n, 7_000_000n])("includes observed 0G stock, including a real zero (%s)", async (raw) => {
     const { id, contracts, supplies, units } = cases[1];
     const observed = [...supplies];
     observed[4] = raw;
@@ -845,9 +857,28 @@ describe("discovery native supply aggregates", () => {
     const expected = (units - Number(supplies[4]) / 1e6 + Number(raw) / 1e6) * 1.25;
     expect(result?.mcap).toBeCloseTo(expected, 6);
     expect(Object.values(result?.chainCirculating ?? {}).find((row) => row.chainId === "0g")?.current)
-      .toBeCloseTo(Number(raw) / 1e6 * 1.25, 6);
+      .toBe(Number(raw) / 1e6 * 1.25);
     expect(Object.values(result?.chainCirculating ?? {}).reduce((sum, row) => sum + row.current, 0))
       .toBeCloseTo(expected, 6);
+  });
+
+  it("withholds PYUSDx when a native deployment is missing from the contract roster", async () => {
+    const { id, contracts, supplies } = cases[1];
+    installReads(contracts, supplies);
+    for (const missing of contracts) {
+      await expect(fetchCuratedAggregateOnChainMcap(makeMeta({
+        id, name: id, symbol: id,
+        contracts: contracts.filter((contract) => contract.chain !== missing.chain),
+      }), 1.25, buildChainRpcs())).resolves.toBeNull();
+    }
+  });
+
+  it.each([NaN, Infinity])("withholds PYUSDx rather than publishing a non-finite valuation (%s)", async (price) => {
+    const { id, contracts, supplies } = cases[1];
+    installReads(contracts, supplies);
+    await expect(fetchCuratedAggregateOnChainMcap(
+      makeMeta({ id, name: id, symbol: id, contracts }), price, buildChainRpcs(),
+    )).resolves.toBeNull();
   });
 
   it("withholds the complete PYUSDx aggregate on a 0G RPC exception", async () => {
