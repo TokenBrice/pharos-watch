@@ -111,7 +111,7 @@ Reserve recovery: `WORKER_RESERVE_RECOVERY_MODE` defaults to `off`; checked-in c
 
 ## Module Initialization
 
-The current Zod dependency is owned by `package.json` and `worker/package.json`. Historical Zod 4.5.0 import-only comparisons against 4.4.3 reduced retained heap for the measured-execution graph from 8.52 MB to 4.97 MB and the V9 extension graph from 40.43 MB to 31.42 MB (three fresh-process samples per version). These overlapping graphs must not be added together, and import-only Node measurements do not prove Cloudflare peak-memory safety. Memory-risk releases still require a new affected production execution and correlated platform outcomes; CPU-class aliases and staggered cron minutes are not isolate memory boundaries.
+Zod history and the unqualified V9 guard are detailed in the [memory appendix](./process/worker-infrastructure-appendix.md#module-initialization-memory-evidence).
 
 Runtime configuration is derived from `Env` bindings in the scheduled context factory (`worker/src/handlers/scheduled/context.ts`) and the HTTP route-context factory (`worker/src/handlers/http/context.ts`), which runs the per-endpoint hydrators in `worker/src/routes/dependency-hydrators.ts`, with results passed as parameters rather than stored in module-level state:
 

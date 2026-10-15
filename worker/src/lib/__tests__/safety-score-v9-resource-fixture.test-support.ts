@@ -21,6 +21,10 @@ import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY, parsePersistedAlertSafetyV9SourceEnve
 import { parseNativeV9InputCacheArtifact } from "../safety-score-v9/native-input";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import { parseSafetyScoreV9PublicationReplayCapture } from "../safety-score-v9/publication-replay-capture";
+import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
+import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
+import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
+import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 
 const sqlite = new DatabaseSync(process.env.PHAROS_RESOURCE_DATABASE!);
 const db = createSqliteD1(sqlite);
@@ -137,7 +141,7 @@ try {
     const deltaRow = rows.find((row) => row.key === SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY);
     assert(baseRow && deltaRow, "paired-replay-required");
     const base = await parseNativeV9InputCacheArtifact(String(baseRow.value));
-    await parseSafetyScoreV9PublicationReplayCapture(String(deltaRow.value), base.input);
+    const replay = await parseSafetyScoreV9PublicationReplayCapture(String(deltaRow.value), base.input);
     assert.equal(base.input.baseInputGenerationId, publication.baseInputGenerationId);
     const alertRow = rows.find((row) => row.key === ALERT_SAFETY_V9_SOURCE_CACHE_KEY);
     assert(alertRow);
@@ -145,7 +149,48 @@ try {
     assert(alert);
     assert.equal(alert.publicationGenerationId, publication.publicationGenerationId);
     assert.equal(Number(sqlite.prepare("SELECT count(*) AS count FROM safety_score_capture_archive").get()!.count), 3);
-    console.log(JSON.stringify({ cards: publication.cards.length, rated: publication.completeness.ratedCount, generation: publication.publicationGenerationId }));
+    const transport = String(rows.find((row) => row.key === SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value);
+    const envelope = JSON.parse(transport);
+    const enrichment = JSON.parse(String(deltaRow.value));
+    const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(replay.fixedInput);
+    const researchEvidenceCount = extension.assets.reduce((count, asset) => count + asset.researchEvidence.length, 0);
+    const componentEvidenceCount = extension.assets.reduce((count, asset) => count + asset.componentEvidence.length, 0);
+    let witnessTextSavingsBytes = 0;
+    let factVocabularySavingsBytes = 0;
+    const witnessViewBytes: Record<string, number> = {};
+    for (const card of publication.cards) {
+      const semantic = resolveV9PublicWitnessTexts(card);
+      witnessTextSavingsBytes += Buffer.byteLength(JSON.stringify(semantic)) - Buffer.byteLength(JSON.stringify(card));
+      const decoded = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
+      const originalFacts = card.scoreTrace.evidenceResponsibility.facts.map((row, index) => {
+        const fact = decoded[index];
+        return [fact[0], row[1], row[2], fact[3], fact[4], fact[5], fact[6]];
+      });
+      factVocabularySavingsBytes += Buffer.byteLength(JSON.stringify(originalFacts)) - Buffer.byteLength(JSON.stringify(card.scoreTrace.evidenceResponsibility.facts));
+      for (const [view, value] of Object.entries({
+        pillarReasons: Object.values(semantic.pillars).flatMap((pillar) => pillar.reasons),
+        evidenceReasons: semantic.evidence.reasons, adverseAttribution: semantic.scoreTrace.adverseAttribution.items,
+        boundedAttribution: semantic.scoreTrace.boundedUncertaintyAttribution.items,
+        evidenceFacts: semantic.scoreTrace.evidenceResponsibility.facts,
+      })) witnessViewBytes[view] = (witnessViewBytes[view] ?? 0) + Buffer.byteLength(JSON.stringify(value));
+    }
+    const acceptedBaselineBytes = Buffer.byteLength(JSON.stringify(buildSafetyScoreV9AcceptedPublicationBaseline(publication)));
+    assert(envelope.uncompressedBytes <= 7_100_000, "synthetic-publication-byte-budget");
+    assert(envelope.compressedBytes < 1_350_000, "publication-compressed-byte-budget");
+    assert(Buffer.byteLength(transport) > 0, "publication-stored-bytes");
+    assert(enrichment.uncompressedBytes > 300_000, "replay-enrichment-size-floor");
+    assert(acceptedBaselineBytes < 500_000, "accepted-baseline-byte-budget");
+    assert.equal(extension.assets.length, ACTIVE_STABLECOINS.length);
+    assert(researchEvidenceCount > 5_000 && componentEvidenceCount > 3_000, "full-evidence-fixture");
+    assert.match(publication.factSetDigest, /^[a-f0-9]{64}$/);
+    assert.match(publication.resultDigest, /^[a-f0-9]{64}$/);
+    console.log(JSON.stringify({ cards: publication.cards.length, rated: publication.completeness.ratedCount,
+      generation: publication.publicationGenerationId, candidateBytes: envelope.uncompressedBytes,
+      compressedBytes: envelope.compressedBytes, storedBytes: Buffer.byteLength(transport),
+      replayCaptureUncompressedBytes: enrichment.uncompressedBytes, acceptedBaselineBytes,
+      extensionAssets: extension.assets.length, researchEvidenceCount, componentEvidenceCount,
+      witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes,
+      expandedWitnessCandidateBytes: envelope.uncompressedBytes + witnessTextSavingsBytes + factVocabularySavingsBytes }));
   } else {
     for (const name of readdirSync(resolve(process.cwd(), "worker/migrations")).filter((name) => /^\d+.*\.sql$/.test(name)).sort()) sqlite.exec(readFileSync(resolve(process.cwd(), "worker/migrations", name), "utf8"));
     sqlite.exec("CREATE TABLE resource_fixture_cache (cycle INTEGER, key TEXT, value TEXT, updated_at INTEGER); CREATE TABLE resource_fixture_sql (cycle INTEGER, ordinal INTEGER, sql TEXT); CREATE TABLE resource_fixture_clocks (cycle INTEGER, clock INTEGER)");

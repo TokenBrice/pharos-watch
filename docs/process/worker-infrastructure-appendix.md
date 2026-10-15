@@ -393,6 +393,12 @@ Unavailable entries explicitly carry `id`, `sources`, and `reason`: `unknown-id`
 
 ---
 
+## Module initialization memory evidence
+
+The current Zod dependency is owned by `package.json` and `worker/package.json`. Historical Zod 4.5.0 import-only comparisons against 4.4.3 reduced retained heap for the measured-execution graph from 8.52 MB to 4.97 MB and the V9 extension graph from 40.43 MB to 31.42 MB (three fresh-process samples per version). These overlapping graphs must not be added together, and import-only Node measurements do not prove Cloudflare peak-memory safety. Memory-risk releases still require a new affected production execution and correlated platform outcomes; CPU-class aliases and staggered cron minutes are not isolate memory boundaries.
+
+The faithful [V9 resource guard](../testing.md#v9-resource-lane) resolves `#pharos-full-catalog` to the packed Worker loader using heavy Wrangler configuration and installed esbuild. Post-P2 phases record forced-GC retained heap and a separate uninstrumented child must finish at 128 MiB Node old-space. The 112 MiB phase policy remains **unqualified**: the fact boundary measured approximately 119 MiB, above the 110 MiB calibration prerequisite. Complete phases, correctness/bytes and natural 128 MiB are required now; a future qualified checked-in policy automatically enables phase enforcement. Further remediation/P3/P4 is required. These Node checks are not Cloudflare isolate memory or production headroom measurements.
+
 ## Packed catalog transport mechanics
 
 [ADR-37](../architecture.md#adr-37) owns losslessness, one canonical registry, no new runtime external dependency and the distinction between evaluation-build and semantic catalog identities. Frontend/tooling resolves the private `#pharos-full-catalog` import to its ordinary JSON wrapper; only Wrangler's `[alias]` redirects it to `worker/src/lib/full-stablecoin-catalog.ts`.

@@ -1,8 +1,10 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, relative, resolve } from "node:path";
+import { hostname, release } from "node:os";
+import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, loadResourcePolicy, type ResourcePolicy, type ResourceIdentity } from "../../../scripts/lib/v9-resource-policy";
 import ts from "typescript";
 import { z } from "zod";
 import type * as Esbuild from "esbuild";
@@ -10,13 +12,9 @@ import type { BuildOptions, Plugin } from "esbuild";
 import { parseAssignments, unquote } from "../../../../scripts/lib/wrangler-toml.mjs";
 
 export type ResourceProfile = "compute" | "heavy-warm";
-export type PhaseManifest = "pre-p2" | "post-p2";
-export const RESOURCE_HARNESS_REVISION = "full-path-v1";
-const COMMON_PHASES = ["module-initialized", "native-envelope-loaded", "native-inflate-decoded", "native-input-decoded", "enrichment-loaded", "extension-built", "facts-compiled", "evaluation-complete", "candidate-finalized", "gate-assessed", "replay-serialized", "store-admitted", "publication-gzip-complete", "score-index-serialized", "publication-committed", "alert-envelope-projected", "journal-complete", "archive-string-built", "archive-upload-pending", "publication-settled"];
-export const PHASE_MANIFESTS = {
-  "pre-p2": [...COMMON_PHASES, "accepted-text-decoded", "accepted-json-parsed", "accepted-admitted", "accepted-baseline-ready"],
-  "post-p2": [...COMMON_PHASES, "accepted-baseline-row-loaded", "accepted-baseline-parsed", "accepted-baseline-ready"],
-};
+export type PhaseManifest = "post-p2";
+export { RESOURCE_HARNESS_REVISION };
+export const PHASE_MANIFESTS = { "post-p2": RESOURCE_PHASES };
 export function resourceChildEnvironment(protocol: Record<string, string>): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
@@ -56,9 +54,8 @@ const SITES: Site[] = [
   { file: "worker/src/lib/report-cards-fixed-input-cache-codec.ts", fn: "parseFixedInputCacheEntry", phase: "native-inflate-decoded", kind: "variable", name: "payloadText" },
   { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "native-input-decoded", kind: "variable", name: "fixedInput" },
   { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "enrichment-loaded", kind: "variable", name: "evidenceJournalById" },
-  { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: "parseSafetyScoreV9Publication", phase: "accepted-text-decoded", kind: "assignment", name: "canonical" },
-  { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: "parseSafetyScoreV9Publication", phase: "accepted-json-parsed", kind: "variable", name: "payload" },
-  { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: "parseSafetyScoreV9Publication", phase: "accepted-admitted", kind: "variable", name: "publication" },
+  { file: "worker/src/lib/safety-score-v9/publication-store.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-row-loaded", kind: "variable", name: "row" },
+  { file: "worker/src/lib/safety-score-v9/publication-store.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-parsed", kind: "variable", name: "state" },
   { file: "worker/src/lib/safety-score-v9/publication-runner.ts", fn: "runSafetyScoreV9Publication", phase: "accepted-baseline-ready", kind: "variable", name: "acceptedPublication" },
   { file: "worker/src/lib/safety-score-v9/candidate.ts", fn: "buildSafetyScoreV9CandidatePipeline", phase: "extension-built", kind: "variable", name: "extension" },
   { file: "worker/src/lib/safety-score-v9/candidate.ts", fn: "buildSafetyScoreV9CandidatePipeline", phase: "facts-compiled", kind: "variable", name: "compiledFacts" },
@@ -74,14 +71,11 @@ const SITES: Site[] = [
   { file: "worker/src/lib/safety-score-v9/capture-archive.ts", fn: "archiveSafetyScoreCapture", phase: "archive-upload-pending", kind: "variable", name: "upload" },
 ];
 
-function instrumentation(root: string, manifest: PhaseManifest): Plugin {
-  const sites = SITES.filter((site) => manifest === "pre-p2" || !site.phase.startsWith("accepted-") || site.phase === "accepted-baseline-ready");
-  const codec = readFileSync(resolve(root, "worker/src/lib/safety-score-v9/publication-codec.ts"), "utf8");
-  const admissionFunction = codec.includes("export async function admitAndSerializeSafetyScoreV9Publication(")
-    ? "admitAndSerializeSafetyScoreV9Publication" : "serializeSafetyScoreV9Publication";
+function instrumentation(root: string): Plugin {
+  const sites = [...SITES];
   sites.push(
-    { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: admissionFunction, phase: "store-admitted", kind: "variable", name: "publication" },
-    { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: admissionFunction, phase: "publication-gzip-complete", kind: "variable", name: "compressed" },
+    { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: "admitAndSerializeSafetyScoreV9Publication", phase: "store-admitted", kind: "variable", name: "publication" },
+    { file: "worker/src/lib/safety-score-v9/publication-codec.ts", fn: "admitAndSerializeSafetyScoreV9Publication", phase: "publication-gzip-complete", kind: "variable", name: "compressed" },
   );
   const counts = new Map(sites.map((site) => [site.phase, 0]));
   return {
@@ -138,7 +132,7 @@ globalThis.__pharosResourcePhase = (phase) => {
   const before = process.memoryUsage(); globalThis.gc(); const after = process.memoryUsage();
   __resourceAppend(process.env.PHAROS_RESOURCE_OUTPUT, JSON.stringify({type:'phase',phase,cycle:globalThis.__pharosResourceCycle ?? 0,before,after})+'\\n');
 };`;
-export async function buildResourceProbe(root: string, directory: string, mode: "live" | "hard-cap" | "setup", manifest: PhaseManifest) {
+export async function buildResourceProbe(root: string, directory: string, mode: "live" | "hard-cap" | "setup") {
   const require = createRequire(resolve(root, "package.json"));
   const wranglerRequire = createRequire(require.resolve("wrangler"));
   const esbuild = wranglerRequire("esbuild") as typeof Esbuild;
@@ -150,7 +144,7 @@ export async function buildResourceProbe(root: string, directory: string, mode: 
     outfile, bundle: true, metafile: true, format: "esm", ...buildSettings,
     external: ["node:*"], tsconfig: resolve(root, "tsconfig.json"), logLevel: "silent",
     banner: { js: `globalThis.__zod_globalConfig = { jitless: true };\n${mode === "live" ? OBSERVER_BANNER : ""}` },
-    plugins: mode === "live" ? [instrumentation(root, manifest)] : [],
+    plugins: mode === "live" ? [instrumentation(root)] : [],
   } as BuildOptions);
   const metafile = result.metafile!;
   const loader = relative(root, settings.alias["#pharos-full-catalog"]);
@@ -180,7 +174,7 @@ type ModeResult = ChildResult & {
   cycles: ResourceSample[]; archives: ResourceSample["archives"] | null;
 };
 type RunResult = { run: number; violations: ResourceViolation[]; live?: ModeResult; "hard-cap"?: ModeResult };
-type ResourceReport = Record<string, unknown> & { complete?: boolean; runs: RunResult[]; violations: ResourceViolation[] };
+export type ResourceReport = Record<string, unknown> & { complete?: boolean; identity?: ResourceIdentity; runs: RunResult[]; violations: ResourceViolation[] };
 export function validateResourceSamples(samples: ResourceSample[], phases: readonly string[], policy?: { phaseLimitsBytes: Record<string, number>; globalPostGcHeapBytes: number }): ResourceViolation[] {
   const violations: ResourceViolation[] = [];
   for (const phase of phases) {
@@ -189,7 +183,7 @@ export function validateResourceSamples(samples: ResourceSample[], phases: reado
     for (const cycle of cycles) if (!matching.some((sample) => sample.cycle === cycle)) violations.push({ reason: "missing-phase", phase, cycle });
     for (const sample of matching) {
       if (!sample.after || !sample.before) { violations.push({ reason: "invalid-phase-sample", phase }); continue; }
-      if (policy && sample.after.heapUsed > policy.phaseLimitsBytes[phase]) violations.push({ reason: "phase-budget-exceeded", phase, observed: sample.after.heapUsed, limit: policy.phaseLimitsBytes[phase] });
+      if (policy && (!Number.isFinite(policy.phaseLimitsBytes[phase]) || sample.after.heapUsed > policy.phaseLimitsBytes[phase])) violations.push({ reason: "phase-budget-exceeded", phase, observed: sample.after.heapUsed, limit: policy.phaseLimitsBytes[phase] ?? null });
       if (policy && sample.after.heapUsed > policy.globalPostGcHeapBytes) violations.push({ reason: "global-live-budget-exceeded", phase });
     }
   }
@@ -206,31 +200,62 @@ export function runResourceChild(root: string, entry: string, protocol: Record<s
   return { status: result.status, signal: result.signal, error: result.error?.message ?? null, reasons };
 }
 
-export async function measureV9Resource(root: string, profile: ResourceProfile, runs: number, manifest: PhaseManifest) {
-  const directory = resolve(root, ".tmp/safety-score-v9-resource");
+export async function measureV9Resource(root: string, profile: ResourceProfile, runs: number, manifest: PhaseManifest, options: { directory?: string; policyPath?: string; invocationId?: string; allowUnqualifiedPolicy?: boolean } = {}) {
+  const directory = options.directory ?? resolve(root, ".tmp/safety-score-v9-resource");
   rmSync(directory, { recursive: true, force: true });
   mkdirSync(directory, { recursive: true });
-  const report: ResourceReport = { schemaVersion: 1, harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest, profile, diagnosticOnly: true, node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, productionRawPublicationBytesApprox: 8_000_000, fixtureProductionGap: "Synthetic fixture under-represents production; measured raw bytes and the approximate 8.0 MB production size are not capacity evidence.", runs: [], violations: [] };
+  const report: ResourceReport = { schemaVersion: 1, invocationId: options.invocationId ?? randomUUID(), generatedAt: new Date().toISOString(), harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest, profile, diagnosticOnly: !options.policyPath, node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, productionRawPublicationBytesApprox: 8_000_000, fixtureProductionGap: "Synthetic fixture under-represents production by approximately 1 MB; neither synthetic bytes nor Node heap limits establish Workers isolate capacity.", runs: [], violations: [] };
+  report.policy = options.policyPath ? "unqualified" : "diagnostic";
+  report.declaredPhases = PHASE_MANIFESTS[manifest];
   report.testedSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout?.trim() || null;
   report.sourceHashes = Object.fromEntries([
     "package-lock.json", "worker/src/lib/__tests__/fixtures/safety-score-v9-full-registry-input.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
+    "worker/scripts/lib/v9-resource-policy.ts",
   ].map((file) => {
     try { return [file, createHash("sha256").update(readFileSync(resolve(root, file))).digest("hex")]; }
     catch { return [file, null]; }
   }));
   try {
-    const setup = await buildResourceProbe(root, directory, "setup", manifest);
-    const live = await buildResourceProbe(root, directory, "live", manifest);
-    const hardCap = await buildResourceProbe(root, directory, "hard-cap", manifest);
+    const setup = await buildResourceProbe(root, directory, "setup");
+    const live = await buildResourceProbe(root, directory, "live");
+    const hardCap = await buildResourceProbe(root, directory, "hard-cap");
     report.bundle = { esbuildVersion: live.esbuildVersion, wranglerVersion: live.wranglerVersion, settings: live.settings, liveSha256: live.sha256, hardCapSha256: hardCap.sha256 };
     const fixturePath = resolve(directory, "fixture.sqlite");
     const fixtureManifest = resolve(directory, "fixture.json");
     const preparation = runResourceChild(root, setup.outfile, { PHAROS_RESOURCE_DATABASE: fixturePath, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "setup" }, ["--max-old-space-size=512"], directory, "setup");
     if (preparation.reasons.length) throw new Error(`fixture-preparation-failed:${JSON.stringify(preparation)}`);
     report.fixture = JSON.parse(readFileSync(fixtureManifest, "utf8"));
+    const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
+    const identity: ResourceIdentity = {
+      harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest,
+      node: process.version, v8: process.versions.v8, esbuild: live.esbuildVersion, wrangler: live.wranglerVersion,
+      platform: process.platform, arch: process.arch,
+      runner: process.env.GITHUB_ACTIONS === "true"
+        ? { kind: "github", description: process.env.RUNNER_OS ?? "unknown", image: process.env.ImageOS ?? "unknown", version: process.env.ImageVersion ?? "unknown" }
+        : { kind: "local", description: `${hostname()} ${process.platform} ${process.arch}`, image: process.platform, version: release() },
+      fixture: { kind: "current-full-registry-native", sourceSha256: hash(readFileSync(resolve(root, "worker/src/lib/__tests__/fixtures/safety-score-v9-full-registry-input.ts"))), manifestSha256: hash(readFileSync(fixtureManifest)) },
+      protocolSha256: hash(JSON.stringify({ settings: live.settings, hashes: report.sourceHashes })),
+    };
+    report.identity = identity;
+    let policy: ResourcePolicy | undefined;
+    if (options.policyPath) {
+      try {
+        policy = loadResourcePolicy(options.policyPath, identity, options.allowUnqualifiedPolicy) ?? undefined;
+        if (policy) {
+          report.appliedPolicy = policy;
+          report.policy = "qualified";
+        } else {
+          report.policy = "unqualified";
+          report.policyQualification = "No qualified checked-in policy. All phases/correctness/bytes and natural 128 MiB remain required; phase limits are not enforced. Further remediation is required before five-run <=110 MiB qualification.";
+        }
+      } catch (error) {
+        report.policy = "invalid";
+        report.violations.push({ reason: "invalid-resource-policy", detail: String(error) });
+      }
+    }
     for (let run = 1; run <= runs; run += 1) {
       const entry: RunResult = { run, violations: [] };
       report.runs.push(entry);
@@ -243,7 +268,7 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
         let samples: ResourceSample[] = [];
         try { samples = readFileSync(output, "utf8").trim().split("\n").filter(Boolean).map((line) => SampleSchema.parse(JSON.parse(line))); }
         catch (error) { result.reasons.push({ reason: "protocol-fault", detail: String(error) }); }
-        if (mode === "live") result.reasons.push(...validateResourceSamples(samples, [...PHASE_MANIFESTS[manifest], ...(profile === "heavy-warm" ? ["prep-complete"] : [])]));
+        if (mode === "live") result.reasons.push(...validateResourceSamples(samples, [...PHASE_MANIFESTS[manifest], ...(profile === "heavy-warm" ? ["prep-complete"] : [])], policy));
         if (!samples.some((sample) => sample.type === "complete")) result.reasons.push({ reason: "missing-completion" });
         const phaseMaxima = Object.fromEntries(PHASE_MANIFESTS[manifest].map((phase) => {
           const values = samples.filter((sample) => sample.type === "phase" && sample.phase === phase);
@@ -253,6 +278,13 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
         entry.violations.push(...result.reasons.map((reason) => ({ ...reason, mode })));
         if (result.status === 0) {
           const check = runResourceChild(root, setup.outfile, { PHAROS_RESOURCE_DATABASE: database, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "inspect" }, ["--max-old-space-size=512"], directory, `${mode}-${run}-correctness`);
+          if (!check.reasons.length) {
+            try {
+              const lines = readFileSync(resolve(directory, `${mode}-${run}-correctness.stdout`), "utf8").trim().split("\n");
+              const correctness = JSON.parse(lines[lines.length - 1]);
+              (entry[mode] as ModeResult & { correctness?: unknown }).correctness = correctness;
+            } catch (error) { entry.violations.push({ reason: "correctness-protocol-fault", mode, detail: String(error) }); }
+          }
           if (check.reasons.length) entry.violations.push({ reason: "correctness-failed", mode, ...check });
         }
       }

@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { inspectPrCheckout, runPrChecks, type RunPrChecksOptions } from "../maintenance/run-pr-checks.ts";
 import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receipt.mts";
-import { assertRequiredResourceCases, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
+import { assertFaithfulResourceReport, assertRequiredResourceCases, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
 
@@ -126,35 +126,51 @@ describe("receipt explanation dispatch", () => {
 });
 
 describe("isolated V9 resource execution", () => {
-  const publication = "publishes the full registry within 128 MiB of old-space";
   const contagion = "evaluates a bounded nine-scenario matrix within 256 MiB of old-space";
   const report = (cases: Array<{ title: string; status: string }>) => ({
     testResults: [{ name: resolve(repoRoot, RESOURCE_TEST_FILE), assertionResults: cases }],
   });
 
-  it("requires both named passes, never an arbitrary pass count or optional capture", () => {
-    const passed = [publication, contagion].map((title) => ({ title, status: "passed" }));
+  it("requires the independent named contagion pass, never an arbitrary pass count or optional capture", () => {
+    const passed = [{ title: contagion, status: "passed" }];
     expect(() => assertRequiredResourceCases(report([
       ...passed, { title: "keeps the frozen same-capture production envelope within both byte budgets", status: "pending" },
     ]))).not.toThrow();
     for (const status of ["pending", "skipped", "failed", "todo"]) {
-      expect(() => assertRequiredResourceCases(report([passed[0], { title: contagion, status }]))).toThrow(contagion);
+      expect(() => assertRequiredResourceCases(report([{ title: contagion, status }]))).toThrow(contagion);
     }
-    expect(() => assertRequiredResourceCases(report([passed[0], { title: "unrelated", status: "passed" }]))).toThrow(contagion);
-    expect(() => assertRequiredResourceCases({ testResults: [] })).toThrow(publication);
-    expect(() => assertRequiredResourceCases(report([...passed, passed[0]]))).toThrow(publication);
+    expect(() => assertRequiredResourceCases(report([{ title: "unrelated", status: "passed" }]))).toThrow(contagion);
+    expect(() => assertRequiredResourceCases({ testResults: [] })).toThrow(contagion);
+    expect(() => assertRequiredResourceCases(report([...passed, passed[0]]))).toThrow(contagion);
   });
 
   it("removes stale evidence and fails closed when a launch produces no JSON", async () => {
     const directory = mkdtempSync(`${tmpdir()}/pharos-resource-launch-`);
     try {
       writeFileSync(resolve(directory, "vitest.json"), JSON.stringify(report(
-        [publication, contagion].map((title) => ({ title, status: "passed" })),
+        [{ title: contagion, status: "passed" }],
       )));
       await expect(runV9ResourceLane({
-        argv: [], outputDirectory: directory, runCommand: async () => 0,
+        argv: [], outputDirectory: directory, resourceDirectory: directory, runCommand: async () => 0,
       })).rejects.toThrow();
     } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it("rejects stale faithful reports and violations even when child statuses pass", () => {
+    const faithful = { schemaVersion: 1, invocationId: "previous-run", complete: true, diagnosticOnly: false,
+      profile: "compute", phaseManifest: "post-p2", violations: [], policy: "qualified", declaredPhases: ["phase"],
+      appliedPolicy: { globalPostGcHeapBytes: 117440512, phaseLimitsBytes: { phase: 100 } },
+      runs: [{ violations: [], live: { status: 0, signal: null, reasons: [], phaseMaxima: { phase: { postGcHeapBytes: 90 } } },
+        "hard-cap": { status: 0, signal: null, reasons: [] } }] };
+    expect(() => assertFaithfulResourceReport(faithful, "current-run")).toThrow("stale-resource-report");
+    expect(() => assertFaithfulResourceReport(faithful, "previous-run")).not.toThrow();
+    expect(() => assertFaithfulResourceReport({ ...faithful, violations: [{ reason: "phase-budget-exceeded" }] }, "previous-run")).toThrow();
+    expect(() => assertFaithfulResourceReport({ ...faithful, runs: [] }, "previous-run")).toThrow();
+    expect(() => assertFaithfulResourceReport({ ...faithful, declaredPhases: ["phase", "missing"] }, "previous-run")).toThrow("missing-resource-phase");
+    const { appliedPolicy: _applied, ...unqualified } = faithful;
+    expect(() => assertFaithfulResourceReport({ ...unqualified, policy: "unqualified" }, "previous-run")).not.toThrow();
+    expect(() => assertFaithfulResourceReport({ ...unqualified, policy: "qualified" }, "previous-run")).toThrow("missing-applied-resource-policy");
+    expect(() => assertFaithfulResourceReport({ ...faithful, policy: "unqualified" }, "previous-run")).toThrow("unqualified-resource-policy-applied");
   });
 
   it("keeps admission covered without probes under test:all despite ambient opt-in", () => {
@@ -178,7 +194,7 @@ describe("isolated V9 resource execution", () => {
       expect(Object.values(admission.s).some((hits) => hits > 0)).toBe(true);
       const cases = result.testResults.flatMap((file: { assertionResults: Array<{ title: string; status: string }> }) => file.assertionResults);
       expect(cases.find((test: { title: string }) => test.title === "uses the codec expanded-byte ceiling and preserves unknown measurement")?.status).toBe("passed");
-      for (const title of [publication, contagion]) {
+      for (const title of [contagion, "keeps the frozen same-capture production envelope within both byte budgets"]) {
         expect(["skipped", "pending"]).toContain(cases.find((test: { title: string }) => test.title === title)?.status);
       }
     } finally { rmSync(directory, { recursive: true, force: true }); }
