@@ -594,3 +594,38 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^CAJD2IBSP7VO2VYJQUYJSOGPJINTUYV7MQITINXVPTIH3CCLCUENNMW4$''']
 paths = ['''(?:^|/)worker/src/cron/dex-discovery/__tests__/crawl-soroban-pools\.test\.ts$''']
+
+# Batch-64 review 2026-10-15: GitBook public download links for Saturn's Certora
+# sUSDat v2 audit and Matrixdock's STBT terms (the latter already allowlisted for
+# the evidence-gap registry above). Pin each capability to only the files that
+# cite it.
+[[allowlists]]
+description = "Saturn publicly linked Certora sUSDat v2 audit and Matrixdock STBT terms download tokens"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^(?:937d6687-03b4-4c9b-a525-5f180793a6a2|79d5fd49-deae-41b4-a809-9e1afaa02f32)$''']
+paths = [
+  '''(?:^|/)shared/data/stablecoins/coins/susdat-saturn\.json$''',
+  '''(?:^|/)shared/data/safety-score-v9/mechanism-review-overlays-v1\.json$''',
+  '''(?:^|/)data/ai-summaries\.json$''',
+]
+
+# krUSDC's additional sentinel custody review cites its hash-derived control key.
+[[allowlists]]
+description = "Reviewed krUSDC sentinel mint-control key digest in evidence-gap classification scopes"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^05daeb147e418c420d59$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
+
+# MANTRA's August 20, 2026 chain halt is a reviewed public incident slug used as
+# both the operational-resilience episode and incident key.
+[[allowlists]]
+description = "Reviewed MANTRA chain-halt incident slug in operational-resilience overlays"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^mantra-chain-halt-2026-08-20$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/operational-resilience-overlays-v1\.json$''']
