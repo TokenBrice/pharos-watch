@@ -222,7 +222,9 @@ function makeMintBurnAssessmentDb(
     { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
     {
       match: "GROUP BY job",
-      rows: [],
+      rows: ["sync-dex-liquidity", "sync-yield-data", "compute-dews"].map((job) => ({
+        job, started_at: nowSec - 60, generation_id: "fixture-generation", degraded_runs_since_ok: 0,
+      })),
       ...(options.producerHistoryError ? { throwError: options.producerHistoryError } : {}),
     },
     {
@@ -431,7 +433,8 @@ describe("assessPublicHealth upstream provider enrichment", () => {
 
   it.each([
     ["small", 10_000_000, 900, 1, "healthy"],
-    ["growth factor", 60_000_000, 900, 1, "degraded"],
+    ["isolated PYUSDx-sized gap", 96_534_823.01, 7 * 86400, 1, "healthy"],
+    ["growth factor", MATERIAL_MARKET_CAP_USD / 2, 900, 1, "degraded"],
     ["material", MATERIAL_MARKET_CAP_USD, 900, 1, "degraded"],
     ["no evidence", null, 900, 1, "degraded"],
     ["stale evidence", 10_000_000, STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC + 1, 1, "degraded"],

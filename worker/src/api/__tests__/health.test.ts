@@ -127,7 +127,9 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     statusStartedAt = now - 300,
     extras = [],
     yieldSentinelAge = 60,
-    producerCronRows = [],
+    producerCronRows = ["sync-dex-liquidity", "sync-yield-data", "compute-dews"].map((job) => ({
+      job, started_at: now - 60, generation_id: "fixture-generation", degraded_runs_since_ok: 0,
+    })),
     producerCronError,
   } = options;
 
@@ -423,6 +425,12 @@ describe("handleHealth", () => {
     const db = healthD1([
       completePublicationEntry(now),
       dewsPublicationEntry(now),
+      {
+        match: "GROUP BY job",
+        rows: ["sync-dex-liquidity", "sync-yield-data", "compute-dews"].map((job) => ({
+          job, started_at: now - 60, generation_id: "fixture-generation", degraded_runs_since_ok: 0,
+        })),
+      },
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         matchBinds: ["ops:d1-capacity:v1"],
@@ -953,7 +961,7 @@ describe("handleHealth", () => {
       freshnessSource: "table-fallback",
       degraded: true,
       degradedReason: "freshness-sentinel-missing",
-      streakDegradedRuns: null,
+      streakDegradedRuns: 0,
       healthy: false,
     });
     expect(body.warnings).toContain(
@@ -961,12 +969,12 @@ describe("handleHealth", () => {
     );
   });
 
-  it("reports yield-data unhealthy when degraded runs follow a recent last-good sentinel", async () => {
+  it("reports yield-data unhealthy when its confirmed publication has degraded quality", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeHealthyHealthDb(now, {
       producerCronRows: [{
         job: "sync-yield-data",
-        started_at: now - 3_600,
+        started_at: now - 60,
         degraded_runs_since_ok: 3,
         latest_reason: "yield-supplemental:family-degraded:aaveV3",
       }],
@@ -1037,11 +1045,9 @@ describe("handleHealth", () => {
   it("reports yield-data healthy again after a clean recovery run", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = makeHealthyHealthDb(now, {
-      producerCronRows: [{
-        job: "sync-yield-data",
-        started_at: now - 60,
-        degraded_runs_since_ok: 0,
-      }],
+      producerCronRows: ["sync-dex-liquidity", "sync-yield-data", "compute-dews"].map((job) => ({
+        job, started_at: now - 60, degraded_runs_since_ok: 0,
+      })),
     });
 
     const res = await handleHealth(db);

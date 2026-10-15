@@ -108,6 +108,39 @@ describe("runCoingeckoLowVolumePass", () => {
     expect(expired.price).toBeNull();
   });
 
+  it.each([
+    ["cgusd-cygnus-finance", "cygnus-finance-global-usd", 0.991614, 1791903934, "peggedUSD"],
+    ["wm-m0", "wrappedm-by-m0", 0.999229, 1792012792, "peggedUSD"],
+    ["mxne-real-mxn", "real-mxn", 0.054597, 1792021431, "peggedMXN"],
+  ] as const)("recovers reviewed %s price without upgrading supply, confidence, or observation time", async (id, geckoId, price, observedAt, pegType) => {
+    const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
+      "../../../lib/coingecko-simple-price",
+    );
+    vi.mocked(fetchCoingeckoSimplePrices).mockImplementation(actual.fetchCoingeckoSimplePrices);
+    vi.useFakeTimers();
+    vi.setSystemTime(1792043600 * 1000);
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      [geckoId]: { usd: price, last_updated_at: observedAt },
+    })));
+    const asset = makePeggedAsset({
+      id, pegType, price: null, supplyRestored: true,
+      supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
+      circulating: { [pegType]: 123 },
+    });
+    const fxRates = { peggedMXN: 0.055 };
+    expect(await runCoingeckoLowVolumePass([asset], null, fxRates)).toEqual({ resolved: 1, failures: [] });
+    expect(asset).toMatchObject({
+      price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
+      priceObservedAt: observedAt, priceObservedAtMode: "upstream",
+      supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
+      circulating: { [pegType]: 123 },
+    });
+    vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
+    const expired = makePeggedAsset({ id, pegType, price: null });
+    expect(await runCoingeckoLowVolumePass([expired], null, fxRates)).toEqual({ resolved: 0, failures: [] });
+    expect(expired.price).toBeNull();
+  });
+
   it("recovers HBD on carried supply without renewing its upstream clock, then rejects it at expiry", async () => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",

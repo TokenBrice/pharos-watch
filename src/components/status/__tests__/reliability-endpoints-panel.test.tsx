@@ -21,6 +21,7 @@ afterEach(() => {
 describe("ReliabilityEndpointsPanel", () => {
   it("explains both probe planes, prioritizes failures, collapses healthy rows, and copies safe diagnostics", async () => {
     const data = makeHealthyStatusResponse();
+    data.probe = { ...data.probe, sampleCount: 17, passCount: 14, failCount: 0, status: "degraded" };
     const model = buildReliabilityWorkspaceModel({
       data,
       healthData: makeHealthyHealthResponse(),
@@ -53,6 +54,7 @@ describe("ReliabilityEndpointsPanel", () => {
     render(<ReliabilityEndpointsPanel model={model.endpoints} />);
 
     expect(screen.getByText("Worker-origin self-check")).toBeTruthy();
+    expect(screen.getByText("14 transport passes · 0 transport failures · 17 total samples · degraded")).toBeTruthy();
     expect(screen.getByText("Browser-origin endpoint probes")).toBeTruthy();
     expect(screen.getByText(/Runs inside the Worker/)).toBeTruthy();
     expect(screen.getByText(/does not identify endpoint rows/)).toBeTruthy();

@@ -144,6 +144,16 @@ describe("inheritedTrackedPriceProvider", () => {
     )).resolves.toBeNull();
   });
 
+  it.each(["m-m0", "usdk-kast"])("does not upgrade wM low-volume fallback into a trusted %s parent", async (id) => {
+    const parent = {
+      ...freshParent("wm-m0", 0.999229, "coingecko-low-volume", { nowSec }),
+      priceConfidence: "fallback" as const,
+    };
+    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+      unpricedChild(id), { assetsById: new Map([[parent.id, parent]]) },
+    )).resolves.toBeNull();
+  });
+
   it("replays the tracked parent's historical market observations and preserves unavailable history", async () => {
     const meta = makeHistoricalMeta("usdai-usd-ai", "USD AI", "USDAI");
     const points = [{ timestamp: nowSec - 3_600, price: 0.97 }, { timestamp: nowSec, price: 0.99 }];

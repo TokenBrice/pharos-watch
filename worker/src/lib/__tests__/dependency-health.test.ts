@@ -73,6 +73,23 @@ function failedDexPublication(): PublicationHealth {
 }
 
 describe("buildDependencyHealth", () => {
+  it("attributes an unhealthy neutral skip to the required attempt it inherits", () => {
+    const failedRun = {
+      startedAt: NOW - 2_400, durationMs: 731, status: "error" as const,
+      degradedReason: "dex-source-stage-unavailable",
+    };
+    const skip = { startedAt: NOW - 600, durationMs: 1, status: "skipped_neutral" as const };
+    const result = buildDependencyHealth({
+      now: NOW, publicationHealth: null,
+      caches: { "dex-liquidity": cache({ producerJob: "sync-dex-liquidity" }) },
+      crons: { "sync-dex-liquidity": cron({ healthy: false, lastRun: skip, recentRuns: [skip, failedRun] }) },
+    });
+    expect(result.dependencies["dex-liquidity"]).toMatchObject({
+      status: "degraded", updatedAt: failedRun.startedAt, ageSeconds: 2_400,
+      reason: "Latest required cron status is error: dex-source-stage-unavailable.",
+    });
+  });
+
   it.each(["ordinary", "sentinel"] as const)("keeps immutable publication clocks across cached %s assessments", (kind) => {
     const publishedAt = NOW - 420;
     const caches = { stablecoins: cache({

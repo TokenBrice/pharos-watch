@@ -12,8 +12,6 @@ import type { DashboardEvidence, DashboardIssue } from "@/lib/status/dashboard-t
 
 /** Window for the recurrence chip ("5× in 48h"). */
 const TRIAGE_RECURRENCE_WINDOW_SEC = 48 * 3600;
-/** A non-informational cause that degraded the admin state this often in the window is "failing repeatedly". */
-const TRIAGE_RECURRING_ACT_THRESHOLD = 3;
 
 const SELF_CHECK_JOB = "status-self-check";
 
@@ -130,7 +128,7 @@ export function getCausesVerdict(causes: readonly StatusCause[]): "act" | "watch
 
 /**
  * Turns normalized status issues into the Triage inbox: one verdict per item
- * (act = public impact or repeated degradation, watch = everything else),
+ * (act = public impact or critical severity, watch = everything else),
  * sorted by verdict then age, with the recurrence count and one primary link.
  */
 export function buildTriageInbox(
@@ -141,8 +139,8 @@ export function buildTriageInbox(
     const cronSubjects = getCronSubjects(issue);
     const recurrence = countRecurrence(data.timeline, issue.code, data.timestamp);
     const informational = issue.kind === "watch";
-    const verdict: TriageInboxItem["verdict"] =
-      issue.kind === "impacting" || (!informational && recurrence >= TRIAGE_RECURRING_ACT_THRESHOLD) ? "act" : "watch";
+    // Timeline co-occurrence cannot prove a diagnostic caused the degradation.
+    const verdict = getCausesVerdict([issue]);
     const firstCron = cronSubjects[0] ? data.crons[cronSubjects[0]] : undefined;
     const sinceSec = getSince(data.timeline, issue.code);
     return {
@@ -246,7 +244,9 @@ export function readSlowestProbePath(crons: StatusResponse["crons"]): string | n
 export function describeSelfCheck(probe: StatusResponse["probe"], slowestPath: string | null): string {
   if (probe.timestamp == null || probe.sampleCount === 0) return "No self-check result yet";
   if (probe.failCount > 0) return `${probe.failCount} of ${probe.sampleCount} probes failing`;
-  const base = `All ${probe.sampleCount} probes pass`;
+  const base = probe.passCount === probe.sampleCount
+    ? `All ${probe.sampleCount} probes pass`
+    : `${probe.passCount} transport passes; no transport failures (${probe.sampleCount} total samples)`;
   if (probe.status === "healthy") return base;
   const budget = STATUS_PROBE_THRESHOLDS.healthyP95MaxMs;
   if (probe.p95LatencyMs != null && probe.p95LatencyMs > budget) {

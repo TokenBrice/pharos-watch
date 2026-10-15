@@ -184,7 +184,6 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
       reserve.writeTimeoutUncertain;
     reserveCount += reserveOperationalCount;
     if (reserveOperationalCount > 0) reserveStates.push("watch");
-    if (reserve.errorCoins > 0 || reserve.corruptCoins > 0) reserveStates.push("critical");
   }
   if (data.reserveDrift) {
     reserveCount += data.reserveDrift.length;

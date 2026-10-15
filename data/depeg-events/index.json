@@ -1,5 +1,14 @@
 [
   {
+    "slug": "wars-2026-10-14",
+    "stablecoinId": "wars-argentine-peso",
+    "symbol": "WARS",
+    "pegType": "peggedARS",
+    "direction": "below",
+    "peakDeviationBps": -612,
+    "startedAt": 1791937017
+  },
+  {
     "slug": "vchf-2026-09-29",
     "stablecoinId": "vchf-vnx",
     "symbol": "VCHF",

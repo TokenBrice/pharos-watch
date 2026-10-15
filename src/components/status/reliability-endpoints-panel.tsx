@@ -129,7 +129,7 @@ export function ReliabilityEndpointsPanel({ model }: { model: ReliabilityEndpoin
           title="Worker-origin self-check"
           accentClassName={STATUS_RELIABILITY_ACCENT_CLASSES.endpoints}
           description="Runs inside the Worker to validate internal execution, bindings, and critical API behavior independently of this browser session. The status payload reports this plane as a summary and does not identify endpoint rows."
-          result={`${model.workerPlane.passCount}/${model.workerPlane.sampleCount} passing · ${model.workerPlane.status}`}
+          result={`${model.workerPlane.passCount} transport passes · ${model.workerPlane.failCount} transport failures · ${model.workerPlane.sampleCount} total samples · ${model.workerPlane.status}`}
           sampledAt={model.workerPlane.sampledAt}
           ageSeconds={workerAge}
         />
