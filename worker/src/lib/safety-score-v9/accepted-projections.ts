@@ -19,13 +19,7 @@ import type { SafetyScoreV9AcceptedCardBaseline, SafetyScoreV9AcceptedPublicatio
 export const SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES = 458_752;
 export const SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES = 1_048_576;
 
-export const AcceptedProjectionUnavailableReasonSchema = z.enum([
-  "projection-missing", "projection-invalid", "publication-invalid", "publication-mismatch",
-  "health-unavailable", "health-mismatch", "read-failed",
-]);
-export type AcceptedProjectionUnavailableReason = z.infer<typeof AcceptedProjectionUnavailableReasonSchema>;
-
-export const AcceptedProjectionHeaderSchema = z.strictObject({
+const AcceptedProjectionHeaderSchema = z.strictObject({
   schemaVersion: z.literal(1),
   safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,
   publicationResultDigest: Sha256Schema,
@@ -60,7 +54,7 @@ const AcceptedPublicationBaselineSchema = z.strictObject({
 export type SafetyScoreV9AcceptedBaselineProjectionV1 = AcceptedProjectionHeaderV1 & {
   baseline: SafetyScoreV9AcceptedPublicationBaseline;
 };
-export const SafetyScoreV9AcceptedBaselineProjectionSchema = AcceptedProjectionHeaderSchema.safeExtend({
+const SafetyScoreV9AcceptedBaselineProjectionSchema = AcceptedProjectionHeaderSchema.safeExtend({
   baseline: AcceptedPublicationBaselineSchema,
 }).superRefine((value, ctx) => {
   const identity = value.safetyScoreIdentity;
@@ -79,7 +73,7 @@ export const SafetyScoreV9AcceptedBaselineProjectionSchema = AcceptedProjectionH
 export type SafetyScoreV9LenderCollateralProjectionV1 = AcceptedProjectionHeaderV1 & {
   byAssetId: LenderCollateralBacking["byAssetId"];
 };
-export const SafetyScoreV9LenderCollateralProjectionSchema = AcceptedProjectionHeaderSchema.safeExtend({
+const SafetyScoreV9LenderCollateralProjectionSchema = AcceptedProjectionHeaderSchema.safeExtend({
   byAssetId: LenderCollateralBackingSchema.shape.byAssetId,
 }).superRefine((value, ctx) => {
   const rows = Object.entries(value.byAssetId);
