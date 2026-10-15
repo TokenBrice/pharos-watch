@@ -12522,10 +12522,10 @@
     },
     {
       "assetId": "kpkusdcyield-kpk",
-      "reviewedAt": "2026-10-14T15:21:20Z",
+      "reviewedAt": "2026-10-15T19:04:35Z",
       "expiresAt": "2027-10-03T23:06:59Z",
-      "reviewer": "Sol KPK review 2026-10-14 (ControlIncidents)",
-      "notes": "Exact Yield VaultV2 creation is 2025-12-30 at Ethereum block 24125461; the 2026-10-03 review of nine full calendar months remains an eligibility-only lower bound, not renewed parent or legacy history. The 2026-06-09 Cap precautionary pause has an observed exact-vault allocator response: 633.203984 USDC deallocated through adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 at block 25282840, 2026-06-09T22:24:11Z, with the successful receipt re-read 2026-10-14T14:37:20.085Z. KPK describes a soft shutdown and subsequent re-enabling after human review. Neither this receipt nor the disclosed approximately-15-second first response proves holder redemption continued or measures whole-book recovery; both outcomes remain unknown. No redemption throughput, independent reconciliation or incident-free claim is made. The separately recorded June 21 mint-control incident is not duplicated here; incidentReview remains not-reviewed.",
+      "reviewer": "KPK questionnaire follow-up (Reserves)",
+      "notes": "Exact Yield VaultV2 creation is 2025-12-30 at Ethereum block 24125461; the 2026-10-03 review of nine full calendar months remains an eligibility-only lower bound, not renewed parent or legacy history. The 2026-06-09 Cap precautionary pause has an observed exact-vault allocator response: 633.203984 USDC deallocated through adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 at block 25282840, 2026-06-09T22:24:11Z, with the successful receipt re-read 2026-10-14T14:37:20.085Z. KPK describes a soft shutdown and subsequent re-enabling after human review. Neither that receipt nor the approximately-15-second first response proves holder redemption continued or measures whole-book recovery. March RLP liquidity episode, independently re-read 2026-10-15: V2's sole adapter at blocks 24703000..24736000 was 0x494495f8575b4acdfc6ef4b8c7c490475cc70cdc, whose pinned morphoVaultV1/parentVault getters identify legacy V1 0x9178ebe0691593184c1d785a864b62a326cc3509 and this exact V2. V1 held positive supply shares in RLP/USDC market 0xe1b65304edd8ceaea9b629df4c3c926a37d1216e27900505c04f14b2ed279f33; at block 24712346 (2026-03-22T10:06:35Z), market supply and borrowing both equalled 2310753531806 raw USDC, leaving no market cash. Block 24721555 (2026-03-23T16:57:23Z) Withdraw log records 222034034739 raw USDC paid to V1, with only 533207 raw supply-share dust remaining; the position is exactly zero by block 24721921 (2026-03-23T18:10:59Z). Thus the reported March 23 full-value exit is economic, with exact share-zero reached later that day. At bad-debt realization block 25259134 (2026-06-06T15:05:59Z), the liquidation records 1181253926430 raw USDC badDebtAssets and V1/V2 both have zero direct market shares. V2 convertToAssets(1e18) at blocks 24703000, 24712346, 24721555, 24721921 and 24736000 is respectively 1012371, 1012673, 1014229, 1014239 and 1014680 raw USDC; those samples are non-decreasing, not a claim about every intervening block. V1 lostAssets()=0 at blocks 25259134 and 26197527, consistent with its reviewed monotone lost-assets accounting and no recognized vault loss. The episode records liquidity stress and exit before loss, not a realized vault loss, reimbursement or funded backstop. Neither allocator withdrawal nor sampled NAV establishes continued holder redemption, a whole-book recovery duration or stress-settlement credit; the episode outcomes stay null. No redemption throughput, independent reconciliation or incident-free claim is made. The separately recorded June 21 mint-control incident is not duplicated; incidentReview remains not-reviewed.",
       "sources": [
         {
           "sourceId": "yield-exact-creation",
@@ -12542,6 +12542,46 @@
           "publishedAt": "2026-06-09",
           "url": "https://eth.blockscout.com/api/v2/transactions/0x5c15f1ea3873bd1d74f74fb1251568a701edee4b5fee56dd401b4c3ebfb0c828",
           "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "yield-rlp-pinned-history",
+          "label": "Pinned Ethereum history via research:dwellir-rpc, observed 2026-10-15T19:03:29Z..19:04:35Z: blocks 24703000 (2026-03-21T02:50:11Z), 24712346 (2026-03-22T10:06:35Z), 24721555 (2026-03-23T16:57:23Z), 24721921 (2026-03-23T18:10:59Z), 24736000 (2026-03-25T17:17:11Z), 25259134 (2026-06-06T15:05:59Z), and 26197527 (2026-10-15T11:10:59Z); exact V2/V1/adapter identities, positions, sampled NAV and lostAssets; not independent financial assurance",
+          "publisher": "Ethereum archive RPC",
+          "publishedAt": "2026-10-15",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "yield-rlp-exit-receipt",
+          "label": "Morpho Withdraw log, block 24721555, hash 0xe1bff1956a0a1e968cae262832d50c50a99c6dd3fd045d91574b39a34aa96644, 2026-03-23T16:57:23Z; 222034.034739 USDC to exact V1; independently pinned 2026-10-15",
+          "publisher": "Ethereum transaction",
+          "publishedAt": "2026-03-23",
+          "url": "https://etherscan.io/tx/0x4f7f7d5c64a4e5a108a5fd4d8d6302867e8a536ac766a04a0aa7e56c3538c67f",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "yield-rlp-bad-debt-receipt",
+          "label": "Morpho bad-debt liquidation, block 25259134, hash 0x0f6b048d8792c8a02ba8db0cf12dcd6a1fca76f15f7b03b5a21a488efad427cc, 2026-06-06T15:05:59Z; 1181253.926430 USDC bad debt after exact V1 exit; independently pinned 2026-10-15",
+          "publisher": "Ethereum transaction",
+          "publishedAt": "2026-06-06",
+          "url": "https://etherscan.io/tx/0x267a017b5f011558223af8aee98cdaf4b6e2418ab204b0a12b8fc892eeec150f",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "yield-rlp-legacy-adapter-source",
+          "label": "Legacy MorphoVaultV1Adapter primary source and immutable exact-vault getters, partial verification caveat; accessedAt 2026-10-15",
+          "publisher": "Blockscout",
+          "publishedAt": "2026-03-18",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x494495f8575b4acdfc6ef4b8c7c490475cc70cdc",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "yield-rlp-v1-loss-accounting",
+          "label": "Exact MetaMorpho V1.1 primary source: lostAssets increases or stays unchanged; accessedAt 2026-10-15; code review is not financial assurance",
+          "publisher": "Blockscout",
+          "publishedAt": "2026-01-04",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9178ebe0691593184c1d785a864b62a326cc3509",
+          "confidence": "issuer-reported"
         }
       ],
       "eligibility": {
@@ -12556,6 +12596,20 @@
       },
       "redemptionThroughput": null,
       "stressEpisodes": [
+        {
+          "episodeKey": "kpk-yield-rlp-2026",
+          "name": "Indirect RLP liquidity stress, exited before realized bad debt",
+          "observedMonth": "2026-03",
+          "redemptionContinued": null,
+          "recoveredWithinSec": null,
+          "sourceIds": [
+            "yield-rlp-pinned-history",
+            "yield-rlp-exit-receipt",
+            "yield-rlp-bad-debt-receipt",
+            "yield-rlp-legacy-adapter-source",
+            "yield-rlp-v1-loss-accounting"
+          ]
+        },
         {
           "episodeKey": "kpk-usdc-yield-cap-pause-2026-06-09",
           "name": "Cap precautionary pause and Yield soft shutdown",
