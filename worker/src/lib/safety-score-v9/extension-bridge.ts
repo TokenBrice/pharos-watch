@@ -1,3 +1,4 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 /**
  * Safety Score v9 bridge-review adapter. Extracted verbatim from
  * `safety-score-v9-extension.ts`; no behaviour change.
@@ -29,7 +30,6 @@ import {
   reviewedKeyCustody,
   type ControlOverlay,
   type ExtensionAsset,
-  type V9ExtensionRegistryMeta,
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
@@ -901,7 +901,7 @@ function buildBridgeJoinDiagnostics(
 }
 
 export function adaptBridgeReview(
-  meta: V9ExtensionRegistryMeta,
+  meta: SafetyScoreV9ScoringMeta,
   supplyReview: ExtensionAsset["supplyReview"],
   deployedChainCount: number,
   evidence: ReviewEvidenceBuilder,

@@ -810,6 +810,16 @@ export function projectWorkerRuntimeCoin(coin, index) {
   for (const key of ["variantOf", "pegReferenceId", "protocolSlug", "launchDate"]) {
     if (Object.prototype.hasOwnProperty.call(coin, key)) projected[key] = coin[key];
   }
+  // Heavy chart reconciliation and yield preparation consume these owner slices.
+  for (const key of ["detailProvider", "llamaId"]) {
+    if (Object.prototype.hasOwnProperty.call(coin, key)) projected[key] = coin[key];
+  }
+  if (Object.prototype.hasOwnProperty.call(coin, "yieldConfig")) {
+    projected.yieldConfig = coin.yieldConfig == null ? coin.yieldConfig : {
+      ...(Object.prototype.hasOwnProperty.call(coin.yieldConfig, "yieldType")
+        ? { yieldType: coin.yieldConfig.yieldType } : {}),
+    };
+  }
   if (coin.pegScoreCoverage) projected.pegScoreCoverage = { startDate: coin.pegScoreCoverage.startDate };
   if (coin.proofOfReserves) projected.proofOfReserves = {
     url: coin.proofOfReserves.url,

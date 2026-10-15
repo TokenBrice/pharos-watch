@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { YieldBenchmarkKey, YieldBenchmarkMeta } from "@shared/types/yield";
 import { classifyYieldBenchmarkFreshness, YIELD_BENCHMARK_RECORD_MAX_AGE_SEC, type YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 import { getBenchmarkKeyForPegCurrency } from "../../cron/yield-sync/benchmarks";

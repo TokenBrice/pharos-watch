@@ -10,6 +10,7 @@ import { z } from "zod";
 import type * as Esbuild from "esbuild";
 import type { BuildOptions, Plugin } from "esbuild";
 import { parseAssignments, unquote } from "../../../../scripts/lib/wrangler-toml.mjs";
+import { RUNTIME_REACHABILITY_POLICIES } from "../../../../scripts/lib/runtime-reachability-policies.mts";
 
 export type ResourceProfile = "compute" | "heavy-warm";
 export type PhaseManifest = "post-p2";
@@ -54,8 +55,8 @@ const SITES: Site[] = [
   { file: "worker/src/lib/report-cards-fixed-input-cache-codec.ts", fn: "parseFixedInputCacheEntry", phase: "native-inflate-decoded", kind: "variable", name: "payloadText" },
   { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "native-input-decoded", kind: "variable", name: "fixedInput" },
   { file: "worker/src/cron/compute-safety-score-v9.ts", fn: "computeSafetyScoreV9", phase: "enrichment-loaded", kind: "variable", name: "evidenceJournalById" },
-  { file: "worker/src/lib/safety-score-v9/publication-store.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-row-loaded", kind: "variable", name: "row" },
-  { file: "worker/src/lib/safety-score-v9/publication-store.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-parsed", kind: "variable", name: "state" },
+  { file: "worker/src/lib/safety-score-v9/accepted-projection-readers.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-row-loaded", kind: "variable", name: "row" },
+  { file: "worker/src/lib/safety-score-v9/accepted-projection-readers.ts", fn: "loadSafetyScoreV9AcceptedBaselineState", phase: "accepted-baseline-parsed", kind: "variable", name: "state" },
   { file: "worker/src/lib/safety-score-v9/publication-runner.ts", fn: "runSafetyScoreV9Publication", phase: "accepted-baseline-ready", kind: "variable", name: "acceptedPublication" },
   { file: "worker/src/lib/safety-score-v9/candidate.ts", fn: "buildSafetyScoreV9CandidatePipeline", phase: "extension-built", kind: "variable", name: "extension" },
   { file: "worker/src/lib/safety-score-v9/candidate.ts", fn: "buildSafetyScoreV9CandidatePipeline", phase: "facts-compiled", kind: "variable", name: "compiledFacts" },
@@ -132,6 +133,25 @@ globalThis.__pharosResourcePhase = (phase) => {
   const before = process.memoryUsage(); globalThis.gc(); const after = process.memoryUsage();
   __resourceAppend(process.env.PHAROS_RESOURCE_OUTPUT, JSON.stringify({type:'phase',phase,cycle:globalThis.__pharosResourceCycle ?? 0,before,after})+'\\n');
 };`;
+export function assertResourceProbeCatalog(metafile: Esbuild.Metafile, packedLoader: string, measured: boolean) {
+  const loader = packedLoader.replaceAll("\\", "/");
+  const inputs = Object.keys(metafile.inputs).map((input) => input.replaceAll("\\", "/"));
+  for (const input of Object.values(metafile.inputs)) {
+    for (const edge of input.imports) {
+      if (edge.original === "#pharos-full-catalog" && (edge.external || edge.path.replaceAll("\\", "/") !== loader || !inputs.includes(loader))) {
+        throw new Error("catalog-alias-not-packed-worker-loader");
+      }
+    }
+  }
+  if (!measured) return;
+  const policy = RUNTIME_REACHABILITY_POLICIES.find((entry) => entry.id === "safety-score-v9-publication");
+  if (!policy || policy.forbidden.kind !== "paths") throw new Error("missing-publication-reachability-policy");
+  for (const input of inputs) {
+    if (input === loader || policy.forbidden.paths.some((path) => path === input)) throw new Error(`forbidden-catalog-in-measured-graph:${input}`);
+  }
+  if (!inputs.includes("shared/lib/stablecoins/safety-score-v9-registry.ts")) throw new Error("scoring-catalog-missing-from-measured-graph");
+}
+
 export async function buildResourceProbe(root: string, directory: string, mode: "live" | "hard-cap" | "setup") {
   const require = createRequire(resolve(root, "package.json"));
   const wranglerRequire = createRequire(require.resolve("wrangler"));
@@ -148,7 +168,7 @@ export async function buildResourceProbe(root: string, directory: string, mode: 
   } as BuildOptions);
   const metafile = result.metafile!;
   const loader = relative(root, settings.alias["#pharos-full-catalog"]);
-  if (!metafile.inputs[loader] || !Object.values(metafile.inputs).some((input) => input.imports.some((edge) => edge.original === "#pharos-full-catalog" && edge.path === loader))) throw new Error("catalog-alias-not-packed-worker-loader");
+  assertResourceProbeCatalog(metafile, loader, mode !== "setup");
   if (mode !== "setup") {
     for (const input of Object.keys(metafile.inputs)) {
       if (/resource-fixture|full-registry-input|latest-schema-sqlite/.test(input)) throw new Error(`setup-import-in-measured-graph:${input}`);

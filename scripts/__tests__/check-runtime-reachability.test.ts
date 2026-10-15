@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { checkRuntimeReachabilityPolicy } from "../ci/check-runtime-reachability";
 import { getRuntimeReachabilityPolicy } from "../lib/runtime-reachability-policies.mts";
 import { createTempRepoTracker } from "./helpers/test-state";
+import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE } from "../../shared/lib/scheduled-runner-registry";
 
 const { cleanup, makeRoot, writeText } = createTempRepoTracker("pharos-runtime-reachability");
 
@@ -14,7 +15,85 @@ function policy(id: string) {
   return found;
 }
 
+function writePublicationInvocationFixture(root: string, loadBeforeGuard = false): void {
+  const ownerKeys = [...new Set(Object.values(SCHEDULED_SLOT_PLANS_BY_SCHEDULE)
+    .filter((plan) => plan.worker === "heavy").map((plan) => plan.scheduleKey))];
+  writeText(root, "worker/src/handlers/scheduled.ts", `
+export const SLOT_RUNNER_LOADER_BY_KEY = {
+  ${ownerKeys.map((key) => `${key}: () => import("./scheduled/${key}")`).join(",\n")},
+  publicOnly: () => import("./scheduled/public-only")
+};
+export async function handleScheduledEvent(slotPlan, workerRole) {
+  const loadRunner = slotPlan ? SLOT_RUNNER_LOADER_BY_KEY[slotPlan.scheduleKey] : undefined;
+  ${loadBeforeGuard ? "await loadRunner();" : ""}
+  if (slotPlan.worker !== workerRole) { return; }
+  ${loadBeforeGuard ? "" : "await loadRunner();"}
+}
+`);
+  for (const key of ownerKeys) writeText(root, `worker/src/handlers/scheduled/${key}.ts`, "export const run = true;\n");
+  writeText(root, "worker/src/handlers/scheduled/public-only.ts", 'export { coins } from "@shared/lib/stablecoins/registry";\n');
+  writeText(root, "shared/lib/stablecoins/registry.ts", 'export const coins = ["full-catalog"];\n');
+  writeText(root, "worker/src/handlers/scheduled/context.ts", "export const context = true;\n");
+  writeText(root, "worker/src/workflows/safety-score-v9-publication.entry.ts", "export const workflow = true;\n");
+  writeText(root, "worker/src/cron/compute-safety-score-v9.ts", `
+export { default as shock } from "@shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
+export { default as incidents } from "@shared/data/safety-score-v9/incident-runtime-v1.generated.json";
+`);
+  writeText(root, "worker/src/lib/safety-score-v9/candidate.ts", "export const candidate = true;\n");
+  writeText(root, "shared/data/safety-score-v9/shock-coverage-measurements-v1.json", '{"measurements":[1]}\n');
+  writeText(root, "shared/data/safety-score-v9/incident-runtime-v1.generated.json", '{"incidents":[1]}\n');
+  writeText(root, "worker/wrangler.heavy.toml", '[alias]\n"#pharos-full-catalog" = "./src/lib/full-stablecoin-catalog.ts"\n');
+  writeText(root, "worker/src/lib/full-stablecoin-catalog.ts", 'export { default as coins } from "@shared/data/stablecoins/coins.worker-full.generated.json";\n');
+  writeText(root, "shared/data/stablecoins/coins.worker-full.generated.json", '[{"id":"packed-full"}]\n');
+}
+
 describe("runtime reachability policies", () => {
+  it("proves heavy-owned invocation reachability while excluding rejected non-owner lazy slots", async () => {
+    const root = makeRoot();
+    writePublicationInvocationFixture(root);
+    const result = await checkRuntimeReachabilityPolicy(policy("safety-score-v9-publication"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("fails closed when role rejection moves after loading a runner", async () => {
+    const root = makeRoot();
+    writePublicationInvocationFixture(root, true);
+    const result = await checkRuntimeReachabilityPolicy(policy("safety-score-v9-publication"), root);
+    expect(result.configurationErrors).toContain("Scheduled owner role rejection must return before invoking loadRunner()");
+  });
+
+  it("reports the exact chain for a reintroduced transitive full-catalog alias import", async () => {
+    const root = makeRoot();
+    writePublicationInvocationFixture(root);
+    writeText(root, "worker/src/lib/safety-score-v9/candidate.ts", 'export { coins } from "./prep-regression";\n');
+    writeText(root, "worker/src/lib/safety-score-v9/prep-regression.ts", 'export { coins } from "#pharos-full-catalog";\n');
+    const result = await checkRuntimeReachabilityPolicy(policy("safety-score-v9-publication"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toContainEqual({
+      entrypoint: "worker/src/lib/safety-score-v9/candidate.ts",
+      forbidden: "shared/data/stablecoins/coins.worker-full.generated.json",
+      kind: "reachable",
+      chain: [
+        "worker/src/lib/safety-score-v9/candidate.ts",
+        "worker/src/lib/safety-score-v9/prep-regression.ts",
+        "worker/src/lib/full-stablecoin-catalog.ts",
+        "shared/data/stablecoins/coins.worker-full.generated.json",
+      ],
+    });
+  });
+
+  it("requires shock measurements and generated incident evidence to stay reachable", async () => {
+    const root = makeRoot();
+    writePublicationInvocationFixture(root);
+    writeText(root, "worker/src/cron/compute-safety-score-v9.ts", "export const compute = true;\n");
+    const result = await checkRuntimeReachabilityPolicy(policy("safety-score-v9-publication"), root);
+    expect(result.configurationErrors).toEqual([
+      "Required runtime evidence is not reachable: shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
+      "Required runtime evidence is not reachable: shared/data/safety-score-v9/incident-runtime-v1.generated.json",
+    ]);
+  });
+
   it("rejects a DOM-only shared module reached by a scheduled runner", async () => {
     const root = makeRoot();
     writeText(root, "worker/src/handlers/scheduled.ts", 'const loaders = { bad: () => import("./scheduled/bad") };\n');

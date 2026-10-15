@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import coin from "@shared/data/stablecoins/coins/zarsc-supercoin.json";
 import reserves from "@shared/data/stablecoins/domains/reserves/zarsc-supercoin.json";
 import { buildSafetyScoreV9ReviewedAuditedFallbackReserveRows, buildSafetyScoreV9ReviewedStaticReserveRows } from "../safety-score-v9/extension-reserves";
-import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 
-const meta = { ...coin, ...reserves } as unknown as V9ExtensionRegistryMeta;
+const meta = { ...coin, ...reserves } as unknown as SafetyScoreV9ScoringMeta;
 const clock = Date.parse("2026-10-12T00:00:00Z") / 1000;
 
 describe("named AUP historical composition, not assurance", () => {

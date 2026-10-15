@@ -9,9 +9,9 @@
  */
 
 import type { ReserveSlice } from "@shared/types/reserves";
-import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 
-export const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
+export const LIVE_RESERVES_CONFIG: NonNullable<SafetyScoreV9ScoringMeta["liveReservesConfig"]> = {
   adapter: "curated-validated",
   version: 1,
   semantics: "collateral-mix",
@@ -19,7 +19,7 @@ export const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveRese
 };
 
 /** A prudentially supervised, issuer-controlled mint with a dated review. */
-export function mintMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
+export function mintMeta(id: string, overrides: Partial<SafetyScoreV9ScoringMeta> = {}): SafetyScoreV9ScoringMeta {
   return {
     id,
     mintAuthority: {
@@ -35,7 +35,7 @@ export function mintMeta(id: string, overrides: Partial<V9ExtensionRegistryMeta>
       supervision: "prudential",
     },
     ...overrides,
-  } as V9ExtensionRegistryMeta;
+  } as SafetyScoreV9ScoringMeta;
 }
 
 /** The two-slice composition the admission gate accepts as a full composition. */
@@ -69,7 +69,7 @@ export function eligibleReserveRows(): ReserveSlice[] {
  * independent regional attestor. Evaluate near the composition date to test
  * admission, or far past it to test the expired-publication path.
  */
-export function eligibleReserveMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9ExtensionRegistryMeta {
+export function eligibleReserveMeta(overrides: Partial<SafetyScoreV9ScoringMeta> = {}): SafetyScoreV9ScoringMeta {
   return mintMeta("pyusd-paypal", {
     reserves: eligibleReserveRows(),
     reserveReview: {

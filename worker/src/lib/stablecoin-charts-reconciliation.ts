@@ -1,7 +1,7 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { normalizeLegacyPegType } from "@shared/lib/peg-price-bounds";
 import { pegTypeFromCurrency as canonicalPegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
+import { WORKER_CORE_AGGREGATE_ACTIVE_STABLECOINS as CORE_AGGREGATE_ACTIVE_STABLECOINS } from "./worker-metadata-cohorts";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "@shared/lib/rate-series";
 import type { StablecoinChartPoint } from "@shared/types";
 

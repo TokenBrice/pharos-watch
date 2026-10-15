@@ -1,3 +1,4 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { deriveEffectiveDependencySet } from "@shared/lib/dependency-derivation";
@@ -10,7 +11,6 @@ import {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
-  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
@@ -38,7 +38,7 @@ import usdoReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdo-
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 const DEPENDENCY_CLOCK_SEC = Date.UTC(2026, 7, 20) / 1_000;
 
-const LIVE_RESERVES_CONFIG: NonNullable<V9ExtensionRegistryMeta["liveReservesConfig"]> = {
+const LIVE_RESERVES_CONFIG: NonNullable<SafetyScoreV9ScoringMeta["liveReservesConfig"]> = {
   adapter: "curated-validated",
   version: 1,
   semantics: "collateral-mix",
@@ -69,7 +69,7 @@ const LINKED_RESERVES: ReserveSlice[] = [
   },
 ];
 
-function dependencyMeta(reviewedAt: string): V9ExtensionRegistryMeta {
+function dependencyMeta(reviewedAt: string): SafetyScoreV9ScoringMeta {
   return {
     id: "alpha",
     mechanismArchetype: "fiat-cash",
@@ -91,7 +91,7 @@ function dependencyMeta(reviewedAt: string): V9ExtensionRegistryMeta {
   };
 }
 
-function dependencyMetaById(reviewedAt: string): Map<string, V9ExtensionRegistryMeta> {
+function dependencyMetaById(reviewedAt: string): Map<string, SafetyScoreV9ScoringMeta> {
   return new Map([
     ["alpha", dependencyMeta(reviewedAt)],
     [
@@ -107,8 +107,8 @@ function dependencyMetaById(reviewedAt: string): Map<string, V9ExtensionRegistry
 
 function reviewedMeta(
   reserves: ReserveSlice[],
-  overrides: Partial<NonNullable<V9ExtensionRegistryMeta["reserveReview"]>> = {},
-): V9ExtensionRegistryMeta {
+  overrides: Partial<NonNullable<SafetyScoreV9ScoringMeta["reserveReview"]>> = {},
+): SafetyScoreV9ScoringMeta {
   return {
     id: "alpha",
     reserves,
@@ -130,14 +130,14 @@ function reviewedMeta(
 
 describe("v10.01 named reserve reports", () => {
   const asOfSec = Date.parse("2026-06-30T00:00:00Z") / 1000;
-  const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+  const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as SafetyScoreV9ScoringMeta;
 
   it.each([94 * 86400, 120 * 86400, 120 * 86400 + 1])(
     "uses the same as-of admission and evidence expiry at age %s seconds", (ageSec) => {
       const clockSec = asOfSec + ageSec;
       const meta = structuredClone(usdt);
       meta.liveReservesConfig = undefined;
-      const supervised = { ...meta, mintAuthority: { supervision: "prudential" } as V9ExtensionRegistryMeta["mintAuthority"] };
+      const supervised = { ...meta, mintAuthority: { supervision: "prudential" } as SafetyScoreV9ScoringMeta["mintAuthority"] };
       const admissions = [
         buildSafetyScoreV9ReviewedStaticReserveRows(supervised, clockSec),
         buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec),
@@ -193,7 +193,7 @@ describe("v10.01 named reserve reports", () => {
   });
 
   it("admits actual USDY through its explicit Ankura report signer without promoting partial assurance or the BVI tail", () => {
-    const meta = { ...usdyCoin, ...usdyReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
+    const meta = { ...usdyCoin, ...usdyReserveEnvelope } as unknown as SafetyScoreV9ScoringMeta;
     const clockSec = Date.parse(`${meta.proofOfReserves!.latestReport!.periodEnd}T00:00:00Z`) / 1000 + 94 * 86400;
     const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec);
     expect(admission).toMatchObject({ evidenceClass: "static-validated", provenance: "audited-fallback" });
@@ -211,7 +211,7 @@ describe("v10.01 named reserve reports", () => {
     { ...xagmCoin, ...xagmReserveEnvelope },
     { ...mxneCoin, ...mxneReserveEnvelope },
   ])("retains the actual named $id report despite a direct PDF or issuer-prefixed firm description", (registryMeta) => {
-    const meta = registryMeta as unknown as V9ExtensionRegistryMeta;
+    const meta = registryMeta as unknown as SafetyScoreV9ScoringMeta;
     const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
     const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec);
     expect(admission).toMatchObject({
@@ -223,7 +223,7 @@ describe("v10.01 named reserve reports", () => {
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unnamed, clockSec)).toBeNull();
   });
   it("does not substitute MXNE's issuer prefix for corroboration of the actual BHR report firm", () => {
-    const meta = structuredClone({ ...mxneCoin, ...mxneReserveEnvelope }) as unknown as V9ExtensionRegistryMeta;
+    const meta = structuredClone({ ...mxneCoin, ...mxneReserveEnvelope }) as unknown as SafetyScoreV9ScoringMeta;
     const clockSec = Date.parse("2026-10-03T07:16:45Z") / 1000;
     for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Etherfuse issuer figures";
     meta.proofOfReserves!.latestReport!.reviewer = "Pharos curation reviewer";
@@ -232,7 +232,7 @@ describe("v10.01 named reserve reports", () => {
 
 
   it("does not treat actual USDO self-verification as a named independent report that blocks curated admission", () => {
-    const meta = { ...usdoCoin, ...usdoReserveEnvelope, liveReservesConfig: LIVE_RESERVES_CONFIG } as unknown as V9ExtensionRegistryMeta;
+    const meta = { ...usdoCoin, ...usdoReserveEnvelope, liveReservesConfig: LIVE_RESERVES_CONFIG } as unknown as SafetyScoreV9ScoringMeta;
     const reviewDaySec = Date.parse(`${meta.reserveReview!.reviewedAt}T00:00:00Z`) / 1000;
     // A current reviewed disclosure must never be admitted into a prior capture.
     expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(meta, reviewDaySec - 1)).toBeNull();
@@ -282,7 +282,7 @@ describe("reviewed live unknown residuals", () => {
     });
   }
 
-  function compile(rows: ReserveSlice[], meta: V9ExtensionRegistryMeta) {
+  function compile(rows: ReserveSlice[], meta: SafetyScoreV9ScoringMeta) {
     const base = makeV9TwoAssetFixedInput({ clockSec: CLOCK_SEC });
     const {
       schemaVersion: _schemaVersion, dexPayloadFingerprint: _dexPayloadFingerprint,
@@ -462,7 +462,7 @@ describe("reviewed curated reserve admission", () => {
     });
   });
 
-  function residualMeta(residualPct: number, portfolio: boolean): V9ExtensionRegistryMeta {
+  function residualMeta(residualPct: number, portfolio: boolean): SafetyScoreV9ScoringMeta {
     const meta = reviewedMeta([
       { sourceKey: "fixture:cash", name: "Cash", pct: 100 - residualPct, risk: "very-low", assetClass: "cash",
         issuerOrObligor: "issuer:alpha", liquidityHorizon: "immediate", maturityDaysMax: 0 },
@@ -500,9 +500,9 @@ describe("reviewed curated reserve admission", () => {
     expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows({ ...meta, liveReservesConfig: LIVE_RESERVES_CONFIG }, CLOCK_SEC)).toBeNull();
   });
 
-  function attestedResidualMeta(residualPct: number, prudential: boolean): V9ExtensionRegistryMeta {
+  function attestedResidualMeta(residualPct: number, prudential: boolean): SafetyScoreV9ScoringMeta {
     const meta = residualMeta(residualPct, false);
-    if (prudential) meta.mintAuthority = { supervision: "prudential" } as V9ExtensionRegistryMeta["mintAuthority"];
+    if (prudential) meta.mintAuthority = { supervision: "prudential" } as SafetyScoreV9ScoringMeta["mintAuthority"];
     meta.proofOfReserves = { type: "independent-audit", url: "https://example.com/reports", provider: "Independent examiner", attestorTier: "niche",
       latestReport: { periodEnd: "2026-07-12", publishedAt: "2026-07-13", assuranceMethod: "examination",
         scope: "assets-and-liabilities", liabilityReconciliation: "full", confidence: "verified", reviewer: "fixture",
@@ -646,7 +646,7 @@ describe("reviewed curated reserve admission", () => {
     }]);
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, CLOCK_SEC)).toBeNull();
     expect(buildSafetyScoreV9ReviewedStaticReserveRows({
-      ...meta, mintAuthority: { supervision: "prudential" } as V9ExtensionRegistryMeta["mintAuthority"],
+      ...meta, mintAuthority: { supervision: "prudential" } as SafetyScoreV9ScoringMeta["mintAuthority"],
     }, CLOCK_SEC)).toBeNull();
     for (const candidate of [
       { ...meta, liveReservesConfig: undefined },
@@ -1291,7 +1291,7 @@ describe("buildReviewedReserveClassifications", () => {
     expect(withoutLiveProducer.liveReservesConfig).toBeUndefined();
     expect(buildSafetyScoreV9ReviewedCuratedFallbackReserveRows(withoutLiveProducer, CLOCK_SEC)).toBeNull();
 
-    const withLiveProducer: V9ExtensionRegistryMeta = {
+    const withLiveProducer: SafetyScoreV9ScoringMeta = {
       ...withoutLiveProducer,
       liveReservesConfig: LIVE_RESERVES_CONFIG,
     };

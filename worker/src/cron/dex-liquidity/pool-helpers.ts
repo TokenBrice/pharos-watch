@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { clamp, clampScore } from "@shared/lib/math";
 import {
   DURABILITY_COMPONENT_WEIGHTS,

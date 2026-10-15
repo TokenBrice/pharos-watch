@@ -1,3 +1,4 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import fraxMetaSource from "@shared/data/stablecoins/coins/frax-frax.json";
 import fraxReserveSource from "@shared/data/stablecoins/domains/reserves/frax-frax.json";
@@ -15,7 +16,6 @@ import {
 import {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9BaselineExtension,
-  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import {
@@ -207,7 +207,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
 
   it("rejects wrapper relationships that use a non-serial economic role", () => {
     const fixed = exactTwoAssetFixedInput({ omitAlphaReserve: true });
-    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+    const metaById = new Map<string, SafetyScoreV9ScoringMeta>([
       [
         "alpha",
         {
@@ -274,7 +274,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
         },
       ],
     });
-    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+    const metaById = new Map<string, SafetyScoreV9ScoringMeta>([
       [
         "alpha",
         {
@@ -318,7 +318,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
   ] as const)("compiles a reviewed %s relationship from metadata", (economicRole, type, pathKind) => {
     const fixed = exactTwoAssetFixedInput({ mapAlphaCollateral: type === "collateral", omitAlphaReserve: type !== "collateral" });
     const weight = type === "collateral" ? 0.5 : 1;
-    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+    const metaById = new Map<string, SafetyScoreV9ScoringMeta>([
       ["alpha", {
         id: "alpha", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01",
         dependencies: [{ id: "beta", type, weight }],
@@ -343,7 +343,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
   it("preserves the reviewed Frax WTGXX non-link", () => {
     const frax = {
       ...fraxMetaSource, reserves: fraxReserveSource.reserves, reserveReview: fraxReserveSource.reserveReview,
-    } as unknown as V9ExtensionRegistryMeta;
+    } as unknown as SafetyScoreV9ScoringMeta;
     const wtgxx = frax.reserves!.find((reserve) => reserve.name.startsWith("WTGXX"))!;
     expect(frax.reserveReview?.nonLinkDispositions).toContainEqual(
       expect.objectContaining({
@@ -640,7 +640,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
 
   it("keeps unaffected assets unchanged when one asset is quarantined", () => {
     const fixed = exactTwoAssetFixedInput();
-    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+    const metaById = new Map<string, SafetyScoreV9ScoringMeta>([
       [
         "alpha",
         {

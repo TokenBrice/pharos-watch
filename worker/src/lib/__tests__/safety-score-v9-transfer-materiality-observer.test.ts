@@ -16,8 +16,10 @@ import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
 
 // Vitest hoists mock factories before static imports; load their fixture helpers inside the factories.
 
-vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) =>
+vi.mock("@shared/lib/stablecoins/safety-score-v9-registry", async (importOriginal) =>
   (await import("./safety-score-v9-transfer-census.test-support")).censusRegistryMock(importOriginal));
+vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) =>
+  (await import("./safety-score-v9-transfer-census.test-support")).censusFullRegistryMock(importOriginal));
 vi.mock("../safety-score-v9/supply-attribution-contract", async (importOriginal) =>
   (await import("./safety-score-v9-transfer-census.test-support")).censusSupplyAttributionMock(importOriginal));
 

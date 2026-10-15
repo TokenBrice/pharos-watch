@@ -15,6 +15,11 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
     { id: "fpi-frax", flags: { pegCurrency: "VAR", navToken: true } },
   ],
 }));
+/* Vitest hoists mock factories: load the full-registry fixture only after its mock is registered. */
+vi.mock("@shared/lib/stablecoins/worker-runtime-registry", async () => {
+  const { mockWorkerRuntimeRegistryFromFullRegistry } = await import("../../test-helpers/cron/mock-registry");
+  return mockWorkerRuntimeRegistryFromFullRegistry(await import("@shared/lib/stablecoins/registry"));
+});
 
 import { isPlausibleDexObservationPrice } from "../dex-liquidity/price-sanity";
 

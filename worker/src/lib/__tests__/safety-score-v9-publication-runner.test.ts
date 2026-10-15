@@ -10,6 +10,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
+import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 
@@ -38,9 +39,12 @@ vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => (
 }));
 vi.mock("../safety-score-v9/publication-store", async (importOriginal) => ({
   ...await importOriginal<typeof PublicationStore>(),
-  loadSafetyScoreV9AcceptedBaselineState: mocks.loadBaseline,
   persistSafetyScoreV9Publication: mocks.persist,
   persistSafetyScoreV9PublicationAttempt: mocks.persistAttempt,
+}));
+vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal) => ({
+  ...await importOriginal<typeof AcceptedProjectionReaders>(),
+  loadSafetyScoreV9AcceptedBaselineState: mocks.loadBaseline,
 }));
 
 const { runSafetyScoreV9Publication } = await import(
@@ -191,7 +195,8 @@ describe("Safety Score V9 publication runner", () => {
       await store.persistSafetyScoreV9Publication(db, currentInput(prior));
       sqlite.prepare("DELETE FROM cache WHERE key = ?").run(store.SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline);
       const before = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
-      mocks.loadBaseline.mockImplementation(store.loadSafetyScoreV9AcceptedBaselineState);
+      const readers = await vi.importActual<typeof AcceptedProjectionReaders>("../safety-score-v9/accepted-projection-readers");
+      mocks.loadBaseline.mockImplementation(readers.loadSafetyScoreV9AcceptedBaselineState);
       mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
       const result = await runSafetyScoreV9Publication({ db, fixedInput, nowSec: fixedInput.clockSec });
       expect(result).toMatchObject({ status: "failed", stage: "publication-gate",

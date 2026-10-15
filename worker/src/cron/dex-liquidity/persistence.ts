@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS as ACTIVE_IDS, WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS, WORKER_TRACKED_IDS as TRACKED_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";

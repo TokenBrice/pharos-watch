@@ -22,13 +22,13 @@ import {
   type V9PublicationCoverageFloor,
 } from "./publication-assessment";
 import {
-  loadSafetyScoreV9AcceptedBaselineState,
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
   type V9PublicationAttempt,
 } from "./publication-store";
 import type { V9AssetQuarantine } from "./fact-set";
 import { persistAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
+import { loadSafetyScoreV9AcceptedBaselineState } from "./accepted-projection-readers";
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";

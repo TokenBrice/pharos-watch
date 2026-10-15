@@ -19,6 +19,9 @@ import type { SafetyScoreV9AcceptedCardBaseline, SafetyScoreV9AcceptedPublicatio
 export const SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES = 458_752;
 export const SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES = 1_048_576;
 
+export type AcceptedProjectionUnavailableReason =
+  | "projection-missing" | "projection-invalid" | "publication-invalid" | "publication-mismatch"
+  | "health-unavailable" | "health-mismatch" | "read-failed";
 const AcceptedProjectionHeaderSchema = z.strictObject({
   schemaVersion: z.literal(1),
   safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,

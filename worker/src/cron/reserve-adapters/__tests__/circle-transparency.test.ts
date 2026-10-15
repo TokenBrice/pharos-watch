@@ -7,7 +7,7 @@ import {
   buildReviewedReserveClassifications,
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
 } from "../../../lib/safety-score-v9/extension-reserves";
-import type { V9ExtensionRegistryMeta } from "../../../lib/safety-score-v9/extension-shared";
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const CIRCLE_HTML = readFileSync(join(FIXTURES_DIR, "circle-usdc.html"), "utf8");
@@ -267,7 +267,7 @@ describe("adaptCircleTransparency", () => {
     const html = readFileSync(join(FIXTURES_DIR, "circle-transparency-2026-10-01.html"), "utf8");
     const live = adaptCircleTransparency(html, coinType).slices;
     const sourceKey = `circle:${coinType}:bank-deposits`;
-    const meta: V9ExtensionRegistryMeta = {
+    const meta: SafetyScoreV9ScoringMeta = {
       id: `${coinType}-circle`,
       reserves: [{
         sourceKey, name: "Examined aggregate net bank cash", pct: 100, risk: "very-low",

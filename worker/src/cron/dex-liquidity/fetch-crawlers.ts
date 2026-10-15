@@ -1,4 +1,4 @@
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { logCronEvent, type CronEventInput } from "../../lib/cron-logger";
 import type { LiquidityFallbackCounters, LiquidityMetrics, PoolEntry, GtNewPool, CgNewPool } from "./types";
 import { addSecondaryPoolContribution } from "./pool-contribution";

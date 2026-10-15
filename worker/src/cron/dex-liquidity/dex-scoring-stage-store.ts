@@ -1,4 +1,4 @@
-import { ACTIVE_IDS, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS as ACTIVE_IDS, WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { parseDexVolumeAvailabilityRecord, readStoredDexTurnover24h } from "@shared/lib/dex-volume-availability";
 import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";

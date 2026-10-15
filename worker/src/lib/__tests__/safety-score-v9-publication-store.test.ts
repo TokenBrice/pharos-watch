@@ -10,8 +10,6 @@ import {
   loadSafetyScoreV9PublicationIdentityEnvelope,
   loadSafetyScoreV9FailedPublicationAttempt,
   loadSafetyScoreV9PublicationHealth,
-  loadSafetyScoreV9AcceptedBaselineState,
-  loadSafetyScoreV9LenderCollateralState,
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
   SAFETY_SCORE_V9_CACHE_KEYS,
@@ -27,6 +25,7 @@ import {
   parseSafetyScoreV9AcceptedBaselineProjection,
   parseSafetyScoreV9LenderCollateralProjection,
 } from "../safety-score-v9/accepted-projections";
+import { loadSafetyScoreV9AcceptedBaselineState, loadSafetyScoreV9LenderCollateralState } from "../safety-score-v9/accepted-projection-readers";
 
 const databases: DatabaseSync[] = [];
 

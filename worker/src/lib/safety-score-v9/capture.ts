@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID, WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   computeReportCardsRegistryFingerprint,
@@ -42,7 +42,7 @@ import { resolveLenderTokenIds, deriveLenderBookObservationIdentity, canonicaliz
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import type { LiveReserveSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
-import { loadSafetyScoreV9LenderCollateralState } from "./publication-store";
+import { loadSafetyScoreV9LenderCollateralState } from "./accepted-projection-readers";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./consumer-freshness";
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */

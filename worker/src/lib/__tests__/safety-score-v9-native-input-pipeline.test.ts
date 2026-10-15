@@ -40,7 +40,7 @@ import {
   type NativeSafetyScoreV9Input,
 } from "../safety-score-v9/native-input";
 import { buildNativeSafetyScoreV9Capture, captureLenderCollateralBacking } from "../safety-score-v9/capture";
-import * as publicationStore from "../safety-score-v9/publication-store";
+import * as acceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
 import * as lenderRegistry from "@shared/lib/safety-score-v9/lender-book-registry";
 import {
   buildSafetyScoreV9PublicationReplayCapture,
@@ -500,7 +500,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
         acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
       };
-      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+      vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
         kind: "accepted", projection: buildSafetyScoreV9LenderCollateralProjection(previous), health,
       });
       const captured = await captureLenderCollateralBacking(mockD1(), live.provenanceById!, input.registryFingerprint, input.clockSec + 1);
@@ -608,7 +608,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
         acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
       };
-      const sourceRead = vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState");
+      const sourceRead = vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState");
       let clock = input.clockSec + 1;
       if (scenario === "held") Object.assign(health, { status: "held", heldSinceSec: previous.publishedAtSec, reasons: [{ code: "dex-stale" }] });
       if (scenario === "stale") clock = input.clockSec + 3601;
@@ -636,7 +636,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
 
     it("admits the accepted-publication freshness boundary inclusively", async () => {
       const previous = pipeline.candidate;
-      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+      vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
         kind: "accepted", projection: buildSafetyScoreV9LenderCollateralProjection(previous),
         health: {
           schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
@@ -652,7 +652,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
     it("resolves a newly referenced token from the complete accepted collateral inventory", async () => {
       const previous = pipeline.candidate;
       const projection = buildSafetyScoreV9LenderCollateralProjection(previous);
-      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+      vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
         kind: "accepted", projection,
         health: {
           schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
@@ -685,7 +685,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
           card.pillars.backing.limitedEvidenceCauses = ["U"];
           card.pillars.backing.causeGapRefs = [];
         }
-        vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+        vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
           kind: "accepted", projection: buildSafetyScoreV9LenderCollateralProjection(previous),
           health: {
             schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
@@ -717,7 +717,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
 
     it("replays frozen token resolutions against a supplied registry without network or recapture", () => {
       const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Offline replay must not fetch"));
-      const source = vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockRejectedValue(new Error("Offline replay must not recapture"));
+      const source = vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockRejectedValue(new Error("Offline replay must not recapture"));
       const metaById = new Map([PRIME, YIELD, "usdc-circle"].map(id => [id, structuredClone(ACTIVE_META_BY_ID.get(id)!)] as const));
       const resolve = vi.spyOn(lenderRegistry, "resolveLenderTokenIds").mockImplementation(() => {
         throw new Error("Offline replay must consume frozen token identities");
@@ -822,7 +822,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         generationId: input.dexGenerationId, updatedAt: observedAt,
       });
       vi.spyOn(evidenceJournalStore, "loadReportCardEvidenceJournalByIdV1").mockResolvedValue({});
-      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({ kind: "bootstrap", health: null });
+      vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({ kind: "bootstrap", health: null });
       const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Preparation must only consume captured lender data"));
       const captured = await buildNativeSafetyScoreV9Capture(mockD1(), { expectedDexGenerationId: input.dexGenerationId });
       expect(captured.input.lenderCollateralBacking).toMatchObject({

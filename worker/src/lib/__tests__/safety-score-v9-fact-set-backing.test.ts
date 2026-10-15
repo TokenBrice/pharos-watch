@@ -1,7 +1,7 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildSafetyScoreV9BaselineExtension,
-  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { computeSafetyScoreV9ReserveExposureKey } from "../safety-score-v9/fact-set-schema";
 import {
@@ -80,14 +80,14 @@ const ASSET_ID = "alpha";
 const EXPIRED_HISTORY_CLOCK_SEC = Date.UTC(2027, 7, 1) / 1_000;
 const NO_HISTORY_CLOCK_SEC = Date.UTC(2026, 7, 1) / 1_000;
 
-function baseMeta(): V9ExtensionRegistryMeta {
+function baseMeta(): SafetyScoreV9ScoringMeta {
   return mintMeta(ASSET_ID, {
     mechanismArchetype: "fiat-cash",
     launchDate: "2020-01-01",
   });
 }
 
-function expiredReserveMeta(): V9ExtensionRegistryMeta {
+function expiredReserveMeta(): SafetyScoreV9ScoringMeta {
   const meta = eligibleReserveMeta({
     id: ASSET_ID,
     mechanismArchetype: "fiat-cash",
@@ -101,7 +101,7 @@ function expiredReserveMeta(): V9ExtensionRegistryMeta {
 }
 
 function compileWithEmptyLiveReserves(
-  meta: V9ExtensionRegistryMeta,
+  meta: SafetyScoreV9ScoringMeta,
   clockSec: number,
 ) {
   const fixed = makeV9FixedInput({

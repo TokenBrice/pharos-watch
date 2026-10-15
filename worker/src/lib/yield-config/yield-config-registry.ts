@@ -5,7 +5,7 @@ import type {
   YieldBenchmarkKey,
 } from "@shared/types/yield";
 import { buildOnChainSourceKey } from "../yield-utils";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getBenchmarkKeyForPegCurrency } from "../../cron/yield-sync/benchmarks";
 
 export function isPriceDerivedYieldEligible(stablecoinId: string, intentionalGapReason?: string): boolean {

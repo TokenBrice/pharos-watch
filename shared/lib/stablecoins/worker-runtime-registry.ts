@@ -17,6 +17,9 @@ export interface WorkerRuntimeStablecoinMeta {
   symbol: string;
   name: string;
   geckoId?: string;
+  detailProvider?: StablecoinMeta["detailProvider"];
+  llamaId?: StablecoinMeta["llamaId"];
+  yieldConfig?: Pick<NonNullable<StablecoinMeta["yieldConfig"]>, "yieldType">;
   pegCurrency: PegCurrency;
   governance: string;
   navToken?: boolean;
@@ -76,6 +79,8 @@ const registry = buildStablecoinRegistryIndexes(workerRuntimeAsset as WorkerRunt
 });
 
 export const WORKER_TRACKED_STABLECOINS = registry.tracked.stablecoins as WorkerRuntimeStablecoinMeta[];
+
+export const WORKER_TRACKED_IDS: ReadonlySet<string> = registry.tracked.ids;
 
 export const WORKER_TRACKED_META_BY_ID: ReadonlyMap<string, WorkerRuntimeStablecoinMeta> = registry.tracked.metaById;
 

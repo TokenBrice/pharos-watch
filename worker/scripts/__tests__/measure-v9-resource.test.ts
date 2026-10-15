@@ -1,10 +1,10 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
+import { assertResourceProbeCatalog, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
 import type * as Esbuild from "esbuild";
 import { calibrateV9Resource } from "../calibrate-v9-resource";
 import { GLOBAL_HEAP_BYTES, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
@@ -51,7 +51,9 @@ describe("V9 resource diagnostic failure modes", () => {
     const lengths: number[] = [];
     for (const minify of [settings.minify, false]) {
       const outfile = join(root, `behavior-${minify}.mjs`);
-      await esbuild.build({ stdin: { contents: 'import {PackedWorkerCatalog} from "#pharos-full-catalog"; console.log(JSON.stringify([PackedWorkerCatalog(), PackedWorkerCatalog.name, PackedWorkerCatalog.toString().length]));', resolveDir: root }, outfile, bundle: true, format: "esm", ...settings, minify });
+      const built = await esbuild.build({ absWorkingDir: root, stdin: { contents: 'import {PackedWorkerCatalog} from "#pharos-full-catalog"; console.log(JSON.stringify([PackedWorkerCatalog(), PackedWorkerCatalog.name, PackedWorkerCatalog.toString().length]));', resolveDir: root }, outfile, bundle: true, metafile: true, format: "esm", ...settings, minify });
+      expect(() => assertResourceProbeCatalog(built.metafile!, "worker/packed.ts", false)).not.toThrow();
+      expect(() => assertResourceProbeCatalog(built.metafile!, "worker/wrong-loader.ts", false)).toThrow("catalog-alias-not-packed-worker-loader");
       const child = spawnSync(process.execPath, [outfile], { encoding: "utf8", env: {} });
       expect(child.status).toBe(0);
       const result = JSON.parse(child.stdout);
@@ -59,6 +61,31 @@ describe("V9 resource diagnostic failure modes", () => {
       lengths.push(result[2]);
     }
     expect(lengths[0]).toBeLessThan(lengths[1]);
+  });
+
+  it("requires the scoring catalog while rejecting full-catalog leaks in measured bundles", async () => {
+    const root = temporary();
+    const scoring = "shared/lib/stablecoins/safety-score-v9-registry.ts";
+    mkdirSync(dirname(join(root, scoring)), { recursive: true });
+    writeFileSync(join(root, scoring), 'export const score = "scoring-only";');
+    const require = createRequire(resolve("package.json"));
+    const esbuild = createRequire(require.resolve("wrangler"))("esbuild") as typeof Esbuild;
+    const packedLoader = "worker/src/lib/full-stablecoin-catalog.ts";
+    for (const leak of [null, "shared/lib/stablecoins/registry.ts", "shared/lib/stablecoins/full-catalog.ts",
+      packedLoader, "shared/data/stablecoins/coins.generated.json", "shared/data/stablecoins/coins.worker-full.generated.json"]) {
+      if (leak) {
+        mkdirSync(dirname(join(root, leak)), { recursive: true });
+        writeFileSync(join(root, leak), leak.endsWith(".json") ? '{"value":"full"}' : 'export const value = "full";');
+      }
+      const built = await esbuild.build({ absWorkingDir: root, stdin: {
+        contents: `import {score} from "./${scoring}"; ${leak ? `import {value} from "./${leak}"; console.log(score, value);` : "console.log(score);"} `,
+        resolveDir: root,
+      }, bundle: true, write: false, metafile: true, format: "esm" });
+      if (leak) expect(() => assertResourceProbeCatalog(built.metafile!, packedLoader, true)).toThrow(`forbidden-catalog-in-measured-graph:${leak}`);
+      else expect(() => assertResourceProbeCatalog(built.metafile!, packedLoader, true)).not.toThrow();
+    }
+    const missing = await esbuild.build({ absWorkingDir: root, stdin: { contents: 'console.log("no scoring catalog");', resolveDir: root }, bundle: true, write: false, metafile: true });
+    expect(() => assertResourceProbeCatalog(missing.metafile!, packedLoader, true)).toThrow("scoring-catalog-missing-from-measured-graph");
   });
 });
 

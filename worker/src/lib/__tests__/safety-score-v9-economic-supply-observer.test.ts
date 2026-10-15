@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, keccak256, parseAbiParameters, toFunctionSelector, toHex } from "viem/utils";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
 import { sha256Hex } from "@shared/lib/sha256";
-import type { StablecoinMeta } from "@shared/types/core";
 import { ReviewedEconomicSupplyPlanSchema, type CcipPendingRead, type CurveLzPendingRead, type LayerZeroOftPendingRead, type ReviewedEconomicSupplyPlan } from "@shared/types/safety-score-v9-supply-attribution";
 import * as evmRpc from "../evm-rpc";
 import type { ChainRpcConfig } from "../chain-registry";
@@ -39,9 +38,10 @@ function fixture() {
     chainCirculatingById: {}, navPriceById: { alpha: { sourceId: "reference", priceUsd: 1, observedAtSec: CLOCK - 60, confidence: "high" } },
   });
   vi.spyOn(REVIEWED_ECONOMIC_SUPPLY_PLANS, "get").mockImplementation(id => id === "alpha" ? plan : undefined);
-  vi.spyOn(ACTIVE_META_BY_ID, "get").mockImplementation(id => id === "alpha" ? {
+  vi.spyOn(SAFETY_SCORE_V9_ACTIVE_META_BY_ID, "get").mockImplementation(id => id === "alpha" ? {
+    id: "alpha",
     contracts: plan.deployments.filter(row => row.holdingKind !== "native-gas").map(row => ({ chain: row.chainId, address: row.address!, decimals: row.decimals })),
-  } as StablecoinMeta : undefined);
+  } : undefined);
   const chainRpcs = new Map<string, ChainRpcConfig>();
   return { plan, fixedInput, assetId: "alpha", chainRpcs, scoringClockSec: CLOCK, run(signal?: AbortSignal, scoringClockSec = CLOCK) { return observeReviewedEconomicDeploymentPartitionAttempt({ assetId: "alpha", fixedInput, chainRpcs, signal, scoringClockSec }); } };
 }

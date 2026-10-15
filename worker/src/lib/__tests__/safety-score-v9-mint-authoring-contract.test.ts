@@ -3,7 +3,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { MintAuthorityProfile } from "@shared/types/core";
-import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it, vi } from "vitest";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
@@ -342,7 +342,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         upgradeability: { model: "immutable", canChangeMintLogic: false, sources: [] },
       };
       const input = fixedInput();
-      const metaById: Map<string, V9ExtensionRegistryMeta> = metaWith(profile);
+      const metaById: Map<string, SafetyScoreV9ScoringMeta> = metaWith(profile);
       metaById.set(ASSET_ID, {
         ...metaById.get(ASSET_ID)!,
         proofOfReserves: { type: "attestation", url: "https://example.com/attestation", cadence },
