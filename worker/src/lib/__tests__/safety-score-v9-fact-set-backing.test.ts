@@ -23,10 +23,11 @@ import type { ReserveSlice } from "@shared/types/reserves";
 import { ReserveBoundedFactSchema, type ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
 import { evaluateV9ReserveExposures } from "@shared/lib/safety-score-v9/backing";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
+import { CompiledV9FactSetV3Schema, V9AssetFactsV3Schema } from "@shared/types/safety-score-v9-facts";
 import { refineV9CauseContribution } from "@shared/types/safety-score-v9-causes";
 import { buildLenderBookFact } from "../safety-score-v9/fact-set-lender-book";
 import { canonicalizeLenderBookObservation, deriveLenderBookObservationIdentity } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderBookObservation, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import { LiveReserveSnapshotProvenanceSchema } from "@shared/lib/safety-score-v9/reserve-provenance";
 import { V1019LenderBookFactSchema } from "@shared/types/safety-score-v9-facts";
@@ -1004,6 +1005,10 @@ describe("v10.19 frozen lender-book fact admission", () => {
     const gap = ctx.gaps.get(fact.status.gapIds[0]!)!;
     expect(gap.causeProof).toMatchObject({ cause: "A", rejectionCode: reason });
     expect(gap.message).toContain(`reason=${reason}`);
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(ctx.fixedInput, ctx.extension);
+    expect(compiled.quarantines).toEqual([]);
+    expect(CompiledV9FactSetV3Schema.safeParse(compiled.factSet).success).toBe(true);
+    expect(gap.observationState).toBe(fact.status.observationState);
   });
 
   it.each([28_800, 28_801])("judges the older pin age %s rather than acquisition or prepare time", (age) => {
@@ -1018,6 +1023,9 @@ describe("v10.19 frozen lender-book fact admission", () => {
     const ctx = context(observation);
     const fact = buildLenderBookFact(ctx)!;
     expect(fact.status.observationState).toBe(age === 28_800 ? "known" : "stale");
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(ctx.fixedInput, ctx.extension);
+    expect(compiled.quarantines).toEqual([]);
+    expect(CompiledV9FactSetV3Schema.safeParse(compiled.factSet).success).toBe(true);
     if (age === 28_800) {
       expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).not.toBeNull();
     } else {
@@ -1083,7 +1091,12 @@ describe("v10.19 frozen lender-book fact admission", () => {
     const ctx = context(book());
     const bundle = source(ctx, { publishedAtSec: clockSec - SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC - 1,
       tokenToAssetId: { [`ethereum:${btc}`]: "fixture-collateral" } });
-    const fact = buildLenderBookFact({ ...ctx, fixedInput: { ...ctx.fixedInput, lenderCollateralBacking: bundle } })!;
+    const fixed = { ...ctx.fixedInput, lenderCollateralBacking: bundle };
+    const fact = buildLenderBookFact({ ...ctx, fixedInput: fixed })!;
+    const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(fixed, ctx.extension);
+    expect(compiled.quarantines).toEqual([]);
+    expect(compiled.factSet.assets[0]!.lenderBook).toEqual(fact);
+    expect(CompiledV9FactSetV3Schema.safeParse(compiled.factSet).success).toBe(true);
     expect(fact.status.observationState).toBe("known");
     expect(fact.collaterals[0]).toMatchObject({ quality: 85, qualitySource: "authored-class", fallbackReason: "accepted-source-stale" });
     expect([...ctx.gaps.values()]).toContainEqual(expect.objectContaining({ causeProof: expect.objectContaining({ cause: "A", rejectionCode: "accepted-source-stale" }) }));
@@ -1091,10 +1104,22 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(fact.acceptedSourceStatus).toMatchObject({
       observationState: "stale", gapIds: [`${assetId}:gap:lender-collateral-accepted-source`],
     });
+    const gap = ctx.gaps.get(fact.acceptedSourceStatus!.gapIds[0]!)!;
+    expect(gap.observationState).toBe("stale");
+    expect(gap.evidenceRefIds).toEqual(fact.acceptedSourceStatus!.evidenceRefIds);
+    const staleEvidence = fact.acceptedSourceStatus!.evidenceRefIds
+      .map((id) => ctx.evidence.get(id)!).filter((evidence) => evidence.freshness.state === "stale");
+    expect(staleEvidence).toEqual([expect.objectContaining({
+      sourceId: "previous-accepted-backing", sourceGenerationId: bundle.publicationGenerationId,
+      disposition: "published", observedAtSec: bundle.publishedAtSec, publishedAtSec: bundle.publishedAtSec,
+      contentSha256: domainDigest("safety-score-v10.19.accepted-collateral-source.v1", bundle),
+      freshness: { state: "stale", ageSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC + 1,
+        maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC },
+    })]);
     expect(evaluateV1019LenderBook(fact, 90, V9_CANDIDATE_POLICY_V1)).not.toBeNull();
   });
 
-  it.each(["accepted-source-unavailable", "accepted-source-held"] as const)(
+  it.each(["accepted-source-unavailable", "accepted-source-held", "accepted-source-stale", "future-dated"] as const)(
     "keeps unavailable accepted source %s distinct from book unavailability", (reason) => {
       const ctx = context(book());
       const bundle = source(ctx, { status: "unavailable", reason, publicationGenerationId: null,
@@ -1113,6 +1138,8 @@ describe("v10.19 frozen lender-book fact admission", () => {
         ...ctx.fixedInput, lenderCollateralBacking: bundle,
       }, ctx.extension);
       expect(compiled.quarantines).toEqual([]);
+      expect(CompiledV9FactSetV3Schema.safeParse(compiled.factSet).success).toBe(true);
+      expect(ctx.gaps.get(fact.acceptedSourceStatus!.gapIds[0]!)!.observationState).toBe("missing");
       expect(compiled.factSet.assets[0]!.lenderBook).toMatchObject({
         status: { observationState: "known", gapIds: fact.status.gapIds },
         acceptedSourceStatus: fact.acceptedSourceStatus,
@@ -1143,6 +1170,13 @@ describe("v10.19 frozen lender-book fact admission", () => {
         fixedInput: { ...ctx.fixedInput, lenderCollateralBacking: bundle } })!;
       expect(fact.collaterals[0]).toMatchObject({ quality: 85, qualitySource: "authored-class",
         fallbackReason: publishedAtSec > clockSec ? "future-dated" : "accepted-card-ineligible" });
+      const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension({
+        ...ctx.fixedInput, lenderCollateralBacking: bundle,
+      }, ctx.extension);
+      expect(compiled.quarantines).toEqual([]);
+      expect(CompiledV9FactSetV3Schema.safeParse(compiled.factSet).success).toBe(true);
+      expect(compiled.factSet.assets[0]!.lenderBook?.acceptedSourceStatus?.observationState)
+        .toBe(publishedAtSec > clockSec ? "missing" : undefined);
     }
   });
 
@@ -1162,6 +1196,48 @@ describe("v10.19 frozen lender-book fact admission", () => {
     expect(fact.observation).toMatchObject({ status: "unavailable", reason: "unreconciled" });
     expect(ctx.gaps.get(fact.status.gapIds[0]!)?.causeProof).toMatchObject({ cause: "A", rejectionCode: "stale" });
   });
+
+  it.each(["stale", "accepted-source-stale", "missing-observation", "legacy-unobserved", "unreconciled"] as const)(
+    "keeps stale/missing failed observations schema-valid for %s", reason => {
+      for (const age of [100, 28_801]) {
+        const payload = { ...unavailable(reason), acquiredAtSec: clockSec - age };
+        const ctx = context({ ...payload, ...deriveLenderBookObservationIdentity(payload) });
+        const fact = buildLenderBookFact(ctx)!;
+        const gap = ctx.gaps.get(fact.status.gapIds[0]!)!;
+        const staleEvidence = fact.status.evidenceRefIds
+          .some(id => ctx.evidence.get(id)?.freshness.state === "stale");
+        const expectedState = age > 28_800 && reason !== "missing-observation" && reason !== "legacy-unobserved"
+          ? "stale" : "missing";
+        expect(staleEvidence).toBe(expectedState === "stale");
+        expect(fact.status.observationState).toBe(expectedState);
+        expect(gap.observationState).toBe(expectedState);
+        expect(fact.collaterals).toEqual([]);
+        const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(ctx.fixedInput, ctx.extension);
+        expect(compiled.quarantines).toEqual([]);
+        expect(CompiledV9FactSetV3Schema.safeParse(compiled.factSet).success).toBe(true);
+      }
+    },
+  );
+
+  it.each(["stale", "accepted-source-stale"] as const)(
+    "keeps a latest-attempt %s diagnostic missing without stale last-known source data", reason => {
+      const ctx = context(book());
+      const failed = unavailable(reason);
+      if (failed.status !== "unavailable") throw new Error("Expected failed fixture");
+      const attempted = { ...ctx, fixedInput: { ...ctx.fixedInput,
+        liveReserveProvenanceMap: { [assetId]: {
+          ...ctx.fixedInput.liveReserveProvenanceMap[assetId]!, lenderBookLatestAttemptFailure: failed,
+        } },
+      } };
+      const fact = buildLenderBookFact(attempted)!;
+      expect(fact.latestAttemptStatus?.observationState).toBe("missing");
+      expect(ctx.gaps.get(fact.latestAttemptStatus!.gapIds[0]!)!.observationState).toBe("missing");
+      expect(fact.status.observationState).toBe("known");
+      const compiled = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(attempted.fixedInput, attempted.extension);
+      expect(compiled.quarantines).toEqual([]);
+      expect(CompiledV9FactSetV3Schema.safeParse(compiled.factSet).success).toBe(true);
+    },
+  );
 
   it("canonicalizes reordered producer inventories without repairing duplicate identities", () => {
     const measured = book();

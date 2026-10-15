@@ -76,13 +76,25 @@ describe("Safety Score V9 publication codec", () => {
     const envelope = JSON.parse(await serializeSafetyScoreV9Publication(makeWorkerSafetyScoreV9Publication()));
     for (const [field, limit, mismatch, exceeded] of [
       ["compressedBytes", 1_350_000, /compressed byte length mismatch/, /exceeds 1350000 compressed bytes/],
-      ["uncompressedBytes", 8_000_000, /payload length mismatch/, /exceeds 8000000 uncompressed bytes/],
+      ["uncompressedBytes", 9_000_000, /payload length mismatch/, /exceeds 9000000 uncompressed bytes/],
     ] as const) {
       await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit }))).rejects.toThrow(mismatch);
       await expect(parseSafetyScoreV9Publication(stableJsonStringifyV1({ ...envelope, [field]: limit + 1 }))).rejects.toThrow(exceeded);
     }
     await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_000))).rejects.toThrow(/Malformed.*JSON/);
     await expect(parseSafetyScoreV9Publication(" ".repeat(1_900_001))).rejects.toThrow(/exceeds 1900000 stored bytes/);
+  });
+
+  it("round-trips the raw byte ceiling and rejects one additional byte on write", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    publication.sourceGenerations.byteBudgetFixture = "";
+    const initialBytes = Buffer.byteLength(stableJsonStringifyV1(publication), "utf8");
+    publication.sourceGenerations.byteBudgetFixture = "x".repeat(9_000_000 - initialBytes);
+    const stored = await serializeSafetyScoreV9Publication(publication);
+    expect(JSON.parse(stored).uncompressedBytes).toBe(9_000_000);
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(publication);
+    publication.sourceGenerations.byteBudgetFixture += "x";
+    await expect(serializeSafetyScoreV9Publication(publication)).rejects.toThrow(/uncompressed byte limit; maximum is 9000000/);
   });
 
   it("rejects invalid UTF-8 with authenticated transport metadata", async () => {
