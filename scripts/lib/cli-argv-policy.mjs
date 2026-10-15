@@ -54,7 +54,6 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/measure-cdp-mechanism-metrics.ts"),
     strict("scripts/maintenance/measure-cdp-shock-coverage.ts"),
     strict("scripts/maintenance/measure-protocol-api-mechanism-metrics.ts"),
-    strict("worker/scripts/measure-v9-resource.ts"),
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
     strict("scripts/maintenance/monitor-worker-memory.ts"),
     strict("scripts/maintenance/publish-daily-social.ts"),
@@ -85,6 +84,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/export-safety-score-capture-archive.ts"),
     strict("worker/scripts/list-curation-expiry-queue.ts"),
     strict("worker/scripts/measure-contagion-gate0.ts"),
+    strict("worker/scripts/measure-v9-resource.ts"),
     strict("worker/scripts/one-shot-backfill.ts"),
     strict("worker/scripts/rebuild-blacklist-current-balances.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict(
