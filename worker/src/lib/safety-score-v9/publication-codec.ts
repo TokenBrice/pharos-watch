@@ -151,6 +151,25 @@ function sameJsonValue(left: unknown, right: unknown): boolean {
   return keys.every((key) => Object.prototype.hasOwnProperty.call(rightRecord, key) && sameJsonValue(leftRecord[key], rightRecord[key]));
 }
 
+// JSON decoding loses the producer's shared string storage. Reclaim duplicate
+// evidence/identity text as each owned card is admitted, before validating the
+// next card. Only primitive strings are shared: decoded objects remain mutable
+// and independent, and serializer callers' graphs are never rewritten.
+function internPublicationStrings(value: object, strings: Map<string, string>): void {
+  const record = value as Record<string, unknown>;
+  for (const key in record) {
+    if (!Object.prototype.hasOwnProperty.call(record, key)) continue;
+    const child = record[key];
+    if (typeof child === "string") {
+      const canonical = strings.get(child);
+      if (canonical === undefined) strings.set(child, child);
+      else record[key] = canonical;
+    } else if (child !== null && typeof child === "object") {
+      internPublicationStrings(child, strings);
+    }
+  }
+}
+
 function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): SafetyScoreV9CurrentResponse {
   if (value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === 6) {
     throw new SafetyScoreV9SchemaCutoverPendingError();
@@ -167,11 +186,13 @@ function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): S
   // The envelope still runs every response refinement, including parent and
   // gap reconciliation; only already-admitted object identities bypass reparsing.
   const admittedCards = new WeakSet<object>();
+  const decodedStrings = reuseUnchangedCards ? undefined : new Map<string, string>();
   for (let index = 0; index < value.cards.length; index++) {
     try {
       const original = value.cards[index];
       const parsed = SafetyScoreV9CurrentCardSchema.parse(original);
       value.cards[index] = reuseUnchangedCards && sameJsonValue(original, parsed) ? original : parsed;
+      if (decodedStrings) internPublicationStrings(parsed, decodedStrings);
     } catch (error) {
       if (error instanceof z.ZodError) {
         throw new z.ZodError(error.issues.map((issue) => ({ ...issue, path: ["cards", index, ...issue.path] })));

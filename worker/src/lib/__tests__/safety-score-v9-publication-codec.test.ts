@@ -48,6 +48,24 @@ describe("Safety Score V9 publication codec", () => {
     });
   });
 
+  it.each(["compressed", "canonical"] as const)("preserves independent mutable cards when decoding repeated strings (%s)", async (encoding) => {
+    const first = makeWorkerSafetyScoreV9Publication().cards[0]!;
+    first.sharedBookId = "Repeated évidence \u{10400} \u0000 \"text\"";
+    const second = structuredClone(first);
+    second.id = "usdt-tether";
+    const publication = makeWorkerSafetyScoreV9Publication({ cards: [first, second] });
+    const canonical = stableJsonStringifyV1(publication);
+    const stored = encoding === "compressed" ? await serializeSafetyScoreV9Publication(publication) : canonical;
+    const decoded = await parseSafetyScoreV9Publication(stored);
+    expect(stableJsonStringifyV1(decoded)).toBe(canonical);
+    expect(decoded.cards[0]!.sharedBookId).toBe(decoded.cards[1]!.sharedBookId);
+    expect(decoded.cards[0]!.scoreTrace.evidenceResponsibility).not.toBe(decoded.cards[1]!.scoreTrace.evidenceResponsibility);
+    decoded.cards[0]!.sharedBookId = "changed";
+    decoded.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount += 1;
+    expect(decoded.cards[1]).toEqual(second);
+    expect(publication.cards).toEqual([first, second]);
+  });
+
   it("rejects digest and valid identity tampering independently", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = await serializeSafetyScoreV9Publication(publication);
