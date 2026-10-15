@@ -7,6 +7,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createNativeSafetyScoreV9FullRegistryInput, createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 import type { ReportCardsSnapshotInputs } from "../report-cards-snapshot-inputs";
+import { createV9CaptureDexSnapshot } from "./safety-score-v9-capture.test-support";
 
 const input = createNativeSafetyScoreV9FullRegistryInput();
 const legacy = createSafetyScoreV9FullRegistryInput();
@@ -43,16 +44,7 @@ async function captureWithMetadata(fullReference: boolean) {
   ]);
   const inputs: ReportCardsSnapshotInputs = {
     stablecoinsCached: { kind: "ok", updatedAt: input.updatedAt, payload },
-    dexLiquiditySnapshot: {
-      latestUpdatedAt: observedAt,
-      map: Object.fromEntries(Object.entries(legacy.dexLiqMap).map(([id, row]) => [id, {
-        liquidityScore: row.liquidityScore, concentrationHhi: row.concentrationHhi,
-        poolCount: row.poolCount, chainCount: row.chainCount,
-        exitRouteObservations: row.exitRouteObservations,
-        exitRouteObservationCoverage: row.exitRouteObservationCoverage,
-        methodologyVersion: legacy.inputMethodologyVersions.dexLiquidity[0],
-      }])),
-    },
+    dexLiquiditySnapshot: createV9CaptureDexSnapshot(legacy, observedAt),
     redemptionBackstopMap: {},
     redemptionSnapshotProvenance: { runId: null, latestUpdatedAt: null, methodologyVersion: null },
     liveReserveMap: new Map(Object.entries(input.liveReserveMap)),

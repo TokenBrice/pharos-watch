@@ -58,6 +58,7 @@ import { buildSafetyScoreV9LenderCollateralProjection } from "../safety-score-v9
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { compareCodeUnits } from "@shared/lib/compare";
+import { createV9CaptureDexSnapshot } from "./safety-score-v9-capture.test-support";
 
 // The shared setup evaluates both capture lanes. Preserve the coverage budget
 // for two full-registry compile/evaluate passes without repeating the native pass;
@@ -627,8 +628,9 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       const captured = await captureLenderCollateralBacking(mockD1(), provenance, frozen.registryFingerprint, clock);
       expect(captured).toMatchObject({
         status: "unavailable", reason, publicationGenerationId: null, publishedAtSec: null,
-        policyDigest: null, evaluationBuildDigest: null, byAssetId: {},
+        policyDigest: null, evaluationBuildDigest: null,
       });
+      expect(captured.byAssetId).toEqual({});
       expect(captured.tokenToAssetId[`ethereum:${SAVUSD}`]).toBe("savusd-avant");
       expect(captured.tokenToAssetId[`ethereum:${FTUSD}`]).toBe("ftusd-flying-tulip");
       expect(sourceRead).toHaveBeenCalledTimes(1);
@@ -793,16 +795,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       const observedAt = input.clockSec - 100;
       vi.spyOn(snapshotInputs, "loadReportCardsSnapshotInputs").mockResolvedValue({
         stablecoinsCached: { kind: "ok", updatedAt: input.clockSec, payload: { peggedAssets: [] } },
-        dexLiquiditySnapshot: {
-          latestUpdatedAt: observedAt,
-          map: Object.fromEntries(Object.entries(legacy.dexLiqMap).map(([id, row]) => [id, {
-            liquidityScore: row.liquidityScore, concentrationHhi: row.concentrationHhi,
-            poolCount: row.poolCount, chainCount: row.chainCount,
-            exitRouteObservations: row.exitRouteObservations,
-            exitRouteObservationCoverage: row.exitRouteObservationCoverage,
-            methodologyVersion: legacy.inputMethodologyVersions.dexLiquidity[0],
-          }])),
-        },
+        dexLiquiditySnapshot: createV9CaptureDexSnapshot(legacy, observedAt),
         redemptionBackstopMap: {},
         redemptionSnapshotProvenance: { runId: null, latestUpdatedAt: null, methodologyVersion: null },
         liveReserveMap: new Map([[PRIME, ACTIVE_META_BY_ID.get(PRIME)!.reserves!]]),
@@ -826,8 +819,9 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Preparation must only consume captured lender data"));
       const captured = await buildNativeSafetyScoreV9Capture(mockD1(), { expectedDexGenerationId: input.dexGenerationId });
       expect(captured.input.lenderCollateralBacking).toMatchObject({
-        status: "unavailable", reason: "accepted-source-unavailable", byAssetId: {},
+        status: "unavailable", reason: "accepted-source-unavailable",
       });
+      expect(captured.input.lenderCollateralBacking!.byAssetId).toEqual({});
       const policy = loadV9CandidateMethodologyPolicy().policy.semantic.backing.lenderCollateralBook;
       for (const admitted of policy.admittedAssets) {
         const observation = captured.input.liveReserveProvenanceMap[admitted.assetId]!.lenderBookObservation!;

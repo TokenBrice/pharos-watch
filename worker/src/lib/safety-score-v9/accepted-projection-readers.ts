@@ -1,6 +1,7 @@
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
+import { logWorkerEvent } from "../structured-log";
 import {
   parseSafetyScoreV9AcceptedBaselineProjection,
   parseSafetyScoreV9LenderCollateralProjection,
@@ -32,7 +33,7 @@ interface AcceptedProjectionRow {
   index_present: number;
   replay_present: number;
   replay_base_present: number;
-  published_attempt_present: number;
+  published_attempt_present: number | null;
 }
 
 async function loadAcceptedProjectionRow(
@@ -45,13 +46,13 @@ async function loadAcceptedProjectionRow(
   const row = await db.prepare(`SELECT
     r.value AS projection, r.updated_at AS projection_updated_at,
     h.value AS health, h.updated_at AS health_updated_at,
-    json_extract(p.value, '$.identity') AS publication_identity,
+    CASE WHEN json_valid(p.value) THEN json_extract(p.value, '$.identity') END AS publication_identity,
     p.updated_at AS publication_updated_at,
     s.key IS NOT NULL AS sibling_present, i.key IS NOT NULL AS index_present,
     d.key IS NOT NULL AS replay_present, b.key IS NOT NULL AS replay_base_present,
-    CASE WHEN json_valid(a.value) THEN
+    COALESCE(CASE WHEN json_valid(a.value) THEN
       json_extract(a.value, '$.outcome') IN ('published-clean', 'published-partial')
-      ELSE 0 END AS published_attempt_present
+      END, 0) AS published_attempt_present
     FROM (SELECT 1) singleton
     LEFT JOIN cache r ON r.key = ?
     LEFT JOIN cache h ON h.key = ?
@@ -91,7 +92,7 @@ function admitAcceptedProjection<T extends AcceptedProjectionHeaderV1>(
   }
   const hasAcceptedWitness = row.publication_updated_at !== null || row.projection !== null ||
     row.sibling_present || row.index_present || row.replay_present || row.replay_base_present ||
-    row.published_attempt_present;
+    (row.published_attempt_present ?? 0);
   if (!hasAcceptedWitness) {
     if (health === null || (health.status === "held" && health.acceptedPublicationGenerationId === null &&
         health.acceptedAtSec === null)) return { kind: "bootstrap", health };
@@ -135,6 +136,11 @@ export async function loadSafetyScoreV9AcceptedBaselineState(
     return state;
   } catch (error) {
     rethrowIfAborted(error, signal);
+    logWorkerEvent({
+      scope: "lib", level: "error", event: "safety_score_v9_accepted_projection_read_failed",
+      message: "Accepted Safety Score v9 baseline projection read failed",
+      source: SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, error,
+    });
     return { kind: "unavailable", reason: "read-failed" };
   }
 }
@@ -151,6 +157,11 @@ export async function loadSafetyScoreV9LenderCollateralState(
     return state;
   } catch (error) {
     rethrowIfAborted(error, signal);
+    logWorkerEvent({
+      scope: "lib", level: "error", event: "safety_score_v9_accepted_projection_read_failed",
+      message: "Accepted Safety Score v9 lender collateral projection read failed",
+      source: SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, error,
+    });
     return { kind: "unavailable", reason: "read-failed" };
   }
 }

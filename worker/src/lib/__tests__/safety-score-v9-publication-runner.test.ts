@@ -716,7 +716,7 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
-  it("preserves accepted state when publication assessment loading fails", async () => {
+  it("preserves accepted state when the accepted baseline read fails", async () => {
     mocks.build.mockReturnValue({
       candidate: makeWorkerSafetyScoreV9Publication({
         baseInputGenerationId: fixedInput.baseInputGenerationId,

@@ -8,6 +8,7 @@ async function main() {
     profile: { type: "string", default: "compute" }, runs: { type: "string", default: "1" },
     "phase-manifest": { type: "string", default: "post-p2" }, policy: { type: "string" }, "invocation-id": { type: "string" },
     guard: { type: "boolean", default: false },
+    "deadline-seconds": { type: "string", default: "300" }, directory: { type: "string" },
   } });
   if (values.help) {
     console.log("Usage: npm run measure:v9-resource -- --profile=compute|heavy-warm --runs=N [--policy=PATH | --guard]\n--guard requires complete phases, correctness/bytes and natural 128 MiB; it automatically enforces a checked-in qualified policy, or explicitly reports policy: unqualified if absent. --policy always requires a valid file. Without either option this is diagnostic.");
@@ -19,13 +20,18 @@ async function main() {
     assertCliUsage(manifest === "post-p2", "--phase-manifest must be post-p2; historical pre-p2 instrumentation is not part of the current workload");
     assertCliUsage(!(values.guard && values.policy), "--guard and --policy are mutually exclusive");
     assertCliUsage((!values.guard && values.policy === undefined) || values.profile === "compute", "guard/policy assertions require the compute profile");
+    const deadlineSeconds = Number(values["deadline-seconds"]);
+    assertCliUsage(Number.isInteger(deadlineSeconds) && deadlineSeconds > 0 && deadlineSeconds <= 360, "--deadline-seconds must be an integer between 1 and 360");
+    const directory = resolve(root, typeof values.directory === "string" ? values.directory : ".tmp/safety-score-v9-resource");
     const report = await measureV9Resource(root, values.profile as ResourceProfile, Number(values.runs), manifest as PhaseManifest, {
       policyPath: values.guard ? resolve(root, ".ci/safety-score-v9-resource-budget.json") : typeof values.policy === "string" ? resolve(root, values.policy) : undefined,
       allowUnqualifiedPolicy: values.guard === true,
       invocationId: typeof values["invocation-id"] === "string" ? values["invocation-id"] : undefined,
+      deadlineMs: deadlineSeconds * 1000,
+      directory,
     });
-    console.log(JSON.stringify({ report: ".tmp/safety-score-v9-resource/report.json", policy: report.policy, complete: report.complete, violations: report.violations }, null, 2));
-    if (values.guard || values.policy ? !report.complete : report.violations.some((violation: { reason: string }) => violation.reason === "harness-error")) process.exitCode = 1;
+    console.log(JSON.stringify({ report: resolve(directory, "report.json"), policy: report.policy, complete: report.complete, violations: report.violations }, null, 2));
+    if (values.guard || values.policy ? !report.complete : report.violations.some((violation: { reason: string }) => violation.reason === "harness-error" || violation.reason === "wall-timeout")) process.exitCode = 1;
   }
 }
 

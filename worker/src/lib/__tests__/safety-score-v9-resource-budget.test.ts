@@ -76,7 +76,7 @@ describe("Safety Score V9 compile admission", () => {
     { capturePath: "/explicit/capture.json" },
   ])("isolates probe children from poisoned ambient instrumentation: %j", (protocol) => {
     const env = createResourceProbeEnv({
-      PATH: process.env.PATH, HOME: process.env.HOME, LANG: "C", LC_ALL: "C",
+      PATH: process.env.PATH, HOME: process.env.HOME, LANG: "C", LANGUAGE: "en", LC_ALL: "C", LC_lowercase: "poison",
       NODE_V8_COVERAGE: "/poison/coverage", NODE_OPTIONS: "--require=/poison/preload.cjs",
       VITEST: "true", VITEST_WORKER_ID: "1", COVERAGE: "1",
       CONTAGION_MATRIX: "poison", SAFETY_SCORE_V9_RESOURCE_CAPTURE: "/poison/capture.json",
@@ -89,7 +89,7 @@ describe("Safety Score V9 compile admission", () => {
     expect(JSON.parse(child.stdout)).toEqual({
       ...(process.env.PATH === undefined ? {} : { PATH: process.env.PATH }),
       ...(process.env.HOME === undefined ? {} : { HOME: process.env.HOME }),
-      LANG: "C", LC_ALL: "C",
+      LANG: "C", LANGUAGE: "en", LC_ALL: "C",
       ...("contagion" in protocol ? { CONTAGION_MATRIX: "1" } : {}),
       ...("capturePath" in protocol ? { SAFETY_SCORE_V9_RESOURCE_CAPTURE: protocol.capturePath } : {}),
     });
@@ -294,7 +294,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
     ], {
       // Wall-clock guard only (memory is the asserted bound): v10.01 cause
       // tracing raises evaluation CPU, and shared CI runners exceeded 45s.
-      cwd: ROOT, encoding: "utf8", timeout: 100_000,
+      cwd: ROOT, encoding: "utf8", timeout: 130_000,
       env: createResourceProbeEnv(process.env, { contagion: true }),
     });
     expect(result.error).toBeUndefined();
@@ -313,7 +313,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
       expect(count.failed).toBe(0);
     }
     // Retain all nine full-cohort scenarios and the independent 256 MiB heap bound.
-    // Shared-runner scheduling/GC time is included; the subprocess keeps its 100s kill guard.
-    expect(output.wallMs).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
+    // Shared-runner scheduling/GC time is included; leave 40s of kill headroom.
+    expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
 });

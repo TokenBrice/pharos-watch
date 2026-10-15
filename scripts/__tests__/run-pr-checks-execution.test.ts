@@ -8,6 +8,7 @@ import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receip
 import { assertFaithfulResourceReport, assertRequiredResourceCases, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
+import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES } from "../../worker/scripts/lib/v9-resource-policy";
 
 const fixture = vi.hoisted(() => ({ changedFiles: [] as string[] }));
 vi.mock("../lib/changed-files.mts", async (importOriginal) => ({
@@ -158,15 +159,20 @@ describe("isolated V9 resource execution", () => {
 
   it("rejects stale faithful reports and violations even when child statuses pass", () => {
     const faithful = { schemaVersion: 1, invocationId: "previous-run", complete: true, diagnosticOnly: false,
-      profile: "compute", phaseManifest: "post-p2", violations: [], policy: "qualified", declaredPhases: ["phase"],
-      appliedPolicy: { globalPostGcHeapBytes: 117440512, phaseLimitsBytes: { phase: 100 } },
-      runs: [{ violations: [], live: { status: 0, signal: null, reasons: [], phaseMaxima: { phase: { postGcHeapBytes: 90 } } },
+      harnessRevision: RESOURCE_HARNESS_REVISION,
+      profile: "compute", phaseManifest: "post-p2", violations: [], policy: "qualified", declaredPhases: [...RESOURCE_PHASES],
+      appliedPolicy: { globalPostGcHeapBytes: 117440512, phaseLimitsBytes: Object.fromEntries(RESOURCE_PHASES.map(phase => [phase, 100])) },
+      runs: [{ violations: [], live: { status: 0, signal: null, reasons: [], phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map(phase => [phase, { postGcHeapBytes: 90 }])) },
         "hard-cap": { status: 0, signal: null, reasons: [] } }] };
     expect(() => assertFaithfulResourceReport(faithful, "current-run")).toThrow("stale-resource-report");
     expect(() => assertFaithfulResourceReport(faithful, "previous-run")).not.toThrow();
     expect(() => assertFaithfulResourceReport({ ...faithful, violations: [{ reason: "phase-budget-exceeded" }] }, "previous-run")).toThrow();
     expect(() => assertFaithfulResourceReport({ ...faithful, runs: [] }, "previous-run")).toThrow();
-    expect(() => assertFaithfulResourceReport({ ...faithful, declaredPhases: ["phase", "missing"] }, "previous-run")).toThrow("missing-resource-phase");
+    for (const declaredPhases of [[], ["phase"], RESOURCE_PHASES.slice(1), [...RESOURCE_PHASES].reverse(), [...RESOURCE_PHASES, "extra"]]) {
+      expect(() => assertFaithfulResourceReport({ ...faithful, declaredPhases }, "previous-run")).toThrow();
+    }
+    expect(() => assertFaithfulResourceReport({ ...faithful, harnessRevision: "obsolete" }, "previous-run")).toThrow();
+    expect(() => assertFaithfulResourceReport({ ...faithful, runs: [{ ...faithful.runs[0], live: { ...faithful.runs[0].live, phaseMaxima: {} } }] }, "previous-run")).toThrow("missing-resource-phase");
     const { appliedPolicy: _applied, ...unqualified } = faithful;
     expect(() => assertFaithfulResourceReport({ ...unqualified, policy: "unqualified" }, "previous-run")).not.toThrow();
     expect(() => assertFaithfulResourceReport({ ...unqualified, policy: "qualified" }, "previous-run")).toThrow("missing-applied-resource-policy");

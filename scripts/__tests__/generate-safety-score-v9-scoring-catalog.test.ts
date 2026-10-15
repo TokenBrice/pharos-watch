@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import {
@@ -60,6 +61,11 @@ describe("Safety Score V9 scoring catalog generation", () => {
     expect(generated).toEqual({ schemaVersion: 1, registryFingerprint: fullFingerprint,
       catalogCount: TRACKED_SOURCE_COINS.length, activeAssetIds: expectedIds, rows: SAFETY_SCORE_V9_SCORING_ROWS });
     expect(JSON.stringify(buildSafetyScoreV9ScoringCatalog())).toBe(JSON.stringify(generated));
+  });
+
+  it("ships the scoring artifact as compact JSON without adding a runtime decoder", () => {
+    const source = readFileSync(new URL("../../shared/data/stablecoins/coins.safety-score-v9.generated.json", import.meta.url), "utf8");
+    expect(source).toBe(`${JSON.stringify(buildSafetyScoreV9ScoringCatalog())}\n`);
   });
 
   it("strips suspended feeds exactly as the full registry does, without admitting inactive rows", () => {

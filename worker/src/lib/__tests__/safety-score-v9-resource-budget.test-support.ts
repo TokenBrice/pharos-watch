@@ -11,17 +11,15 @@ import type * as Esbuild from "esbuild";
 import type { BuildOptions, Plugin } from "esbuild";
 import { parseAssignments, unquote } from "../../../../scripts/lib/wrangler-toml.mjs";
 import { RUNTIME_REACHABILITY_POLICIES } from "../../../../scripts/lib/runtime-reachability-policies.mts";
+import { resourceChildEnvironment } from "./safety-score-v9-resource-env.test-support";
 
 export type ResourceProfile = "compute" | "heavy-warm";
 export type PhaseManifest = "post-p2";
 export { RESOURCE_HARNESS_REVISION };
 export const PHASE_MANIFESTS = { "post-p2": RESOURCE_PHASES };
-export function resourceChildEnvironment(protocol: Record<string, string>): Record<string, string> {
-  const env: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined && /^(PATH|HOME|TMPDIR|TMP|TEMP|LANG|LANGUAGE|LC_[A-Z_]+)$/.test(key)) env[key] = value;
-  }
-  return { ...env, ...protocol };
+export const RESOURCE_MEASUREMENT_DEADLINE_MS = 300_000;
+class ResourceWallTimeout extends Error {
+  constructor() { super("overall-resource-measurement-deadline-exceeded"); }
 }
 export function readHeavyProbeBuildSettings(root: string) {
   const path = resolve(root, "worker/wrangler.heavy.toml");
@@ -209,8 +207,10 @@ export function validateResourceSamples(samples: ResourceSample[], phases: reado
   }
   return violations;
 }
-export function runResourceChild(root: string, entry: string, protocol: Record<string, string>, flags: string[], directory: string, name: string) {
-  const result = spawnSync(process.execPath, [...flags, entry], { cwd: root, env: resourceChildEnvironment(protocol), encoding: "utf8", timeout: 300_000, maxBuffer: 16 * 1024 * 1024 });
+export function runResourceChild(root: string, entry: string, protocol: Record<string, string>, flags: string[], directory: string, name: string, deadline = Date.now() + RESOURCE_MEASUREMENT_DEADLINE_MS) {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return { status: null, signal: null, error: "overall-resource-measurement-deadline-exceeded", reasons: [{ reason: "wall-timeout" }] };
+  const result = spawnSync(process.execPath, [...flags, entry], { cwd: root, env: resourceChildEnvironment(protocol), encoding: "utf8", timeout: Math.min(300_000, remaining), killSignal: "SIGKILL", maxBuffer: 16 * 1024 * 1024 });
   writeFileSync(resolve(directory, `${name}.stderr`), result.stderr ?? "");
   writeFileSync(resolve(directory, `${name}.stdout`), result.stdout ?? "");
   const reasons: ResourceViolation[] = [];
@@ -220,16 +220,44 @@ export function runResourceChild(root: string, entry: string, protocol: Record<s
   return { status: result.status, signal: result.signal, error: result.error?.message ?? null, reasons };
 }
 
-export async function measureV9Resource(root: string, profile: ResourceProfile, runs: number, manifest: PhaseManifest, options: { directory?: string; policyPath?: string; invocationId?: string; allowUnqualifiedPolicy?: boolean } = {}) {
+export async function measureV9Resource(root: string, profile: ResourceProfile, runs: number, manifest: PhaseManifest, options: { directory?: string; policyPath?: string; invocationId?: string; allowUnqualifiedPolicy?: boolean; deadlineMs?: number } = {}) {
+  const deadlineMs = Math.min(options.deadlineMs ?? RESOURCE_MEASUREMENT_DEADLINE_MS, 360_000);
+  const deadline = Date.now() + deadlineMs;
   const directory = options.directory ?? resolve(root, ".tmp/safety-score-v9-resource");
   rmSync(directory, { recursive: true, force: true });
   mkdirSync(directory, { recursive: true });
   const report: ResourceReport = { schemaVersion: 1, invocationId: options.invocationId ?? randomUUID(), generatedAt: new Date().toISOString(), harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest, profile, diagnosticOnly: !options.policyPath, node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, productionRawPublicationBytesApprox: 8_000_000, fixtureProductionGap: "Synthetic fixture under-represents production by approximately 1 MB; neither synthetic bytes nor Node heap limits establish Workers isolate capacity.", runs: [], violations: [] };
   report.policy = options.policyPath ? "unqualified" : "diagnostic";
   report.declaredPhases = PHASE_MANIFESTS[manifest];
-  report.testedSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).stdout?.trim() || null;
+  report.complete = false;
+  report.deadlineMs = deadlineMs;
+  const flush = () => writeFileSync(resolve(directory, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
+  flush();
+  async function buildBeforeDeadline(mode: "setup" | "live" | "hard-cap") {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new ResourceWallTimeout();
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      return await Promise.race([
+        buildResourceProbe(root, directory, mode),
+        new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new ResourceWallTimeout()), remaining); }),
+      ]);
+    } finally { clearTimeout(timer); }
+  }
+  function child(entry: string, protocol: Record<string, string>, flags: string[], name: string) {
+    report.activeChild = name;
+    flush();
+    const result = runResourceChild(root, entry, protocol, flags, directory, name, deadline);
+    report.lastChild = { name, ...result };
+    delete report.activeChild;
+    flush();
+    if (result.reasons.some((violation) => violation.reason === "wall-timeout")) throw new ResourceWallTimeout();
+    return result;
+  }
+  report.testedSha = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", timeout: Math.max(1, deadline - Date.now()), killSignal: "SIGKILL" }).stdout?.trim() || null;
   report.sourceHashes = Object.fromEntries([
     "package-lock.json", "worker/src/lib/__tests__/fixtures/safety-score-v9-full-registry-input.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-env.test-support.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
     "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
@@ -239,13 +267,13 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
     catch { return [file, null]; }
   }));
   try {
-    const setup = await buildResourceProbe(root, directory, "setup");
-    const live = await buildResourceProbe(root, directory, "live");
-    const hardCap = await buildResourceProbe(root, directory, "hard-cap");
+    const setup = await buildBeforeDeadline("setup");
+    const live = await buildBeforeDeadline("live");
+    const hardCap = await buildBeforeDeadline("hard-cap");
     report.bundle = { esbuildVersion: live.esbuildVersion, wranglerVersion: live.wranglerVersion, settings: live.settings, liveSha256: live.sha256, hardCapSha256: hardCap.sha256 };
     const fixturePath = resolve(directory, "fixture.sqlite");
     const fixtureManifest = resolve(directory, "fixture.json");
-    const preparation = runResourceChild(root, setup.outfile, { PHAROS_RESOURCE_DATABASE: fixturePath, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "setup" }, ["--max-old-space-size=512"], directory, "setup");
+    const preparation = child(setup.outfile, { PHAROS_RESOURCE_DATABASE: fixturePath, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "setup" }, ["--max-old-space-size=512"], "setup");
     if (preparation.reasons.length) throw new Error(`fixture-preparation-failed:${JSON.stringify(preparation)}`);
     report.fixture = JSON.parse(readFileSync(fixtureManifest, "utf8"));
     const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
@@ -258,6 +286,7 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
         : { kind: "local", description: `${hostname()} ${process.platform} ${process.arch}`, image: process.platform, version: release() },
       fixture: { kind: "current-full-registry-native", sourceSha256: hash(readFileSync(resolve(root, "worker/src/lib/__tests__/fixtures/safety-score-v9-full-registry-input.ts"))), manifestSha256: hash(readFileSync(fixtureManifest)) },
       protocolSha256: hash(JSON.stringify({ settings: live.settings, hashes: report.sourceHashes })),
+      configSha256: live.settings.configSha256,
     };
     report.identity = identity;
     let policy: ResourcePolicy | undefined;
@@ -284,7 +313,7 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
         const output = resolve(directory, `${mode}-${run}.ndjson`);
         copyFileSync(fixturePath, database);
         writeFileSync(output, "");
-        const result = runResourceChild(root, build.outfile, { PHAROS_RESOURCE_DATABASE: database, PHAROS_RESOURCE_OUTPUT: output, PHAROS_RESOURCE_PROFILE: profile }, [...flags], directory, `${mode}-${run}`);
+        const result = child(build.outfile, { PHAROS_RESOURCE_DATABASE: database, PHAROS_RESOURCE_OUTPUT: output, PHAROS_RESOURCE_PROFILE: profile }, [...flags], `${mode}-${run}`);
         let samples: ResourceSample[] = [];
         try { samples = readFileSync(output, "utf8").trim().split("\n").filter(Boolean).map((line) => SampleSchema.parse(JSON.parse(line))); }
         catch (error) { result.reasons.push({ reason: "protocol-fault", detail: String(error) }); }
@@ -296,8 +325,9 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
         }));
         entry[mode] = { ...result, phaseMaxima, cycles: samples.filter((sample) => sample.type === "cycle-result"), archives: samples.find((sample) => sample.type === "complete")?.archives ?? null };
         entry.violations.push(...result.reasons.map((reason) => ({ ...reason, mode })));
+        flush();
         if (result.status === 0) {
-          const check = runResourceChild(root, setup.outfile, { PHAROS_RESOURCE_DATABASE: database, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "inspect" }, ["--max-old-space-size=512"], directory, `${mode}-${run}-correctness`);
+          const check = child(setup.outfile, { PHAROS_RESOURCE_DATABASE: database, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "inspect" }, ["--max-old-space-size=512"], `${mode}-${run}-correctness`);
           if (!check.reasons.length) {
             try {
               const lines = readFileSync(resolve(directory, `${mode}-${run}-correctness.stdout`), "utf8").trim().split("\n");
@@ -312,12 +342,13 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
       const naturalCycles = entry["hard-cap"]!.cycles.map((cycle) => cycle.metadata?.publication?.publicationGenerationId);
       if (entry["hard-cap"]!.status === 0 && JSON.stringify(liveCycles) !== JSON.stringify(naturalCycles)) entry.violations.push({ reason: "output-identity-mismatch" });
       report.violations.push(...entry.violations.map((violation: ResourceViolation) => ({ run, ...violation })));
+      flush();
     }
   } catch (error) {
-    report.violations.push({ reason: "harness-error", detail: error instanceof Error ? error.stack : String(error) });
+    report.violations.push({ reason: error instanceof ResourceWallTimeout ? "wall-timeout" : "harness-error", detail: error instanceof Error ? error.stack : String(error) });
   } finally {
     report.complete = report.runs.length === runs && report.violations.length === 0;
-    writeFileSync(resolve(directory, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
+    flush();
   }
   return report;
 }

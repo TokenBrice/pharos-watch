@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli } from "../../scripts/lib/cli-args.mjs";
 import { measureV9Resource, type ResourceReport } from "../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
-import { CALIBRATION_MAX_BYTES, GLOBAL_HEAP_BYTES, RESOURCE_PHASES, ROUNDING_BYTES, TOLERANCE_BYTES, validateResourcePolicy } from "./lib/v9-resource-policy";
+import { CALIBRATION_MAX_BYTES, GLOBAL_HEAP_BYTES, RESOURCE_PHASES, ROUNDING_BYTES, TOLERANCE_BYTES, resourceBuildIdentity, validateResourcePolicy } from "./lib/v9-resource-policy";
 
 export async function calibrateV9Resource(root: string, runs: number, measure = measureV9Resource) {
   const directory = resolve(root, ".tmp/safety-score-v9-resource");
@@ -22,7 +22,7 @@ export async function calibrateV9Resource(root: string, runs: number, measure = 
   const violations: Array<{ reason: string; [key: string]: unknown }> = [];
   for (const report of reports) {
     if (!report.complete || report.violations.length) violations.push({ reason: "calibration-run-failed", violations: report.violations });
-    if (!identity || JSON.stringify(identity) !== JSON.stringify(report.identity)) violations.push({ reason: "calibration-identity-mismatch" });
+    if (!identity || !report.identity || JSON.stringify(resourceBuildIdentity(identity)) !== JSON.stringify(resourceBuildIdentity(report.identity))) violations.push({ reason: "calibration-identity-mismatch" });
     if (report.runs.length !== 1 || report.runs[0]?.["hard-cap"]?.status !== 0 || report.runs[0]?.["hard-cap"]?.reasons.length) violations.push({ reason: "natural-128-mib-failed" });
     for (const phase of RESOURCE_PHASES) {
       const value = report.runs[0]?.live?.phaseMaxima[phase]?.postGcHeapBytes;
@@ -46,6 +46,7 @@ export async function calibrateV9Resource(root: string, runs: number, measure = 
   }
   writeFileSync(resolve(directory, "proposed-policy.json"), `${JSON.stringify(policy, null, 2)}\n`);
   writeFileSync(resolve(directory, "report.json"), `${JSON.stringify({ schemaVersion: 1, calibration: true, qualified, runs: reports, violations, complete: violations.length === 0 }, null, 2)}\n`);
+  console.log("Enforced identity: harness/phase manifest, Node/V8/esbuild/Wrangler, platform/arch, heavy config hash and fixture identity. Runner and source/protocol hashes (including package-lock) are recorded evidence only.");
   let previous: { phaseLimitsBytes?: Record<string, number> } = {};
   try { previous = JSON.parse(readFileSync(resolve(root, ".ci/safety-score-v9-resource-budget.json"), "utf8")); }
   catch { console.log("Checked-in policy missing or unreadable; proposal is not applied."); }
@@ -54,7 +55,9 @@ export async function calibrateV9Resource(root: string, runs: number, measure = 
     const old = previous.phaseLimitsBytes?.[phase];
     console.log(`${phase} | ${old ?? "missing"} | ${phaseLimitsBytes[phase]} | ${old === undefined ? "new" : phaseLimitsBytes[phase] - old}`);
   }
-  console.log(JSON.stringify({ proposedPolicy: ".tmp/safety-score-v9-resource/proposed-policy.json", qualified, runs, violations }, null, 2));
+  console.log(JSON.stringify({ proposedPolicy: ".tmp/safety-score-v9-resource/proposed-policy.json", qualified, runs, violations,
+    buildIdentity: identity ? resourceBuildIdentity(identity) : null,
+    evidence: reports.map((report) => ({ runner: report.identity?.runner, protocolSha256: report.identity?.protocolSha256, sourceHashes: report.sourceHashes })) }, null, 2));
   return { qualified, violations, policy };
 }
 

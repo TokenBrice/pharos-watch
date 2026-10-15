@@ -27,6 +27,8 @@ export interface RuntimeReachabilityPolicy {
   directImports?: DirectImportPolicy;
   requiredReachable?: readonly string[];
   wranglerConfig?: string;
+  /** Check initialization through static edges, excluding deferred invocation imports. */
+  staticImportsOnly?: boolean;
   failureHeading: string;
   remediation: string;
   successLabel: string;
@@ -71,14 +73,24 @@ export const RUNTIME_REACHABILITY_POLICIES = [
   },
   {
     id: "public-safety-projections",
-    // Public storage roots exclude the generic scheduler's lazy heavy-only imports.
+    // Public HTTP initialization, not deferred scheduled/admin invocation graphs.
     entrypoints: { kind: "paths", paths: [
+      "worker/src/index.ts",
+      "worker/src/handlers/http/request-dispatch.ts",
+      "worker/src/lib/report-cards-v9-cache.ts",
+      "worker/src/lib/public-health-assessment.ts",
       "worker/src/lib/safety-score-v9/publication-store.ts",
       "worker/src/lib/safety-score-index.ts",
     ] },
-    forbidden: { kind: "paths", paths: ["worker/src/lib/safety-score-v9/accepted-projections.ts"] },
+    staticImportsOnly: true,
+    forbidden: { kind: "paths", paths: [
+      "worker/src/lib/safety-score-v9/accepted-projections.ts",
+      "worker/src/lib/safety-score-v9/accepted-projection-readers.ts",
+      "shared/lib/stablecoins/safety-score-v9-registry.ts",
+      "shared/data/stablecoins/coins.safety-score-v9.generated.json",
+    ] },
     failureHeading: "Public Worker accepted-projection boundary failed",
-    remediation: "Inject accepted-projection builders from the heavy publication runner; public storage readers must not import them.",
+    remediation: "Keep accepted-projection builders/readers and scoring-only catalogs out of public static initialization; inject builders from the heavy publication runner and retain deferred scheduled/admin imports.",
     successLabel: "Public Worker accepted-projection boundary",
   },
   {

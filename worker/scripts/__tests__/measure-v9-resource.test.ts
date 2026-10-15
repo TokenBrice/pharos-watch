@@ -40,6 +40,25 @@ describe("V9 resource diagnostic failure modes", () => {
     expect(runResourceChild(root, script, {}, [], root, "crash")).toMatchObject({ status: 7, reasons: [{ reason: "child-failed", status: 7 }] });
   });
 
+  it("shares a measurement deadline across children and retains evidence before any build or child", async () => {
+    const root = temporary();
+    const pending = measureV9Resource(root, "compute", 1, "post-p2", { deadlineMs: 0 });
+    const path = join(root, ".tmp/safety-score-v9-resource/report.json");
+    expect(JSON.parse(readFileSync(path, "utf8"))).toMatchObject({ complete: false, runs: [] });
+    const report = await pending;
+    expect(report.violations).toContainEqual(expect.objectContaining({ reason: "wall-timeout" }));
+    expect(JSON.parse(readFileSync(path, "utf8"))).toMatchObject({ complete: false, violations: [expect.objectContaining({ reason: "wall-timeout" })] });
+    const script = join(root, "hang.mjs");
+    // Exercise the real OS spawn timeout/kill path; fake timers cannot interrupt a child.
+    writeFileSync(script, 'process.on("SIGTERM", () => {}); while (true) {}');
+    const deadline = Date.now() + 100;
+    expect(runResourceChild(root, script, {}, [], root, "hang", deadline).reasons).toEqual([{ reason: "wall-timeout" }]);
+    const marker = join(root, "should-not-run");
+    writeFileSync(script, `import {writeFileSync} from "node:fs"; writeFileSync(${JSON.stringify(marker)}, "ran");`);
+    expect(runResourceChild(root, script, {}, [], root, "expired", deadline).reasons).toEqual([{ reason: "wall-timeout" }]);
+    expect(() => readFileSync(marker)).toThrow();
+  });
+
   it("proves alias, minify and keep_names translation through bundled behavior", async () => {
     const root = temporary();
     mkdirSync(join(root, "worker"));
@@ -95,6 +114,7 @@ const policyIdentity: ResourceIdentity = {
   runner: { kind: "local", description: "test host", image: "linux", version: "test-kernel" },
   fixture: { kind: "current-full-registry-native", sourceSha256: "a".repeat(64), manifestSha256: "b".repeat(64) },
   protocolSha256: "c".repeat(64),
+  configSha256: "d".repeat(64),
 };
 function validPolicy() {
   return { schemaVersion: 1, identity: policyIdentity, globalPostGcHeapBytes: GLOBAL_HEAP_BYTES,
@@ -117,10 +137,19 @@ describe("V9 resource reviewed policy", () => {
       { ...validPolicy(), calibration: { ...validPolicy().calibration, phaseMaximaBytes: { ...validPolicy().calibration.phaseMaximaBytes, "facts-compiled": 110 * 1024 * 1024 + 1 } } },
       { ...validPolicy(), phaseLimitsBytes: { ...validPolicy().phaseLimitsBytes, "facts-compiled": 13 * 1024 * 1024 } },
     ]) expect(() => validateResourcePolicy(invalid, policyIdentity)).toThrow();
-    for (const key of ["node", "v8", "esbuild", "wrangler", "harnessRevision", "phaseManifest", "protocolSha256"] as const) {
+    for (const key of ["node", "v8", "esbuild", "wrangler", "harnessRevision", "phaseManifest", "platform", "arch", "configSha256"] as const) {
       expect(() => validateResourcePolicy(validPolicy(), { ...policyIdentity, [key]: "mismatch" } as ResourceIdentity)).toThrow();
     }
     expect(() => validateResourcePolicy(validPolicy(), { ...policyIdentity, fixture: { ...policyIdentity.fixture, manifestSha256: "d".repeat(64) } })).toThrow("fixture");
+  });
+
+  it("records runner and lockfile/protocol drift without rejecting a deterministic build", () => {
+    const drifted = { ...policyIdentity, protocolSha256: "e".repeat(64),
+      runner: { kind: "github" as const, description: "unknown", image: "unknown", version: "unknown" } };
+    expect(() => validateResourcePolicy(validPolicy(), drifted)).not.toThrow();
+    expect(() => validateResourcePolicy({ ...validPolicy(), identity: drifted }, policyIdentity)).not.toThrow();
+    expect(() => validateResourcePolicy(validPolicy(), { ...policyIdentity, fixture: { ...policyIdentity.fixture, sourceSha256: "e".repeat(64) } })).toThrow("fixture");
+    expect(() => validateResourcePolicy(validPolicy(), { ...policyIdentity, configSha256: "e".repeat(64) })).toThrow("configSha256");
   });
 
   it("allows only explicitly unqualified absence and automatically enforces a subsequently installed policy", () => {
@@ -143,7 +172,10 @@ describe("V9 resource reviewed policy", () => {
     let invocation = 0;
     const measure: typeof measureV9Resource = async (_root, _profile, _runs, _manifest, options) => {
       invocation += 1;
-      const report = { identity: policyIdentity, testedSha: "test-revision", invocationId: invocation, complete: true, violations: [],
+      const report = { identity: { ...policyIdentity, protocolSha256: String(invocation).repeat(64),
+        runner: { kind: "github" as const, description: "unknown", image: "unknown", version: `rollover-${invocation}` } },
+        sourceHashes: { "package-lock.json": String(invocation).repeat(64) },
+        testedSha: "test-revision", invocationId: invocation, complete: true, violations: [],
         runs: [{ run: 1, violations: [],
           live: { status: 0, signal: null, error: null, reasons: [], cycles: [], archives: [],
             phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map((phase) => [phase, { samples: 2, postGcHeapBytes: 10 * 1024 * 1024, beforeGcHeapBytes: 11 * 1024 * 1024 }])) },

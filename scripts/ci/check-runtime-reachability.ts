@@ -357,11 +357,17 @@ function resolveForbidden(root: string, selector: ForbiddenSelector): ResolvedFo
   return { allowedImporters: [], paths: new Set(paths), prefixes: [] };
 }
 
-function externalPackagesPlugin(ownerBoundary?: { source: string; excludedLazyImports: Set<string> }): Plugin {
+function externalPackagesPlugin(
+  ownerBoundary?: { source: string; excludedLazyImports: Set<string> },
+  staticImportsOnly = false,
+): Plugin {
   return {
     name: "external-packages",
     setup(buildContext) {
       buildContext.onResolve({ filter: /.*/ }, (args) => {
+        if (staticImportsOnly && args.kind === "dynamic-import") {
+          return { path: args.path, external: true };
+        }
         if (ownerBoundary && args.kind === "dynamic-import" &&
             args.importer === ownerBoundary.source && ownerBoundary.excludedLazyImports.has(args.path)) {
           return { path: args.path, external: true };
@@ -451,7 +457,7 @@ async function buildReachability(root: string, entrypoints: string[], policy: Ru
     metafile: true,
     outdir: "runtime-reachability-out",
     platform: "neutral",
-    plugins: [externalPackagesPlugin(ownerBoundary)],
+    plugins: [externalPackagesPlugin(ownerBoundary, policy.staticImportsOnly)],
     tsconfig,
     write: false,
   });

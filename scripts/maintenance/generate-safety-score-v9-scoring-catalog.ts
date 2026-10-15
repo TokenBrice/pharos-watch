@@ -53,7 +53,7 @@ export function runSafetyScoreV9ScoringCatalogGenerator(args = process.argv.slic
   }
   const catalog = buildSafetyScoreV9ScoringCatalog();
   syncGeneratedArtifacts({
-    artifacts: [{ path: resolve(REPO_ROOT, OUTPUT_PATH), contents: `${JSON.stringify(catalog, null, 2)}\n` }],
+    artifacts: [{ path: resolve(REPO_ROOT, OUTPUT_PATH), contents: `${JSON.stringify(catalog)}\n` }],
     check: values.check === true,
     staleMessage: `${OUTPUT_PATH} is stale. Run: npx tsx scripts/maintenance/generate-safety-score-v9-scoring-catalog.ts`,
     currentMessage: `${OUTPUT_PATH}: scoring catalog is current (${catalog.rows.length} active rows).`,

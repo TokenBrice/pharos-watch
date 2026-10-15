@@ -2,10 +2,11 @@
 
 import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { z } from "zod";
 import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 import { createLocalVitestCommand, runSpawnCommand, type CommandImplementation, type SpawnCommand } from "../lib/command-runner.mts";
+import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES } from "../../worker/scripts/lib/v9-resource-policy";
 
 export const RESOURCE_TEST_FILE = "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts";
 const CONTAGION_CASE = "evaluates a bounded nine-scenario matrix within 256 MiB of old-space";
@@ -20,6 +21,7 @@ export function assertRequiredResourceCases(report: unknown): void {
 }
 const faithfulReportSchema = z.object({
   schemaVersion: z.literal(1), invocationId: z.string(), complete: z.literal(true), diagnosticOnly: z.literal(false),
+  harnessRevision: z.literal(RESOURCE_HARNESS_REVISION),
   profile: z.literal("compute"), phaseManifest: z.literal("post-p2"), violations: z.array(z.unknown()).length(0),
   policy: z.enum(["qualified", "unqualified"]), declaredPhases: z.array(z.string().min(1)).min(1),
   appliedPolicy: z.object({ globalPostGcHeapBytes: z.literal(117440512), phaseLimitsBytes: z.record(z.string(), z.number().int().positive().max(117440512)) }).optional(),
@@ -32,6 +34,7 @@ const faithfulReportSchema = z.object({
 export function assertFaithfulResourceReport(report: unknown, invocationId: string) {
   const parsed = faithfulReportSchema.parse(report);
   if (parsed.invocationId !== invocationId) throw new Error("stale-resource-report");
+  if (JSON.stringify(parsed.declaredPhases) !== JSON.stringify(RESOURCE_PHASES)) throw new Error("invalid-resource-phase-set");
   for (const phase of parsed.declaredPhases) {
     if (!parsed.runs[0].live.phaseMaxima[phase]) throw new Error(`missing-resource-phase:${phase}`);
   }
@@ -51,6 +54,9 @@ export async function runV9ResourceLane({
 }: { argv?: readonly string[]; outputDirectory?: string; resourceDirectory?: string; runCommand?: CommandImplementation<SpawnCommand> } = {}): Promise<number> {
   const { values } = parseStrictCliArgs(argv);
   if (values.help) { console.log("Usage: npm run test:v9-resource\nRuns the faithful compute policy guard (live + natural 128 MiB), then the independent 256 MiB contagion matrix."); return 0; }
+  const root = resolve(import.meta.dirname, "../..");
+  resourceDirectory = resolve(root, resourceDirectory);
+  outputDirectory = resolve(root, outputDirectory);
   mkdirSync(outputDirectory, { recursive: true });
   mkdirSync(resourceDirectory, { recursive: true });
   const vitestPath = join(outputDirectory, "vitest.json");
@@ -58,7 +64,7 @@ export async function runV9ResourceLane({
   rmSync(vitestPath, { force: true });
   rmSync(reportPath, { force: true });
   const invocationId = randomUUID();
-  const args = ["--import", "tsx", "worker/scripts/measure-v9-resource.ts", "--profile=compute", "--runs=1", "--guard", `--invocation-id=${invocationId}`];
+  const args = ["--import", "tsx", "worker/scripts/measure-v9-resource.ts", "--profile=compute", "--runs=1", "--guard", "--deadline-seconds=300", `--directory=${resourceDirectory}`, `--invocation-id=${invocationId}`];
   let failure: unknown;
   let status = 0;
   let summaryWritten = false;

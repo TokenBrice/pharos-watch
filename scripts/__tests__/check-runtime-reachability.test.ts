@@ -47,7 +47,72 @@ export { default as incidents } from "@shared/data/safety-score-v9/incident-runt
   writeText(root, "shared/data/stablecoins/coins.worker-full.generated.json", '[{"id":"packed-full"}]\n');
 }
 
+function writePublicInitializationFixture(root: string): void {
+  const selector = policy("public-safety-projections").entrypoints;
+  if (selector.kind !== "paths") throw new Error("Public initialization roots must be explicit");
+  for (const entrypoint of selector.paths) writeText(root, entrypoint, "export const publicRoot = true;\n");
+}
+
 describe("runtime reachability policies", () => {
+  it.each([
+    ["worker/src/lib/safety-score-v9/accepted-projections.ts", "./safety-score-v9/accepted-projections"],
+    ["worker/src/lib/safety-score-v9/accepted-projection-readers.ts", "./safety-score-v9/accepted-projection-readers"],
+    ["shared/lib/stablecoins/safety-score-v9-registry.ts", "@shared/lib/stablecoins/safety-score-v9-registry"],
+    ["shared/data/stablecoins/coins.safety-score-v9.generated.json", "@shared/data/stablecoins/coins.safety-score-v9.generated.json"],
+  ] as const)("rejects transitive public HTTP initialization of %s", async (forbidden, specifier) => {
+    const root = makeRoot();
+    writePublicInitializationFixture(root);
+    const entrypoint = "worker/src/handlers/http/request-dispatch.ts";
+    const intermediary = "worker/src/lib/public-projection-regression.ts";
+    writeText(root, entrypoint, 'export { heavy } from "../../lib/public-projection-regression";\n');
+    writeText(root, intermediary, `export { default as heavy } from "${specifier}";\n`);
+    writeText(root, forbidden, forbidden.endsWith(".json") ? '{"heavy":true}\n' : "export default true;\n");
+    const result = await checkRuntimeReachabilityPolicy(policy("public-safety-projections"), root);
+    expect(result.configurationErrors).toEqual([]);
+    expect(result.violations).toContainEqual({
+      entrypoint, forbidden, kind: "reachable",
+    });
+  });
+
+  it("covers the public entry, HTTP dispatch and all public V9 storage roots", () => {
+    expect(policy("public-safety-projections").entrypoints).toEqual({
+      kind: "paths",
+      paths: [
+        "worker/src/index.ts",
+        "worker/src/handlers/http/request-dispatch.ts",
+        "worker/src/lib/report-cards-v9-cache.ts",
+        "worker/src/lib/public-health-assessment.ts",
+        "worker/src/lib/safety-score-v9/publication-store.ts",
+        "worker/src/lib/safety-score-index.ts",
+      ],
+    });
+  });
+
+  it("excludes deferred scheduled/admin imports but rejects static imports from the public entry", async () => {
+    const root = makeRoot();
+    writePublicInitializationFixture(root);
+    const entrypoint = "worker/src/index.ts";
+    const forbidden = "worker/src/lib/safety-score-v9/accepted-projection-readers.ts";
+    writeText(root, entrypoint, 'export const scheduled = () => import("./handlers/scheduled");\n');
+    writeText(root, "worker/src/handlers/http/request-dispatch.ts", 'export { admin } from "../../routes/registry";\n');
+    writeText(root, "worker/src/routes/registry.ts", 'export { admin } from "./admin-routes";\n');
+    writeText(root, "worker/src/routes/admin-routes.ts", 'export const admin = () => import("../handlers/admin");\n');
+    writeText(root, "worker/src/handlers/scheduled.ts", 'export { default } from "../lib/safety-score-v9/accepted-projection-readers";\n');
+    writeText(root, "worker/src/handlers/admin.ts", 'export { default } from "@shared/lib/stablecoins/safety-score-v9-registry";\n');
+    writeText(root, forbidden, "export default true;\n");
+    writeText(root, "shared/lib/stablecoins/safety-score-v9-registry.ts", "export default true;\n");
+    const deferred = await checkRuntimeReachabilityPolicy(policy("public-safety-projections"), root);
+    expect(deferred.configurationErrors).toEqual([]);
+    expect(deferred.violations).toEqual([]);
+
+    writeText(root, entrypoint, 'export { default } from "./lib/safety-score-v9/accepted-projection-readers";\n');
+    const initialized = await checkRuntimeReachabilityPolicy(policy("public-safety-projections"), root);
+    expect(initialized.configurationErrors).toEqual([]);
+    expect(initialized.violations).toContainEqual({
+      entrypoint, forbidden, kind: "reachable",
+    });
+  });
+
   it("proves heavy-owned invocation reachability while excluding rejected non-owner lazy slots", async () => {
     const root = makeRoot();
     writePublicationInvocationFixture(root);

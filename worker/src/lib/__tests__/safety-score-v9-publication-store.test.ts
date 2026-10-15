@@ -102,6 +102,7 @@ describe("Safety Score V9 publication store", () => {
       ["projection-noncanonical", "projection-invalid"],
       ["projection-clock", "projection-invalid"],
       ["publication-missing", "publication-invalid"],
+      ["publication-malformed", "publication-invalid"],
       ["publication-identity", "publication-invalid"],
       ["publication-clock", "publication-mismatch"],
       ["health-missing", "health-unavailable"],
@@ -134,7 +135,7 @@ describe("Safety Score V9 publication store", () => {
       expect(await loadState(db)).toEqual({ kind: "unavailable", reason });
     });
 
-    it.each(["absent", "held-bootstrap", "failed-attempt", "held-attempt"] as const)(
+    it.each(["absent", "held-bootstrap", "failed-attempt", "held-attempt", "missing-outcome-attempt"] as const)(
       "bootstraps only without accepted witnesses (%s)", async scenario => {
         const { sqlite, db } = database();
         let health = null;
@@ -147,7 +148,9 @@ describe("Safety Score V9 publication store", () => {
         }
         if (scenario.endsWith("-attempt")) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
           SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
-          stableJsonStringifyV1({ outcome: scenario === "failed-attempt" ? "failed" : "held" }), 100,
+          stableJsonStringifyV1(scenario === "missing-outcome-attempt" ? {} : {
+            outcome: scenario === "failed-attempt" ? "failed" : "held",
+          }), 100,
         );
         expect(await loadState(db)).toEqual({ kind: "bootstrap", health });
       },
@@ -194,6 +197,24 @@ describe("Safety Score V9 publication store", () => {
       const { sqlite, db } = database();
       sqlite.exec("DROP TABLE cache");
       expect(await loadState(db)).toEqual({ kind: "unavailable", reason: "read-failed" });
+    });
+
+    it("logs a bounded read-failure cause with the affected projection", async () => {
+      const { db } = database();
+      const message = "D1 read failed: " + "x".repeat(600);
+      const prepare = vi.spyOn(db, "prepare").mockImplementation(() => { throw new Error(message); });
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        expect(await loadState(db)).toEqual({ kind: "unavailable", reason: "read-failed" });
+        expect(log).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(log.mock.calls[0]![0] as string)).toMatchObject({
+          scope: "lib", level: "error", event: "safety_score_v9_accepted_projection_read_failed",
+          source: projectionKey, errorName: "Error", errorMessage: message.slice(0, 500),
+        });
+      } finally {
+        prepare.mockRestore();
+        log.mockRestore();
+      }
     });
 
     it("propagates a D1 AbortError even before the signal reports aborted", async () => {
