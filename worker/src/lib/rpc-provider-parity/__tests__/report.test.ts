@@ -713,16 +713,17 @@ describe("rpc provider trial report", () => {
     const { db } = fixtures.open();
     const env = { DWELLIR_API_KEY: "parity-test-key" };
     const report = await loadRpcProviderTrialReport(db, env, PARITY_NOW_SEC);
-    for (const chainId of ["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche"]) {
+    for (const chainId of ["ethereum", "mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche"]) {
       expect(report.observation?.chains.find((chain) => chain.chainId === chainId)?.routing.statePlacement, chainId).toBe("primary");
     }
     for (const chainId of ["linea", "scroll", "unichain", "worldchain", "megaeth", "stable"]) {
       expect(report.observation?.chains.find((chain) => chain.chainId === chainId)?.routing)
         .toEqual({ statePlacement: "supplemental-first", logScan: false });
     }
-    for (const chainId of ["gnosis", "base", "optimism", "avalanche"]) {
+    for (const chainId of ["gnosis", "base", "arbitrum", "optimism", "avalanche"]) {
       expect(report.observation?.chains.find((chain) => chain.chainId === chainId)?.routing.logScan, chainId).toBe(true);
     }
+    expect(report.observation?.chains.find((chain) => chain.chainId === "ethereum")?.routing.logScan).toBe(false);
     expect(report.observation?.chains.find((chain) => chain.chainId === "bsc")?.routing)
       .toEqual({ statePlacement: "supplemental", logScan: false });
     const disabled = await loadRpcProviderTrialReport(db, { ...env, DWELLIR_ROUTING_DISABLED_CHAINS: "MANTLE, Base, Linea" }, PARITY_NOW_SEC);

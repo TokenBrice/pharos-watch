@@ -46,6 +46,8 @@ export interface EvmRpcOptions {
   gas?: string;
   /** Maximum number of calls per Multicall3 aggregate3 request. Defaults to one request for the full input. */
   multicallBatchSize?: number;
+  /** Reviewed quote aggregates may return unavailable on -32000/out of gas so their caller can split before failover. */
+  stopOnExecutionBudgetError?: boolean;
   /** EIP-1898 identity for every state read; unsupported hash reads fail closed. */
   stateBlockHash?: `0x${string}`;
   /** Enable direct-call fallback only for explicit Multicall3 absence at a numbered, hash-bound block. */
@@ -445,6 +447,8 @@ async function fetchJsonRpcResult<T>(
       const body = result.body;
       if (body.error) {
         failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
+        if (options?.stopOnExecutionBudgetError &&
+            body.error.code === -32000 && /\bout of gas\b/i.test(body.error.message ?? "")) break;
         continue;
       }
       if (body.result == null) {

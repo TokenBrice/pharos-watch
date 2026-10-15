@@ -72,10 +72,9 @@ const HIGH_VOLUME_LOG_WINDOW_BLOCKS = 2;
  * Address provenance: `shared/data/stablecoins/coins/usdc-circle.json`,
  * `usdt-tether.json` (plasma, megaeth), and `usde-ethena.json` (blast,
  * robinhood). Public pin provenance: onchain-supply-probe.ts and
- * public-rpc-registry.ts. HyperEVM's Alchemy pin is live-verified below.
- * XDC is an exception in its source, not its role: `rpc.xinfin.network` now
- * answers Cloudflare error 1010 for some user agents, so the pin is
- * `rpc.xdcrpc.com` (verified eth_chainId 0x32 with and without a User-Agent).
+ * public-rpc-registry.ts. The 2026-10-15 reviewed public pins for Celo, XDC,
+ * Robinhood and Arc each matched Dwellir's numeric state and ten-block log
+ * identities in three serial reads; see the provider-parity API documentation.
  */
 /** 2026-10-05T19:15Z: every target's H1/Multicall3/ArbSys/H2 domain was probed.
  * Only arbitrum/robinhood returned L1-numbered Multicall3 and local ArbSys
@@ -91,7 +90,7 @@ export const RPC_PARITY_TARGETS: readonly RpcParityTarget[] = [
   { chainId: "avalanche", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e", blockTimeSec: 2, comparator: { source: "registry" } },
   { chainId: "bsc", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", blockTimeSec: 0.75, comparator: { source: "registry" } },
   { chainId: "gnosis", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83", blockTimeSec: 5, comparator: { source: "registry" } },
-  { chainId: "celo", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0xceba9300f2b948710d2653dd7b07f33a8b32118c", blockTimeSec: 1, comparator: { source: "registry" } },
+  { chainId: "celo", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0xceba9300f2b948710d2653dd7b07f33a8b32118c", blockTimeSec: 1, comparator: { source: "pin", url: "https://forno.celo.org" } },
   { chainId: "tempo", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x20c000000000000000000000b9537d11c60e8b50", blockTimeSec: 1, comparator: { source: "registry" } },
   { chainId: "plasma", latestStateProbe: "multicall3-block-number", coinId: "usdt-tether", contract: "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb", blockTimeSec: 1, comparator: { source: "registry" } },
   { chainId: "monad", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x754704bc059f8c67012fed69bc8a327a5aafb603", blockTimeSec: 0.4, comparator: { source: "registry" } },
@@ -112,11 +111,11 @@ export const RPC_PARITY_TARGETS: readonly RpcParityTarget[] = [
   { chainId: "worldchain", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x79a02482a880bce3f13e09da970dc34db4cd24d1", blockTimeSec: 2, comparator: { source: "pin", url: "https://worldchain.drpc.org" } },
   { chainId: "scroll", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4", blockTimeSec: 3, comparator: { source: "pin", url: "https://rpc.scroll.io" } },
   { chainId: "unichain", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x078d782b760474a361dda0af3839290b0ef57ad6", blockTimeSec: 1, comparator: { source: "pin", url: "https://mainnet.unichain.org" } },
-  { chainId: "xdc", latestStateProbe: "state-bracket", coinId: "usdc-circle", contract: "0xfa2958cb79b0491cc627c1557f441ef849ca8eb1", blockTimeSec: 2, comparator: { source: "pin", url: "https://rpc.xdcrpc.com" } },
+  { chainId: "xdc", latestStateProbe: "state-bracket", coinId: "usdc-circle", contract: "0xfa2958cb79b0491cc627c1557f441ef849ca8eb1", blockTimeSec: 2, comparator: { source: "pin", url: "https://erpc.xinfin.network" } },
   { chainId: "blast", latestStateProbe: "multicall3-block-number", coinId: "usde-ethena", contract: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", blockTimeSec: 2, comparator: { source: "pin", url: "https://rpc.blast.io" } },
   { chainId: "manta", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0xb73603c5d87fa094b7314c74ace2e64d165016fb", blockTimeSec: 12, comparator: { source: "pin", url: "https://pacific-rpc.manta.network/http" } },
-  { chainId: "robinhood", latestStateProbe: "arbsys-block-number", coinId: "usde-ethena", contract: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", blockTimeSec: 1, comparator: { source: "pin", url: "https://rpc.mainnet.chain.robinhood.com" } },
-  { chainId: "arc", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x3600000000000000000000000000000000000000", blockTimeSec: 1, comparator: { source: "registry" } },
+  { chainId: "robinhood", latestStateProbe: "arbsys-block-number", coinId: "usde-ethena", contract: "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34", blockTimeSec: 1, comparator: { source: "pin", url: "https://robinhood-rpc.publicnode.com" } },
+  { chainId: "arc", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x3600000000000000000000000000000000000000", blockTimeSec: 1, comparator: { source: "pin", url: "https://arc-rpc.publicnode.com" } },
   // Numeric USDC state and logs live-verified in the 2026-10-05 chain harness.
   { chainId: "etherlink", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9", blockTimeSec: 1, comparator: { source: "pin", url: "https://node.mainnet.etherlink.com" } },
   { chainId: "cronos", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x3d7f2c478aafdb65542bcb44bceec05849999d2d", blockTimeSec: 0.4, comparator: { source: "pin", url: "https://evm.cronos.org" } },

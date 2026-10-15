@@ -598,6 +598,61 @@ describe("rpc parity probe", () => {
     }
   });
 
+  it.each(["dwellir", "comparator"] as const)("treats a deadline-clipped %s timeout as a skipped chain, not a provider failure", async (operator) => {
+    let clock = START_MS;
+    const timeouts: number[] = [];
+    const transport = createFakeTransport((call) => {
+      if (isDwellir(call.url) === (operator === "dwellir")) {
+        clock += 933; // Timer rounding can precede the absolute deadline.
+        return { kind: "throw", error: new DOMException("fetch timed out after 934ms", "TimeoutError") };
+      }
+      return rpcResult("0x64");
+    });
+    const fetchText: typeof fetchTextWithRetry = (url, init, retries, options) => {
+      timeouts.push(options?.timeoutMs ?? 0);
+      return transport.fetchText(url, init, retries, options);
+    };
+    const result = await runProbe({
+      targets: [target("base"), target("megaeth")], fetchText,
+      nowMs: () => clock, deadlineMs: START_MS + 934,
+    });
+    expect(timeouts.every((timeout) => timeout === 934)).toBe(true);
+    expect(result).toMatchObject({ deadlineHit: true, aborted: false, attempted: 0, samples: [] });
+    expect(result.skipped).toEqual([
+      { chainId: "base", reason: "deadline" }, { chainId: "megaeth", reason: "deadline" },
+    ]);
+  });
+
+  it.each(["dwellir", "comparator"] as const)("retains a full-length %s timeout as a provider failure at the deadline boundary", async (operator) => {
+    let clock = START_MS;
+    let failed = false;
+    const timeouts: number[] = [];
+    const transport = createFakeTransport((call) => {
+      if (!failed && isDwellir(call.url) === (operator === "dwellir")) {
+        failed = true;
+        clock += 7_999;
+        return { kind: "throw", error: new DOMException("fetch timed out after 8000ms", "TimeoutError") };
+      }
+      if (call.method === "eth_blockNumber") return rpcResult("0x64");
+      if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
+      if (call.method === "eth_call") return rpcResult("0x64");
+      return rpcResult([]);
+    });
+    const fetchText: typeof fetchTextWithRetry = (url, init, retries, options) => {
+      timeouts.push(options?.timeoutMs ?? 0);
+      return transport.fetchText(url, init, retries, options);
+    };
+    const result = await runProbe({
+      targets: [target("base")], fetchText, nowMs: () => clock, deadlineMs: START_MS + 8_000,
+    });
+    expect(timeouts[0]).toBe(8_000);
+    expect(result.deadlineHit).toBe(false);
+    expect(result.samples).toHaveLength(1);
+    expect(result.samples[0].failedSteps[operator].head).toBe(true);
+    expect(result.samples[0][operator === "dwellir" ? "errorClass" : "comparatorErrorClass"]).toBe("timeout");
+    expect(result.samples[0].failures).toContainEqual(expect.objectContaining({ operator, step: "head", errorClass: "timeout" }));
+  });
+
   it("stops starting chains once the run deadline passes", async () => {
     let clock = START_MS;
     const transport = createFakeTransport(() => {

@@ -148,6 +148,7 @@ function decodePoint(request: EncodedQuoterV2Request, result: EvmMulticall3Resul
 const quoterMulticallExecutor = createEvmQuotePlanMulticallExecutor({
   gas: QUOTER_MULTICALL_GAS,
   maxBatchSize: QUOTER_MULTICALL_BATCH_SIZE,
+  splitOnExecutionBudgetError: true,
 });
 
 export async function quoteQuoterV2Requests(input: {

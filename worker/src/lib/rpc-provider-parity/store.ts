@@ -5,6 +5,7 @@ import { getCache, setCache } from "../db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { safeErrorMessage } from "../safe-error-message";
 import { RPC_PARITY_TARGETS } from "./targets";
+import { captureRpcParityGateRun, isRpcParityGateRun, type RpcParityGateRun } from "./gate-history";
 import type {
   RpcParityChainSample,
   RpcParityComparatorRef,
@@ -16,6 +17,8 @@ import type {
 import {
   combineRpcParityLatestFreshness,
   createRpcParityStepRecord,
+  isRpcParityComparatorOperator,
+  isRpcParityComparatorSource,
   RPC_PARITY_PROBE_STEPS,
   RPC_PARITY_LATEST_MAX_NUMERIC_CALLS,
   RPC_PARITY_MAX_CALLS_PER_OPERATOR,
@@ -52,7 +55,7 @@ const Buffer = NodeBuffer as {
  */
 
 export const RPC_PARITY_STORE_KEY = "rpc:provider-parity:dwellir:v1";
-const RPC_PARITY_STORE_VERSION = 6;
+const RPC_PARITY_STORE_VERSION = 7;
 export const RPC_PARITY_RETENTION_SEC = 7 * 86_400;
 export const RPC_PARITY_RETENTION_RUNS = 168;
 /** Serialized compressed row ceiling; leaves 16 KiB below the cache-row budget. */
@@ -60,7 +63,7 @@ export const RPC_PARITY_MAX_ROW_BYTES = 240 * 1024;
 /** Bound the uncompressed wire too, so highly compressible proof data stays readable. */
 export const RPC_PARITY_MAX_DECOMPRESSED_BYTES = 4 * 1024 * 1024;
 const RAW_ROW_BUDGET_ERROR = "rpc-parity-raw-row-budget";
-/** v6 reads v1–v5; old readers reject split availability and failure evidence.
+/** v7 reads v1–v6; old readers reject independently retained gate counters.
  * A rollback reader's next write resets history; preserve the row beforehand.
  */
 
@@ -152,6 +155,8 @@ export interface RpcParityStoreRow {
   dwellirHosts: string[];
   runs: RpcParityStoredRun[];
   latest: Record<string, RpcParityLatestState>;
+  /** Independently retained counters; never removed by detailed-row byte pruning. */
+  gateRuns?: RpcParityGateRun[];
 }
 
 const SAMPLE_FIELD_SEPARATOR = "|";
@@ -189,6 +194,7 @@ interface RpcParityWireRow {
   skips?: ([number, number][] | null)[];
   /** Sparse v6 diagnostics, newest five per chain across the whole window. */
   failures?: [number, number, RpcParityFailure[]][];
+  gateRuns?: [number, unknown[][]][];
 }
 
 function encodeCompactFreshness(
@@ -643,6 +649,15 @@ export function encodeRpcParityStoreRow(row: RpcParityStoreRow): string {
   for (const [chainId, state] of Object.entries(row.latest)) {
     latest[chainId] = [state.atSec, state.dwellirHead, state.comparatorHead, state.commonBlock];
   }
+  const gateRuns: NonNullable<RpcParityWireRow["gateRuns"]> = (row.gateRuns
+    ?? row.runs.map((run) => captureRpcParityGateRun(run.atSec, run.samples))).map(([atSec, samples]) => [
+    atSec, samples.map(([chainId, host, comparator, flags, block, methods, freshness, stale, logsComparator]) => {
+      let hostIndex = hosts.indexOf(host);
+      if (hostIndex === -1) hostIndex = hosts.push(host) - 1;
+      return [chains.indexOf(chainId), hostIndex, registerComparator(comparators, comparator),
+        flags, block, methods, freshness, stale, logsComparator === null ? null : registerComparator(comparators, logsComparator)];
+    }),
+  ]);
   const wire: RpcParityWireRow = {
     v: RPC_PARITY_STORE_VERSION,
     chains,
@@ -652,6 +667,7 @@ export function encodeRpcParityStoreRow(row: RpcParityStoreRow): string {
     runs,
     latest,
     failures,
+    gateRuns,
     skips: row.runs.map((run) => run.skipped === undefined ? null : run.skipped.map<[number, number]>((entry) => (
       [chains.indexOf(entry.chainId), RPC_PARITY_SKIP_REASONS.indexOf(entry.reason)]
     ))),
@@ -675,7 +691,7 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
     parsed = JSON.parse(value) as unknown;
     if (parsed && typeof parsed === "object" && "encoding" in parsed) {
       const envelope = parsed as { v?: unknown; encoding?: unknown; payload?: unknown };
-      if ((envelope.v !== 2 && envelope.v !== 3 && envelope.v !== 4 && envelope.v !== 5 && envelope.v !== RPC_PARITY_STORE_VERSION) || envelope.encoding !== "gzip" || typeof envelope.payload !== "string") return null;
+      if ((envelope.v !== 2 && envelope.v !== 3 && envelope.v !== 4 && envelope.v !== 5 && envelope.v !== 6 && envelope.v !== RPC_PARITY_STORE_VERSION) || envelope.encoding !== "gzip" || typeof envelope.payload !== "string") return null;
       const decompressed = gunzipSync(Buffer.from(envelope.payload, "base64"), {
         maxOutputLength: RPC_PARITY_MAX_DECOMPRESSED_BYTES,
       });
@@ -688,7 +704,7 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
   const wire = parsed as Partial<RpcParityWireRow>;
-  if (wire.v !== 1 && wire.v !== 2 && wire.v !== 3 && wire.v !== 4 && wire.v !== 5 && wire.v !== RPC_PARITY_STORE_VERSION) return null;
+  if (wire.v !== 1 && wire.v !== 2 && wire.v !== 3 && wire.v !== 4 && wire.v !== 5 && wire.v !== 6 && wire.v !== RPC_PARITY_STORE_VERSION) return null;
   if (!Array.isArray(wire.chains) || !wire.chains.every((chainId) => typeof chainId === "string")) return null;
   if (!Array.isArray(wire.hosts) || !wire.hosts.every((host) => typeof host === "string")) return null;
   if (!Array.isArray(wire.comparators)) return null;
@@ -698,9 +714,7 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
   for (const entry of wire.comparators) {
     if (!Array.isArray(entry) || entry.length !== 3) return null;
     const [operator, host, source] = entry as [unknown, unknown, unknown];
-    if (typeof operator !== "string" || typeof host !== "string" || typeof source !== "string") return null;
-    if (operator !== "alchemy" && operator !== "drpc" && operator !== "public") return null;
-    if (source !== "registry" && source !== "pin") return null;
+    if (typeof host !== "string" || !isRpcParityComparatorOperator(operator) || !isRpcParityComparatorSource(source)) return null;
     comparators.push({ operator, host, source });
   }
 
@@ -798,7 +812,26 @@ export function decodeRpcParityStoreRow(value: string): RpcParityStoreRow | null
     }
   }
 
-  return { chains, comparators, dwellirHosts: hosts, runs, latest };
+  if (wire.v === 7 && !Array.isArray(wire.gateRuns)) return null;
+  const gateRuns: RpcParityGateRun[] = [];
+  if (wire.gateRuns !== undefined) {
+    if (!Array.isArray(wire.gateRuns) || wire.gateRuns.length > RPC_PARITY_RETENTION_RUNS) return null;
+    for (const raw of wire.gateRuns) {
+      if (!Array.isArray(raw) || raw.length !== 2 || !Array.isArray(raw[1])) return null;
+      const decoded = [raw[0], raw[1].map((sample) => {
+        if (!Array.isArray(sample) || sample.length !== 9
+          || ![sample[0], sample[1], sample[2]].every(Number.isSafeInteger)
+          || !(sample[8] === null || Number.isSafeInteger(sample[8]))) return null;
+        return [chains[Number(sample[0])], hosts[Number(sample[1])], comparators[Number(sample[2])],
+          ...sample.slice(3, 8), sample[8] === null ? null : comparators[Number(sample[8])]];
+      })];
+      if (!isRpcParityGateRun(decoded) || (gateRuns.length > 0 && decoded[0] <= gateRuns[gateRuns.length - 1][0])) return null;
+      gateRuns.push(decoded);
+    }
+  } else {
+    for (const run of runs) gateRuns.push(captureRpcParityGateRun(run.atSec, run.samples));
+  }
+  return { chains, comparators, dwellirHosts: hosts, runs, latest, gateRuns };
 }
 
 export interface RpcParityStoreMerge {
@@ -903,6 +936,12 @@ export function mergeRpcParityRun(
       Object.entries(latest).filter(([, state]) => state.atSec >= windowStartSec),
     ),
   };
+  const previousGateRuns = existing && !reset
+    ? existing.gateRuns ?? existing.runs.map((entry) => captureRpcParityGateRun(entry.atSec, entry.samples)) : [];
+  row.gateRuns = [...previousGateRuns.filter(([atSec]) => atSec >= windowStartSec && atSec !== run.atSec)
+    .map(([atSec, samples]): RpcParityGateRun => [atSec, samples.filter((sample) => !incomingHosts.has(sample[0])
+      || incomingHosts.get(sample[0]) === sample[1])]), captureRpcParityGateRun(run.atSec, incoming)]
+    .sort((left, right) => left[0] - right[0]).slice(-retentionRuns);
 
   let droppedOldest = 0;
   let bytes = encodedRowBytesForPruning(row);

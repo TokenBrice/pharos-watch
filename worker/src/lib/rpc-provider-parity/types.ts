@@ -126,12 +126,18 @@ export interface RpcParityChainSummary {
   /** Current scheduled routing policy after key/budget/circuit admission and operator rollback. */
   routing: { statePlacement: "primary" | "supplemental-first" | "supplemental" | "unavailable"; logScan: boolean };
   lastFailures: RpcParityFailure[];
-  comparator: { operator: "alchemy" | "drpc" | "public"; host: string; source: "registry" | "pin" };
+  comparator: { operator: RpcParityComparatorOperator; host: string; source: RpcParityComparatorSource };
   /** Newest logs baseline (planned when unsampled); null records an unavailable pin. */
   logsComparator: RpcParityComparatorRef | null;
   /** Actual baseline references behind each method's retained observations. */
   comparatorsByStep: Record<RpcParityProbeStep, RpcParityComparatorRef[]>;
   runs: number;                              // runs retained in the window
+  /** First/last retained samples for this host, not the nominal retention policy. */
+  windowStartSec: number | null;
+  windowEndSec: number | null;
+  windowDurationSec: number;
+  /** Counter-backed availability/parity/freshness window, independent of details. */
+  gateWindow: { windowStartSec: number | null; windowEndSec: number | null; windowDurationSec: number; runs: number };
   skips: Record<RpcParitySkipReason | "unknown", number>;
   lastSkip: { atSec: number; reason: RpcParitySkipReason } | null;
   /** Runs in which every Dwellir read answered, over the plan-capability-excluded denominator. */
@@ -178,6 +184,7 @@ export interface RpcProviderTrialReport {
   circuit: { state: string; consecutiveFailures: number | null; updatedAtSec: number | null } | null;
   observation: {
     windowStartSec: number | null;
+    windowDurationSec: number;
     lastRunAtSec: number | null;
     runsRetained: number;
     chains: RpcParityChainSummary[];
@@ -186,8 +193,16 @@ export interface RpcProviderTrialReport {
 }
 
 /** Operator/source vocabulary of the comparator side of a parity sample. */
-export type RpcParityComparatorOperator = RpcParityChainSummary["comparator"]["operator"];
-export type RpcParityComparatorSource = RpcParityChainSummary["comparator"]["source"];
+export const RPC_PARITY_COMPARATOR_OPERATORS = ["alchemy", "drpc", "public"] as const;
+export const RPC_PARITY_COMPARATOR_SOURCES = ["registry", "pin"] as const;
+export type RpcParityComparatorOperator = (typeof RPC_PARITY_COMPARATOR_OPERATORS)[number];
+export type RpcParityComparatorSource = (typeof RPC_PARITY_COMPARATOR_SOURCES)[number];
+export function isRpcParityComparatorOperator(value: unknown): value is RpcParityComparatorOperator {
+  return RPC_PARITY_COMPARATOR_OPERATORS.some((operator) => operator === value);
+}
+export function isRpcParityComparatorSource(value: unknown): value is RpcParityComparatorSource {
+  return RPC_PARITY_COMPARATOR_SOURCES.some((source) => source === value);
+}
 
 /** A comparator as actually resolved for a run (registry endpoint or reviewed public pin). */
 export interface RpcParityComparatorRef {

@@ -276,13 +276,13 @@ describe("buildChainRpcs", () => {
     }
   });
 
-  it("keeps Ethereum's new archive host supplemental-last without log admission", () => {
+  it("promotes Ethereum's archive host for state without global log admission", () => {
     const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get("ethereum")!;
     const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get("ethereum")!;
-    expect(primaryRpcUrl(admitted)).toBe(primaryRpcUrl(baseline));
-    expect(registryRpcUrls(admitted)).toEqual(registryRpcUrls(baseline));
-    expect(admitted.endpoints[admitted.endpoints.length - 1]).toMatchObject({
-      url: "https://api-ethereum-mainnet.n.dwellir.com", operator: "dwellir", position: "supplemental",
+    expect(primaryRpcUrl(admitted)).toBe("https://api-ethereum-mainnet.n.dwellir.com");
+    expect(registryRpcUrls(admitted).slice(1)).toEqual(registryRpcUrls(baseline));
+    expect(admitted.endpoints[0]).toMatchObject({
+      url: "https://api-ethereum-mainnet.n.dwellir.com", operator: "dwellir", position: "registry",
       stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-13",
     });
     expect(logScanRpcEndpoints(admitted)).toEqual(logScanRpcEndpoints(baseline));
@@ -301,7 +301,7 @@ describe("buildChainRpcs", () => {
     },
   );
 
-  it.each(["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche", "polygon"])(
+  it.each(["ethereum", "mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche", "polygon"])(
     "promotes %s state before keyed and keyless incumbents", (chainId) => {
       for (const { alchemyApiKey, drpcApiKey } of KEY_COMBINATIONS) {
         const baseline = buildChainRpcs(alchemyApiKey, drpcApiKey).get(chainId);
@@ -312,7 +312,7 @@ describe("buildChainRpcs", () => {
     },
   );
 
-  it.each(["gnosis", "base", "optimism", "avalanche"])(
+  it.each(["gnosis", "base", "arbitrum", "optimism", "avalanche"])(
     "puts %s Dwellir logs first independent of state placement and retains incumbents", (chainId) => {
       const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
       const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId)!;
@@ -446,19 +446,14 @@ describe("buildChainRpcs", () => {
   it("admits Dwellir logs only on the reviewed full-history allowlist", () => {
     const chainRpcs = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY });
 
-    for (const config of chainRpcs.values()) {
-      expect(
-        logScanRpcEndpoints(config).some((endpoint) => endpoint.operator === "dwellir"),
-        config.chainId,
-      ).toBe(DWELLIR_LOG_SCAN_CHAINS.has(config.chainId) && config.endpoints.some(
-        (endpoint) => endpoint.operator === "dwellir" && endpoint.logsHistory === "full",
-      ));
-    }
+    expect([...chainRpcs.values()]
+      .filter((config) => logScanRpcEndpoints(config).some((endpoint) => endpoint.operator === "dwellir"))
+      .map((config) => config.chainId).sort()).toEqual(["arbitrum", "avalanche", "base", "gnosis", "optimism"]);
 
     const ethereum = chainRpcs.get("ethereum")!;
-    expect(logScanRpcEndpoints(ethereum).map((endpoint) => endpoint.url)).toEqual(
-      registryRpcUrls(ethereum),
-    );
+    expect(logScanRpcEndpoints(ethereum).map((endpoint) => endpoint.url)).toEqual([
+      "https://eth-mainnet.g.alchemy.com/v2/", "https://ethereum-rpc.publicnode.com",
+    ]);
     expect(logScanRpcEndpoints(chainRpcs.get("hyperevm"))).toEqual([]);
   });
 
@@ -470,9 +465,9 @@ describe("buildChainRpcs", () => {
     expect(supplementalRpcEndpoints(chainRpcs.get("bsc"), { historicalBlock: true })).toEqual([]);
     expect(supplementalRpcEndpoints(chainRpcs.get("zksync"), { historicalBlock: true })).toEqual([]);
     expect(supplementalRpcEndpoints(chainRpcs.get("zksync"))).toHaveLength(1);
-    expect(supplementalRpcEndpoints(chainRpcs.get("ethereum"), { historicalBlock: true }))
-      .toEqual(supplementalRpcEndpoints(chainRpcs.get("ethereum")));
-    expect(supplementalRpcEndpoints(chainRpcs.get("ethereum"), { historicalBlock: true }))
+    expect(supplementalRpcEndpoints(chainRpcs.get("arc"), { historicalBlock: true }))
+      .toEqual(supplementalRpcEndpoints(chainRpcs.get("arc")));
+    expect(supplementalRpcEndpoints(chainRpcs.get("arc"), { historicalBlock: true }))
       .toHaveLength(1);
   });
 

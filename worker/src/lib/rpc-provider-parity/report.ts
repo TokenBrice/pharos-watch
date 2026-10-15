@@ -5,6 +5,7 @@ import { CIRCUIT_SOURCE } from "../constants";
 import { loadDwellirBudgetState, type DwellirBudgetEnv } from "../rpc-provider-budget";
 import { logWorkerEvent } from "../structured-log";
 import { readRpcParityStore, RPC_PARITY_RETENTION_SEC, type RpcParityLatestState, type RpcParityStoredRun } from "./store";
+import { applyRpcParityGateHistory, type RpcParityGateRun } from "./gate-history";
 import { DWELLIR_STATE_PLACEMENT, DWELLIR_LOG_SCAN_CHAINS } from "../chain-registry";
 import { parseDwellirRoutingDisabledChains } from "../env";
 import {
@@ -182,6 +183,7 @@ function addComparatorRef(refs: RpcParityComparatorRef[], ref: RpcParityComparat
 export function buildRpcParityChainSummary(input: {
   chainId: string;
   runs: readonly RpcParityStoredRun[];
+  gateRuns?: readonly RpcParityGateRun[];
   latest: RpcParityLatestState | null;
   dwellirHost: string;
   fallbackComparator: RpcParityComparatorRef;
@@ -359,6 +361,15 @@ export function buildRpcParityChainSummary(input: {
       : input.fallbackLogsComparator ?? input.fallbackComparator,
     comparatorsByStep,
     runs: runCount,
+    windowStartSec: samples[0]?.atSec ?? null,
+    windowEndSec: samples[samples.length - 1]?.atSec ?? null,
+    windowDurationSec: samples.length === 0 ? 0 : samples[samples.length - 1].atSec - samples[0].atSec,
+    gateWindow: {
+      windowStartSec: samples[0]?.atSec ?? null,
+      windowEndSec: samples[samples.length - 1]?.atSec ?? null,
+      windowDurationSec: samples.length === 0 ? 0 : samples[samples.length - 1].atSec - samples[0].atSec,
+      runs: runCount,
+    },
     skips,
     lastSkip,
     dwellirSuccessRate,
@@ -399,6 +410,7 @@ export function buildRpcParityChainSummary(input: {
       }
       : null,
   };
+  if (input.gateRuns !== undefined) applyRpcParityGateHistory(summary, input.gateRuns);
   summary.gate = evaluateRpcParityGate(summary, input.blockTimeSec);
   return summary;
 }
@@ -485,6 +497,7 @@ export async function loadRpcProviderTrialReport(
       circuit,
       observation: {
         windowStartSec: null,
+        windowDurationSec: 0,
         lastRunAtSec: null,
         runsRetained: 0,
         chains: RPC_PARITY_TARGETS.map((target) => ({
@@ -506,6 +519,7 @@ export async function loadRpcProviderTrialReport(
     return buildRpcParityChainSummary({
       chainId: target.chainId,
       runs,
+      gateRuns: row.gateRuns?.filter(([atSec]) => atSec >= cutoffSec),
       latest: latest && latest.atSec >= cutoffSec
         && runs.some((run) => run.atSec === latest.atSec && run.samples.some((sample) => sample.chainId === target.chainId))
         ? latest : null,
@@ -525,6 +539,7 @@ export async function loadRpcProviderTrialReport(
     circuit,
     observation: {
       windowStartSec: runs[0]?.atSec ?? null,
+      windowDurationSec: runs.length === 0 ? 0 : runs[runs.length - 1].atSec - runs[0].atSec,
       lastRunAtSec: runs[runs.length - 1]?.atSec ?? null,
       runsRetained: runs.length,
       chains,
