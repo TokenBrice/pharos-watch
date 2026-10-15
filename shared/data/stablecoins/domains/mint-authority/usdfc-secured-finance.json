@@ -5,6 +5,7 @@
     "authorityPosture": "unbounded-adverse",
     "confidence": "unknown",
     "summary": "BorrowerOperations issues USDFC against FIL Troves, but a live 2-of-3 Safe controls token ownership and the ProxyAdmin that can replace mint logic.",
+    "headline": "FIL-backed borrowing with immediate mint-logic upgrades controlled by a two-of-three multisig.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -22,8 +23,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "USDFC owner and ProxyAdmin-owner Safe",
-      "observedAt": "2026-10-05",
-      "observedBlock": 6429411,
+      "observedAt": "2026-10-15",
+      "observedBlock": 6458485,
       "sources": [
         {
           "label": "Secured Finance FIL-only CDP overview",
@@ -34,7 +35,7 @@
           "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
         },
         {
-          "label": "Filecoin GLIF RPC pinned block 6422489",
+          "label": "Filecoin GLIF RPC pinned block 6458485 (2026-10-15T10:42:30Z)",
           "url": "https://api.node.glif.io/rpc/v1"
         }
       ]
@@ -51,8 +52,8 @@
         "authorityType": "contract",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 6422489,
+        "observedAt": "2026-10-15",
+        "observedBlock": 6458485,
         "sources": [
           {
             "label": "Secured Finance FIL-only CDP overview",
@@ -63,7 +64,7 @@
             "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
           },
           {
-            "label": "Filecoin GLIF RPC pinned block 6422489",
+            "label": "Filecoin GLIF RPC pinned block 6458485 (2026-10-15T10:42:30Z)",
             "url": "https://api.node.glif.io/rpc/v1"
           },
           {
@@ -71,7 +72,7 @@
             "url": "https://raw.githubusercontent.com/Secured-Finance/stablecoin-contracts/develop/contracts/DebtToken.sol"
           }
         ],
-        "evidence": "Pinned token borrowerOperationsAddress() returns this protocol contract. Official DebtToken source restricts mint() to BorrowerOperations; ordinary minting is governed by FIL Trove rules, not an immutable end-to-end issuance constraint."
+        "evidence": "At Filecoin block 6458485 (2026-10-15T10:42:30Z), token borrowerOperationsAddress() returns this protocol contract, whose owner is the recorded Safe. The Sourcify-matched DebtToken implementation restricts mint() to BorrowerOperations, burn() to BorrowerOperations/TroveManager/StabilityPool and pool transfers to the named protocol callers. No additional native minter role exists in that implementation; upgrades can replace these restrictions."
       },
       {
         "chain": "filecoin",
@@ -89,19 +90,19 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0x09fca6c975ea841505bd9fd1d6a67279c224100f0",
-            "0xe27b953dbfde5a06daf71363d8e9f2b2814055c0",
+            "0x09fca6c975ea841505bd9fd1d6a67279c224100f",
+            "0x0e27b953dbfde5a06daf71363d8e9f2b2814055c",
             "0xbf86d350c0764f14b5aa63bdc73bf3ff288a00b6"
           ],
           "threshold": 2,
           "enabledModules": [],
           "guard": null,
-          "observedAt": "2026-10-05",
-          "observedBlock": 6429411,
+          "observedAt": "2026-10-15",
+          "observedBlock": 6458485,
           "source": "onchain"
         },
-        "observedAt": "2026-10-05",
-        "observedBlock": 6429411,
+        "observedAt": "2026-10-15",
+        "observedBlock": 6458485,
         "sources": [
           {
             "label": "Secured Finance FIL-only CDP overview",
@@ -112,16 +113,20 @@
             "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
           },
           {
-            "label": "Filecoin GLIF RPC pinned block 6429411",
+            "label": "Filecoin GLIF RPC pinned block 6458485 (2026-10-15T10:42:30Z)",
+            "url": "https://api.node.glif.io/rpc/v1"
+          },
+          {
+            "label": "Filecoin GLIF RPC Safe owner re-read, block 6458685 (2026-10-15T12:22:30Z)",
             "url": "https://api.node.glif.io/rpc/v1"
           }
         ],
-        "evidence": "At Filecoin block 6429411, token and ProxyAdmin owners remain this 2-of-3 Safe with unchanged owners, empty modules and zero guard. Verified ProxyAdmin upgrade/upgradeAndCall are immediate onlyOwner calls without a queue or delay. This establishes zero mandatory upgrade delay, not human signer independence or a complete execution certificate."
+        "evidence": "At Filecoin block 6458485 (2026-10-15T10:42:30Z), token, BorrowerOperations, TroveManager, PriceFeed and ProxyAdmin owners are this unchanged 2-of-3 Safe. getModulesPaginated() returns an empty list and terminal sentinel; guard storage is zero. Verified ProxyAdmin upgrade/upgradeAndCall are immediate onlyOwner calls without a queue or delay. getOwners() at that block and again at block 6458685 (2026-10-15T12:22:30Z) returns three 20-byte owner addresses with threshold 2; eth_getCode returns no EVM code for any of them. This establishes zero mandatory upgrade delay, not human signer independence or a complete execution certificate."
       }
     ],
     "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
-    "supervision": "none",
+    "supervision": "unknown",
     "review": {
       "sources": [
         {
@@ -133,7 +138,7 @@
           "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
         },
         {
-          "label": "Filecoin GLIF RPC pinned block 6422489",
+          "label": "Filecoin GLIF RPC pinned block 6422489 (2026-10-02T22:44:30Z)",
           "url": "https://api.node.glif.io/rpc/v1"
         },
         {
@@ -173,7 +178,7 @@
           "url": "https://vaults.secured.finance/"
         },
         {
-          "label": "Secured Finance September 7–18 incident-response thread",
+          "label": "Secured Finance September 7 to 18 incident-response thread",
           "url": "https://x.com/Secured_Fi/status/2097897896549179583"
         },
         {
@@ -189,7 +194,7 @@
           "url": "https://filecoin.blockscout.com/api/v2/smart-contracts/0xa3122c3ee71cbdc9e60b47f502b015c2d82f5fcc"
         },
         {
-          "label": "Current Filecoin core-owner and Safe pin, block 6429411",
+          "label": "Prior Filecoin core-owner and Safe pin, block 6429411 (2026-10-05T08:25:30Z)",
           "url": "https://api.node.glif.io/rpc/v1"
         },
         {
@@ -207,11 +212,15 @@
         {
           "label": "Recovered indexed initial USDFC mint transaction logs",
           "url": "https://filecoin.blockscout.com/api/v2/transactions/0x41188a1f0e27a8f277461fc1c03f8f0849772468e88fed9c0f73b5fa0c1a108a/logs"
+        },
+        {
+          "label": "Current Filecoin authority census, block 6458485 (2026-10-15T10:42:30Z)",
+          "url": "https://api.node.glif.io/rpc/v1"
         }
       ],
-      "evidence": "R17 re-pins Filecoin core controls at block 6429411, hash 0x0acbb64bb2c1d62c8375c5d74aa2c52d7cb130c358c137f623154245d242a8f0. Implementation remains 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b, BorrowerOperations remains 0x1de3c2e21dd5af7e5109d2502d0d570d57a1abb0, and token/ProxyAdmin owners remain the recorded 2-of-3 Safe with unchanged owners, empty modules and zero guard. Verified ProxyAdmin upgrade()/upgradeAndCall() are immediate onlyOwner calls: mandatory delay is zero, not unresearched. The prior Sourcify executable-runtime match is retained without claiming exact metadata verification. Official September 26 disclosure describes lending patches, still-paused markets and pending compensation/position repair. Its linked lending history names order-book, Itayose, recovery and TokenVault changes, not core USDFC mint remediation; the social post dates patches September 25 while the history dates Ethereum/Arbitrum execution September 24. Filtered lifetime Blockscout queries recover 575 mint events, 3732 deduplicated burns, two upgrades and two ownership changes from token creation block4807452 through the pin. Their net raw issuance is 186897978724044529018007, whereas pinned totalSupply is 190455538808608777432105. That mismatch is an unresolved historical observation/reconciliation issue, not proof of an exploit. GLIF rejects creation-to-pin event history and returns null for the earliest mint and both historical upgrade receipts; its recent filtered mint query also does not reproduce the indexer's latest mint. Thus an indexed lifetime census is recovered, but authenticated core abnormal-issuance and affected-contract reconciliation is not complete. Issuer disclosures, exact core/lending inventories, source/audit material, September7–26 incident thread and independent incident-index searches were reviewed. No core compromise, absence or resolution is inferred from lending patches or distinct oracle upgrades. Aggregate review remains unresolved and native authority remains unbounded-adverse.",
-      "reviewer": "Prior executable-source review retained; R17 current authority and September 26 incident-scope review",
-      "reviewedAt": "2026-10-05",
+      "evidence": "The 2026-10-15 review pins Filecoin block 6458485 (2026-10-15T10:42:30Z), hash 0xfe8adb3e783187f23605223eccddc6bbf0b33b6544a899b038144fa84298f703. EIP-1967 storage confirms implementation 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b and ProxyAdmin 0xa3122c3ee71cbdc9e60b47f502b015c2d82f5fcc. BorrowerOperations remains 0x1de3c2e21dd5af7e5109d2502d0d570d57a1abb0; token, ProxyAdmin, BorrowerOperations, TroveManager and PriceFeed ownership remains with the recorded 2-of-3 Safe, with unchanged owners, no enabled modules and zero guard. The verified ProxyAdmin has immediate onlyOwner upgrades and no mandatory delay. Sourcify again reports an executable-runtime match, not exact metadata equality. Pinned totalSupply and entire-system debt both equal 217964.428512163127719810 USDFC. The prior October 5 review recorded indexed lifetime counts of 575 mints, 3732 deduplicated burns, two upgrades and two ownership changes, with net issuance 186897978724044529018007 versus then-pinned supply 190455538808608777432105 raw units. Those historical figures are retained as prior evidence, not re-authenticated here or compared with today's supply. Today's public-RPC attempt to authenticate the first mint receipt at block 4807947 fails with requested block outside available upstream range. Current ownership and supply/debt equality do not resolve the lifetime issuance discrepancy or establish an incident verdict. The official lending upgrade history names order-book, Itayose, recovery and TokenVault changes on September 24, distinct from the USDFC oracle migration. It does not reconcile the exact core BorrowerOperations/Safe incident scope. Aggregate review remains unresolved and native authority remains unbounded-adverse.",
+      "reviewer": "Rev_UsdfcSecuredFinance; prior historical issuance research retained",
+      "reviewedAt": "2026-10-15",
       "disposition": "unresolved",
       "unresolvedQuestions": [
         "The latest official update establishes still-paused lending/TokenVault remediation, not core USDFC BorrowerOperations/Safe incident status. Filtered lifetime indexer history is now recovered, but its net issuance does not match pinned totalSupply; GLIF cannot authenticate earliest mint or historical upgrade receipts and does not reproduce the latest indexed mint in its recent event query. Obtain an aligned authenticated historical issuance/upgrade census and exact affected-contract reconciliation before any core incident verdict.",

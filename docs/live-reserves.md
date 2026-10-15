@@ -39,6 +39,10 @@ Equivalent complete descriptors may select explicit named profiles; shared telem
 
 For instrument identity, measurement limits, report validation, and retained weak-evidence tiers, read [adapter-specific evidence boundaries](process/live-reserves-appendix.md#adapter-specific-evidence-boundaries). The class definitions above remain the shared admission vocabulary.
 
+Forest Road USDfr uses physical token supply plus accrued unissued senior/fee claims as the reserve-liability denominator. Its physical, unissued and effective amounts remain separate diagnostics; this reserve accounting does not replace provider circulating-supply ingestion. See the Forest Road boundary in the linked appendix.
+
+Spark Legacy V1 inventory requires all five native Ethereum, Arbitrum, Base, Optimism and Unichain vaults, with chain-qualified holdings and independent block pins; the oldest pin sets aggregate freshness. Spark and Forest Road use version-two reserve bindings so retained Ethereum-only Spark inventory or physical-only Forest Road liability snapshots no longer match the current configuration.
+
 ### Snapshot admission gates
 
 The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], freshness }`, where `freshness` is the `assessReserveSnapshotFreshness()` result that decided the `stale` gate (`null` without a snapshot or coin). All gates must pass for independent reserve scoring:
@@ -207,37 +211,7 @@ Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = tru
 
 ### Reviewed liability scopes
 
-Reviewed 2026-09-27 from primary sources; the config `liabilityScope` blocks in `tusd-trueusd.json` and `usd1-world-liberty-financial.json` encode these tables, and a catalog data test requires every catalog chain to be classified exactly once. A new catalog deployment therefore withholds the ratio (`liability-scope-unclassified-chain`) until it is reviewed. Supply figures are the 2026-09-27 reads, in token units.
-
-**TUSD** (`chainlink-por`; current binding in `shared/data/stablecoins/coins/tusd-trueusd.json`). Evidence: Moore CPA assurance report as of 2026-09-27 08:30:30Z (footnote 1: issued tokens on Ethereum, Tron, Avalanche and BNB Smart Chain sum to total TrueUSD issued; footnotes 3–6 name the catalog contracts) and tusd.io/transparency "Natively Deployed Networks". The feed (`description()` "TUSD Reserves") answered $501,928,900.88, exactly Moore's "Total Assets Held in Reserve Accounts", against Moore's 494,515,082.75 issued TUSD, which the four native `totalSupply()` reads reproduce to the cent. The corrected ratio is 1.014992; the previous unscoped denominator added 819,883.78 of bridged supply and published 1.013312. `maxReserveSupplySkewSec` is 172800 (two days, equal to the adapter's default oracle-age cap), supported by issued supply being unchanged from Moore's 2026-08-07 report through 2026-09-27.
-
-| Chain | Decision | Relation | Supply read | Basis |
-|---|---|---|---|---|
-| ethereum | include (`evm-erc20`) | issuer-native | 315,125,540.95 | Moore fn 3; includes the L1 bridge locks below |
-| tron | include (`tron-trc20`) | issuer-native | 168,513,454.14 | Moore fn 4 |
-| bsc | include (`evm-erc20`) | issuer-native | 10,030,363.88 | Moore fn 6 |
-| avalanche | include (`evm-erc20`) | issuer-native | 845,723.78 | Moore fn 5 |
-| polygon | exclude | lock-mint of Ethereum TUSD | 183,788.69 | ERC20PredicateProxy holds 236,917.48 TUSD on Ethereum |
-| arbitrum | exclude | lock-mint of Ethereum TUSD | 164,752.32 | L1ERC20Gateway holds 164,752.33 TUSD on Ethereum |
-| optimism | exclude | lock-mint of Ethereum TUSD | 4,874.23 | L1StandardBridge holds 4,890.72 TUSD on Ethereum |
-| fantom | exclude | third-party bridge representation | 466,468.53 | Multichain MPC holds 6.31 TUSD; defunct-bridge claim, not issuer liability |
-| near | exclude | lock-mint (Rainbow Bridge) | 509.67 | `factory.bridge.near` NEP-141; outside Moore's issued perimeter |
-
-**USD1** (`usd1-bundle-oracle`, config v3). Evidence: KPMG's examination of the BitGo USD1 Reserve Report for July 2026 (Note A: "USD1 is minted and redeemed on the Ethereum, BNB Smart Chain, Solana, Tron, Aptos, and Tempo networks"; Note B redemption assets; Note C redeemed-not-settled), the issuer's `worldliberty/cre-por-dashboard@109a68ae` (`lib/contracts/usd1-token.ts` marks the same six chains `native: true` and counts only their supply), and the Chainlink CCIP USD1 directory. Bundles on 2026-07-15 (4,339,943,400.85 and, after 5,033,700 redeemed-not-settled, 4,334,909,700.85) and 2026-07-31 (3,996,921,055.91) equal KPMG's redemption assets to the dollar. Conservation: the Ethereum CCIP LockReleaseTokenPool `0x36a72eD0096B414521C45E3ddC9ed657d1D9c141` held 20,927,760.16 USD1 against 20,927,760.66 of bridge-only supply (six catalog chains plus uncatalogued Creditcoin; residual +0.50, or +21.50 with the paused Neo X lane), and the BNB, Solana, Aptos and Tempo pools held zero, so the native sum counts each token once. Catalog decimals for Tempo and Monad were corrected from 18 to 6 (on-chain `decimals()` and the CCIP directory).
-
-| Chain | Decision | Relation | Supply read | Basis |
-|---|---|---|---|---|
-| ethereum | include (`evm-erc20`) | issuer-native | 1,603,126,802.60 | KPMG Note A; includes the CCIP pool lock |
-| bsc | include (`evm-erc20`) | issuer-native | 1,392,331,528.62 | KPMG Note A; pool balance 0 |
-| tron | include (`tron-trc20`) | issuer-native | 10,062,604.90 | KPMG Note A; no CCIP route |
-| solana | include (`solana-spl-mint`) | issuer-native | 1,390,641,181.37 | KPMG Note A; 1-of-4 mint multisig with non-pool signers; pool 0 |
-| aptos | include (`aptos-fungible-asset`) | issuer-native | 20,017,233.38 | KPMG Note A; `ConcurrentSupply` at one ledger; pool stores 0 |
-| tempo | include (`evm-erc20`) | issuer-native | 1,119.86 | KPMG Note A fn 3; 6 decimals; pool 0 |
-| plume, monad, mantle, morph-l2, abcore, xlayer | exclude | CCIP lock-mint of Ethereum USD1 | 20,899,866.44 combined | backed by the Ethereum pool lock; not minted-and-redeemed chains |
-
-The six-chain native sum was 4,416,180,470.74 at 2026-09-27T20:43:47–20:44:16Z, 51 h 12 m 40 s after the latest bundle (2026-09-25T17:31:07Z, $4,416,592,902.74), so that quotient compares two instants and is withheld; it is not a backing claim. Per-chain historical supply at a bundle's timestamp cannot be reconstructed for Solana or Tron through public RPCs, which is why time identity is enforced by the skew bound instead of back-dated reads. Open item: the KPMG per-chain token columns were not reconciled against on-chain supply at the report instant.
-
-**Availability limitation — pending owner review:** with the current 4-hour reserve/supply skew bound, USD1's collateralization ratio is expected to be withheld much of the time even when all six supply reads succeed. Historical bundle publication delays observed during review ranged from 556 seconds to 18 h 48 m; a subsequent live review measured roughly 53 hours of skew (190,758 seconds). Ten-minute oracle posting cadence does not establish timely advancement of the embedded reserve timestamp. The 4-hour value is pending owner review against these publication delays; no availability assurance or owner approval is implied, and the bound has not been widened.
+Every catalog deployment must have exactly one reviewed liability-scope classification; an unclassified chain withholds the ratio (`liability-scope-unclassified-chain`). Native liabilities and bridged representations are not additive. Original reserve and supply clocks must fit the adapter's reviewed skew bound. The [dated TUSD and USD1 scope review](process/live-reserves-appendix.md#reviewed-liability-scopes) retains chain tables, conservation evidence and USD1's unresolved publication-delay limitation.
 
 ### Adding a New Adapter
 

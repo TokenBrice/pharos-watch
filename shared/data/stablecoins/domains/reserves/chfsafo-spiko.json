@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
     "confidence": "verified",
     "sources": [
       {
@@ -55,9 +55,21 @@
       {
         "label": "Diagnostic re-check by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z: SAFO signed-value inventory valued 2026-10-09 contains positive and negative swaps and CACEIS cash; no complete current collateral, netting, reuse, custody-continuity or independently reconciled all-class liability disclosure",
         "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+      },
+      {
+        "label": "15 October 2026 diagnostic review: 14 October CHF NAV 1.000138, totalShares 10072779.37971, totalAssets CHF 10074169.42; issuer share-class arithmetic, not independent financial reconciliation",
+        "url": "https://public-api.spiko.io/share-classes/chfSAFO/totals"
+      },
+      {
+        "label": "15 October 2026 diagnostic review: 107 signed equity, swap and cash rows valued 14 October; negative swap values retained without positive-weight normalization",
+        "url": "https://public-api.spiko.io/fund-assets/?fundId=59c2c924-ebf8-492d-a4b0-72d72ebf61e6"
+      },
+      {
+        "label": "Exact CHF issuer product page names BNP Paribas as banking counterparty",
+        "url": "https://www.spiko.io/spiko-swiss-franc"
       }
     ],
-    "rationale": "The 100% slice is the immediate proportional fund-share claim, not a measured 100% derivative allocation. The current API publishes 134 physical, cash and signed swap rows valued at 2 October 2026. Negative swap market values are not normalized to positive portfolio weights. June SAFO filing independently anchors the portfolio model; current complete NAV and collateral reconciliation remains unavailable.",
+    "rationale": "The 100% slice identifies the immediate proportional CHF fund-share claim, not a measured 100% derivative allocation. A diagnostic re-check on 15 October retrieved 107 equity, cash and signed swap rows valued 14 October 2026. Negative swap market values are not normalized to positive portfolio weights. The June SAFO filing names BNP FINANCE PARIS as the historical TRS counterparty; the exact CHF product page currently names BNP Paribas. Neither establishes complete current counterparty-by-contract collateral, netting, reuse or all-share-class/native-register financial reconciliation. The standing-identity observation and original composition date are retained; this review does not refresh them or assert current whole-asset financial assurance.",
     "compositionBasis": "Issuer CHF fund-share identity, exact KID/prospectus, current signed inventory and AMF-filed June report",
     "compositionAsOf": "2026-10-02",
     "scope": "full-composition",
@@ -98,7 +110,7 @@
         "instrumentKey": "SPIKO SICAV, Spiko Amundi Overnight Swap Fund CHF accumulation share FR0014015LG6"
       }
     ],
-    "knownUnknownExposure": "Immediate share claim is identified. Complete derivatives netting, actual reuse, counterparty allocation, custody suballocations and current independent assets/liabilities reconciliation remain unverified; zero unknown immediate slices does not mean zero economic risk.",
+    "knownUnknownExposure": "Immediate share claim is identified and BNP Paribas is issuer-named. Complete current derivatives netting, actual reuse, counterparty-by-contract allocation, custody suballocations and independent assets-to-all-liabilities reconciliation remain unverified; zero unknown immediate slices does not mean zero economic risk.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -112,8 +124,8 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review (Rev_ChfsafoSpiko)",
     "confidence": "verified",
     "sources": [
       {
@@ -125,6 +137,7 @@
         "url": "https://cdn.spiko.finance/legal_docs/EN/KID_chfSAFO_EN.pdf"
       }
     ],
-    "uncertainty": "Exact CHF KID states product assets are separate from the management company and legally segregated from depositary assets. The prospectus identifies CACEIS Bank and delegated custody arrangements. Actual subcustodian/collateral allocations and reuse remain unverified."
+    "uncertainty": "The exact CHF KID documents separation from the management company and legal segregation from the depositary's own assets. The prospectus identifies regulated CACEIS Bank as depositary and permits delegated custody. Current complete physical-security, derivative-collateral and subcustodian allocations and actual reuse remain unverified; June SFTR custody tables do not close current allocations. These documented legal safeguards and the named provider are retained, but they do not establish the whole-book institutional-regulated scalar tier, which remains unknown.",
+    "knownUnknownExposurePct": 100
   }
 }

@@ -51,7 +51,7 @@
   ],
   "liveReservesConfig": {
     "adapter": "liquity-native-active-pool",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "meusd-mezo",
     "display": {

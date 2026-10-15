@@ -53,7 +53,7 @@ function matchesAllocationIdentity(
 
 export function buildAllocationScopeFacts(
   context: AssetBuildContext,
-  input: { dependencies: V9EffectiveDependenciesV3; reserveStatus: V9FactStatusV2; reserveExposures: readonly V9ReserveExposureFactV2[] },
+  input: { dependencies: V9EffectiveDependenciesV3; reserveStatus: V9FactStatusV2; reserveExposures: readonly V9ReserveExposureFactV2[]; parentDeploymentKeys: ReadonlyMap<string, readonly string[]> },
   policy: AllocationPolicy = V9_CANDIDATE_POLICY_V1,
 ): V9AllocationScopeFact[] {
   const review = context.asset.wrapperAllocationReview;
@@ -64,14 +64,7 @@ export function buildAllocationScopeFacts(
   const sourceGenerationId = context.extension.sources.researchOverlays.generationId;
   const identities = new Map<string, V9AllocationScopeIdentityReview["deployments"][number]>();
   for (const row of context.asset.allocationScopeIdentityReview?.deployments ?? []) identities.set(`${row.chain}:${row.address}`, row);
-  const parentDeploymentKeys = new Map<string, readonly string[]>();
-  for (const claim of review.claims) {
-    const proof = claim.target.kind === "deployment" ? claim.target.idleCustodyProof : undefined;
-    if (proof && !parentDeploymentKeys.has(proof.upstreamAssetId)) {
-      const parent = context.extension.assets.find((asset) => asset.assetId === proof.upstreamAssetId);
-      parentDeploymentKeys.set(proof.upstreamAssetId, parent?.allocationScopeIdentityReview?.registeredDeploymentKeys ?? []);
-    }
-  }
+  const { parentDeploymentKeys } = input;
   const exposures = new Map(input.reserveExposures.map((exposure) => [exposure.exposureKey, exposure]));
   const liveRows = context.fixedInput.liveReserveMap[context.asset.assetId] ?? [];
   const reserveRows = liveRows.length > 0 ? liveRows : context.asset.reviewedStaticReserveRows?.rows ?? [];

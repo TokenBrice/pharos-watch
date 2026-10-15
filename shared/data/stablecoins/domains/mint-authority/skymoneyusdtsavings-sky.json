@@ -5,16 +5,29 @@
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "Local share issuance is asset-backed and accounting-mediated; the parameter administrator does not have arbitrary share mint authority. Base USDT issuance remains inherited from usdt-tether.",
+    "headline": "Deposits back local shares; a curator multisig and delegated allocator manage parameters and liquidity, while USDT issuer control remains inherited.",
     "inheritedFrom": "usdt-tether",
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "VaultV2 enter transfers the underlying USDT before creating the corresponding shares. Fee shares are accounting-mediated; neither curator nor allocator can arbitrarily mint unbacked shares or replace the immutable vault code. Allocation-cap increases change investment limits, not a native issuance ceiling. USDT issuer authority is inherited separately through the parent dependency.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SkymoneyusdtsavingsSky",
+      "sources": [
+        {
+          "label": "Exact verified VaultV2 enter and accrueInterest functions",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "sky.money USDT Savings immutable asset-backed share contract",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107702,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26196563,
       "sources": [
         {
           "label": "Sky.money curated vault disclosure",
@@ -25,8 +38,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
         },
         {
-          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-          "url": "https://etherscan.io/block/26107702"
+          "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), pinned vault, adapter and Safe reads",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         },
         {
           "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -48,8 +61,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "sources": [
           {
             "label": "Sky.money curated vault disclosure",
@@ -60,8 +73,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
           },
           {
-            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-            "url": "https://etherscan.io/block/26107702"
+            "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), pinned vault, adapter and Safe reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           },
           {
             "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -72,7 +85,7 @@
             "url": "https://api.morpho.org/graphql"
           }
         ],
-        "evidence": "Deposits and mint calls transfer the underlying parent asset before minting shares. Interest accrual may mint management/performance fee shares against accounted assets; both rates are zero in the current exact-vault API. Verified fixed deployment code has no privileged arbitrary native share mint or upgrade entrypoint; the implementation slot is zero."
+        "evidence": "At block 26196563, deposits and mint calls transfer USDT before creating shares. Interest accrual can create management/performance fee shares against accounted assets; both current rates are zero by pinned read. Exact runtime bytecode matches verified VaultV2 source, with no privileged arbitrary share mint or code-upgrade entrypoint; the implementation slot is zero."
       },
       {
         "chain": "ethereum",
@@ -94,12 +107,12 @@
           "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26107702,
-          "observedAt": "2026-10-02",
+          "observedBlock": 26196563,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "sources": [
           {
             "label": "Sky.money curated vault disclosure",
@@ -110,8 +123,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
           },
           {
-            "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-            "url": "https://etherscan.io/block/26107702"
+            "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), pinned vault, adapter and Safe reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           },
           {
             "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -126,7 +139,49 @@
             "url": "https://etherscan.io/address/0x3f32bc09d41ee699844f8296e806417d6bf61bba"
           }
         ],
-        "evidence": "At block 26107702, current Safe threshold/owner enumeration, empty getModulesPaginated result and zero guard were re-read. This Safe is both owner and curator. Current API reports 259200-second delays for adding adapters and increasing allocation caps, but zero for allocator and fee settings. Share-transfer and asset-exit gate setters are abdicated. Signer independence and offchain key custody are not established."
+        "evidence": "At block 26196563 this 2-of-3 Safe is owner, curator, allocator and sentinel. Owner can replace curator/sentinels; curator can appoint allocators without delay. The complete current Morpho API roster identifies this Safe and a separate allocator Safe; each membership is pinned through isAllocator/isSentinel. Full selector census: addAdapter/increaseAbsoluteCap/increaseRelativeCap=259200 seconds; removeAdapter/increaseTimelock/abdicate/setForceDeallocatePenalty=604800 seconds; allocator, send-assets-gate and fee/recipient settings=0. decreaseTimelock uses the target selector's delay, not its own zero entry. Share-transfer, receive-assets and adapter-registry setters are abdicated. Empty module pagination and zero guard are pinned. Every current adapter/collateral/market ID has uint128-max absolute cap and 100% relative cap, so the book has no effective diversification limit. Adapter burnShares and setSkimRecipient each have 259200-second delays. Force-deallocation penalty is 0.2%; both fee rates are zero. Signer independence and offchain custody remain undisclosed."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xa1d2d1ad14d2f8819a06eee8438ec5a5c780e3ae",
+        "label": "sky.money USDT Savings delegated allocator Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 1,
+        "signerCount": 3,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xaf64ad999d65da1cecec2e694ce9caccc423d72a",
+            "0x2380944b7ee61e219262ddd37a0d2e8b17720f5c",
+            "0xe9184ba65749999cf054222411894f9afc797701"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26196563,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
+        "sources": [
+          {
+            "label": "Morpho complete current allocator and sentinel roster",
+            "url": "https://api.morpho.org/graphql"
+          },
+          {
+            "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), allocator membership and complete Safe reads",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator functions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+          }
+        ],
+        "evidence": "At block 26196563 isAllocator=true and isSentinel=false. getThreshold=1 and getOwners returns the three recorded owners; module pagination is empty and guard storage is zero. This allocator can allocate/deallocate within admitted adapter and market caps, set the liquidity adapter/data and change maxRate without a timelock. It cannot raise allocation caps or arbitrarily mint shares. Liquidity-adapter changes can obstruct ordinary withdrawals; forceDeallocate remains a separate liquidity-dependent exit. Beneficial ownership, signer independence and offchain key custody are not established."
       }
     ],
     "review": {
@@ -140,8 +195,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
         },
         {
-          "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-          "url": "https://etherscan.io/block/26107702"
+          "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), pinned vault, adapter and Safe reads",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         },
         {
           "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -156,9 +211,9 @@
           "url": "https://eth.blockscout.com/tx/0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40"
         }
       ],
-      "evidence": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=60340093.055146 USDT; totalSupply=59334016.791589 shares; convertToAssets(1e18)=1.016956 USDT; idle balance=0.000000 USDT. Complete current adapter census contains 1 adapter, 2 markets: 0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b (sUSDS, LLTV 0.965): 0.020553 USDT lender claim; 0x26b178d49895f80ca3c39b2745efc4cd9adcddfcc73dae93e531e86977ec4d96 (sUSDS, LLTV 0.965): 60340093.034593 USDT lender claim. The API snapshot is separately observed and is not the pinned-block denominator. Exact-deployment source and current Safe state establish the local share and parameter paths; parent native mint authority is inherited separately. Exact implementation creation transaction 0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40, block 24568955, timestamp 2026-03-02T09:46:23+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Offchain key custody and independence of Safe signers remain unestablished. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes.",
-      "reviewer": "Sol refinement Refine11",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Pinned Ethereum block 26196563 (hash 0xa4d9465ae9769e038b6bc2afd7750401a68080edff6ca5e2a106838c97c80f1b; 2026-10-15T07:57:11Z): totalAssets=59582229.827675 USDT; totalSupply=58541705.825467484191603121 shares; convertToAssets(1e18)=1.017774 USDT; idle=0. Complete one-adapter/two-market census reconciles expected lender claims of 0.020572 and 59582229.807103 USDT exactly to realAssets and totalAssets. Both borrower markets use sUSDS at 96.5% LLTV; the vault's lender positions carry zero borrowing and collateral. The complete current indexed role roster, independently pinned membership and Safe reads identify a 2-of-3 owner/curator/allocator/sentinel Safe and a separate 1-of-3 allocator Safe. No wrapper-local arbitrary-recipient mint or proxy upgrade exists. Cap settings govern investment allocation, not unbacked issuance. Creation transaction 0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40 is re-read at block 24568955 (2026-03-02T09:46:23Z). Reconciliation=not-applicable describes local deposit-backed accounting, not parent reserve-to-total-liability financial assurance; supervision=none grants no prudential credit. Key custody and signer independence remain scoped questions for each Safe. This role census does not certify complete arbitrary-execution paths inside the controllers.",
+      "reviewer": "Rev_SkymoneyusdtsavingsSky",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -166,8 +221,8 @@
           "controlRef": "ethereum:0x3f32bc09d41ee699844f8296e806417d6bf61bba",
           "question": "For sky.money USDT Savings parameter-control Safe (ethereum:0x3f32bc09d41ee699844f8296e806417d6bf61bba): Offchain key custody and independence of Safe signers remain unestablished.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SkymoneyusdtsavingsSky",
           "sources": [
             {
               "label": "Sky.money curated vault disclosure",
@@ -178,8 +233,8 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
             },
             {
-              "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-              "url": "https://etherscan.io/block/26107702"
+              "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), pinned vault, adapter and Safe reads",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             },
             {
               "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -192,6 +247,23 @@
             {
               "label": "Parameter-control Safe",
               "url": "https://etherscan.io/address/0x3f32bc09d41ee699844f8296e806417d6bf61bba"
+            }
+          ]
+        },
+        {
+          "controlRef": "ethereum:0xa1d2d1ad14d2f8819a06eee8438ec5a5c780e3ae",
+          "question": "For sky.money USDT Savings delegated allocator Safe: beneficial owner identity, offchain key custody and signer independence remain unestablished.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SkymoneyusdtsavingsSky",
+          "sources": [
+            {
+              "label": "Skybase International curation and delegated allocation terms",
+              "url": "https://docs.sky.money/legal/skybase-international/terms-of-use"
+            },
+            {
+              "label": "Ethereum block 26196563 (2026-10-15T07:57:11Z), allocator Safe reads",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ]
         }

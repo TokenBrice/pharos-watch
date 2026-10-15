@@ -10,7 +10,7 @@
     "rwa": true
   },
   "collateral": "Short-term U.S. Treasury bills and tokenized USTB and BUIDL fund interests held through issuer affiliates; holders have an unsecured Prometheus debt claim.",
-  "pegMechanism": "Daily business-day rebasing distributes underlying investment returns while targeting $1 per token. Eligible holders can request issuer redemption into USD-pegged digital assets, less applicable losses and costs; T+0 capacity is limited and larger redemptions settle T+2.",
+  "pegMechanism": "Business-day rebasing distributes portfolio returns while targeting $1 per token. Accredited, allowlisted investors redeem into USD-pegged digital assets. The April 2026 operational update states a 0% redemption fee, T+0 for redemption requests up to $1M and T+2 for larger requests. The issuer's daily quick-redemption quota governs T+0 availability. Governing terms retain an unsecured issuer claim, loss and transaction-cost deductions, and account-based redemption restrictions.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -32,7 +32,7 @@
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.matrixdock.com/stbt",
-    "provider": "Matrixdock issuer reserve dashboard; no current signed STBT financial assurance retrieved",
+    "provider": "Matrixdock issuer dashboard and hash-registered asset statements; the issuer-maintained FallbackReserveFeed replaced Chainlink PoR, and no current independent STBT financial assurance was retrieved",
     "attestorTier": "self",
     "cadence": "daily-nav"
   },
@@ -56,6 +56,30 @@
     {
       "label": "Current STBTv2 activation, block 23279728 (2025-09-03)",
       "url": "https://etherscan.io/tx/0xc137039da347ca5ab92b990a2f496e5bb70c70a60216849e6e5904a67e4a8c85"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/token/0x530824da86689c9c17cdc2871ff29b058345b44a"
+    },
+    {
+      "label": "Smart-contract audits",
+      "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/treasury-bill-token-stbt/smart-contract/contract-audit.md"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/54ERjq"
+    },
+    {
+      "label": "Reserve feed replacement disclosure",
+      "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/notice-on-the-update-of-stbt-proof-of-reserves-data-feed-contract.md"
+    },
+    {
+      "label": "Settlement and fee update",
+      "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/stbt-custodian-and-conversion-fee-reduction-and-settlement-optimization.md"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://twitter.com/matrixdock"
     }
   ],
   "jurisdiction": {
@@ -70,9 +94,18 @@
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
   "yieldConfig": {
     "yieldSource": "Matrixdock short-term Treasury portfolio",
     "yieldType": "rebase"
   },
-  "implementationLaunchDate": "2025-09-03"
+  "launchDate": "2023",
+  "implementationLaunchDate": "2025-09-03",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Unsecured debt and restricted redemption",
+      "message": "STBT holders have an unsecured claim against Prometheus, not ownership of Treasury or fund assets. Transfers require allowlisting. April 2026 operational redemption terms do not remove the January 2025 legal loss deductions or account restrictions. BNB Chain and Arbitrum links on the issuer site refer to separate non-rebasing wrapped tokens, excluded from native STBT supply."
+    }
+  ]
 }

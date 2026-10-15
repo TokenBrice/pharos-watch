@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_KrusdcKeyrock)",
     "confidence": "verified",
     "sources": [
       {
@@ -43,34 +43,38 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "arc fixed-block RPC observation 23952285",
+        "label": "Arc block 26080279, 2026-10-15T10:44:09Z; full adapter and market census",
         "url": "https://rpc.mainnet.arc.io"
       }
     ],
-    "rationale": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=75004490745099738925640035 atomic shares; accrueInterestView returned assets=75012317730434, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 75012317730434 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1000104 USDC atomic units. The 100% slice is the USDC-denominated deployed lending claim, not ownership of borrower collateral or a separate direct claim on Circle reserve assets.",
+    "rationale": "At Arc block 26080279 (hash 0xd45fba23210a5662823d06f1e292ca0e0798748413f29663b523b30568b955cf; 2026-10-15T10:44:09Z), totalSupply=75022024133358070384877635 raw 18-decimal shares; totalAssets=accrueInterestView assets=75080951234671 raw 6-decimal USDC, with zero pending fee shares. Idle USDC=0. The complete one-adapter inventory at 0x6adc3de83e00c4a74fda9403043828b831d0f5c3 has one market, 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d: expectedSupplyAssets=realAssets=75080951234671, supplyShares=75004112723053268694, borrowShares=0 and posted collateral=0. The market lends USDC against cirBTC at 86% LLTV. convertToAssets(1e18)=1000785 raw USDC. The 100% slice is the deployed USDC lender claim, not direct ownership of borrower collateral or Circle reserve assets.",
     "compositionBasis": "Full fixed-block ERC-4626 vault, adapter and Morpho market inventory",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current strategy claims and parent asset are identified. Borrower collateral custody, legal insolvency priority, future allocations and stressed realization remain uncertain.",
+    "knownUnknownExposure": "Current strategy claims and parent asset are identified. Circle discloses custody of the native BTC backing borrower cirBTC collateral; exact-holder legal insolvency priority, future allocations and stressed realization remain uncertain.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
         "name": "Keyrock Prime USDC Morpho Vault V2",
-        "role": "other",
-        "jurisdiction": "arc"
+        "role": "other"
       },
       {
         "name": "0x6adc3de83e00c4a74fda9403043828b831d0f5c3 MorphoMarketV1 adapter and Morpho markets",
         "role": "other"
+      },
+      {
+        "name": "Circle National Trust, custodian of native BTC backing borrower cirBTC collateral",
+        "role": "custodian",
+        "jurisdiction": "United States"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_KrusdcKeyrock)",
     "confidence": "probable",
     "sources": [
       {
@@ -90,10 +94,14 @@
         "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
       },
       {
-        "label": "arc fixed-block RPC observation 23952285",
+        "label": "Arc block 26080279, 2026-10-15T10:44:09Z; full adapter and market census",
         "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Circle cirBTC whitepaper: exact Arc deployment and native BTC custody",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/PDFs/Whitepapers/Circle_cirBTC%20Whitepaper.pdf"
       }
     ],
-    "uncertainty": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=75004490745099738925640035 atomic shares; accrueInterestView returned assets=75012317730434, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 75012317730434 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1000104 USDC atomic units. All present local positions are onchain lending claims; borrowed USDC is intentionally reused by borrowers. Upstream USDC reserve custody and borrower-collateral custody are separate inherited/credit exposures. No legal segregation or insolvency-remoteness claim is established."
+    "uncertainty": "At Arc block 26080279 (2026-10-15T10:44:09Z), all 75080951234671 raw USDC of vault assets are onchain lender claims in one cirBTC/USDC market, with zero idle USDC, borrower shares or posted collateral at the adapter. Whole-book custody is mixed: the local vault/adapter/Morpho claims are onchain, but Circle's whitepaper identifies collateral 0x171a4217b86a807a64eb94757db6849fb4bdbaa0 as cirBTC, issued by Circle International Bermuda Limited and backed by native BTC custodied by Circle National Trust. USDC reserve custody is a separate parent exposure. Circle's statements about cirBTC reserve segregation do not establish legal segregation or bankruptcy remoteness of krUSDC holder claims. Borrowers reuse loaned USDC; this does not prove that the cirBTC custodian may rehypothecate its BTC reserves. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x6c3ea9036406852006290770bedfcaba0e23a0e8",
       "name": "Sentora PRIME Main idle underlying",
-      "pct": 1.9532,
+      "pct": 2.1645,
       "risk": "medium",
       "coinId": "pyusd-paypal",
       "depType": "wrapper",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd:deployed",
       "name": "Sentora PRIME Main deployed strategy positions",
-      "pct": 98.0468,
+      "pct": 97.8355,
       "risk": "high",
       "coinId": "pyusd-paypal",
       "depType": "wrapper",
@@ -38,8 +38,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -59,7 +59,7 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
+        "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
@@ -73,11 +73,15 @@
       {
         "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
         "url": "https://sentora.com/legal/terms-of-use"
+      },
+      {
+        "label": "Sentora PRIME asset risk review, October 14, 2026",
+        "url": "https://sentora.com/asset-risk-reviews/prime-figure"
       }
     ],
-    "rationale": "At block 26107702, asset()=0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets=212994583350440, idle underlying=4160246119942, current adapter realAssets=208834337230498, in underlying smallest units. Idle plus adapter assets reconcile exactly to totalAssets. The 1 current pinned lender positions have zero borrow shares and zero posted collateral. PYUSD loans against the Hastra PRIME token (0x19ebb35279a16207ec4ba82799cc64715065f7f6; on-chain name Hastra PRIME), described by Sentora as Figure home-equity credit exposure. Enforceable collateral recovery priority remains unresolved. The parent link denotes denomination and inherited token risk, not ownership of the parent issuer reserves.",
+    "rationale": "At Ethereum block 26197388 (2026-10-15T10:42:47Z), asset()=0x6c3ea9036406852006290770bedfcaba0e23a0e8; totalAssets=214467337000991, idle underlying=4642078872057 and sole adapter realAssets=209825258128934, in PYUSD base units. Idle plus adapter assets reconcile exactly to totalAssets. The sole funded market is 0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa; its adapter lender position has zero borrow shares and zero posted collateral. Morpho market parameters bind PYUSD loans to Hastra PRIME collateral 0x19ebb35279a16207ec4ba82799cc64715065f7f6 at 86% liquidation LLTV. Sentora describes the exposure as Figure home-equity financing between origination and securitization; this disclosure does not establish enforceable collateral recovery priority. The parent link denotes denomination and inherited token risk, not ownership of parent issuer reserves.",
     "compositionBasis": "Pinned exact vault underlying balance and sole adapter realAssets; percentages of totalAssets, rounded to four decimals",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Current vault/adapter accounting is identified. Collateral custody, enforceable insolvency priority, borrower losses and stressed liquidation capacity are not established across every underlying layer.",
     "knownUnknownExposurePct": 0
@@ -100,9 +104,9 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review (Rev_Senpyusdprimev2Sentora)",
     "confidence": "probable",
     "sources": [
       {
@@ -122,7 +126,7 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
+        "label": "Ethereum RPC, pinned block 26197388, 2026-10-15T10:42:47Z",
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
@@ -142,6 +146,6 @@
         "url": "https://docs.morpho.org/get-started/resources/audits/"
       }
     ],
-    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers."
+    "uncertainty": "Immediate lender positions are held in contracts and intentionally reused as loans. No whole-book claim of exclusively on-chain ultimate collateral custody is made. Parent issuer custody remains inherited; underlying collateral legal/custody layers and recoveries are unresolved. June 2026 Sentora terms section 4.3 describes non-custodial vault configurations; section 21.4 specifies BVI governing law and arbitration. This is an issuer legal statement, not evidence of borrower collateral segregation or removal of observed curator powers. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

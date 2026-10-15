@@ -4,7 +4,7 @@
     {
       "sourceKey": "spark-usdc-v1:ethereum:susds",
       "name": "sUSDS shares held by Legacy UsdcVault",
-      "pct": 99.99999943645203,
+      "pct": 35.16795002164135,
       "risk": "high",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "spark-usdc-v1:ethereum:usdc",
       "name": "Idle USDC held by Legacy UsdcVault",
-      "pct": 5.620471151816011e-7,
+      "pct": 2.0457383337918334e-07,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -30,31 +30,139 @@
     },
     {
       "sourceKey": "spark-usdc-v1:ethereum:usds",
-      "name": "USDS rounding dust held by Legacy UsdcVault",
-      "pct": 1.5008597053488657e-9,
+      "name": "Idle USDS held by Legacy UsdcVault",
+      "pct": 5.525681369637182e-10,
       "risk": "high",
       "coinId": "usds-sky",
       "depType": "collateral",
       "assetClass": "stablecoin",
-      "issuerOrObligor": "Sky USDS protocol",
+      "issuerOrObligor": "Sky",
       "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "spark-usdc-v1:ethereum:dai",
       "name": "Idle DAI held by Legacy UsdcVault",
-      "pct": 0,
+      "pct": 0.0,
       "risk": "low",
       "coinId": "dai-makerdao",
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky",
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:arbitrum:susds",
+      "name": "Bridged sUSDS shares held by Legacy UsdcVault on arbitrum",
+      "pct": 63.091199287822896,
+      "risk": "high",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky sUSDS canonical bridge representation",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:arbitrum:usdc",
+      "name": "Idle USDC held by Legacy UsdcVault on arbitrum",
+      "pct": 0.0,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:base:susds",
+      "name": "Bridged sUSDS shares held by Legacy UsdcVault on base",
+      "pct": 1.1897693855367468,
+      "risk": "high",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky sUSDS canonical bridge representation",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:base:usdc",
+      "name": "Idle USDC held by Legacy UsdcVault on base",
+      "pct": 7.676323573474813e-06,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:optimism:susds",
+      "name": "Bridged sUSDS shares held by Legacy UsdcVault on optimism",
+      "pct": 0.5253241484101652,
+      "risk": "high",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky sUSDS canonical bridge representation",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:optimism:usdc",
+      "name": "Idle USDC held by Legacy UsdcVault on optimism",
+      "pct": 0.0,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:unichain:susds",
+      "name": "Bridged sUSDS shares held by Legacy UsdcVault on unichain",
+      "pct": 0.025749275138867614,
+      "risk": "high",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky sUSDS canonical bridge representation",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "spark-usdc-v1:unichain:usdc",
+      "name": "Idle USDC held by Legacy UsdcVault on unichain",
+      "pct": 0.0,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
     "compositionSource": "live-adapter",
-    "reviewedAt": "2026-10-05",
-    "reviewer": "W3R34 native sUSDS liquidity review; W2R05 gross inventory retained",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdcSparkV1",
     "confidence": "verified",
     "sources": [
       {
@@ -84,28 +192,84 @@
       {
         "label": "Credential-free RPC endpoint; pinned read in review notes",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Arbitrum deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Arbitrum.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned arbitrum block 515036950, 2026-10-15T10:49:28.000Z",
+        "url": "https://arb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Base deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Base.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned base block 52636002, 2026-10-15T10:49:11.000Z",
+        "url": "https://base-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Optimism deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Optimism.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned optimism block 158231275, 2026-10-15T10:48:47.000Z",
+        "url": "https://opt-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Official Unichain deployment registry",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Unichain.sol"
+      },
+      {
+        "label": "Legacy L2 vault source",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVaultL2.sol"
+      },
+      {
+        "label": "Pinned unichain block 61312998, 2026-10-15T10:49:17.000Z",
+        "url": "https://api-unichain-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum block 26197387, hash 0x530cc1059f89d04e8a499a738ba8a4983a6a5695ffe0fa29d5bd25934b8dd702, timestamp 2026-10-15T10:42:35.000Z",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Native L1/L2 savings-vault trust model",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
       }
     ],
-    "rationale": "Ethereum block 26115200 (2026-10-03T23:47:59Z; hash 0x0049cb9fd66ba90ddc0b3fb89f299cd7644f5b55ef95dc09949f426f624a6e6f) binds implementation 0xf943cb8d5f06f2bbf352878ebef3ec5c537a20ba and its immutable USDC, USDS, sUSDS and PSM accounting. Held sUSDS and vault totalSupply both equal 160851641385946608970541089 base units. sUSDS.convertToAssets(held) is 178803692286874041546569087 USDS base units. Idle USDC is 1004961 base units; USDS rounding dust is 2683592584333002 base units; the implementation-linked DAI balance is zero. Gross book NAV at token-accounting par is 178803693.294518634130902089, comprising all three nonzero holdings, not native totalAssets (178803692286874 USDC base units), which excludes idle tokens. Percentages preserve both dust positions. Par is a book valuation convention, not market price, final USD realization, independent assurance or insolvency priority; upstream sUSDS, USDS and USDC backing remains linked. Unsolicited unrelated token transfers are not reserve-accounting claims. Separate 2026-10-05 liquidity review at block 26122496, hash 0xdfc52d249b99b65701ad35d1e329202a89dd44e2fdd6896f176f89f111c720ab, confirmed the same Legacy implementation and sUSDS implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, both byte-for-byte matched to verified source. Native sUSDS maxRedeem(vault) equaled its entire held share balance; a pinned eth_call from the vault redeeming that whole balance succeeded and returned USDS. Legacy exit burns matching sUSDC shares and transfers sUSDS in kind without the PSM. Immediate liquidity describes this entire reserve leg's native USDS realization, not USDC pocket capacity, sale at par or final USD settlement. The October 3 composition and all weights are unchanged; idle USDC and USDS dust liquidity remains unknown.",
-    "compositionBasis": "Complete implementation-defined local gross token inventory at one pinned Ethereum block; sUSDS valued by its native convertToAssets in USDS units, USDS and USDC at accounting par; no fee or stress deduction",
-    "compositionAsOf": "2026-10-03",
+    "rationale": "Ethereum block 26197387, hash 0x530cc1059f89d04e8a499a738ba8a4983a6a5695ffe0fa29d5bd25934b8dd702, timestamp 2026-10-15T10:42:35.000Z. Current Ethereum implementation is unchanged; totalSupply and held sUSDS both equal 155237059484932859039348902 base units, valued by sUSDS.convertToAssets at 172761186696788084715061523 USDS base units. Ethereum idle USDC=1004961, USDS rounding dust=2714469481841862, DAI=0. Four additional official native L2 vaults were omitted from the earlier Ethereum-only inventory. arbitrum block 515036950 (2026-10-15T10:49:28.000Z, hash 0x041d8ded9ee1fc965cc161453fed3beb01a5c79040985df7bac6bf31fc875784): shares=held sUSDS=278494693806596696784599870, native totalAssets=309933062700000 USDC base units, idle USDC=0. base block 52636002 (2026-10-15T10:49:11.000Z, hash 0xc41e0ed5e8085c521c443f4d18237486aadcfc36ff0c62ce7170e92c8efdde74): shares=held sUSDS=5251833395583209887344640, native totalAssets=5844695832835 USDC base units, idle USDC=37709641. optimism block 158231275 (2026-10-15T10:48:47.000Z, hash 0x372869d98921784f0c187300ed7901b0cc996f4d947af5872861c3633712a1c2): shares=held sUSDS=2318865334721541442866212, native totalAssets=2580634447671 USDC base units, idle USDC=0. unichain block 61312998 (2026-10-15T10:49:17.000Z, hash 0xe3bfef6819cf5bca778b83073f3700d88acea657465b744e480b3a8111c861b2): shares=held sUSDS=113661440420086363040341, native totalAssets=126492312655 USDC base units, idle USDC=0. Gross five-chain local book value is 491246110.707265554196903385 USDC/USDS-accounting units. L2 held-receipt NAV uses that chain's own PSM3 conversion, not a fabricated global rate; native totalAssets excludes residual idle tokens. No sUSDC escrow deduction applies to these independent receipts. Ethereum sUSDS maxRedeem(vault) equals the full held balance and a same-pin eth_call redeeming it returned 172761186696788084715061523 USDS base units; no transaction was broadcast. The L2 reserve realization horizon remains unknown: exit transfers the local bridged receipt, not native Ethereum USDS or cash. Accounting par and inventory coverage do not establish market liquidation prices, priority or independent assurance.",
+    "compositionBasis": "Complete implementation-defined local gross token inventory across five chain-specific pinned blocks on 2026-10-15. Ethereum sUSDS uses native USDS conversion; L2 sUSDS uses local PSM3 USDC conversion; residual USDC and USDS are valued at accounting par, with no stress/fee deduction.",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "All nonzero holdings in the implementation-defined local reserve inventory are identified, including idle USDC and USDS dust. Ultimate backing is inherited from each linked asset; stressed realization, enforceable priority and independently reconciled legal encumbrance are not established by this gross local inventory. Sol curation campaign 2026-10-09 (Lane31Standard), source review 2026-10-09T10:36:33Z: the linked verified Legacy UsdcVault implementation routes holder withdraw/redeem through sUSDS and the PSM, while exit transfers sUSDS shares. Neither those paths nor the linked Spark legacy documentation establish a holder realization horizon for the separate idle USDC and USDS dust. Their liquidity stays unknown with exact exposure-scoped researched non-disclosure classifications; the October 3 inventory, weights and prior observation dates are unchanged.",
+    "knownUnknownExposure": "All nonzero holdings in the five implementation-defined local inventories are identified. Ultimate Sky reserve custody, enforceable priority and independent encumbrance remain upstream/unestablished. Idle USDC and Ethereum USDS dust are excluded from holder totalAssets accounting and have no direct holder recovery horizon. L2 bridged sUSDS realization into native USDS depends on separate bridge and local PSM paths; no immediate USDC or final cash guarantee is inferred.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "Legacy UsdcVault and Sky sUSDS contract",
+        "name": "Legacy UsdcVault / UsdcVaultL2 and local Sky sUSDS contracts",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdcSparkV1",
     "confidence": "manual-review",
     "sources": [
       {
@@ -127,9 +291,13 @@
       {
         "label": "Credential-free RPC endpoint; pinned read in review notes",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Audited native L1/L2 reserve mechanics",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
       }
     ],
-    "uncertainty": "On-chain position location is verified. Complete ultimate custody, enforceable segregation, successor custody and legal insolvency protection are not established by the receipt code or parent reserve disclosures.",
+    "uncertainty": "All five local on-chain receipt inventories are identified and fully matched to local share liabilities at the stated pins. L2 inventories hold canonical sUSDS bridge representations. Complete ultimate Sky custody, enforceable segregation, successor custody and insolvency protection are not established by those local receipt balances or contracts.",
     "knownUnknownExposurePct": 100
   }
 }

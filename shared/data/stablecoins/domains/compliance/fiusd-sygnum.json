@@ -22,14 +22,14 @@
           "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
           "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07",
+          "accessedAt": "2026-10-15",
           "sourceDate": "2025-03-20"
         },
         {
           "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
           "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
           "sourceKind": "statute",
-          "accessedAt": "2026-10-07",
+          "accessedAt": "2026-10-15",
           "sourceDate": "2025-07-18"
         }
       ]
@@ -46,18 +46,18 @@
         "label": "Sygnum issuer-authored FIUSD application dated March 20, 2025",
         "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
+        "accessedAt": "2026-10-15",
         "sourceDate": "2025-03-20"
       },
       {
         "label": "GENIUS Act section 2(22)(B)(iii): securities excluded",
         "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
         "sourceKind": "statute",
-        "accessedAt": "2026-10-07",
+        "accessedAt": "2026-10-15",
         "sourceDate": "2025-07-18"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-10-15"
   }
 }

@@ -18,9 +18,9 @@ const SOLANA_TOKEN = "FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog";
 const CHAINS: Record<string, true> = { arbitrum: true, optimism: true, ethereum: true, base: true, polygon: true, avalanche: true, hedera: true, solana: true };
 const TYPES = ["TREASURY_BILLS", "REPURCHASE_AGREEMENTS", "CASH"] as const;
 const CLASSIFICATION: Record<string, Omit<ReserveSlice, "pct">> = {
-  TREASURY_BILLS: { sourceKey: "ledgerlens:frnt:treasury-bills", name: "U.S. Treasury bills in FBO trust accounts", risk: "very-low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury", riskFactors: ["duration", "liquidity", "custody"], liquidityHorizon: "one-day" },
-  REPURCHASE_AGREEMENTS: { sourceKey: "ledgerlens:frnt:repurchase-agreements", name: "Treasury-collateralized repurchase agreements in FBO trust accounts", risk: "low", assetClass: "repo", issuerOrObligor: "Undisclosed repo counterparties", riskFactors: ["counterparty", "liquidity", "custody"], liquidityHorizon: "unknown" },
-  CASH: { sourceKey: "ledgerlens:frnt:cash", name: "USD cash in FBO trust accounts", risk: "very-low", assetClass: "bank-deposit", issuerOrObligor: "Fiduciary Trust International / Bank of New York Mellon", riskFactors: ["counterparty", "custody"], liquidityHorizon: "one-day" },
+  TREASURY_BILLS: { sourceKey: "ledgerlens:frnt:treasury-bills", name: "U.S. Treasury bills in FBO trust accounts", risk: "very-low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury", riskFactors: ["duration", "liquidity", "custody"], liquidityHorizon: "unknown", maturityDaysMax: 365 },
+  REPURCHASE_AGREEMENTS: { sourceKey: "ledgerlens:frnt:repurchase-agreements", name: "Treasury-collateralized repurchase agreements in FBO trust accounts", risk: "low", assetClass: "repo", issuerOrObligor: "Undisclosed repo counterparties", riskFactors: ["counterparty", "liquidity", "custody"], liquidityHorizon: "unknown", maturityDaysMax: 30 },
+  CASH: { sourceKey: "ledgerlens:frnt:cash", name: "USD cash in FBO trust accounts", risk: "very-low", assetClass: "bank-deposit", issuerOrObligor: "Custody-account cash counterparties not itemized", riskFactors: ["counterparty", "custody"], liquidityHorizon: "unknown" },
 };
 
 // TanStack's public loader returns Seroval JSON. Read only its plain data

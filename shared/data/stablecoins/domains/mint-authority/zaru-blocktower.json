@@ -4,6 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
+    "headline": "Issuer signers can mint without an on-chain cap; the EVM administrator can replace mint logic immediately.",
     "summary": "Native issuance remains under issuer authority. ZARU has a System Program Solana signer and the same EOA with mint/admin/upgrader powers on three EVM chains.",
     "controls": [
       {
@@ -19,15 +20,19 @@
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-05",
-        "observedBlock": 453523097,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457208926,
         "sources": [
           {
             "label": "Solana mint and authority observation",
             "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+          },
+          {
+            "label": "Exact archived mint and signer account state, Solana slot 457208926, 2026-10-15T10:45:27Z",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "A single finalized getMultipleAccounts response at slot 453523097 binds the Token-2022 mint to sole mintAuthority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62 and this nonexecutable, zero-data System Program account. This is not an SPL multisig or PDA; jsonParsed instruction labels do not establish a quorum. Archival history reaches creation slot 373091718 (2025-10-13): all 854 transactions were retrieved, with 39 mintToChecked instructions using this sole signer and 24 burnChecked instructions. Mint less burn exactly equals pinned supply 60552996194140 base units. No native numeric issuance cap, independently verified HSM custody or human independence is established."
+        "evidence": "Exact finalized Alchemy Account Archive reads of the mint and signer both return context slot 457208926, blockhash 6GFVeAGF3msuiviWBgrT8fbJakKhkUfgyn63oRsxypYr, timestamp 2026-10-15T10:45:27Z. The Token-2022 mint retains sole mintAuthority and freezeAuthority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62; its signer is a nonexecutable, zero-data System Program account, not an SPL multisig. Supply is 60553096194140 base units with 6 decimals. The same signer controls permanent delegate, pause, transfer hook, transfer fees, metadata and mint-close extensions. Pause is false, the hook program is unset and both transfer-fee schedules and interest rates are zero. The prior October 5 archival census remains historical: 854 transactions, 39 mints and 24 burns reconciled 60552996194140 base units then; it is not a fresh complete transaction census. No native numeric issuance cap, independently verified HSM custody or human independence is established."
       },
       {
         "chain": "ethereum",
@@ -42,8 +47,8 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110191,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197399,
         "sources": [
           {
             "label": "Verified ERC20F implementation",
@@ -52,9 +57,13 @@
           {
             "label": "ethereum issuer token",
             "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          },
+          {
+            "label": "Ethereum block 26197399, 2026-10-15T10:44:59Z; identity, supply, eight role memberships and administrators, implementation and signer code",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 26110191, additionally verified BURNER_ROLE, CONTRACT_ADMIN_ROLE and SALVAGE_ROLE are true for this EOA. Full RoleGranted/RoleRevoked history through block 26110183 returned eight grants to this sole address and no revocations, covering DEFAULT_ADMIN, MINTER, PAUSER, RECOVERY, BURNER, CONTRACT_ADMIN, SALVAGE and UPGRADER. Verified ERC20F source gates mint only by MINTER_ROLE, with no quantitative cap; _authorizeUpgrade is immediate UPGRADER_ROLE. accessRegistry() is 0xfa51dd24f7348d5f0e6c5a5a00213d85ca401da9. Role administration and upgrades can expand issuance, without independently established human quorum or HSM custody."
+        "evidence": "At Ethereum block 26197399 (2026-10-15T10:44:59Z), all eight DEFAULT_ADMIN, MINTER, PAUSER, RECOVERY, BURNER, CONTRACT_ADMIN, SALVAGE and UPGRADER memberships are true for this codeless EOA; all role administrators are DEFAULT_ADMIN_ROLE. Re-opened terminal explorer histories show eight grants to this address and no revocations. Nine successful pinned Dwellir log windows extend the retained complete inventory from block 26110184 through 26197399 with no returned role, upgrade or pause changes; a historical positive-log window independently returns four grants to the same address. accessRegistry() is 0xfa51dd24f7348d5f0e6c5a5a00213d85ca401da9. EIP-1967 retains implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62; its 15673-byte runtime equals the Base and Arc implementations byte-for-byte at their review pins. Verified ERC20F source gates uncapped mint by MINTER_ROLE and immediate UUPS replacement by UPGRADER_ROLE. Current totalSupply is explicitly zero and paused() is false. No independently established human quorum or HSM custody is inferred."
       },
       {
         "chain": "base",
@@ -69,8 +78,8 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52110948,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635879,
         "sources": [
           {
             "label": "Verified ERC20F implementation",
@@ -79,9 +88,13 @@
           {
             "label": "base issuer token",
             "url": "https://basescan.org/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          },
+          {
+            "label": "Base block 52635879, 2026-10-15T10:45:05Z; identity, supply, eight role memberships and administrators, implementation and signer code",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ],
-        "evidence": "Full Base RoleGranted/RoleRevoked history through block 52110948 returned eight grants to this sole EOA and no revocations, including BURNER_ROLE, CONTRACT_ADMIN_ROLE and SALVAGE_ROLE as well as DEFAULT_ADMIN, MINTER, UPGRADER, RECOVERY and PAUSER. Current BURNER and CONTRACT_ADMIN membership was independently confirmed at the pin; SALVAGE's full-history grant was observed but a fresh membership call was rate-limited. Verified ERC20F source has immediate role-gated mint and UUPS upgrades, with no numeric cap. accessRegistry() at block 52110830 is 0xfa51dd24f7348d5f0e6c5a5a00213d85ca401da9. No signer-independence or HSM attestation is inferred."
+        "evidence": "At Base block 52635879 (2026-10-15T10:45:05Z), all eight DEFAULT_ADMIN, MINTER, PAUSER, RECOVERY, BURNER, CONTRACT_ADMIN, SALVAGE and UPGRADER memberships are true for this codeless EOA; all role administrators are DEFAULT_ADMIN_ROLE. This closes the earlier rate-limited SALVAGE membership read. Re-opened terminal explorer histories show eight grants to this address and no revocations. Fifty-three successful pinned Dwellir log windows extend the retained complete inventory from block 52110949 through 52635879 with no returned role, upgrade or pause changes; a historical positive-log window independently returns four grants to the same address. accessRegistry() is 0xfa51dd24f7348d5f0e6c5a5a00213d85ca401da9 and EIP-1967 retains ERC20F 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Its 15673-byte runtime matches Ethereum and Arc at their review pins. Source has uncapped role-gated mint and immediate UUPS upgrades; totalSupply is explicitly zero and paused() is false. No signer independence or HSM attestation is inferred."
       },
       {
         "chain": "arc",
@@ -96,8 +109,8 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-05",
-        "observedBlock": 24360273,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26080389,
         "sources": [
           {
             "label": "Verified ERC20F implementation",
@@ -106,9 +119,13 @@
           {
             "label": "arc issuer token",
             "url": "https://explorer.arc.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+          },
+          {
+            "label": "Arc block 26080389, 2026-10-15T10:45:05Z; identity, supply, eight role memberships and administrators, implementation and signer code",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
           }
         ],
-        "evidence": "Arc's topic-filtered explorer histories terminate with eight RoleGranted events to this sole EOA and no RoleRevoked events. The explorer indexing tail is closed by 27 successful 500-block Dwellir queries from block 24347185 through pinned block 24360273, with no role changes. At that pin all eight memberships are true and all role administrators are DEFAULT_ADMIN_ROLE; the EOA is codeless. EIP-1967 points to ERC20F 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Its pinned executable matches the Sourcify-recompiled runtime byte-for-byte after substituting five exact __self immutables and removing trailing CBOR metadata. Source gates uncapped mint by MINTER_ROLE and immediate UUPS replacement by UPGRADER_ROLE. No human independence or HSM custody is inferred."
+        "evidence": "At Arc block 26080389 (2026-10-15T10:45:05Z), all eight DEFAULT_ADMIN, MINTER, PAUSER, RECOVERY, BURNER, CONTRACT_ADMIN, SALVAGE and UPGRADER memberships are true for this codeless EOA; all role administrators are DEFAULT_ADMIN_ROLE. Re-opened terminal explorer histories show eight grants to this address and no revocations. One hundred seventy-three successful pinned Dwellir log windows extend the retained complete inventory from block 24360274 through 26080389 with no returned role, upgrade or pause changes; a historical positive-log window independently returns five grants to the same address. EIP-1967 retains ERC20F 0x0f25045d15c163478bb67c56c5d9d602628f4f62; its 15673-byte runtime matches Ethereum and Base at their review pins. accessRegistry() is 0xfa51dd24f7348d5f0e6c5a5a00213d85ca401da9. Source permits uncapped MINTER_ROLE issuance and immediate UPGRADER_ROLE replacement. Current totalSupply is explicitly zero and paused() is false. No human independence or HSM custody is inferred."
       }
     ],
     "upgradeability": {
@@ -130,7 +147,7 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "ethereum MINTER_ROLE and role administrator",
-      "observedAt": "2026-10-02",
+      "observedAt": "2026-10-15",
       "sources": [
         {
           "label": "Verified ERC20F implementation",
@@ -139,6 +156,10 @@
         {
           "label": "ethereum issuer token",
           "url": "https://etherscan.io/address/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5"
+        },
+        {
+          "label": "Fresh EIP-1967 implementation and UPGRADER_ROLE pins: Ethereum 26197399, Base 52635879, Arc 26080389, October 15, 2026",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },
@@ -194,9 +215,10 @@
         {"label": "Arc historical mint and burn event inventory", "url": "https://explorer.arc.io/api/v2/addresses/0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5/logs?topic=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"},
         {"label": "Solana atomic finalized mint and authority observation", "url": "https://solana-rpc.publicnode.com"},
         {"label": "FSCA official register unavailable during ICT maintenance", "url": "https://fscasplashpage.z1.web.core.windows.net/"},
-        {"label": "Moore ZARU ISRS 4400 report signed 2026-10-01, snapshot 2026-08-31 14:00 UTC", "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf"}
+        {"label": "Moore ZARU ISRS 4400 report signed 2026-10-01, snapshot 2026-08-31 14:00 UTC", "url": "https://framerusercontent.com/assets/Q3LUtjT3Rql8mWBWWS6RfU5c4.pdf"},
+        {"label": "FSCA March 2026 licensed-CASP list, page 20 row 170; historical FSP 55172 Loop South Africa Category I intermediary services; accessed 2026-10-15", "url": "https://www.fsca.co.za/_api/cr3ad_regulatoryframes%2894942cc4-0238-f111-88b3-000d3a64fb06%29/cr3ad_document/$value"}
       ],
-      "evidence": "Reviewed native issuance on October 5, 2026. Arc's terminal eight-grant/zero-revoke explorer history plus a successful 27-window indexing-tail census establishes the sole eight-role EOA through block 24360273. All current Arc memberships and default-admin relationships are pinned. Ethereum/Base earlier complete role inventories remain sourced; current implementation slots and codeless authority are corroborated at Ethereum 26124902, Base 52199351 and Arc 24360273. Each chain's deployed ERC20F executable equals Sourcify's recompiled source runtime: substitute the observed 32-byte __self address at byte offsets 3167, 3231, 3585, 3649 and 3792, then remove only the final 53-byte CBOR section. All 15620 executable bytes agree; no other normalization is used. Unbounded immediate mint/admin/upgrade economics are retained. Incident review searched issuer home, whitepaper, legal and blog disclosures, published audit claims, indexed issuer X, rekt.news and exploit searches. Direct X access was blocked and the whitepaper promises rather than supplies a contract audit. All 854 archival Solana mint-address transactions through finalized slot 453523097 were fetched without errors, reaching creation slot 373091718. The 39 mints all use the identified sole issuer signer; 24 burns yield the exact pinned supply 60552996194140 base units. Terminal Ethereum/Base/Arc Transfer histories show one 100-token mint and corresponding burn on each chain; each mint/burn caller is the identified role EOA and all three pinned current supplies are zero. No active or resolved native unauthorized-mint incident was identified in this review. This is not financial backing assurance or a custody-independence claim. Reconciliation-only refresh on 2026-10-07: the issuer's 2026-07-21 whitepaper sections 3.04 and 4.14 define monthly on-chain total-supply verification and liabilities-versus-reserves reconciliation. The subsequently published Moore Blockchain and Digital Assets JHB (Pty) Ltd report signed 2026-10-01 covers the common 2026-08-31 14:00 UTC snapshot: page 2 defines Total Issued ZARU Supply across approved blockchains and reports zero noncirculating supply; procedures 6 and 8 identify exact Solana mint 2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN at slot 443168748, enumerate all token accounts and reconcile their aggregate 61576130.774140 ZARU to mint supply without difference. Procedures 3, 10-12 match that liability to independently obtained Standard Bank and Sanlam statements totalling ZAR 62675198.86, with reported reserve coverage 101.78%. Together with the already cited July snapshot report, this establishes a recurring periodic whole-supply reconciliation, not NAV/AUM equivalence or current reserve coverage. The report explicitly says ISRS 4400 AUP is not an assurance engagement and expresses no assurance conclusion; supervision therefore remains unknown, not attestation-only or prudential. Subsequent EVM deployments are not asserted to be individually attested by the August snapshot. FSCA's official site/register redirected to its ICT-maintenance notice in the prior review; FSP55172 scope remains unverified. All named key-custody questions remain open.",
+      "evidence": "Reviewed native issuance on October 5, 2026. Arc's terminal eight-grant/zero-revoke explorer history plus a successful 27-window indexing-tail census establishes the sole eight-role EOA through block 24360273. All current Arc memberships and default-admin relationships are pinned. Ethereum/Base earlier complete role inventories remain sourced; current implementation slots and codeless authority are corroborated at Ethereum 26124902, Base 52199351 and Arc 24360273. Each chain's deployed ERC20F executable equals Sourcify's recompiled source runtime: substitute the observed 32-byte __self address at byte offsets 3167, 3231, 3585, 3649 and 3792, then remove only the final 53-byte CBOR section. All 15620 executable bytes agree; no other normalization is used. Unbounded immediate mint/admin/upgrade economics are retained. Incident review searched issuer home, whitepaper, legal and blog disclosures, published audit claims, indexed issuer X, rekt.news and exploit searches. Direct X access was blocked and the whitepaper promises rather than supplies a contract audit. All 854 archival Solana mint-address transactions through finalized slot 453523097 were fetched without errors, reaching creation slot 373091718. The 39 mints all use the identified sole issuer signer; 24 burns yield the exact pinned supply 60552996194140 base units. Terminal Ethereum/Base/Arc Transfer histories show one 100-token mint and corresponding burn on each chain; each mint/burn caller is the identified role EOA and all three pinned current supplies are zero. No active or resolved native unauthorized-mint incident was identified in this review. This is not financial backing assurance or a custody-independence claim. Reconciliation-only refresh on 2026-10-07: the issuer's 2026-07-21 whitepaper sections 3.04 and 4.14 define monthly on-chain total-supply verification and liabilities-versus-reserves reconciliation. The subsequently published Moore Blockchain and Digital Assets JHB (Pty) Ltd report signed 2026-10-01 covers the common 2026-08-31 14:00 UTC snapshot: page 2 defines Total Issued ZARU Supply across approved blockchains and reports zero noncirculating supply; procedures 6 and 8 identify exact Solana mint 2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN at slot 443168748, enumerate all token accounts and reconcile their aggregate 61576130.774140 ZARU to mint supply without difference. Procedures 3, 10-12 match that liability to independently obtained Standard Bank and Sanlam statements totalling ZAR 62675198.86, with reported reserve coverage 101.78%. Together with the already cited July snapshot report, this establishes a recurring periodic whole-supply reconciliation, not NAV/AUM equivalence or current reserve coverage. The report explicitly says ISRS 4400 AUP is not an assurance engagement and expresses no assurance conclusion; supervision therefore remains unknown, not attestation-only or prudential. Subsequent EVM deployments are not asserted to be individually attested by the August snapshot. Historical licensing corroboration added 2026-10-15: FSCA's official March 2026 licensed-CASP list, page 20 row 170, identifies FSP 55172, Loop South Africa (Pty) Ltd, Category I, intermediary services; Moore's October 1 report identifies BlockTower South Africa as formerly Loop. Current October licence status and product-specific prudential mint-supervision scope remain independently unverified; the dated intermediary-services entry does not establish either. The prior register-maintenance observation remains historical. All named key-custody questions remain open.",
       "reviewer": "Unknown-resolver wave 4 (R09) primary-source and pinned-state review; Sol unknown-resolver wave 2026-10-07 (MINT_RECON_2)",
       "reviewedAt": "2026-10-07",
       "disposition": "scoreable",

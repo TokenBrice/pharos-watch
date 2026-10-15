@@ -176,7 +176,9 @@ export function adaptTetherTransparency(
     metadata: {
       diag: { rawSumDeviation: calculateRawPercentageSumDeviation(slices.map((slice) => slice.pct)) },
       ...verifiedFreshnessMetadata(sourceTimestamp),
-      collateralizationRatio: totalAssets / totalLiabilities,
+      ...(params.currencyIso !== "mxnt"
+        ? { collateralizationRatio: totalAssets / totalLiabilities }
+        : {}),
       ...(params.currencyIso === "usdt"
         ? {
             totalAssetsUsd: totalAssets,

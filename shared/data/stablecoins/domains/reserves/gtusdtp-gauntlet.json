@@ -2,7 +2,7 @@
   "id": "gtusdtp-gauntlet",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "sourceKey": "erc4626-single-asset:ethereum:0xf3557ad5e984211ac8a0874a670344f2c3376471:deployed",
       "name": "USDT deposited into Gauntlet-curated Morpho lending markets",
       "pct": 100,
       "risk": "high",
@@ -23,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown wave W1R56",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_GtusdtpGauntlet)",
     "confidence": "verified",
     "sources": [
       {
@@ -54,13 +54,25 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+      },
+      {
+        "label": "Ethereum block 26197394, hash 0xb3e5604e82dba582540491dd864b3db2325110e5155a603c3c6f06b33e2ac9cc, timestamp 2026-10-15T10:43:59.000Z; pinned on-chain review 2026-10-15",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "WBTC primary disclosure: Bitcoin held in custody; downstream borrower-collateral layer, not direct vault custody",
+        "url": "https://www.wbtc.network/"
+      },
+      {
+        "label": "Gauntlet branded vault disclaimer: no custodial product, guarantee or vault-user contractual obligation",
+        "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
       }
     ],
-    "rationale": "At Ethereum block 26114897 (2026-10-03T22:47:11Z), asset() identifies USDT 0xdac17f958d2ee523a2206206994597c13d831ec7. liquidityAdapter() identifies 0x0fc9b889756e1241a4d89472db701c0417c26d89. Its complete marketIdsLength()=8 census has expectedSupplyAssets summing to 2507752278329 raw USDT, equal to adapter realAssets() and vault totalAssets(); idle USDT.balanceOf(vault)=0. Thus the whole denominator is USDT-denominated Morpho lender positions. This is not idle cash, borrower-collateral reserve weighting, guaranteed redemption, or underlying Tether reserve ownership.",
+    "rationale": "At Ethereum block 26197394 (2026-10-15T10:43:59.000Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7; totalSupply()=256704082652908784980765 raw 18-decimal shares; totalAssets()=263483878807 raw 6-decimal USDT. The sole adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates eight current markets; expectedSupplyAssets sums to 263483878807, equal to adapter realAssets() and vault totalAssets(), with zero idle USDT. Each adapter position has zero borrow shares and zero posted collateral. Current lender allocation grouped by borrower collateral is WBTC 147170.970642 USDT (55.855778% of NAV), sUSDS 116312.189320 USDT (44.143949% of NAV), cbBTC 0.391864 USDT (0.000149% of NAV), wstETH 0.326981 USDT (0.000124% of NAV). These weights classify the collateral supporting loans, not borrower-owned tokens held directly by the vault. The existing 100% USDT lender-position denomination slice and parent wrapper dependency are unchanged. Ordinary withdrawal capacity is separate from NAV; no finite full-book liquidation deadline or guaranteed fiat redemption follows.",
     "compositionBasis": "Complete eight-market adapter census plus idle balance at one pinned Ethereum block; sum equals whole vault totalAssets",
-    "compositionAsOf": "2026-10-03",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
+    "knownUnknownExposure": "All eight lender positions and the complete USDT denominator are identified. WBTC establishes a material off-chain Bitcoin custody layer behind borrower collateral, supporting mixed whole-book custody. Exact custodian allocation, enforceable holder segregation/insolvency rights, independent whole-vault financial assurance and a maximum illiquid-position realization interval remain unestablished.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -76,13 +88,17 @@
       {
         "name": "Morpho Blue Ethereum lending markets",
         "role": "other"
+      },
+      {
+        "name": "WBTC Bitcoin custodians (downstream borrower-collateral layer; exact custodian allocation undisclosed)",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_GtusdtpGauntlet)",
     "confidence": "probable",
     "sources": [
       {
@@ -108,8 +124,20 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+      },
+      {
+        "label": "Ethereum block 26197394, hash 0xb3e5604e82dba582540491dd864b3db2325110e5155a603c3c6f06b33e2ac9cc, timestamp 2026-10-15T10:43:59.000Z; pinned on-chain review 2026-10-15",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "WBTC primary disclosure: Bitcoin held in custody; downstream borrower-collateral layer, not direct vault custody",
+        "url": "https://www.wbtc.network/"
+      },
+      {
+        "label": "Gauntlet branded vault disclaimer: no custodial product, guarantee or vault-user contractual obligation",
+        "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
       }
     ],
-    "uncertainty": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification."
+    "uncertainty": "At Ethereum block 26197394 (2026-10-15T10:43:59.000Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7; totalSupply()=256704082652908784980765 raw 18-decimal shares; totalAssets()=263483878807 raw 6-decimal USDT. The sole adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates eight current markets; expectedSupplyAssets sums to 263483878807, equal to adapter realAssets() and vault totalAssets(), with zero idle USDT. Each adapter position has zero borrow shares and zero posted collateral. Current lender-asset allocation by borrower collateral: WBTC 147170.970642 USDT (55.855778% of NAV), sUSDS 116312.189320 USDT (44.143949% of NAV), cbBTC 0.391864 USDT (0.000149% of NAV), wstETH 0.326981 USDT (0.000124% of NAV). The WBTC issuer describes its Bitcoin reserve as custodial; the vault and adapter remain immediate on-chain lenders, but their material borrower-collateral layer is not wholly on-chain. This supports custodyModel=mixed under the whole-book rule, not an institutional whole-vault custody claim. No custodian percentage is attributed directly to the vault, and no direct ownership of borrower collateral or Tether reserves is asserted. The curator disclaimer excludes custodial products and a guaranteed vault-user claim; legal segregation, insolvency priority and custodian reuse rights remain unknown. Functional executable correspondence was independently reproduced against Sourcify match 30034094: all bytes match after masking only compiler-declared asset/decimals/virtualShares immutables and CBOR metadata; every immutable occurrence matches exact-deployment getters. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Blockscout remains partially verified; functional correspondence does not establish complete metadata or creation-bytecode identity, financial assurance or legal segregation. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

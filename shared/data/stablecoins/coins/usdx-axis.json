@@ -16,16 +16,18 @@
   "mechanismArchetype": "synthetic-delta-neutral",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The canonical Ethereum V2 USDx token is a synthetic dollar backed by stablecoins and liquid assets deployed at trading venues, with directional inventory offset by hedges. The official reserve documentation explicitly describes delta-neutral exposure and offchain venue custody; it does not establish measured hedge coverage.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review 2026-10-15 (Rev_UsdxAxis)",
+    "rationale": "The canonical Ethereum V2 USDx token is a synthetic dollar backed by stablecoins and liquid assets deployed at trading venues, with directional inventory offset by hedges. The official reserve documentation explicitly describes delta-neutral exposure and offchain venue custody; it does not establish measured hedge coverage. Axis dates the first USDx tranche to April 8, 2026; the legacy Plasma V1 token records that 10,000,000 USDx tranche minted between blocks 18603490 and 18607789 on April 7, 2026 UTC. The current canonical V2 implementation launched on July 23, so its mechanism history does not inherit the private-beta product age.",
     "sources": [
       { "label": "Axis backing and custody disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
-      { "label": "Axis canonical V2 deployments", "url": "https://docs.axis.to/reference/contract-addresses.md" }
+      { "label": "Axis canonical V2 deployments", "url": "https://docs.axis.to/reference/contract-addresses.md" },
+      { "label": "Axis dates first USDx issuance to April 8, 2026", "url": "https://www.axis.to/insights/The-Axis-Roadmap" },
+      { "label": "Legacy Plasma V1 first-tranche mint completion, April 7, 2026", "url": "https://plasmascan.to/tx/0xb2018a5cae65942cc64922c8e50cf1bcc72d837f59e8a446fd8245829a304252" }
     ]
   },
   "flags": { "backing": "crypto-backed", "governance": "centralized-dependent" },
-  "collateral": "Issuer asset-form snapshot dated October 8, 2026: liquid hedge inventory 67.92%, stablecoins and settlement tokens 25.18%, yield-bearing and staked collateral 5.79%, tokenized Treasuries or reserve-backed cash equivalents 0.56%, and fiat cash and FX balances 0.54% (display-rounded; reserves sidecar retains exact source weights). Gross shares precede hedge offsets. The issuer marks 45.6252% of the whole book unclassified within liquid inventory; constituent identities, dependency weights and canonical V2-versus-legacy reserve partition remain unresolved.",
+  "collateral": "Issuer gross asset-form snapshot dated October 15, 2026: liquid hedge inventory 75.83%, stablecoins and settlement tokens 18.13%, yield-bearing and staked collateral 4.50%, tokenized Treasuries or reserve-backed cash equivalents 0.89%, and fiat cash and FX balances 0.64% (display-rounded; reserves sidecar retains exact source weights). Gross shares precede hedge offsets. The issuer marks 44.9659% of the whole book unclassified within liquid inventory; constituent identities, dependency weights and canonical V2-versus-legacy reserve partition remain unresolved.",
   "pegMechanism": "Approved primary-market accounts sign EIP-712 orders against USDC or USDT collateral; authorized operators settle minting and redemption atomically onchain. Offchain RFQ pricing reflects portfolio unwind costs, and the contract does not independently value collateral using an external oracle. Retail holders rely on secondary markets. Indicative instant and seven-day redemption bands are not committed capacity or settlement guarantees.",
   "llamaId": "442",
   "detailProvider": "defillama",
@@ -42,7 +44,11 @@
     { "label": "Docs", "url": "https://docs.axis.to/" },
     { "label": "Transparency", "url": "https://app.axis.to/transparency" },
     { "label": "Terms", "url": "https://www.axis.to/terms-of-service" },
-    { "label": "Canonical V2 deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xc50b87d6c87b63e5b8b97253aecd32724eed0b081afdf2732e654a027adf3432" }
+    { "label": "Canonical V2 deployment, July 23, 2026", "url": "https://etherscan.io/tx/0xc50b87d6c87b63e5b8b97253aecd32724eed0b081afdf2732e654a027adf3432" },
+    { "label": "Audits", "url": "https://docs.axis.to/backing-reserves-and-transparency/audits.md" },
+    { "label": "Explorer", "url": "https://etherscan.io/address/0xa1fa7777974312f7d801a8880714a218f76233f8#code" },
+    { "label": "X", "url": "https://x.com/AxisFDN" },
+    { "label": "Telegram", "url": "https://t.me/AxisFDN" }
   ],
   "jurisdiction": { "country": "British Virgin Islands" },
   "contracts": [
@@ -51,6 +57,13 @@
   "collateralQuality": "exotic",
   "custodyModel": "unknown",
   "governanceQuality": "multisig",
-  "launchDate": "2026-07-23",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Primary redemption is restricted and has no modeled capacity",
+      "message": "Direct USDx redemption requires an approved primary-market account and an operator-settled signed order. Public instant and seven-day scenarios are indicative, not committed capacity or settlement guarantees. Pharos does not model an issuer redemption backstop without executable RFQ capacity; other holders rely on secondary markets."
+    }
+  ],
+  "launchDate": "2026-04-07",
   "implementationLaunchDate": "2026-07-23"
 }

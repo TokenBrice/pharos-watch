@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.51",
+    "title": "Source-bound consensus inputs and reviewed USDFC price recovery",
+    "date": "2026-10-15",
+    "effectiveAt": 1792108800,
+    "summary": "Pricing v6.51 prevents supplemental prices from re-entering consensus as DefiLlama list observations and admits USDFC to the existing reviewed low-volume CoinGecko fallback.",
+    "impact": [
+      "DefiLlama list intake accepts only an absent legacy source label, defillama or defillama-list, while retaining the existing exclusion of CoinGecko-fallback supply rows. A carried or supplemental price cannot acquire a second provider identity merely because it is present on the intake row.",
+      "Missing USDFC prices may recover through its reviewed CoinGecko identity after earlier fallback passes fail. The seven-day age budget, 120-second future-skew bound, peg validation, fallback confidence and original upstream observation clock remain unchanged.",
+      "Consensus weights, depeg authority and supply admission are unchanged. Fixed-clock admitted-input comparison and fresh producer observations remain release requirements; no production recovery or replay equivalence is claimed.",
+      "Activation is provisionally 2026-10-16 00:00 UTC (1792108800), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.50",
     "title": "Reviewed BRLV low-volume price recovery",
     "date": "2026-10-13",

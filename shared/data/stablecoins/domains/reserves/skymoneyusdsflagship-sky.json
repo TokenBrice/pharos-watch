@@ -3,8 +3,25 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
-      "name": "sky.money USDS Flagship idle underlying and Morpho lender claims",
-      "pct": 100,
+      "name": "sky.money USDS Flagship idle USDS",
+      "pct": 81.474991085354,
+      "risk": "medium",
+      "coinId": "usds-sky",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Protocol USDS",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate",
+      "blacklistabilityExposure": "upstream"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:ethereum:0xe15fcc81118895b67b6647bbd393182df44e11e0:deployed",
+      "name": "sky.money USDS Flagship Morpho lender claims",
+      "pct": 18.525008914646,
       "risk": "high",
       "coinId": "usds-sky",
       "depType": "wrapper",
@@ -23,8 +40,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine11",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 exact-deployment review",
     "confidence": "verified",
     "sources": [
       {
@@ -36,8 +53,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
       },
       {
-        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-        "url": "https://etherscan.io/block/26107702"
+        "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+        "url": "https://etherscan.io/block/26197300"
       },
       {
         "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -48,9 +65,9 @@
         "url": "https://api.morpho.org/graphql"
       }
     ],
-    "rationale": "At Ethereum block 26107702 (2026-10-02T22:43:47+00:00), totalAssets=37213041.517174 USDS; totalSupply=37094821.851264 shares; convertToAssets(1e18)=1.003186958718484905 USDS; idle balance=29771240.288112 USDS. Complete current adapter census contains 1 adapter, 3 markets: 0x9a8dab6de1059e6dc66c34b358764b70effb289e514e237f3161ffb09eaaf24f (PT-sUSDS-26NOV2026, LLTV 0.915): 2535545.351573 USDS lender claim; 0xb374528d44b6ab6e0cecc87e0481f45d892f38baec90c1d318851969ec14ea5f (wstETH, LLTV 0.86): 1323435.223921 USDS lender claim; 0x2f4ea313fb7df23a82c19d95e8b90acc8179bd053e0d9ef745cdf28d6a49499c (cbBTC, LLTV 0.86): 3582820.653569 USDS lender claim. The API snapshot is separately observed and is not the pinned-block denominator. The 100% row is the current direct parent-denominated operational claim, not a claim that lending exposure is idle cash or that borrower collateral is owned directly by holders.",
-    "compositionBasis": "Fixed-block ERC-4626, underlying balance and complete adapter/market reads at Ethereum block 26107702; verified deployed source",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), totalAssets=40957315564631184834483764 raw USDS, totalSupply=40816828320738646526976560 raw shares and convertToAssets(1e18)=1003441895161196492 raw USDS. Idle USDS=33370015140198112300770155. The entire adapter roster is 0xf94be39e8863183ff41194b5923627c90a34039d, with three marketIds. Their expectedSupplyAssets are 4387091447458699794356951 (PT-sUSDS-26NOV2026, LLTV 91.5%), 660946990058586169876117 (wstETH, LLTV 86%) and 2539261986915786569480541 (cbBTC, LLTV 86%); the sum is adapter realAssets=7587300424433072533713609. Idle plus all lender claims reconciles exactly to totalAssets. Every position is lender-only, with zero borrow shares and collateral. Rows follow the adapter's measured split: idle USDS uses the underlying key and the non-idle lender book uses the vault :deployed key. At Ethereum block 26197838 (2026-10-15T12:13:11Z) idle was 81.4750% of totalAssets and lender claims 18.5250%. The lender row is a USDS-denominated operational claim, not idle cash or direct ownership of borrower collateral. liquidityAdapter is zero and forceDeallocatePenalty is 0.2%; no full-book realization deadline or financial assurance is established. Pinned RPC: https://eth-mainnet.g.alchemy.com/v2/.",
+    "compositionBasis": "Fixed-block ERC-4626, underlying balance and complete adapter/market reads at Ethereum block 26197300 (2026-10-15T10:25:11Z); runtime-matched verified vault and adapter source",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Immediate wrapper claim and current positions are identified; independent financial reconciliation, enforceable segregation and insolvency priority remain undisclosed. Parent reserve risks are evaluated on the parent, not replicated as local custody.",
     "knownUnknownExposurePct": 0
@@ -59,20 +76,18 @@
     "providers": [
       {
         "name": "sky.money USDS Flagship Ethereum vault",
-        "role": "other",
-        "jurisdiction": "Ethereum"
+        "role": "other"
       },
       {
         "name": "Morpho Blue and vault adapter 0xf94be39e8863183ff41194b5923627c90a34039d",
-        "role": "other",
-        "jurisdiction": "Ethereum"
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 exact-deployment review",
     "confidence": "verified",
     "sources": [
       {
@@ -84,8 +99,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
       },
       {
-        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-        "url": "https://etherscan.io/block/26107702"
+        "label": "Ethereum block 26197300, fixed-block vault, adapter and Safe reads",
+        "url": "https://etherscan.io/block/26197300"
       },
       {
         "label": "Morpho Vault V2 accounting, curation and withdrawal specification",
@@ -96,6 +111,6 @@
         "url": "https://api.morpho.org/graphql"
       }
     ],
-    "uncertainty": "Immediate custody is onchain; this does not establish whole-parent reserve custody or enforceable legal priority. Lender assets are intentionally deployed into Morpho borrower markets; allocation and available liquidity change."
+    "uncertainty": "Immediate custody is onchain; this does not establish whole-parent reserve custody or enforceable legal priority. Lender assets are intentionally deployed into Morpho borrower markets; allocation and available liquidity change. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown. Whole-book custody is mixed: at Ethereum block 26197300 (2026-10-15T10:25:11Z), 2539261986915786569480541 raw USDS of lender claims were secured by custodial cbBTC, about 6.2% of 40957315564631184834483764 raw total assets. This is an allocation weight, not a direct BTC holding or a custodian reserve share; legal safeguards remain unresolved."
   }
 }

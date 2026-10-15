@@ -3,12 +3,12 @@
   "reserves": [
     {
       "sourceKey": "forest-road:credit-book",
-      "name": "Forest Road deployed specialty-finance credit book",
-      "pct": 97.344125,
+      "name": "Forest Road net accrued private-credit accounting book",
+      "pct": 90.997851814381,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Forest Road originated facilities; borrower legal identities undisclosed",
-      "maturityDaysMax": 969,
+      "maturityDaysMax": 957,
       "riskFactors": [
         "credit",
         "duration",
@@ -21,8 +21,8 @@
     },
     {
       "sourceKey": "forest-road:idle-usdc",
-      "name": "USDC idle redemption reserve",
-      "pct": 2.655875,
+      "name": "USDC idle accounting reserve",
+      "pct": 9.002148185619,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -38,8 +38,8 @@
   ],
   "reserveReview": {
     "compositionSource": "live-adapter",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R61 (contractual maximum maturity); existing composition review preserved",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
     "confidence": "verified",
     "sources": [
       {
@@ -83,29 +83,29 @@
         "url": "https://etherscan.io/address/0x8317736611b542ddb4a820fe344b621a904bdd48"
       },
       {
-        "label": "ClaimBridge totalOriginated=11 and exhaustive facility(1..11) census at Ethereum block 26114921, 2026-10-03T22:51:59Z; all Active, maximum contractual maturity 2029-05-29T00:00:00Z",
-        "url": "https://etherscan.io/address/0x37b71fec40b5dd04f29c5698b4112ef2ad0c980e#readProxyContract"
+        "label": "ClaimBridge totalOriginated=11 and exhaustive facility(1..11) census at Ethereum block 26197399, 2026-10-15T10:44:59Z; all Active and nonrenewable, maximum contractual maturity 2029-05-29T00:00:00Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Verified ClaimBridge implementation: totalOriginated is nextId minus one; facility returns contractual maturity and loan state",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc63b7bf5472378abfea171793c06bd0e960b2bb7"
       },
       {
-        "label": "Verified ReserveManager implementation accounting; accessed 2026-10-07T21:06:45Z, separately pinned at block 26143056",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x99B4DFa4e1344273d5335bD90de1dea3A02b9C3A"
+        "label": "ReserveManager, USDfr, canonical USDC balance and facility census at Ethereum block 26197399, hash 0x2bff3ac61a5d73489280644fbef154289380ad03d8135a65efdd7a433c6a2c36, 2026-10-15T10:44:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "Existing composition remains the block 26107707 accounting observation: backing $5150523.219270193949, deployed principal $5013731.736653193831, USDC custody $136791.482617 and USDfr supply 5142565.55847783. Weights use backing value, not token supply or contractual face. Separately, at block 26114921 (2026-10-03T22:51:59Z), ClaimBridge totalOriginated=11 and every facility(1..11) is Active; all are nonrenewable. Maximum contractual maturity is 2029-05-29T00:00:00Z, giving a conservatively rounded-up remaining maximum of 969 days. This is a complete contractual maturity ceiling for the observed current facilities, not WAM, expected recovery timing, independent credit valuation or a permanent limit on future originations.",
-    "compositionBasis": "Pinned Ethereum ReserveManager totalBackingValue/deployedPrincipal and canonical USDC balance at block 26107707",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26197399 (2026-10-15T10:44:59Z), totalBackingValue and recognizedBackingValue both equal 5541726221558535991407754 raw 18-decimal units. deployedPrincipal is 5042851815052535991407754, including continuously accrued receivables, with zero principal impairment. idleUSDC and physical canonical USDC balance both equal 498874406506 raw six-decimal units. Physical USDfr totalSupply is 5536330484442284742571821; controller totalUSDfr, including unissued accrued liabilities, equals 5541726221558535991407754. Weights use recognized backing, not physical token supply or contractual face. ClaimBridge totalOriginated=11; exhaustive facility(1..11) reads show all Active and nonrenewable. Ten renewable-energy facilities share one borrower identifier and mature on 2029-05-29; the digital-assets facility matures on 2027-09-21. The contractual maximum rounds up to 957 remaining days at the pinned timestamp. This ceiling is not WAM, cash realization timing, independent credit valuation or a permanent limit on future originations.",
+    "compositionBasis": "Pinned Ethereum recognizedBackingValue, deployedPrincipal, totalPrincipalImpairment, idleUSDC and canonical USDC balance at block 26197399; onchain accounting claim, not independently verified loan value",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Deployed credit book has onchain accounting and facility identifiers, but borrower identities, executed liens/segregation instruments, independently confirmed collateral and financial assurance remain unavailable. Idle USDC alone creates the tracked collateral dependency. The October 9 liquidity review found no whole-credit-book realization deadline: issuer operating limits bound direct USDfr redemption by idle USDC, while principal and PIK accrual enter NAV before cash arrives. The sUSDfr queue's 21-day minimum is a separate holder route, not a maximum liquidity horizon for this credit-book exposure; the timestamped research classification preserves that distinction.",
-    "knownUnknownExposurePct": 97.344125,
+    "knownUnknownExposurePct": 90.997851814381,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Forest Road deployed specialty-finance credit book",
-        "pct": 97.344125,
+        "reserveName": "Forest Road net accrued private-credit accounting book",
+        "pct": 90.997851814381,
         "disposition": "insufficient-evidence",
         "rationale": "Credit-facility accounting does not establish borrower identities, independently verified asset values or enforceable holder priority; no stablecoin dependency is invented for the loan book."
       }
@@ -125,8 +125,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -163,6 +163,6 @@
       }
     ],
     "uncertainty": "Exact Ethereum contract custodies idle USDC. Credit collateral is described as assigned, lien-perfected and escrowed via attester facts, but executed deeds, escrow account holders, borrower identities and asset-wide legal safeguards are not public. Named onchain custody cannot establish a whole-book regulated institutional tier.",
-    "knownUnknownExposurePct": 97.344125
+    "knownUnknownExposurePct": 90.997851814381
   }
 }

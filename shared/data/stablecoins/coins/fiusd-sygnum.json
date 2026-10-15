@@ -49,19 +49,23 @@
   "geckoId": "sygnum-fiusd-liquidity-fund",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779",
-    "provider": "Deloitte Ireland LLP is named as annual underlying-fund financial auditor in the March 2025 application. No current signed token-to-fund-unit reconciliation or token-scoped financial report was retrieved.",
+    "url": "https://fidelityinternational.com/legal/documents/FILF/en/ar.filf.en.xx.pdf",
+    "provider": "Deloitte Ireland LLP audited Fidelity Institutional Liquidity Fund plc's financial statements for the year ended 31 August 2025; its opinion is signed 9 December 2025. This is underlying-fund assurance, not a reconciliation of Sygnum's FIUSD tokens to fiduciary fund units.",
     "attestorTier": "big4",
     "cadence": "annual",
     "attestorJurisdiction": "Ireland"
   },
   "links": [
     {
+      "label": "Website",
+      "url": "https://www.sygnum.com/tokenization/"
+    },
+    {
       "label": "FIUSD zkSync proxy creation, 21 February 2024, block 27141850",
       "url": "https://era.zksync.network/tx/0x71a851d8023d213b57ef1c5d9782151a3436380bf33ed1809aaead95fbe768b4"
     },
     {
-      "label": "Issuer application and product terms",
+      "label": "Issuer application, historical product description",
       "url": "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
     },
     {
@@ -71,11 +75,36 @@
     {
       "label": "Arbitrum token",
       "url": "https://arbiscan.io/address/0xcded6b899edba762d793f44ed295248049440e1e"
+    },
+    {
+      "label": "Fidelity USD Fund Class G Acc factsheet, ISIN IE00BNKLND78",
+      "url": "https://fidelityinternational.com/FILPS/Documents/en/current/pro.en.xx.IE00BNKLND78.pdf"
+    },
+    {
+      "label": "Fidelity USD Fund holdings",
+      "url": "https://www.fidelity.ie/media/Ireland/PDF/Liquidity%20Funds/ilf-fund-holdings.pdf"
+    },
+    {
+      "label": "Fidelity daily USD share-class NAV and outstanding units",
+      "url": "https://www.fidelity.ie/media/Ireland/Excel/lvnav-usd-daily-price.xlsx"
+    },
+    {
+      "label": "Fidelity underlying fund and dealing information",
+      "url": "https://www.fidelity.ie/liquidity-funds/"
+    },
+    {
+      "label": "FINMA authorised banks register",
+      "url": "https://www.finma.ch/en/~/media/finma/dokumente/bewilligungstraeger/pdf/beh.pdf?sc_lang=en"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/sygnumofficial"
     }
   ],
   "jurisdiction": {
     "country": "Switzerland",
-    "license": "Issuer describes ledger-based securities under Swiss Code of Obligations art. 973d; underlying fund domiciled in Ireland"
+    "regulator": "Swiss Financial Market Supervisory Authority (FINMA)",
+    "license": "FINMA-authorised Swiss bank; FIUSD is described as a ledger-based security under Swiss Code of Obligations art. 973d, without direct token product supervision; underlying fund domiciled in Ireland"
   },
   "contracts": [
     {

@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_MxntTether",
     "confidence": "manual-review",
     "sources": [
       {
@@ -29,10 +29,18 @@
       {
         "label": "Retrieved independent reserve report",
         "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+      },
+      {
+        "label": "Issuer Relevant Information Document, safeguarding arrangements and token scope",
+        "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
+      },
+      {
+        "label": "Current issuer report index; latest period remains June 30, 2026",
+        "url": "https://tether.to/page-data/transparency/page-data.json"
       }
     ],
-    "rationale": "BDO reconciles the aggregate June 30 fiat-token reserve pool of USD 187,751,426,411 against USD 183,641,897,215 total liabilities, including USD 183,622,105,630 token liabilities. Legal terms place MXNT in that shared reserve model. This single basket records the whole shared claim but does not import USDT percentages or infer a dedicated peso-denominated allocation.",
-    "compositionBasis": "Retrieved independent report; historical snapshot and scope retained",
+    "rationale": "The issuer report index re-opened October 15 still identifies June 30, 2026 as its latest independently assured period. BDO reconciles the aggregate fiat-token reserve pool of USD 187,751,426,411 against USD 183,641,897,215 total liabilities, including USD 183,622,105,630 token liabilities. Holder terms and the February 20 Relevant Information Document explicitly place MXNT in the same shared reserve model. No token-specific constituent weights, reserve custodians, maximum maturity or full liquidation bound are disclosed. This single basket records the shared claim without importing USDT percentages or inferring dedicated peso assets. The daily MXNT feed's equal total_assets and total_liabilities reproduce issued-token counts, not an independently valued dedicated reserve allocation.",
+    "compositionBasis": "June 30, 2026 aggregate independent report; shared-claim identity corroborated by issuer terms and Relevant Information Document; historical composition date unchanged",
     "compositionAsOf": "2026-06-30",
     "scope": "classification-only",
     "knownUnknownExposure": "The report does not disclose a dedicated MXNT reserve allocation, named MXNT custodian roster, insolvency priority, or reserve-specific peso asset mix.",
@@ -58,8 +66,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_MxntTether",
     "confidence": "manual-review",
     "sources": [
       {
@@ -69,8 +77,12 @@
       {
         "label": "Retrieved independent reserve report",
         "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+      },
+      {
+        "label": "Issuer Relevant Information Document, section 3 safeguarding arrangements",
+        "url": "https://tether.to/public/Relevant_Information_Document_-_Tether_International%2C_S.A._de_C.V..pdf"
       }
     ],
-    "uncertainty": "The report does not disclose a dedicated MXNT reserve allocation, named MXNT custodian roster, insolvency priority, or reserve-specific peso asset mix."
+    "uncertainty": "The issuer's Relevant Information Document states reserves are primarily held with third parties including banks and licensed financial institutions, but provides no named whole-book MXNT custodian roster or allocation. The aggregate report and terms do not establish token-specific reserve segregation, enforceable insolvency priority, replacement continuity or a reserve-specific peso asset mix. Generic online/offline issuer-wallet disclosures do not identify the six privileged signers' key-custody policy."
   }
 }

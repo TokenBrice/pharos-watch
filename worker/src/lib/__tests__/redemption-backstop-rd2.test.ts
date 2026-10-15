@@ -27,9 +27,9 @@ const eventualClaims = [
   ["zaru-blocktower", "allowlisted"],
 ] as const;
 
-function fixedInput(row: RedemptionBackstopEntry): ReportCardsFixedInput {
+function fixedInput(row: RedemptionBackstopEntry, clockSec = now): ReportCardsFixedInput {
   return {
-    clockSec: now,
+    clockSec,
     dexGenerationId: "dex-liquidity-rd2",
     redemptionGenerationId: "redemption-backstops-rd2",
     dexLiqMap: {},
@@ -38,12 +38,12 @@ function fixedInput(row: RedemptionBackstopEntry): ReportCardsFixedInput {
   } as unknown as ReportCardsFixedInput;
 }
 
-async function resolve(id: string, supply: number | null = supplyUsd) {
+async function resolve(id: string, supply: number | null = supplyUsd, clockSec = now) {
   const config = getRedemptionBackstopConfig(id)!;
-  const capacity = await resolveRedemptionCapacity(db, id, config.capacityModel, supply, now);
+  const capacity = await resolveRedemptionCapacity(db, id, config.capacityModel, supply, clockSec);
   const row = makeSupplyFullRedemption({
     stablecoinId: id,
-    updatedAt: now,
+    updatedAt: clockSec,
     ...capacity,
     routeFamily: config.routeFamily,
     accessModel: config.accessModel,
@@ -60,15 +60,15 @@ async function resolve(id: string, supply: number | null = supplyUsd) {
   return { config, capacity, row };
 }
 
-function assertConsumerGaps(row: RedemptionBackstopEntry) {
+function assertConsumerGaps(row: RedemptionBackstopEntry, clockSec = now) {
   const assetId = row.stablecoinId;
-  const draft = makeV9FixedInput({ assetId, clockSec: now });
+  const draft = makeV9FixedInput({ assetId, clockSec });
   draft.redemptionBackstopMap = { [assetId]: row };
   draft.redemptionStale = false;
   draft.redemptionGenerationId = "redemption:rd2";
-  draft.inputFreshness.redemptionBackstops = { updatedAt: now, ageSeconds: 0, stale: false };
+  draft.inputFreshness.redemptionBackstops = { updatedAt: clockSec, ageSeconds: 0, stale: false };
   const fixed = rebuildFixed(draft);
-  const extension = structuredClone(makeV9Extension({ assetId, clockSec: now, registryFingerprint: fixed.registryFingerprint }));
+  const extension = structuredClone(makeV9Extension({ assetId, clockSec, registryFingerprint: fixed.registryFingerprint }));
   extension.assets[0]!.routeReviews = buildSafetyScoreV9RouteReviews(fixed, assetId);
   extension.assets[0]!.retainedRoutes = buildSafetyScoreV9RetainedRedemptionRoutes(fixed, assetId);
   const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
@@ -214,17 +214,17 @@ describe("RD2 legal entitlement remains eventual diagnostic evidence", () => {
 describe("RD2 issuer-fee and output boundaries", () => {
   // A captured positive capacity point is deliberately retained as diagnostic evidence.
   // It cannot erase current missing-factor reviews or certify an alternative payout.
-  async function captured(id: string) {
-    const { config, row } = await resolve(id);
+  async function captured(id: string, clockSec = now) {
+    const { config, row } = await resolve(id, supplyUsd, clockSec);
     if (!row.capacityProfile) throw new Error("Expected configured route capacity profile");
     const observation = buildRedemptionExitRouteObservation({
       stablecoinId: id, config, capacityProfile: { scoringUsd: supplyUsd, scoringHorizon: "immediate", capacityProfileConfidence: row.capacityConfidence, modeledExitSizeUsd: 5_000_000 },
       scoringCapacityUsd: supplyUsd, supplyUsd, routeStatus: "open", resolutionState: "resolved", sourceMode: "static",
-      capacityConfidence: row.capacityConfidence, resolvedFeeBps: row.feeBps, now,
+      capacityConfidence: row.capacityConfidence, resolvedFeeBps: row.feeBps, now: clockSec,
     })!;
     const capturedRow = { ...row, capacityProfile: { ...row.capacityProfile, exitRouteObservations: [observation] } };
-    assertConsumerGaps(capturedRow);
-    return { config, observation, reviews: buildSafetyScoreV9RouteReviews(fixedInput(capturedRow), id) };
+    assertConsumerGaps(capturedRow, clockSec);
+    return { config, observation, reviews: buildSafetyScoreV9RouteReviews(fixedInput(capturedRow, clockSec), id) };
   }
 
   it("publishes MoonPay's zero issuer fee without an all-in cost bound or downstream-holder entitlement", async () => {
@@ -254,11 +254,33 @@ describe("RD2 issuer-fee and output boundaries", () => {
     expect(reviews).toMatchObject([{ holderAccess: "institutional-eligible", coverageClass: "diagnostic", minRedeemUsd: 1 }]);
   });
 
+  it("keeps ChinaAMC's single Redemption Charge distinct from an all-in distributor cost bound", () => {
+    const config = getRedemptionBackstopConfig("cumiu-chinaamc")!;
+    expect(config.v9RouteReviewTerms).toMatchObject({
+      minRedeemUsd: 1000,
+      missingScoringFields: ["capacity", "settlement", "cost"],
+    });
+    expect(config.capacityModel).toEqual({
+      kind: "supply-full", confidence: "documented-bound", basis: "issuer-term-redemption",
+    });
+    for (const notional of [1_000, 1_000_000, 25_000_000]) {
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBeNull();
+    }
+  });
+
   it("retains GoldZip physical delivery without inventing USD proceeds or free delivery", async () => {
-    const { observation, reviews } = await captured("xgz-goldzip");
+    // Admit the October 15 source review only after its reviewed UTC day ends.
+    const { config, observation, reviews } = await captured("xgz-goldzip", Date.UTC(2026, 9, 16, 12) / 1_000);
     expect(observation).toMatchObject({
       scoreEligible: false, output: { kind: "physical-commodity-delivery", assetKeys: ["commodity:xau"], sameNotionalEligible: false },
     });
     expect(reviews).toMatchObject([{ coverageClass: "diagnostic", settlementSlaSec: null }]);
+    expect(resolveFeeModelKind(config.costModel)).toBe("documented-variable");
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+    expect(config.physicalToUsd).toBeUndefined();
+    expect(config.outputAssets).toBeUndefined();
+    for (const notional of [1_000, 1_000_000, 25_000_000]) {
+      expect(resolveV9RedemptionRouteCostBpsAtNotional(config, notional)).toBeNull();
+    }
   });
 });

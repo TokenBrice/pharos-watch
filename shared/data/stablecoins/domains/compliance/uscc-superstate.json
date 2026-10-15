@@ -16,26 +16,26 @@
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {
-      "summary": "USCC is a NAV-accreting restricted private-fund share rather than a fixed-value payment stablecoin. The crypto carry strategy does not change that fund-share identity; no GENIUS issuer approval is asserted.",
+      "summary": "USCC represents restricted private-fund shares offered under Securities Act Section 4(a)(2) and Regulation D Rule 506. Variable NAV redemption does not create a fixed-value payment claim. The GENIUS Act's securities exclusion applies to the fund-share instrument; no payment-stablecoin issuer authorization is asserted.",
       "references": [
         {
           "label": "USCC fund, service providers and current holdings",
           "url": "https://superstate.com/assets/uscc",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-15"
         },
         {
           "label": "USCC current investor terms",
           "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-15"
         },
         {
           "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
           "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
           "sourceKind": "statute",
           "sourceDate": "2025-07-18",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-15"
         }
       ]
     },
@@ -45,42 +45,42 @@
     "issuerDomicile": "United States",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "USCC is a NAV-accreting restricted private-fund share rather than a fixed-value payment stablecoin. The crypto carry strategy does not change that fund-share identity; no GENIUS issuer approval is asserted.",
+    "notes": "USCC is assessed as a restricted investment-fund share, independently of the regulatory status of its underlying USDC or custodians. Public issuer disclosures describe a Delaware Statutory Trust series, securities-law offering exemptions and variable NAV redemption. The GENIUS Act excludes securities from payment stablecoins. MiCA financial-instrument exclusion is separately supported by ESMA's technology-neutral collective-investment-unit criteria; neither assessment asserts issuer licensing or retail access.",
     "references": [
       {
         "label": "USCC fund, service providers and current holdings",
         "url": "https://superstate.com/assets/uscc",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "USCC current investor terms",
         "url": "https://docs.superstate.com/investors/tokenized-funds/available-funds/bitwise-uscc",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "Superstate deployments and administrative powers",
         "url": "https://docs.superstate.com/investors/smart-contracts",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "GENIUS Act Public Law 119-27: payment stablecoin definition and exclusions",
         "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       },
       {
         "label": "OCC Bulletin 2026-3: GENIUS Act proposed rules",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
         "sourceDate": "2026-02-25",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-15"
       }
     ],
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewer": "Rev_UsccSuperstate primary-source compliance review",
+    "reviewedAt": "2026-10-15"
   }
 }

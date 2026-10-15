@@ -2,7 +2,7 @@
   "id": "steakusdg-steakhouse",
   "name": "Steakhouse USDG",
   "symbol": "steakUSDG",
-  "oneLiner": "steakUSDG is Steakhouse’s Morpho V2 USDG lending vault; shares accrue yield, absorb strategy losses, and redeem against available liquidity.",
+  "oneLiner": "steakUSDG is Steakhouse’s high-yield USDG lending vault on Robinhood Chain, with yield-accruing shares exposed to borrower losses and withdrawal liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdg-paxos",
   "collateral": "USDG held idle in the exact Morpho VaultV2 and supplied through its sole MorphoMarketV1 adapter; borrower collateral and market liquidity determine strategy risk.",
-  "pegMechanism": "ERC-4626 shares represent a proportional USDG-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Holder withdrawals burn shares and pay USDG atomically when idle assets plus the selected liquidity adapter suffice.",
+  "pegMechanism": "ERC-4626 shares represent a proportional USDG-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Holder withdrawals burn shares and pay USDG atomically when idle assets plus the selected liquidity adapter suffice. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current holder claim is the operational ERC-4626 claim at robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd, not direct ownership of the parent’s fiat reserves. Exact verified immutable VaultV2 code pulls underlying before user mint, can mint fee shares during interest accrual, and burns receipts against available underlying on exit. Reverified at block 78597801; parent fiat-cash protections remain upstream.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review (Rev_SteakusdgSteakhouse)",
+    "rationale": "The holder claim is the operational ERC-4626 claim at robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd, not direct ownership of the parent’s fiat reserves. At block 89162029 (2026-10-15T10:43:17Z), deployed runtime exactly matches the verified immutable VaultV2 source. User issuance transfers underlying before creating shares, interest accrual can mint fee shares, and redemption burns receipts against available underlying. Parent fiat-cash protections remain upstream.",
     "sources": [
       {
         "label": "Morpho exact Steakhouse USDG deployment",
@@ -37,13 +37,17 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact runtime and ERC-4626 state",
+        "url": "https://rpc.mainnet.chain.robinhood.com"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho exact Steakhouse USDG deployment",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
     },
     {
@@ -51,8 +55,31 @@
       "url": "https://www.steakhouse.financial/docs"
     },
     {
-      "label": "Morpho Vault V2 mechanics",
+      "label": "Steakhouse USDG mandate and market risks",
+      "url": "https://www.steakhouse.financial/docs/products/robinhood/steakhouse-usdg.md"
+    },
+    {
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Curator",
+      "url": "https://www.steakhouse.financial/"
+    },
+    {
+      "label": "Steakhouse: Vault terms",
+      "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    }
+  ],
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Morpho flags deposits as disabled",
+      "message": "On 15 October 2026, the exact Morpho vault page and API reported deposits disabled. This does not establish a withdrawal suspension. Existing holders still depend on available USDG market liquidity to redeem."
     }
   ],
   "contracts": [
@@ -62,14 +89,16 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "unknown",
+  "collateralQuality": "exotic",
+  "custodyModel": "mixed",
+  "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Steakhouse Morpho USDG lending vault",
     "yieldType": "lending-vault"
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "steakusdg-steakhouse",
     "display": {
@@ -93,8 +122,8 @@
         "expectedAssetAddress": "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
       },
       "deployedExposure": {
-        "basis": "Exact asset() returned 0x5fc5360d0400a0fd4f2af552add042d716f1d168; sole adapter 0x44abc1d6ccff2696d98890b92e2157af242179c2 is identified by Morpho as MorphoMarketV1 over the same loan asset. This 100% slice is the underlying lending claim, not an estimate of borrower collateral or idle cash.",
-        "reviewedAt": "2026-10-02",
+        "basis": "At Robinhood block 89162029 (2026-10-15T10:43:17Z), asset() returned USDG at 0x5fc5360d0400a0fd4f2af552add042d716f1d168 and adaptersLength()=1 with adapter 0x44abc1d6ccff2696d98890b92e2157af242179c2. The reviewed descriptor covers the USDG-denominated lending claim; borrower-collateral weights and idle cash are separate observations.",
+        "reviewedAt": "2026-10-15",
         "sourceUrl": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
       },
       "redemptionLiquidity": {

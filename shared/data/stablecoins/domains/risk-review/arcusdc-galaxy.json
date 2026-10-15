@@ -26,17 +26,21 @@
       {
         "label": "Exact Arc VaultV2 partial source; explorer deployed bytecode equals RPC at block 24011393, full compiler verification unclaimed",
         "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+      },
+      {
+        "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+        "url": "https://rpc.mainnet.arc.io"
       }
     ],
-    "evidence": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, all four gate addresses were zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate were abdicated. setSendAssetsGate remains mutable and gates deposits/mints, not direct withdrawal/redeem. Deposit-funded in-kind exit may be obstructed by deposit gating. Underlying USDC freeze powers remain inherited. Reference source is pinned; exact-deployment compiler/source completeness is unestablished on Arc. Official Arc explorer now supplies exact partial VaultV2 source with runtime bytecode matching RPC at block 24011393; full compiler verification remains unclaimed.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Arc block 26080262, timestamp 2026-10-15T10:44:00Z, all four gate getters are zero. setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate are permanently abdicated; setSendAssetsGate remains mutable at zero delay and affects vault deposits/mints, not ordinary withdraw/redeem. The documented in-kind fallback deposits directly into the underlying Morpho market; a vault-only sendAssetsGate does not itself gate that market deposit. Any fallback still depends on executable market transactions and leaves a lender claim rather than guaranteed cash. Circle USDC and cirBTC issuer controls remain separate inherited/credit exposures. The exact vault executable matches the independently verified Sourcify template outside compiler-declared immutable/CBOR offsets; full metadata/creation-bytecode identity and financial assurance are not claimed.",
+    "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Galaxy USDC has one reviewed native vault-share deployment; no second share deployment or bridge representation is established. Underlying collateral bridge/custody exposure is separate.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
     "confidence": "probable",
     "sources": [
       {
@@ -58,6 +62,10 @@
       {
         "label": "arc fixed-block RPC observation 23952285",
         "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+        "url": "https://rpc.mainnet.arc.io"
       }
     ],
     "routes": [
@@ -74,8 +82,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Sole authored native VaultV2 share deployment. No share bridge route is established by the current inventory; underlying collateral bridges and future integrations are separate.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 24011393,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26080262,
         "sources": [
           {
             "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -92,21 +100,25 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+            "url": "https://rpc.mainnet.arc.io"
           }
         ]
       }
     ]
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
-    "summary": "At Arc block 24129914 the sole adapter contains one cirBTC/USDC market. Its oracle has one nonzero BTC/USD feed, no nested vault conversions, and no staleness check. That feed delegates to DualAggregator 0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362. Exact explorer runtime bytes match pinned RPC for the adapter, Morpho, oracle, feed proxy and aggregator; partial explorer verification is not full compiler certification. No independent fallback or bounded freshness is credited.",
+    "tier": "standard-external",
+    "summary": "At Arc block 26080262 (2026-10-15T10:44:00Z), the complete one-adapter/one-market census still identifies cirBTC/USDC at 86% LLTV. BASE_FEED_1 alone is nonzero and points to BTC/USD proxy 0x7777547914e03bcbb04ae034942765a0dbb26ae3, which still delegates to DualAggregator 0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362. Ten transmitters remain; proxy and aggregator share owner 0x73877fe34aa2b162430cef680fea268b8ec1c4f1. Exact oracle and aggregator explorer runtime bytes match pinned RPC. The oracle discards updatedAt and enforces no staleness bound; no independent fallback is credited. Chainlink's Arc feed directory lists that aggregator as the official BTC / USD feed (0.5% deviation, 86400-second heartbeat) and this proxy as its Shared SVR secondary proxy, so the branch is a Chainlink DON composer without a consumer staleness check: standard-external under the family convention.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "W2R21 exact-source and pinned RPC review",
-      "rationale": "At block 24129914 adaptersLength=1 and marketIdsLength=1; exact idToMarketParams resolves the cirBTC/USDC borrower market with LLTV 86%. All six feed/vault getters close the valuation topology: only BASE_FEED_1 is nonzero. Direct share accounting does not exempt this borrower branch.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
+      "rationale": "Fresh complete census at Arc block 26080262 (2026-10-15T10:44:00Z): adaptersLength=1, marketIdsLength=1; the exact cirBTC/USDC market retains 86% LLTV. All six feed/vault getters were re-read: BASE_FEED_1 is the only nonzero input. This collateral branch remains price-sensitive even though direct USDC share accounting does not read the collateral price.",
       "sources": [
         {
           "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -123,11 +135,15 @@
         {
           "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
           "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+          "url": "https://rpc.mainnet.arc.io"
         }
       ]
     },
-    "reviewedAt": "2026-10-07",
-    "reviewer": "Sol unknown-resolver wave 2026-10-07 (MISC)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
     "confidence": "probable",
     "sources": [
       {
@@ -181,14 +197,22 @@
       {
         "label": "Exact Arc Galaxy USDC Vault V2 identity and Galaxy Curation designation, observed October 7, 2026",
         "url": "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc"
+      },
+      {
+        "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+        "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Chainlink Arc mainnet feed directory: BTC / USD aggregator 0x733FE1bA02ea9003C3CFbf5dcc41cf685fF64362, Shared SVR secondary proxy 0x7777547914e03BCbB04Ae034942765a0dbb26aE3, 0.5% deviation, 86400-second heartbeat",
+        "url": "https://reference-data-directory.vercel.app/feeds-arc-mainnet.json"
       }
     ],
     "branches": [
       {
         "id": "0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
         "label": "cirBTC collateral market 0xc2db905f",
-        "tier": "single-source-or-laggy",
-        "summary": "Pinned one-market census and all feed/vault getters establish a single BTC/USD feed and no nested vault conversion. ChainlinkDataFeedLib discards updatedAt and accepts nonnegative answers without a staleness bound. The proxy owner can replace its aggregator; DualAggregator uses OCR signatures and caller-dependent primary/secondary round selection, not an independent backup feed.",
+        "tier": "standard-external",
+        "summary": "Pinned one-market census and all feed/vault getters establish a single BTC/USD feed and no nested vault conversion. ChainlinkDataFeedLib discards updatedAt and accepts nonnegative answers without a staleness bound. The proxy owner can replace its aggregator; DualAggregator uses OCR signatures and caller-dependent primary/secondary round selection, not an independent backup feed. Chainlink's Arc directory identifies the aggregator as its official BTC / USD DON feed and the proxy as its Shared SVR secondary proxy; standard-external, no single-reporter evidence.",
         "collateralAssets": [
           "0x171a4217b86a807a64eb94757db6849fb4bdbaa0"
         ],
@@ -201,12 +225,12 @@
             "path": "Morpho oracle BASE_FEED_1 -> EACAggregatorProxy 0x7777547914e03bcbb04ae034942765a0dbb26ae3 -> DualAggregator 0x733fe1ba02ea9003c3cfbf5dcc41cf685ff64362; all other feed/vault inputs are zero",
             "address": "0x7777547914e03bcbb04ae034942765a0dbb26ae3",
             "chain": "arc",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15"
           }
         ],
         "fallbackBehavior": "No alternate feed or local stale-answer rejection exists in the configured Morpho oracle. EACAggregatorProxy delegates to its owner-selected aggregator. DualAggregator has caller-dependent primary/secondary round selection; its secondaryProxy is this same feed proxy, not a separate independent data source. No freshness SLA is asserted.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 24129914,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26080262,
         "collateralParameters": [
           {
             "asset": "0x171a4217b86a807a64eb94757db6849fb4bdbaa0",
@@ -257,6 +281,14 @@
           {
             "label": "Exact Galaxy USDC Arc vault identity and named Galaxy curator, observed October 7, 2026",
             "url": "https://app.morpho.org/arc/vault/0x8E357432CC12ff425c36432F312968aEb16112AF/galaxy-usdc"
+          },
+          {
+            "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Chainlink Arc mainnet feed directory: BTC / USD aggregator 0x733FE1bA02ea9003C3CFbf5dcc41cf685fF64362, Shared SVR secondary proxy 0x7777547914e03BCbB04Ae034942765a0dbb26aE3, 0.5% deviation, 86400-second heartbeat",
+            "url": "https://reference-data-directory.vercel.app/feeds-arc-mainnet.json"
           }
         ]
       }
@@ -269,10 +301,10 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-05",
-          "reviewer": "R22 exact runtime and valuation-reach review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
           "confidence": "verified",
-          "rationale": "At Arc block 24363505 (hash 0x976abe2b257c5ce59f4eed9933005a65a276e0ac7c3dc0340908ce0aaf518462), the exact vault and sole adapter runtime match Sourcify compiler-produced VaultV2/MorphoMarketV1AdapterV2 bytecode outside compiler-declared immutable slots, with zero other differences. Morpho and AdaptiveCurveIrm executable bytes likewise match exact-verified templates outside immutable slots; only trailing Solidity CBOR metadata differs. Immutable values bind USDC 0x3600000000000000000000000000000000000000, this parent vault, Morpho 0x34cd04070dd72b14e241112f6d83812df5af7fcd and AdaptiveCurveIrm 0xf02615d094fc02fc031c35fe705e175aa4653f20. Complete current census is one adapter and one cirBTC/USDC market; liquidityAdapter is zero. Bound accrueInterestView computes USDC balance plus adapter.realAssets; the adapter's inlined expectedMarketBalances reads Morpho.market and rateAtTarget, not IOracle.price or collateral valuation. Only direct share-accounting pricing is exempt. The retained cirBTC oracle path remains separately applicable and single-source-or-laggy; borrower loss, mutable adapter governance, custody and leverage are not exempt.",
+          "rationale": "At Arc block 24363505 (hash 0x976abe2b257c5ce59f4eed9933005a65a276e0ac7c3dc0340908ce0aaf518462), the exact vault and sole adapter runtime match Sourcify compiler-produced VaultV2/MorphoMarketV1AdapterV2 bytecode outside compiler-declared immutable slots, with zero other differences. Morpho and AdaptiveCurveIrm executable bytes likewise match exact-verified templates outside immutable slots; only trailing Solidity CBOR metadata differs. Immutable values bind USDC 0x3600000000000000000000000000000000000000, this parent vault, Morpho 0x34cd04070dd72b14e241112f6d83812df5af7fcd and AdaptiveCurveIrm 0xf02615d094fc02fc031c35fe705e175aa4653f20. Complete current census is one adapter and one cirBTC/USDC market; liquidityAdapter is zero. Bound accrueInterestView computes USDC balance plus adapter.realAssets; the adapter's inlined expectedMarketBalances reads Morpho.market and rateAtTarget, not IOracle.price or collateral valuation. Only direct share-accounting pricing is exempt. The retained cirBTC oracle path remains separately applicable and standard-external; borrower loss, mutable adapter governance, custody and leverage are not exempt. Fresh block 26080262 (2026-10-15T10:44:00Z) re-read confirms the same complete one-adapter/one-market valuation identity; liquidityAdapter is now set to the sole adapter. Current vault/adapter executable normalization again matches the independently verified templates. This liquidity configuration change does not change direct NAV valuation or exempt borrower collateral pricing.",
           "sources": [
             {
               "label": "Arc block 24363505: exact vault/adapter/Morpho/IRM runtime, complete adapter/market census, immutable bindings and rate getter pinned 2026-10-05",
@@ -309,6 +341,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+              "url": "https://rpc.mainnet.arc.io"
             }
           ]
         }
@@ -321,10 +357,10 @@
         "branchId": "0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "W2R21 exact-source and pinned RPC review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
           "confidence": "probable",
-          "rationale": "At block 24129914 the sole current market oracle prices cirBTC borrower collateral using one BTC/USD feed. All other feeds and vault conversions are zero. Exact oracle and downstream current aggregator runtime bytes match source endpoints; absent staleness enforcement establishes a laggy single-source tier without independence credit.",
+          "rationale": "At block 24129914 the sole current market oracle prices cirBTC borrower collateral using one BTC/USD feed. All other feeds and vault conversions are zero. Exact oracle and downstream current aggregator runtime bytes match source endpoints; absent consumer staleness enforcement earns no independence credit, but Chainlink's Arc directory identifies the aggregator as its official BTC / USD DON feed (Shared SVR secondary proxy), so the branch is standard-external. Fresh block 26080262 (2026-10-15T10:44:00Z) re-read confirms the same complete one-adapter/one-market valuation identity; liquidityAdapter is now set to the sole adapter. Current vault/adapter executable normalization again matches the independently verified templates. This liquidity configuration change does not change direct NAV valuation or exempt borrower collateral pricing.",
           "sources": [
             {
               "label": "Adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c marketIdsLength/marketIds census at arc block 24011393, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -341,6 +377,14 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+              "url": "https://rpc.mainnet.arc.io"
+            },
+            {
+              "label": "Chainlink Arc mainnet feed directory: BTC / USD aggregator 0x733FE1bA02ea9003C3CFbf5dcc41cf685fF64362, Shared SVR secondary proxy 0x7777547914e03BCbB04Ae034942765a0dbb26aE3, 0.5% deviation, 86400-second heartbeat",
+              "url": "https://reference-data-directory.vercel.app/feeds-arc-mainnet.json"
             }
           ]
         }

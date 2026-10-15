@@ -40,8 +40,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
     "confidence": "verified",
     "sources": [
       {
@@ -53,7 +53,7 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
       },
       {
-        "label": "Pinned base block 52095852",
+        "label": "Superseded base pin 52095852, 2026-10-02; retained historical evidence",
         "url": "https://basescan.org/block/52095852"
       },
       {
@@ -71,11 +71,15 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      },
+      {
+        "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+        "url": "https://basescan.org/block/52630636"
       }
     ],
-    "rationale": "At base block 52095852 (0x31aeb6c), observed 2026-10-02T22:44:15.795793+00:00, totalAssets was 35529795.455193 USDC, totalSupply 34539931.135790698230 shares, idle USDC 0.000000; all 8 adapter market IDs and expectedSupplyAssets were enumerated. Idle and deployed percentages use the same-block totalAssets denominator. The itemized market balances plus idle USDC reconcile to totalAssets. These slices classify the direct USDC-denominated claim; they do not reclassify all borrower collateral as cash.",
+    "rationale": "At Base block 52630636 (2026-10-15T07:50:19Z), totalAssets is 39060319078707 raw USDC (39060319.078707 USDC), totalSupply is 37919442037585257272817364 raw 18-decimal shares and idle underlying is zero. All 8 market IDs of the sole adapter were enumerated, and their expectedSupplyAssets sum exactly to totalAssets with no residual. All adapter Morpho position borrow shares and posted collateral are zero. The cbBTC market carries 26059498.509593 USDC of lending exposure (66.716% of this denominator). This is a deployed lending claim, not idle Circle reserve cash or a financial audit. Family pass (block 52630636, 2026-10-15T07:50:19Z): after the config-version-2 measured split, idle USDC is classified under the underlying key at 0.0% and non-idle lender claims under the vault :deployed key at 100.0%, using the producer's held/totalAssets denominator.",
     "compositionBasis": "Pinned ERC-4626 accounting assets and idle USDC, complete sole-adapter market census",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Direct idle and deployed categories are classified. Borrower collateral custody, legal priority and future allocations remain unresolved, and USDC parent reserve quality is not vault financial assurance.",
     "knownUnknownExposurePct": 0
@@ -97,9 +101,9 @@
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_CscbusdcClearstar)",
     "confidence": "probable",
     "sources": [
       {
@@ -111,7 +115,7 @@
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
       },
       {
-        "label": "Pinned base block 52095852",
+        "label": "Superseded base pin 52095852, 2026-10-02; retained historical evidence",
         "url": "https://basescan.org/block/52095852"
       },
       {
@@ -129,8 +133,16 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x812b71c33ae5eafebae967c5670e37eca3cab0ac"
+      },
+      {
+        "label": "Base block 52630636 (2026-10-15T07:50:19Z): fresh accounting, controls and full market census",
+        "url": "https://basescan.org/block/52630636"
+      },
+      {
+        "label": "Coinbase cbBTC backed by BTC held in Coinbase custody",
+        "url": "https://www.coinbase.com/cbbtc"
       }
     ],
-    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel remains unknown rather than inheriting an all-onchain claim from older precedents."
+    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel is mixed: the cbBTC market (66.716% of lender assets) is backed by BTC in Coinbase custody alongside onchain contract positions; no all-onchain claim is made. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

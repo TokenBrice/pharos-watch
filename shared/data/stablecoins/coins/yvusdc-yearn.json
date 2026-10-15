@@ -45,7 +45,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "yvusdc-yearn",
     "display": {

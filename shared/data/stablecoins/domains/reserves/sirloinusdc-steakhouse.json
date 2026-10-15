@@ -3,8 +3,25 @@
   "reserves": [
     {
       "sourceKey": "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "name": "Steakhouse High Yield USDC Edition idle USDC",
+      "pct": 0.0,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "erc4626-single-asset:base:0xbeeff2490feffa212fac2f6553682c219e6a8845:deployed",
       "name": "USDC-denominated Steakhouse Morpho lending claim",
-      "pct": 100,
+      "pct": 100.0,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -23,8 +40,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine11",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
     "confidence": "verified",
     "sources": [
       {
@@ -46,21 +63,24 @@
       {
         "label": "Exact MorphoMarketV1AdapterV2 source and eight-market accounting surface",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4a70dc70cef79f51cc7f79c08f863b2841311165"
+      },
+      {
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       }
     ],
-    "rationale": "Exact asset, 18 share decimals, 6 underlying decimals, positive totalAssets and totalSupply were independently read at base block 52095842. Sole adapter 0x4a70dc70cef79f51cc7f79c08f863b2841311165 matches the current Morpho API. The complete direct reserve relationship is the USDC-denominated protocol position, not idle fiat or an independently attested loan book. At Base block 52095842, adapter marketIdsLength()=8; complete market census [{\"marketId\":\"0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b\",\"expectedSupplyAssetsRaw\":\"32275015952884\"},{\"marketId\":\"0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354\",\"expectedSupplyAssetsRaw\":\"389345558126782\"},{\"marketId\":\"0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8\",\"expectedSupplyAssetsRaw\":\"97873691545\"},{\"marketId\":\"0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109\",\"expectedSupplyAssetsRaw\":\"23400921893901\"},{\"marketId\":\"0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327\",\"expectedSupplyAssetsRaw\":\"760160877384\"},{\"marketId\":\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"expectedSupplyAssetsRaw\":\"7368149242883\"},{\"marketId\":\"0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d\",\"expectedSupplyAssetsRaw\":\"451057354796\"},{\"marketId\":\"0x2319fa118eb9f7353609796b6f70018a5384d42169503515da52bfa0b194c6ac\",\"expectedSupplyAssetsRaw\":\"2909\"}]. Their sum=453698737143084 USDC raw equals realAssets() and totalAssets(), with idle USDC=0. totalSupply=448220693243737493222108073 raw shares; accrueInterestView performanceFeeShares=274872574661233963, managementFeeShares=0, virtualShares=1000000000000. Integer previewRedeem=(453698737143084+1)*1e18/(448220693243737493222108073+274872574661233963+1000000000000), rounded down, reproduces convertToAssets(1e18)=1012221. This is operational same-block conservation, not independent financial assurance.",
-    "compositionBasis": "Complete same-block eight-market asset census, zero idle USDC, accrued fee-adjusted share denominator and exact integer NAV at Base block 52095842; exact verified VaultV2 and adapter source.",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Base block 52630636 (2026-10-15T07:50:19Z), asset() is native Base USDC with 6 decimals, share decimals are 18, totalSupply() is 450365980837563964002729394 raw shares and totalAssets() is 456333375359343 raw USDC. The sole adapter enumerates eight markets; complete expectedSupplyAssets census [{\"marketId\":\"0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b\",\"collateral\":\"mGLO\",\"expectedSupplyAssetsRaw\":\"38037011852588\",\"pctOfLenderAssets\":8.335356},{\"marketId\":\"0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354\",\"collateral\":\"USDe\",\"expectedSupplyAssetsRaw\":\"382374291451706\",\"pctOfLenderAssets\":83.792752},{\"marketId\":\"0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8\",\"collateral\":\"cbHYPE\",\"expectedSupplyAssetsRaw\":\"221656748729\",\"pctOfLenderAssets\":0.048573},{\"marketId\":\"0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109\",\"collateral\":\"cbXRP\",\"expectedSupplyAssetsRaw\":\"25522273940438\",\"pctOfLenderAssets\":5.592901},{\"marketId\":\"0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327\",\"collateral\":\"cbZEC\",\"expectedSupplyAssetsRaw\":\"1920324796800\",\"pctOfLenderAssets\":0.420816},{\"marketId\":\"0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836\",\"collateral\":\"cbBTC\",\"expectedSupplyAssetsRaw\":\"6303852785658\",\"pctOfLenderAssets\":1.381414},{\"marketId\":\"0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d\",\"collateral\":\"cbETH\",\"expectedSupplyAssetsRaw\":\"1755787362756\",\"pctOfLenderAssets\":0.38476},{\"marketId\":\"0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5\",\"collateral\":\"JitoSOL\",\"expectedSupplyAssetsRaw\":\"198176420668\",\"pctOfLenderAssets\":0.043428}]. Sum=456333375359343; idle=0; adapter.realAssets() and totalAssets() agree exactly. All eight adapter positions have zero borrow shares and zero posted collateral. The 100% reserve slice identifies the standing USDC denomination, not cash-only backing or a signed financial attestation. Performance fee is 25% of interest and management fee zero; accrued fee shares are included by convertToAssets. Family pass (block 52630636, 2026-10-15T07:50:19Z): after the config-version-2 measured split, idle USDC is classified under the underlying key at 0.0% and non-idle lender claims under the vault :deployed key at 100.0%, using the producer's held/totalAssets denominator.",
+    "compositionBasis": "Complete same-block eight-market expectedSupplyAssets census plus idle underlying; exact matched immutable vault and adapter code; Base block 52630636, 2026-10-15T07:50:19Z.",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Borrower collateral allocations and realizable stress exit vary. The 100% underlying-token claim does not assert any collateral-market weighting, signed reconciliation, legal segregation or funded recovery.",
+    "knownUnknownExposure": "Current lender-asset allocations are fully enumerated. Borrower-collateral custody, legal priority, future liquidity and stressed realizability remain separate unknowns; no signed vault financial assurance or funded recovery guarantee is established.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
         "name": "Steakhouse High Yield USDC Edition VaultV2 and Morpho adapter 0x4a70dc70cef79f51cc7f79c08f863b2841311165",
-        "role": "other",
-        "jurisdiction": "base"
+        "role": "other"
       },
       {
         "name": "Carniceria Tropical SA (Steakhouse vault service operator and curator)",
@@ -71,8 +91,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
     "confidence": "manual-review",
     "sources": [
       {
@@ -90,8 +110,16 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Coinbase cbBTC backed by BTC held in Coinbase custody",
+        "url": "https://www.coinbase.com/cbbtc"
       }
     ],
-    "uncertainty": "Immediate assets sit in vault and adapter/market contracts; the curator terms deny custody and fiduciary obligations. Ultimate parent reserve custody, borrower-collateral custody, legal priority, continuity resources and legal reuse rights are not fully established for this exact share. Whole-book custody therefore remains unknown."
+    "uncertainty": "Immediate assets sit in vault and adapter/market contracts; the curator terms deny custody and fiduciary obligations. Ultimate parent reserve custody, borrower-collateral custody, legal priority, continuity resources and legal reuse rights are not fully established for this exact share. Whole-book custody is mixed: onchain contract positions sit alongside custodial borrower collateral (USDe 83.79% of lender assets and Coinbase-wrapped cbXRP/cbBTC/cbZEC/cbETH/cbHYPE about 7.83%); safeguards of those layers remain unestablished. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

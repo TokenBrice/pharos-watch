@@ -4,7 +4,8 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
     "confidence": "manual-review",
-    "summary": "Wintermute USDC Select mints USDC-backed deposit shares and may mint fee shares during accrual. Circle USDC issuance is inherited; owner and curator retain strategy parameter powers. The six-market borrower basket also includes nested Morpho V1 USDC vault shares (v-wmtUSDC), separately from PT-reUSD and PT-USDat collateral.",
+    "summary": "Wintermute USDC Select mints deposit-backed USDC shares and may accrue fee shares. Owner, curator, three allocators and one sentinel control strategy parameters. Seven borrower markets include Wildcat debt-token wrapper v-wmtUSDC and 3Jane USD3; parent USDC mint and freeze powers remain inherited.",
+    "headline": "Deposit-backed shares inherit USDC controls; owner, curator and allocators retain strategy powers, with signer custody undisclosed.",
     "inheritedFrom": "usdc-circle",
     "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
@@ -20,8 +21,9 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "capDescription": "Ethereum block 26197390 (2026-10-15T10:43:11Z): asset=USDC, share decimals=18, asset decimals=6, totalSupply=45777319351152393341737589, totalAssets=46779493778612, zero pending fee shares and idle USDC. One adapter, seven markets, summed expectedSupplyAssets exactly equals totalAssets. Deposit-backed issuance and fee accrual do not convey discretionary USDC minting.",
         "sources": [
           {
             "label": "Wintermute USDC Select exact vault identity and accounting",
@@ -62,9 +64,14 @@
           {
             "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
             "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+          },
+          {
+            "label": "Ethereum block 26197390, 2026-10-15T10:43:11Z; fresh vault accounting and complete seven-market census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units. Reference VaultV2 code mints shares against transferred USDC and accrual can mint fee shares. No discretionary Circle USDC minting power is conveyed. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 26110193 for vault 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x867c752e0e0e5d73ff7e349f1b7e45a8170884aaba4a8fd1234991db870cf476; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode."
+        "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units. Reference VaultV2 code mints shares against transferred USDC and accrual can mint fee shares. No discretionary Circle USDC minting power is conveyed. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 26110193 for vault 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x867c752e0e0e5d73ff7e349f1b7e45a8170884aaba4a8fd1234991db870cf476; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode.",
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
@@ -77,8 +84,8 @@
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110202,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
         "sources": [
           {
             "label": "Wintermute USDC Select exact vault identity and accounting",
@@ -111,16 +118,21 @@
           {
             "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 26110202, 2026-10-03",
             "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum block 26197390, 2026-10-15T10:43:11Z; Safe owners, threshold, terminal module page, guard and fallback slots",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
           }
         ],
-        "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Independent 2026-10-03 census at block 26110202: getOwners returned the authored 6 owners; threshold 4; getModulesPaginated(0x1,100) returned [] and terminal next=0x1; fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Guard storage returned a zero word. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
+        "evidence": "Ethereum block 26197390 (2026-10-15T10:43:11Z): owner Safe threshold=4 and owners=7, superseding the October 3 six-owner census. getModulesPaginated(0x1,100) returned [] with terminal next=0x1; guard storage is zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Owner can replace curator and sentinels without a configured timelock. Curator-sensitive additions, removals, absolute/relative cap increases and timelock increases have 604800-second delays; sendAssetsGate setter has 259200 seconds. Fee setters, fee recipients, allocator changes and penalty setter have zero delay. Current performance and management fees and active-adapter force-deallocation penalty are zero. Signer independence, operational key custody and executable fallback noninterference remain unestablished.",
         "failureDomainKeys": [
           "safe:ethereum:0xb83a77677c51aaf6c45b0b64199eae6938559e5e"
         ],
         "threshold": 4,
-        "signerCount": 6,
+        "signerCount": 7,
         "safe": {
           "owners": [
+            "0x0b26b90592171a3a77fa058b9802b47cbe683201",
             "0xfdc7917dce08a4a0a169c1ea60ac19fc569bd42c",
             "0x910c2847ee5e636e7592128bc87df8df1ec8a751",
             "0x0f6351a7bcd1881e2cff382de2e3473ea819a7d9",
@@ -131,18 +143,118 @@
           "threshold": 4,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26110202,
-          "observedAt": "2026-10-03",
+          "observedBlock": 26197390,
+          "observedAt": "2026-10-15",
           "source": "onchain",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99"
-        }
+        },
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x4687e45bb5518a995913a24bb2816fe2031d74d8",
+        "deploymentRefs": ["ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"],
+        "label": "Wintermute USDC Select curator parameter authority",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "none-detected",
+        "threshold": 3,
+        "signerCount": 6,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "safe": {
+          "owners": [
+            "0x0b26b90592171a3a77fa058b9802b47cbe683201",
+            "0xfdc7917dce08a4a0a169c1ea60ac19fc569bd42c",
+            "0x910c2847ee5e636e7592128bc87df8df1ec8a751",
+            "0x0f6351a7bcd1881e2cff382de2e3473ea819a7d9",
+            "0x88f7a5761882da521a7ad761c4f62d8ca41f052f",
+            "0x51464d67ead940040023e28b5afdaa1764de329d"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 26197390,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "failureDomainKeys": ["safe:ethereum:0x4687e45bb5518a995913a24bb2816fe2031d74d8"],
+        "sources": [
+          {"label": "Complete Submit history from block 24936985 through 26197390, 82 records; active executableAt values independently pinned", "url": "https://api.etherscan.io/v2/api"},
+          {"label": "Pinned complete Safe and selector census, Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://eth-mainnet.g.alchemy.com/v2/"},
+          {"label": "Exact VaultV2 parameter permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"}
+        ],
+        "evidence": "Pinned curator getter identifies this 3-of-6 Safe; all six signers also appear in the 4-of-7 owner Safe, so role separation does not establish independent humans. Empty terminal module page, zero guard and fallback handler are observed, not certified noninterference. Curator submits timelocked adapter/cap changes and can change fees, allocators and force-deallocation penalty without a configured delay. No arbitrary share or USDC mint function is conferred. Signer custody and independence remain undisclosed. Complete explorer Submit census (82 records, deployment block 24936985 through 26197390) and same-block executableAt checks identify four active submissions, all executable from 2026-10-15T17:56:47Z: PT-USD3-17DEC2026 collateral 0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d collateral-token absolute cap uint128 max and relative cap 100%, plus market cap 5000000000000 atomic USDC and relative cap 100% for USDC/PT-USD3, oracle 0x716021a5d598c22851764923271c90a0aa704754, IRM 0x870ac11d48b15db9a138cf899d20f13f79ba00bc, LLTV 86%. These are pending caps, not an eighth invested market or evidence of execution.",
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x73b40e49eb625e6b2ee8e41c8a5509f3e206a53b",
+        "deploymentRefs": ["ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"],
+        "label": "Wintermute USDC Select allocator one",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "sources": [{"label": "Complete creation-to-pin role events, Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://api-ethereum-mainnet.n.dwellir.com"}, {"label": "VaultV2 exact allocation permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"}, {"label": "Current role mapping and code at Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://eth-mainnet.g.alchemy.com/v2/"}],
+        "evidence": "Complete SetIsAllocator event history from deployment block 24936985 to 26197390 and current isAllocator=true identify this codeless EOA. Allocators can rebalance within caps, set liquidity adapter/data and maxRate. These powers can constrain exits but confer no discretionary mint authority; beneficial ownership and key custody are not established.",
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc007eb51e3d3285d192f43a35a7a5dacc35a8d99",
+        "deploymentRefs": ["ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"],
+        "label": "Wintermute USDC Select allocator two",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "sources": [{"label": "Complete creation-to-pin role events, Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://api-ethereum-mainnet.n.dwellir.com"}, {"label": "VaultV2 exact allocation permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"}, {"label": "Current role mapping and code at Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://eth-mainnet.g.alchemy.com/v2/"}],
+        "evidence": "Complete SetIsAllocator event history and current isAllocator=true identify this codeless EOA at block 26197390. It has the same within-cap allocation, liquidity-adapter/data and maxRate powers as allocator one, without discretionary share or USDC mint authority. Beneficial ownership and key custody are not established.",
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x12f6e7646808aa948ba7a625ef6e02f55efc684b",
+        "deploymentRefs": ["ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"],
+        "label": "Wintermute USDC Select DeallocateProxy allocator",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "sources": [{"label": "Complete role census and current code, Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://eth-mainnet.g.alchemy.com/v2/"}, {"label": "Exact DeallocateProxy source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x12f6e7646808aa948ba7a625ef6e02f55efc684b"}],
+        "evidence": "Current isAllocator=true. Exact published DeallocateProxy source checks caller vault.isAllocator and vault.isAdapter before calling deallocate, bounded by supplied assets and market liquidity. It has no share mint function. Source inspection and current code are recorded; independent compiler/runtime correspondence for this helper is not established.",
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x77fcf2c8bb9c6a0da2d21f331e15fd83a63e9fbe",
+        "deploymentRefs": ["ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"],
+        "label": "Wintermute USDC Select sentinel",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "sources": [{"label": "Complete creation-to-pin role events, Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://api-ethereum-mainnet.n.dwellir.com"}, {"label": "Exact VaultV2 emergency parameter permissions", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"}, {"label": "Current role mapping and code at Ethereum block 26197390, 2026-10-15T10:43:11Z", "url": "https://eth-mainnet.g.alchemy.com/v2/"}],
+        "evidence": "Complete SetIsSentinel event history and current isSentinel=true identify this codeless EOA. Source permits emergency cap decreases, adapter removal and pending-action revocation within its specified checks; it grants no arbitrary share or USDC issuance. Beneficial ownership and key custody remain unestablished.",
+        "canRaiseCap": false
       }
     ],
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107703,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197390,
       "sources": [
         {
           "label": "Wintermute USDC Select exact vault identity and accounting",
@@ -183,6 +295,10 @@
         {
           "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
           "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Exact VaultV2 runtime re-read at Ethereum block 26197390, 2026-10-15T10:43:11Z; byte-for-byte matches explorer deployed runtime and retained execution identity SHA-256 over hex text",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ]
     },
@@ -236,11 +352,15 @@
         {
           "label": "Sourcify fully matched MorphoMarketV1AdapterV2 compiler output/source and immutable/CBOR layout; exact pinned adapter correspondence independently reproduced",
           "url": "https://sourcify.dev/server/v2/contract/8453/0x812b71c33ae5eafebae967c5670e37eca3cab0ac?fields=sources,compilation,runtimeBytecode"
+        },
+        {
+          "label": "Complete current role and selector census at Ethereum block 26197390, 2026-10-15T10:43:11Z; historical compiler proof retained below without re-dating",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ],
-      "evidence": "At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Partial exact deployed VaultV2 source and matching RPC bytecode corroborate the documented immutable model; full compiler/source verification is not claimed. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"Signer independence and actual key custody are undisclosed.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: []. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=not-applicable concerns the bounded asset-backed native share-issuance path, not a declaration of independently audited financial reconciliation. Underlying USDC issuance/assurance remains inherited; supervision=none grants no prudential credit, and exact-vault financial assurance and statutory holder priority remain unverified in Backing evidence. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 26110193 for vault 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x867c752e0e0e5d73ff7e349f1b7e45a8170884aaba4a8fd1234991db870cf476; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Closed questions retained as provenance: [\"Exact Wintermute VaultV2 executable source identity remains incompletely established: the cited Blockscout result supplies partial source and matching deployed RPC bytecode, but equality to an independently verified compiled reference including imported source units has not been proved.\"]. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode.",
-      "reviewer": "Refine07 compiler/runtime correspondence 2026-10-03",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Current review at Ethereum block 26197390 (2026-10-15T10:43:11Z): owner 4-of-7, curator 3-of-6 with six overlapping signers; three allocators and one sentinel enumerated from complete deployment-to-pin role logs and current mappings. Root and adapter normalized runtime correspondence to the cited Sourcify recompiled outputs independently reproduced, retaining normalized SHA-256 cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e and 355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. Only declared immutable references and CBOR tails were masked; every target immutable occurrence has one consistent value matching the cited identity. This is correspondence to published recompiled outputs, not a new local compiler run or financial audit. Market absolute caps in 6-decimal USDC: cbBTC/WBTC/wstETH=100000000000000 each, PT-reUSD=10000000000000, v-wmtUSDC=25000000000000, PT-USDat/USD3=5000000000000 each; a configured reUSD market (collateral 0x5086bf358635b81d8c47c66d1c8b9e567db70c72, LLTV 91.5%) has a 10000000000000 cap and zero allocation. Adapter and collateral-token absolute caps are uint128 max; all 17 nonzero relative caps are 1e18 (100%). These configured per-market ceilings and deposit backing do not establish a protective aggregate issuance cap. Complete selector/delay/abdication census: [{\"selector\":\"0x60d54d41\",\"function\":\"addAdapter(address)\",\"timelockSec\":604800,\"abdicated\":false},{\"selector\":\"0x8c54519b\",\"function\":\"decreaseAbsoluteCap(bytes,uint256)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x57975270\",\"function\":\"decreaseRelativeCap(bytes,uint256)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x5c1a1a4f\",\"function\":\"decreaseTimelock(bytes4,uint256)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0xf6f98fd5\",\"function\":\"increaseAbsoluteCap(bytes,uint256)\",\"timelockSec\":604800,\"abdicated\":false},{\"selector\":\"0x2438525b\",\"function\":\"increaseRelativeCap(bytes,uint256)\",\"timelockSec\":604800,\"abdicated\":false},{\"selector\":\"0x47966291\",\"function\":\"increaseTimelock(bytes4,uint256)\",\"timelockSec\":604800,\"abdicated\":false},{\"selector\":\"0x585cd34b\",\"function\":\"removeAdapter(address)\",\"timelockSec\":604800,\"abdicated\":false},{\"selector\":\"0x5b34b823\",\"function\":\"setAdapterRegistry(address)\",\"timelockSec\":0,\"abdicated\":true},{\"selector\":\"0xe90956cf\",\"function\":\"setCurator(address)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x3e9d2ac7\",\"function\":\"setForceDeallocatePenalty(address,uint256)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0xb192a84a\",\"function\":\"setIsAllocator(address,bool)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x920ed706\",\"function\":\"setIsSentinel(address,bool)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x7fb6caad\",\"function\":\"setLiquidityAdapterAndData(address,bytes)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0xfe56e232\",\"function\":\"setManagementFee(uint256)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x9faae464\",\"function\":\"setManagementFeeRecipient(address)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0xaa4abe7f\",\"function\":\"setMaxRate(uint256)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0xc47f0027\",\"function\":\"setName(string)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x13af4035\",\"function\":\"setOwner(address)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x70897b23\",\"function\":\"setPerformanceFee(uint256)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x6a5f1aa2\",\"function\":\"setPerformanceFeeRecipient(address)\",\"timelockSec\":0,\"abdicated\":false},{\"selector\":\"0x04dbf0ce\",\"function\":\"setReceiveAssetsGate(address)\",\"timelockSec\":0,\"abdicated\":true},{\"selector\":\"0x2cb19f98\",\"function\":\"setReceiveSharesGate(address)\",\"timelockSec\":0,\"abdicated\":true},{\"selector\":\"0x871c979c\",\"function\":\"setSendAssetsGate(address)\",\"timelockSec\":259200,\"abdicated\":false},{\"selector\":\"0xc21ad028\",\"function\":\"setSendSharesGate(address)\",\"timelockSec\":0,\"abdicated\":true},{\"selector\":\"0xb84c8246\",\"function\":\"setSymbol(string)\",\"timelockSec\":0,\"abdicated\":false}]. Historical review and compiler provenance retained verbatim: At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, owner=0xb83a77677c51aaf6c45b0b64199eae6938559e5e; curator=0x4687e45bb5518a995913a24bb2816fe2031d74d8. Owner getThreshold=4, owners=6, enabled modules empty and guard zero; signer independence unestablished. addAdapter delay=604800 sec; increaseAbsoluteCap delay=604800 sec; fee-setting delays=0. Fee rates performance=0.0, management=0.0. Local financial attestation or prudential supervision is not inherited from Circle. Partial exact deployed VaultV2 source and matching RPC bytecode corroborate the documented immutable model; full compiler/source verification is not claimed. Calibration provenance (2026-10-03): original umbrella observations retained verbatim: [\"Signer independence and actual key custody are undisclosed.\"]. Human independence and key custody remain unverified and are priced by their dedicated control signals; financial/legal safeguards remain Backing-domain gaps. Calibration v2 (2026-10-03) reconsidered every prior removal and scoped move. Prior scoped observations retained verbatim: []. Genuine unknown implementation, controller authorization and unreadable execution state are retained as umbrella questions; identified-signer custody/independence is recorded per control, not asserted to be independently scored or resolved. Field re-justification: reconciliation=not-applicable concerns the bounded asset-backed native share-issuance path, not a declaration of independently audited financial reconciliation. Underlying USDC issuance/assurance remains inherited; supervision=none grants no prudential credit, and exact-vault financial assurance and statutory holder priority remain unverified in Backing evidence. Functional compiler/runtime correspondence independently reproduced on 2026-10-03 at block 26110193 for vault 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd. Sourcify reference runtimeMatch=match, matchId=30034094, verifiedAt=2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun. Runtime length 21808 bytes. Masked ONLY compiler-declared immutable offsets (asset AST37:6 occurrences; decimals AST39:1; virtualShares AST41:5) and the 12-byte CBOR compiler-tag tail at offset 21796 including its two-byte length trailer; every remaining executable byte exactly equals the verified reference recompiled runtime. Every immutable occurrence separately equals the exact pinned asset()/decimals()/virtualShares() getter: asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals=18, virtualShares=1000000000000. Normalized VaultV2 SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Complete current adaptersLength()/adapters(0) census contains one mint-accounting adapter 0x3b9e060a2b05588126fda01b95e9485687fc91d7. Its complete cited Blockscout source/import units were independently compiled with solc 0.8.28+commit.7893614a, viaIR, optimizer 100000, EVM cancun, bytecodeHash=none. Adapter runtime length 11784 bytes; only compiler-declared immutable offsets (factory AST2265, parentVault AST2267, asset AST2269, morpho AST2271, adapterId AST2273, adaptiveCurveIrm AST2275) and its 12-byte CBOR tail at offset 11772 were masked. All remaining executable bytes exactly equal independently compiled adapter runtime; all 20 immutable occurrences separately match exact pinned getters (factory=0x32bb1c0d48d8b1b3363e86eeb9a0300bad61ccc1; parentVault=0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd; asset=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; morpho=0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb; adapterId=0x867c752e0e0e5d73ff7e349f1b7e45a8170884aaba4a8fd1234991db870cf476; adaptiveCurveIrm=0x870ac11d48b15db9a138cf899d20f13f79ba00bc), with parentVault and asset also matching the reviewed vault. Normalized adapter SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. These proofs CLOSE the prior executable-source/mint-code identity questions under calibration v2 R4; earlier partial-verification observations are historical limitations superseded for functional runtime identity, not claims of full metadata/creation-bytecode identity or financial assurance. Closed questions retained as provenance: [\"Exact Wintermute VaultV2 executable source identity remains incompletely established: the cited Blockscout result supplies partial source and matching deployed RPC bytecode, but equality to an independently verified compiled reference including imported source units has not been proved.\"]. Adapter correspondence was additionally independently checked against Sourcify runtimeMatch=match reference matchId=33231859, verifiedAt=2026-06-21T06:48:43Z: its recompiled executable bytes, all immutable offsets and CBOR layout exactly equal the independently compiled adapter output and both pinned target adapter normalized runtimes; normalized SHA-256=355d973d7a246e5d4c02bb68e7415b9d62bf584a57f6101357b57c5d2fc40113. The adapter proof therefore also establishes correspondence to an independently verified reference, not merely explorer-supplied onchain bytecode.",
+      "reviewer": "Batch64 pinned authority and executable review",
+      "reviewedAt": "2026-10-15",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {
@@ -281,6 +401,74 @@
             {
               "label": "Exact Safe getOwners/getThreshold/modules pagination + guard/fallback storage at block 26110202, 2026-10-03",
               "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        },
+        {
+          "controlRef": "Wintermute USDC Select curator parameter authority",
+          "question": "Beneficial human control, operational signing-key custody and independence of Wintermute USDC Select curator parameter authority are not established by public curator disclosures or the enumerated onchain role; no MPC/HSM or independent-approval attestation is inferred.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 primary-source control review",
+          "sources": [
+            {
+              "label": "Armitage role separation disclosure",
+              "url": "https://armitage.wintermute.com/docs/vault-infrastructure"
+            },
+            {
+              "label": "Armitage legal terms and noncustody scope",
+              "url": "https://armitage.wintermute.com/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "Wintermute USDC Select allocator one",
+          "question": "Beneficial human control, operational signing-key custody and independence of Wintermute USDC Select allocator one are not established by public curator disclosures or the enumerated onchain role; no MPC/HSM or independent-approval attestation is inferred.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 primary-source control review",
+          "sources": [
+            {
+              "label": "Armitage role separation disclosure",
+              "url": "https://armitage.wintermute.com/docs/vault-infrastructure"
+            },
+            {
+              "label": "Armitage legal terms and noncustody scope",
+              "url": "https://armitage.wintermute.com/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "Wintermute USDC Select allocator two",
+          "question": "Beneficial human control, operational signing-key custody and independence of Wintermute USDC Select allocator two are not established by public curator disclosures or the enumerated onchain role; no MPC/HSM or independent-approval attestation is inferred.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 primary-source control review",
+          "sources": [
+            {
+              "label": "Armitage role separation disclosure",
+              "url": "https://armitage.wintermute.com/docs/vault-infrastructure"
+            },
+            {
+              "label": "Armitage legal terms and noncustody scope",
+              "url": "https://armitage.wintermute.com/terms-of-use"
+            }
+          ]
+        },
+        {
+          "controlRef": "Wintermute USDC Select sentinel",
+          "question": "Beneficial human control, operational signing-key custody and independence of Wintermute USDC Select sentinel are not established by public curator disclosures or the enumerated onchain role; no MPC/HSM or independent-approval attestation is inferred.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 primary-source control review",
+          "sources": [
+            {
+              "label": "Armitage role separation disclosure",
+              "url": "https://armitage.wintermute.com/docs/vault-infrastructure"
+            },
+            {
+              "label": "Armitage legal terms and noncustody scope",
+              "url": "https://armitage.wintermute.com/terms-of-use"
             }
           ]
         }

@@ -132,6 +132,7 @@ export function buildDlListPrices(assets: PeggedAsset[]): Map<string, DlListQuot
   for (const asset of assets) {
     if (
       asset.supplySource !== "coingecko-fallback" &&
+      (asset.priceSource == null || asset.priceSource === "defillama" || asset.priceSource === "defillama-list") &&
       asset.price != null &&
       typeof asset.price === "number" &&
       Number.isFinite(asset.price) &&

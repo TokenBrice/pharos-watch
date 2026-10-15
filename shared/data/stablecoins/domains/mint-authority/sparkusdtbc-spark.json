@@ -3,23 +3,23 @@
   "mintAuthority": {
     "capSemanticsReview": {
       "verdict": "bounded-by-construction",
-      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdt-tether, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "rationale": "Pinned Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdt-tether, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch64 review (Rev_SparkusdtbcSpark)",
       "sources": [
         {
           "label": "Verified current local mint implementation/source",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
         },
         {
-          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
-          "url": "https://etherscan.io/block/26113624"
+          "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z)",
+          "url": "https://etherscan.io/block/26197390"
         }
       ]
     },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
-    "confidence": "unknown",
+    "confidence": "verified",
     "summary": "sparkUSDTbc inherits USDT issuer authority. Native shares are deposit-backed; immutable local vault code constrains issuance while Spark controllers can change strategy parameters.",
     "inheritedFrom": "usdt-tether",
     "controls": [
@@ -34,8 +34,8 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
         "sources": [
           {
             "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -52,9 +52,14 @@
           {
             "label": "Morpho vault framework and holder exit mechanics",
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+          },
+          {
+            "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Verified source mints receipts only through deposit-backed user operations and documented fee accounting; it does not create the underlying stablecoin."
+        "evidence": "Pinned Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z): totalSupply=76314545914654098613391774 (18 decimals), totalAssets=77544999649970 (6-decimal USDT), convertToAssets(10^18)=1016123 USDT base units. Idle USDT=0; sole adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a realAssets equals vault totalAssets at this pin. At this pin only, the four expectedSupplyAssets sum to the vault denominator 77544999649970: sUSDS=7678890857988 (9.9024964764%), wstETH=46289560215238 (59.6938041449%), WBTC=23576548519424 (30.4036993047%), cbBTC=57320 (0.0000000739%). This observed reconciliation is not an invariant: VaultV2 can cap recognized accrual through maxRate. All four adapter positions have zero borrow shares and zero posted collateral. These are lender receivables, not borrower collateral held by the vault or guaranteed USDT realization. Verified runtime exactly matches immutable VaultV2 source; deposit/mint transfers assets before creating shares, while formula-based fee accrual creates additional fee shares.",
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
@@ -64,12 +69,13 @@
         ],
         "label": "Spark vault owner configuration authority",
         "role": "governor",
-        "authorityType": "contract",
+        "authorityType": "dao-governor",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "timelockDelaySec": 172800,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
         "sources": [
           {
             "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -90,9 +96,17 @@
           {
             "label": "Exact owner authorization and delegatecall source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3300f198988e4c9c63f75df86de36421f06af8c4"
+          },
+          {
+            "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Family governance-route census at Ethereum block 26197928, 2026-10-15T12:31:11Z",
+            "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "Pinned owner() returned this contract. The verified immutable vault supports owner/curator configuration and fee/cap changes; owner permissions do not provide an arbitrary external share minter. SubProxy wards for DSPauseProxy, StarGuard and ESM each returned 1. DSPause delay() returned 172800; that proves this one path, not an all-path mandatory delay. Independent full-address Rely/Deny eth_getLogs from block0 through26107702 found5 events; current wards census=[{\"address\":\"0xd1236a6a111879d9862f8374ba15344b6b233fbd\",\"active\":0},{\"address\":\"0xbe8e3e3618f7474f8cb1d074a26affef007e98fb\",\"active\":1},{\"address\":\"0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58\",\"active\":1},{\"address\":\"0x6605aa120fe8b656482903e7757babf56947e45e\",\"active\":1}]. DSPauseProxy.owner()=0xbe286431454714f511008713973d3b053a2d38f3 and delay()=172800. ESM and StarGuard are independently active ward alternatives, so this delay is not universal. Arbitrary authorized delegatecall can write ward storage without Rely/Deny, so event enumeration cannot certify exhaustive mutable execution closure."
+        "evidence": "Pinned owner() identifies Spark SubProxy. At Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z), previously event-enumerated wards for deployer 0xd1236a6a111879d9862f8374ba15344b6b233fbd, DSPauseProxy 0xbe8e3e3618f7474f8cb1d074a26affef007e98fb, ESM 0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58 and StarGuard 0x6605aa120fe8b656482903e7757babf56947e45e return 0,1,1,1. Family route verification at Ethereum block 26197928 (hash 0xc690ef4e3b4e8060cb17d25be4ed70cb038ff3c07f092acf97732e020672831f, 2026-10-15T12:31:11Z) establishes the current 172800-second DSPause schedule for the reviewed execution routes: DSPauseProxy.owner() is DSPause; StarGuard only executes a code-hash-bound spell plotted by its sole event-enumerated ward DSPauseProxy; ESM exposes denyProxy, not arbitrary SubProxy execution. StarGuard maxDelay is a deadline, not a separate minimum delay. This supports dao-governor typing and the observed scheduling delay, not an immutable all-future-path bound or exhaustive historical storage-write certificate. SubProxy.exec delegatecalls in SubProxy storage, not in the separate immutable VaultV2. Owner/curator changes retain parameter-only reach: allocation caps, gates and fees cannot replace vault code or bypass enter's funded-deposit accounting and capped formula-derived fee issuance."
       },
       {
         "chain": "ethereum",
@@ -101,30 +115,27 @@
           "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
         ],
         "label": "Spark current curator Safe",
-        "role": "governor",
+        "role": "other",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "threshold": 3,
-        "signerCount": 5,
+        "threshold": 2,
+        "signerCount": 2,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0xba638112360d6ba325329e3881d61bf926a36811",
-            "0x5a2e65bc3b383f04136b0a9d190db82e72e7deac",
-            "0x1cae4d7efdd34d6c4d54d365c3583a62d8041ea8",
-            "0xdc473772ed710e36853a7c278754ddbe9bec76be",
-            "0x7de4bb4fc0e55b7beeae238dbe665f8475451f63"
+            "0x50c770e6dc6cfdee33509273fa9a215bfafff9b2",
+            "0xab5710211458fc8d7e0be628202f47ddbd3f38eb"
           ],
-          "threshold": 3,
+          "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 26107702,
-          "observedAt": "2026-10-03",
+          "observedBlock": 26197390,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
         "sources": [
           {
             "label": "Exact current Safe controller",
@@ -133,9 +144,84 @@
           {
             "label": "Exact vault source and native authorization",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+          },
+          {
+            "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Spark curator and guardian key-rotation governance scope; proposal distinct from pinned final state",
+            "url": "https://forum.skyeco.com/t/28281.json"
           }
         ],
-        "evidence": "Independently re-read at block 26107702 on 2026-10-03: getOwners and getThreshold give the listed quorum; getModulesPaginated(0x1,100) returned empty with terminal next=0x1, and the Safe guard slot was zero. This identifies cryptographic owners, not independent people or attested key custody. Parameter scope does not create native underlying stablecoin liabilities."
+        "evidence": "Re-read at Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z): current curator Safe is 2-of-2 with the listed cryptographic owners, no enabled modules (terminal pagination next=0x1) and zero guard. This supersedes the historical 3-of-5 roster. The curator can submit allocation-cap increases, adapter/allocator changes and fee settings, each observed with an 864000-second (10-day) selector timelock; cap increases are parameter-only authority, not arbitrary share issuance. Cap census re-read at Ethereum block 26197928 (hash 0xc690ef4e3b4e8060cb17d25be4ed70cb038ff3c07f092acf97732e020672831f, 2026-10-15T12:31:11Z) across all nine adapter.ids() of the four markets: the adapter-wide ID and both sUSDS-market IDs have absoluteCap=uint128 max; the wstETH-market and cbBTC-market IDs have absoluteCap=250000000000000 (250M USDT); the WBTC-market IDs have absoluteCap=100000000000000 (100M USDT); every relativeCap=1e18 (100%). Signer independence, key custody and recovery arrangements remain undisclosed. The two direct curator owners are themselves SafeProxy contracts, not two individual EOAs: 0x50c770e6dc6cfdee33509273fa9a215bfafff9b2 is 3-of-5 with owners 0xacd204885e9ea069c1cd3e4b12a75ce478de6f1d,0x3126c94c032a1d9be9294cf5be2da99255b00cc8,0x52a8305f29f85bec5fa6ee78b87ddd2218d8e12e,0xf01d0a6f78180c4c9583a848192dd2f250ef4b8f,0x8a714da4cd3ad43442a092227db52860329e0742; 0xab5710211458fc8d7e0be628202f47ddbd3f38eb is 1-of-2 with owners 0xb81b1dd68887e1ef77966d8f60b3448531315330,0x6c36d4e8a5606aaf75655f60307ad73af8d56d8c. Both nested Safes have empty enabled-module lists and zero guard at the same pin; leaf-code responses are empty and do not certify ownership or custody. This is cryptographic topology, not an attestation of independent people, organizations or custody."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe5c6318456a7cb6f74f93b4eee4616db5fcef699",
+        "deploymentRefs": [
+          "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        ],
+        "label": "Spark active allocation proxy",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "sources": [
+          {
+            "label": "Exact controller verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe5c6318456a7cb6f74f93b4eee4616db5fcef699"
+          },
+          {
+            "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Full six-event deployment-to-pin role census and current isAllocator() identify this sole active allocator. It can allocate/deallocate inside enabled caps, set liquidity adapter/data and maxRate, not mint arbitrary shares or USDT. ALMProxyFreezable delegates execution through its role-authorized doCall surface; complete upstream execution closure is not established."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf5748bbefa17505b2f7222b23ae11584932c908b",
+        "deploymentRefs": [
+          "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+        ],
+        "label": "Spark active sentinel Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197390,
+        "sources": [
+          {
+            "label": "Exact controller verified source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf5748bbefa17505b2f7222b23ae11584932c908b"
+          },
+          {
+            "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Full deployment-to-pin role census and current isSentinel() identify this sole active sentinel. It can revoke pending operations, reduce caps and deallocate but cannot increase caps or mint arbitrary shares. Current Safe is 2-of-3 with listed owners, empty module pagination and zero guard; owner identities, independence and key custody remain unknown.",
+        "threshold": 2,
+        "signerCount": 3,
+        "safe": {
+          "owners": [
+            "0x0a3cca3883cb011c8beb8098f71ac29cd7facb19",
+            "0x21fd3ab3d1a05ac0e2903e11f45a4ae8a9d27753",
+            "0x554c51d4099e137f3e13ce5b6a2ae7e878f3ef80"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 26197390,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        }
       }
     ],
     "economicCapSemantics": "collateral-gated",
@@ -184,22 +270,23 @@
         {
           "label": "Historical SubProxy delegated spell trace: September 28, 2026",
           "url": "https://eth.blockscout.com/api/v2/transactions/0xc2af81f173a4a2c17df44dda75e369d0c9876de221487ceeacd67f4d0196a9c1/internal-transactions"
+        },
+        {
+          "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "Observed 2026-10-02T22:43:49.516688+00:00 at ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6). Native totalSupply 88558225018782413763816976 (18 decimals), asset 0xdac17f958d2ee523a2206206994597c13d831ec7 (6 decimals), totalAssets 89911293130474, convertToAssets(10^18) 1015278. One-share redeem from actual holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance. Exact implementation creation transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95, block 24794487, timestamp 2026-04-02T21:02:35+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key custody are not publicly established. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern usdt-tether, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
-      "reviewedAt": "2026-10-03",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Complete executable/storage-write closure of SubProxy delegatecall targets remains unestablished. Supplemental 2026-10-05 source/runtime and pinned Ethereum block 26124951 census narrow the known alternatives: StarGuard's only live event-derived ward is Pause Proxy, spellData is empty, and maxDelay=604800 is a deadline, not a minimum delay; ESM's verified source exposes denyProxy, not SubProxy.exec. Neither an empty current spell nor event-derived wards proves absence of historical unlogged SubProxy delegatecall writes. Aggregate review and incidentState=none are therefore not promoted; immutable wrapper-local D14 and binding Sky D29/D32 doctrine are unchanged. Cause research by Sol curation campaign 2026-10-09 (Lane49Secured), observed 2026-10-09T10:38:41Z: the verified SubProxy source publicly exposes wards, rely, deny and exec with target.delegatecall(args). The missing executable/storage-write closure is public-but-uncurated control evidence (B), not issuer non-disclosure of local reconciliation or supervision. This source observation does not refresh historical onchain pins or establish a complete authority review.",
-        "W2 historical source recovery recorded 2026-10-09T11:54:57Z by Sol curation campaign 2026-10-09 (W2L22Spark): transaction 0xc2af81f173a4a2c17df44dda75e369d0c9876de221487ceeacd67f4d0196a9c1 at Ethereum block 26076924 (hash 0x706b672362a5e4dc2d39d68040a8d501591ef3578961fdc1e402451f0afc6dac, timestamp 2026-09-28T15:43:11Z) has an indexed StarGuard-to-SubProxy call and SubProxy DELEGATECALL to SparkEthereum_20260924 at 0xde40689816da168b0a56f8f22cbd7fffcfa403e6b. This proves one historical delegated execution, not an exhaustive deployment-to-pin call/storage-write census or a controller incident. Rely/Deny events do not enumerate unlogged delegated writes to wards. The conservative-maximal execution domain requires ordinary CALL, so SubProxy's DELEGATECALL cannot be relabelled to fit it. Complete archival traces, historical target/runtime/calldata and storage diffs remain required, including nested and dynamically created targets; the pinned helper has no trace/state-diff method. B and the original aggregate review dates/disposition remain unchanged."
-      ],
+      "evidence": "Historical observation at Ethereum block 26107702 (hash 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6, 2026-10-02T22:43:49Z) recorded totalSupply=88558225018782413763816976, totalAssets=89911293130474 and convertToAssets(10^18)=1015278. One-share redeem from holder 0x1601843c5e9bc251a3272907010afa41fa18347e returned 1015278 USDT base units in eth_call without a broadcast transaction. Creation transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95 joins the exact deployment to block 24794487, 2026-04-02T21:02:35Z. Fresh Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z) records totalSupply=76314545914654098613391774, totalAssets=77544999649970 and convertToAssets(10^18)=1016123. Idle USDT=0; adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a realAssets and four expectedSupplyAssets equal that denominator at this pin only, not as an invariant under maxRate. All four adapter positions have zero borrow shares and zero posted collateral. These lender receivables are not borrower collateral held by the vault or guaranteed USDT realization. The six-event SetIsAllocator/SetIsSentinel census and current getters retain allocator 0xe5c6318456a7cb6f74f93b4eee4616db5fcef699 and sentinel 0xf5748bbefa17505b2f7222b23ae11584932c908b; former allocators 0x6cdc4bd1e7ff90f97d1cdc410bfd41303fc0b8ed and 0x9ad87668d49ab69eea0af091de970ef52b0d5178 are revoked. Performance fee=10% of interest, management fee=0 and forceDeallocatePenalty=0. All four gates are zero; share-send, share-receive and asset-receive setters are abdicated, while deposit gating remains configurable. Curator Safe is 2-of-2 with nested 3-of-5 and 1-of-2 Safes; their empty module lists and zero guards establish topology, not independent humans or custody. Immutable deposit/mint enters through funded transfers before createShares; fee shares follow MAX_PERFORMANCE_FEE=50% of interest and MAX_MANAGEMENT_FEE=5% annualized. Allocation-cap changes are not share-issuance-cap changes. Reconciliation=not-applicable applies only to this deposit-backed share mechanism; supervision=none grants no prudential credit, and USDT issuance remains inherited. Historical transaction 0xc2af81f173a4a2c17df44dda75e369d0c9876de221487ceeacd67f4d0196a9c1 at block 26076924 (2026-09-28T15:43:11Z) records StarGuard calling SubProxy and SubProxy delegatecalling SparkEthereum_20260924 at 0xde40689816da168b0a56f8f22cbd7fffcfa403e6b. This proves delegated execution, not an incident or exhaustive storage-write history. SubProxy storage writes cannot alter the separate immutable VaultV2's share ledger or code. The live mint-control contract does not turn unsearched controller execution closure into a new authority-resolution requirement for these legacy-equivalent parameter controls. The local review is scoreable; no execution-complete certificate, conservative-maximal CALL envelope, immutable governance schedule or independent key-custody assurance is asserted.",
+      "reviewer": "Pharos batch64 review (SparkControlHarmonizer)",
+      "reviewedAt": "2026-10-15",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "ethereum:0x0f963a8a8c01042b69054e787e5763abbb0646a3",
           "question": "For Spark current curator Safe (ethereum:0x0f963a8a8c01042b69054e787e5763abbb0646a3): Safe signer independence and offchain key custody are not publicly established.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
+          "reviewedAt": "2026-10-15",
           "reviewer": "Sol refinement Refine11",
           "sources": [
             {
@@ -209,6 +296,10 @@
             {
               "label": "Exact vault source and native authorization",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+            },
+            {
+              "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+              "url": "https://ethereum-rpc.publicnode.com"
             }
           ]
         }
@@ -220,8 +311,8 @@
         "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107702,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197390,
       "sources": [
         {
           "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -238,8 +329,13 @@
         {
           "label": "Morpho vault framework and holder exit mechanics",
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+        },
+        {
+          "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+          "url": "https://ethereum-rpc.publicnode.com"
         }
       ]
-    }
+    },
+    "headline": "Deposit-backed shares with immutable issuance code; Spark controls strategy, fees and caps, while USDT issuer powers remain inherited."
   }
 }

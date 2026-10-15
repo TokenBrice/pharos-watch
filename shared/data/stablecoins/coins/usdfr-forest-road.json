@@ -1,7 +1,7 @@
 {
   "liveReservesConfig": {
     "adapter": "forest-road-reserve-manager",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "usdfr-forest-road",
     "display": { "url": "https://forestroadvault.com/transparency", "label": "Onchain idle USDC and net accrued credit accounting" },
@@ -23,13 +23,13 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Specialty-finance credit receivables and idle canonical USDC in an Ethereum reserve. Forest Road originates and services the book; loan facts enter through threshold-signed attestations. Renewable-energy, media/entertainment and a related-party digital-assets facility are disclosed sectors.",
+  "collateral": "Specialty-finance credit principal and accrued cash/PIK interest, plus idle canonical USDC in an Ethereum reserve. The current book is concentrated in renewable-energy facilities to one borrower, alongside a small related-party digital-assets facility. Forest Road originates and services the book; loan facts enter through threshold-signed attestations, not independent financial assurance.",
   "pegMechanism": "KYC-approved participants mint USDfr 1:1 with USDC. Direct USDfr-to-USDC redemption pays 1:1 while fully backed and is limited to idle USDC, with transfer blocklisting and pause controls. A separate Uniswap v4 market supports secondary exit. USDfr itself earns no yield; sUSDfr is a separate instrument.",
   "mechanismArchetype": "rwa-credit-fund",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
     "rationale": "Exact Ethereum token 0xcc07e7c4e5e35affd47b351e420a22c667d7f83d is a transferable credit-backed dollar claim. ReserveManager records loan principal/accrual and idle USDC; controller redemption and a verified exact-token secondary market establish ordinary exit. This is credit investment exposure, not core cash backing or the separate yield-bearing sUSDfr wrapper.",
     "sources": [
       {
@@ -51,6 +51,10 @@
       {
         "label": "Definitive legal characterization and related-party facility",
         "url": "https://forestroadvault.com/legal"
+      },
+      {
+        "label": "Live facility concentration, operating limits and open findings, updated 14 October 2026",
+        "url": "https://forestroadvault.com/docs/status"
       }
     ]
   },
@@ -84,6 +88,30 @@
     {
       "label": "CoinGecko",
       "url": "https://www.coingecko.com/en/coins/forest-road-usdfr"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://forestroadvault.com/transparency"
+    },
+    {
+      "label": "Audit register",
+      "url": "https://forestroadvault.com/docs/audit"
+    },
+    {
+      "label": "Terms",
+      "url": "https://forestroadvault.com/terms"
+    },
+    {
+      "label": "Token explorer",
+      "url": "https://etherscan.io/token/0xcc07e7c4e5e35affd47b351e420a22c667d7f83d"
+    },
+    {
+      "label": "Live deployment status",
+      "url": "https://forestroadvault.com/docs/status"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/forestroadvault"
     }
   ],
   "contracts": [

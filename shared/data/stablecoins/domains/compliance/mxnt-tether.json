@@ -89,13 +89,20 @@
         "sourceKind": "federal-regulator",
         "sourceDate": "2021-10-15",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "CNAD exact stablecoin issuer registration EME-0003",
+        "url": "https://cnad.gob.sv/es/issuers/#expand-25eec8d",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-15",
+        "sourceDate": "2025-05-19"
       }
     ],
     "notes": "Reviewed 2026-10-07. Tether International, S.A. de C.V. is the exact current issuer in the February 26, 2026 terms. MXN tokens are redeemable for one Mexican peso per token, less fees, by eligible verified customers. The published June 30, 2026 BDO report is aggregate quarterly reasonable assurance over shared fiat-token reserves; it does not establish dedicated MXNT reserves or monthly attestations. No MXNT-specific GENIUS approval, application, intent or foreign exception was located. Tether statements concerning USDT GENIUS readiness and Anchorage-issued USA₮ do not establish MXNT intent or authorization. Current issuer licensing claims concern Salvadoran CNAD registration. GENIUS remains pre-effective; expected January 18, 2027 effectiveness and separate July 18, 2028 general DASP restriction do not establish current foreign registration. The optional enforcement finding is omitted: current terms identify the issuer as formerly Tether International Limited, which was a respondent in the CFTC October 15, 2021 USDT reserve-disclosure settlement. That historical issuer action does not establish a GENIUS action or MXNT issuance prohibition.",
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-10-07",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "licensingRegulator": "CNAD, El Salvador (issuer disclosure; not U.S. GENIUS permission)",
+    "licensingRegulator": "CNAD, El Salvador; stablecoin issuer EME-0003 in the regulator registry (not U.S. GENIUS permission)",
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC Bulletin 2026-3 and March 2, 2026 GENIUS implementation proposed rule, including the full official Federal Register HTML",

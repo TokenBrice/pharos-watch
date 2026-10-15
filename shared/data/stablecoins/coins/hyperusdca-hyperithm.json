@@ -2,7 +2,7 @@
   "id": "hyperusdca-hyperithm",
   "name": "Hyperithm USDC Apex",
   "symbol": "hyperUSDCa",
-  "implementationLaunchDate": "2026-01-09",
+  "launchDate": "2026-01-09",
   "oneLiner": "hyperUSDCa is Hyperithm's USDC lending vault on Monad; shares earn borrower interest and redeem for liquid USDC, with credit losses reducing NAV.",
   "flags": {
     "backing": "crypto-backed",
@@ -13,15 +13,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC in the Hyperithm-curated Morpho Vault V2 on monad, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
-  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "collateral": "USDC held idle or lent through the Hyperithm-curated Morpho Vault V2 on Monad. Its sole MorphoMarketV1AdapterV2 holds nine lender positions, led by aHYPER and PT-USDat collateral; borrower credit and collateral risks remain local strategy exposure.",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. No liquidity adapter is configured at the reviewed block, so ordinary withdraw/redeem uses idle USDC. Permissionless force-deallocation and in-kind exits are separate routes, not guaranteed dollar settlement. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Hyperithm USDC Apex (hyperUSDCa) at monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371 is the current public ERC-4626 VaultV2 share over USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 holds 7 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_HyperusdcaHyperithm)",
+    "rationale": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: hyperUSDCa is the exact native ERC-4626 VaultV2 share over Monad USDC 0x754704bc059f8c67012fed69bc8a327a5aafb603. Deposit-backed issuance and accrued fee shares preserve proportional residual NAV accounting; strategy losses reduce share value. The sole adapter 0x068f22739a5f8a5c84619d7f355b678d00707908 has nine nonzero lender markets. Holder rights are code-enforced redemption into available USDC, not direct ownership of Circle reserves or proven legal segregation. Other Hyperithm USDC Apex vaults on Ethereum and Arbitrum are distinct native liabilities, not additional deployments of this Monad share.",
     "sources": [
       {
         "label": "Exact Morpho Vault V2 deployment",
@@ -54,22 +54,46 @@
       {
         "label": "Exact vault creationTimestamp 1767929586, creationBlockNumber 47497571; RPC block timestamp independently matches, reviewed 2026-10-03",
         "url": "https://blue-api.morpho.org/graphql"
+      },
+      {
+        "label": "Monad block 113592449, 2026-10-15T10:44:05Z; exact vault, roles, markets and oracle reads",
+        "url": "https://monadscan.com/block/113592449"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho vault",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
     },
     {
-      "label": "Vault mechanics",
+      "label": "Morpho: Vault asset flows",
       "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
     },
     {
-      "label": "Gate documentation",
+      "label": "Morpho: Gate documentation",
       "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    },
+    {
+      "label": "Curator",
+      "url": "https://www.hyperithm.com/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
+    },
+    {
+      "label": "Vault code audit",
+      "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-09-15-chainsecurity.pdf"
+    },
+    {
+      "label": "Lending adapter code audit",
+      "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/main/audits/2025-12-04-market-v1-adapter-v2-spearbit.pdf"
+    },
+    {
+      "label": "Hyperithm transparency (issuer book, not exact-vault assurance)",
+      "url": "https://accountable.hyperithm.com/"
     }
   ],
   "contracts": [
@@ -88,7 +112,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "hyperusdca-hyperithm",
     "display": {
@@ -111,9 +135,9 @@
         "expectedAssetAddress": "0x754704bc059f8c67012fed69bc8a327a5aafb603"
       },
       "deployedExposure": {
-        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+        "basis": "Monad block 113592449, hash 0xe28608349f55c565f97911ad6364f00301b952fa3749889c07ce8568eed73140, timestamp 2026-10-15T10:44:05Z: totalAssets 51602639731900 raw USDC reconciles exactly to idle USDC 2928807842209 plus nine sole-adapter lender positions totaling 48673831889691. The reviewed descriptor covers the non-idle lender claims; idle cash is measured separately.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://monadscan.com/block/113592449"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

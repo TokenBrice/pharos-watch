@@ -2,7 +2,7 @@
   "id": "xgz-goldzip",
   "reserves": [
     {
-      "name": "Issuer-reported physical gold in HKGX-recognised depositories (allocation unverified)",
+      "name": "Issuer-mapped 1 kg gold bars at Horsemart Service Limited (snapshot 2026-10-05)",
       "pct": 100,
       "risk": "medium",
       "assetClass": "other",
@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine06 primary-source review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_XgzGoldzip",
     "confidence": "probable",
     "sources": [
       {
@@ -32,38 +32,54 @@
         "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
       },
       {
-        "label": "GoldZip transparency report gap",
+        "label": "GoldZip issuer allocation and independent-report gap",
         "url": "https://goldzip.info/transparency/"
+      },
+      {
+        "label": "GoldZip terms clauses 4.2-4.3, 5 and 10",
+        "url": "https://goldzip.info/terms-conditions/"
+      },
+      {
+        "label": "GoldZip primary legal terms component",
+        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+      },
+      {
+        "label": "HKGX identifies the Singapore issuing subsidiary GoldZip Pte. Ltd.",
+        "url": "https://hkgx.com.hk/en/marketdata/goldzip"
+      },
+      {
+        "label": "GoldZip 5 October 2026 holder-to-bar allocation snapshot",
+        "url": "https://goldzip.info/transparency/XGZ_Bar_Allocation_2026-10-05.csv"
       }
     ],
-    "rationale": "The complete issuer-described reserve category is physical gold; 100% records promised backing type, not verified bars, allocated title or sufficiency. Homepage identifies GoldZip Digital Pte. Ltd. as an HKGX group member and the litepaper describes issuance by an HKGX wholly owned subsidiary. HKGX both affiliates with the issuer and recognizes refiners/depositories: this related-party concentration is not independent custody or assurance. No current MinLaw register confirmation or PSPM credit is inferred from issuer marketing.",
-    "compositionBasis": "Issuer product and backing disclosures reopened 2026-10-02",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "The issuer's 5 October 2026 CSV maps 39,000 XGZ across 39 Heraeus bar serials, each allocated 1,000 XGZ, with Horsemart Service Limited named as vault in every row. Its 298 rows cover 260 addresses. The total matches 39,000 XGZ at Ethereum block 26198051 (2026-10-15T12:55:59Z), but matching token arithmetic is not independent verification of 39 kg of physical gold. Terms name GoldZip Digital Pte Ltd as administrator/redemption counterparty, the obligor in this slice. Clauses 4.2-4.3 deny holders proprietary interest in stored bars and pass title only on collection. Independent reserve reports, account segregation and insolvency safeguards remain unverified.",
+    "compositionBasis": "Issuer-published holder-to-bar allocation snapshot dated 2026-10-05: 39 Heraeus 1 kg bars at Horsemart Service Limited, mapped to 39,000 XGZ; token-total reconciliation by construction, not independent physical inventory assurance",
+    "compositionAsOf": "2026-10-05",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current bar inventory, named custodians, provider shares, segregation and independent reserve-liability reconciliation are unavailable.",
+    "knownUnknownExposure": "The issuer names and allocates the bars, but independently verified physical holdings, current post-snapshot inventory, account segregation, insolvency safeguards and independently signed reserve-liability reconciliation remain unavailable across the full reserve envelope.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Issuer-reported physical gold in HKGX-recognised depositories (allocation unverified)",
+        "reserveName": "Issuer-mapped 1 kg gold bars at Horsemart Service Limited (snapshot 2026-10-05)",
         "pct": 100,
         "disposition": "insufficient-evidence",
-        "rationale": "The issuer promises physical gold, but no current bar inventory or independent reserve-liability reconciliation verifies the assets actually held; the full reserve envelope remains unresolved rather than a verified exogenous gold holding."
+        "rationale": "The issuer CSV maps 39,000 XGZ to 39 named 1 kg bar serials at Horsemart Service Limited. This snapshot is a holder-balance allocation, not independent evidence that all bars are held or protected for holders; the full physical reserve envelope remains unverified."
       }
     ]
   },
   "custodyProfile": {
     "providers": [
       {
-        "name": "HKGX-recognised third-party depositories (not publicly named)",
+        "name": "Horsemart Service Limited (issuer-named vault, snapshot 2026-10-05)",
         "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_XgzGoldzip",
     "confidence": "probable",
     "sources": [
       {
@@ -71,11 +87,19 @@
         "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
       },
       {
-        "label": "GoldZip transparency report gap",
+        "label": "GoldZip issuer allocation and independent-report gap",
         "url": "https://goldzip.info/transparency/"
+      },
+      {
+        "label": "GoldZip primary terms clauses 4.2-4.3 deny proprietary bar interests before collection",
+        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+      },
+      {
+        "label": "GoldZip 5 October 2026 allocation CSV names Horsemart Service Limited",
+        "url": "https://goldzip.info/transparency/XGZ_Bar_Allocation_2026-10-05.csv"
       }
     ],
-    "uncertainty": "Current bar inventory, named custodians, provider shares, segregation and independent reserve-liability reconciliation are unavailable.",
+    "uncertainty": "The issuer's 5 October 2026 allocation CSV names Horsemart Service Limited for all 39 bar serials and Heraeus as brand; provider shares beyond that snapshot are unverified. The mapping does not confer title: terms deny token-holder proprietary interest before collection. Independent physical inventory assurance, reserve-account segregation, insolvency protection, rehypothecation restrictions and independently signed reserve-liability reconciliation remain unavailable.",
     "knownUnknownExposurePct": 100
   }
 }

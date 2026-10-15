@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "name": "Steakhouse Confidential Prime USDC idle USDC",
-      "pct": 0.0,
+      "pct": 0.005757310118,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xbeef00a59b577423653a1526c7009bde103f542b:deployed",
       "name": "Steakhouse Confidential Prime USDC deployed strategy positions",
-      "pct": 100.0,
+      "pct": 99.994242689881,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -40,8 +40,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
     "confidence": "verified",
     "sources": [
       {
@@ -53,8 +53,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
       },
       {
-        "label": "Pinned ethereum block 26107704",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+        "url": "https://etherscan.io/block/26196563"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -73,11 +73,11 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
       }
     ],
-    "rationale": "At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.796565+00:00, totalAssets was 34464466.497611 USDC, totalSupply 33652188.989718034863 shares, idle USDC 0.000000; all 3 adapter market IDs and expectedSupplyAssets were enumerated. Idle and deployed percentages use the same-block totalAssets denominator. The sum of market expectedSupplyAssets exceeds accounting totalAssets by 16705.345257 USDC; VaultV2 accrueInterestView caps positive recognition using maxRate, so market assets are not silently renormalized into extra reserve coverage. These slices classify the direct USDC-denominated claim; they do not reclassify all borrower collateral as cash.",
-    "compositionBasis": "Pinned ERC-4626 accounting assets and idle USDC, complete sole-adapter market census",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), totalAssets=35318046503247 raw USDC, totalSupply=34404401040963463160177117 raw shares, idle USDC=2033369465 raw. The sole adapter reports 35323102016447 raw USDC across all three enumerated lender markets: cbBTC 25094669198111, wstETH 9932099790042, WETH 296333028294; all three positions have zero borrow shares and zero posted collateral. Real assets including idle total 35325135385912; the 7088882665 raw USDC difference from totalAssets is undistributed positive interest under maxRate, not an extra reserve or missing exposure. The measured idle/deployed partition is 0.00575731%/99.99424269% of same-block totalAssets and is published as separate idle and deployed slices, not 100% deployed cash or borrower-collateral holdings; borrower-collateral allocation weights are a separate look-through book. Lending allocations are approximately 71.04% cbBTC, 28.12% wstETH and 0.84% WETH of real assets, not vault holdings of those collateral tokens. Family pass (block 26196563, 2026-10-15T07:57:11Z): after the config-version-2 measured split, idle USDC is classified under the underlying key at 0.005757310118% and non-idle lender claims under the vault :deployed key at 99.994242689881%, using the producer's held/totalAssets denominator.",
+    "compositionBasis": "Pinned idle USDC and complete sole-adapter market census; measured idle/deployed split published under separate underlying and vault :deployed keys",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Direct idle and deployed categories are classified. Borrower collateral custody, legal priority and future allocations remain unresolved, and USDC parent reserve quality is not vault financial assurance.",
+    "knownUnknownExposure": "Direct idle and deployed categories and current borrower-collateral identities are established. Legal segregation, insolvency priority and future allocations remain unresolved; parent USDC reserves are not vault-level financial assurance.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -93,13 +93,17 @@
       {
         "name": "Morpho lending markets 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb",
         "role": "other"
+      },
+      {
+        "name": "Coinbase (BTC custody behind borrower cbBTC collateral)",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
     "confidence": "probable",
     "sources": [
       {
@@ -111,8 +115,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
       },
       {
-        "label": "Pinned ethereum block 26107704",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+        "url": "https://etherscan.io/block/26196563"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -129,8 +133,12 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
+      },
+      {
+        "label": "Coinbase cbBTC backed by BTC held in Coinbase custody",
+        "url": "https://www.coinbase.com/cbbtc"
       }
     ],
-    "uncertainty": "The complete current immediate inventory is held by onchain vault/adapter/Morpho contracts. USDC is intentionally lent to borrowers. This identifies operational position custody, not legal segregation, borrower-collateral whole-book custody, signer independence or insolvency priority. The aggregate custodyModel remains unknown rather than inheriting an all-onchain claim from older precedents."
+    "uncertainty": "Immediate lender claims are held by the vault, its adapter and Morpho contracts. The material cbBTC borrower-collateral leg is backed by BTC held by Coinbase, alongside onchain wstETH/WETH collateral and USDC issuer exposure; aggregate custody is mixed. The lender allocations are not direct cbBTC holdings or custody percentages. This establishes heterogeneous custody, not legal segregation, bankruptcy remoteness, signer independence or insolvency priority. Lending deployment is intentional strategy reuse; it does not establish custodians' contractual rights to repledge collateral, which remain unknown."
   }
 }

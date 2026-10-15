@@ -13,15 +13,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC lender positions in six Morpho markets secured by cbBTC, WBTC, wstETH, principal-token (PT-reUSD-10DEC2026, PT-USDat-14JAN2027) and nested Morpho V1 USDC vault-share (v-wmtUSDC) collateral",
-  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. In-kind deallocation retains underlying lending-position exposure.",
+  "collateral": "USDC lender positions in seven Morpho markets secured by cbBTC, WBTC, wstETH, PT-reUSD-10DEC2026, PT-USDat-14JAN2027, Wildcat debt-token wrapper v-wmtUSDC and 3Jane USD3 collateral",
+  "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. A separate in-kind redemption route retains underlying lending-position exposure; forceDeallocate itself withdraws available cash to the vault. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07 primary-source review 2026-10-03",
-    "rationale": "Wintermute USDC Select at ethereum:0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd is an ERC-4626 share over USDC with a code-enforced pro-rata claim on the current Morpho lending inventory. The claim bears lending losses and liquidity constraints, so protocol-position intentionally differs from the fiat-cash parent and older Morpho precedents. At ethereum block 26107703 (0x18e5f37), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=44986944522361979656587662 atomic shares; accrueInterestView returned assets=45890229418936, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 45890229418936 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=1020078 USDC atomic units.  The exact deployment launch date is 2026-04-22, established by Morpho creationTimestamp for this chain-qualified vault address (1776879155). Published VaultV2 framework security audits corroborate the referenced semantics; source-to-bytecode completeness and financial assurance are separate facts.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review",
+    "rationale": "Wintermute USDC Select is an ERC-4626 share over USDC with a pro-rata claim on Morpho lending positions, bearing losses and liquidity constraints. At Ethereum block 26197390 (2026-10-15T10:43:11Z), totalSupply=45777319351152393341737589 atomic 18-decimal shares; totalAssets and accrueInterestView assets=46779493778612 atomic 6-decimal USDC, with zero pending fee shares and zero idle USDC. The sole adapter enumerates seven invested markets whose expectedSupplyAssets sum exactly to totalAssets. convertToAssets(1e18)=1021892 USDC atomic units. The native lending claim supports protocol-position rather than the fiat-cash parent's archetype. Morpho creationTimestamp=1776879155 and deployment receipt at block 24936985 establish 2026-04-22 launch. Published VaultV2 audits concern framework code, not exact-vault financial assurance.",
     "sources": [
       {
         "label": "Wintermute USDC Select exact vault identity and accounting",
@@ -62,6 +62,10 @@
       {
         "label": "Exact VaultV2 address on chainId 1: creationTimestamp=1776879155, accessed 2026-10-03",
         "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; vault, complete adapter inventory and market positions",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ]
   },
@@ -69,11 +73,27 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://app.morpho.org/ethereum/vault/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+      "url": "https://armitage.wintermute.com/vaults/ethereum/usdc-select"
     },
     {
       "label": "Docs",
-      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      "url": "https://armitage.wintermute.com/docs/vaults/select"
+    },
+    {
+      "label": "Morpho: Vault",
+      "url": "https://app.morpho.org/ethereum/vault/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+    },
+    {
+      "label": "Armitage: Terms of use",
+      "url": "https://armitage.wintermute.com/terms-of-use"
     }
   ],
   "contracts": [
@@ -84,15 +104,22 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Curator terms restrict UK and US access",
+      "message": "Armitage's terms, last updated 19 May 2026, prohibit UK and US persons from using Covered Vaults. Permissionless contract execution does not waive these contractual restrictions. The terms identify Corto Industries Limited in the Cayman Islands as curator, disclaim CIMA supervision and do not guarantee withdrawal timing."
+    }
+  ],
   "yieldConfig": {
     "yieldSource": "Wintermute USDC Select Morpho USDC lending vault",
     "yieldType": "lending-vault"
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "armusdcs-wintermute",
     "display": {
@@ -115,9 +142,9 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
       "deployedExposure": {
-        "basis": "Pinned complete adapter inventory consists of USDC-denominated lender positions, not idle cash: USDC lender positions in six Morpho markets secured by cbBTC, WBTC, wstETH, principal-token collateral and nested Morpho V1 USDC vault shares. The nested v-wmtUSDC collateral is 0xf65460b84c13eeb911303336ab0f9d63cc79839f in market 0x1d09bf979a167075f5608686642fd3cdb458de742a234175892fa03f23693f6b; borrower collateral is not directly held lender-vault reserves.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://api.morpho.org/graphql"
+        "basis": "Ethereum block 26197390 (2026-10-15T10:43:11Z): zero idle USDC; one adapter holds seven USDC-denominated lender positions totaling 46779493778612 atomic USDC. Collateral comprises cbBTC, WBTC, wstETH, PT-reUSD-10DEC2026, PT-USDat-14JAN2027, v-wmtUSDC and 3Jane USD3. v-wmtUSDC at 0xf65460b84c13eeb911303336ab0f9d63cc79839f is Wildcat4626Wrapper over Wildcat debt token 0xc9499006a149c553d18171747ed19aa7c6dd19e2, not a Morpho V1 vault. Borrower collateral is not directly held lender-vault reserves.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

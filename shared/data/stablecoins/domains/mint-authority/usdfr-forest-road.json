@@ -4,7 +4,8 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "D14 review retained: verified USDfr.mint(address,uint256) is onlyRole(MINTER_ROLE) but performs _mint without the ReserveManager backing check used by the present controller. DEFAULT_ADMIN_ROLE grantRole can authorize a different minter once accrual is idle. This minter-authorization path, not UUPS upgrade alone or oracle admission, makes economic cap unbounded. R17 completes historical issuance and governor/vote-source root review at Ethereum block 26124975; attester signing-policy evidence remains scoped unknown. The fallback stays unbounded-adverse, internal-ledger accounting supplies no reconciliation uplift, and no D29 certificate is authored.",
+    "headline": "The controller checks backing, but issuer-controlled timelocked governance can authorize an uncapped minter.",
+    "summary": "Verified USDfr.mint(address,uint256) is onlyRole(MINTER_ROLE) but performs _mint without the ReserveManager backing check used by the current controller. DEFAULT_ADMIN_ROLE can authorize a different minter while accrual is idle. This authorization path makes economic issuance unbounded; the two-day upgrade delay does not impose an immutable backing cap. At Ethereum block 26197399 the controller remains the sole minter and the timelock remains the sole token admin/upgrader. Signed loan facts and continuous internal accounting do not establish independent reserve reconciliation, attester key independence or prudential supervision.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -19,9 +20,13 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "Forest Road governance timelock",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107707,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197399,
       "sources": [
+        {
+          "label": "Ethereum block 26197399, 2026-10-15T10:44:59Z; ERC-1967 implementation and complete role census",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
         {
           "label": "Canonical Ethereum deployment addresses",
           "url": "https://forestroadvault.com/docs/addresses"
@@ -44,11 +49,15 @@
         ],
         "directMintAbility": "direct",
         "canRaiseCap": false,
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107707,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197399,
         "capDescription": "Every user mint is gated by KYC and the reserve-to-liability invariant; authenticated credit interest may create yield liabilities through authorized modules. Upgrade authority can replace this logic.",
-        "evidence": "At block 26107707 hasRole(keccak256(MINTER_ROLE),controller) returned true. Primary topology docs assign native mint only to this controller and explain canonical USDC deposits and backed yield issuance.",
+        "evidence": "At Ethereum block 26197399 (2026-10-15T10:44:59Z), the complete token RoleGranted/RoleRevoked/RoleAdminChanged census from deployment block 26006832, followed by hasRole verification, identifies the controller as the sole MINTER_ROLE holder. The controller is unpaused, backingInvariantHolds=true and previewRedeem(1e18) returns 1e6 USDC with 1e18 USDfr burned. Its CREDIT_ROLE belongs only to WaterfallEngine, while LOSS_BURNER_ROLE belongs to ReserveManager and DefaultManager. No new minter, financial assurance or immutable mint cap is inferred.",
         "sources": [
+          {
+            "label": "Ethereum block 26197399, 2026-10-15T10:44:59Z; controller role, guards, effective supply and par preview",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
           {
             "label": "Forest Road USDfr and credit-book mechanism",
             "url": "https://forestroadvault.com/docs/overview"
@@ -75,13 +84,17 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "timelockDelaySec": 172800,
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107707,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197399,
         "failureDomainKeys": [
           "issuer-governance:forest-road:grove-treasury"
         ],
-        "evidence": "At block 26107707 token hasRole(DEFAULT_ADMIN_ROLE,timelock) returned true and timelock getMinDelay returned 172800. Primary docs identify timelock UPGRADER and DEFAULT_ADMIN and state Forest Road treasury controls GROVE voting at launch. No independent electorate or Safe signer separation is inferred.",
+        "evidence": "At Ethereum block 26197399 (2026-10-15T10:44:59Z), complete deployment-to-pin role logs and hasRole reads retain the timelock as sole DEFAULT_ADMIN_ROLE and UPGRADER_ROLE holder on USDfr, controller, ReserveManager, ClaimBridge and AttestationOracle. getMinDelay=172800. The timelock is self-administered; FRGovernor alone holds PROPOSER_ROLE and CANCELLER_ROLE, and EXECUTOR_ROLE is open to the zero address. Governor wiring points to this timelock and GroveVotesAggregator, with a one-day voting delay, two-day voting period and one-million-GROVE proposal threshold. Issuer disclosure still states Forest Road treasury controls governance; public execution of an already-approved operation is not permissionless proposal authority.",
         "sources": [
+          {
+            "label": "Ethereum block 26197399, 2026-10-15T10:44:59Z; complete role history, memberships, governor wiring and timelock delay",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
           {
             "label": "Canonical Ethereum deployment addresses",
             "url": "https://forestroadvault.com/docs/addresses"
@@ -98,11 +111,19 @@
     "supervision": "unknown",
     "review": {
       "disposition": "scoreable",
-      "reviewedAt": "2026-10-05",
-      "reviewer": "Pharos control review R17, historical issuance and governance-root review",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
       "sources": [
         {
-          "label": "Complete USDfr token role history, 175 logs through pagination end",
+          "label": "Ethereum block 26197399, hash 0x2bff3ac61a5d73489280644fbef154289380ad03d8135a65efdd7a433c6a2c36, 2026-10-15T10:44:59Z; role/Transfer census and pinned state",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Exact USDfr implementation: role-gated mint calls _mint without a reserve check",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9eef9b0b566c82e0802ced653dc8c0a5df1edc26"
+        },
+        {
+          "label": "Historical USDfr event source; current complete role census pinned separately",
           "url": "https://eth.blockscout.com/api/v2/addresses/0xcc07e7c4e5e35affd47b351e420a22c667d7f83d/logs"
         },
         {
@@ -170,7 +191,7 @@
           "url": "https://forestroadvault.com/docs/audit"
         }
       ],
-      "evidence": "R17 re-reviewed the current verified sources and authenticated the entire Ethereum block 26006832–26124975 history in one pinned eth_getLogs response: USDfr 198 events, MintRedeemController 51, FRGovernor 20, timelock 34, GROVE 7 and sGROVE 11. USDfr has 29 mint and six burn events; their net amount exactly equals pinned totalSupply 5142565558477829991308833 raw units. Historical mint/burn transaction inputs were reviewed alongside controller events, bootstrap role revocations and the FRV-007 token upgrade. No unexplained mint, burn, role grant or upgrade was identified. This is an issuance-control incident review, not independent reserve assurance. Issuer status, security disclosures, audit register, published governance and independent incident-index searches were also reviewed; disclosed open economic findings are fork scenarios, not live issuance incidents, and remain material risks. FRGovernor token() binds immutable GroveVotesAggregator 0x297ab97621b8b7734bbb0da6a4047ea873da5b04; its grove()/sGrove() bind the documented two sources. Verified FRGovernor authorizes upgrades onlyGovernance and disables pointer-only timelock replacement. GROVE and sGROVE remain mutable through timelock-held UPGRADER_ROLE; complete role histories and pinned membership retain that adverse vote-source authority, rather than treating aggregator immutability as immutable voting power. The timelock retains its 172800-second delay and the treasury has exercised decisive 1-billion-GROVE votes. No independent electorate, attester-human independence, D29 execution certificate or governed-issuance uplift is asserted. The established unrestricted minter-authorization economics, unbounded-adverse posture and internal-ledger reconciliation are unchanged. Earlier oracle-proxy binding, attester roster and treasury topology findings remain applicable; the separate scoped signing-policy question is retained.",
+      "evidence": "Fresh Ethereum block 26197399, hash 0x2bff3ac61a5d73489280644fbef154289380ad03d8135a65efdd7a433c6a2c36, timestamp 2026-10-15T10:44:59Z, keyless RPC https://api-ethereum-mainnet.n.dwellir.com. Complete role-event census from block 26006832 across token, controller, manager, oracle, ClaimBridge, timelock and governor contains 53 events; every remaining membership was independently re-read with hasRole at the pin. Token: MINTER=controller; DEFAULT_ADMIN/UPGRADER=timelock; GUARDIAN=operations Safe 0x297e88c997c2e0edf70a5f817aadca2858aa6c04. Controller: DEFAULT_ADMIN/UPGRADER=timelock; GUARDIAN=operations Safe; CREDIT=WaterfallEngine 0xed7f98103ef13d27d572cb4b790e6cf54c27b063; LOSS_BURNER=ReserveManager and DefaultManager 0xd08fa0dc72232c9cf5c8c6a0c4ed9e0074037263. ReserveManager: DEFAULT_ADMIN/UPGRADER/RESERVE_ADMIN=timelock; GUARDIAN=operations Safe; CONTROLLER=controller; CREDIT=WaterfallEngine and DefaultManager. ClaimBridge: DEFAULT_ADMIN/UPGRADER=timelock; GUARDIAN/ORIGINATOR=operations Safe; CREDIT=WaterfallEngine and DefaultManager. Oracle: DEFAULT_ADMIN/UPGRADER=timelock; GUARDIAN=operations Safe; CREDIT=ClaimBridge, WaterfallEngine and DefaultManager; ATTESTER=0x759c2cd90594fdb114c5d37c5c3ea78a0033ed35 and 0xe2e544eded1189b8a5bda86a6f474011a397efb0. Oracle thresholds remain one for kinds 0/1 and two for kinds 2-9. Timelock: DEFAULT_ADMIN=self; PROPOSER/CANCELLER=FRGovernor; EXECUTOR=zero address. No RoleAdminChanged event was returned in the complete interval. Operations Safe is currently 2-of-4, with owners 0xe6e7d3c6379ad80de02f26ccc72605d0f70d5201, 0x7961523a81cc89beb33f2f140255213a6433cdbd, 0x10b23b2f2a5f6bc4ce0c68a5f65c248c1129831 and 0x2d1da1037d2a3b7a49f343212c0b00714ae27975; getModulesPaginated returns an empty list with the terminal sentinel. This is operational guardian/origination custody, not independent governance or attester custody. USDfr's complete 376 Transfer events comprise 36 mints and six burns; their exact net 5536330484442284742571821 equals pinned physical totalSupply. This arithmetic is not transaction-by-transaction financial assurance. ERC-1967 token/controller/manager/oracle/ClaimBridge/governor implementation slots were also re-pinned; no implementation drift from the reviewed source was found. The historical R17 review at block 26124975 retained 29 mints/six burns with exact net 5142565558477829991308833, reviewed transaction inputs and bootstrap revocations, and found no unexplained historical issuance or upgrade. Its governor-root finding remains: FRGovernor upgrades onlyGovernance, rejects pointer-only timelock replacement, and reads immutable GroveVotesAggregator whose GROVE and sGROVE vote sources remain timelock-upgradeable. No fresh independent electorate, attester-human independence, execution certificate, financial reconciliation or governed-issuance uplift is asserted. Disclosed open economic findings remain fork scenarios, not evidence of a live loss.",
       "scopedQuestions": [
         {
           "controlRef": "USDfr MintRedeemController",

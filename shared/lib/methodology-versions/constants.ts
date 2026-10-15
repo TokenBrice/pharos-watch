@@ -28,15 +28,15 @@ export const MINT_AUTHORITY_METHODOLOGY_VERSION = "1.3";
 export const MINT_AUTHORITY_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_AUTHORITY_METHODOLOGY_VERSION);
 export const MINT_AUTHORITY_METHODOLOGY_PATH = "/methodology/#mint-authority-score";
 
-export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.25";
+export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.26";
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_BURN_FLOW_METHODOLOGY_VERSION);
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = "/methodology/mint-burn-flow-changelog/";
 
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.50";
+export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.51";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 
-export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.5";
+export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.51";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL = methodologyLabel(REDEMPTION_BACKSTOP_METHODOLOGY_VERSION);
 export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = "/methodology/#redemption-backstop-methodology";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH = "/methodology/redemption-backstop-changelog/";
@@ -49,6 +49,6 @@ export const PSI_METHODOLOGY_VERSION = "3.67";
 export const PSI_METHODOLOGY_VERSION_LABEL = methodologyLabel(PSI_METHODOLOGY_VERSION);
 export const PSI_METHODOLOGY_CHANGELOG_PATH = "/methodology/stability-index-changelog/";
 
-export const YIELD_METHODOLOGY_VERSION = "8.48";
+export const YIELD_METHODOLOGY_VERSION = "8.49";
 export const YIELD_METHODOLOGY_VERSION_LABEL = methodologyLabel(YIELD_METHODOLOGY_VERSION);
 export const YIELD_METHODOLOGY_CHANGELOG_PATH = "/methodology/yield-changelog/";

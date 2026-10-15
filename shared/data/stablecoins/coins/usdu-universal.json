@@ -33,11 +33,12 @@
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
-    "rationale": "USDU is an issuer-native fixed-dollar fiat obligation supported by bank deposits, deposit validation and par redemption, not an oracle-valued share or borrower collateral mechanism. Ethereum receipts bind the exact current TokenV1 logic creation to block 23076876 and proxy creation to block 23076878, both on 2025-08-05. The dated CertiK audit reference is code-security evidence, not reserve assurance.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_UsduUniversal)",
+    "rationale": "USDU is an issuer-native fixed-dollar fiat obligation supported by bank deposits, deposit validation and par redemption, not an oracle-valued share or borrower collateral mechanism. The issuer explicitly announced the public product launch on January 29, 2026. Ethereum logic and proxy creation on August 5, 2025 are earlier deployment facts, not evidence of that public launch. No later implementation boundary is established. The dated CertiK audit reference is code-security evidence, not reserve assurance.",
     "sources": [
       {"label": "USDU January 30, 2026 whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"},
+      {"label": "Universal public USDU launch, January 29, 2026", "url": "https://www.universal.ae/news/universal-launches-uaes-first-central-bank-registered-usd-stablecoin"},
       {"label": "Exact current TokenV1 implementation creation", "url": "https://etherscan.io/tx/0xbdaaa67b4efbe639b70a452d981ac4c024abb8b5d8ae0a0fb6ea09dddb0eedc0"},
       {"label": "Ethereum proxy creation", "url": "https://etherscan.io/tx/0xb26eb7562ed95893f67960b2deaf1eb4c98609b7759e366449b4a708548c6a9d"}
     ]
@@ -45,8 +46,7 @@
   "llamaId": "410",
   "detailProvider": "defillama",
   "geckoId": "universal-usd",
-  "launchDate": "2025-08-05",
-  "implementationLaunchDate": "2025-08-05",
+  "launchDate": "2026-01-29",
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.universal.ae/transparency",
@@ -100,6 +100,42 @@
     {
       "label": "CertiK Aquanow USDU audit archive, delivered May 2, 2025",
       "url": "https://v1.skynet.cdn.certik.com/projects/usdu"
+    },
+    {
+      "label": "Terms of Services",
+      "url": "https://www.universal.ae/legal/terms-of-services"
+    },
+    {
+      "label": "Ethereum token",
+      "url": "https://etherscan.io/token/0xe4ca6596d2c28014c6f89964f57838e0be9f369b"
+    },
+    {
+      "label": "Issuer smart-contract repository",
+      "url": "https://github.com/AquaNow/usdu-smart-contracts"
+    },
+    {
+      "label": "USDU product and reserve banking partners",
+      "url": "https://www.universal.ae/usdu"
+    },
+    {
+      "label": "Ecosystem and live deployment",
+      "url": "https://www.universal.ae/ecosystem"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/Universal_USDU"
+    },
+    {
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/company/universal-stablecoin"
+    },
+    {
+      "label": "Public launch announcement, January 29, 2026",
+      "url": "https://www.universal.ae/news/universal-launches-uaes-first-central-bank-registered-usd-stablecoin"
+    },
+    {
+      "label": "Solana integration announcement, October 13, 2026",
+      "url": "https://www.universal.ae/news/universal-expands-usdu-to-solana-bringing-regulated-usd-liquidity-on-chain"
     }
   ],
   "jurisdiction": {

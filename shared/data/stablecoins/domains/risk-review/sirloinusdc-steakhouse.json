@@ -18,17 +18,21 @@
       {
         "label": "Steakhouse DeFi vault governing terms",
         "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+      },
+      {
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       }
     ],
-    "evidence": "At base block 52095842, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Matched immutable core has no direct holder seizure or discretionary forced burn. The USDC-denominated lending claim inherits upstream parent freeze exposure; deposit gate/curator authority is distinct from a holder blacklist.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), receiveSharesGate, sendSharesGate and receiveAssetsGate are zero, with their exact setters permanently abdicated. Source-matched immutable core has ordinary ERC20 transfers and no discretionary holder seizure or forced burn. USDC held or lent by the vault retains Circle freeze exposure; mutable deposit gating is separate from holder transfer and withdrawal gates.",
+    "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only the exact native base vault share is authored. No source-verified share bridge representation is included; underlying parent chain routes remain upstream.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
     "confidence": "manual-review",
     "sources": [
       {
@@ -42,19 +46,23 @@
       {
         "label": "Morpho current vault identity and asset API",
         "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       }
     ]
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
     "role": "collateral-pricing",
-    "summary": "Complete current sole-adapter inventory at base block 52139143: 7 funded borrower markets, with the prior emptied sirloin branch retained diagnostically. Exact pricing roots are immutable Morpho arithmetic or source-resolved EIP-1167 MetaOracle clones. Consumer pricing does not enforce feed timestamp freshness; no redundant-provider credit is asserted. A matched mGLO implementation accepts manually submitted feed-admin prices, so privileged internal pricing remains the binding aggregate tier.",
+    "summary": "Complete current sole-adapter inventory at Base block 52630636 (2026-10-15T07:50:19Z): eight funded borrower markets. The previous siUSD market has zero expectedSupplyAssets and remains diagnostic; JitoSOL is now funded. Exact pricing roots are Morpho fixed arithmetic or source-resolved MetaOracleDeviationTimelock clones. Consumer pricing has no timestamp-staleness guard; no independent-provider redundancy is inferred. The mGLO path still delegates to a manual-admin pricing implementation, retaining privileged internal pricing.",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement Refine11",
-      "rationale": "Current complete marketIds/expectedSupplyAssets census at base block 52139143 and exact Morpho idToMarketParams prove all borrower-price paths. NAV remains loan-unit accounting; no oracleless lending exemption is claimed.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+      "rationale": "The complete marketIds/expectedSupplyAssets census and Morpho idToMarketParams at Base block 52630636 enumerate all eight funded borrower-price paths. The old siUSD allocation is zero and retained diagnostically; NAV loan-unit accounting does not exempt collateral liquidation pricing.",
       "sources": [
         {
           "label": "Exact verified native vault source",
@@ -63,11 +71,15 @@
         {
           "label": "Morpho core market, liquidation and bad-debt source",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb"
+        },
+        {
+          "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown wave W1R15 exact pricing-path review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
     "confidence": "verified",
     "sources": [
       {
@@ -93,6 +105,10 @@
       {
         "label": "Exact MetaOracle clone implementation and fallback source",
         "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+      },
+      {
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       }
     ],
     "branches": [
@@ -100,7 +116,7 @@
         "id": "0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b",
         "label": "Borrower market 1 (0x29ae7ac0)",
         "tier": "privileged-internal-pricing",
-        "summary": "Pinned market 0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b at block 52095842: collateral 0xfcc9cc1209651ed8867332d6f664cf82743a2584, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=915000000000000000/1e18. Oracle 0x182e072f2c9c58c6f19f144c97986f7496c6a109. CustomAggregatorV3CompatibleFeedAdjusted immutable/current parameters: {\"underlyingFeed\":\"0x6b593a5fabb90f36e125562db833f761d274fcbc\",\"adjustmentPercentage\":-600000000}. The adjusted feed underlyingFeed=0x6b593a5fabb90f36e125562db833f761d274fcbc is a TransparentUpgradeableProxy. At the same block, implementation=0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94 and admin=0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac. Verified implementation MGloCustomAggregatorFeed explicitly specifies prices submitted manually by feed admins. This borrower NAV feed is privileged internal pricing, not an independently medianized Chainlink market quote.",
+        "summary": "Pinned market 0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b at block 52630636: collateral 0xfcc9cc1209651ed8867332d6f664cf82743a2584, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=915000000000000000/1e18. Oracle 0x182e072f2c9c58c6f19f144c97986f7496c6a109. CustomAggregatorV3CompatibleFeedAdjusted immutable/current parameters: {\"underlyingFeed\":\"0x6b593a5fabb90f36e125562db833f761d274fcbc\",\"adjustmentPercentage\":-600000000}. The adjusted feed underlyingFeed=0x6b593a5fabb90f36e125562db833f761d274fcbc is a TransparentUpgradeableProxy. At the same block, implementation=0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94 and admin=0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac. Verified implementation MGloCustomAggregatorFeed explicitly specifies prices submitted manually by feed admins. This borrower NAV feed is privileged internal pricing, not an independently medianized Chainlink market quote.",
         "collateralAssets": [
           "0xfcc9cc1209651ed8867332d6f664cf82743a2584"
         ],
@@ -113,29 +129,29 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0x182e072f2c9c58c6f19f144c97986f7496c6a109",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "CustomAggregatorV3CompatibleFeedAdjusted",
             "path": "BASE_FEED_1()",
             "address": "0x3732f1e48499922426f9ddad37d79c98b1fbf29e",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "MGloCustomAggregatorFeed manual-admin pricing",
             "path": "BASE_FEED_1.underlyingFeed proxy implementation",
             "address": "0x6b593a5fabb90f36e125562db833f761d274fcbc",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xfcc9cc1209651ed8867332d6f664cf82743a2584",
@@ -169,6 +185,10 @@
           {
             "label": "Pinned manual-admin MGloCustomAggregatorFeed implementation",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -176,7 +196,7 @@
         "id": "0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354",
         "label": "Borrower market 2 (0x54cf9be5)",
         "tier": "single-source-or-laggy",
-        "summary": "At base block 52139143, exact market parameters identify pricing root 0xf4b17c79492d68775e22e8dd0a2bb22854a39a47. EIP-1167 clone delegates to 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e; primary=0xf243538bc89634b0abb5686a5b72e21282a54695, backup=0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a, current=0xf243538bc89634b0abb5686a5b72e21282a54695, deviation=5000000000000000/1e18, challenge=57600s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
+        "summary": "At base block 52630636, exact market parameters identify pricing root 0xf4b17c79492d68775e22e8dd0a2bb22854a39a47. EIP-1167 clone delegates to 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e; primary=0xf243538bc89634b0abb5686a5b72e21282a54695, backup=0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a, current=0xf243538bc89634b0abb5686a5b72e21282a54695, deviation=5000000000000000/1e18, challenge=57600s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "collateralAssets": [
           "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
         ],
@@ -189,37 +209,37 @@
             "path": "price() / currentOracle()",
             "address": "0xf4b17c79492d68775e22e8dd0a2bb22854a39a47",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52139143
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "MorphoChainlinkOracleV2",
             "path": "primaryOracle()",
             "address": "0xf243538bc89634b0abb5686a5b72e21282a54695",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52139143
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "MorphoChainlinkOracleV2",
             "path": "backupOracle()",
             "address": "0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52139143
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "Pinned single feed or ERC-4626 rate input; no independent heartbeat guarantee asserted",
             "path": "backupOracle() / BASE_FEED_1()",
             "address": "0x790181e93e9f4eedb5b864860c12e4d2cfffe73b",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52139143
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
         "fallbackBehavior": "EIP-1167 clone delegates to 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e; primary=0xf243538bc89634b0abb5686a5b72e21282a54695, backup=0x995aed0fa3dbe02fa1efa50f65ea57dc0b3dcf6a, current=0xf243538bc89634b0abb5686a5b72e21282a54695, deviation=5000000000000000/1e18, challenge=57600s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52139143,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
@@ -257,6 +277,10 @@
           {
             "label": "Exact MetaOracle clone implementation and fallback source",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -264,7 +288,7 @@
         "id": "0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8",
         "label": "Borrower market 3 (0x76629002)",
         "tier": "standard-external",
-        "summary": "Pinned market 0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8 at block 52095842: collateral 0xb200000000000000000000451d033a5000cb479e, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff.",
+        "summary": "Pinned market 0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8 at block 52630636: collateral 0xb200000000000000000000451d033a5000cb479e, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff.",
         "collateralAssets": [
           "0xb200000000000000000000451d033a5000cb479e"
         ],
@@ -277,21 +301,21 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0x7fad8b8de2ddb7b4b415e1aa3613e45eef9e4bff",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "EACAggregatorProxy",
             "path": "BASE_FEED_1()",
             "address": "0xadb55ef366459c94a318af2b05a44eee463f8e63",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xb200000000000000000000451d033a5000cb479e",
@@ -317,6 +341,10 @@
           {
             "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xadb55ef366459c94a318af2b05a44eee463f8e63"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -324,7 +352,7 @@
         "id": "0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109",
         "label": "Borrower market 4 (0xd4a903dc)",
         "tier": "standard-external",
-        "summary": "Pinned market 0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109 at block 52095842: collateral 0xcb585250f852c6c6bf90434ab21a00f02833a4af, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde.",
+        "summary": "Pinned market 0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109 at block 52630636: collateral 0xcb585250f852c6c6bf90434ab21a00f02833a4af, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde.",
         "collateralAssets": [
           "0xcb585250f852c6c6bf90434ab21a00f02833a4af"
         ],
@@ -337,21 +365,21 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0x031b2efc8d70042ac8d9f5c793c4149ec4b60fde",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "EACAggregatorProxy",
             "path": "BASE_FEED_1()",
             "address": "0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xcb585250f852c6c6bf90434ab21a00f02833a4af",
@@ -377,6 +405,10 @@
           {
             "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -384,7 +416,7 @@
         "id": "0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327",
         "label": "Borrower market 5 (0xe458a501)",
         "tier": "standard-external",
-        "summary": "Pinned market 0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327 at block 52095842: collateral 0xb2000000000000000000008501b13360000cb2ec, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272.",
+        "summary": "Pinned market 0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327 at block 52630636: collateral 0xb2000000000000000000008501b13360000cb2ec, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=625000000000000000/1e18. Oracle 0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272.",
         "collateralAssets": [
           "0xb2000000000000000000008501b13360000cb2ec"
         ],
@@ -397,21 +429,21 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0xa3cb2d7204f47a468b82c6fab1ca9675e9f7a272",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "EACAggregatorProxy",
             "path": "BASE_FEED_1()",
             "address": "0xc4a161651546983083aedddec5878a2eaf604890",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xb2000000000000000000008501b13360000cb2ec",
@@ -437,6 +469,10 @@
           {
             "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc4a161651546983083aedddec5878a2eaf604890"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -444,7 +480,7 @@
         "id": "0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836",
         "label": "Borrower market 6 (0x9103c3b4)",
         "tier": "standard-external",
-        "summary": "Pinned market 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836 at block 52095842: collateral 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=860000000000000000/1e18. Oracle 0x663becd10dae6c4a3dcd89f1d76c1174199639b9.",
+        "summary": "Pinned market 0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836 at block 52630636: collateral 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=860000000000000000/1e18. Oracle 0x663becd10dae6c4a3dcd89f1d76c1174199639b9.",
         "collateralAssets": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
         ],
@@ -457,21 +493,21 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0x663becd10dae6c4a3dcd89f1d76c1174199639b9",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "EACAggregatorProxy",
             "path": "BASE_FEED_1()",
             "address": "0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
@@ -497,6 +533,10 @@
           {
             "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -504,7 +544,7 @@
         "id": "0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d",
         "label": "Borrower market 7 (0x0ca10126)",
         "tier": "standard-external",
-        "summary": "Pinned market 0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d at block 52095842: collateral 0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=770000000000000000/1e18. Oracle 0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295.",
+        "summary": "Pinned market 0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d at block 52630636: collateral 0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22, loan 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913, LLTV=770000000000000000/1e18. Oracle 0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295.",
         "collateralAssets": [
           "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22"
         ],
@@ -517,21 +557,21 @@
             "path": "Morpho idToMarketParams(marketId).oracle / price()",
             "address": "0x97ff9cbd7e77348b2b8ffbb883bf29452ad18295",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           },
           {
             "provider": "EACAggregatorProxy",
             "path": "BASE_FEED_1()",
             "address": "0xd7818272b9e248357d13057aab0b417af31e817d",
             "chain": "base",
-            "observedAt": "2026-10-03",
-            "observedBlock": 52095842
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
           }
         ],
         "fallbackBehavior": "The verified fixed arithmetic composes the recorded feeds/vault conversions, with zero feed addresses treated as unity. There is no independent failover branch or consumer-enforced heartbeat/staleness bound in the reviewed ChainlinkDataFeedLib; negative answers revert. External feed refresh remains provider-dependent.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095842,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "collateralParameters": [
           {
             "asset": "0x2ae3f1ec7f1f5012cfeab0185bfc7aa3cf0dec22",
@@ -557,6 +597,10 @@
           {
             "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xd7818272b9e248357d13057aab0b417af31e817d"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -564,7 +608,7 @@
         "id": "0x2319fa118eb9f7353609796b6f70018a5384d42169503515da52bfa0b194c6ac",
         "label": "Borrower market 8 (0x2319fa11)",
         "tier": "single-source-or-laggy",
-        "summary": "At base block 52139143, exact market parameters identify pricing root 0xefe4a8e53ff7c65fe07a079b54e26b48d1a51967. EIP-1167 clone delegates to 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e; primary=0x64cf6dfab3f938eb49e4f6ac2fd09ea3e2458505, backup=0x1b7cccca7d58d01131bb9f64b919a94f253a3588, current=0x64cf6dfab3f938eb49e4f6ac2fd09ea3e2458505, deviation=20000000000000000/1e18, challenge=57600s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
+        "summary": "Diagnostic retired allocation: expectedSupplyAssets(marketId)=0 at Base block 52630636 (2026-10-15T07:50:19Z); this ID is absent from the current eight-market list. The following oracle configuration is the retained historical 2026-10-03 review, not a claim of current funded exposure. At base block 52139143, exact market parameters identify pricing root 0xefe4a8e53ff7c65fe07a079b54e26b48d1a51967. EIP-1167 clone delegates to 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e; primary=0x64cf6dfab3f938eb49e4f6ac2fd09ea3e2458505, backup=0x1b7cccca7d58d01131bb9f64b919a94f253a3588, current=0x64cf6dfab3f938eb49e4f6ac2fd09ea3e2458505, deviation=20000000000000000/1e18, challenge=57600s, healing=86400s. price() catches selected-oracle reverts and calls the other; persistent deviation switches require the permissionless challenge/heal timelock. No independent-provider or timestamp-freshness guarantee follows.",
         "collateralAssets": [
           "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2"
         ],
@@ -653,6 +697,118 @@
           {
             "label": "Exact MetaOracle clone implementation and fallback source",
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5",
+        "label": "Borrower market 9 (JitoSOL)",
+        "tier": "standard-external",
+        "summary": "At Base block 52630636 (2026-10-15T07:50:19Z), funded JitoSOL market 0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5 has USDC loan asset, collateral 0x97be14dd8f994a5364573bc035d85309e7cb34de, LLTV=625000000000000000/1e18 and pricing root 0x78f772f5fcc03256260cc1165e34da9bb3f9be1c. EIP-1167 runtime delegates to 0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e; primary=0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b, backup=0x41b5637a347a6c199a503fddef466080d7256acc, current=0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b; deviation=20000000000000000/1e18, challenge=10800s, healing=28800s. Primary composes two Chainlink-compatible feeds and backup one. This does not establish independent-provider redundancy or a consumer timestamp-staleness bound.",
+        "collateralAssets": [
+          "0x97be14dd8f994a5364573bc035d85309e7cb34de"
+        ],
+        "chains": [
+          "base"
+        ],
+        "feeds": [
+          {
+            "provider": "MetaOracleDeviationTimelock EIP-1167 clone",
+            "path": "Morpho idToMarketParams(marketId).oracle / currentOracle()",
+            "address": "0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
+            "chain": "base",
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "primaryOracle()",
+            "address": "0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b",
+            "chain": "base",
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "primaryOracle() / BASE_FEED_1()",
+            "address": "0x4b28dfaf2acaf982524a75409ab59dff85942ad7",
+            "chain": "base",
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "primaryOracle() / BASE_FEED_2()",
+            "address": "0xb221fff161c23c6473a6316294e2d510cfb667b0",
+            "chain": "base",
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
+          },
+          {
+            "provider": "MorphoChainlinkOracleV2",
+            "path": "backupOracle()",
+            "address": "0x41b5637a347a6c199a503fddef466080d7256acc",
+            "chain": "base",
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
+          },
+          {
+            "provider": "EACAggregatorProxy",
+            "path": "backupOracle() / BASE_FEED_1()",
+            "address": "0x0ca181015d21a5ed19bafc17f2138883c2b16d54",
+            "chain": "base",
+            "observedAt": "2026-10-15",
+            "observedBlock": 52630636
+          }
+        ],
+        "fallbackBehavior": "The selected oracle is called first; on revert, price() calls the other oracle. Persistent deviation switching uses permissionless challenge/heal timelocks (10800/28800 seconds at the pin). The source does not enforce feed timestamps or prove independent providers.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "collateralParameters": [
+          {
+            "asset": "0x97be14dd8f994a5364573bc035d85309e7cb34de",
+            "maximumLtvPct": 62.5
+          }
+        ],
+        "liquidationMechanism": "Morpho core checks borrower health at the market oracle price and immutable market LLTV; permissionless liquidators repay debt and seize collateral.",
+        "backstop": "No independently verified dedicated funded default-recovery backstop for this exact lender receipt is established by these code and state reads.",
+        "shutdownOrBadDebtBehavior": "When seized collateral is exhausted, Morpho realizes residual badDebtAssets by reducing totalBorrowAssets and totalSupplyAssets; lender NAV absorbs the shortfall. No guaranteed par recovery is claimed.",
+        "sources": [
+          {
+            "label": "Exact funded JitoSOL oracle clone",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x78f772f5fcc03256260cc1165e34da9bb3f9be1c"
+          },
+          {
+            "label": "Verified MetaOracle implementation",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e?fields=all"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "primaryOracle() verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b"
+          },
+          {
+            "label": "primaryOracle() / BASE_FEED_1() verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4b28dfaf2acaf982524a75409ab59dff85942ad7"
+          },
+          {
+            "label": "primaryOracle() / BASE_FEED_2() verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xb221fff161c23c6473a6316294e2d510cfb667b0"
+          },
+          {
+            "label": "backupOracle() verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x41b5637a347a6c199a503fddef466080d7256acc"
+          },
+          {
+            "label": "backupOracle() / BASE_FEED_1() verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x0ca181015d21a5ed19bafc17f2138883c2b16d54"
           }
         ]
       }
@@ -665,14 +821,18 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "The immutable local ERC-4626 share exchange rate uses deposited loan assets, accrued lending interest and fee shares rather than a price oracle. This exemption is local accounting only; every enumerated borrower market is reviewed separately.",
           "sources": [
             {
               "label": "Exact verified native vault source",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -685,8 +845,8 @@
         "branchId": "0x29ae7ac08be3a58e11151fed74701fb8e6ffd8e76b1870cf17ad70f332752d0b",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [
@@ -713,6 +873,10 @@
             {
               "label": "Pinned manual-admin MGloCustomAggregatorFeed implementation",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4a0a3eab5c75173c760b5a50a8570e5d20d9cc94"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -725,8 +889,8 @@
         "branchId": "0x54cf9be57fdfa6457a660991907434ff9d295c465a603a50126ff647d50b7354",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Unknown wave W1R15 exact pricing-path review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "Exact EIP-1167 bytecode resolves the previously unindexed clone to the verified MetaOracleDeviationTimelock executable; pinned primary/backup/current getter state identifies the borrower pricing path and timed switching.",
           "sources": [
@@ -757,6 +921,10 @@
             {
               "label": "Exact MetaOracle clone implementation and fallback source",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -769,8 +937,8 @@
         "branchId": "0x76629002c9fdb20fb2092053a4f22c5c65e04a81887218b9546f2a2d82b4c0a8",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [
@@ -789,6 +957,10 @@
             {
               "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xadb55ef366459c94a318af2b05a44eee463f8e63"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -801,8 +973,8 @@
         "branchId": "0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [
@@ -821,6 +993,10 @@
             {
               "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9f0c1dd78c4cbdf5b9cf923a549a201edc676d34"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -833,8 +1009,8 @@
         "branchId": "0xe458a501c1103ca3b256f2bcb45d223263fb34b6349d82675494ce3a94ce1327",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [
@@ -853,6 +1029,10 @@
             {
               "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xc4a161651546983083aedddec5878a2eaf604890"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -865,8 +1045,8 @@
         "branchId": "0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [
@@ -885,6 +1065,10 @@
             {
               "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x64c911996d3c6ac71f9b455b1e8e7266bcbd848f"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -897,8 +1081,8 @@
         "branchId": "0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
           "confidence": "verified",
           "rationale": "Exact Morpho market parameters positively identify this price authority on borrower collateral health and liquidation; lender-only share accounting does not exempt the borrower branch.",
           "sources": [
@@ -917,6 +1101,10 @@
             {
               "label": "BASE_FEED_1 exact upstream EACAggregatorProxy",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0xd7818272b9e248357d13057aab0b417af31e817d"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
             }
           ]
         }
@@ -961,6 +1149,54 @@
             {
               "label": "Exact MetaOracle clone implementation and fallback source",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e"
+            }
+          ]
+        }
+      },
+      {
+        "id": "borrower-oracle-9",
+        "chain": "base",
+        "address": "0x78f772f5fcc03256260cc1165e34da9bb3f9be1c",
+        "pricingAuthority": "external-price",
+        "branchId": "0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5",
+        "applicability": {
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "confidence": "verified",
+          "rationale": "Complete current adapter census and pinned Morpho market parameters identify the funded JitoSOL liquidation pricing path. Runtime matches the reviewed EIP-1167 MetaOracle implementation, with exact primary/backup/current getters and upstream inputs read at the same block.",
+          "sources": [
+            {
+              "label": "Exact funded JitoSOL oracle clone",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x78f772f5fcc03256260cc1165e34da9bb3f9be1c"
+            },
+            {
+              "label": "Verified MetaOracle implementation",
+              "url": "https://sourcify.dev/server/v2/contract/8453/0x846e726a1bf5fd5cbe08c179ee491b085b1cac3e?fields=all"
+            },
+            {
+              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "primaryOracle() verified source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x2be831d635f3d6fe4fa63c78f66cf793fa3b3e5b"
+            },
+            {
+              "label": "primaryOracle() / BASE_FEED_1() verified source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4b28dfaf2acaf982524a75409ab59dff85942ad7"
+            },
+            {
+              "label": "primaryOracle() / BASE_FEED_2() verified source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0xb221fff161c23c6473a6316294e2d510cfb667b0"
+            },
+            {
+              "label": "backupOracle() verified source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x41b5637a347a6c199a503fddef466080d7256acc"
+            },
+            {
+              "label": "backupOracle() / BASE_FEED_1() verified source",
+              "url": "https://base.blockscout.com/api/v2/smart-contracts/0x0ca181015d21a5ed19bafc17f2138883c2b16d54"
             }
           ]
         }

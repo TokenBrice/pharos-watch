@@ -133,7 +133,7 @@ describe("exact external-share custodian runtime witness", () => {
       envelope, reviews: [review], inputReference, outputReference });
     expect(produced.failures).toEqual([]);
     const observation = produced.observations[0]!;
-    expect(observation).toMatchObject({ routeId: "redemption:fixture-custodian:stablecoin-redeem", scoreEligible: true });
+    expect(observation).toMatchObject({ routeFamily: "issuer-redemption", routeId: "redemption:fixture-custodian:stablecoin-redeem", scoreEligible: true });
     const certificate = observation.executionCertificate!;
     const admit = (candidate: ExitExecutionCertificate, clockSec = CLOCK) => admitExitExecutionCertificate({ certificate: candidate, envelope,
       assetId: "fixture-custodian", clockSec, request, reviews: [review], observationGenerationId: candidate.observationGenerationId,

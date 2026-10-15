@@ -5,6 +5,7 @@
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "sreUSD shares mint against deposited REUSD; parent issuance remains inherited from reusd-resupply. The nonproxy savings contract has no privileged native share mint; fixed Resupply Core ownership administers rewards and potential bridge configuration.",
+    "headline": "Shares mint only against deposited reUSD; parent issuance risk remains inherited, while governance controls rewards and bridge configuration.",
     "inheritedFrom": "reusd-resupply",
     "controls": [
       {
@@ -18,8 +19,8 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197384,
         "sources": [
           {
             "label": "Resupply savings documentation",
@@ -34,11 +35,11 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
           },
           {
-            "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; pinned vault, Core voter and full active operator getter census via https://ethereum-rpc.publicnode.com and https://api-ethereum-mainnet.n.dwellir.com",
+            "url": "https://etherscan.io/block/26197384"
           }
         ],
-        "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. Verified ERC-4626 native shares mint only against underlying deposits. OFT _debit/_credit locks and releases existing shares without changing native totalSupply; PeerSet logs from genesis through the pin are empty."
+        "evidence": "At Ethereum block 26197384 (2026-10-15T10:41:59Z; hash 0xfe4eaf54384aae47b1a503ea6fb142c136e5297bc6cf4a8f59ded1f0fafe36bb), asset() is REUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec. Shares and underlying use 18 decimals. totalSupply()=27165447700558279620805063, totalAssets()=28125190204358710744242153 and REUSD.balanceOf(vault)=28133386982657864034636304 raw units. convertToAssets(1e18)=previewRedeem(1e18)=1035329530158293962. Runtime matches the verified source; native mint/deposit requires an underlying transfer. OFT _debit/_credit escrows/releases existing shares without changing native totalSupply. The vault's own share balance is zero. Complete indexed PeerSet history returned no events; supplemental RPC logs for blocks 26110188-26197384 are empty, an observation rather than independent proof of no bridge deployment."
       }
     ],
     "economicCapSemantics": "bounded",
@@ -59,8 +60,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
         },
         {
-          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-          "url": "https://etherscan.io/block/26107704"
+          "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; pinned accounting, immutable runtime, Core and complete active operator getter census",
+          "url": "https://etherscan.io/block/26197384"
         },
         {
           "label": "Resupply dated audit index (scope is parent protocol, not savings vault)",
@@ -83,13 +84,13 @@
           "url": "https://etherscan.io/tx/0x94c79307fa4ba4bcffdc270c3e28d31716308868e01cb338466d9b351ceb5355"
         },
         {
-          "label": "Core event replay and operator getter pin",
-          "url": "https://etherscan.io/block/26110187"
+          "label": "Complete indexed Core OperatorSet history; 86 events through block 26197384, replayed and all 23 active tuples checked at that pin",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0xc07e000044f95655c11fda4cd37f70a94d7e0a7d/logs?topic=0xea1c80a55152994df103f78d348a42089784a75528faa5b2c312d7cf8b886d6d"
         }
       ],
-      "evidence": "At Ethereum block 26107704 (2026-10-02T22:44:11Z), asset() is 0x57ab1e0003f623289cd798b1824be09a793e4bec; decimals() is 18, totalSupply() is 27269498.885603778064 shares, totalAssets() is 28218576.035466793925 REUSD, and balanceOf(vault) is 28224015.272168319672 REUSD. convertToAssets(1e18) and previewRedeem(1e18) return 1.034803615345 REUSD. EIP-1967 implementation slot is zero and the verified source is a direct nonproxy deployment. owner() is immutable Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d, whose voter() currently returns 0x11111111063874ce8dc6232cb5c1c849359476e6, differing from the deployment-manifest VOTER. No native privileged share minter is present. Existing bridge support cannot mint additional native liabilities. Refinement at block 26110187: full Core OperatorSet genesis-to-pin replay contains 86 events and 23 currently authorized triples. No savings-specific operator target remains. Global authorizations (all hooks zero) are [[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0xe0a8f6f5\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x8456cb59\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0xc91b040f\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x398d2ce9\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x193e3f0a\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0x9265a7d5\"],[\"0x0950000465476f4470e74aed93e7dd414012bb7d\",\"0xe7a33174\"],[\"0xa4745e0b1f40ab3dcfd98f381835de591a8974e3\",\"0xaec35fdb\"]]; each active triple was checked against operatorPermissions. Core.execute permits the exact voter or explicitly authorized selector, never a new savings share-mint path; matched immutable native implementation has only deposit-backed mint plus lock/release OFT accounting. Parent yAudit (11 Jan 2025) and ChainSecurity (28 Feb 2025) reports predate the savings deployment and do not establish savings-specific audit coverage. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: No independently dated security audit scoped to the exact SavingsReUSD contract deployed on 2025-08-20 has been identified; the published January/February 2025 protocol audits predate it.",
-      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Pinned Ethereum block 26197384 (2026-10-15T10:41:59Z; hash 0xfe4eaf54384aae47b1a503ea6fb142c136e5297bc6cf4a8f59ded1f0fafe36bb) confirms the control observation above. EIP-1967 implementation is zero and the full runtime matches the verified direct deployment (SHA-256 of RPC hex text 8083ee33b2ffebb03840723b825870bddd813d51fb8d9f3c83e0e37c37d74e85). owner() is immutable Core 0xc07e000044f95655c11fda4cd37f70a94d7e0a7d; its current voter() is 0x11111111063874ce8dc6232cb5c1c849359476e6, still different from the manifest's legacy VOTER. Complete indexed OperatorSet replay has 86 events and 23 active tuples; every active tuple agrees with pinned operatorPermissions and has a zero hook. None targets the savings vault, and none of the eight global selector permissions intersects its callable mutators. Core voter can authorize future parameter actions, but fixed source cannot add privileged native share minting. Core alone can set the reward-distribution cap (currently 6341958396 per second per 1e18 assets), LayerZero peer/delegate, message inspector, precrime and enforced options; ownership cannot transfer after initialization. Endpoint delegates(vault)=Core, msgInspector()=preCrime()=zero. These non-mint roles do not create an additional native liability. No native blacklist, seizure, pause, arbitrary-call or asset-recovery function exists. Reward-cycle rollover can call registry.feeDeposit().operator().distribute(); the pinned fee deposit is 0x07ad4630985ade5b5307806c43e57e0a9a932c52, its operator is 0xc700000506423bad12d5eb6d55b35ea9f5384df6, and both vault getEpoch() and fee-deposit lastDistributedEpoch() are 83. This external call is an execution dependency, not a native mint or withdrawal-delay power. Full indexed PeerSet history is empty and vault-held share escrow is zero; empty supplemental logs do not independently prove absence. The issuer's audit index and both linked reports were reopened: January/February 2025 protocol reviews predate the August 2025 savings deployment and do not establish savings-specific audit coverage, financial assurance, legal priority or signer independence.",
+      "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": []
     },
@@ -100,8 +101,8 @@
       ],
       "canChangeMintLogic": false,
       "controlRef": "sreUSD native savings wrapper",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107704,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197384,
       "sources": [
         {
           "label": "Resupply savings documentation",
@@ -116,8 +117,8 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
         },
         {
-          "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-          "url": "https://etherscan.io/block/26107704"
+          "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; implementation slot zero and runtime matching verified nonproxy code",
+          "url": "https://etherscan.io/block/26197384"
         }
       ]
     }

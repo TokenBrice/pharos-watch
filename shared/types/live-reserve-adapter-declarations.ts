@@ -1809,6 +1809,14 @@ const tetherTransparencyParamsSchema = z.discriminatedUnion("currencyIso", [
   }).strict(),
 ]);
 
+const tetherMxntTransparencyParamsSchema = z
+  .object({
+    currencyIso: z.literal("mxnt"),
+    slices: z.array(ReserveSliceSchema).min(1),
+    compositionAsOf: StrictIsoDateSchema.optional(),
+  })
+  .strict();
+
 const singleAssetParamsSchema = z
   .object({
     label: z.string(),
@@ -2139,10 +2147,12 @@ const afiProofParamsSchema = z
 
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "spark-usdc-v1-inventory": declareAdapter(noParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
+    configValidation: CONFIG_COLLATERAL_V2,
     preferredFreshnessMode: "verified",
     validation: VERIFIED_ONLY_VALIDATION,
   }),
   "forest-road-reserve-manager": declareAdapter(forestRoadReserveManagerParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
+    configValidation: CONFIG_COLLATERAL_V2,
     preferredFreshnessMode: "verified",
     validation: VERIFIED_ONLY_VALIDATION,
   }),
@@ -2479,6 +2489,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     validation: DASHBOARD_VALIDATION,
   },
   "erc4626-single-asset": declareAdapter(erc4626SingleAssetParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
+    configValidation: CONFIG_SINGLE_ASSET_V1_V2,
     redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
   }),
   "escrow-balance": declareAdapter(escrowBalanceParamsSchema, ONCHAIN_SINGLE_ASSET_V1, {
@@ -2773,8 +2784,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "single-bucket",
     evidenceClass: "independent",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
+    configValidation: CONFIG_COLLATERAL_V2,
+    // Gross debt and system TCR do not measure executable eligible-Trove debt.
+    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
     validation: LATEST_STATE_VALIDATION,
   },
   "liquity-v2-branches": {
@@ -3063,6 +3075,22 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // number.
     validation: DISCLOSURE_VALIDATION,
   },
+  "tether-transparency-mxnt": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: tetherMxntTransparencyParamsSchema,
+    sourceModel: "validated-static",
+    evidenceClass: "static-validated",
+    preferredFreshnessMode: "verified",
+    sourceOriginClass: "issuer-attested",
+    sharedSourceMode: "source-invariant",
+    configValidation: CONFIG_ATTESTATION_V1_V2,
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    provenance: {
+      status: "active",
+      rationale: "MXNT uses a configured shared-pool slice; issuer-reported MXNT totals do not disclose dedicated, independently valued reserves. Retain live circulation diagnostics without independent composition scoring.",
+    },
+    validation: DISCLOSURE_VALIDATION,
+  },
   "united-por": {
     primaryInputKinds: ["http-json"],
     paramsSchema: unitedPorParamsSchema,
@@ -3271,7 +3299,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     preferredFreshnessMode: "verified",
     displayBadgeKind: "proof",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: DASHBOARD_VERIFIED_VALIDATION,
     provenance: {

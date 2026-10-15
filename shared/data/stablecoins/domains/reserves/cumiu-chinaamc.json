@@ -41,8 +41,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-05",
-    "reviewer": "W3R23 prospectus duration and disclosure review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_CumiuChinaamc batch64 current-disclosure review",
     "confidence": "verified",
     "sources": [
       {
@@ -71,6 +71,10 @@
       },
       {
         "label": "Issuer complete daily holdings workbook, October 9, 2026; diagnostic review 2026-10-09T10:32:15Z by Sol curation campaign 2026-10-09 (Lane17Peso)",
+        "url": "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN"
+      },
+      {
+        "label": "Issuer complete holdings workbook, October 15, 2026; 67 rows, 100.0541% reported NAV weights, blank Total NAV; SHA-256 1f8683b1e4bbe5edb89591f074b81f3a2dcd87900e47f37b2c86a60d90f67c48",
         "url": "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsDetail?fundID=USDDMMF&curLang=EN"
       }
     ],
@@ -116,7 +120,7 @@
         }
       }
     ],
-    "knownUnknownExposure": "August category weights are complete, but do not identify the August constituents or obligors. The issuer's recovered October 2 full holdings workbook lists 62 rows, totaling 100.0497% of reported NAV without normalization, rather than only the 72.54% top-ten display. It identifies named banks and ISINs but lacks a classification join to the August categories, leaves the 23.8501% Credit Agricole instrument unnamed, truncates term-deposit maturity descriptions, and supplies no per-position realization bounds. These independently dated holdings are not transplanted into August weights. The prior June 30 unaudited accounts cover pooled gross assets of USD 603917339, not current token liabilities. August WAM 50.85 days is an average, not maximum tenor. Class I token-to-fund liability reconciliation and exact distributor custody shares remain unestablished. A supplemental Lane17Peso observation at 2026-10-09T10:32:15Z recovered the independently dated October 9 workbook: 63 rows total 100.0523% of reported NAV, its Total NAV cell is blank, and the 7.7719% Credit Agricole instrument remains unnamed. The workbook says percentages may differ from 100% due to rounding, but provides no reconciled gross denominator or classification of that instrument. No normalization, newer composition date, new August obligor weights or current financial-assurance claim is inferred.",
+    "knownUnknownExposure": "August category weights are complete but do not identify the August constituents or obligors. Historical October 2 and October 9 workbooks reported 62 rows totaling 100.0497% and 63 rows totaling 100.0523% of NAV respectively; their unnamed Credit Agricole entries were 23.8501% and 7.7719%. Reopening the issuer workbook on October 15 gives C2=2026/10/15, 67 positions totaling 100.0541% of reported NAV weights, blank Total NAV, and a still-unclassified Credit Agricole entry of 0.8036%. Deposit descriptions still truncate, and the workbook gives no per-position realizability or complete gross-asset denominator. Its rounding disclaimer does not reconcile the total, so weights are not normalized or transplanted into August categories. The publication index still lists August 31 as its newest English factsheet; compositionAsOf remains August 31. June 30 unaudited accounts cover pooled gross assets of USD 603,917,339, not current token liabilities. August WAM 50.85 days is an average, not a maximum tenor. A current numerical token-to-fund liability match and exact distributor custody shares remain unavailable despite the documented periodic reconciliation process. No new financial-assurance claim is inferred.",
     "knownUnknownExposurePct": 63.54,
     "nonLinkDispositions": [
       {

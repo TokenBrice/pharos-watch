@@ -3,24 +3,25 @@
   "mintAuthority": {
     "capSemanticsReview": {
       "verdict": "bounded-by-construction",
-      "rationale": "Pinned base block 52131494 (hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5). The pinned exact immutable MetaMorphoV1_1 source inherits ERC4626 deposit/mint: _deposit transfers USDC before _mint. Owner/curator submitCap changes market allocation limits and setFee changes a source-capped fraction of earned interest; accrued fee shares are formula-derived, not an arbitrary privileged recipient mint. Configuration and delegated owner execution cannot replace this immutable vault code or bypass the asset-funded user issuance path. Inherited controls concern usdc-circle, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "rationale": "Reverified at Base block 52630636 (2026-10-15T07:50:19Z; hash 0xd29b0a40afb66cf6503e9627bbb4546f867c64172fb6f01822879425dc73b8a5). Exact immutable MetaMorphoV1_1 runtime retains code SHA-256 6738e7faaf07a698718176bd0a8fb95825b0ab0288e58ecfc3cb4d5416cccb57 (hex-string convention). ERC4626 _deposit transfers USDC before _mint. Owner/curator submitCap changes market allocation limits; fee shares derive from earned interest and the bounded fee formula. Strategy permissions cannot replace immutable local share issuance code. Parent USDC issuance remains a separate inherited authority.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch64 review (Rev_SparkusdcSpark)",
       "sources": [
         {
           "label": "Verified current local mint implementation/source",
           "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
         },
         {
-          "label": "base D14 observation block 52131494, hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5",
-          "url": "https://mainnet.base.org"
+          "label": "Base block 52630636, 2026-10-15T07:50:19Z: runtime and accounting",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
         }
       ]
     },
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "none-resolved-mint",
-    "confidence": "unknown",
+    "confidence": "verified",
     "summary": "sparkUSDC inherits USDC issuer authority. Native shares are deposit-backed; immutable local vault code constrains issuance while Spark controllers can change strategy parameters.",
+    "headline": "Deposit-backed shares inherit USDC controls; Spark governance can change lending allocations, caps and fees.",
     "inheritedFrom": "usdc-circle",
     "controls": [
       {
@@ -34,8 +35,8 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095837,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -54,7 +55,8 @@
             "url": "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
           }
         ],
-        "evidence": "Observed 2026-10-02T22:43:43.966947+00:00 at base block 52095837 (hash 0x03974c717b8f0205ba3eef8dccfae70f5e044d6a8ac0a3f6e1b00ac938652604). Native totalSupply 306832432087111435323561004 (18 decimals), asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 (6 decimals), totalAssets 331690048897426, convertToAssets(10^18) 1081013. One-share redeem from actual holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca returned 1081013 asset base units via eth_call at that same block; no transaction broadcast. Verified source mints receipts only through deposit-backed user operations and documented fee accounting; it does not create the underlying stablecoin."
+        "evidence": "Base block 52630636 (2026-10-15T07:50:19Z; hash 0xd29b0a40afb66cf6503e9627bbb4546f867c64172fb6f01822879425dc73b8a5), https://api-base-mainnet-archive.n.dwellir.com: asset() is native USDC, decimals()=18, totalSupply()=439882075988993114685529010, totalAssets()=476165762076098, convertToAssets(10^18)=1082485. Ordinary redeem(10^18,holder,holder) from actual fee recipient 0x2917956eff0b5eaf030abdb4ef4296df775009ca returns 1082485 USDC base units in eth_call without state overrides or broadcasting. The source constrains minting to funded deposits and formula-derived fee shares.",
+        "canRaiseCap": false
       },
       {
         "chain": "base",
@@ -66,10 +68,11 @@
         "role": "governor",
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095837,
+        "timelockDelaySec": 0,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -92,7 +95,7 @@
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf93b7122450a50af3e5a76e1d546e95ac1d0f579"
           }
         ],
-        "evidence": "Pinned owner() returned this contract. The verified immutable vault supports owner/curator configuration and fee/cap changes; owner permissions do not provide an arbitrary external share minter. The Base Executor owner has a delegatecall admin path; the vault's 864000-second timelock does not prove a universal owner delay. Independent full-address RoleGranted/RoleRevoked eth_getLogs from block0 through52095837 found4 events; current hasRole census=[{\"role\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"address\":\"0x6f3066538a648b9cfad0679df0a7e40882a23aa4\",\"active\":0},{\"role\":\"0x0000000000000000000000000000000000000000000000000000000000000000\",\"address\":\"0xf93b7122450a50af3e5a76e1d546e95ac1d0f579\",\"active\":1},{\"role\":\"0x85af328ca8dd848a128ca6b89dd0d76e6255ddd3da76b6fde4e67309c27f780a\",\"address\":\"0xfda082e00ef89185d9db7e5dcd8c5505070f5a3b\",\"active\":1}]. delay()=0. SUBMISSION_ROLE is held by OptimismReceiver 0xfda082e00ef89185d9db7e5dcd8c5505070f5a3b, whose pinned l1Authority/l2CrossDomain/target={\"l1Authority\":\"0x3300f198988e4c9c63f75df86de36421f06af8c4\",\"l2CrossDomain\":\"0x4200000000000000000000000000000000000007\",\"target\":\"0xf93b7122450a50af3e5a76e1d546e95ac1d0f579\"}. The Executor self-admin path and arbitrary admin delegatecall remain; an event census alone cannot exclude storage changes performed through authorized delegatecall."
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), owner() remains this Executor and delay()=0. Explorer RoleGranted census from creation through the pin, joined to pinned hasRole calls, retains Executor as self-admin and OptimismReceiver 0xfda082e00ef89185d9db7e5dcd8c5505070f5a3b as SUBMISSION_ROLE; former admin 0x6f3066538a648b9cfad0679df0a7e40882a23aa4 is inactive. Receiver l1Authority()=0x3300f198988e4c9c63f75df86de36421f06af8c4 and target()=this Executor. The local vault timelock remains 864000 seconds, but is not a universal owner delay. Owner can immediately replace curator/allocators and change fees, while cap increases follow the local timelock. Queued/admin delegatecalls execute in the Executor's storage context, not the separate immutable MetaMorpho vault's context. Even a different Executor role holder reaches only the vault's existing parameter interface; it cannot replace vault code or bypass funded deposits and formula-derived fee shares. Historical unlogged controller storage writes are not exhaustively certified. This is a contract executor with zero additional local delay, not the Ethereum SubProxy itself."
       },
       {
         "chain": "base",
@@ -101,30 +104,27 @@
           "base:0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
         ],
         "label": "Spark current curator Safe",
-        "role": "governor",
+        "role": "other",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "threshold": 3,
-        "signerCount": 5,
+        "threshold": 2,
+        "signerCount": 2,
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0xba638112360d6ba325329e3881d61bf926a36811",
-            "0x5a2e65bc3b383f04136b0a9d190db82e72e7deac",
-            "0x1cae4d7efdd34d6c4d54d365c3583a62d8041ea8",
-            "0xdc473772ed710e36853a7c278754ddbe9bec76be",
-            "0x7de4bb4fc0e55b7beeae238dbe665f8475451f63"
+            "0x50c770e6dc6cfdee33509273fa9a215bfafff9b2",
+            "0xab5710211458fc8d7e0be628202f47ddbd3f38eb"
           ],
-          "threshold": 3,
+          "threshold": 2,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "observedBlock": 52095837,
-          "observedAt": "2026-10-03",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "observedAt": "2026-10-03",
-        "observedBlock": 52095837,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
         "sources": [
           {
             "label": "Exact current Safe controller",
@@ -135,7 +135,74 @@
             "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
           }
         ],
-        "evidence": "Independently re-read at block 52095837 on 2026-10-03: getOwners and getThreshold give the listed quorum; getModulesPaginated(0x1,100) returned empty with terminal next=0x1, and the Safe guard slot was zero. This identifies cryptographic owners, not independent people or attested key custody. Parameter scope does not create native underlying stablecoin liabilities."
+        "evidence": "At Base block 52630636 (2026-10-15T07:50:19Z), curator() identifies this Safe. getOwners/getThreshold now establish 2-of-2, superseding the October 3 3-of-5 roster. Both owners are nested Safes: 0x50c770e6dc6cfdee33509273fa9a215bfafff9b2 is 3-of-5 with owners [0xacd204885e9ea069c1cd3e4b12a75ce478de6f1d,0x3126c94c032a1d9be9294cf5be2da99255b00cc8,0x52a8305f29f85bec5fa6ee78b87ddd2218d8e12e,0xf01d0a6f78180c4c9583a848192dd2f250ef4b8f,0x8a714da4cd3ad43442a092227db52860329e0742]; 0xab5710211458fc8d7e0be628202f47ddbd3f38eb is 1-of-2 with owners [0xb81b1dd68887e1ef77966d8f60b3448531315330,0x6c36d4e8a5606aaf75655f60307ad73af8d56d8c]. The top-level and both nested Safes return empty getModulesPaginated(0x1,100), terminal next=0x1, and zero canonical guard slots. Exact onlyCuratorRole permits this curator to submit cap increases subject to the 864000-second timelock and reduce caps immediately. This is contract/quorum topology, not proof of independent human signers or attested key custody."
+      },
+      {
+        "chain": "base",
+        "address": "0xf5748bbefa17505b2f7222b23ae11584932c908b",
+        "deploymentRefs": [
+          "base:0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+        ],
+        "label": "Spark vault guardian Safe",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "none",
+        "threshold": 2,
+        "signerCount": 3,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x0a3cca3883cb011c8beb8098f71ac29cd7facb19",
+            "0x21fd3ab3d1a05ac0e2903e11f45a4ae8a9d27753",
+            "0x554c51d4099e137f3e13ce5b6a2ae7e878f3ef80"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedBlock": 52630636,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Exact guardian Safe verified source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xf5748bbefa17505b2f7222b23ae11584932c908b"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "guardian() binds this Safe at the pinned block. getOwners/getThreshold establish 2-of-3; getModulesPaginated(0x1,100) is empty and the guard slot is zero. Guardian can revoke pending timelock, guardian and cap changes; it cannot submit a cap increase or arbitrarily mint shares. Human independence and key custody remain unestablished."
+      },
+      {
+        "chain": "base",
+        "address": "0x92d7b06e5844e67174ae9e86bdcb06428482ddf9",
+        "deploymentRefs": [
+          "base:0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+        ],
+        "label": "Spark active vault allocator proxy",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52630636,
+        "sources": [
+          {
+            "label": "Exact ALMProxyFreezable source",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x92d7b06e5844e67174ae9e86bdcb06428482ddf9"
+          },
+          {
+            "label": "Base block 52630636, 2026-10-15T07:50:19Z",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Creation-to-pin SetIsAllocator census contains five events. Pinned isAllocator is true for this proxy and false for predecessors 0x8a25a24ede9482c4fc0738f99611be58f1c839ab and 0xcba0c0a2a0b6bb11233ec4ea85c5bffea33e724d. The vault also grants allocator powers implicitly to owner and curator. This proxy can reallocate within enabled caps and update queues, not raise caps. Its complete event-derived RoleGranted candidates joined to pinned hasRole are active: DEFAULT_ADMIN_ROLE=Executor 0xf93b7122450a50af3e5a76e1d546e95ac1d0f579; ALLOCATOR_ROLE=0x8a25a24ede9482c4fc0738f99611be58f1c839ab and 0x8cc0cb0cfb6b7e548cfd395b833c05c346534795; FREEZER_ROLE=0x90d8c80c028b4c09c0d8dcaab9bbb057f0513431. Verified doCall/doCallWithValue use CALL, not delegatecall. Transitive executable authority through the owner Executor remains unresolved."
       }
     ],
     "economicCapSemantics": "collateral-gated",
@@ -143,8 +210,18 @@
     "supervision": "none",
     "review": {
       "sources": [
-        {"label": "Verified current local mint implementation/source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"},
-        {"label": "base D14 observation block 52131494, hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5", "url": "https://mainnet.base.org"},
+        {
+          "label": "Fresh accounting, runtime, Safe and role census at Base block 52630636, 2026-10-15T07:50:19Z",
+          "url": "https://api-base-mainnet-archive.n.dwellir.com"
+        },
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+        },
+        {
+          "label": "base D14 observation block 52131494, hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5",
+          "url": "https://mainnet.base.org"
+        },
         {
           "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
           "url": "https://api.morpho.org/graphql"
@@ -186,14 +263,11 @@
           "url": "https://base.blockscout.com/tx/0x7b8e692e523eca62aaad95e04e279ad7d8c31b38c0694af18f1a0635f54323ae"
         }
       ],
-      "evidence": "Observed 2026-10-02T22:43:43.966947+00:00 at base block 52095837 (hash 0x03974c717b8f0205ba3eef8dccfae70f5e044d6a8ac0a3f6e1b00ac938652604). Native totalSupply 306832432087111435323561004 (18 decimals), asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 (6 decimals), totalAssets 331690048897426, convertToAssets(10^18) 1081013. One-share redeem from actual holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca returned 1081013 asset base units via eth_call at that same block; no transaction broadcast. Parent mint authority remains inherited. Current exact-token operational controls are recorded without promoting local accounting into independent reserve assurance. Exact implementation creation transaction 0x4ce6e5d051d2a7951781dc6dd7dc7e0e0cbac3d4723d0ba63faa4f24850370cd, block 24392934, timestamp 2024-12-30T16:13:35+00:00, was independently joined from Blockscout creation identity to RPC transaction receipt and block timestamp; issuer founding and parent launch were not substituted. Separate signer/key-custody observation, recorded per identified control rather than as an aggregate issuance-census gap: Safe signer independence and offchain key custody are not publicly established. Calibration v2 field re-justification: reconciliation=not-applicable describes the immutable deposit-backed local share mechanism and does not assert parent reserve-to-total-liability financial assurance; supervision=none grants no prudential-supervision credit. Source-defined share accounting and independent financial assurance retain separate scopes. D14/A7/A10 review 2026-10-03, pinned base block 52131494 (hash 0x3d31cbc91a3065f9b4817af44865cd30cc82c4e13d49a1e322571745d55e15e5). The pinned exact immutable MetaMorphoV1_1 source inherits ERC4626 deposit/mint: _deposit transfers USDC before _mint. Owner/curator submitCap changes market allocation limits and setFee changes a source-capped fraction of earned interest; accrued fee shares are formula-derived, not an arbitrary privileged recipient mint. Configuration and delegated owner execution cannot replace this immutable vault code or bypass the asset-funded user issuance path. Inherited controls concern usdc-circle, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
-      "reviewedAt": "2026-10-03",
-      "disposition": "unresolved",
-      "unresolvedQuestions": [
-        "Complete executable/storage-write closure of queued/admin delegatecall targets remains unestablished. Supplemental 2026-10-05 exact runtime/source and pinned Base block 52199652 observations bind OptimismReceiver's immutable l1Authority to SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4 and target to this Executor; lifetime role logs retain the receiver as SUBMISSION_ROLE and Executor as sole event-derived self-admin. delay() remains zero. Receiver enforces canonical messenger and xDomainMessageSender but forwards arbitrary calldata; Executor permits arbitrary queued/admin delegatecalls. Event-derived role topology does not exclude historical unlogged delegatecall writes. Aggregate review and incidentState=none remain unresolved; immutable wrapper-local D14 and binding Sky D29/D32 doctrine are unchanged. Cause research by Sol curation campaign 2026-10-09 (Lane49Secured), observed 2026-10-09T10:38:41Z: the verified Executor source publicly exposes queue, execute and DEFAULT_ADMIN_ROLE executeDelegateCall returning target.functionDelegateCall(data). The missing executable/storage-write closure is public-but-uncurated control evidence (B), not issuer non-disclosure of local reconciliation or supervision. This source observation does not refresh historical onchain pins or establish a complete authority review.",
-        "W2 historical source recovery recorded 2026-10-09T11:54:57Z by Sol curation campaign 2026-10-09 (W2L22Spark): ActionsSetQueued id 19 at Base block 48285892 (hash 0xe104a316022ad2c9939937ce9796d1a883865ac6781ee3f8cee7e0b377260e95, timestamp 2026-07-06T18:05:31Z) names target 0x93c81adc7f98fdbc8c7a15ecbed312c8f6adbcb3, signature execute(), empty calldata and withDelegatecalls=true. Its executionTime equals the block timestamp. ActionsSetExecuted id 19 is indexed at block 48285903 (hash 0xf8d99b0708d2cac3f454ba678a0334fdce9adac2cc954cc77f3bccfa9c7f2267, timestamp 2026-07-06T18:05:53Z). This positively identifies historical use of the delegated-code branch, without identifying every nested call or storage write or making an incident finding. The existing conservative-maximal domain supports ordinary arbitrary CALL only and cannot certify this separate DELEGATECALL branch. Complete creation-to-pin queue/execution/role/delay history, target runtimes, archival call trees and storage diffs remain required; the supplemental pinned helper has no trace/state-diff method. B and the original aggregate review dates/disposition remain unchanged."
-      ],
+      "evidence": "Fresh Base block 52630636 (2026-10-15T07:50:19Z; hash 0xd29b0a40afb66cf6503e9627bbb4546f867c64172fb6f01822879425dc73b8a5) refreshes exact local accounting, immutable runtime identity, owner/curator/guardian/allocator census and Safe topology. Fee=10% of earned interest; pending owner, guardian, timelock and all three market caps are empty. cbBTC and WETH market caps are each 1000000000 USDC; the collateral-free queue market has the uint184 maximum cap. Local timelock=864000 seconds; Executor delay=0. Ordinary holder transfer and one-share redemption succeed in eth_call without overrides or a broadcast transaction. Reconciliation=not-applicable concerns only deposit-funded local share issuance, not independent reserve-to-liability assurance. Supervision=none grants no prudential-supervision credit. Parent issuance stays inherited. Historical ActionsSetQueued id 19 at Base block 48285892 (2026-07-06T18:05:31Z) targeted 0x93c81adc7f98fdbc8c7a15ecbed312c8f6adbcb3 with execute(), empty calldata and withDelegatecalls=true; execution followed at block 48285903 (2026-07-06T18:05:53Z). This proves delegated execution, not a controller incident or exhaustive storage-write history. Delegatecall writes remain in Executor storage; the separate immutable vault exposes no owner share-mint or upgrade bypass. Under the live mint-control contract, unsearched execution closure is not a new authority-resolution requirement for these legacy-equivalent parameter controls. The local mint review is scoreable without claiming an execution-complete certificate, a conservative-maximal CALL envelope, independent key custody or immutable upstream governance delay.",
+      "reviewer": "Pharos batch64 review (SparkControlHarmonizer)",
+      "reviewedAt": "2026-10-15",
+      "disposition": "scoreable",
+      "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "base:0x0f963a8a8c01042b69054e787e5763abbb0646a3",
@@ -220,8 +294,8 @@
         "base:0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-10-02",
-      "observedBlock": 52095837,
+      "observedAt": "2026-10-15",
+      "observedBlock": 52630636,
       "sources": [
         {
           "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",

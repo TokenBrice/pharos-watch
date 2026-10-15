@@ -1,6 +1,6 @@
 {
   "id": "senpyusdmain-sentora",
-  "name": "Paypal USD Main",
+  "name": "PayPal USD Main",
   "symbol": "senPYUSDmain",
   "oneLiner": "senPYUSDmain is Sentora's PYUSD Morpho Vault V2 share; yield and losses change NAV, and cash redemption depends on idle PYUSD.",
   "flags": {
@@ -13,14 +13,14 @@
   "variantKind": "strategy-vault",
   "pegReferenceId": "pyusd-paypal",
   "collateral": "PYUSD lending positions against cbBTC, WBTC, LBTC, syrupUSDC, wstETH, weETH, sUSDe, kBTC. Allocations change under curator controls; borrower collateral is distinct from the underlying deposited token.",
-  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for PYUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. liquidityAdapter() is zero at the pinned review; ordinary cash redemptions use idle assets unless assets are first deallocated. Shared market liquidity and an in-kind position exit do not promise full-size cash redemption.",
+  "pegMechanism": "ERC-4626 deposit/mint and withdraw/redeem exchange shares for PYUSD at the current asset conversion rate. Lending interest, fees and realized losses change NAV. At Ethereum block 26197398 (2026-10-15), liquidityAdapter() is zero, so ordinary cash redemption uses idle PYUSD unless assets are first deallocated. Holder-initiated forceDeallocate through the current adapter calls Morpho.withdraw and charges a 0.01% penalty on assets deallocated; it still requires market cash liquidity. This exact adapter does not directly transfer lender positions to the holder. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum deployment 0xb576765fb15505433af24fee2c0325895c559fb2 is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. asset(), decimals(), totalSupply(), convertToAssets() and ordinary one-share redeem simulation were reverified at Ethereum block 26107702. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation: Morpho vaultV2ByAddress creationBlockNumber=24025034, creationTimestamp=1765886495 (2025-12-16T12:01:35.000Z); independently retrieved 2026-10-03.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 review (Rev_SenpyusdmainSentora)",
+    "rationale": "Exact Ethereum deployment 0xb576765fb15505433af24fee2c0325895c559fb2 is immutable VaultV2, issuing transferable ERC-4626 operational shares over PYUSD, not a direct fiat or parent-reserve ownership claim. At Ethereum block 26197398 (2026-10-15T10:44:47Z), asset() is PYUSD, decimals()=18, totalSupply()=197014583182103401408852592 and convertToAssets(10^18)=2024483 PYUSD base units. Vault and sole adapter runtime match their exact verified sources; all three EIP-1967 proxy slots are zero. The earlier one-share redemption simulation remains evidence at block 26107702 only; this refresh does not claim a new execution measurement. The protocol-position archetype intentionally differs from the fiat-cash parent. Exact deployment creation transaction 0x15ff511e3936ae415ad809e4872aad8b195f13abc10a2e03e7cfa42b678a6d2b is at block 24025034, timestamp 2025-12-16T12:01:35Z.",
     "sources": [
       {
         "label": "Paypal USD Main exact vault",
@@ -39,7 +39,7 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
+        "label": "Ethereum RPC, pinned block 26197398, 2026-10-15T10:44:47Z",
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
@@ -51,16 +51,28 @@
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Website",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
     },
     {
-      "label": "Issuer",
+      "label": "Curator",
       "url": "https://sentora.com"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/address/0xb576765fb15505433af24fee2c0325895c559fb2"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Sentora: Terms of use",
+      "url": "https://sentora.com/legal/terms-of-use"
     }
   ],
   "contracts": [
@@ -71,7 +83,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Paypal USD Main Morpho lending vault",
@@ -79,7 +91,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "senpyusdmain-sentora",
     "display": {
@@ -95,11 +107,16 @@
     },
     "params": {
       "slice": {
-        "name": "PYUSD deposited into Sentora-curated Morpho lending markets",
-        "risk": "medium",
+        "name": "PYUSD supplied to Paypal USD Main Morpho lending positions",
+        "risk": "high",
         "coinId": "pyusd-paypal",
         "depType": "wrapper",
         "expectedAssetAddress": "0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+      },
+      "deployedExposure": {
+        "basis": "At Ethereum block 26197870 (2026-10-15T12:19:35Z), idle PYUSD raw 20953893142386 plus sole adapter 0xc2a11ba52ad80124ccc60774c881f93738f334d4 realAssets raw 377902687186232 equaled totalAssets raw 398856580328618 exactly. The adapter held eight Morpho lender market positions against cbBTC, wstETH, sUSDe, syrupUSDC, LBTC, weETH, WBTC, kBTC collateral, each with zero borrowShares and posted collateral. The reviewed descriptor covers non-idle PYUSD-denominated lender claims, not idle cash or borrower-collateral ownership.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

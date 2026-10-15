@@ -34,7 +34,7 @@
       },
       {
         "id": "zaru-arc-fiat-par", "chain": "arc", "address": "0xe205b4e7ac03e3f7b2060c3edf2171aa7126c0d5", "pricingAuthority": "none",
-        "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "The bound Arc ERC20F implementation has native role-controlled minting; the incomplete role census does not convert this fiat claim into a borrower/NAV-price branch.", "sources": [{"label": "Verified ERC20F implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"}]}
+        "applicability": {"disposition": "not-applicable", "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source review", "confidence": "verified", "rationale": "The bound Arc ERC20F implementation has native role-controlled minting, without a borrower liquidation or variable-NAV pricing branch.", "sources": [{"label": "Verified ERC20F implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f25045d15c163478bb67c56c5d9d602628f4f62"}]}
       }
     ]
   },
@@ -52,17 +52,21 @@
       {
         "label": "Binding ZARU holder terms, September 16, 2026; reviewed 2026-10-09T10:38:10Z",
         "url": "https://blocktower.tech/legal/zaru-terms-of-use"
+      },
+      {
+        "label": "Exact Solana mint archive, slot 457208926, 2026-10-15T10:45:27Z; retained freeze, delegate, pause and hook authorities",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "evidence": "The retained October 2 technical observation at finalized Solana slot 452748072 identifies freezeAuthority and permanent delegate 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62 and a pausable authority; no new RPC state is asserted. Independently re-read holder terms dated September 16, 2026, sections 4, 11 and 14 prohibit restricted-person use, permit blocked-address account freezes and forfeiture, and require ZARU or reserve surrender under valid government orders. They also permit suspension of issuer services. These are issuer-controlled holder access powers, not evidence of prudential mint supervision or a complete current material-deployment supply census.",
-    "reviewer": "Sol curation campaign 2026-10-09 (Lane22Stoneyield)",
-    "reviewedAt": "2026-10-09"
+    "evidence": "Exact finalized Solana Account Archive at slot 457208926 (2026-10-15T10:45:27Z) retains freezeAuthority, permanent delegate, pausable, transfer-hook and transfer-fee authorities at 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62. Paused is false, hook program is unset and both transfer-fee schedules are zero; the powers remain changeable. Ethereum block 26197399, Base 52635879 and Arc 26080389 retain the role-controlled ERC20F implementation and DenyList registry implementation; all three are unpaused with zero supply. Holder terms dated September 16, 2026, sections 4, 11 and 14 retain restricted-person prohibitions, blocked-address freezes and forfeiture, valid-government-order surrender and issuer-service suspension. These establish direct issuer holder controls, not prudential supervision or signing-policy independence.",
+    "reviewer": "Rev_ZaruBlocktower primary-source and pinned-state review",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "All four registered ZARU deployments are independent native issuer liabilities: Solana Token-2022 and Ethereum/Base/Arc ERC20F mint/burn rails. The issuer's native-token-standard expansion model, directly observed issuer authorities and verified ERC20F role-controlled mint/burn establish direct issuance, not canonical-token escrow, LockRelease or pooled bridge receipts. Eligible for a complete exact-input transfer census, including every zero-supply leg; no static shares or authority-key custody credit are authored. Supplemental evidence observed 2026-10-11T00:50:29Z by Sol curation campaign 2026-10-11 (C32UTY) confirms the same ERC20F implementation, 18 decimals and explicitly zero totalSupply at historical Ethereum block 26155000, Base block 52199351 and Arc block 24360273. These are separate diagnostic pins, not a current complete economic partition. The attempted exact-slot Solana archive read failed and grants no new Solana identity, stock or authority fact; the prior complete four-native review and its original date remain unchanged.",
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4T02Avant)",
+    "summary": "The four registered deployments are native issuer liabilities backed by rand: Solana Token-2022 and Ethereum/Base/Arc ERC20F mint/burn rails. Exact October 15 pins confirm 60,553,096.194140 ZARU on Solana at slot 457208926 and explicitly zero totalSupply on Ethereum 26197399, Base 52635879 and Arc 26080389. All EVM implementations remain identical ERC20F code with the identified issuer EOA holding all eight roles. The Solana archive read now succeeds, superseding the earlier failed-read diagnostic. These research observations do not create a producer-admitted economic partition, current reserve coverage or executable redemption capacity; no static supply shares or independent key-custody credit are authored.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_ZaruBlocktower primary-source and pinned-state review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -104,6 +108,22 @@
       {
         "label": "Supplemental Arc implementation, decimals and explicitly zero totalSupply at block 24360273, hash 0x8406ce1f1781205f575711f4a34f14535fd6ad867cda99372d91f57f62630cd0, timestamp 2026-10-05T08:14:09Z; observed 2026-10-11T00:50:29Z by Sol curation campaign 2026-10-11 (C32UTY)",
         "url": "https://api-arc-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum block 26197399, hash 0x2bff3ac61a5d73489280644fbef154289380ad03d8135a65efdd7a433c6a2c36, 2026-10-15T10:44:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Base block 52635879, hash 0x0efd3ff81a5933fbe7b836b35d6d0256e84f95272a701e3af4d7cff12217b6dd, 2026-10-15T10:45:05Z",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Arc block 26080389, hash 0xb9f22d1398625769c02056224d3d0c06a8532fdc26b005c2cee2a20b0e6d6cee, 2026-10-15T10:45:05Z",
+        "url": "https://api-arc-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Solana exact mint and signer archive at slot 457208926, blockhash 6GFVeAGF3msuiviWBgrT8fbJakKhkUfgyn63oRsxypYr, 2026-10-15T10:45:27Z",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       }
     ],
     "routes": [
@@ -119,12 +139,12 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent direct Token-2022 issuer mint/burn, backed by rand rather than another chain's escrow. The issuer whitepaper sections 4.04/4.08/4.11 states mint only when reserve rand is received, burn on redemption and expansion using each chain's native token standard. Moore's October 1 report independently identifies this exact Solana mint at snapshot slot 443168748. Finalized identity snapshot slot 454891046 (blockhash CmkAxc1dMUfs2Uuszipv2Wfo8GDtVTJwBQU1ThPzX6Kc, blockTime 1791555521) confirms ZAR Universal/ZARU, 6 decimals and ordinary issuer mint authority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62. No bridge/controller or canonical lock-and-release liability is present in this native issuance path; signing-policy independence remains unresolved.",
+        "reviewNote": "Independent direct Token-2022 issuer mint/burn, backed by rand rather than another chain's escrow. The whitepaper sections 4.04/4.08/4.11 define deposit issuance, redemption burning and native-token-standard expansion; Moore's October 1 report identifies this exact Solana mint. Exact archived mint and signer state at slot 457208926 (2026-10-15T10:45:27Z) confirms ZAR Universal/ZARU, 6 decimals, 60553096194140 base units and ordinary issuer mint authority 8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62. No bridge or lock-and-release liability is present in this native issuance path; signing-policy independence remains unresolved.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "solana",
         "controllerAddress": "8USLqNrJ6WfUcTk2XUBYGRiMA2Mp2qh9AhsJZBEg5W62",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748072,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457208926,
         "sources": [
           {
             "label": "Solana mint and authority observation",
@@ -133,6 +153,10 @@
           {
             "label": "Issuer native expansion model",
             "url": "https://zaru.network/blog/zar-universal-white-paper"
+          },
+          {
+            "label": "Exact archived mint and signer, slot 457208926, 2026-10-15T10:45:27Z",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ]
       },
@@ -148,12 +172,12 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native issuer liability: the deployed ERC20F implementation provides onlyRole(MINTER_ROLE) mint() and onlyRole(BURNER_ROLE) burn(), not a canonical-token lock/release adapter. The existing complete role census identifies issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1, with no bridge minter. Existing October 5 executable-runtime correspondence remains the source binding; October 9 pinned Ethereum block 26124902 additionally confirms ZARU, 18 decimals and implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Issuer fiat-backed native expansion is documented in whitepaper section 4.08; this is not a receipt against Solana escrow.",
+        "reviewNote": "Independent native issuer liability: verified ERC20F provides MINTER_ROLE mint and BURNER_ROLE burn, rather than an escrow-backed receipt. Ethereum block 26197399 (2026-10-15T10:44:59Z) confirms ZAR Universal/ZARU, 18 decimals, zero totalSupply, unpaused state, implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 and all eight roles held by issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1. The implementation runtime matches Base and Arc byte-for-byte. The native-token-standard expansion model is documented in whitepaper 4.08. Research stock observations do not establish producer-admitted supply shares.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
         "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107705,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197399,
         "sources": [
           {
             "label": "Verified ERC20F implementation",
@@ -166,6 +190,10 @@
           {
             "label": "Issuer native expansion model",
             "url": "https://zaru.network/blog/zar-universal-white-paper"
+          },
+          {
+            "label": "Ethereum pinned identity and supply, block 26197399, 2026-10-15T10:44:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       },
@@ -181,12 +209,12 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native issuer liability: verified ERC20F role-controlled mint()/burn(), with the complete existing role census identifying issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1 rather than a bridge minter. Existing October 5 executable-runtime correspondence is retained; October 9 pinned Base block 52199351 confirms ZARU, 18 decimals and implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62. The issuer native-token-standard expansion model covers this direct fiat-backed issuance. No canonical lockbox or cross-chain receipt is used in this issuance path; zero stock must still be observed by the complete census.",
+        "reviewNote": "Independent native issuer liability: verified ERC20F provides role-controlled mint and burn, rather than a cross-chain receipt. Base block 52635879 (2026-10-15T10:45:05Z) confirms ZAR Universal/ZARU, 18 decimals, zero totalSupply, unpaused state, implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 and all eight roles held by issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1. Its runtime matches Ethereum and Arc byte-for-byte. The whitepaper native-token-standard expansion model supports direct fiat-backed issuance. Research stock observations do not establish producer-admitted supply shares.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095862,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635879,
         "sources": [
           {
             "label": "Verified ERC20F implementation",
@@ -199,6 +227,10 @@
           {
             "label": "Issuer native expansion model",
             "url": "https://zaru.network/blog/zar-universal-white-paper"
+          },
+          {
+            "label": "Base pinned identity and supply, block 52635879, 2026-10-15T10:45:05Z",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
           }
         ]
       },
@@ -214,12 +246,12 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Independent native issuer liability: the existing terminal eight-grant/zero-revoke role census through Arc block 24360273 establishes only issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1; reviewed ERC20F executable correspondence proves direct role-controlled mint()/burn(), with no LockRelease adapter or bridge minter in that path. October 9 pinned identity at that same Arc block confirms ZARU and 18 decimals. Whitepaper section 4.08 specifies native-token-standard expansion and the issuer homepage identifies Arc deployment. Native issuance remains separate from issuer key-custody uncertainty; no supply share is asserted.",
+        "reviewNote": "Independent native issuer liability: verified ERC20F provides direct role-controlled mint and burn, not a LockRelease adapter. Arc block 26080389 (2026-10-15T10:45:05Z) confirms ZAR Universal/ZARU, 18 decimals, zero totalSupply, unpaused state, implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 and all eight roles held by issuer EOA 0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1. Its runtime matches Ethereum and Base byte-for-byte. The issuer's September 22 Arc announcement and whitepaper native expansion model corroborate this direct issuance rail. Research stock observations do not establish producer-admitted supply shares or signing-policy independence.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "arc",
         "controllerAddress": "0x29fc8c0e185f7d6cb85e232412db8e2a28f72cf1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 23952333,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26080389,
         "sources": [
           {
             "label": "Verified ERC20F implementation",
@@ -232,6 +264,10 @@
           {
             "label": "Issuer native expansion model",
             "url": "https://zaru.network/blog/zar-universal-white-paper"
+          },
+          {
+            "label": "Arc pinned identity and supply, block 26080389, 2026-10-15T10:45:05Z",
+            "url": "https://api-arc-mainnet.n.dwellir.com"
           }
         ]
       }

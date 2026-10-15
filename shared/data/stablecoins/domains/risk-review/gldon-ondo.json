@@ -4,6 +4,22 @@
     "reviewedStatus": true,
     "sources": [
       {
+        "label": "ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      },
+      {
+        "label": "solana block/slot 457209355, hash CDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp 2026-10-15T10:46:59.000Z, RPC https://solana-mainnet.g.alchemy.com/v2/",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
+      },
+      {
         "label": "Ondo native managers",
         "url": "https://docs.ondo.finance/addresses.md"
       },
@@ -28,9 +44,9 @@
         "url": "https://docs.ondo.finance/ondo-stocks/important-notes.md"
       }
     ],
-    "evidence": "EVM GLDon exposes issuer-selected compliance and tokenPauseManager contracts; current role getters retain these controllers on Ethereum, BNB and HyperEVM. Finalized Solana mint metadata exposes freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK and a pausable extension. These establish direct holder-control exposure independently of issuer minting.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "Fresh exact-token reads at Ethereum block 26197409 (2026-10-15T10:46:59Z), BNB block 127773120 (2026-10-15T10:47:11Z) and HyperEVM block 48601302 (2026-10-15T10:47:12Z) retain nonzero issuer-selected compliance and tokenPauseManager contracts. Exact-slot Solana Account Archive at slot 457209355 (2026-10-15T10:46:59Z) confirms Token-2022 freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK and pausable-config authority 9foMHsSDq7nMg4WPusSz9eY7tyxyukqborA8GyU5cUxD, currently unpaused. These are direct holder-control powers, separate from mint authority; an unpaused observation is not renunciation.",
+    "reviewer": "Rev_GldonOndo pinned-chain review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
@@ -67,11 +83,23 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Native Ethereum/BNB/Solana issuance and HyperEVM representation are inventoried. Current review binds custom OFT storage to the actual Messenger OApps and reads ETH/BNB↔HyperEVM peer, library, DVN and delegate state. Complete Solana messaging, rate limits, owner/delegate bypass closure and fresh liability materiality remain unresolved.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine06 primary-source and pinned RPC review; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting only",
+    "summary": "Native Ethereum/BNB/Solana issuance and the HyperEVM representation are inventoried. Fresh pins establish EVM Messenger peers, current libraries and three required DVNs, exact-token pathway capacity and downstream owner roles. Solana execution closure, arbitrary-remote inventory, human key custody and reconciled liability materiality remain open.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_GldonOndo primary-source and pinned-chain review",
     "confidence": "manual-review",
     "sources": [
+      {
+        "label": "ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/",
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      },
       {
         "label": "Exact Ethereum OndoOFT verified bytecode/ABI; Messenger stored in slot 1",
         "url": "https://etherscan.io/address/0x6d119ebada730583ef8dc7b8506fa317a374796a#code"
@@ -148,8 +176,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Current MINTER_ROLE includes native GMTokenManager and a distinct token-specific OFT bridge minter; native issuance and bridge powers remain separated.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197409,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -187,8 +215,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Current MINTER_ROLE includes native GMTokenManager and a distinct token-specific OFT bridge minter; native issuance and bridge powers remain separated.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 125374463,
+        "observedAt": "2026-10-15",
+        "observedBlock": 127773120,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -226,8 +254,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Finalized GLDon mint exposes the Ondo GM mint authority; issuer docs classify Solana as native issuance.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748021,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209355,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -265,8 +293,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Issuer classifies HyperEVM as bridged. MINTER_ROLE has only the exact OndoOFT, whose token() matches this deployment and approvalRequired() is false. R1 source review 2026-10-09: exact HyperEVM adapter 0x1750c8e2546338aca047e3b9ece8d8d986579115 is verified OndoOFT, and the canonical Ethereum adapter's verified _debit calls innerToken.burnFrom while _credit calls innerToken.mint, rather than locking/releasing canonical GLDon. Issuer bridge docs positively specify native burn/mint on Ethereum, BNB and HyperEVM with the same destination token amount; Solana is separately native GM issuance. The four registered deployments therefore form a direct-burn/no-canonical-escrow liability inventory (EVM 18 decimals, Solana 9). Existing block observations and control gaps retain their original dates; this review authors eligibility, not a reconciled supply census.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 47503251,
+        "observedAt": "2026-10-15",
+        "observedBlock": 48601302,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -298,6 +326,7 @@
         "routeRefs": [
           "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139"
         ],
+
         "capabilities": [
           "bridge-mint",
           "bridge-burn"
@@ -305,8 +334,8 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x6d119ebada730583ef8dc7b8506fa317a374796a",
         "authorityType": "contract",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197409,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -331,11 +360,11 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "token() matches GLDon and approvalRequired() is false; no GLDon-specific escrow is proven.",
-          "trustedPeerOrRemote": "At Ethereum block 26110184, OFT slot 1 binds Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3; Messenger peers(30367) matches HyperEVM 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f. Endpoint 0x1a44076050125825900e736c501f859c50fe728c send library 0xbb2ea70c9e858123480642cf96acbcce1372dce1 requires 65 confirmations; receive library 0xc02ab410f0734efa3f14628780e6e695156024c2 requires 120. Both require all three DVNs 0x241c66a979125f230c239e79d103e0c2128c6618, 0x589dedbd617e0cbcb916a9223f4d1300c294236b and 0xa4fe5a5b9a846458a70cd0748228aed3bf65c2cd; no optional DVNs. This is selected-remote evidence, not complete Solana or arbitrary-remote closure.",
-          "rateLimits": "No current exact GLDon per-remote rate-limit inventory is established.",
-          "pausersAdminsUpgraders": "OFT and Messenger owner are 0xbc6d5c103a3f586e68bd475942a49d041b171c3e; endpoint delegate for Messenger is 0x71a4d411b5f7941dee020417fca30413712f1646, whose current threshold is 4 with 7 owners. Complete owner/delegate module, configuration and bypass control remains unverified."
+          "trustedPeerOrRemote": "At ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/, OFT slot 1 identifies Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3; peers(30102)=0x0000000000000000000000005f7d50242206993a4476c76b21950219a4ed2c91; peers(30367)=0x000000000000000000000000dcf29fa293125ae2361e12fb83fc096699c4fc2f. Endpoint 0x1a44076050125825900e736c501f859c50fe728c. EID 30102 send library 0xbb2ea70c9e858123480642cf96acbcce1372dce1, confirmations 65, required DVNs [0x241c66a979125f230c239e79d103e0c2128c6618,0x589dedbd617e0cbcb916a9223f4d1300c294236b,0xf9d2c0915cac4c75b7ae359089333c8ac258e12c], optional DVNs=0; EID 30102 receive library 0xc02ab410f0734efa3f14628780e6e695156024c2, confirmations 70, required DVNs [0x241c66a979125f230c239e79d103e0c2128c6618,0x589dedbd617e0cbcb916a9223f4d1300c294236b,0xf9d2c0915cac4c75b7ae359089333c8ac258e12c], optional DVNs=0; EID 30367 send library 0xbb2ea70c9e858123480642cf96acbcce1372dce1, confirmations 65, required DVNs [0x241c66a979125f230c239e79d103e0c2128c6618,0x589dedbd617e0cbcb916a9223f4d1300c294236b,0xf9d2c0915cac4c75b7ae359089333c8ac258e12c], optional DVNs=0; EID 30367 receive library 0xc02ab410f0734efa3f14628780e6e695156024c2, confirmations 120, required DVNs [0x241c66a979125f230c239e79d103e0c2128c6618,0x589dedbd617e0cbcb916a9223f4d1300c294236b,0xf9d2c0915cac4c75b7ae359089333c8ac258e12c], optional DVNs=0. This covers the other two cataloged EVM networks, not every possible remote or Solana messaging.",
+          "rateLimits": "At ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/, getAmountsAvailable(exact GLDon tokenId, Messenger, remote) returns raw 18-decimal token units: EID 30102: sendable 1189416467602622714059, currentOutbound 0, receivable 1313895831689649647889, currentInbound 0; EID 30367: sendable 417492954806387642208, currentOutbound 0, receivable 463678516587077678969, currentInbound 0. These are current refillable pathway capacities, not immutable issuance caps, USD valuation or guaranteed executable holder exits.",
+          "pausersAdminsUpgraders": "At ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/, OFT/Messenger owner=0xbc6d5c103a3f586e68bd475942a49d041b171c3e; endpoint delegate=0x71a4d411b5f7941dee020417fca30413712f1646. The delegate Safe is independently read on this chain as 4-of-7, complete seven-owner roster, no modules, zero guard and standard fallback. OndoOwner roles: DEFAULT_ADMIN_ROLE=0x71a4d411b5f7941dee020417fca30413712f1646; INSPECTOR_ADMIN=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc; MESSENGER_ADMIN=0x71a4d411b5f7941dee020417fca30413712f1646,0x58d73026c64da97ce858766384477d2e8775e9ec; RATE_LIMITER_ADMIN=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Current token pause, global Inspector pause and exact-token Inspector pause flags are false; administrative freeze/pause powers remain. Full mutable-target/runtime correspondence, human key custody and exhaustive bypass closure remain unverified."
         },
-        "evidence": "Pinned native token MINTER_ROLE enumeration binds this OndoOFT, and token() matches the authored GLDon deployment. HyperEVM has only this minter. Issuer technical docs identify the HyperEVM representation; this capability is not native issuance."
+        "evidence": "At ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/, exact token MINTER_ROLE enumeration binds this bridge OndoOFT; token() matches GLDon, approvalRequired() is false, and tokenId() identifies the exact asset. Ethereum/BNB additionally retain native GMTokenManager; HyperEVM has only this bridge minter. The verified canonical OFT burns/mints rather than escrows/releases tokens. This is transfer machinery, not native issuance; no financial reconciliation or liability share is inferred."
       },
       {
         "id": "gldon-ethereum-oft-owner",
@@ -349,8 +378,8 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0xbc6d5c103a3f586e68bd475942a49d041b171c3e",
         "authorityType": "contract",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197409,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -373,7 +402,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Current OndoOFT owner() returns this controller. Complete downstream signer and bypass inventory remains unavailable; no Safe threshold or timelock protection is claimed."
+        "evidence": "At ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/, exact OndoOFT and Messenger owner getters both identify this OndoOwner controller. Full enumerable role census: DEFAULT_ADMIN_ROLE=0x71a4d411b5f7941dee020417fca30413712f1646; INSPECTOR_ADMIN=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc; MESSENGER_ADMIN=0x71a4d411b5f7941dee020417fca30413712f1646,0x58d73026c64da97ce858766384477d2e8775e9ec; RATE_LIMITER_ADMIN=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The administrator Safe is independently observed on this chain as 4-of-7 with seven enumerated owners, no modules and zero guard. Verified Ethereum/BNB OndoOwner source exposes DEFAULT_ADMIN_ROLE-only superCall with arbitrary target/calldata; this is administrative reach, not a native issuance control. Controller-local role identities do not prove human signer independence or exhaustive runtime/bypass closure. No immutable role roster or delayed exercise is inferred."
       },
       {
         "id": "gldon-bsc-oft",
@@ -388,8 +417,8 @@
         "controllerChain": "bsc",
         "controllerAddress": "0x6b2cdc221a2ef9c3c35dac38514154c5c35dab57",
         "authorityType": "contract",
-        "observedAt": "2026-10-02",
-        "observedBlock": 125374463,
+        "observedAt": "2026-10-15",
+        "observedBlock": 127773120,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -414,11 +443,11 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "token() matches GLDon and approvalRequired() is false; no GLDon-specific escrow is proven.",
-          "trustedPeerOrRemote": "At BNB block 125441304, OFT slot 1 binds Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91; peers(30367) matches HyperEVM Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f. Endpoint 0x1a44076050125825900e736c501f859c50fe728c send library 0x9f8c645f2d0b2159767bd6e0839de4be49e823de requires 70 confirmations; receive library 0xb217266c3a98c8b2709ee26836c98cf12f6ccec1 requires 120. Both require all three DVNs 0x00efecf8714c2bc9376f8391f47a2ffce8bcdfea, 0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda and 0xfd6865c841c2d64565562fcc7e05e619a30615f0, with no optional DVNs. Other-remote and Solana inventory remain incomplete.",
-          "rateLimits": "No current exact GLDon per-remote rate-limit inventory is established.",
-          "pausersAdminsUpgraders": "OFT/Messenger owner is 0x4d4e562d6882dc523b8d629d2e9df9230b699933; Messenger endpoint delegate is 0xa307e57ca7f9712af3557af8c5624bef214aa913, observed 4-of-7 on BNB. Complete owner/delegate signing, modules and configuration bypass closure remains unverified."
+          "trustedPeerOrRemote": "At bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/, OFT slot 1 identifies Messenger 0x5f7d50242206993a4476c76b21950219a4ed2c91; peers(30101)=0x000000000000000000000000ff2baba46df92919705e60120c477ae5b7341eb3; peers(30367)=0x000000000000000000000000dcf29fa293125ae2361e12fb83fc096699c4fc2f. Endpoint 0x1a44076050125825900e736c501f859c50fe728c. EID 30101 send library 0x9f8c645f2d0b2159767bd6e0839de4be49e823de, confirmations 70, required DVNs [0x00efecf8714c2bc9376f8391f47a2ffce8bcdfea,0x97e19088d0c9d490a99b57fb52ad3636d7c3612c,0xfd6865c841c2d64565562fcc7e05e619a30615f0], optional DVNs=0; EID 30101 receive library 0xb217266c3a98c8b2709ee26836c98cf12f6ccec1, confirmations 65, required DVNs [0x00efecf8714c2bc9376f8391f47a2ffce8bcdfea,0x97e19088d0c9d490a99b57fb52ad3636d7c3612c,0xfd6865c841c2d64565562fcc7e05e619a30615f0], optional DVNs=0; EID 30367 send library 0x9f8c645f2d0b2159767bd6e0839de4be49e823de, confirmations 70, required DVNs [0x00efecf8714c2bc9376f8391f47a2ffce8bcdfea,0x97e19088d0c9d490a99b57fb52ad3636d7c3612c,0xfd6865c841c2d64565562fcc7e05e619a30615f0], optional DVNs=0; EID 30367 receive library 0xb217266c3a98c8b2709ee26836c98cf12f6ccec1, confirmations 120, required DVNs [0x00efecf8714c2bc9376f8391f47a2ffce8bcdfea,0x97e19088d0c9d490a99b57fb52ad3636d7c3612c,0xfd6865c841c2d64565562fcc7e05e619a30615f0], optional DVNs=0. This covers the other two cataloged EVM networks, not every possible remote or Solana messaging.",
+          "rateLimits": "At bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/, getAmountsAvailable(exact GLDon tokenId, Messenger, remote) returns raw 18-decimal token units: EID 30101: sendable 1189416467602622714059, currentOutbound 0, receivable 1313895831689649647889, currentInbound 0; EID 30367: sendable 417492954806387642208, currentOutbound 0, receivable 463678516587077678969, currentInbound 0. These are current refillable pathway capacities, not immutable issuance caps, USD valuation or guaranteed executable holder exits.",
+          "pausersAdminsUpgraders": "At bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/, OFT/Messenger owner=0x4d4e562d6882dc523b8d629d2e9df9230b699933; endpoint delegate=0xa307e57ca7f9712af3557af8c5624bef214aa913. The delegate Safe is independently read on this chain as 4-of-7, complete seven-owner roster, no modules, zero guard and standard fallback. OndoOwner roles: DEFAULT_ADMIN_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913; INSPECTOR_ADMIN=0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97; MESSENGER_ADMIN=0xa307e57ca7f9712af3557af8c5624bef214aa913,0x72c697d72beb419152ed457b9f1eee29c12e0ccb; RATE_LIMITER_ADMIN=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Current token pause, global Inspector pause and exact-token Inspector pause flags are false; administrative freeze/pause powers remain. Full mutable-target/runtime correspondence, human key custody and exhaustive bypass closure remain unverified."
         },
-        "evidence": "Pinned native token MINTER_ROLE enumeration binds this OndoOFT, and token() matches the authored GLDon deployment. HyperEVM has only this minter. Issuer technical docs identify the HyperEVM representation; this capability is not native issuance."
+        "evidence": "At bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/, exact token MINTER_ROLE enumeration binds this bridge OndoOFT; token() matches GLDon, approvalRequired() is false, and tokenId() identifies the exact asset. Ethereum/BNB additionally retain native GMTokenManager; HyperEVM has only this bridge minter. The verified canonical OFT burns/mints rather than escrows/releases tokens. This is transfer machinery, not native issuance; no financial reconciliation or liability share is inferred."
       },
       {
         "id": "gldon-bsc-oft-owner",
@@ -432,8 +461,8 @@
         "controllerChain": "bsc",
         "controllerAddress": "0x4d4e562d6882dc523b8d629d2e9df9230b699933",
         "authorityType": "contract",
-        "observedAt": "2026-10-02",
-        "observedBlock": 125374463,
+        "observedAt": "2026-10-15",
+        "observedBlock": 127773120,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -456,7 +485,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Current OndoOFT owner() returns this controller. Complete downstream signer and bypass inventory remains unavailable; no Safe threshold or timelock protection is claimed."
+        "evidence": "At bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/, exact OndoOFT and Messenger owner getters both identify this OndoOwner controller. Full enumerable role census: DEFAULT_ADMIN_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913; INSPECTOR_ADMIN=0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97; MESSENGER_ADMIN=0xa307e57ca7f9712af3557af8c5624bef214aa913,0x72c697d72beb419152ed457b9f1eee29c12e0ccb; RATE_LIMITER_ADMIN=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The administrator Safe is independently observed on this chain as 4-of-7 with seven enumerated owners, no modules and zero guard. Verified Ethereum/BNB OndoOwner source exposes DEFAULT_ADMIN_ROLE-only superCall with arbitrary target/calldata; this is administrative reach, not a native issuance control. Controller-local role identities do not prove human signer independence or exhaustive runtime/bypass closure. No immutable role roster or delayed exercise is inferred."
       },
       {
         "id": "gldon-hyperevm-oft",
@@ -471,8 +500,8 @@
         "controllerChain": "hyperevm",
         "controllerAddress": "0x1750c8e2546338aca047e3b9ece8d8d986579115",
         "authorityType": "contract",
-        "observedAt": "2026-10-02",
-        "observedBlock": 47503251,
+        "observedAt": "2026-10-15",
+        "observedBlock": 48601302,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -497,11 +526,11 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "token() matches GLDon and approvalRequired() is false; no GLDon-specific escrow is proven.",
-          "trustedPeerOrRemote": "At HyperEVM block 47534625, OFT slot 1 binds Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f; peers(30101) matches Ethereum Messenger 0xff2baba46df92919705e60120c477ae5b7341eb3. Endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9 send library 0xfd76d9cb0bac839725ab79127e7411fe71b1e3ca requires 120 confirmations; receive library 0x7cacbe439ead55fa1c22790330b12835c6884a91 requires 65. Both require all three DVNs 0x83342ec538df0460e730a8f543fe63063e2d44c4, 0x8614fb9ed4b75d83f781ce836c785eff04379a37 and 0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f, with no optional DVNs. Complete other-remote/replay-bypass closure is not established.",
-          "rateLimits": "No current exact GLDon per-remote rate-limit inventory is established.",
-          "pausersAdminsUpgraders": "OFT/Messenger owner is 0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d; endpoint delegate is 0xa307e57ca7f9712af3557af8c5624bef214aa913. Its HyperEVM signing/module state is not inherited from the same-address BNB Safe; full local signing and bypass control remains unverified."
+          "trustedPeerOrRemote": "At hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm, OFT slot 1 identifies Messenger 0xdcf29fa293125ae2361e12fb83fc096699c4fc2f; peers(30101)=0x000000000000000000000000ff2baba46df92919705e60120c477ae5b7341eb3; peers(30102)=0x0000000000000000000000005f7d50242206993a4476c76b21950219a4ed2c91. Endpoint 0x3a73033c0b1407574c76bdbac67f126f6b4a9aa9. EID 30101 send library 0xfd76d9cb0bac839725ab79127e7411fe71b1e3ca, confirmations 120, required DVNs [0x0e330b859441d6172e41591ad6a2448268840456,0x8614fb9ed4b75d83f781ce836c785eff04379a37,0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f], optional DVNs=0; EID 30101 receive library 0x7cacbe439ead55fa1c22790330b12835c6884a91, confirmations 65, required DVNs [0x0e330b859441d6172e41591ad6a2448268840456,0x8614fb9ed4b75d83f781ce836c785eff04379a37,0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f], optional DVNs=0; EID 30102 send library 0xfd76d9cb0bac839725ab79127e7411fe71b1e3ca, confirmations 120, required DVNs [0x0e330b859441d6172e41591ad6a2448268840456,0x8614fb9ed4b75d83f781ce836c785eff04379a37,0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f], optional DVNs=0; EID 30102 receive library 0x7cacbe439ead55fa1c22790330b12835c6884a91, confirmations 70, required DVNs [0x0e330b859441d6172e41591ad6a2448268840456,0x8614fb9ed4b75d83f781ce836c785eff04379a37,0xc097ab8cd7b053326dfe9fb3e3a31a0cce3b526f], optional DVNs=0. This covers the other two cataloged EVM networks, not every possible remote or Solana messaging.",
+          "rateLimits": "At hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm, getAmountsAvailable(exact GLDon tokenId, Messenger, remote) returns raw 18-decimal token units: EID 30101: sendable 417492954806387642208, currentOutbound 0, receivable 463678516587077678969, currentInbound 0; EID 30102: sendable 417492954806387642208, currentOutbound 0, receivable 463678516587077678969, currentInbound 0. These are current refillable pathway capacities, not immutable issuance caps, USD valuation or guaranteed executable holder exits.",
+          "pausersAdminsUpgraders": "At hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm, OFT/Messenger owner=0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d; endpoint delegate=0xa307e57ca7f9712af3557af8c5624bef214aa913. The delegate Safe is independently read on this chain as 4-of-7, complete seven-owner roster, no modules, zero guard and standard fallback. OndoOwner roles: DEFAULT_ADMIN_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913; INSPECTOR_ADMIN=0xd484422208b1020c83a155336d2b13ce883e5a21; MESSENGER_ADMIN=0xa307e57ca7f9712af3557af8c5624bef214aa913,0xe3153764ab2a0a928a59c3805503b2ac56b802a3; RATE_LIMITER_ADMIN=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. Current token pause, global Inspector pause and exact-token Inspector pause flags are false; administrative freeze/pause powers remain. Full mutable-target/runtime correspondence, human key custody and exhaustive bypass closure remain unverified."
         },
-        "evidence": "Pinned native token MINTER_ROLE enumeration binds this OndoOFT, and token() matches the authored GLDon deployment. HyperEVM has only this minter. Issuer technical docs identify the HyperEVM representation; this capability is not native issuance."
+        "evidence": "At hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm, exact token MINTER_ROLE enumeration binds this bridge OndoOFT; token() matches GLDon, approvalRequired() is false, and tokenId() identifies the exact asset. Ethereum/BNB additionally retain native GMTokenManager; HyperEVM has only this bridge minter. The verified canonical OFT burns/mints rather than escrows/releases tokens. This is transfer machinery, not native issuance; no financial reconciliation or liability share is inferred."
       },
       {
         "id": "gldon-hyperevm-oft-owner",
@@ -515,8 +544,8 @@
         "controllerChain": "hyperevm",
         "controllerAddress": "0x2e59565b98ec5339cb9767ddb903d9b1e2127e5d",
         "authorityType": "contract",
-        "observedAt": "2026-10-02",
-        "observedBlock": 47503251,
+        "observedAt": "2026-10-15",
+        "observedBlock": 48601302,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -539,8 +568,33 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Current OndoOFT owner() returns this controller. Complete downstream signer and bypass inventory remains unavailable; no Safe threshold or timelock protection is claimed."
+        "evidence": "At hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm, exact OndoOFT and Messenger owner getters both identify this OndoOwner controller. Full enumerable role census: DEFAULT_ADMIN_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913; INSPECTOR_ADMIN=0xd484422208b1020c83a155336d2b13ce883e5a21; MESSENGER_ADMIN=0xa307e57ca7f9712af3557af8c5624bef214aa913,0xe3153764ab2a0a928a59c3805503b2ac56b802a3; RATE_LIMITER_ADMIN=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b. The administrator Safe is independently observed on this chain as 4-of-7 with seven enumerated owners, no modules and zero guard. Verified Ethereum/BNB OndoOwner source exposes DEFAULT_ADMIN_ROLE-only superCall with arbitrary target/calldata; this is administrative reach, not a native issuance control. Controller-local role identities do not prove human signer independence or exhaustive runtime/bypass closure. No immutable role roster or delayed exercise is inferred."
+      },
+      {
+        "id": "gldon-hyperevm-token-upgrade",
+        "label": "GLDon HyperEVM representation beacon administration",
+        "routeRefs": [
+          "hyperevm:0x95febdd6f447b5278c9b98743b4254eb02c6ea1d"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x6253fbc5bcf4f49c80745694366f05d6c7be0e83",
+        "authorityType": "timelock",
+        "timelockDelaySec": 7200,
+        "observedAt": "2026-10-15",
+        "observedBlock": 48601302,
+        "sources": [
+          {
+            "label": "hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm",
+            "url": "https://rpc.hyperliquid.xyz/evm"
+          }
+        ],
+        "evidence": "At hyperevm block/slot 48601302, hash 0xf22b5c6c7c390ce59aaa4d86ee29a2c10fbc487b540bac2f9ef06c0dc280112e, timestamp 2026-10-15T10:47:12.000Z, RPC https://rpc.hyperliquid.xyz/evm, token EIP-1967 beacon slot resolves 0x258269e782ab73aca6c0574990ff29b79aafffb6; implementation is 0x0d25c65d0cc97af724ffd7a54eb287660e8dfad4 and beacon owner matches token DEFAULT_ADMIN_ROLE 0x6253fbc5bcf4f49c80745694366f05d6c7be0e83. getMinDelay=7200. Full timelock role census: PROPOSER_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913; EXECUTOR_ROLE=0xd484422208b1020c83a155336d2b13ce883e5a21,0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; CANCELLER_ROLE=0xd484422208b1020c83a155336d2b13ce883e5a21,0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; DEFAULT_ADMIN_ROLE=0x6253fbc5bcf4f49c80745694366f05d6c7be0e83,0xa3a3c71380128972f172ff4052af7b6405da6364. This upgrade authority can replace the representation mint logic and belongs to Bridge Risk, not native Mint Authority. Proposer is independently 4-of-7 and executor Safe 1-of-9; full local execution/key-custody closure remains unverified."
       }
     ]
   }
 }
+

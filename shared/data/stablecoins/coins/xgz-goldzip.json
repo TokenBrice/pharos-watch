@@ -19,16 +19,16 @@
   ],
   "mechanismArchetype": "commodity-claim",
   "custodyModel": "unknown",
-  "implementationLaunchDate": "2025-08-27",
-  "oneLiner": "XGZ is GoldZip’s physical-gold token, representing one gram of 99.99% fine gold with AML-gated delivery from 1,000 tokens.",
+  "launchDate": "2025-12-23",
+  "oneLiner": "XGZ is GoldZip’s one-gram physical-gold token, with issuer-described AML-gated delivery from 1,000 tokens and no title to stored bars.",
   "commodityOunces": 0.03215074656862798,
-  "collateral": "Issuer-reported physical 99.99% fine gold stored in HKGX-recognised third-party depositories; one gram per XGZ.",
-  "pegMechanism": "GoldZip accepts eligible minimum 1kg gold bars for Ethereum issuance after verification. Physical delivery requires at least 1,000 XGZ and AML compliance, with Singapore and Hong Kong delivery described. Delivery charges and settlement timing are undisclosed.",
+  "collateral": "Issuer-reported physical 99.99% fine gold, one gram per XGZ. The 5 October 2026 allocation snapshot maps 39,000 XGZ to 39 Heraeus 1 kg bars at Horsemart Service Limited; physical holdings are not independently verified.",
+  "pegMechanism": "Ordinary AML/KYC-gated redemption starts at one 1 kg bar for 1,000 XGZ, with appointment-only collection at Brinks Singapore. Rules publish per-bar redemption fees but no completion deadline; the issuer-change notice separately cites a conflicting ordinary 0.25% fee. Terms allow exchange-rate changes, deny proprietary rights in stored bars and pass title on collection. Hong Kong citizens and residents are excluded. The 15 October 2026 notice offers an additional entire-balance, no-minimum USDT exit for verified self-custody Ethereum holders electing by 5 November 2026 at 23:59 UTC, with settlement within 14 Business Days after that deadline subject to lawful checks and token delivery.",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "XGZ Ethereum 0x69af64f409c08e9076bf7f3ed9db3a7409717161 is an operational claim redeemable for physical gold, one gram per token, corroborated by the issuer transparency deployment and 8-decimal on-chain identity. Specific bar allocation and insolvency segregation remain unverified.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_XgzGoldzip",
+    "rationale": "XGZ is a fixed-gram operational physical-redemption claim, not a gold fund or strategy share. Ethereum block 26198051 (2026-10-15T12:55:59Z) confirms 39,000 XGZ at 8 decimals, matching the issuer's 5 October allocation CSV total. That mapping does not independently verify the bars or confer title: terms clauses 4.2-4.3 deny proprietary interest before collection. The temporary issuer-change USDT exit does not change the underlying gold reference. Insolvency safeguards remain unverified.",
     "sources": [
       {
         "label": "GoldZip litepaper",
@@ -37,18 +37,34 @@
       {
         "label": "GoldZip transparency and exact deployment",
         "url": "https://goldzip.info/transparency/"
+      },
+      {
+        "label": "GoldZip legal terms, clauses 4.2-4.3",
+        "url": "https://goldzip.info/terms-conditions/"
+      },
+      {
+        "label": "Ethereum block 26198051 (2026-10-15T12:55:59Z), 39,000 XGZ at 8 decimals",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "GoldZip holder-to-bar allocation snapshot, 5 October 2026",
+        "url": "https://goldzip.info/transparency/XGZ_Bar_Allocation_2026-10-05.csv"
+      },
+      {
+        "label": "GoldZip issuer change and special exit, 15 October 2026",
+        "url": "https://goldzip.info/news/notice-change-of-issuer-special-redemption-option/"
       }
     ]
   },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://goldzip.info/transparency/",
-    "provider": "GoldZip issuer transparency. Independent reports are advertised but downloads remain coming soon; no named current attestor or scoped reconciliation is available.",
+    "provider": "GoldZip issuer transparency publishes a 5 October 2026 holder-to-bar allocation CSV naming Horsemart Service Limited. Independent reserve reports remain coming soon; no named current attestor or independently signed reconciliation is available.",
     "attestorTier": "undisclosed",
     "cadence": "undisclosed"
   },
   "jurisdiction": {
-    "country": "Singapore"
+    "country": "British Virgin Islands"
   },
   "links": [
     {
@@ -66,13 +82,43 @@
     {
       "label": "Transparency",
       "url": "https://goldzip.info/transparency/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://goldzip-1.gitbook.io/goldzip"
+    },
+    {
+      "label": "Terms and Conditions",
+      "url": "https://goldzip.info/terms-conditions/"
+    },
+    {
+      "label": "Smart contract and audit documentation",
+      "url": "https://goldzip-1.gitbook.io/goldzip/goldzip-xgz/smart-contract"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/goldzipxgz"
+    },
+    {
+      "label": "Telegram",
+      "url": "https://t.me/goldzipofficial"
     }
   ],
   "notices": [
     {
       "type": "info",
-      "title": "Reserve reports not yet published",
-      "message": "The transparency page advertises reports as coming soon. Current named custodians, bar allocation and independent reserve-to-token reconciliation are unavailable."
+      "title": "Self-reported bar allocation",
+      "message": "The 5 October 2026 issuer snapshot maps 39,000 XGZ to 39 Heraeus 1 kg bars at Horsemart Service Limited. This holder-to-bar mapping does not independently verify physical holdings, confer title or establish segregation. Independent reserve reports remain coming soon."
+    },
+    {
+      "type": "warning",
+      "title": "No proprietary claim to stored gold",
+      "message": "Terms clauses 4.2-4.3 deny token holders proprietary interest in stored bars or a right to their cash value; title passes only on collection. The administrator may change exchange terms and suspend redemption. Hong Kong citizens and residents are excluded."
+    },
+    {
+      "type": "warning",
+      "title": "Issuer change and special redemption deadline",
+      "message": "GoldZip's 15 October 2026 notice announces BVI GoldZip Company Limited (2056034) replacing Singapore GoldZip Pte Limited (202119587H), subject to lawful implementation. The Ethereum contract is unchanged; no swap is required. Object and elect the optional entire-balance special exit by 5 November 2026 at 23:59 UTC. No minimum applies, but only verified self-custody Ethereum wallets qualify. Settlement is in USDT on Ethereum within 14 Business Days after the objection deadline, subject to lawful identity checks, wallet verification and token delivery. Administration and redemption fees are waived; instructed transfer fees are refunded or credited. Valuation uses the deadline-date Hong Kong weighted-average traded price or an issuer-determined fair price if data are insufficient; sources and methodology remain confidential."
     }
   ]
 }

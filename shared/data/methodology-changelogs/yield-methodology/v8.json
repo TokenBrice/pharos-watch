@@ -1,5 +1,21 @@
 [
   {
+    "version": "8.49",
+    "title": "XGLD gold-denominated on-chain rate source",
+    "date": "2026-10-15",
+    "effectiveAt": 1792108800,
+    "summary": "XGLD leaves the intentional yield gap through a reviewed BNB Chain exchange-rate source measuring XAUt per XGLD, separate from gold's USD price appreciation.",
+    "impact": [
+      "The existing Tier 1 exchange-rate reader consumes the exact reviewed XGLDExchangeRate provider's exchangeRate() with six-decimal precision. Its rate delta measures issuer-administered gold-denominated NAV, not reconciled strategy profit or a guaranteed holder return.",
+      "The source grants no measured TVL: the provider is an auxiliary rate contract, not the token deployment or an ERC-4626 totalAssets reader. Existing comparison-anchor, freshness, sanity, arbitration and publication gates continue to apply.",
+      "PYS weights, source-risk penalties and benchmark selection are unchanged. The bump records a new admitted runtime APY source, following prior source-roster releases; the separate BlackRock distribution-reader gap remains open.",
+      "Fresh source observations and a valid historical comparison anchor are required before a current APY is established. No production yield, replay result or accepted PYS is claimed.",
+      "Activation is provisionally 2026-10-16 00:00 UTC (1792108800); re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.48",
     "title": "Qualified wrapper returns and observation-clock history",
     "date": "2026-10-10",

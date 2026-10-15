@@ -19,14 +19,14 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "The reviewed USDU token is native Ethereum issuance, matched to the whitepaper and Crowe's exact Ethereum liability book. Additional networks are prospective; no existing bridge is established and no current whole-liability attribution is manufactured.",
-    "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review", "confidence": "verified",
-    "sources": [{"label": "USDU whitepaper: inaugural Ethereum issuance", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}],
+    "summary": "The verified Ethereum deployment is native issuer issuance. Universal announced a Solana integration on October 13, 2026, but the reviewed announcement does not identify a mint or establish its issuance/bridge controls. The Ethereum route review does not certify a current whole-liability chain census or an unverified Solana representation.",
+    "reviewedAt": "2026-10-15", "reviewer": "Pharos batch64 review (Rev_UsduUniversal)", "confidence": "verified",
+    "sources": [{"label": "USDU whitepaper: inaugural Ethereum issuance", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}, {"label": "Universal Solana integration announcement, October 13, 2026", "url": "https://www.universal.ae/news/universal-expands-usdu-to-solana-bringing-regulated-usd-liquidity-on-chain"}],
     "routes": [{
       "id": "ethereum:0xe4ca6596d2c28014c6f89964f57838e0be9f369b", "destinationChain": "ethereum", "contractAddress": "0xe4ca6596d2c28014c6f89964f57838e0be9f369b",
       "protocol": "Universal native USDU", "issuanceModel": "native-issuance", "routeClass": "native", "riskTier": "single-chain-or-native", "semantics": "native-mint", "scope": "canonical",
-      "reviewDisposition": "reviewed", "reviewNote": "Current TokenV1 implementation and MasterMinter calls show configurable native issuance on the whitepaper's inaugural Ethereum network; future network plans do not create active bridge routes.",
-      "controllerChain": "ethereum", "controllerAddress": "0x5ec8a285f6c1f08c812c591a3263eef52d22fe19", "observedAt": "2026-10-03", "observedBlock": 26110183,
+      "reviewDisposition": "reviewed", "reviewNote": "Pinned current TokenV1 implementation and MasterMinter calls establish native Ethereum issuance. The subsequently announced Solana integration has no independently established mint or route controls in the reviewed materials; it is not fabricated as a live bridge route.",
+      "controllerChain": "ethereum", "controllerAddress": "0x5ec8a285f6c1f08c812c591a3263eef52d22fe19", "observedAt": "2026-10-15", "observedBlock": 26197360,
       "sources": [{"label": "Verified current TokenV1 implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750"}, {"label": "USDU whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"}]
     }]
   },
@@ -38,16 +38,16 @@
         "url": "https://sourcify.dev/server/v2/contract/1/0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750?fields=all"
       },
       {
-        "label": "Ethereum pinned block 26107709",
-        "url": "https://etherscan.io/block/26107709"
+        "label": "Ethereum pinned block 26197360, 2026-10-15T10:37:11Z",
+        "url": "https://etherscan.io/block/26197360"
       },
       {
         "label": "USDU mint and redemption whitepaper",
         "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
       }
     ],
-    "evidence": "Sourcify reports exact runtime and creation match for the live implementation. Blacklistable and TokenV1 implement blacklist/unBlacklist and wipeBlacklistedAddress. Pinned getBlacklister() returns0x91462fc34e6b1fda7675e3729eeb1e762f5ac80d, also the permission admin and pauser. Whitepaper explicitly describes transaction revocation.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197360 (2026-10-15T10:37:11Z), EIP-1967 storage binds the proxy to verified TokenV1 implementation 0x7df0b1f63e0a467b6aa95b4ed6d299dab9f73750. Blacklistable and TokenV1 implement blacklist/unBlacklist and owner-only wipeBlacklistedAddress. Pinned getBlacklister(), getPermissionAdmin(), getPauser() and rescuer() return 0x91462fc34e6b1fda7675e3729eeb1e762f5ac80d; paused() is false. Blacklisting can prevent holder transfers and the owner can destroy a blacklisted balance. State read: https://api-ethereum-mainnet.n.dwellir.com.",
+    "reviewer": "Pharos batch64 review (Rev_UsduUniversal)",
+    "reviewedAt": "2026-10-15"
   }
 }

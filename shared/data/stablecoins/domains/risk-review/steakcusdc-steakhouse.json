@@ -12,8 +12,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
       },
       {
-        "label": "Pinned ethereum block 26107704",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+        "url": "https://etherscan.io/block/26196563"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -32,15 +32,15 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
       }
     ],
-    "evidence": "At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.796565+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was the whitelist 0x47c591a3bc346913d0b6bdd96fb50e34efa268aa with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At ethereum block 26196563 (2026-10-15T07:57:11Z), receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was the whitelist 0x47c591a3bc346913d0b6bdd96fb50e34efa268aa with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
+    "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "One reviewed native ethereum VaultV2 share deployment; no bridge or separate confidential receipt supply is included. This does not prove absence of uncatalogued integrations.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
     "confidence": "probable",
     "sources": [
       {
@@ -52,8 +52,8 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
       },
       {
-        "label": "Pinned ethereum block 26107704",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+        "url": "https://etherscan.io/block/26196563"
       },
       {
         "label": "Morpho complete current vault inventory",
@@ -86,8 +86,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Native asset-backed ERC-4626 share issuance on the sole authored deployment.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -98,8 +98,8 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
           },
           {
-            "label": "Pinned ethereum block 26107704",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Morpho complete current vault inventory",
@@ -122,12 +122,12 @@
     ]
   },
   "oracleRisk": {
-    "tier": "single-source-or-laggy",
+    "tier": "standard-external",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Pinned sole-adapter inventory contains 3 borrower markets and an internal VaultV2 NAV path. Borrower oracle/LLTV identities are matched to engine state, with complete paths and loss mechanisms. The exact current feed-owner, operational heartbeat and independent fallback census remains incomplete; no oracleless lending exemption or redundant-feed credit is asserted.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+    "summary": "Current sole-adapter census contains three borrower markets at 86% LLTV and the internal VaultV2 NAV path. All composer inputs, feed identities and current proxy owners/aggregators are pinned at Ethereum block 26196563. The wstETH leg combines Chainlink stETH/ETH with the Lido wrapping rate and divides by USDC/ETH; cbBTC uses BTC/USD as a peg assumption and WETH uses ETH/USD. Source code establishes no composer round-age rejection or independent fallback; feed operational cadence and owner key custody remain unverified.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
     "confidence": "verified",
     "sources": [
       {
@@ -135,8 +135,8 @@
         "url": "https://api.morpho.org/graphql"
       },
       {
-        "label": "Pinned engine market parameters and immutable oracle getters",
-        "url": "https://etherscan.io/block/26110187"
+        "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+        "url": "https://etherscan.io/block/26196563"
       },
       {
         "label": "Morpho Blue borrower and liquidation specification",
@@ -149,8 +149,8 @@
     ],
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
       "rationale": "Every sole-adapter market has a collateral-price/LLTV liquidation branch. The internal share-NAV path is reviewed separately and does not exempt borrower branches. Adapter and position pagination countTotal confirms complete current inventory.",
       "sources": [
         {
@@ -158,8 +158,8 @@
           "url": "https://api.morpho.org/graphql"
         },
         {
-          "label": "Pinned engine market parameters and immutable oracle getters",
-          "url": "https://etherscan.io/block/26110187"
+          "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+          "url": "https://etherscan.io/block/26196563"
         },
         {
           "label": "Morpho Blue borrower and liquidation specification",
@@ -175,8 +175,8 @@
       {
         "id": "market-b323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
         "label": "wstETH / steakcUSDC borrower market",
-        "tier": "single-source-or-laggy",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Matched Chainlink-oracle source has no elapsed-time round-age rejection; composite feed legs are required, not redundant failover.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), exact engine parameters match the complete adapter census; LLTV is 86%. Composer inputs: BASE_FEED_1()=0x4f67e4d9bd67efa28236013288737d39aef48e79, BASE_FEED_2()=0x0000000000000000000000000000000000000000, QUOTE_FEED_1()=0x986b5e1e1755e3c2440e960477f25201b0a8bbd4, QUOTE_FEED_2()=0x0000000000000000000000000000000000000000, SCALE_FACTOR()=10000000000000000000000000000000000, VAULT()=0x0000000000000000000000000000000000000000, VAULT_CONVERSION_SAMPLE()=1. Proxy 0x986b5e1e1755e3c2440e960477f25201b0a8bbd4 owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; aggregator=0x26ae9b951f84e6c28f58a92133c30e312d42e0fe. The wrapper feed divides the external stETH/ETH answer by wstETH.tokensPerStEth(), then the composer divides by USDC/ETH. Chainlink stETH/ETH proxy 0x86392dc19c0b719886221c78ab11eb8cf5c52812 owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca, aggregator=0xc9c8efa84eab332d1950e5ba0a913b090775825c. External stETH market pricing remains present; the wrapping rate is not a standalone independent price.",
         "collateralAssets": [
           "wstETH"
         ],
@@ -189,29 +189,45 @@
             "path": "IOracle.price for market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
             "address": "0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Compound WstETHPriceFeed (Chainlink stETH/ETH multiplied by Lido wrapping rate)",
             "path": "BASE_FEED_1()",
             "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Chainlink USDC / ETH",
             "path": "QUOTE_FEED_1()",
             "address": "0x986b5e1e1755e3c2440e960477f25201b0a8bbd4",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
+          },
+          {
+            "provider": "Chainlink stETH / ETH",
+            "path": "BASE_FEED_1.stETHtoETHPriceFeed().latestRoundData()",
+            "address": "0x86392dc19c0b719886221c78ab11eb8cf5c52812",
+            "chain": "ethereum",
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
+          },
+          {
+            "provider": "Lido wstETH wrapping rate",
+            "path": "BASE_FEED_1.wstETH().tokensPerStEth()",
+            "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "chain": "ethereum",
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           }
         ],
-        "fallbackBehavior": "No alternative feed is selected by the matched Morpho composition; failed price calls revert borrower valuation/liquidation. Upstream feed availability/freshness and proxy replacement policy remain distinct unverified dependencies.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "fallbackBehavior": "No alternative feed or circuit breaker is selected by the exact composer. Zero feed/vault inputs contribute neutral factors; configured nonzero legs are arithmetic components, not redundant failover. A failed downstream price call reverts borrower valuation/liquidation. Source nonnegative-answer checks do not reject an elapsed updatedAt; pinned round timestamps do not establish an operational heartbeat guarantee. Proxy owner/aggregator identities are enumerated, but their signer/key-custody census and current operating cadence remain open.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "collateralParameters": [
           {
             "asset": "wstETH",
@@ -228,8 +244,8 @@
             "url": "https://api.morpho.org/graphql"
           },
           {
-            "label": "Pinned engine market parameters and immutable oracle getters",
-            "url": "https://etherscan.io/block/26110187"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Morpho Blue borrower and liquidation specification",
@@ -242,14 +258,30 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2"
+          },
+          {
+            "label": "Exact Compound wstETH composite feed source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f67e4d9bd67efa28236013288737d39aef48e79"
+          },
+          {
+            "label": "Exact upstream feed deployment source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f67e4d9bd67efa28236013288737d39aef48e79"
+          },
+          {
+            "label": "Exact upstream feed deployment source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x986b5e1e1755e3c2440e960477f25201b0a8bbd4"
+          },
+          {
+            "label": "Exact upstream feed deployment source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x86392dc19c0b719886221c78ab11eb8cf5c52812"
           }
         ]
       },
       {
         "id": "market-64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
         "label": "cbBTC / steakcUSDC borrower market",
-        "tier": "single-source-or-laggy",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Matched Chainlink-oracle source has no elapsed-time round-age rejection; composite feed legs are required, not redundant failover.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), exact engine parameters match the complete adapter census; LLTV is 86%. Composer inputs: BASE_FEED_1()=0xf4030086522a5beea4988f8ca5b36dbc97bee88c, BASE_FEED_2()=0x0000000000000000000000000000000000000000, BASE_VAULT()=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE()=1, QUOTE_FEED_1()=0x0000000000000000000000000000000000000000, QUOTE_FEED_2()=0x0000000000000000000000000000000000000000, QUOTE_VAULT()=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE()=1, SCALE_FACTOR()=100000000000000000000000000. Proxy 0xf4030086522a5beea4988f8ca5b36dbc97bee88c owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; aggregator=0x4a3411ac2948b33c69666b35cc6d055b27ea84f1. BTC/USD prices BTC, not a cbBTC discount; the cbBTC/BTC 1:1 assumption has no separate depeg feed in this composer.",
         "collateralAssets": [
           "cbBTC"
         ],
@@ -262,21 +294,21 @@
             "path": "IOracle.price for market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
             "address": "0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Chainlink BTC / USD",
             "path": "BASE_FEED_1()",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           }
         ],
-        "fallbackBehavior": "No alternative feed is selected by the matched Morpho composition; failed price calls revert borrower valuation/liquidation. Upstream feed availability/freshness and proxy replacement policy remain distinct unverified dependencies.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "fallbackBehavior": "No alternative feed or circuit breaker is selected by the exact composer. Zero feed/vault inputs contribute neutral factors; configured nonzero legs are arithmetic components, not redundant failover. A failed downstream price call reverts borrower valuation/liquidation. Source nonnegative-answer checks do not reject an elapsed updatedAt; pinned round timestamps do not establish an operational heartbeat guarantee. Proxy owner/aggregator identities are enumerated, but their signer/key-custody census and current operating cadence remain open.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "collateralParameters": [
           {
             "asset": "cbBTC",
@@ -293,8 +325,8 @@
             "url": "https://api.morpho.org/graphql"
           },
           {
-            "label": "Pinned engine market parameters and immutable oracle getters",
-            "url": "https://etherscan.io/block/26110187"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Morpho Blue borrower and liquidation specification",
@@ -307,14 +339,18 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa6d6950c9f177f1de7f7757fb33539e3ec60182a"
+          },
+          {
+            "label": "Exact upstream feed deployment source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
           }
         ]
       },
       {
         "id": "market-94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd",
         "label": "WETH / steakcUSDC borrower market",
-        "tier": "single-source-or-laggy",
-        "summary": "Exact engine idToMarketParams matches collateral, oracle and LLTV from the complete adapter inventory. Getter inputs are pinned; source-verified composition does not establish independent fallback, feed-admin closure or heartbeat. Matched Chainlink-oracle source has no elapsed-time round-age rejection; composite feed legs are required, not redundant failover.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26196563 (2026-10-15T07:57:11Z), exact engine parameters match the complete adapter census; LLTV is 86%. Composer inputs: BASE_FEED_1()=0xc0053f3fbccd593758258334dfce24c2a9a673ad, BASE_FEED_2()=0x0000000000000000000000000000000000000000, BASE_VAULT()=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE()=1, QUOTE_FEED_1()=0x0000000000000000000000000000000000000000, QUOTE_FEED_2()=0x0000000000000000000000000000000000000000, QUOTE_VAULT()=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE()=1, SCALE_FACTOR()=10000000000000000. Proxy 0xc0053f3fbccd593758258334dfce24c2a9a673ad owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; aggregator=0xad88fc1a810379ef4efbf2d97ede57e306178e5a. ETH/USD prices the wrapped ETH collateral with no separate quote feed.",
         "collateralAssets": [
           "WETH"
         ],
@@ -327,21 +363,21 @@
             "path": "IOracle.price for market 0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd",
             "address": "0x0f948cba8231db7898ef36a4212581ad7b1b4580",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           },
           {
-            "provider": "Pinned oracle input; operator/heartbeat not assumed",
+            "provider": "Chainlink ETH / USD",
             "path": "BASE_FEED_1()",
             "address": "0xc0053f3fbccd593758258334dfce24c2a9a673ad",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110187
+            "observedAt": "2026-10-15",
+            "observedBlock": 26196563
           }
         ],
-        "fallbackBehavior": "No alternative feed is selected by the matched Morpho composition; failed price calls revert borrower valuation/liquidation. Upstream feed availability/freshness and proxy replacement policy remain distinct unverified dependencies.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "fallbackBehavior": "No alternative feed or circuit breaker is selected by the exact composer. Zero feed/vault inputs contribute neutral factors; configured nonzero legs are arithmetic components, not redundant failover. A failed downstream price call reverts borrower valuation/liquidation. Source nonnegative-answer checks do not reject an elapsed updatedAt; pinned round timestamps do not establish an operational heartbeat guarantee. Proxy owner/aggregator identities are enumerated, but their signer/key-custody census and current operating cadence remain open.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26196563,
         "collateralParameters": [
           {
             "asset": "WETH",
@@ -358,8 +394,8 @@
             "url": "https://api.morpho.org/graphql"
           },
           {
-            "label": "Pinned engine market parameters and immutable oracle getters",
-            "url": "https://etherscan.io/block/26110187"
+            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+            "url": "https://etherscan.io/block/26196563"
           },
           {
             "label": "Morpho Blue borrower and liquidation specification",
@@ -372,6 +408,10 @@
           {
             "label": "Exact oracle deployment source response",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f948cba8231db7898ef36a4212581ad7b1b4580"
+          },
+          {
+            "label": "Exact upstream feed deployment source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc0053f3fbccd593758258334dfce24c2a9a673ad"
           }
         ]
       }
@@ -384,8 +424,8 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
           "confidence": "verified",
           "rationale": "Exact immutable VaultV2 accrueInterest/adapter realAssets determine the share-to-underlying rate; this local NAV path is internal accounting, not a borrower-price oracle. Borrower markets are separately enumerated below, not exempted.",
           "sources": [
@@ -398,8 +438,8 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
             },
             {
-              "label": "Pinned ethereum block 26107704",
-              "url": "https://etherscan.io/block/26107704"
+              "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+              "url": "https://etherscan.io/block/26196563"
             },
             {
               "label": "Morpho complete current vault inventory",
@@ -428,8 +468,8 @@
         "branchId": "market-b323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
           "confidence": "verified",
           "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
           "sources": [
@@ -438,8 +478,8 @@
               "url": "https://api.morpho.org/graphql"
             },
             {
-              "label": "Pinned engine market parameters and immutable oracle getters",
-              "url": "https://etherscan.io/block/26110187"
+              "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+              "url": "https://etherscan.io/block/26196563"
             },
             {
               "label": "Morpho Blue borrower and liquidation specification",
@@ -460,8 +500,8 @@
         "branchId": "market-64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
           "confidence": "verified",
           "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
           "sources": [
@@ -470,8 +510,8 @@
               "url": "https://api.morpho.org/graphql"
             },
             {
-              "label": "Pinned engine market parameters and immutable oracle getters",
-              "url": "https://etherscan.io/block/26110187"
+              "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+              "url": "https://etherscan.io/block/26196563"
             },
             {
               "label": "Morpho Blue borrower and liquidation specification",
@@ -492,8 +532,8 @@
         "branchId": "market-94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine12, exact source and RPC census)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
           "confidence": "verified",
           "rationale": "Exact engine idToMarketParams binds this oracle to the borrower collateral, LLTV and market ID; the market is in the full sole-adapter position inventory. Borrower/liquidation oracle risk applies notwithstanding internal ERC-4626 share accounting.",
           "sources": [
@@ -502,8 +542,8 @@
               "url": "https://api.morpho.org/graphql"
             },
             {
-              "label": "Pinned engine market parameters and immutable oracle getters",
-              "url": "https://etherscan.io/block/26110187"
+              "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
+              "url": "https://etherscan.io/block/26196563"
             },
             {
               "label": "Morpho Blue borrower and liquidation specification",

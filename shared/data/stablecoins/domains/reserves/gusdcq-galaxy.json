@@ -2,7 +2,7 @@
   "id": "gusdcq-galaxy",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "sourceKey": "erc4626-single-asset:ethereum:0x91600e31fbedc72433d4a57f16639cfe661be7d8:deployed",
       "name": "USDC deposited into Galaxy-curated Morpho lending markets",
       "pct": 100,
       "risk": "high",
@@ -13,18 +13,19 @@
       "issuerOrObligor": "Galaxy-curated Morpho lending markets and their borrowers",
       "riskFactors": [
         "credit",
-        "liquidity",
         "counterparty",
+        "liquidity",
         "smart-contract",
         "market",
+        "custody",
         "concentration"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "PilotVaults exact-vault reserve denominator review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
     "confidence": "verified",
     "sources": [
       {
@@ -50,13 +51,25 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df529c92b5744b13be10f06e0c0846186a24f79"
+      },
+      {
+        "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Coinbase: cbBTC is backed by BTC held in custody",
+        "url": "https://www.coinbase.com/cbbtc"
+      },
+      {
+        "label": "WBTC: custodial BTC reserves and Ethereum token identity",
+        "url": "https://www.wbtc.network/transparency"
       }
     ],
-    "rationale": "At Ethereum block 26114818, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and totalAssets()=10193155834240 atomic USDC. adaptersLength()=1; adapters(0)=0x7df529c92b5744b13be10f06e0c0846186a24f79. Its realAssets()=10192886801022 plus USDC.balanceOf(vault)=269033218 exactly equals totalAssets(). The unchanged 100% row represents the whole USDC-denominated idle-and-lending-position envelope, not a claim that every unit is deployed or idle, ownership of borrower collateral, or an independently signed financial reconciliation. No borrower collateral weights, borrowing absence, insolvency protection or stressed liquidity are inferred from this denominator check.",
+    "rationale": "At Ethereum block 26197000 (2026-10-15T09:24:59Z; hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d), asset() is USDC, totalSupply()=9981619073650174219359686 raw 18-decimal shares and totalAssets()=10183216864889 raw 6-decimal USDC. adaptersLength()=1 and adapters(0)=0x7df529c92b5744b13be10f06e0c0846186a24f79. Its four market IDs reconcile expectedSupplyAssets to realAssets()=10183216864889; idle USDC=0. Lender-claim allocations are WBTC 71.29467103%, cbBTC 26.23508602%, weETH 2.47024295% and wstETH 2 atomic USDC units. These are USDC lender-claim weights by borrower collateral, not holdings of the collateral tokens. All four adapter positions have zero borrow shares and zero posted collateral; immutable market LLTV is 86%. The 100% reserve row covers the entire USDC-denominated lending-and-idle envelope. It does not imply cash backing, ownership of pledged collateral or independent financial reconciliation. Immediate vault and adapter custody is on-chain. About 97.53% of the lender claims are against custodial WBTC/cbBTC collateral, so whole-book custody is mixed. Coinbase identifies itself as cbBTC backing custodian; WBTC discloses custodial BTC reserves without allocating this vault to named reserve custodians. No custody-provider share, legal segregation, insolvency priority, independent vault financial assurance or guaranteed stressed realization is inferred.",
     "compositionBasis": "Whole USDC-denominated envelope reconciled from the complete adapter roster plus idle underlying at one pinned block",
-    "compositionAsOf": "2026-10-03",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Parent denomination and current positions are identified. Borrower collateral custody and recovery protections, independent vault financial assurance and legal segregation remain unproven.",
+    "knownUnknownExposure": "The entire current USDC lender-position denominator and borrower-collateral identities are identified. Whole-book custody is mixed; collateral recovery rights, independent vault financial assurance and legal segregation remain unestablished.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
@@ -72,13 +85,17 @@
       {
         "name": "Morpho Blue Ethereum lending markets",
         "role": "other"
+      },
+      {
+        "name": "Coinbase (look-through cbBTC backing custodian)",
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
     "confidence": "probable",
     "sources": [
       {
@@ -104,8 +121,20 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7df529c92b5744b13be10f06e0c0846186a24f79"
+      },
+      {
+        "label": "Ethereum block 26197000, hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d, timestamp 2026-10-15T09:24:59Z; complete vault, adapter, market, role, gate and cap reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Coinbase: cbBTC is backed by BTC held in custody",
+        "url": "https://www.coinbase.com/cbbtc"
+      },
+      {
+        "label": "WBTC: custodial BTC reserves and Ethereum token identity",
+        "url": "https://www.wbtc.network/transparency"
       }
     ],
-    "uncertainty": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=10004999210318959713616421 raw 18-decimal shares and totalAssets()=10191951404573 raw 6-decimal USDC. One adapter 0x7df529c92b5744b13be10f06e0c0846186a24f79 enumerates 4 current market IDs; summed expectedSupplyAssets=10191682371355, idle underlying=269033218; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification."
+    "uncertainty": "At Ethereum block 26197000 (2026-10-15T09:24:59Z; hash 0x7f8f6377ac8f3948e1ac61d81c1a236b58c7ef57ef2743f18189cca1127aa66d), asset() is USDC, totalSupply()=9981619073650174219359686 raw 18-decimal shares and totalAssets()=10183216864889 raw 6-decimal USDC. adaptersLength()=1 and adapters(0)=0x7df529c92b5744b13be10f06e0c0846186a24f79. Its four market IDs reconcile expectedSupplyAssets to realAssets()=10183216864889; idle USDC=0. Lender-claim allocations are WBTC 71.29467103%, cbBTC 26.23508602%, weETH 2.47024295% and wstETH 2 atomic USDC units. These are USDC lender-claim weights by borrower collateral, not holdings of the collateral tokens. All four adapter positions have zero borrow shares and zero posted collateral; immutable market LLTV is 86%. Immediate vault and adapter custody is on-chain. About 97.53% of the lender claims are against custodial WBTC/cbBTC collateral, so whole-book custody is mixed. Coinbase identifies itself as cbBTC backing custodian; WBTC discloses custodial BTC reserves without allocating this vault to named reserve custodians. No custody-provider share, legal segregation, insolvency priority, independent vault financial assurance or guaranteed stressed realization is inferred."
   }
 }

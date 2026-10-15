@@ -1,10 +1,10 @@
 {
   "liveReservesConfig": {
     "adapter": "spark-usdc-v1-inventory",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "susdc-spark-v1",
-    "display": { "url": "https://docs.spark.finance/products/spark-savings", "label": "Spark V1 local receipt inventory" },
+    "display": { "url": "https://docs.spark.finance/products/spark-savings", "label": "Spark V1 five-chain receipt inventory" },
     "inputs": { "primary": { "kind": "onchain-evm", "chain": "ethereum", "rpcMode": "public-rpc" } }
   },
   "id": "susdc-spark-v1",
@@ -26,9 +26,9 @@
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact ethereum holder instrument 0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe is an operational ERC-4626 protocol-position claim. sUSDS shares in the Sky Savings Rate, obtained by converting deposited USDC through the Sky PSM. USDC is the deposit and ordinary redemption asset, not the held reserve asset. Verified deployment code and native accounting distinguish this receipt from direct parent fiat ownership and from Spark Savings V2.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdcSparkV1",
+    "rationale": "Five official native ERC-4626 deployments issue Spark USDC Vault shares against equal local sUSDS share balances: Ethereum, Arbitrum, Base, Optimism and Unichain. Ethereum converts USDC through the Sky PSM and deposits USDS into sUSDS; L2 vaults swap USDC directly for bridged sUSDS through PSM3. USDC is the deposit and ordinary redemption denomination, not the predominant reserve asset. The legacy V1 instrument is separate from Spark Savings V2 and the Spark-branded Morpho lending vaults. Official registries, the ChainSecurity assessment and pinned 2026-10-15 reads establish the protocol-position archetype.",
     "sources": [
       {
         "label": "Spark Savings documentation distinguishes Legacy V1 from V2",
@@ -49,16 +49,40 @@
       {
         "label": "Credential-free RPC endpoint; pinned read in review notes",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "ChainSecurity assessment covers both Ethereum and L2 legacy vault mechanics",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/audits/20250124-chainsecurity-audit.pdf"
       }
     ]
   },
-  "collateral": "sUSDS shares in the Sky Savings Rate, obtained by converting deposited USDC through the Sky PSM. USDC is the deposit and ordinary redemption asset, not the held reserve asset.",
-  "pegMechanism": "Deposit USDC through the PSM to obtain sUSDS and mint matching sUSDC shares; burn shares for USDC through PSM pocket liquidity. The exit function can instead return the corresponding sUSDS shares. Share NAV follows the Sky Savings Rate.",
+  "collateral": "Locally held sUSDS shares on Ethereum, Arbitrum, Base, Optimism and Unichain, plus residual USDC and Ethereum USDS dust. L2 sUSDS is a canonical bridge representation of Sky savings shares; ultimate Sky backing and bridge risks remain upstream.",
+  "pegMechanism": "Deposit USDC to obtain sUSDS and mint an equal number of sUSDC shares. Ethereum uses the Sky PSM and sUSDS; L2 vaults use PSM3 with a trusted cross-chain savings-rate provider. Ordinary USDC exits depend on the respective PSM's liquidity and, on Ethereum, tin/tout fees. exit() burns sUSDC for the matching local sUSDS shares without using PSM liquidity.",
   "detailProvider": "coingecko",
   "contracts": [
     {
       "chain": "ethereum",
       "address": "0xbc65ad17c5c0a2a4d159fa5a503f4992c7b545fe",
+      "decimals": 18
+    },
+    {
+      "chain": "arbitrum",
+      "address": "0x940098b108fb7d0a7e374f6eded7760787464609",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x3128a0f7f0ea68e7b7c9b00afa7e41045828e858",
+      "decimals": 18
+    },
+    {
+      "chain": "optimism",
+      "address": "0xcf9326e24ebffbef22ce1050007a43a3c0b6db55",
+      "decimals": 18
+    },
+    {
+      "chain": "unichain",
+      "address": "0x14d9143becc348920b68d123687045db49a016c6",
       "decimals": 18
     }
   ],
@@ -82,6 +106,18 @@
     {
       "label": "Current UsdcVault implementation creation, block 21969022 (2025-03-03)",
       "url": "https://etherscan.io/tx/0x9f672438ec394503ed67287b58395ef2237769541004c11869c9080a9282f236"
+    },
+    {
+      "label": "Legacy V1 audit reports",
+      "url": "https://github.com/sparkdotfi/spark-vaults/tree/master/audits"
+    },
+    {
+      "label": "Official multichain deployment registry",
+      "url": "https://github.com/sparkdotfi/spark-address-registry/tree/master/src"
+    },
+    {
+      "label": "Legacy V1 deposit, withdrawal and escape-hatch mechanics",
+      "url": "https://github.com/sparkdotfi/spark-vaults"
     }
   ],
   "custodyModel": "unknown",
@@ -92,8 +128,8 @@
   },
   "geckoId": "spark-usdc",
   "dependencyReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdcSparkV1",
     "confidence": "verified",
     "sources": [
       {
@@ -117,7 +153,7 @@
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "rationale": "USDC is the exact native deposit/redemption denomination and tracked variant parent. Reserve composition records separate held positions; borrower collateral is not custody of the lender receipt.",
+    "rationale": "Pinned asset() getters identify native USDC on all five independently issued legacy vaults. USDC is the serial denomination and tracked variant parent; held local sUSDS, including its L2 bridge representations, is separately linked through reserve composition. These independently deposit-backed sUSDC supplies sum; remote sUSDC is not minted against escrowed Ethereum sUSDC.",
     "relationships": [
       {
         "id": "usdc-circle",

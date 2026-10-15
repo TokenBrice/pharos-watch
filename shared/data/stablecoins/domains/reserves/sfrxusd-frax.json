@@ -2,7 +2,7 @@
   "id": "sfrxusd-frax",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xcacd6fd266af91b8aed52accc382b4e165586e29",
+      "sourceKey": "erc4626-single-asset:ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6:deployed",
       "name": "Staked Frax USD deployed strategy positions",
       "pct": 100,
       "risk": "high",

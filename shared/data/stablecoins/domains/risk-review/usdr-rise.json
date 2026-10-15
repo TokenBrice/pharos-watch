@@ -30,17 +30,21 @@
       {
         "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
         "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+      },
+      {
+        "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+        "url": "https://rpc.risechain.com"
       }
     ],
-    "evidence": "At rise block 23375290, symbol/decimals and EIP-1967 implementation/admin were re-read. Local backing balance was 4,186,507.178834 M against 4,166,902.771484 USDR supply. The verified MYieldToOne/Freezable source exposes role-gated holder freezes and rejects frozen-account transfers and wrap/unwrap interactions. The current FREEZE_MANAGER and DEFAULT_ADMIN holder is the observed 2-of-3 operational Safe 0xb0ea3203b80d67c58f6709779c5fbac641aab769.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At RISE block 24455282 (2026-10-15T10:44:01Z), the extension held 4,191,272.318305 M against 4,166,891.817608 USDR, and JMI totalAssets() was zero. Token and facility EIP-1967 implementations remain 0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b and 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e; both runtimes match the explorer verified bytecode. Verified MYieldToOne/Freezable code checks the caller, sender and recipient on transfers, the relevant participants on wrapping/unwrapping, and owner/spender on approvals. Role-gated freeze controls are direct, not only inherited. At this pin FREEZE_MANAGER_ROLE and DEFAULT_ADMIN_ROLE remain held by the retained 2-of-3 operational Safe 0xb0ea3203b80d67c58f6709779c5fbac641aab769; paused() is false. Unpaused state does not remove the ability to restrict holders.",
+    "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Sole authored native child-token deployment. The reviewed local wrapping/custodian mint path issues the child on this chain; parent-token cross-chain and custody risks remain inherited. No global uncatalogued bridge-liability absence is asserted.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdrRise primary-source review 2026-10-15",
     "confidence": "probable",
     "sources": [
       {
@@ -70,6 +74,10 @@
       {
         "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
         "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+      },
+      {
+        "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+        "url": "https://rpc.risechain.com"
       }
     ],
     "routes": [
@@ -85,9 +93,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "The sole authored child token is locally minted against parent-token custody. No child bridge path is established; this does not certify absence of uncatalogued integrations or parent bridge risks.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 23375290,
+        "reviewNote": "The sole disclosed child deployment is locally minted against M. RISE describes Bungee and M0 solver acquisition into USDR on RISE; USDC source-chain support is not a child-token deployment on those chains. This bounded native-deployment review does not certify absence of uncatalogued integrations or parent-token bridge risks.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 24455282,
         "sources": [
           {
             "label": "RISE Dollar product documentation (accessed 2026-10-02)",
@@ -116,6 +124,10 @@
           {
             "label": "Guardian JMI/MYieldToOne/Freezable/SwapFacility code review, 2025-12-12; not a reserve audit or exact deployment certification",
             "url": "https://github.com/m0-foundation/evm-m-extensions/blob/main/audits/JMI/M0_EVM-M_Extensions_Review_report.pdf"
+          },
+          {
+            "label": "RISE block 24455282, 2026-10-15T10:44:01Z, hash 0x596c6901cbd4908d8f93a92f49d70b485ae8206db5ba78a99ea87c26b9318af4",
+            "url": "https://rpc.risechain.com"
           }
         ]
       }

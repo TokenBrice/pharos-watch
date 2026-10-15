@@ -5,8 +5,25 @@
     "authorityPosture": "none-resolved-mint",
     "confidence": "verified",
     "summary": "Deposits mint locally asset-backed shares; parent durable issuance remains inherited.",
+    "headline": "Immutable deposit-backed shares have no privileged local minter; xDAI bridge and Sky risks remain inherited.",
     "inheritedFrom": "xdai-gnosis",
     "economicCapSemantics": "bounded",
+    "capSemanticsReview": {
+      "verdict": "bounded-by-construction",
+      "rationale": "The complete immutable SavingsXDai/ERC4626 source requires deposit() and mint() to transfer the computed WXDAI assets into the vault before minting shares. There is no wrapper-local privileged mint, minter authorization, cap setter, price setter, upgrade or asset-allocation path. maxDeposit/maxMint are permissionless uint256-max limits, not an administrator's unbacked issuance power. The bound is deposit-backed construction, not a finite lifetime supply ceiling. Upstream xDAI bridge issuance and Sky exposure remain inherited through the xdai-gnosis serial claim rather than a second local mint charge.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
+      "sources": [
+        {
+          "label": "Complete verified SavingsXDai and imported ERC4626/ERC20 source",
+          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+        },
+        {
+          "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+          "url": "https://gnosis.blockscout.com/block/48768019"
+        }
+      ]
+    },
     "reconciliation": "not-applicable",
     "supervision": "none",
     "controls": [
@@ -20,9 +37,10 @@
         "role": "wrapper",
         "authorityType": "contract",
         "directMintAbility": "none",
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 48557408,
+        "observedAt": "2026-10-15",
+        "observedBlock": 48768019,
         "sources": [
           {
             "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
@@ -33,11 +51,11 @@
             "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
           },
           {
-            "label": "Pinned Gnosis block 48557408",
-            "url": "https://gnosis.blockscout.com/block/48557408"
+            "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+            "url": "https://gnosis.blockscout.com/block/48768019"
           }
         ],
-        "evidence": "Reviewed source and asset/share reads establish deposit-backed share minting, not an unrestricted privileged native share minter."
+        "evidence": "Complete SavingsXDai, ERC4626 and ERC20 source census finds only user deposits/mints backed by transferred WXDAI; no local owner, role administrator, privileged share mint, cap setter, pause, seizure, upgrade or strategy allocator exists. The immutable asset and current runtime are corroborated at Gnosis block 48768019. Permissionless maxDeposit/maxMint return uint256 maximum, but neither creates unbacked shares or an administrator able to raise an issuance cap. Upstream bridge interest distribution changes assets per share, not privileged share issuance."
       }
     ],
     "review": {
@@ -51,20 +69,20 @@
           "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
         },
         {
-          "label": "Pinned Gnosis block 48557408",
-          "url": "https://gnosis.blockscout.com/block/48557408"
+          "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+          "url": "https://gnosis.blockscout.com/block/48768019"
         }
       ],
-      "evidence": "Fresh pinned Gnosis reads show a zero EIP-1967 implementation slot and owner() reverting. Complete verified SavingsXDai plus imported ERC-4626 code has fixed WXDAI asset, no local owner, proxy upgrade or privileged share mint. Parent xDAI mint control is not treated as absent.",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "evidence": "At Gnosis block 48768019 (2026-10-15T10:43:10Z), https://rpc.gnosischain.com returned the fixed WXDAI asset, a zero EIP-1967 implementation slot and runtime whose SHA256 over the 0x-prefixed hex string is 3a090cb03bc4708c50986acd44093c4b5220646139a0229bad1e12fb2aabecef. owner() reverted; this is only corroboration, not proof of absence by itself. The complete verified SavingsXDai and imported ERC4626/ERC20 source positively establishes deposit-backed share minting with no privileged local mint, cap expansion or upgrade path. Parent xDAI control is inherited and is not treated as absent.",
+      "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable"
     },
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
-      "observedAt": "2026-10-02",
-      "observedBlock": 48557408,
+      "observedAt": "2026-10-15",
+      "observedBlock": 48768019,
       "sources": [
         {
           "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
@@ -75,8 +93,8 @@
           "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
         },
         {
-          "label": "Pinned Gnosis block 48557408",
-          "url": "https://gnosis.blockscout.com/block/48557408"
+          "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+          "url": "https://gnosis.blockscout.com/block/48768019"
         }
       ]
     }

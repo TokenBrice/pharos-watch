@@ -6,11 +6,12 @@ import { buildWrapperLocalFacts } from "../safety-score-v9/fact-set-wrapper";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { makeV9RoleExtension, makeV9TwoAssetFixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { SafetyScoreV9WrapperLocalReviewSchema } from "@shared/types/safety-score-v9-wrapper-local-review";
+import { allocationReviewClockSec } from "@shared/types/safety-score-v9-allocation";
 import wrapperLocalReviews from "@shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json";
 
 function intakeFixture(assetId: string) {
   const review = getSafetyScoreV9WrapperLocalReviews(assetId)[0]!;
-  const fixed = makeV9TwoAssetFixedInput({ clockSec: 1791184659 });
+  const fixed = makeV9TwoAssetFixedInput({ clockSec: Math.ceil(allocationReviewClockSec(review.reviewedAt)) });
   const extension = makeV9RoleExtension(fixed, {
     alpha: [{ upstreamAssetId: "beta", dependencyType: "wrapper", economicRole: "serial-claim", weight: 1, failureDomains: [] }],
   });
@@ -62,9 +63,12 @@ describe("wrapper-local reviewed registry intake contract", () => {
   });
 
   for (const assetId of ["senpathusd-sentora", "stusd-stoneyield"]) {
-    it.each(["expired", "identity-mismatch"] as const)(`rejects ${assetId} %s at admission without inventing a local fact`, (rejection) => {
+    it.each(["expired", "future-review", "identity-mismatch"] as const)(`rejects ${assetId} %s at admission without inventing a local fact`, (rejection) => {
       const fixture = intakeFixture(assetId);
       if (rejection === "expired") fixture.retained.expiresAtSec = fixture.fixed.clockSec;
+      if (rejection === "future-review") {
+        fixture.retained.reviewedAt = new Date((fixture.fixed.clockSec + 1) * 1_000).toISOString();
+      }
       if (rejection === "identity-mismatch") {
         const identity = fixture.wrapper.allocationScopeIdentityReview!;
         const row = identity.deployments[0]!;

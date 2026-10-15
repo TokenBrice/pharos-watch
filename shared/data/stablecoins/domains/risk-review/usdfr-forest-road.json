@@ -2,9 +2,17 @@
   "id": "usdfr-forest-road",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02",
+    "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
+    "reviewedAt": "2026-10-15",
     "sources": [
+      {
+        "label": "Pinned token complianceModule and paused state at Ethereum block 26197399, 2026-10-15T10:44:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Exact USDfr implementation screens _update with ComplianceRegistry.canTransfer",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9eef9b0b566c82e0802ced653dc8c0a5df1edc26"
+      },
       {
         "label": "Canonical Ethereum deployment addresses",
         "url": "https://forestroadvault.com/docs/addresses"
@@ -28,11 +36,11 @@
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
     "branchModel": "single-path",
-    "summary": "ReserveManager values loan principal/accrual and impairment using AttestationOracle 0xb53977a70d755a56d3ce26926acb4c33f7861c61. At Ethereum block 26110192 its live ATTESTER_ROLE has two keys, 0x759c2cd90594fdb114c5d37c5c3ea78a0033ed35 and 0xe2e544eded1189b8a5bda86a6f474011a397efb0; threshold(kind)=1 for kinds 0/1 and 2 for kinds 2-9. Privileged signed loan facts and governance professional impairment marks affect issuance/exit, not a decentralized NAV feed. Key independence and economic truth of signed marks remain unknown.",
+    "summary": "ReserveManager values loan principal/accrual and impairment using AttestationOracle 0xb53977a70d755a56d3ce26926acb4c33f7861c61. At Ethereum block 26197399 (2026-10-15T10:44:59Z), its complete deployment-to-pin role-event census and hasRole reads retain two ATTESTER_ROLE keys, 0x759c2cd90594fdb114c5d37c5c3ea78a0033ed35 and 0xe2e544eded1189b8a5bda86a6f474011a397efb0; threshold(kind)=1 for kinds 0/1 and 2 for kinds 2-9. The ERC-1967 implementation remains 0x870deb459512099e70e9a640cf3140a0d969fc18. Privileged signed loan facts and governance impairment marks affect issuance/exit, not a decentralized NAV feed. Key independence and economic truth of signed marks remain unknown.",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-      "reviewedAt": "2026-10-02",
+      "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
+      "reviewedAt": "2026-10-15",
       "rationale": "USDfr is a senior protocol dollar claim, using loan-book reserve and attested impairment marks in issuance/exit. The curated review covers this top-level price authority without inventing a CDP collateral-market branch set.",
       "sources": [
         {
@@ -49,8 +57,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine05 primary-source and pinned-RPC review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
     "confidence": "verified",
     "sources": [
       {
@@ -58,12 +66,12 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x870deb459512099e70e9a640cf3140a0d969fc18"
       },
       {
-        "label": "Attester grant/revoke census, all 156 logs through pagination end",
+        "label": "Historical attester grant/revoke source; complete current census re-pinned below",
         "url": "https://eth.blockscout.com/api/v2/addresses/0xb53977a70d755a56d3ce26926acb4c33f7861c61/logs"
       },
       {
-        "label": "Threshold and role membership reads at Ethereum block 26110192",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Oracle implementation, exhaustive role census and thresholds at Ethereum block 26197399, 2026-10-15T10:44:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Forest Road USDfr and credit-book mechanism",
@@ -82,8 +90,8 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "The official live roster and exact CoinGecko contract identify Ethereum-only native USDfr. No bridge representation or separate cross-chain messaging controller is authored.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfrForestRoad primary-source and pinned-state review",
     "confidence": "verified",
     "sources": [
       {
@@ -106,8 +114,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Ethereum-only USDfr liability is issued by MintRedeemController; sUSDfr is a separate yield instrument, not another USDfr supply deployment.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107707,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197399,
         "sources": [
           {
             "label": "Canonical Ethereum deployment addresses",

@@ -12,15 +12,15 @@
   "variantOf": "usdt-tether",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdt-tether",
-  "collateral": "USDT-denominated idle balances and lender positions in Gauntlet-curated Morpho markets. Borrower collateral, valuation and market liquidity vary; the share does not represent cash held solely at the parent issuer.",
-  "pegMechanism": "ERC-4626 deposits exchange USDT for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDT and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets.",
+  "collateral": "USDT-denominated idle balances and lender positions in Gauntlet-curated Morpho markets, including loans secured by WBTC, cbBTC, wstETH and sUSDS. Borrower collateral secures the loans rather than being held directly by the vault; custodial-BTC, collateral-valuation and market-liquidity risks remain. Shares are not direct claims on Tether reserves.",
+  "pegMechanism": "ERC-4626 deposits exchange USDT for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDT and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets. VaultV2 deliberately returns zero from maxWithdraw and maxRedeem as conservative underestimates, not measurements of available exit liquidity. The current adapter force-deallocation penalty is 0.01%, separately governed from ordinary withdrawal accounting.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact Ethereum 0xf3557ad5e984211ac8a0874a670344f2c3376471 issues a proportional operational position in Morpho lending strategies over USDT. VaultV2 exit code burns shares against available assets and recognizes losses; holder exposure differs from the fiat-cash parent. At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=4983174896491884983364107 raw 18-decimal shares and totalAssets()=5109830264097 raw 6-decimal USDT. One adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates 8 current market IDs; summed expectedSupplyAssets=5109830264096, idle underlying=1; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol batch64 review (Rev_GtusdtpGauntlet)",
+    "rationale": "Exact Ethereum 0xf3557ad5e984211ac8a0874a670344f2c3376471 issues proportional operational positions in Morpho lending strategies over USDT. Deposit-backed ERC-4626 accounting and recognized supplier losses distinguish the share from its fiat-cash parent. At Ethereum block 26197394 (2026-10-15T10:43:59.000Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7; totalSupply()=256704082652908784980765 raw 18-decimal shares; totalAssets()=263483878807 raw 6-decimal USDT. The sole adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates eight current markets; expectedSupplyAssets sums to 263483878807, equal to adapter realAssets() and vault totalAssets(), with zero idle USDT. Each adapter position has zero borrow shares and zero posted collateral. Current allocation by borrower collateral is WBTC 147170.970642 USDT (55.855778% of NAV), sUSDS 116312.189320 USDT (44.143949% of NAV), cbBTC 0.391864 USDT (0.000149% of NAV), wstETH 0.326981 USDT (0.000124% of NAV). These are lender-asset weights, not direct holdings of borrower collateral. Functional executable correspondence was independently reproduced against Sourcify match 30034094: all bytes match after masking only compiler-declared asset/decimals/virtualShares immutables and CBOR metadata; every immutable occurrence matches exact-deployment getters. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Blockscout remains partially verified; functional correspondence does not establish complete metadata or creation-bytecode identity, financial assurance or legal segregation.",
     "sources": [
       {
         "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
@@ -45,6 +45,18 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0fc9b889756e1241a4d89472db701c0417c26d89"
+      },
+      {
+        "label": "Ethereum block 26197394, hash 0xb3e5604e82dba582540491dd864b3db2325110e5155a603c3c6f06b33e2ac9cc, timestamp 2026-10-15T10:43:59.000Z; pinned on-chain review 2026-10-15",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Functional VaultV2 compiler/runtime correspondence; declared immutables and metadata masks only",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
+      },
+      {
+        "label": "Exact native share deployment and ERC-4626 holder mechanics",
+        "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics/"
       }
     ]
   },
@@ -52,12 +64,36 @@
   "geckoId": "gauntlet-usdt-prime",
   "links": [
     {
-      "label": "Exact Gauntlet USDT Prime V2 Morpho Vault V2 deployment",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
     },
     {
-      "label": "Docs",
+      "label": "Morpho: Curation documentation",
       "url": "https://docs.morpho.org/curate/"
+    },
+    {
+      "label": "Gauntlet VaultBook",
+      "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/token/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+    },
+    {
+      "label": "Terms",
+      "url": "https://www.gauntlet.xyz/tos"
+    },
+    {
+      "label": "Vault disclaimer",
+      "url": "https://storage.googleapis.com/gauntlet-public-web-assets/gauntlet-branded-vault-disclaimer-dec-2025.pdf"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/gauntlet_xyz"
     }
   ],
   "contracts": [
@@ -68,7 +104,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Gauntlet USDT Prime V2 Morpho V2 lending interest",
@@ -76,7 +112,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "gtusdtp-gauntlet",
     "display": {
@@ -99,9 +135,9 @@
         "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
       },
       "deployedExposure": {
-        "basis": "Complete current adapter census at Ethereum block 26107704 identifies USDT-denominated lender positions, not idle cash; credit, collateral and liquidity risks remain local.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
+        "basis": "At Ethereum block 26197394 (2026-10-15T10:43:59.000Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7; totalSupply()=256704082652908784980765 raw 18-decimal shares; totalAssets()=263483878807 raw 6-decimal USDT. The sole adapter 0x0fc9b889756e1241a4d89472db701c0417c26d89 enumerates eight current markets; expectedSupplyAssets sums to 263483878807, equal to adapter realAssets() and vault totalAssets(), with zero idle USDT. Each adapter position has zero borrow shares and zero posted collateral. Current borrower-collateral allocation: WBTC 147170.970642 USDT (55.855778% of NAV), sUSDS 116312.189320 USDT (44.143949% of NAV), cbBTC 0.391864 USDT (0.000149% of NAV), wstETH 0.326981 USDT (0.000124% of NAV). Position accounting is not an assurance report or an executable withdrawal quote.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

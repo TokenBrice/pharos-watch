@@ -2,10 +2,11 @@
   "id": "sfrax-frax",
   "oracleRisk": {
     "tier": "oracleless",
+    "role": "coin-price-feed",
     "summary": "Exact immutable local share accounting holds legacy FRAX and distributes rewards without an external price read or borrower/liquidation branch. The IORB benchmark targets yield, not mint/redemption valuation. Parent FRAX exposure remains inherited.",
     "branchModel": "single-path",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine11",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -15,8 +16,8 @@
     ],
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement Refine11",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
       "rationale": "Exact immutable local share accounting holds legacy FRAX and distributes rewards without an external price read or borrower/liquidation branch. The IORB benchmark targets yield, not mint/redemption valuation. Parent FRAX exposure remains inherited.",
       "sources": [
         {
@@ -33,8 +34,8 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement Refine11",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
           "rationale": "Exact immutable local share accounting holds legacy FRAX and distributes rewards without an external price read or borrower/liquidation branch. The IORB benchmark targets yield, not mint/redemption valuation. Parent FRAX exposure remains inherited.",
           "sources": [
             {
@@ -59,40 +60,670 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
       },
       {
-        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-        "url": "https://etherscan.io/block/26107702"
+        "label": "Ethereum block 26197388, vault accounting and complete Safe census at 2026-10-15T10:42:47Z",
+        "url": "https://etherscan.io/block/26197388"
       },
       {
         "label": "Pinned Frax reward accounting implementation",
         "url": "https://raw.githubusercontent.com/FraxFinance/staked-frax-erc4626/9e42ee6b39fb1c08c6dc3607707b8b190f2de58c/src/contracts/LinearRewardsErc4626.sol"
       }
     ],
-    "evidence": "At block 26107702, the exact deployed source exposes ordinary ERC-20 share transfers and no administrator-only holder blacklist, seizure or forced burn. The fixed StakedFrax implementation has no upgrade entrypoint or share whitelist. The tracked child inherits frax-frax token/reserve/control exposure; absence of a local blacklist is not an exemption from inherited wrapper semantics.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197388 (2026-10-15T10:42:47Z), the complete verified immutable deployment source matches runtime bytecode and exposes ordinary ERC-20 transfers without a privileged holder blacklist, seizure, forced burn or upgrade entrypoint. A read-only eth_call from funded holder 0x3afdc9bca9213a35503b077a6072f3d0d5ab0840 transferring 1e18 shares to 0x000000000000000000000000000000000000dead returned true; no transaction was broadcast. Parent FRAX token, reserve and control exposure remains inherited; permissionless local shares do not establish freedom from upstream restrictions.",
+    "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "Only the exact native Ethereum ERC-4626 deployment is authored; no share bridge representation is claimed.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "confidence": "verified",
+    "tier": "opaque-or-unknown",
+    "summary": "The native Ethereum vault has eight independently verified legacy sFRAX representations. Their bridge mint, upgrade and messaging controls are separate from native share issuance; a complete cross-chain transport and liability reconciliation is not established.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SfraxFrax batch64 primary-evidence review",
+    "confidence": "manual-review",
     "sources": [
       {
-        "label": "Frax sFRAX staking and redemption documentation",
-        "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax"
+        "label": "Historical issuer sFRAX deployment table, checked against current onchain identities",
+        "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
       },
       {
-        "label": "Verified exact deployed StakedFrax source",
+        "label": "Exact native Ethereum share source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32",
+        "protocol": "StakedFrax ERC-4626",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Immutable legacy FRAX-backed native shares; external representations and transport administrators are separate route risks.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
+        "sources": [
+          {
+            "label": "Exact native StakedFrax source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+          },
+          {
+            "label": "Ethereum fixed-block identity and asset accounting",
+            "url": "https://etherscan.io/block/26197388"
+          }
+        ]
       },
       {
-        "label": "Ethereum block 26107702, fixed-block vault, adapter and Safe reads",
-        "url": "https://etherscan.io/block/26107702"
+        "id": "arbitrum:0xe3b3fe7bca19ca77ad877a5bebab186becfad906",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe3b3fe7bca19ca77ad877a5bebab186becfad906",
+        "protocol": "Frax legacy sFRAX representation",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint; complete active minter-to-escrow transport and liability matching remains unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 515038652,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "arbitrum pinned token identity at block 515038652 (2026-10-15T10:57:14.000Z)",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ]
       },
       {
-        "label": "Pinned Frax reward accounting implementation",
-        "url": "https://raw.githubusercontent.com/FraxFinance/staked-frax-erc4626/9e42ee6b39fb1c08c6dc3607707b8b190f2de58c/src/contracts/LinearRewardsErc4626.sol"
+        "id": "avalanche:0x3405e88af759992937b84e58f2fe691ef0eea320",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x3405e88af759992937b84e58f2fe691ef0eea320",
+        "protocol": "Frax legacy sFRAX representation",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the historical issuer table, which lists this Avalanche representation without a LayerZero label. The explorer response did not provide verified source. Complete implementation, controller, minter, transport and escrow closure remains unresolved; a LayerZero route is not inferred.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 97610485,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "avalanche pinned token identity at block 97610485 (2026-10-15T10:57:14.000Z)",
+            "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc"
+          }
+        ]
+      },
+      {
+        "id": "base:0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e",
+        "protocol": "LayerZero legacy sFRAX OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified StakedFraxOFT allows LayerZero credit and owner-managed auxiliary minter/burners; current complete peer, DVN, minter and escrow reconciliation remains unresolved. Issuer documentation identifies LayerZero lockbox settlement and disclaims a direct Frax protocol liability; exact current DVN/peer/minter configuration is not certified by this architectural classification.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52636244,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "base pinned token identity at block 52636244 (2026-10-15T10:57:15.000Z)",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Issuer LayerZero architecture and lockbox-only holder claim",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          }
+        ]
+      },
+      {
+        "id": "blast:0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e",
+        "sourceChain": "ethereum",
+        "destinationChain": "blast",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e",
+        "protocol": "LayerZero legacy sFRAX OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified StakedFraxOFT allows LayerZero credit and owner-managed auxiliary minter/burners; current complete peer, DVN, minter and escrow reconciliation remains unresolved. Issuer documentation identifies LayerZero lockbox settlement and disclaims a direct Frax protocol liability; exact current DVN/peer/minter configuration is not certified by this architectural classification.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 41626011,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "blast pinned token identity at block 41626011 (2026-10-15T10:57:17.000Z)",
+            "url": "https://api-blast-mainnet-archive.n.dwellir.com"
+          },
+          {
+            "label": "Issuer LayerZero architecture and lockbox-only holder claim",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xa63f56985f9c7f3bc9ffc5685535649e0c1a55f3",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa63f56985f9c7f3bc9ffc5685535649e0c1a55f3",
+        "protocol": "Frax legacy sFRAX representation",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint; complete active minter-to-escrow transport and liability matching remains unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 127774470,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "bsc pinned token identity at block 127774470 (2026-10-15T10:57:19.000Z)",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "ethereum",
+        "destinationChain": "fraxtal",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero legacy sFRAX OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. This legacy sFRAX proxy is distinct from the Fraxtal native address now identifying as sfrxUSD. Complete implementation, administrator and transport closure remains unresolved. Issuer documentation identifies LayerZero lockbox settlement and disclaims a direct Frax protocol liability; exact current DVN/peer/minter configuration is not certified by this architectural classification.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 42625564,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "fraxtal pinned token identity at block 42625564 (2026-10-15T10:57:19.000Z)",
+            "url": "https://rpc.frax.com"
+          },
+          {
+            "label": "Issuer LayerZero architecture and lockbox-only holder claim",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          }
+        ]
+      },
+      {
+        "id": "metis:0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e",
+        "sourceChain": "ethereum",
+        "destinationChain": "metis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e",
+        "protocol": "LayerZero legacy sFRAX OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the historical issuer table. At Metis block 23279223, runtime hex is byte-for-byte identical to the source-verified Base and Blast StakedFraxOFT deployments at blocks 52636244 and 41626011; UTF-8 runtime-hex SHA256 is dad061bb97660f6993050d3e8147b8a3407a2a2576538d5a2ae48b14fadb2252. Authorized minter-burners can burn holder balances without approval, establishing a restrictable transfer posture. Issuer documentation identifies LayerZero lockbox settlement rather than a direct Frax protocol liability; complete current DVN, peer and minter configuration remains unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 23279223,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "metis pinned token identity at block 23279223 (2026-10-15T10:57:14.000Z)",
+            "url": "https://andromeda.metis.io/?owner=1088"
+          },
+          {
+            "label": "Issuer LayerZero architecture and lockbox-only holder claim",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x2dd1b4d4548accea497050619965f91f78b3b532",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2dd1b4d4548accea497050619965f91f78b3b532",
+        "protocol": "Frax legacy sFRAX representation",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Identity, 18 decimals and deployed code were pinned independently of the stale issuer table. Verified CrossChainCanonicalV2 permits owner/timelock-authorized minter membership and minter_mint; complete active minter-to-escrow transport and liability matching remains unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 158231534,
+        "sources": [
+          {
+            "label": "Issuer deployment identity lead",
+            "url": "https://docs.frax.finance/frax-v3-100-cr-and-more/sfrax-token-addresses.md"
+          },
+          {
+            "label": "optimism pinned token identity at block 158231534 (2026-10-15T10:57:25.000Z)",
+            "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "arbitrum-legacy-sfrax-bridge-governor",
+        "routeRefs": [
+          "arbitrum:0xe3b3fe7bca19ca77ad877a5bebab186becfad906"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xe61d9ed1e5dc261d1e90a99304fadcef2c76fd10",
+        "label": "arbitrum legacy sFRAX bridge governor",
+        "authorityType": "safe",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515038652,
+        "sources": [
+          {
+            "label": "Source-reviewed representation or adapter contract",
+            "url": "https://arbiscan.io/address/0xe3b3fe7bca19ca77ad877a5bebab186becfad906#code"
+          },
+          {
+            "label": "arbitrum pinned root controller census at block 515038652",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned owner identifies this bridge governor. CrossChainCanonicalV2 owner or timelock may add/remove minters and replace timelock; admitted minters may mint arbitrary representation balances without a token-level cap. This is bridge representation issuance, not arbitrary minting of native Ethereum vault shares.",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0xee8787aa507958905edbd99ccdc53f223d4b60b1",
+            "0xc28339c70054bc22255a74e927a0b9e9a475f224",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "observedBlock": 515038652,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "bsc-legacy-sfrax-bridge-governor",
+        "routeRefs": [
+          "bsc:0xa63f56985f9c7f3bc9ffc5685535649e0c1a55f3"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "bsc",
+        "controllerAddress": "0x8811da0385ccf1848b21475a42ea4d07fc5d964a",
+        "label": "bsc legacy sFRAX bridge governor",
+        "authorityType": "safe",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-15",
+        "observedBlock": 127774470,
+        "sources": [
+          {
+            "label": "Source-reviewed representation or adapter contract",
+            "url": "https://bscscan.com/address/0xa63f56985f9c7f3bc9ffc5685535649e0c1a55f3#code"
+          },
+          {
+            "label": "bsc pinned root controller census at block 127774470",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          }
+        ],
+        "evidence": "Pinned owner identifies this bridge governor. CrossChainCanonicalV2 owner or timelock may add/remove minters and replace timelock; admitted minters may mint arbitrary representation balances without a token-level cap. This is bridge representation issuance, not arbitrary minting of native Ethereum vault shares.",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0xee8787aa507958905edbd99ccdc53f223d4b60b1",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0xc28339c70054bc22255a74e927a0b9e9a475f224",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "observedBlock": 127774470,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "optimism-legacy-sfrax-bridge-governor",
+        "routeRefs": [
+          "optimism:0x2dd1b4d4548accea497050619965f91f78b3b532"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "optimism",
+        "controllerAddress": "0x0df840dcbf1229262a4125c1fc559bd338ec9491",
+        "label": "optimism legacy sFRAX bridge governor",
+        "authorityType": "safe",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-15",
+        "observedBlock": 158231534,
+        "sources": [
+          {
+            "label": "Source-reviewed representation or adapter contract",
+            "url": "https://optimistic.etherscan.io/address/0x2dd1b4d4548accea497050619965f91f78b3b532#code"
+          },
+          {
+            "label": "optimism pinned root controller census at block 158231534",
+            "url": "https://api-optimism-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned owner identifies this bridge governor. CrossChainCanonicalV2 owner or timelock may add/remove minters and replace timelock; admitted minters may mint arbitrary representation balances without a token-level cap. This is bridge representation issuance, not arbitrary minting of native Ethereum vault shares.",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0xee8787aa507958905edbd99ccdc53f223d4b60b1",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0xc28339c70054bc22255a74e927a0b9e9a475f224"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 158231534,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "base-legacy-sfrax-bridge-governor",
+        "routeRefs": [
+          "base:0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "base",
+        "controllerAddress": "0xcbfd4ef00a8cf91fd1e1fe97dc05910772c15e53",
+        "label": "base legacy sFRAX bridge governor",
+        "authorityType": "safe",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52636244,
+        "sources": [
+          {
+            "label": "Source-reviewed representation or adapter contract",
+            "url": "https://basescan.org/address/0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e#code"
+          },
+          {
+            "label": "base pinned root controller census at block 52636244",
+            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned owner identifies this bridge governor. StakedFraxOFT owner may replace LayerZero peers/delegate and add/remove auxiliary minter-burners; those actors may mint/burn representation balances. Complete current transport configuration and role census remain unresolved.",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "observedBlock": 52636244,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "blast-legacy-sfrax-bridge-governor",
+        "routeRefs": [
+          "blast:0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config"
+        ],
+        "controllerChain": "blast",
+        "controllerAddress": "0x33a133020b2c2cd41a24f74033b11ec2fc0bf97a",
+        "label": "blast legacy sFRAX bridge governor",
+        "authorityType": "safe",
+        "canRaiseCap": true,
+        "observedAt": "2026-10-15",
+        "observedBlock": 41626011,
+        "sources": [
+          {
+            "label": "Source-reviewed representation or adapter contract",
+            "url": "https://blastscan.io/address/0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e#code"
+          },
+          {
+            "label": "blast pinned root controller census at block 41626011",
+            "url": "https://api-blast-mainnet-archive.n.dwellir.com"
+          }
+        ],
+        "evidence": "Pinned owner identifies this bridge governor. StakedFraxOFT owner may replace LayerZero peers/delegate and add/remove auxiliary minter-burners; those actors may mint/burn representation balances. Complete current transport configuration and role census remain unresolved.",
+        "threshold": 3,
+        "signerCount": 6,
+        "safe": {
+          "owners": [
+            "0x381e2495e683868f693aa5b1414f712f21d34b40",
+            "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+            "0x8d8290d49e88d16d81c6adf6c8774ed88762274a"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "observedBlock": 41626011,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "ethereum-legacy-sfrax-bridge-governor",
+        "routeRefs": [
+          "ethereum:0xa663b02cf0a4b149d2ad41910cb81e23e1c41c32"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "escrow"
+        ],
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+        "label": "ethereum legacy sFRAX bridge governor",
+        "authorityType": "safe",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197388,
+        "sources": [
+          {
+            "label": "Source-reviewed representation or adapter contract",
+            "url": "https://etherscan.io/address/0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e#code"
+          },
+          {
+            "label": "ethereum pinned root controller census at block 26197388",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "The immutable Ethereum OFTAdapter token() resolves to native sFRAX; its owner can replace peers and endpoint delegate and controls escrow transport configuration. This adapter is not an ERC-20 token deployment.",
+        "threshold": 3,
+        "signerCount": 5,
+        "safe": {
+          "owners": [
+            "0x6933bcc3e96f1c4d2cb73cb391d854b18ab7a4f2",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 26197388,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        },
+        "modulesOrGuardsStatus": "none-detected"
+      },
+      {
+        "id": "fraxtal-legacy-sfrax-oft-governor",
+        "routeRefs": [
+          "fraxtal:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x5f25218ed9474b721d6a38c115107428e832fa2e",
+        "label": "fraxtal legacy sFRAX OFT governor",
+        "authorityType": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 42625564,
+        "sources": [
+          {
+            "label": "Issuer OFT controller and ProxyAdmin disclosure",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          },
+          {
+            "label": "fraxtal pinned owner and endpoint at block 42625564",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "Pinned owner() and endpoint() match the issuer-listed OFT governor and LayerZero endpoint. No current Safe quorum, signer independence or minimum delay is asserted for this controller. The exact proxy implementation slot is 0x7feda252881b9c6166b387d3d11d1bdfc076d5cb and admin slot is 0x223a681fc5c5522c85c96157c0efa18cd6c5405c; upgrade authority is recorded separately, without treating source documentation as a current Safe execution certificate. Owner-configured peers authorize the message-credit mint/burn rail; this is bridge issuance control, not discretionary native Ethereum vault share issuance."
+      },
+      {
+        "id": "fraxtal-legacy-sfrax-proxy-admin",
+        "routeRefs": [
+          "fraxtal:0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
+        "controllerChain": "fraxtal",
+        "controllerAddress": "0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+        "label": "Fraxtal legacy sFRAX ProxyAdmin",
+        "authorityType": "contract",
+        "observedAt": "2026-10-15",
+        "observedBlock": 42625564,
+        "sources": [
+          {
+            "label": "Issuer OFT controller and ProxyAdmin disclosure",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          },
+          {
+            "label": "fraxtal pinned owner and endpoint at block 42625564",
+            "url": "https://rpc.frax.com"
+          }
+        ],
+        "evidence": "Pinned EIP-1967 admin slot identifies this ProxyAdmin; the issuer documents its upgrade-control role. No current ultimate ProxyAdmin ownership quorum, mandatory delay or complete replacement-path certificate is asserted."
+      },
+      {
+        "id": "metis-legacy-sfrax-oft-governor",
+        "routeRefs": [
+          "metis:0xe4796ccb6bb5de2290c417ac337f2b66ca2e770e"
+        ],
+        "capabilities": [
+          "admin",
+          "peer-config",
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "metis",
+        "controllerAddress": "0xf4a4f32732f9b2fb84ee28c58616946f3bf80f7d",
+        "label": "metis legacy sFRAX OFT governor",
+        "authorityType": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 23279223,
+        "sources": [
+          {
+            "label": "Issuer OFT controller and ProxyAdmin disclosure",
+            "url": "https://docs.frax.finance/cross-chain/layerzero-x-stargate.md"
+          },
+          {
+            "label": "metis pinned owner and endpoint at block 23279223",
+            "url": "https://andromeda.metis.io/?owner=1088"
+          }
+        ],
+        "evidence": "Pinned owner() and endpoint() match the issuer-listed OFT governor and LayerZero endpoint. No current Safe quorum, signer independence or minimum delay is asserted for this controller. The legacy OFT owner manages peers/delegate and auxiliary minter-burners; full active minter/validator census remains unestablished."
       }
     ]
   }

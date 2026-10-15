@@ -22,14 +22,14 @@
   },
   "detailProvider": "coingecko",
   "geckoId": "oned",
-  "collateral": "USDC held in Coinbase custody, with itemized Base reserve wallets published by Coinbase; token-specific legal segregation and insolvency priority are unverified.",
-  "pegMechanism": "Eligible Coinbase accounts can deposit native ONED from external wallets and convert ONED 1:1 with USDC. New York, Canada and the European Economic Area are excluded on Coinbase. Copies, wrapped and bridged ONED are not redeemable under native holder terms.",
+  "collateral": "USDC held in Coinbase custody, with itemized Base reserve wallets. Holder reserve title and creditor-claim exclusions are contractual; shared addresses are permitted and statutory bankruptcy remoteness is unverified.",
+  "pegMechanism": "Eligible Coinbase accounts can deposit native Base ONED from external wallets and convert it 1:1 with USDC, less any Coinbase fees. New York, Canada and the European Economic Area are excluded on Coinbase. Requests may be delayed, paused or refused under Coinbase's terms, with no published completion maximum. Copies, wrapped and bridged ONED are not redeemable under native holder terms.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The exact Base token is a distinct Coinbase Custom Stablecoin for Gennius, backed 1:1 by Coinbase-custodied USDC and convertible by eligible accounts. This remains a core custody-layer instrument. Coinbase US User Agreement Appendix 4 sections 13.1.1-13.1.3 gives holders transferable ownership and all economic value and risk of the corresponding USDC reserve, so the dependency is a wrapper/serial claim even though conversion is custodian-managed rather than a permissionless on-chain unwrap. Role adjudicated 2026-10-11T01:20:44Z; no custody or assurance upgrade.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_OnedGennius",
+    "rationale": "The exact Base token is a distinct Coinbase Custom Stablecoin for Gennius, backed 1:1 by Coinbase-custodied USDC and convertible by eligible accounts. Its fiat-cash archetype describes custodial reserve issuance and conversion rather than borrower collateral or a NAV fund; immediate backing remains crypto-backed USDC. Coinbase US User Agreement Appendix 4 sections 13.1.1-13.1.3 gives holders transferable reserve ownership and economic value and risk, establishing a wrapper/serial claim even though conversion is custodian-managed. Native ONED terms expressly incorporate those terms. Sections 2.7.1-2.7.4 establish contractual custody protections and permit shared addresses, without independently verified statutory bankruptcy remoteness. The October 15 dashboard and Base block 52635892 corroborate current reserve composition, not financial assurance or executable exit capacity.",
     "sources": [
       {
         "label": "Coinbase ONED custody and conversion",
@@ -41,7 +41,7 @@
       },
       {
         "label": "ONED native holder terms",
-        "url": "https://oned.global/#/end-user-terms-and-conditions"
+        "url": "https://oned.global/end-user-terms-and-conditions"
       },
       {
         "label": "Coinbase US User Agreement, Appendix 4 sections 13.1.1-13.1.3 (July 22, 2026)",
@@ -57,7 +57,6 @@
     "cadence": "real-time"
   },
   "launchDate": "2026-04-14",
-  "implementationLaunchDate": "2026-04-14",
   "links": [
     {
       "label": "Website",
@@ -73,11 +72,15 @@
     },
     {
       "label": "ONED native holder terms",
-      "url": "https://oned.global/#/end-user-terms-and-conditions"
+      "url": "https://oned.global/end-user-terms-and-conditions"
     },
     {
       "label": "Gennius ONED platform terms",
       "url": "https://tc.oned.global/#/oned"
+    },
+    {
+      "label": "Coinbase binding reserve ownership, custody and redemption terms",
+      "url": "https://www.coinbase.com/legal/user_agreement/united_states"
     },
     {
       "label": "Verified current ONED implementation",
@@ -112,5 +115,6 @@
     }
   ],
   "collateralQuality": "rwa",
-  "custodyModel": "cex"
+  "custodyModel": "cex",
+  "governanceQuality": "single-entity"
 }

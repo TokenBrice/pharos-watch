@@ -10,19 +10,23 @@
       {
         "label": "STBT January 2025 terms",
         "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      },
+      {
+        "label": "Ethereum pinned controller and moderator reads, block 26197400, 2026-10-15T10:45:11Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "STBTv2 setPermission controls send/receive permissions; controllerTransfer and controllerRedeem permit forced transfer and burn. Native contract controller/moderator were both 0x22276a1bd16bc3052b362c2e0f65aace04ed6f99 at block 26107703.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "STBTv2 setPermission controls send/receive permissions; controllerTransfer and controllerRedeem permit forced transfer and burn. At Ethereum block 26197400 (2026-10-15T10:45:11Z; hash 0xb6202c5ef87a0002783213622fc438e10b9d7d083afdc407e06945a2d16b2a74), implementation remained STBTv2 and controller/moderator both returned 0x22276a1bd16bc3052b362c2e0f65aace04ed6f99.",
+    "reviewer": "Rev_StbtMatrixdock batch64 primary-source review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
     "branchModel": "single-path",
-    "summary": "STBT native issue/distribution relies on an issuer-controlled reserve feed and mutable owner parameters; independent feed governance was not established.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "Native issuance and rebasing consume the issuer-maintained FallbackReserveFeed. Its owner can change the reserve budget without a timelock; the September 2025 implementation replaced the deprecated Chainlink PoR path.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_StbtMatrixdock batch64 primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -32,6 +36,14 @@
       {
         "label": "STBT January 2025 terms",
         "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+      },
+      {
+        "label": "Issuer reserve-feed replacement disclosure",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/notice-on-the-update-of-stbt-proof-of-reserves-data-feed-contract.md"
+      },
+      {
+        "label": "Verified FallbackReserveFeed",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd7dbecfb1738da6812b6dfd0fe4c424cf7d184dc"
       }
     ],
     "branchApplicability": {
@@ -54,11 +66,11 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine04 deployed source review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_StbtMatrixdock batch64 primary-source review",
           "confidence": "verified",
-          "rationale": "Native STBT uses privileged reserve updates and interest distribution, not collateral-vault liquidation branches. Block 26110197 getLatestReserve returns 23791487760000000000000000; the getter has no report timestamp. Selector-specific controller delays are 14400 seconds for issue/distributeInterests and 86400 seconds for implementation replacement. This establishes pricing authority and path scope, not reserve financial correctness.",
-          "sources": [{"label": "Exact STBT implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"}, {"label": "Deployed selector-delay controller", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"}]
+          "rationale": "At Ethereum block 26197400 (2026-10-15T10:45:11Z; hash 0xb6202c5ef87a0002783213622fc438e10b9d7d083afdc407e06945a2d16b2a74), native getLatestReserve returned 23805202460000000000000000. FallbackReserveFeed round 193 carried updatedAt 2026-10-09T11:30:47Z and owner 0x89bb23e4a82e04a253d9f11767fedf321c127799, whose account returned empty code. The verified setter has no timelock or independent report validation. Native issuance/rebasing remain delayed 14400 seconds; implementation replacement requires 86400 seconds. These reads establish privileged reserve-budget authority, not freshness or financial correctness of the underlying assets. Native STBT has no borrower collateral/liquidation branches.",
+          "sources": [{"label": "Exact STBT implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"}, {"label": "Deployed selector-delay controller", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"}, {"label": "Verified reserve-feed owner setter", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd7dbecfb1738da6812b6dfd0fe4c424cf7d184dc"}, {"label": "Ethereum pinned reserve/owner/delay reads, block 26197400, 2026-10-15T10:45:11Z", "url": "https://api-ethereum-mainnet.n.dwellir.com"}]
         }
       }
     ]

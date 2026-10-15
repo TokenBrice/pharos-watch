@@ -4,7 +4,8 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "STBT's custom proxy has selector-specific timelock delays: 24-hour mint-logic/issuer replacement and four-hour mint/rebase scheduling, despite getMinDelay() returning zero. D14: The issuer can issue against its mutable reserve budget without an atomic collateral deposit; issuance is economically unbounded.",
+    "summary": "STBT's controller enforces 24-hour implementation/issuer replacement and four-hour mint/rebase scheduling despite getMinDelay() returning zero. A separate reserve-feed owner can raise the reserve budget without a timelock. Native issuance is issuer-authorized, not atomically deposit-bound; financial reconciliation and supervisory controls remain unestablished.",
+    "headline": "Issuer minting has a four-hour delay, but a separate key can raise the reserve ceiling without delay.",
     "controls": [
       {
         "chain": "ethereum",
@@ -19,8 +20,8 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "timelockDelaySec": 14400,
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110197,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197400,
         "sources": [
           {
             "label": "Verified deployed mint implementation",
@@ -29,9 +30,45 @@
           {
             "label": "Verified selector-delay controller",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
+          },
+          {
+            "label": "Ethereum pinned controller and role reads, block 26197400, 2026-10-15T10:45:11Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ],
-        "evidence": "At block 26110197 delayMap(resetImplementation)=86400, delayMap(setIssuer)=86400, delayMap(issue)=14400, delayMap(distributeInterests)=14400 and delayMap(grantRole)=14400. Verified schedule ignores the supplied delay and requires its immutable selector-map delay to be positive; scheduleBatch and updateDelay revert. getMinDelay=0 does not mean immediate execution. Event census: self-admin only; proposers 0x65ff5a67d8d7292bd4ea7b6cd863d9f3ca14f046 and Minter 0xca241823d4bfe8b29610709db617407fbc9ae02b; executor 0xd32a1441872774f30ec9c453983cf5c95a720123; canceller 0x520839e886a285e196c8fa3d161797b4bafabe94. All memberships were confirmed by hasRole. Non-contract role accounts have empty code. Minter owner is the executor EOA and its user mint path schedules the same four-hour issue call."
+        "evidence": "At Ethereum block 26197400 (2026-10-15T10:45:11Z; hash 0xb6202c5ef87a0002783213622fc438e10b9d7d083afdc407e06945a2d16b2a74), delayMap(resetImplementation)=86400, delayMap(setIssuer)=86400, delayMap(issue)=14400, delayMap(distributeInterests)=14400 and delayMap(grantRole)=14400. Verified schedule enforces its immutable selector delay; scheduleBatch and updateDelay revert. getMinDelay=0 does not mean immediate execution. The retained event census through block 26110197 identified self-admin, proposers 0x65ff5a67d8d7292bd4ea7b6cd863d9f3ca14f046 and Minter 0xca241823d4bfe8b29610709db617407fbc9ae02b, executor 0xd32a1441872774f30ec9c453983cf5c95a720123 and canceller 0x520839e886a285e196c8fa3d161797b4bafabe94. Each membership remains true in fresh hasRole reads at block 26197400. A bounded role-event read over blocks 26110198-26197400 returned no events; that empty result is not an independent completeness proof. The three externally controlled role accounts returned empty code. Minter.owner remains the executor address, and verified Minter.mint schedules the same four-hour issue call."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x89bb23e4a82e04a253d9f11767fedf321c127799",
+        "deploymentRefs": [
+          "ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a"
+        ],
+        "label": "STBT reserve-feed budget owner",
+        "role": "cap-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "capDescription": "Owner-set reserve feed constrains ordinary issuance and rebasing, but its owner can set any signed reserve value without depositing collateral.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "timelockDelaySec": 0,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197400,
+        "sources": [
+          {
+            "label": "Verified FallbackReserveFeed owner-only setter",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd7dbecfb1738da6812b6dfd0fe4c424cf7d184dc"
+          },
+          {
+            "label": "Issuer confirms replacement of Chainlink PoR",
+            "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/notice-on-the-update-of-stbt-proof-of-reserves-data-feed-contract.md"
+          },
+          {
+            "label": "Ethereum pinned feed owner and account-code reads, block 26197400, 2026-10-15T10:45:11Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          }
+        ],
+        "evidence": "At Ethereum block 26197400 (2026-10-15T10:45:11Z), FallbackReserveFeed.owner() returned this address and eth_getCode returned 0x. Verified setReserve(int256) is onlyOwner with no timelock, range constraint or atomic collateral transfer. The native STBTv2 implementation consumes this feed as its issuance/rebase budget. Feed round 193 reports 23805202460000000000000000 and updatedAt 1791545447 (2026-10-09T11:30:47Z); its clock dates an issuer update, not independent reserve assurance. Beneficial ownership and key-custody arrangements for the setter are not disclosed by these reads."
       }
     ],
     "upgradeability": {
@@ -51,8 +88,8 @@
       "canChangeMintLogic": true,
       "delaySec": 86400,
       "controlRef": "STBT issuer and owner controller",
-      "observedAt": "2026-10-03",
-      "observedBlock": 26110197,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197400,
       "sources": [
         {
           "label": "Deployed upgrade authorization",
@@ -61,6 +98,10 @@
         {
           "label": "Verified selector-delay controller",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"
+        },
+        {
+          "label": "Ethereum pinned implementation, owner and upgrade-delay reads, block 26197400, 2026-10-15T10:45:11Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },
@@ -118,6 +159,17 @@
             {"label": "Issuer STBT whitepaper section 3.3.1: Cactus custody and self-hosted hardware canceller", "url": "https://raw.githubusercontent.com/Matrixdock-STBT/STBT-contracts/main/whitepaper/STBT%20White%20Paper.pdf"},
             {"label": "Verified controller and role/delay source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x22276a1bd16bc3052b362c2e0f65aace04ed6f99"},
             {"label": "Verified proposer Minter source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xca241823d4bfe8b29610709db617407fbc9ae02b"}
+          ]
+        },
+        {
+          "controlRef": "STBT reserve-feed budget owner",
+          "question": "Who controls the current reserve-feed owner, what approval policy governs reserve increases, and is there current independently verifiable key-custody evidence bound to this account? The pinned owner and empty-code reads establish a separate immediate reserve-budget setter, not beneficial-human identity or signing safeguards.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_StbtMatrixdock batch64 primary-source review",
+          "sources": [
+            {"label": "Verified owner-only reserve setter", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd7dbecfb1738da6812b6dfd0fe4c424cf7d184dc"},
+            {"label": "Ethereum pinned feed-owner and code reads, block 26197400, 2026-10-15T10:45:11Z", "url": "https://api-ethereum-mainnet.n.dwellir.com"}
           ]
         }
       ]

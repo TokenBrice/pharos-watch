@@ -8,8 +8,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z: gates and abdications",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -28,15 +28,15 @@
         "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
       }
     ],
-    "evidence": "At ethereum block 26107706, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters permanently abdicated. Exact immutable VaultV2 code forbids executing abdicated setters. Local share transfer and withdrawal gates are disabled; upstream PYUSD blacklist/pause or reserve-access powers remain inherited from pyusd-paypal. Allocator liquidity configuration and lending losses are distinct risks.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and their setters remained permanently abdicated. Exact immutable VaultV2 code prevents executing abdicated setters. Local share transfers and ordinary withdrawals have no mutable holder gate; upstream PYUSD blacklist/pause and reserve-access powers remain inherited. The still-mutable sendAssetsGate applies to deposits, while allocator liquidity routing and lending losses are separate risks.",
+    "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only the exact native ethereum vault-share deployment is authored. No share bridge representation is evidenced; upstream parent routes are separate inherited exposure.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -44,8 +44,8 @@
         "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z: exact native deployment",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -78,16 +78,16 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Exact immutable vault share totalSupply is created by deposit/mint and accrual fee accounting in this deployment. No share bridge or remote mint entrypoint appears in the reviewed implementation; parent-token bridge exposure remains inherited separately.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107706,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "sources": [
           {
             "label": "Exact Sentora vault",
             "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
           },
           {
-            "label": "Pinned RPC identity, accounting and controls",
-            "url": "https://eth-mainnet.g.alchemy.com/v2"
+            "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho Vault V2 documentation",
@@ -113,9 +113,9 @@
     "tier": "single-source-or-laggy",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "Exact MorphoChainlinkOracleV2 has one composite pricing path, not redundant alternative feeds, and no fallback; its verified ChainlinkDataFeedLib ignores updatedAt and does not reject stale answers. At block 26114898 all configured BASE/QUOTE feed addresses matched the earlier inventory. Sentora discloses internal PST valuation and unevidenced staleness circuit-breakers. Single-source/laggy topology is known; upstream feed administration remains unclosed.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown resolver W1R33",
+    "summary": "At Ethereum block 26197000, the exact MorphoChainlinkOracleV2 still combined PST-USDC calculated exchange rate, USDC/USD and PYUSD/USD feeds in one multiplicative/divisive path, not redundant alternatives. Its ChainlinkDataFeedLib ignores updatedAt and has no fallback or stale-answer rejection. Feed proxies and OCR2 aggregators share a 4-of-9 owner Safe. Their on-chain administration is identified; independent PST valuation inputs and heartbeat guarantees remain unestablished.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
     "confidence": "verified",
     "sources": [
       {
@@ -123,16 +123,16 @@
         "url": "https://sentora.com/asset-risk-reviews/huma"
       },
       {
-        "label": "Pinned feed configuration block 26114898",
-        "url": "https://etherscan.io/block/26114898"
+        "label": "Pinned feed configuration block 26197000, 2026-10-15T09:24:59Z",
+        "url": "https://etherscan.io/block/26197000"
       },
       {
         "label": "Exact Sentora vault",
         "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
       },
       {
-        "label": "Pinned RPC identity, accounting and controls",
-        "url": "https://eth-mainnet.g.alchemy.com/v2"
+        "label": "Dwellir Ethereum block 26197000: market, feed, aggregator and owner reads",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho Vault V2 documentation",
@@ -161,12 +161,28 @@
       {
         "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x39228d120b999e6f6918df162cef928beb954448"
+      },
+      {
+        "label": "PST-USDC calculated exchange-rate proxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4be50be32db1510240d542f77c5b36ca0d0965e6"
+      },
+      {
+        "label": "PST-USDC OCR2 aggregator source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7842fe224a835f5587ac33d321cb054a7dd65c98"
+      },
+      {
+        "label": "USDC/USD proxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
+      },
+      {
+        "label": "PYUSD/USD proxy source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8f1df6d7f2db73eece86a18b4381f4707b918fb1"
       }
     ],
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
       "rationale": "Vault conversion is accounting-only, but every current funded lending market uses collateral-price-dependent liquidation. The borrower branches cannot be exempted merely because the wrapper is ERC-4626.",
       "sources": [
         {
@@ -174,8 +190,8 @@
           "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
         },
         {
-          "label": "Pinned RPC identity, accounting and controls",
-          "url": "https://eth-mainnet.g.alchemy.com/v2"
+          "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         },
         {
           "label": "Morpho Vault V2 documentation",
@@ -203,8 +219,8 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
           "confidence": "verified",
           "rationale": "Exact VaultV2 conversion reads underlying token balance plus adapter realAssets and accrued fee shares; it calls no external spot-price feed. This exemption is limited to the vault accounting entrypoint, not its borrowers.",
           "sources": [
@@ -213,8 +229,8 @@
               "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
             },
             {
-              "label": "Pinned RPC identity, accounting and controls",
-              "url": "https://eth-mainnet.g.alchemy.com/v2"
+              "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho Vault V2 documentation",
@@ -243,18 +259,18 @@
         "branchId": "0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_SenpyusdpstSentora)",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107706 binds this oracle to collateral 0x22ae3d9a738471f405169af055d31c687087d4c7 with 86% LLTV and 64972418944308 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at Ethereum block 26197000 binds this oracle to Huma PST collateral 0x22ae3d9a738471f405169af055d31c687087d4c7 at 86% LLTV; sole adapter expectedSupplyAssets was 65116668940589 raw PYUSD.",
           "sources": [
             {
               "label": "Exact Sentora vault",
               "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
             },
             {
-              "label": "Pinned RPC identity, accounting and controls",
-              "url": "https://eth-mainnet.g.alchemy.com/v2"
+              "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho Vault V2 documentation",
@@ -281,7 +297,7 @@
         "id": "0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512",
         "label": "Morpho market 0xb4977179610abfecfc8b76255a002c16b33f46d077beb86e5911e1fe9ee6e512",
         "tier": "single-source-or-laggy",
-        "summary": "Exact market oracle 0x39228d120b999e6f6918df162cef928beb954448: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x4be50be32db1510240d542f77c5b36ca0d0965e6\",\"BASE_FEED_2\":\"0x8fffffd4afb6115b954bd326cbe7b4ba576818f6\",\"QUOTE_FEED_1\":\"0x8f1df6d7f2db73eece86a18b4381f4707b918fb1\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "summary": "At Ethereum block 26197000 (2026-10-15T09:24:59Z), immutable oracle 0x39228d120b999e6f6918df162cef928beb954448 retained BASE_FEED_1 0x4be50be32db1510240d542f77c5b36ca0d0965e6 (PST-USDC Exchange Rate (Calculated), 6 decimals), BASE_FEED_2 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6 (USDC / USD, 8 decimals), and QUOTE_FEED_1 0x8f1df6d7f2db73eece86a18b4381f4707b918fb1 (PYUSD / USD, 8 decimals). QUOTE_FEED_2 and both embedded vaults were zero. Proxies pointed respectively to OCR2 aggregators 0x7842fe224a835f5587ac33d321cb054a7dd65c98, 0x54bcc589d9743e521c64233706fc8cb36d275b07 and 0x39e31761911b9aabaef5fb81b18fd1c24a60e884. All proxies and aggregators had owner Safe 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca, whose pinned threshold was 4 with 9 owners. Source permits owner-controlled aggregator replacement and OCR configuration. This identifies administration, not independently verified off-chain PST valuation inputs, operator independence or complete Safe extension reach.",
         "collateralAssets": [
           "0x22ae3d9a738471f405169af055d31c687087d4c7"
         ],
@@ -294,37 +310,37 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x39228d120b999e6f6918df162cef928beb954448",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107706
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
-            "path": "BASE_FEED_1",
+            "provider": "OCR2 PST-USDC calculated exchange-rate feed",
+            "path": "BASE_FEED_1: PST/USDC, 6 decimals; aggregator 0x7842fe224a835f5587ac33d321cb054a7dd65c98",
             "address": "0x4be50be32db1510240d542f77c5b36ca0d0965e6",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107706
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
-            "path": "BASE_FEED_2",
+            "provider": "OCR2 USDC/USD feed",
+            "path": "BASE_FEED_2: USDC/USD, 8 decimals; aggregator 0x54bcc589d9743e521c64233706fc8cb36d275b07",
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107706
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
-            "path": "QUOTE_FEED_1",
+            "provider": "OCR2 PYUSD/USD feed",
+            "path": "QUOTE_FEED_1: PYUSD/USD, 8 decimals; aggregator 0x39e31761911b9aabaef5fb81b18fd1c24a60e884",
             "address": "0x8f1df6d7f2db73eece86a18b4381f4707b918fb1",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107706
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107706,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides its fixed feed inputs without an alternate fallback. ChainlinkDataFeedLib checks nonnegative answers but explicitly ignores staleness and min/max bounds. At block 26197000 the three latestRoundData updatedAt values were 1792053671, 1792053671 and 1792007699 respectively. These observations do not establish a guaranteed heartbeat or independently verified PST NAV; the parent oracle would accept a stale nonnegative answer.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x22ae3d9a738471f405169af055d31c687087d4c7",
@@ -341,8 +357,8 @@
             "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
           },
           {
-            "label": "Pinned RPC identity, accounting and controls",
-            "url": "https://eth-mainnet.g.alchemy.com/v2"
+            "label": "Dwellir Ethereum block 26197000, 2026-10-15T09:24:59Z: feed and control census",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho Vault V2 documentation",
@@ -371,6 +387,14 @@
           {
             "label": "Exact MorphoChainlinkOracleV2 and included ChainlinkDataFeedLib source",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x39228d120b999e6f6918df162cef928beb954448"
+          },
+          {
+            "label": "PST-USDC calculated exchange-rate proxy and aggregator source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7842fe224a835f5587ac33d321cb054a7dd65c98"
+          },
+          {
+            "label": "Sentora Huma PST private-credit valuation disclosure",
+            "url": "https://sentora.com/asset-risk-reviews/huma"
           }
         ]
       }

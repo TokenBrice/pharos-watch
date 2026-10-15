@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Short-term U.S. Treasury bills",
-      "pct": 95,
+      "pct": 95.24,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -15,8 +15,8 @@
       "liquidityHorizon": "unknown"
     },
     {
-      "name": "Superstate USTB fund interests",
-      "pct": 2.93,
+      "name": "Invesco USTB fund interests on Superstate",
+      "pct": 2.68,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -31,7 +31,7 @@
     },
     {
       "name": "BlackRock BUIDL fund interests",
-      "pct": 2.07,
+      "pct": 2.08,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -46,8 +46,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_StbtMatrixdock batch64 primary-source review",
     "confidence": "probable",
     "sources": [
       {
@@ -69,18 +69,26 @@
       {
         "label": "STBT Daily Asset Statement 2026-10-08, recovered through the pinned on-chain document roster; SHA-256 c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e",
         "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/54ERjq"
+      },
+      {
+        "label": "Issuer stats API, undated composition-of-STBT column retrieved 2026-10-15",
+        "url": "https://www.matrixdock.com/bond/anon/website/api/v1/stats"
+      },
+      {
+        "label": "Ethereum reserve feed and document roster pin, block 26197400, 2026-10-15T10:45:11Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "Issuer dashboard observed on 2026-10-02 attributes 95.00% of STBT to Treasury bills, 2.93% to USTB and 2.07% to BUIDL. These published liability-allocation weights total 100 and are not normalized from the separately shown USD 23,791,487.76 reserve NAV. Cash shown as surplus is not assigned a fabricated holder weight.",
-    "compositionBasis": "Undated rounded issuer dashboard composition-of-STBT column, observed 2026-10-02",
+    "rationale": "Issuer dashboard and stats API retrieved 2026-10-15 attribute 95.24% of STBT to Treasury bills, 2.68% to USTB and 2.08% to BUIDL. These are the published rounded composition-of-STBT liability-allocation weights, not the separately published gross-reserve percentages. Surplus USTB and bank cash are not assigned fabricated holder weights. The October 8 statement identifies USTB as the Invesco Short Duration US Government Securities Fund on the Superstate platform. These undated dashboard weights do not close the common-clock reserve-composition gap.",
+    "compositionBasis": "Undated rounded issuer dashboard and stats API composition-of-STBT column, retrieved 2026-10-15; no reserve observation date inferred",
     "scope": "full-composition",
-    "knownUnknownExposure": "Wave-2 source recovery found the issuer's October 8 Daily Asset Statement through getAllDocuments/getDocument at Ethereum block 26154601 (2026-10-09T11:37:59Z; hash 0xf6d6c7e8f5c1585fb116934eabfc00023f0f89330f014b504eb0a4b593af8672). Download SHA-256 exactly matches the on-chain document hash. The statement dates Treasury holdings and Fidelity Treasury sweep to October 8, bank cash to October 9, and leaves BUIDL/USTB screenshots undated. Disclosed gross rows sum to $23,811,887.72; the pinned October 9 issuer feed is $23,805,202.46, lower by exactly the $6,685.26 Fidelity sweep amount. A reconciled whole-book denominator and common observation date remain unproved. The recovered partial envelope carries these facts diagnostically without refreshing the historical probable weights or assigning a compositionAsOf. No independent reserve-to-liability assurance is established.",
+    "knownUnknownExposure": "The October 8 Daily Asset Statement originally recovered at Ethereum block 26154601 remains the newest document in the pinned 817-entry roster at block 26197400 (2026-10-15T10:45:11Z; hash 0xb6202c5ef87a0002783213622fc438e10b9d7d083afdc407e06945a2d16b2a74). A fresh download still matches on-chain SHA-256 c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e. Treasury holdings and Fidelity sweep are dated October 8; bank cash is dated October 9; BUIDL/USTB screenshots are undated. Gross disclosed rows total $23,811,887.72. At the fresh pin the issuer feed remains $23,805,202.46, round 193 last updated 2026-10-09T11:30:47Z, still $6,685.26 below the disclosed row sum, exactly the Fidelity sweep amount. No source reconciles that exclusion or establishes a common-close whole-book denominator. Updated dashboard liability-allocation weights remain undated and distinct from gross reserves. The retained partial observation is not date-bumped; no compositionAsOf or independent reserve-to-liability assurance is inferred.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Short-term U.S. Treasury bills",
-        "pct": 95,
+        "pct": 95.24,
         "disposition": "untracked-exogenous-asset",
         "rationale": "U.S. Treasury bills are exogenous sovereign securities, not tracked stablecoins."
       }

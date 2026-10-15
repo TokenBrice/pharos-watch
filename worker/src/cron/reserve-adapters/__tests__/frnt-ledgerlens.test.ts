@@ -53,6 +53,28 @@ describe("frnt-ledgerlens", () => {
     expect(result.metadata).not.toHaveProperty("redemption");
   });
 
+  it("separates governing maturity limits from unverified liquidation horizons and cash obligors", () => {
+    const { slices } = adaptFrntLedgerlens(capture);
+    expect(slices).toMatchObject([
+      {
+        sourceKey: "ledgerlens:frnt:treasury-bills",
+        liquidityHorizon: "unknown",
+        maturityDaysMax: 365,
+        issuerOrObligor: "United States Treasury",
+      },
+      {
+        sourceKey: "ledgerlens:frnt:repurchase-agreements",
+        liquidityHorizon: "unknown",
+        maturityDaysMax: 30,
+      },
+      {
+        sourceKey: "ledgerlens:frnt:cash",
+        liquidityHorizon: "unknown",
+      },
+    ]);
+    expect(slices.find((slice) => slice.sourceKey === "ledgerlens:frnt:cash")?.maturityDaysMax).toBeUndefined();
+  });
+
   it("publishes a measured net-reserve shortfall without allocating the administrative haircut to cash", () => {
     const payload = structuredClone(capture);
     const summary = field(snapshot(payload), "summary");

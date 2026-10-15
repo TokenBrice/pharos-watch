@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-04",
-    "reviewer": "Unknown-resolver wave 3 (W3R11)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfcSecuredFinance",
     "confidence": "verified",
     "sources": [
       {
@@ -35,13 +35,13 @@
         "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
       },
       {
-        "label": "Filecoin GLIF RPC pinned block 6422489",
+        "label": "Filecoin GLIF RPC pinned block 6458485 (2026-10-15T10:42:30Z)",
         "url": "https://api.node.glif.io/rpc/v1"
       }
     ],
-    "rationale": "The current issuer overview identifies FIL as Filecoin's native asset and the sole collateral. The exact captured ActivePool source key binds this cryptoasset classification and network identity without changing measured weights or composition date. Redemption releases FIL subject to collateral-ratio and partial-redemption restrictions; no whole-position final USD liquidity maximum is established, so the earlier immediate label is withdrawn.",
-    "compositionBasis": "FIL-only protocol rules, corroborated by pinned ActivePool and DefaultPool reads at Filecoin block 6422489.",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "The issuer overview identifies native FIL as the sole permitted collateral, corroborated by fresh ActivePool and DefaultPool reads. The exact ActivePool source key binds the live adapter's collateral category. Redemption releases FIL subject to collateral-ratio and partial-redemption restrictions; neither those rules nor native transfer speed establishes a whole-position final USD liquidity maximum.",
+    "compositionBasis": "FIL-only protocol rules, corroborated at Filecoin block 6458485 (2026-10-15T10:42:30Z): ActivePool 409845.981164685061058534 FIL plus DefaultPool 0.000000000000127749 FIL; entire-system debt and token totalSupply both 217964.428512163127719810 USDFC. Composition is 100% FIL, distinct from collateralization and executable redemption capacity.",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "No undisclosed collateral asset in the permitted single-asset book; FIL volatility and pool balances remain variable. FIL has no dedicated reserve-risk mapping; medium is the conservative native-altcoin classification.",
     "knownUnknownExposurePct": 0,
@@ -59,20 +59,18 @@
     "providers": [
       {
         "name": "USDFC ActivePool",
-        "role": "other",
-        "jurisdiction": "Filecoin"
+        "role": "other"
       },
       {
         "name": "USDFC DefaultPool",
-        "role": "other",
-        "jurisdiction": "Filecoin"
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_UsdfcSecuredFinance",
     "confidence": "verified",
     "sources": [
       {
@@ -84,11 +82,11 @@
         "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts"
       },
       {
-        "label": "Filecoin GLIF RPC pinned block 6422489",
+        "label": "Filecoin GLIF RPC pinned block 6458485 (2026-10-15T10:42:30Z)",
         "url": "https://api.node.glif.io/rpc/v1"
       }
     ],
-    "uncertainty": "On-chain pool separation establishes technical custody only; legal segregation, insolvency priority and rehypothecation protections are not established.",
+    "uncertainty": "Pinned ActivePool and DefaultPool balances and protocol rules establish on-chain technical custody. Filecoin is the deployment network, not a legal jurisdiction. Legal segregation, insolvency priority and rehypothecation protections are not established.",
     "knownUnknownExposurePct": 100
   }
 }

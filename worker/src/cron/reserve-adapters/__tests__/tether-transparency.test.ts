@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import usdt from "@shared/data/stablecoins/coins/usdt-tether.json";
+import mxnt from "@shared/data/stablecoins/coins/mxnt-tether.json";
 import {
   adaptTetherTransparency,
   type TetherTransparencyParams,
@@ -42,6 +43,20 @@ function withChains(blockChains: unknown): TetherTransparencyResponse {
 }
 
 describe("adaptTetherTransparency", () => {
+  it("omits MXNT token-count totals as reserve coverage for the detail-only binding", () => {
+    const params = parseLiveReserveAdapterParams("tether-transparency-mxnt", mxnt.liveReservesConfig.params);
+    const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, params);
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
+    expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
+    expect(result.metadata).not.toHaveProperty("shareholderEquityUsd");
+    expect(result.metadata).toMatchObject({
+      freshnessMode: "verified",
+      sourceTimestamp: FIXTURE_NOW_SEC - 3_600,
+      details: { compositionSource: "reviewed-config", compositionAsOf: "2026-06-30" },
+    });
+  });
+
   it("conserves all eleven signed-report integer rows without percentage rounding", () => {
     const packet = USDT_PARAMS.reviewedComposition;
     expect(packet.rows.map((row) => row.dollars)).toEqual(REPORT_DOLLARS);
@@ -316,6 +331,16 @@ describe("adaptTetherTransparency", () => {
 });
 
 describe("fetchTetherTransparencyReserves", () => {
+  it("dispatches the MXNT-only binding without treating circulation as reserve coverage", async () => {
+    const { result } = await runAdapter("tether-transparency-mxnt", "mxnt-tether", {
+      network: { json: { [TETHER_ENDPOINT]: TETHER_TRANSPARENCY_FIXTURE } },
+      nowSec: FIXTURE_NOW_SEC,
+    });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
+    expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
+  });
+
   it("fetches the coin's configured transparency endpoint and publishes its reserve totals", async () => {
     const { result, network } = await runAdapter("tether-transparency", "usdt-tether", {
       network: { json: { [TETHER_ENDPOINT]: TETHER_TRANSPARENCY_FIXTURE } },

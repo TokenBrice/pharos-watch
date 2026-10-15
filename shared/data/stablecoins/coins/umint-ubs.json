@@ -1,8 +1,8 @@
 {
   "id": "umint-ubs",
   "name": "UBS USD Money Market Investment Fund Token",
-  "symbol": "UMINT",
-  "oneLiner": "UMINT is UBS's accumulating Ethereum money-market fund share, redeemable through authorized distributors with privately disclosed portfolio terms.",
+  "symbol": "uMINT",
+  "oneLiner": "uMINT is UBS's accumulating Ethereum money-market fund share, redeemable through authorized distributors at NAV with private contractual terms.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -10,7 +10,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Native tokenized participating shares in a Singapore VCC money-market sub-fund managed by UBS Asset Management (Singapore). The distributor names State Street Bank and Trust as custodian/administrator and high-quality money-market instruments; exact underlying strategy, private placement memorandum and current position weights are not publicly disclosed.",
+  "collateral": "Native Class AT-acc (USD) participating shares in UBS (SG) Global Opportunities VCC, managed by UBS Asset Management (Singapore). DigiFT's January 2025 native-fund disclosure names UBS (Irl) Select Money Market Fund - USD as the all-or-substantially-all underlying investment, holding short-term USD debt of US and non-US governmental and other issuers. State Street Bank and Trust is the named native fund custodian/administrator. Current allocations, exact underlying share class and native private placement memorandum remain unavailable.",
   "pegMechanism": "Accumulating native Ethereum money-market fund share, subscribed and redeemed through authorized distributors such as DigiFT at NAV. UBS confirms an in-production subscription and redemption workflow. The 2025 distributor dossier describes daily T+0 dealing, but current contractual cutoffs, fees, minimums and unconditional capacity are not publicly established. DigiFT DR-uMINT is a separate receipt and is excluded from native identity and supply.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
@@ -59,6 +59,18 @@
     {
       "label": "Native uMINT standalone contract creation, block 21091537 (2024-11-01)",
       "url": "https://etherscan.io/tx/0x21e749199e5f709d4a201fb16a16e16c473118d25d5fc1096288a33f21f6c554"
+    },
+    {
+      "label": "Website",
+      "url": "https://www.ubs.com/global/en/investment-bank/tokenize.html"
+    },
+    {
+      "label": "DigiFT native fund mandate and shareholder rights (January 24, 2025)",
+      "url": "https://gov.ethenafoundation.com/t/reserve-fund-ubs-money-market-investment-fund-umint/474"
+    },
+    {
+      "label": "Explorer",
+      "url": "https://etherscan.io/token/0xc06036793272219179f846ef6bfc3b16e820df0b"
     }
   ],
   "jurisdiction": {
@@ -73,12 +85,12 @@
   ],
   "collateralQuality": "rwa",
   "custodyModel": "unknown",
+  "governanceQuality": "regulated-entity",
   "yieldConfig": {
     "yieldSource": "UBS USD money-market fund accumulating share NAV",
     "yieldType": "nav-appreciation"
   },
   "launchDate": "2024-11-01",
-  "implementationLaunchDate": "2024-11-01",
   "notices": [
     {
       "type": "info",

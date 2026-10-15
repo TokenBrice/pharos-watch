@@ -4,6 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
+    "headline": "Two issuer-controlled native minters have uncapped issuance power; reserve reconciliation and independent signing controls remain undisclosed.",
     "summary": "Two codeless EOAs hold native Etherlink MINTER_ROLE, and the default-admin EOA also controls the transparent proxy administrator. Native issuance has no reserve-gated numeric cap. MPC remains an issuer claim without disclosed signer independence or threshold. The additional adapter-only minter/burner and satellite representations are reviewed separately under Bridge Risk.",
     "upgradeability": {
       "model": "transparent-proxy",
@@ -21,8 +22,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "USDSM Etherlink proxy owner",
-      "observedAt": "2026-10-02",
-      "observedBlock": 54792510,
+      "observedAt": "2026-10-15",
+      "observedBlock": 55662309,
       "sources": [
         {
           "label": "Stable Mint current deployment and interoperability roster",
@@ -70,8 +71,8 @@
         "failureDomainKeys": [
           "issuer-backend:usdsm-stable-mint:stable-mint"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 54792510,
+        "observedAt": "2026-10-15",
+        "observedBlock": 55662309,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -94,7 +95,7 @@
             "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
           }
         ],
-        "evidence": "Pinned Etherlink block 54792510 returns this defaultAdmin and true MINTER_ROLE and BLACKLIST_ROLE membership; bytecode is empty. Verified mint is role-gated without a collateral check or economic cap. defaultAdminDelay=604800 delays admin transfer only, not normal minting or upgrades."
+        "evidence": "Etherlink block 55662309 (2026-10-15T10:44:04Z) returns this defaultAdmin and true MINTER_ROLE, BURNER_ROLE, BLACKLIST_ROLE and WHITELIST_ROLE membership; eth_getCode returns 0x. Verified mint checks its role and request-ID uniqueness without a collateral check or economic cap. defaultAdminDelay=604800 delays default-admin transfer only, not ordinary role grants, minting or proxy upgrades."
       },
       {
         "chain": "etherlink",
@@ -107,8 +108,8 @@
         "authorityType": "eoa",
         "directMintAbility": "upgrade-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 54792510,
+        "observedAt": "2026-10-15",
+        "observedBlock": 55662309,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -131,7 +132,7 @@
             "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
           }
         ],
-        "evidence": "EIP-1967 implementation remains 0x7089856110b005a40e8d16da1da31313b0f60561 at block 54792510. The research packet pinned ProxyAdmin 0xb31865ef2a9a1cf842f79f53e3aa868ad7eabe2b owner as this issuer EOA; fresh owner read is recorded with the fragment. No mint-logic timelock is established."
+        "evidence": "At Etherlink block 55662309 (2026-10-15T10:44:04Z), EIP-1967 implementation is 0x7089856110b005a40e8d16da1da31313b0f60561 and admin is ProxyAdmin 0xb31865ef2a9a1cf842f79f53e3aa868ad7eabe2b. ProxyAdmin.owner() returns this issuer EOA. No mint-logic timelock is established; the token's seven-day default-admin transfer delay does not delay ProxyAdmin upgrades."
       },
       {
         "chain": "etherlink",
@@ -142,13 +143,13 @@
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 54814410,
+        "observedAt": "2026-10-15",
+        "observedBlock": 55662309,
         "sources": [
-          {"label": "Complete MINTER_ROLE event census from native deployment", "url": "https://explorer.etherlink.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=54814410&address=0x6bde51212203ae5d592cc5180da2abbd41c922de&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"},
+          {"label": "Indexed MINTER_ROLE grant census through Etherlink block 55662309", "url": "https://explorer.etherlink.com/api?module=logs&action=getLogs&fromBlock=0&toBlock=55662309&address=0x6bde51212203ae5d592cc5180da2abbd41c922de&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d&topic1=0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6&topic0_1_opr=and"},
           {"label": "Exact native implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}
         ],
-        "evidence": "Complete RoleGranted/RoleRevoked history through Etherlink block 54814410 identifies this additional active MINTER_ROLE holder; pinned hasRole confirms membership and eth_getCode is empty. mint(address,uint256,string) checks the role and request-ID uniqueness without reserve collateral or a numeric issuance ceiling. No independent key-custody or signing threshold evidence was found for this EOA."
+        "evidence": "Indexed MINTER_ROLE grant/revoke history through Etherlink block 55662309 identifies this active additional native minter, first granted at block 7589392. Pinned hasRole is true and eth_getCode returns 0x. BURNER_ROLE is also true; BLACKLIST_ROLE and WHITELIST_ROLE are false for this address. The former middleware minter was revoked at block 44157250 and pinned hasRole is false. mint(address,uint256,string) has no reserve-gated economic ceiling. Independent signing quorum, operator independence and key-recovery evidence remain unavailable."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -203,17 +204,16 @@
         {
           "label": "Issuer announcement and disclosure history",
           "url": "https://stablemint.io/blog/"
+        },
+        {
+          "label": "Fresh native controller and implementation observations at Etherlink block 55662309, 2026-10-15T10:44:04Z",
+          "url": "https://explorer.etherlink.com/block/55662309"
         }
       ],
-      "evidence": "The earlier complete native RoleGranted/RoleRevoked census through Etherlink block 54814410 identifies DEFAULT_ADMIN 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd and three live MINTER_ROLE holders: that EOA, codeless EOA 0xab42b550b6d757f3d17eac8e045af095961d75bc, and bridge-only USDSMMinterBurner 0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a. Verified middleware restricts mint to its one-time-set adapter 0xe7f117f87fa650350c3e363ca2c644951d273d1f, owned in Bridge Risk. The earlier ProxyAdmin.owner pin returns the default-admin EOA with no mint-logic timelock; implementation activation was block 21653650 on July 22, 2025. New W3R21 observations pin Ethereum 26122339, Base 52184021, Arbitrum 511756429 and Etherlink 54923573. On all four adapters owner() and Endpoint.delegates(adapter) return 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. All twelve directed peers match the official four-chain roster; each effective receive library is explicitly configured rather than default, and all twenty-four effective send/receive ULN configurations require two DVNs with no optional DVNs. Complete PeerSet topic queries return three events per adapter: Ethereum/Base/Arbitrum RPC over genesis through each pin, and Etherlink explorer over creation block 40962277 through its pin after the public RPC rejected large windows. Current peer/DVN/library/delegate configuration is therefore observed, not merely an issuer assertion. This does not complete historical mint/upgrade incident review or the endpoint/library permission and reconfiguration/bypass inventory; no incidentState none or execution-scope certificate is asserted. MPC quorum, signer independence and key recovery remain undisclosed for both native EOAs. Independent whole-liability reconciliation remains unavailable and reconciliation stays unknown. Prudential supervision remains supported by the existing ESMA exact Stable mint Ltd LEI/EMI/MFSA row, not issuer-reported reserve ratios. Verified confidence refers to the evidenced native controller and implementation facts, not financial, human-independence or complete executable assurance.",
-      "reviewer": "Pharos unknown-resolver wave 3 (W3R21), partial four-chain configuration review",
-      "reviewedAt": "2026-10-04",
+      "evidence": "Fresh observations at Etherlink block 55662309 (2026-10-15T10:44:04Z), Ethereum 26197403 (2026-10-15T10:45:47Z), Base 52635906 and Arbitrum 515036195 (both 2026-10-15T10:45:59Z) confirm unchanged token implementations, default administrators and proxy owners. Complete indexed native MINTER_ROLE grant/revoke queries identify two current native EOAs and the adapter-only middleware; all three memberships are true, while former middleware 0x511879cd4cf5941c09b8c2e3d6be4d54a6befa07 was revoked at block 44157250 and is false. Native defaultAdmin, DEFAULT_ADMIN_ROLE and ProxyAdmin.owner identify 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. Both native EOA eth_getCode reads return 0x. Full role-indexed event queries and pinned hasRole identify six active BURNER_ROLE holders: the two native minters, bridge middleware 0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a, 0xbd02a555180f03293982ab5384d8a505bb4f2a31, 0x1bd84f57611b610877292fe224d16369719e2845 and 0xef5031348a2f1ea8cbc8157bce255892c34971c9. The sole BLACKLIST_ROLE grant and current membership belong to the default administrator. Five active WHITELIST_ROLE holders are that administrator, 0x4a7148c0c0a18808075dff911b19e9aad5e6fe67, 0x36191a4f22ee5818cbf34364ca61274733798529, 0xbd02a555180f03293982ab5384d8a505bb4f2a31 and 0x1bd84f57611b610877292fe224d16369719e2845. All four roles have DEFAULT_ADMIN_ROLE as role administrator. Verified native burn destroys only msg.sender's balance; WHITELIST_ROLE is declared but does not gate mint or transfer in this implementation. Burner-only and unused whitelist memberships therefore do not create additional native mint paths. All four adapter owners and Endpoint.delegates return the same default-administrator EOA; all twelve peers match the official roster and all twenty-four effective send/receive ULNs require two DVNs with no optional DVNs. Send and receive libraries are explicit; all twelve receive-library timeout slots have zero address and expiry. Native verified receive checks endpoint and peer, and the self-only simulator always reverts. These are code and state observations, not financial reconciliation, independent signing assurance or runtime exploit tests. Prudential supervision follows the exact ESMA issuer/EMI row. MPC threshold, operator independence, recovery policy and independent whole-liability reconciliation remain undisclosed. Historical limitation: the October 5 accounting attempt at block 54935586 counted 17 RoleGranted, one RoleRevoked, two Upgraded events and 423 zero-sender Transfers totaling 43700256460391000000000000 base units against native supply 7059516402343000000000000; unfiltered Transfers truncated at 1000 and burn queries failed. That attempt did not establish complete mint/burn accounting or reserve reconciliation. Its stronger assertion that practical incidentState none was unsupported is superseded by the October 11 exact-control negative reviews i43apxusdb-usdsm-stable-mint-5951c00b5ef7965fec9f-20261011, i43apxusdb-usdsm-stable-mint-8ea62eea76364fb14c11-20261011 and i43apxusdb-usdsm-stable-mint-bbb3136e12def53ad156-20261011 in incident-reviews-v1.json. Those finite reviews cover March 10, 2025 through October 11, 2026 and establish only no known incident for each matching control, not lifetime incident absence, complete historical accounting or financial assurance. Native authority and economic semantics are now independently established; custody-only questions remain in scopedQuestions and financial reconciliation remains unknown in its dedicated field. Bridge validation/operator and runtime-execution limitations remain in the bridge review, not as unresolved native authority.",
+      "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
-      "unresolvedQuestions": [
-        "W4 R14 (2026-10-05) pinned Etherlink block 54935586: both native minters remain codeless EOAs with MINTER_ROLE, defaultAdmin and ProxyAdmin.owner remain 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd, and the bridge-only middleware remains bound to the documented adapter. Explorer history has 17 RoleGranted, 1 RoleRevoked and 2 Upgraded events; filtered zero-sender Transfer history has 423 mints totaling 43700256460391000000000000 base units, versus current native supply 7059516402343000000000000. This is gross mint history, not unexplained excess or financial reconciliation. The unfiltered Transfer query truncates at 1000 rows; burn/custom Mint/Burn queries were rate-limited and a v2 logs retry timed out. Without complete burn accounting and historical implementation/caller attribution, native issuance/upgrade incident review is incomplete and incidentState none is unsupported.",
-        "The separately owned bridge review still requires endpoint/library reconfiguration, grace-period/alternative receive-path and runtime permission/bypass coverage. This is not evidence of another native issuer minter; the exact immutable middleware and one-time adapter binding separate the bridge-only role from native EOA issuance.",
-        "Current issuer terms require funds before mint and the whitepaper claims regular audits and MPC administration, but no current independent report tying all-chain USDSM liabilities to reserves or exact native EOA quorum/independence/recovery evidence was established. Reconciliation remains unknown; a role census or a stated reserve percentage does not provide that financial assurance."
-      ],
       "scopedQuestions": [
         {
           "controlRef": "etherlink:0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",

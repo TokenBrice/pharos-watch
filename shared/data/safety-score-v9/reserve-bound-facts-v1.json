@@ -36,83 +36,83 @@
     ],
     "frnt-wyoming": [
       {
-        "factKey": "frnt-wyoming:2026-10-07:observed-treasury-bill-roster",
+        "factKey": "frnt-wyoming:2026-10-14:observed-treasury-bill-roster",
         "kind": "observed-portfolio-maturity",
         "scope": {
           "kind": "exposure",
           "exposureKey": "reserve:d1d9e3df5ba452d3047be2c7"
         },
-        "asOfSec": 1791374444,
+        "asOfSec": 1791979244,
         "publisher": "FRNT LedgerLens supplemental dashboard",
         "sourceUrls": [
           "https://dashboard.ledgerlens.io/c/wystc"
         ],
-        "assertion": "LedgerLens FRNT snapshot 6ac6346c75d8eb627b88b6a1 at 2026-10-07T12:00:44.746Z lists nine positive Treasury-bill positions in FBO_TRUST with USD FMV totaling 356091.65, exactly the complete Treasury-bill category denominator. Latest observed maturity is November 24, 2026, 48 calendar days after the snapshot. This is a supplemental non-assured current portfolio observation, not a legally binding maximum or stressed liquidity promise; zero positions excluded from the covered positive inventory and matured instruments are not presumed paid.",
-        "contentDigest": "0fb1a685110bf3a2dddb14c4c8c5c60ea72b2fd9fe70e4c12508c2b4ac14db65",
+        "assertion": "LedgerLens snapshot 6acf6eec0ff131db2a33fe2c at 2026-10-14T12:00:44.764Z lists nine positive FBO_TRUST Treasury-bill positions totaling USD 357140.86, exactly the complete Treasury-bill category denominator. Latest observed maturity is December 1, 2026, 48 calendar days after the snapshot. The new positive 912797VZ7 replaces matured zero-balance 912797VL8. This non-assured portfolio observation is not the legal 365-day eligibility maximum, a stressed cash-access guarantee or an assumption that matured instruments have paid. contentDigest hashes the exact retrieved public loader response retained in research/frnt-wyoming/ledgerlens-loader.txt.",
+        "contentDigest": "2e5a9bee8db73205b09c1d79feaa31fa8ea81822f2014ec28abc5d6843be5482",
         "provenance": {
           "kind": "reviewed-research",
-          "reviewedAt": "2026-10-07",
-          "reviewer": "Sol unknown-resolver wave 2026-10-07 (RESERVE_3)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review (Rev_FrntWyoming)",
           "confidence": "high"
         },
-        "coveredGrossValue": 356091.65,
-        "totalGrossValue": 356091.65,
-        "coverageAsOfSec": 1791374444,
+        "coveredGrossValue": 357140.86,
+        "totalGrossValue": 357140.86,
+        "coverageAsOfSec": 1791979244,
         "denomination": "USD",
         "observedMaximumDays": 48,
         "instruments": [
           {
-            "instrumentId": "912797VN4",
-            "maturityAtSec": 1793059200,
-            "grossMarkedValue": 36921.56,
-            "denomination": "USD"
-          },
-          {
-            "instrumentId": "912797VX2",
-            "maturityAtSec": 1794873600,
-            "grossMarkedValue": 43803.76,
+            "instrumentId": "912797VW4",
+            "maturityAtSec": 1794268800,
+            "grossMarkedValue": 37888.66,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797VM6",
             "maturityAtSec": 1792454400,
-            "grossMarkedValue": 37947.94,
-            "denomination": "USD"
-          },
-          {
-            "instrumentId": "912797VW4",
-            "maturityAtSec": 1794268800,
-            "grossMarkedValue": 37860.92,
-            "denomination": "USD"
-          },
-          {
-            "instrumentId": "912797UL9",
-            "maturityAtSec": 1792627200,
-            "grossMarkedValue": 44928.45,
-            "denomination": "USD"
-          },
-          {
-            "instrumentId": "912797VL8",
-            "maturityAtSec": 1791849600,
-            "grossMarkedValue": 38975.43,
+            "grossMarkedValue": 37975.68,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797VY0",
             "maturityAtSec": 1795478400,
-            "grossMarkedValue": 38794.86,
+            "grossMarkedValue": 38824.11,
             "denomination": "USD"
           },
           {
-            "instrumentId": "912797VP9",
-            "maturityAtSec": 1793664000,
-            "grossMarkedValue": 36892.33,
+            "instrumentId": "912797VX2",
+            "maturityAtSec": 1794873600,
+            "grossMarkedValue": 43836.76,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797UL9",
+            "maturityAtSec": 1792627200,
+            "grossMarkedValue": 44962.2,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VZ7",
+            "maturityAtSec": 1796083200,
+            "grossMarkedValue": 39788.8,
             "denomination": "USD"
           },
           {
             "instrumentId": "912797UK1",
             "maturityAtSec": 1792022400,
-            "grossMarkedValue": 39966.4,
+            "grossMarkedValue": 39996.0,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VP9",
+            "maturityAtSec": 1793664000,
+            "grossMarkedValue": 36919.71,
+            "denomination": "USD"
+          },
+          {
+            "instrumentId": "912797VN4",
+            "maturityAtSec": 1793059200,
+            "grossMarkedValue": 36948.94,
             "denomination": "USD"
           }
         ]

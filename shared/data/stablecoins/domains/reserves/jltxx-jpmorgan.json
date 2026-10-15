@@ -13,20 +13,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review",
     "confidence": "verified",
     "sources": [
-      { "label": "SEC-filed JLTXX prospectus and SAI", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" },
+      { "label": "Current JLTXX prospectus: Treasury mandate, shareholder claim and cash/securities-in-kind redemption", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/P?site=JPMorganv3" },
       { "label": "JPMorgan exact-class NAV publisher", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
-      { "label": "Issuer JLTXX launch and Ethereum identity", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" }
+      { "label": "Issuer JLTXX launch and Ethereum identity", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" },
+      { "label": "September 30, 2026 Token Class factsheet and sector allocation", "url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/americas/us/en/literature/fact-sheet/money-market/fs-ocltmm-t.pdf" },
+      { "label": "SEC N-MFP3, series S000101820: September 30, 2026 portfolio securities and repo counterparties, filed October 7", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000207169126023653/primary_doc.xml" }
     ],
-    "rationale": "The single slice identifies the direct government-MMF shareholder claim, matching the live adapter's exact class4397 key, rather than fabricating Treasury/repo/cash percentages from NAV. The filed mandate limits Treasury purchases to remaining or original maturities of 93 days and permits fully collateralized overnight repos. The October 1 issuer statistics give WAM/WAL of 13 days and daily/weekly liquid assets of 99.99%; these are dated issuer figures, not independent whole-book assurance or measured unconditional redemption capacity.",
+    "rationale": "The single slice identifies the direct government-MMF shareholder claim, matching the live adapter's exact class 4397 key, rather than fabricating current Treasury/repo/cash percentages from NAV. The September 30 factsheet reports 55.3% U.S. Treasury debt and 44.7% U.S. Treasury repos; these are dated sector weights, not October 14 holdings. The series S000101820 N-MFP3 for September 30, filed October 7, discloses ten portfolio-security lines comprising Treasury debt and Treasury repos, with Citigroup Global Markets, BofA Securities and Wells Fargo Securities named on the repo positions. This monthly regulatory schedule establishes dated security-level composition and counterparties, not current holdings or independent assurance. The current prospectus confirms the 93-day Treasury purchase limit, fully collateralized overnight repos and cash held primarily for redemptions. The October 14 issuer reports NAV $1, WAM/WAL 9 days and daily/weekly liquid assets 99.99%. These are issuer disclosures, not independent assurance or unconditional cash capacity. Redemptions worth $250,000 or more may be paid partly or wholly in readily marketable securities valued at NAV; selling them adds market, tax and transaction-cost exposure.",
     "compositionBasis": "Direct Token Class fund-share exposure, valued by the exact issuer class publisher; no position-level look-through allocation asserted",
-    "compositionAsOf": "2026-10-01",
+    "compositionAsOf": "2026-10-14",
     "compositionSource": "live-adapter",
     "scope": "full-composition",
-    "knownUnknownExposure": "The direct instrument is fully identified. Current underlying security weights, repo counterparties, subcustody allocation, encumbrance and an exact-fund independent reserve-to-liability report remain unverified; the single fund-share slice does not claim a complete look-through census.",
+    "knownUnknownExposure": "The direct instrument is fully identified. The September 30 factsheet discloses Treasury/repo sector weights, and the same-date series S000101820 N-MFP3 discloses individual securities and repo counterparties. Intra-period portfolio changes, subcustody allocation, encumbrance and an exact-fund independent reserve-to-liability report remain unverified; this monthly point-in-time schedule does not establish current look-through weights, and the single fund-share slice does not claim a complete current look-through census.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -45,12 +47,13 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 r1 primary-document adjudication",
     "confidence": "verified",
     "sources": [
-      { "label": "SEC-filed JLTXX SAI, Part II custody and fund accounting", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" }
+      { "label": "Current exact-CUSIP JLTXX SAI, Part II 137 custody and fund accounting; PDF SHA256 7baadb49eb53810d78e8fcebee1df17cfa1ee58f966cb1dd01877d37b702a051", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/S?site=JPMorganv3" }
     ],
-    "uncertainty": "The SAI names JPMorgan Chase Bank as custodian and fund accountant holding portfolio securities/cash and books of account; it is affiliated with the adviser and administrator. This establishes its service role, not independent assurance, current provider shares, every material repo/subcustody layer, account segregation, rehypothecation or a complete insolvency waterfall. Aggregate custodyModel stays unknown rather than treating the named bank as complete custody coverage."
+    "uncertainty": "The SAI names JPMorgan Chase Bank as custodian and fund accountant holding portfolio securities/cash and books of account; it is affiliated with the adviser and administrator. This establishes its service role, not independent assurance, current provider shares, every material repo/subcustody layer, account segregation, rehypothecation or a complete insolvency waterfall. Aggregate custodyModel stays unknown rather than treating the named bank as complete custody coverage.",
+    "knownUnknownExposurePct": 100
   }
 }

@@ -2435,6 +2435,37 @@ describe("native external-validation transfer tiers", () => {
     expect(result.reasons.map((reason) => reason.code)).toContain("selected-bridge-route-unresolved");
   });
 
+  it("compiles identical native transfer statuses interned across admitted extension routes", () => {
+    const metadata = transferMeta();
+    metadata.bridgeRouteRisk!.routes!.push(route(BASE_ROUTE, { observedAt: "2026-10-01" }));
+    metadata.bridgeRouteRisk!.nativeExternalTransferReviews![0]!.routeRefs.push(BASE_ROUTE);
+    const fixed = makeV9FixedInput({
+      assetId: metadata.id,
+      clockSec,
+      chainSupplyByChain: supplyByRoute(metadata.bridgeRouteRisk!.routes!),
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([[metadata.id, metadata]]),
+    });
+    const sourceRoutes = extension.assets[0]!.economicControlReview!.bridge.routes;
+    expect(sourceRoutes).toHaveLength(2);
+    expect(sourceRoutes[0]!.factorStatuses).toBe(sourceRoutes[1]!.factorStatuses);
+    const sourceStatus = sourceRoutes[0]!.factorStatuses!.tier!;
+    expect(Object.isFrozen(sourceStatus)).toBe(true);
+    const researchKeys = [...sourceStatus.evidenceRefIds];
+    const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(fixed), extension);
+    const asset = compiled.assets[0]!;
+    expect(asset.gaps.some((gap) => gap.gapId === `${metadata.id}:gap:asset-compilation`)).toBe(false);
+    expect(asset.economicControlReview.bridge.routes).toHaveLength(2);
+    for (const compiledRoute of asset.economicControlReview.bridge.routes) {
+      const status = compiledRoute.factorStatuses!.tier!;
+      expect(status.observationState).toBe("known");
+      expect(status.evidenceRefIds).toEqual(researchKeys.map((key) => `${metadata.id}:research:${key}`));
+      expect(status.evidenceRefIds.every((id) => asset.evidence.some((row) => row.evidenceId === id))).toBe(true);
+    }
+    expect(sourceStatus.evidenceRefIds).toEqual(researchKeys);
+  });
+
   it("does not infer an external rail from the legacy profile tier or native issuance", () => {
     const metadata = transferMeta();
     delete metadata.bridgeRouteRisk!.nativeExternalTransferReviews;

@@ -897,10 +897,10 @@ Returns reviewed redemption paths and backstop evidence.
 {
   "coins": {},
   "methodology": {
-    "version": "4.5",
-    "versionLabel": "v4.5",
-    "currentVersion": "4.5",
-    "currentVersionLabel": "v4.5",
+    "version": "4.51",
+    "versionLabel": "v4.51",
+    "currentVersion": "4.51",
+    "currentVersionLabel": "v4.51",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -958,7 +958,7 @@ Returns current Yield Intelligence rankings and risk-adjusted fields.
 
 ```json
 {
-  "currentVersion": "8.48",
+  "currentVersion": "8.49",
   "methodologyVersion": "10.19"
 }
 ```
@@ -977,7 +977,7 @@ Returns the public adapter-coverage and source-status manifest.
 
 ```json
 {
-  "methodologyVersion": "v8.48"
+  "methodologyVersion": "v8.49"
 }
 ```
 
@@ -995,8 +995,8 @@ Returns bounded yield history for one stablecoin and optional source projection.
 
 ```json
 {
-  "currentVersion": "8.48",
-  "methodologyVersion": "8.48"
+  "currentVersion": "8.49",
+  "methodologyVersion": "8.49"
 }
 ```
 

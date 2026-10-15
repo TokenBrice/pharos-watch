@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
     "confidence": "verified",
     "sources": [
       {
@@ -32,13 +32,13 @@
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
       },
       {
-        "label": "Pinned Gnosis block 48557408",
-        "url": "https://gnosis.blockscout.com/block/48557408"
+        "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+        "url": "https://gnosis.blockscout.com/block/48768019"
       }
     ],
-    "rationale": "At Gnosis block 48557408, asset() returned WXDAI, totalSupply was 33869798.864272802852763810 shares and totalAssets exactly matched the separately read 42672422.460002511422928167 WXDAI balance. Fixed single-asset code establishes the complete immediate parent exposure; medium legacy risk reflects xDAI bridge dependence.",
+    "rationale": "At Gnosis block 48768019 (2026-10-15T10:43:10Z), https://rpc.gnosischain.com returned WXDAI from asset(), 32797245.666112741555120522 shares from totalSupply(), and 41383980.330756489497209094 WXDAI from both totalAssets() and the independently read WXDAI.balanceOf(vault). previewRedeem(1e18) returned 1.261812676346656200 WXDAI. Complete fixed-asset code establishes the sole immediate parent exposure and no local strategy, borrowing or allocation surface; upstream bridge/Sky holdings are not reclassified as direct vault reserves. The medium legacy tier retains bridged-underlying risk and does not establish financial assurance.",
     "compositionBasis": "Exact ERC-4626 underlying-asset relationship and pinned balance/share reads",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Immediate parent identity is known. This review does not independently close parent reserves, offchain legal segregation, or stressed recovery.",
     "knownUnknownExposurePct": 0
@@ -47,15 +47,14 @@
     "providers": [
       {
         "name": "Gnosis SavingsXDai 0xaf204776c7245bf4147c2612bf6e5972ee483701",
-        "role": "other",
-        "jurisdiction": "gnosis"
+        "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
     "confidence": "manual-review",
     "sources": [
       {
@@ -67,10 +66,10 @@
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
       },
       {
-        "label": "Pinned Gnosis block 48557408",
-        "url": "https://gnosis.blockscout.com/block/48557408"
+        "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+        "url": "https://gnosis.blockscout.com/block/48768019"
       }
     ],
-    "uncertainty": "Immediate WXDAI is held onchain in the fixed-asset vault. Whole-book custody includes the upstream xDAI bridge and Sky reserve stack; no whole-book institutional or all-onchain label is established."
+    "uncertainty": "Immediate WXDAI is held onchain in the fixed-asset vault, whose complete source has no local strategy allocation, borrowing or rehypothecation surface. Whole-book custody includes the upstream xDAI bridge and Sky reserve stack; no whole-book institutional or all-onchain label, legal segregation, bankruptcy remoteness or upstream non-rehypothecation covenant is established. Gnosis is the deployment chain, not an established legal jurisdiction of a custodian."
   }
 }

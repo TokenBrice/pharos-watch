@@ -156,7 +156,10 @@ export function YieldIntelligenceMethodologySection() {
                       <span className="text-foreground">Tier 1 &mdash; Direct on-chain reads</span>: reads protocol state
                       directly, either as an exchange-rate delta (e.g.&nbsp;sUSDe), a conservative reward-only estimator
                       (e.g.&nbsp;LUSD B.Protocol Stability Pool, LQTY only), a multi-branch interest-only estimator
-                      (e.g.&nbsp;Base Dollar Liquity V2 Stability Pools), or scrvUSD&apos;s Yearn V3 profit-unlock current-rate reader
+                      (e.g.&nbsp;Base Dollar Liquity V2 Stability Pools), or scrvUSD&apos;s Yearn V3 profit-unlock current-rate reader.
+                      XGLD&apos;s reviewed exchange-rate provider measures XAUt per XGLD, separating gold-denominated
+                      NAV changes from gold&apos;s USD price. This is issuer-administered NAV, not reconciled strategy
+                      profit; it supplies no measured TVL and still needs a valid historical comparison anchor.
                     </li>
                     <li>
                       <span className="text-foreground">Tier 2 &mdash; DeFiLlama pools</span>: matches the coin to a

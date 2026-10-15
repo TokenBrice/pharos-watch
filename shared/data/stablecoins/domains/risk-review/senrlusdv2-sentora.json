@@ -20,23 +20,23 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho exact-vault portfolio API",
         "url": "https://api.morpho.org/graphql"
       }
     ],
-    "evidence": "Block 26107702: sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock; this gates deposits, not cash redemptions. receiveAssetsGate() is zero with a permanently abdicated setter. Parent RLUSD issuer freeze exposure remains inherited.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "Block 26197000: sendSharesGate(), receiveSharesGate() and receiveAssetsGate() are zero with permanently abdicated setters. Shares are locally permissionless under immutable VaultV2 source. sendAssetsGate() is zero but its setter is not abdicated and has zero timelock; this gates deposits, not cash redemptions. receiveAssetsGate() is zero with a permanently abdicated setter. Parent RLUSD issuer freeze exposure remains inherited.",
+    "reviewer": "Rev_Senrlusdv2Sentora",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Only this native Ethereum vault-share deployment is authored. Reviewed exact deployment and issuer materials do not establish a vault-share bridge representation.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_Senrlusdv2Sentora",
     "confidence": "verified",
     "sources": [
       {
@@ -56,8 +56,8 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho exact-vault portfolio API",
@@ -78,8 +78,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Exact immutable vault share totalSupply is created by deposit/mint and accrual fee accounting in this deployment. No share bridge or remote mint entrypoint appears in the reviewed implementation; parent-token bridge exposure remains inherited separately.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "sources": [
           {
             "label": "Sentora RLUSD Main exact vault",
@@ -98,8 +98,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -113,9 +113,9 @@
     "tier": "privileged-internal-pricing",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
-    "summary": "A positively evidenced funded syrupUSDC borrower branch establishes internal-NAV pricing: exact oracle 0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5 multiplies MaplePool.convertToAssets, whose totalAssets forwards to an upgradeable MaplePoolManager and strategy AUM reports rather than independently marked loan values. At Ethereum block 26115263 (2026-10-04T00:00:35Z), the exact current adapter has nonzero supplyShares in market 0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394; MaplePool.manager is 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f and its implementation is 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. Published manager source gives pool-delegate/protocol-admin default and strategy discretion and delegate/security-admin upgrade authority. This is a measured internal accounting authority, not an arbitrary numerical price setter; unrealizedLosses affects exit conversion separately. Other feed administrators, heartbeats and mutable input safeguards remain unresolved, so no external-feed or redundancy credit is asserted.",
-    "reviewedAt": "2026-10-07",
-    "reviewer": "Sol unknown-resolver wave 2026-10-07 (MISC)",
+    "summary": "A positively evidenced funded syrupUSDC borrower branch establishes internal-NAV pricing: exact oracle 0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5 multiplies MaplePool.convertToAssets, whose totalAssets forwards to an upgradeable MaplePoolManager and strategy AUM reports rather than independently marked loan values. At Ethereum block 26197000 (2026-10-15T09:24:59Z), the exact current adapter has nonzero supplyShares in market 0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394; MaplePool.manager is 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f and its implementation is 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. Published manager source gives pool-delegate/protocol-admin default and strategy discretion and delegate/security-admin upgrade authority. This is a measured internal accounting authority, not an arbitrary numerical price setter; unrealizedLosses affects exit conversion separately. Other feed administrators, heartbeats and mutable input safeguards remain unresolved, so no external-feed or redundancy credit is asserted. Current syrupUSDC lender assets are 4536478864846600539322080 raw RLUSD, 0.9981% of vault NAV; materiality is determined by the separately captured current collateral book, not by this static tier.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_Senrlusdv2Sentora",
     "confidence": "probable",
     "sources": [
       {
@@ -135,8 +135,8 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum RPC, pinned block 26107702",
-        "url": "https://ethereum-rpc.publicnode.com"
+        "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
         "label": "Morpho exact-vault portfolio API",
@@ -195,18 +195,18 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
       },
       {
-        "label": "MaplePoolManager implementation pinned at block 26115263: totalAssets strategy AUM, upgrade and default authority",
+        "label": "MaplePoolManager implementation pinned at block 26197000: totalAssets strategy AUM, upgrade and default authority",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
       },
       {
-        "label": "Pinned funded adapter position, MaplePool manager and implementation: block 26115263, 2026-10-04T00:00:35Z",
-        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        "label": "Pinned funded adapter position, MaplePool manager and implementation: block 26197000, 2026-10-15T09:24:59Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_Senrlusdv2Sentora",
       "rationale": "Vault conversion is accounting-only, but every current funded lending market uses collateral-price-dependent liquidation. The borrower branches cannot be exempted merely because the wrapper is ERC-4626.",
       "sources": [
         {
@@ -226,8 +226,8 @@
           "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
         },
         {
-          "label": "Ethereum RPC, pinned block 26107702",
-          "url": "https://ethereum-rpc.publicnode.com"
+          "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         },
         {
           "label": "Morpho exact-vault portfolio API",
@@ -243,8 +243,8 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
           "rationale": "Exact VaultV2 conversion reads underlying token balance plus adapter realAssets and accrued fee shares; it calls no external spot-price feed. This exemption is limited to the vault accounting entrypoint, not its borrowers.",
           "sources": [
@@ -265,8 +265,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -283,10 +283,10 @@
         "branchId": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf with 86% LLTV and 13267838203347350004955451 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf with 86% LLTV and 12356520240805903465413977 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -305,8 +305,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -323,10 +323,10 @@
         "branchId": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee with 86% LLTV and 107009625584718024134388337 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee with 86% LLTV and 97303980806419396235489058 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -345,8 +345,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -363,10 +363,10 @@
         "branchId": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0 with 86% LLTV and 1383184525063331545249602 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0 with 86% LLTV and 1218418933130521674531819 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -385,8 +385,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -403,10 +403,10 @@
         "branchId": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b with 91.5% LLTV and 4929672592052258298364402 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b with 91.5% LLTV and 4536478864846600539322080 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -425,8 +425,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -443,10 +443,10 @@
         "branchId": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98 with 86% LLTV and 234978651882982045037015510 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98 with 86% LLTV and 245716464958258313226453654 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -465,8 +465,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -483,10 +483,10 @@
         "branchId": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 with 86% LLTV and 409347929450952 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599 with 86% LLTV and 1 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -505,8 +505,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -523,10 +523,10 @@
         "branchId": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb with 91.5% LLTV and 1 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb with 91.5% LLTV and 1 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -545,8 +545,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -563,10 +563,10 @@
         "branchId": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 with 86% LLTV and 1 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 with 86% LLTV and 1 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -585,8 +585,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -603,10 +603,10 @@
         "branchId": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0xce6170ea245dc8d1f275a710a062b70f125f0110 with 77% LLTV and 8532514174952495146250759 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0xce6170ea245dc8d1f275a710a062b70f125f0110 with 77% LLTV and 8938285130152953767216876 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -625,8 +625,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -643,10 +643,10 @@
         "branchId": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_Senrlusdv2Sentora",
           "confidence": "verified",
-          "rationale": "Morpho.idToMarketParams at block 26107702 binds this oracle to collateral 0x4c9edd5852cd905f086c759e8383e09bff1e68b3 with 91.5% LLTV and 32104309941031445613580660 raw lender assets.",
+          "rationale": "Morpho.idToMarketParams at block 26197000 (2026-10-15T09:24:59Z) binds this oracle to collateral 0x4c9edd5852cd905f086c759e8383e09bff1e68b3 with 91.5% LLTV and 61847881189886510779864789 raw lender assets. The adapter position has zero borrow shares and collateral.",
           "sources": [
             {
               "label": "Sentora RLUSD Main exact vault",
@@ -665,8 +665,8 @@
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, pinned block 26107702",
-              "url": "https://ethereum-rpc.publicnode.com"
+              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             },
             {
               "label": "Morpho exact-vault portfolio API",
@@ -680,8 +680,8 @@
       {
         "id": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
         "label": "Morpho market 0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x8b36909dd84d310cbde90cb286d9dab285a245bd: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x2665701293fcbeb223d11a08d826563edcce423a\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Exact market oracle 0x8b36909dd84d310cbde90cb286d9dab285a245bd: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x2665701293fcbeb223d11a08d826563edcce423a\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is Chainlink cbBTC / USD proxy 0x2665701293fcbeb223d11a08d826563edcce423a, aggregator 0x5e2420cace3650622f62b2713b2b3727fc8bcdd1, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
         ],
@@ -694,29 +694,29 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x8b36909dd84d310cbde90cb286d9dab285a245bd",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink cbBTC / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_1",
             "address": "0x2665701293fcbeb223d11a08d826563edcce423a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
@@ -745,8 +745,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -769,8 +769,8 @@
       {
         "id": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
         "label": "Morpho market 0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x6ab351ffde101bb24a97332f4f7162c1711f110b: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22\",\"BASE_FEED_2\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Exact market oracle 0x6ab351ffde101bb24a97332f4f7162c1711f110b: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22\",\"BASE_FEED_2\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is Chainlink weETH / ETH proxy 0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22, aggregator 0x0f316f6b0c2e2ebe3c3a8b23f6c61009238d51fd, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; BASE_FEED_2 is Chainlink ETH / USD proxy 0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, aggregator 0x7d4e742018fb52e48b08be73d041c18b21de6fb5, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee"
         ],
@@ -783,37 +783,37 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x6ab351ffde101bb24a97332f4f7162c1711f110b",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink weETH / ETH proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_1",
             "address": "0x5c9c449bbc9a6075a2c061df312a35fd1e05ff22",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink ETH / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_2",
             "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
@@ -842,8 +842,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -866,8 +866,8 @@
       {
         "id": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
         "label": "Morpho market 0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x4e58cea93a5252547c99d04042de646b17531653: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x4f67e4d9bd67efa28236013288737d39aef48e79\",\"BASE_FEED_2\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Exact market oracle 0x4e58cea93a5252547c99d04042de646b17531653: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x4f67e4d9bd67efa28236013288737d39aef48e79\",\"BASE_FEED_2\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is immutable WstETHPriceFeed, combining stETH/ETH feed 0x86392dc19c0b719886221c78ab11eb8cf5c52812 with wstETH.tokensPerStEth(); BASE_FEED_2 is Chainlink ETH / USD proxy 0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, aggregator 0x7d4e742018fb52e48b08be73d041c18b21de6fb5, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0"
         ],
@@ -880,37 +880,37 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x4e58cea93a5252547c99d04042de646b17531653",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Compound WstETHPriceFeed with Lido exchange-rate input",
             "path": "BASE_FEED_1",
             "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink ETH / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_2",
             "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
@@ -939,8 +939,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -964,7 +964,7 @@
         "id": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
         "label": "Morpho market 0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
         "tier": "privileged-internal-pricing",
-        "summary": "Exact immutable MorphoChainlinkOracleV2 0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5 embeds BASE_VAULT syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b, BASE_FEED_1 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6 and QUOTE_FEED_1 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a; second feed slots and quote vault are zero. Its price() calls convertToAssets, which is shares * MaplePool.totalAssets / totalSupply; totalAssets forwards to manager 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f. At block 26115263 (2026-10-04T00:00:35Z), this vault's adapter has nonzero market supplyShares and manager implementation is 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. The verified manager sums strategy assetsUnderManagement and grants pool-delegate/protocol-admin default and strategy discretion, with delegate/security-admin upgrades. This positively establishes internal ledger pricing without claiming arbitrary NAV submission. Upstream feed heartbeat/admin guarantees remain unresolved.",
+        "summary": "Exact immutable MorphoChainlinkOracleV2 0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5 embeds BASE_VAULT syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b, BASE_FEED_1 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6 and QUOTE_FEED_1 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a; second feed slots and quote vault are zero. Its price() calls convertToAssets, which is shares * MaplePool.totalAssets / totalSupply; totalAssets forwards to manager 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f. At block 26197000 (2026-10-15T09:24:59Z), this vault's adapter has nonzero market supplyShares and manager implementation is 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8. The verified manager sums strategy assetsUnderManagement and grants pool-delegate/protocol-admin default and strategy discretion, with delegate/security-admin upgrades. This positively establishes internal ledger pricing without claiming arbitrary NAV submission. Upstream feed heartbeat/admin guarantees remain unresolved. Pinned upstream identity at block 26197000: BASE_FEED_1 is Chainlink USDC / USD proxy 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6, aggregator 0x54bcc589d9743e521c64233706fc8cb36d275b07, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
         ],
@@ -977,37 +977,37 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0xf766f4f1bcb0cbbf4eef5e26ff7c7f66a713c1b5",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink USDC / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_1",
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Embedded ERC-4626 conversion authority, administrator unreviewed",
+            "provider": "MaplePool conversion via upgradeable MaplePoolManager",
             "path": "BASE_VAULT",
             "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
@@ -1036,8 +1036,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -1060,20 +1060,20 @@
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
           },
           {
-            "label": "MaplePoolManager implementation pinned at block 26115263: strategy AUM, upgrade/default authorities",
+            "label": "MaplePoolManager implementation pinned at block 26197000: strategy AUM, upgrade/default authorities",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8"
           },
           {
-            "label": "Funded adapter position and embedded NAV implementation at block 26115263, 2026-10-04T00:00:35Z",
-            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            "label": "Funded adapter position and embedded NAV implementation at block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       },
       {
         "id": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
         "label": "Morpho market 0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xf4030086522a5beea4988f8ca5b36dbc97bee88c\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Exact market oracle 0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xf4030086522a5beea4988f8ca5b36dbc97bee88c\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is Chainlink BTC / USD proxy 0xf4030086522a5beea4988f8ca5b36dbc97bee88c, aggregator 0x4a3411ac2948b33c69666b35cc6d055b27ea84f1, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98"
         ],
@@ -1086,29 +1086,29 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0xbcc3d9834b84b32cf540dbe948ded4b47bec5ddb",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink BTC / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_1",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x73e0c0d45e048d25fc26fa3159b0aa04bfa4db98",
@@ -1137,8 +1137,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -1161,8 +1161,8 @@
       {
         "id": "0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
         "label": "Morpho market 0xa128dddc761075df9a9a60689f3a41a989b245aad506352c509c0c3a76a9ec6b",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0xf58725eb213161e9054c97f970dc80b2d0327e8d: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23\",\"BASE_FEED_2\":\"0xf4030086522a5beea4988f8ca5b36dbc97bee88c\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Exact market oracle 0xf58725eb213161e9054c97f970dc80b2d0327e8d: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23\",\"BASE_FEED_2\":\"0xf4030086522a5beea4988f8ca5b36dbc97bee88c\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is Chainlink WBTC / BTC proxy 0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23, aggregator 0xa5e3a55cea42b86560a5215094981c300899199d, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; BASE_FEED_2 is Chainlink BTC / USD proxy 0xf4030086522a5beea4988f8ca5b36dbc97bee88c, aggregator 0x4a3411ac2948b33c69666b35cc6d055b27ea84f1, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
         ],
@@ -1175,37 +1175,37 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0xf58725eb213161e9054c97f970dc80b2d0327e8d",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink WBTC / BTC proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_1",
             "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink BTC / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_2",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
@@ -1234,8 +1234,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -1259,7 +1259,7 @@
         "id": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
         "label": "Morpho market 0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
         "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x968eb911db90bb8ea9e4792b05c94500bc1a62d7: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xb131d953712db127308ef07fce30c2ace465bbce\",\"BASE_FEED_2\":\"0xa569d910839ae8865da8f8e70fffb0cba869f961\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "summary": "Exact market oracle 0x968eb911db90bb8ea9e4792b05c94500bc1a62d7: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xb131d953712db127308ef07fce30c2ace465bbce\",\"BASE_FEED_2\":\"0xa569d910839ae8865da8f8e70fffb0cba869f961\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is immutable PendleChainlinkOracle; latestRoundData uses a Pendle market conversion, reports round zero and sets updatedAt to block.timestamp rather than an independent observation time; BASE_FEED_2 is Chainlink USDe / USD proxy 0xa569d910839ae8865da8f8e70fffb0cba869f961, aggregator 0xcc16f670129f965b396f2e81312f6e339ffdb18e, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb"
         ],
@@ -1272,37 +1272,37 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x968eb911db90bb8ea9e4792b05c94500bc1a62d7",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "PendleChainlinkOracle (Chainlink-compatible interface, not a Chainlink feed)",
             "path": "BASE_FEED_1",
             "address": "0xb131d953712db127308ef07fce30c2ace465bbce",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink USDe / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_2",
             "address": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x5a19fa369f2895dcd8d2cee62e4ceae58ef92bbb",
@@ -1331,8 +1331,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -1355,8 +1355,8 @@
       {
         "id": "0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
         "label": "Morpho market 0xc3b37a18d5b15f8e5b78bcdc014ffb3f22933bde4e5f6a36dedf36db87e68585",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x18803b5c20962244f0a99fc3b7d7e614762385eb: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Exact market oracle 0x18803b5c20962244f0a99fc3b7d7e614762385eb: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is Chainlink ETH / USD proxy 0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, aggregator 0x7d4e742018fb52e48b08be73d041c18b21de6fb5, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
         ],
@@ -1369,29 +1369,29 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x18803b5c20962244f0a99fc3b7d7e614762385eb",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink ETH / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_1",
             "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
@@ -1420,8 +1420,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -1445,7 +1445,7 @@
         "id": "0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
         "label": "Morpho market 0x4fa31e3f8ba345227d44e1cf48559eea53a90dd5311dc006984c060f2f311d96",
         "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x5ac03061500e0c97862a466a38a7e87fac4ac39d: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x64775db2ac856843e1f900f6249687d6d803b22d\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "summary": "Exact market oracle 0x5ac03061500e0c97862a466a38a7e87fac4ac39d: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0x64775db2ac856843e1f900f6249687d6d803b22d\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is a RedStone XRP proxy, implementation 0x3d01242aadc0425209544520093e74fd151daeb9, ProxyAdmin 0x8223a6271d1e0bda019ee55d545d7b86eff1f573; source forwards to multi-feed adapter 0xd72a6ba4a87ddb33e801b3f1c7750b2d0911fc6c; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0xce6170ea245dc8d1f275a710a062b70f125f0110"
         ],
@@ -1458,29 +1458,29 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x5ac03061500e0c97862a466a38a7e87fac4ac39d",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "RedStone XRP upgradeable price feed",
             "path": "BASE_FEED_1",
             "address": "0x64775db2ac856843e1f900f6249687d6d803b22d",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0xce6170ea245dc8d1f275a710a062b70f125f0110",
@@ -1509,8 +1509,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",
@@ -1533,8 +1533,8 @@
       {
         "id": "0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
         "label": "Morpho market 0xd9d2fc090bdbab1804ea960dd6669b62357787e5816f575f14ca4e6d999614bf",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact market oracle 0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xa569d910839ae8865da8f8e70fffb0cba869f961\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed.",
+        "tier": "standard-external",
+        "summary": "Exact market oracle 0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7: MorphoChainlinkOracleV2; immutable input configuration {\"BASE_FEED_1\":\"0xa569d910839ae8865da8f8e70fffb0cba869f961\",\"BASE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_FEED_1\":\"0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a\",\"QUOTE_FEED_2\":\"0x0000000000000000000000000000000000000000\",\"BASE_VAULT\":\"0x0000000000000000000000000000000000000000\",\"QUOTE_VAULT\":\"0x0000000000000000000000000000000000000000\"}. Upstream feed/embedded-vault authority is not fully closed. Pinned upstream identity at block 26197000: BASE_FEED_1 is Chainlink USDe / USD proxy 0xa569d910839ae8865da8f8e70fffb0cba869f961, aggregator 0xcc16f670129f965b396f2e81312f6e339ffdb18e, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; QUOTE_FEED_1 is Chainlink RLUSD / USD proxy 0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a, aggregator 0x7d95b7bf7bb7750d818f42df114739b6c88cf9bc, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. This closes provider/address bindings, not complete upstream key-custody, heartbeat or fallback guarantees.",
         "collateralAssets": [
           "0x4c9edd5852cd905f086c759e8383e09bff1e68b3"
         ],
@@ -1547,29 +1547,29 @@
             "path": "price(): collateral/loan token conversion; scale 1e36",
             "address": "0x0c13eec9b02cd9d85facc9edf17e71feafc3d8d7",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink USDe / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "BASE_FEED_1",
             "address": "0xa569d910839ae8865da8f8e70fffb0cba869f961",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           },
           {
-            "provider": "Chainlink-interface feed, upstream provider/admin unreviewed",
+            "provider": "Chainlink RLUSD / USD proxy; current owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca",
             "path": "QUOTE_FEED_1",
             "address": "0x26c46b7ad0012ca71f2298ada567dc9af14e7f2a",
             "chain": "ethereum",
-            "observedAt": "2026-10-02",
-            "observedBlock": 26107702
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197000
           }
         ],
-        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Upstream feed heartbeat and administrator guarantees remain unverified.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "fallbackBehavior": "Verified MorphoChainlinkOracleV2 multiplies/divides fixed feed and ERC-4626 conversion inputs; no alternate fallback. Included ChainlinkDataFeedLib checks nonnegative answers but explicitly does not check staleness or min/max bounds. Proxy identities and current owners are recorded where resolved; complete upstream signer, update-cadence and safeguard guarantees remain unverified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197000,
         "collateralParameters": [
           {
             "asset": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
@@ -1598,8 +1598,8 @@
             "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
           },
           {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
+            "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
             "label": "Morpho exact-vault portfolio API",

@@ -24,30 +24,30 @@
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "The reviewed exact ZARsc deployment is native Solana issuance. Terms permit future additional networks but identify no active bridge or representation; no mirror-stock liability partition is asserted.",
-    "reviewedAt": "2026-10-03", "reviewer": "Pharos refinement Refine02 primary-source and RPC review", "confidence": "verified",
+    "reviewedAt": "2026-10-15", "reviewer": "Rev_ZarscSupercoin primary-source and pinned RPC review", "confidence": "verified",
     "sources": [{"label": "Supercoin Terms 5.3 and issuer exact Solana mint footer", "url": "https://www.supercoin.co.za/terms-of-service"}],
     "routes": [{
       "id": "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ", "destinationChain": "solana", "contractAddress": "5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
       "protocol": "Super Money native ZARsc", "issuanceModel": "native-issuance", "routeClass": "native", "riskTier": "single-chain-or-native", "semantics": "native-mint", "scope": "canonical",
-      "reviewDisposition": "reviewed", "reviewNote": "Issuer exact-mint binding and finalized Token-2022 account read at slot 452860529 identify native issuer minting. Prospective migration is not an existing bridge route.",
-      "controllerChain": "solana", "controllerAddress": "UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk", "observedAt": "2026-10-03", "observedBlock": 452860529,
-      "sources": [{"label": "Issuer terms and exact deployment", "url": "https://www.supercoin.co.za/terms-of-service"}, {"label": "Solana exact mint", "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"}]
+      "reviewDisposition": "reviewed", "reviewNote": "Issuer exact-mint binding and exact-slot Token-2022 account read at finalized Solana slot 457200000 (2026-10-15T10:13:19Z) identify native issuer minting. Prospective migration is not an existing bridge route.",
+      "controllerChain": "solana", "controllerAddress": "UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk", "observedAt": "2026-10-15", "observedBlock": 457200000,
+      "sources": [{"label": "Issuer terms and exact deployment", "url": "https://www.supercoin.co.za/terms-of-service"}, {"label": "Exact-slot Alchemy mint and authority reads, Solana slot 457200000", "url": "https://solana-mainnet.g.alchemy.com/v2/"}]
     }]
   },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
       {
-        "label": "Finalized Solana mint configuration",
-        "url": "https://solscan.io/token/5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ"
+        "label": "Exact-slot Alchemy mint and all four authority accounts, Solana slot 457200000, 2026-10-15T10:13:19Z",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       },
       {
         "label": "Issuer holder terms",
         "url": "https://www.supercoin.co.za/terms-of-service"
       }
     ],
-    "evidence": "At finalized Solana slot 452748073, the exact tracked Token-2022 mint has freezeAuthority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, a permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc, and a retained pausable authority. These are direct holder freeze/seizure controls; transfer hook is presently unset. Issuer terms expressly reserve freeze and recovery/burn powers.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At finalized Solana slot 457200000 (2026-10-15T10:13:19Z; block hash CkfH8u58XAk7qq4cQAuGFuJn8VkdXYGhN39wSRHQKN8Y), exact-slot Alchemy Account Archive bytes identify the complete configured Token-2022 authority census: UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk is mint, mint-close and metadata-update authority; 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi is freeze, metadata-pointer, transfer-hook and pausable authority; 96h1KDUmgqkn6EsSiYFsNiezhEJeB4jEioKmJRZ6Y849 is interest-rate, transfer-fee configuration and withdraw-withheld authority; 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc is permanent delegate. Each authority account is nonexecutable, zero-data and System Program owned. Pause is false, default account state is Initialized, transfer-hook program is unset but mutable, both transfer-fee schedules and mint-withheld fees are zero, and both interest rates are zero. The interest extension changes displayed accounting, not raw mint supply or a contractual yield entitlement. Freeze, pause and permanent delegation are retained direct holder restriction/seizure powers even when unused; no transaction-history absence is inferred. Terms sections 9.2, 12.3 and 15 expressly reserve freeze, burn and refusal powers.",
+    "reviewer": "Rev_ZarscSupercoin primary-source and pinned RPC review",
+    "reviewedAt": "2026-10-15"
   }
 }

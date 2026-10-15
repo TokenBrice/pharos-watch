@@ -181,6 +181,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   // exSat mainnet identity re-read from its official RPC at block 62726859.
   // Identity does not establish token-pool provider coverage or a local logo.
   exsat:          { name: "exSat",            explorerUrl: "https://scan.exsat.network",                    evmChainId: 7200,     type: "evm",   logoPath: ""                            },
+  "0g":          { name: "0G",               explorerUrl: "https://chainscan.0g.ai",                     evmChainId: 16661,    type: "evm",   logoPath: "/chains/0g.png", darkInvert: true },
 };
 
 /**

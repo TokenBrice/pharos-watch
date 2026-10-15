@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated); W1R23 native liquidity review",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -39,17 +39,17 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
       },
       {
-        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
+        "label": "Superseded Ethereum pin 26107704, 2026-10-02T22:44:11Z; retained historical evidence, current composition uses block 26197384",
         "url": "https://etherscan.io/block/26107704"
       },
       {
-        "label": "Ethereum block 26114896, native immediate underlying coverage observation",
-        "url": "https://etherscan.io/block/26114896"
+        "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; single-asset custody and native accounting via https://ethereum-rpc.publicnode.com",
+        "url": "https://etherscan.io/block/26197384"
       }
     ],
-    "rationale": "Original composition pin retained: at Ethereum block 26107704 (2026-10-02T22:44:11Z), the complete local reserve envelope was the named REUSD parent token; unvested rewards are excluded from redeemable totalAssets until released. Native liquidity rechecked at Ethereum block 26114896 (2026-10-03T22:46:59Z): asset is REUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec, totalAssets is 28221691.589077238279605815 REUSD, underlying balance is 28226052.220988060148038707 REUSD and convertToAssets(1e18) is 1.034843053044086092 REUSD. Complete verified SavingsReUSD, LinearRewardsErc4626 and ERC4626 source uses synchronous burn-and-transfer underlying withdrawals with no lockup, queue, local penalty or asset deployment elsewhere. Immediate means native REUSD availability only, not guaranteed USD sale, upstream collateral realization, bridge operation or stress execution. Fee-distribution dependency and parent/governance risks remain separately assessed.",
-    "compositionBasis": "Official single-asset vault documentation, verified accounting source and fixed-block Ethereum reads at 26107704",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26197384 (2026-10-15T10:41:59Z; hash 0xfe4eaf54384aae47b1a503ea6fb142c136e5297bc6cf4a8f59ded1f0fafe36bb), asset() is REUSD 0x57ab1e0003f623289cd798b1824be09a793e4bec, totalSupply() is 27165447.700558279620805063 shares, totalAssets() is 28125190.204358710744242153 REUSD, underlying balance is 28133386.982657864034636304 REUSD, and convertToAssets(1e18)=previewRedeem(1e18)=1.035329530158293962 REUSD. Shares and underlying both use 18 decimals. All redeemable local accounting assets are covered by idle REUSD; the surplus is undistributed revenue. The matched SavingsReUSD, LinearRewardsErc4626 and ERC4626 source has no external asset-allocation or borrowing surface. Withdraw/redeem synchronously burns shares and transfers underlying, with no local queue, cooldown or penalty; reward-cycle rollover can first call the registry-selected fee distributor, so idle coverage alone is not an execution guarantee. Immediate describes native REUSD availability, not USD sale, upstream collateral realization, bridge operation or stressed execution. The 100% local parent-token composition does not establish legal priority, financial assurance or whole-book upstream custody.",
+    "compositionBasis": "Official single-asset vault documentation, runtime-matched verified accounting source and fixed-block Ethereum reads at 26197384",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Local underlying identity is fully identified. Upstream parent custody, collateral realization and stressed liquidity remain parent-layer risks; the local percentage is not an end-to-end solvency claim.",
     "knownUnknownExposurePct": 0
@@ -64,8 +64,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
     "confidence": "verified",
     "sources": [
       {
@@ -81,10 +81,10 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
       },
       {
-        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; pinned REUSD token custody and runtime-matched accounting",
+        "url": "https://etherscan.io/block/26197384"
       }
     ],
-    "uncertainty": "Onchain custody describes only the immediate wrapper token holdings. It does not assert legal segregation, bankruptcy priority, upstream custodial safeguards or administrator independence."
+    "uncertainty": "The immediate REUSD is fully held onchain by the savings contract at the reviewed block. No wrapper-local asset deployment or borrowing surface appears in the matched source. This is not a whole-book custody finding: upstream REUSD collateral and underlying stablecoin custody are not fully resolved by these local balances. The aggregate custodyModel is therefore unknown. Legal segregation, bankruptcy priority, upstream custodial safeguards and administrator independence remain unestablished."
   }
 }

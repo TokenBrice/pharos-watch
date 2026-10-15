@@ -2,7 +2,7 @@
   "id": "sirloinusdc-steakhouse",
   "name": "Steakhouse High Yield USDC Edition",
   "symbol": "sirloinUSDC",
-  "oneLiner": "sirloinUSDC is Steakhouse’s Morpho V2 USDC lending vault; shares accrue yield, absorb strategy losses, and redeem against available liquidity.",
+  "oneLiner": "sirloinUSDC is Steakhouse's broader-collateral USDC lending vault on Base; interest accrues to shares, losses reduce NAV, and withdrawals depend on liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -12,15 +12,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC held idle in the exact Morpho VaultV2 and supplied through its sole MorphoMarketV1 adapter; borrower collateral and market liquidity determine strategy risk.",
-  "pegMechanism": "ERC-4626 shares represent a proportional USDC-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Holder withdrawals burn shares and pay USDC atomically when idle assets plus the selected liquidity adapter suffice.",
+  "collateral": "USDC held idle or supplied through a MorphoMarketV1AdapterV2. The pinned book is concentrated in USDe-backed lending, with mGLO, cbXRP, cbBTC, cbZEC, cbETH, cbHYPE and JitoSOL collateral securing the other loans; these are borrower collateral, not assets held directly by the vault.",
+  "pegMechanism": "ERC-4626 shares represent a proportional USDC-denominated lending position. Interest and fee-share accrual change assets per share; bad debt reduces NAV. Ordinary withdrawals burn shares for idle USDC plus liquidity available through the selected adapter. Force-deallocation is a separate exit with a configurable penalty; maxWithdraw and maxRedeem deliberately return zero and do not measure available liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.001% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "The current holder claim is the operational ERC-4626 claim at base:0xbeeff2490feffa212fac2f6553682c219e6a8845, not direct ownership of the parent’s fiat reserves. Exact verified immutable VaultV2 code pulls underlying before user mint, can mint fee shares during interest accrual, and burns receipts against available underlying on exit. Reverified at block 52095842; parent fiat-cash protections remain upstream. Exact implementation creation is pinned by transaction 0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7, block 45427904, timestamp 2026-05-01T14:19:15+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+    "rationale": "The operational ERC-4626 claim is the exact Base VaultV2, not direct ownership of Circle reserves. Source-matched immutable core at Base block 52630636 (2026-10-15T07:50:19Z) pulls USDC before user minting, mints configured fee shares on accrual and burns shares for available underlying on exit. Creation transaction 0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7 emits this vault's Constructor event at block 45427904, 2026-05-01T14:19:15Z; this dates the implementation rather than the operator or parent token.",
     "sources": [
       {
         "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
@@ -41,13 +41,17 @@
       {
         "label": "Exact implementation creation transaction",
         "url": "https://base.blockscout.com/tx/0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7"
+      },
+      {
+        "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho exact Steakhouse High Yield USDC Edition deployment",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
     },
     {
@@ -55,8 +59,28 @@
       "url": "https://www.steakhouse.financial/docs"
     },
     {
-      "label": "Morpho Vault V2 mechanics",
+      "label": "Morpho: Vault V2 documentation",
       "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Curator",
+      "url": "https://www.steakhouse.financial/"
+    },
+    {
+      "label": "Steakhouse: Vault terms",
+      "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Base explorer",
+      "url": "https://base.blockscout.com/address/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/SteakhouseFi"
     }
   ],
   "contracts": [
@@ -66,14 +90,16 @@
       "decimals": 18
     }
   ],
-  "custodyModel": "unknown",
+  "collateralQuality": "alt-lst-bridged-or-mixed",
+  "custodyModel": "mixed",
+  "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Steakhouse Morpho USDC lending vault",
     "yieldType": "lending-vault"
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "sirloinusdc-steakhouse",
     "display": {
@@ -96,9 +122,9 @@
         "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
       },
       "deployedExposure": {
-        "basis": "Exact asset() returned 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913; sole adapter 0x4a70dc70cef79f51cc7f79c08f863b2841311165 is identified by Morpho as MorphoMarketV1 over the same loan asset. This 100% slice is the underlying lending claim, not an estimate of borrower collateral or idle cash.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+        "basis": "At Base block 52630636 (2026-10-15T07:50:19Z), the sole adapter enumerates eight USDC-denominated lender markets; expectedSupplyAssets sum to 456333375359343 raw USDC and idle USDC is zero, exactly matching totalAssets. The reviewed descriptor covers the loan-denominated protocol claim, not cash or borrower-collateral weights.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-base-mainnet-archive.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",
@@ -106,6 +132,5 @@
       }
     }
   },
-  "launchDate": "2026-05-01",
-  "implementationLaunchDate": "2026-05-01"
+  "launchDate": "2026-05-01"
 }

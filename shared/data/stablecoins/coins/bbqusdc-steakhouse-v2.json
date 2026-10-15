@@ -13,15 +13,15 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC in the Steakhouse-curated Morpho Vault V2 on ethereum, held idle or lent through its MorphoMarketV1AdapterV2; borrower collateral and credit losses remain local strategy exposure",
-  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement",
+  "collateral": "USDC held idle or lent through the Steakhouse-curated Morpho Vault V2 on Ethereum. At block 26197050, lender assets were 33.78% against wFalconX, 30.87% mF-ONE, 21.77% PT-reUSD-10DEC2026, 9.11% weETH and 4.47% reUSD, with small TSLAon and FLHYon positions. Borrower collateral and credit losses remain local strategy exposure.",
+  "pegMechanism": "ERC-4626 shares accrue net USDC lending interest and realize losses at NAV. Ordinary withdraw/redeem uses idle USDC and the configured liquidity adapter, subject to liquidity; force-deallocation and in-kind exits are separate, not guaranteed dollar settlement. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0.001% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Refine07 primary-source review 2026-10-03",
-    "rationale": "Steakhouse High Yield USDC (bbqUSDC) at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 is the current public ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. One current adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 holds 10 enumerated Morpho market IDs. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications. The exact deployment launch date is 2025-10-27, established by Morpho creationTimestamp for this chain-qualified vault address (1761601787). Published VaultV2 framework security audits corroborate the referenced semantics; source-to-bytecode completeness and financial assurance are separate facts.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
+    "rationale": "Steakhouse High Yield USDC (bbqUSDC) at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757 is an immutable ERC-4626 VaultV2 share over USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48. Deposits transfer underlying before minting; interest accrual can mint configured fee shares and recognizes adapter losses. Holder rights are residual proportional code-enforced NAV redemption, not beneficial ownership of Circle reserves or proven statutory segregation. At Ethereum block 26197050 (2026-10-15T09:34:59Z), the sole adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 accounts for eight Morpho markets, down from ten. The removed cbBTC and syrupUSDC markets retain dust supply shares but each rounds to zero expectedSupplyAssets and is excluded from adapter realAssets. Current market assets sum exactly to totalAssets of 45931780.405691 USDC with zero idle USDC. This intentionally differs from the fiat-cash parent and older Morpho precedent classifications. The exact deployment launch date remains 2025-10-27, established by chain-qualified creationTimestamp 1761601787. Verified explorer runtime matches the pinned deployed code; framework security audits are not exact-vault financial assurance.",
     "sources": [
       {
         "label": "Exact Morpho Vault V2 deployment",
@@ -32,7 +32,7 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
       },
       {
-        "label": "Pinned ethereum block 26107704",
+        "label": "Superseded Ethereum pin 26107704, 2026-10-02; retained historical evidence",
         "url": "https://etherscan.io/block/26107704"
       },
       {
@@ -62,22 +62,46 @@
       {
         "label": "Exact VaultV2 address on chainId 1: creationTimestamp=1761601787, accessed 2026-10-03",
         "url": "https://api.morpho.org/graphql"
+      },
+      {
+        "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; vault, runtime and complete adapter/market census",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ]
   },
   "detailProvider": "coingecko",
   "links": [
     {
-      "label": "Morpho vault",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
     },
     {
-      "label": "Vault mechanics",
+      "label": "Morpho: Vault asset flows",
       "url": "https://docs.morpho.org/developers/earn/tutorials/assets-flow.md"
     },
     {
-      "label": "Gate documentation",
+      "label": "Morpho: Gate documentation",
       "url": "https://docs.morpho.org/curate/concepts/gates.md"
+    },
+    {
+      "label": "Curator",
+      "url": "https://www.steakhouse.financial/"
+    },
+    {
+      "label": "Steakhouse: Vault terms",
+      "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Verified vault contract",
+      "url": "https://eth.blockscout.com/address/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+    },
+    {
+      "label": "Steakhouse High Yield Instant product",
+      "url": "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant"
     }
   ],
   "contracts": [
@@ -88,7 +112,7 @@
     }
   ],
   "collateralQuality": "exotic",
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Steakhouse High Yield USDC Morpho Vault V2",
@@ -96,7 +120,7 @@
   },
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "bbqusdc-steakhouse-v2",
     "display": {
@@ -119,9 +143,9 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
       "deployedExposure": {
-        "basis": "Pinned sole MorphoMarketV1AdapterV2 and complete market inventory; supplied USDC is a lending position, not idle cash",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757"
+        "basis": "Ethereum block 26197050 (2026-10-15T09:34:59Z; hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6): sole MorphoMarketV1AdapterV2, eight accounted markets, 45931780.405691 USDC assets and zero idle USDC. cbBTC/syrupUSDC residual supply shares each round to zero assets and are outside realAssets; supplied USDC is a lending position, not idle cash.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

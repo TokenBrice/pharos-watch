@@ -11,10 +11,20 @@
     "navToken": true
   },
   "mechanismArchetype": "tbill",
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 primary-source review",
+    "rationale": "CUSIP 46655R119, Token Class 4397 represents the exact registered government money-market fund share. The issuer identifies a Treasury and overnight Treasury/cash-collateralized repo mandate, a target $1 NAV and daily income distribution. The tbill archetype models this direct fund-share/NAV claim, not an assertion of Treasury-only holdings or unconditional cash redemption.",
+    "sources": [
+      { "label": "JPMorgan exact Token Class identity, investment mandate and NAV", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
+      { "label": "JPMorgan Token Class factsheet", "url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/americas/us/en/literature/fact-sheet/money-market/fs-ocltmm-t.pdf" }
+    ]
+  },
   "detailProvider": "coingecko",
   "geckoId": "jpmorgan-onchain-liquidity-token-money-market-fund",
-  "collateral": "Fund shares backed by U.S. Treasury securities, overnight repurchase agreements fully collateralized by U.S. Treasury securities and/or cash, and operational cash; JPMorgan Chase Bank is securities custodian and fund accountant.",
-  "pegMechanism": "The registered government money-market fund seeks a $1 NAV, publishes transaction NAV, and reinvests dividends daily. Eligible registered shareholders redeem cash through Morgan Money, the service center or approved token-burn requests. The off-chain Investor Register determines legal ownership; on-chain balances can temporarily differ.",
+  "collateral": "Token Class shares in JPMorgan's registered government money-market fund, backed by U.S. Treasury securities with a 93-day purchase-maturity limit, overnight repos fully collateralized by Treasury securities and/or cash, and cash held primarily to meet redemptions. The current prospectus permits temporary defensive cash positions; no current cash weight is inferred.",
+  "pegMechanism": "The registered government money-market fund seeks a $1 NAV and reinvests income daily in same-class shares. Approved shareholders request redemption through Morgan Money, the service center or token-burn requests; the off-chain Investor Register determines legal ownership. Ordinary redemption is USD cash, with optional third-party stablecoin conversion. For redemptions worth $250,000 or more, the Fund may pay part or all in readily marketable securities valued at NAV. Selling them can incur market risk, taxable gains and brokerage or other charges. Ordinary payment is within seven days, subject to suspension exceptions.",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en",
@@ -27,7 +37,12 @@
     { "label": "Website", "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119" },
     { "label": "NAV and fund statistics", "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en" },
     { "label": "SEC prospectus and SAI", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526217424/d44657d485bpos.htm" },
-    { "label": "Solana availability supplement", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm" }
+    { "label": "Solana availability supplement", "url": "https://www.sec.gov/Archives/edgar/data/1659326/000119312526410014/d172947d497.htm" },
+    { "label": "Factsheet", "url": "https://am.jpmorgan.com/content/dam/jpm-am-aem/americas/us/en/literature/fact-sheet/money-market/fs-ocltmm-t.pdf" },
+    { "label": "Issuer launch announcement", "url": "https://am.jpmorgan.com/us/en/asset-management/institutional/about-us/media/press-releases/jp-morgan-asset-management-launches-second-tokenized-fund-on-ethereum/" },
+    { "label": "Ethereum contract", "url": "https://eth.blockscout.com/address/0x09864f52b035ae22ee739dfa5c748fa080d07bd8?tab=contract" },
+    { "label": "Current prospectus", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/P?site=JPMorganv3" },
+    { "label": "Current statement of additional information", "url": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/S?site=JPMorganv3" }
   ],
   "jurisdiction": {
     "country": "United States",
@@ -66,8 +81,8 @@
   "status": "quarantined",
   "listingStatusReview": {
     "changedAt": "2026-10-03",
-    "reason": "Quarantined pending Token Class legal/native-share perimeter, hash-pinned native supply and decimals, reviewed NAV-vs-block skew, matched reserve attempt, runtime price/market-cap PASS and explicit admission. Bootstrap stages evidence only; market cap cannot bypass gates.",
-    "reviewBy": "2026-10-10",
+    "reason": "Reviewed October 15: CoinGecko has no price or market cap. Native-share/Solana perimeter, NAV/block skew, matched reserve attempt and runtime admission remain unresolved despite fresh Ethereum shares and NAV. Reserve recovery remains unauthorized.",
+    "reviewBy": "2026-11-14",
     "source": {
       "label": "JPMorgan JLTXX Token Class NAV and class assets",
       "url": "https://am.jpmorgan.com/FundsMarketingHandler/slim/product.md?cusip=46655r119&country=us&role=adv&language=en"

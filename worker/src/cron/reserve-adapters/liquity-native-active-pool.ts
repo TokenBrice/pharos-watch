@@ -133,8 +133,7 @@ export async function fetchLiquityNativeActivePoolReserves(
       ...(tcr != null ? { totalCollateralRatio: tcr } : {}),
       ...(mcr != null ? { minimumCollateralRatio: mcr } : {}),
       ...buildRedemptionSnapshotMetadata({
-        capacityUsd: totalDebtUsd,
-        capacityKind: "live-direct-bounded",
+        // Gross ActivePool debt is backing diagnostics, not executable eligible Trove debt.
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",

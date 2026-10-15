@@ -15,6 +15,7 @@
         "counterparty",
         "liquidity",
         "smart-contract",
+        "market",
         "custody",
         "concentration"
       ],
@@ -22,8 +23,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
     "confidence": "verified",
     "sources": [
       {
@@ -45,32 +46,39 @@
       {
         "label": "arc fixed-block RPC observation 23952285",
         "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+        "url": "https://rpc.mainnet.arc.io"
       }
     ],
-    "rationale": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. The 100% slice is the USDC-denominated deployed lending claim, not ownership of borrower collateral or a separate direct claim on Circle reserve assets.",
+    "rationale": "At Arc block 26080262 (0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6), timestamp 2026-10-15T10:44:00Z, totalSupply=89769364193500333705669420 raw 18-decimal shares; accrueInterestView returns assets=89794160053854 raw 6-decimal USDC and zero pending performance/management shares. Idle USDC=0. adaptersLength=1; sole adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c has marketIdsLength=1. Its sole market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d has expectedSupplyAssets=realAssets=89794160053854, exactly reconciling totalAssets. convertToAssets(1e18)=1000276 raw USDC. liquidityAdapter is now that same adapter, and liquidityData encodes the sole cirBTC/USDC market at 86% LLTV. This supersedes earlier unset-liquidity-adapter observations; it does not guarantee complete or stressed cash realization. The 100% slice is a USDC-denominated lender claim, not direct ownership of cirBTC or Circle reserve assets. Market-level collateral exposure is 100% cirBTC; the local adapter position and vault position each have zero borrow shares and zero posted collateral. All three current exposure caps are uint128 maximum and 100% relative. No undisclosed sleeve is inferred from unavailable custody or legal protection.",
     "compositionBasis": "Full fixed-block ERC-4626 vault, adapter and Morpho market inventory",
-    "compositionAsOf": "2026-10-02",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current strategy claims and parent asset are identified. Borrower collateral custody, legal insolvency priority, future allocations and stressed realization remain uncertain.",
+    "knownUnknownExposure": "The complete current strategy claim and parent asset are identified. cirBTC custody is described by Circle, but vault-holder legal insolvency priority, future allocation changes, borrower conduct and stressed cash realization remain unestablished.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [
       {
         "name": "Galaxy USDC Morpho Vault V2",
-        "role": "other",
-        "jurisdiction": "arc"
+        "role": "other"
       },
       {
         "name": "0xee0080203a76690bca40670dfd0cd1c30fab7c2c MorphoMarketV1 adapter and Morpho markets",
+        "role": "other"
+      },
+      {
+        "name": "Circle International Bermuda Limited; cirBTC BTC held at First National Digital Currency Bank, N.A. (Circle National Trust)",
         "role": "other"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
-    "rehypothecation": "permitted",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_ArcusdcGalaxy primary-source review 2026-10-15",
     "confidence": "probable",
     "sources": [
       {
@@ -96,8 +104,24 @@
       {
         "label": "Exact Arc VaultV2 published source, accessed 2026-10-09; full compiler verification unclaimed",
         "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8e357432cc12ff425c36432f312968aeb16112af"
+      },
+      {
+        "label": "Arc block 26080262, hash 0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6, timestamp 2026-10-15T10:44:00Z; complete vault, role, adapter, market and oracle reads",
+        "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Circle wrapped-asset custody and reuse terms, sections 1, 2 and 13; applies to borrower collateral, not direct arcUSDC holder rights",
+        "url": "https://www.circle.com/legal/wrapped-digital-assets-terms"
+      },
+      {
+        "label": "Circle cirBTC reserve custody structure, September 4, 2026",
+        "url": "https://www.circle.com/blog/cirbtc-a-clearer-reserve-standard-for-wrapped-btc"
+      },
+      {
+        "label": "Galaxy Covered Vault terms, sections 3.2, 4.3 and 10.2; no vault-holder insolvency protection established",
+        "url": "https://docs.curation.galaxy.com/legal/terms-of-use"
       }
     ],
-    "uncertainty": "At arc block 23952285 (0x16d7b9d), captured 2026-10-02T22:44:09.665742+00:00, totalSupply=89746600641673546252952918 atomic shares; accrueInterestView returned assets=89710295395927, pending performance shares=0, pending management shares=0. Idle USDC=0; complete adapter inventory sums to 89710295395927 USDC atomic units. Asset decimals=6, share decimals=18. convertToAssets(1e18)=999595 USDC atomic units. All present local positions are onchain lending claims; borrowed USDC is intentionally reused by borrowers. Upstream USDC reserve custody and borrower-collateral custody are separate inherited/credit exposures. No legal segregation or insolvency-remoteness claim is established. The 2026-10-09 campaign reviewed Morpho's Vault V2 documentation and the exact Arc explorer's published VaultV2 source. Their contract-level noncustodial and in-kind redemption descriptions do not identify enforceable Galaxy-vault holder segregation or bankruptcy protections. The original position pin and custody review date are unchanged; the separately timestamped custodyEscrow C classification records this legal-disclosure search."
+    "uncertainty": "At Arc block 26080262 (0x7a10f0bb6143c187ccaa935962053082f80f592b0af50fda1c393982072b53a6), timestamp 2026-10-15T10:44:00Z, totalSupply=89769364193500333705669420 raw 18-decimal shares; accrueInterestView returns assets=89794160053854 raw 6-decimal USDC and zero pending performance/management shares. Idle USDC=0. adaptersLength=1; sole adapter 0xee0080203a76690bca40670dfd0cd1c30fab7c2c has marketIdsLength=1. Its sole market 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d has expectedSupplyAssets=realAssets=89794160053854, exactly reconciling totalAssets. convertToAssets(1e18)=1000276 raw USDC. liquidityAdapter is now that same adapter, and liquidityData encodes the sole cirBTC/USDC market at 86% LLTV. This supersedes earlier unset-liquidity-adapter observations; it does not guarantee complete or stressed cash realization. Immediate vault/adapter lending claims are onchain, but the entire borrower-collateral market uses custodial cirBTC. Circle's wrapped-asset terms identify Circle Bermuda and segregated BTC accounts at Circle National Trust (or another regulated affiliate), prohibit lending/pledging/rehypothecation of that underlying BTC, and condition direct redemption on Circle Mint eligibility. These cirBTC protections do not establish arcUSDC holder segregation or bankruptcy remoteness. custodyModel=mixed reflects this material offchain collateral layer and onchain lending positions. rehypothecation=unknown: lending USDC principal to Morpho borrowers is strategy deployment, not an established legal reuse right; the Galaxy terms (section 4.3) deny custody and neither permit nor prohibit custodian reuse, and Circle's reuse prohibition covers only the borrower-collateral BTC layer. The formerly authored provider jurisdiction \"arc\" was a blockchain label, not a legal jurisdiction; no unsupported vault jurisdiction is supplied."
   }
 }

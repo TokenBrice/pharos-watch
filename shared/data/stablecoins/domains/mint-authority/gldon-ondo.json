@@ -5,6 +5,7 @@
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
     "summary": "Ondo GM native managers issue GLDon on Ethereum, BNB and Solana; EVM beacon-owner timelocks can replace mint logic. OFT representation powers are segregated into Bridge Risk. D14: Native adminProcessMint can mint to a registered recipient without on-chain deposit or custody-attestation validation; issuance is economically unbounded.",
+    "headline": "Issuer managers can mint without on-chain backing validation; upgrade timelocks and periodic reconciliation do not impose an immutable issuance cap.",
     "controls": [
       {
         "label": "GLDon ethereum native GMTokenManager",
@@ -16,8 +17,8 @@
         "deploymentRefs": [
           "ethereum:0x423d42e505e64f99b6e277eb7ed324cc5606f139"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197409,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -40,7 +41,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Pinned MINTER_ROLE enumeration returns the issuer-documented native GMTokenManager and a distinct OndoOFT minter. Only the GMTokenManager is native issuance; the OndoOFT is recorded under Bridge Risk."
+        "evidence": "At ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/, token MINTER_ROLE has exactly two members: this native manager and bridge OndoOFT 0x6d119ebada730583ef8dc7b8506fa317a374796a. Token DEFAULT_ADMIN_ROLE is the native timelock; BURNER_ROLE and CONFIGURER_ROLE have zero members. Complete native-manager enumerable role census: ADMIN_MINT_ROLE=0x71a4d411b5f7941dee020417fca30413712f1646; ATTESTATION_SIGNER_ROLE=0xff2d04f6002c10eba702adafe2f43cac5996c477; CONFIGURER_ROLE=0x71a4d411b5f7941dee020417fca30413712f1646,0xd2746617c58b72254785bdb483e04f311c858d5f; DEFAULT_ADMIN_ROLE=0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1; PAUSER_ROLE=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc; UNPAUSER_ROLE=0x71a4d411b5f7941dee020417fca30413712f1646. ADMIN_MINT_ROLE is the 4-of-7 proposer Safe, whose owner/module/guard state was read at the same pin. Verified adminProcessMint checks the role, mint pause, accepted token and registered recipient, but does not require a posted deposit or custody attestation. ATTESTATION_SIGNER_ROLE signs ordinary funded mints; it is not proof of independent key custody. Bridge powers remain in Bridge Risk."
       },
       {
         "label": "GLDon bsc native GMTokenManager",
@@ -52,8 +53,8 @@
         "deploymentRefs": [
           "bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 125374463,
+        "observedAt": "2026-10-15",
+        "observedBlock": 127773120,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -76,7 +77,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Pinned MINTER_ROLE enumeration returns the issuer-documented native GMTokenManager and a distinct OndoOFT minter. Only the GMTokenManager is native issuance; the OndoOFT is recorded under Bridge Risk."
+        "evidence": "At bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/, token MINTER_ROLE has exactly two members: this native manager and bridge OndoOFT 0x6b2cdc221a2ef9c3c35dac38514154c5c35dab57. Token DEFAULT_ADMIN_ROLE is the native timelock; BURNER_ROLE and CONFIGURER_ROLE have zero members. Complete native-manager enumerable role census: ADMIN_MINT_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913; ATTESTATION_SIGNER_ROLE=0xff2d04f6002c10eba702adafe2f43cac5996c477; CONFIGURER_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913,0xa21ed4c3122fc51c6d6db0d668d968c3b3f689cb; DEFAULT_ADMIN_ROLE=0x8860bbfc7a83e4788a981f4e9f30878331413b26; PAUSER_ROLE=0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97; UNPAUSER_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913. ADMIN_MINT_ROLE is the 4-of-7 proposer Safe, whose owner/module/guard state was read at the same pin. Verified adminProcessMint checks the role, mint pause, accepted token and registered recipient, but does not require a posted deposit or custody attestation. ATTESTATION_SIGNER_ROLE signs ordinary funded mints; it is not proof of independent key custody. Bridge powers remain in Bridge Risk."
       },
       {
         "label": "GLDon Solana native mint authority",
@@ -88,8 +89,8 @@
         "deploymentRefs": [
           "solana:hWfiw4mcxT8rnNFkk6fsCQSxoxgZ9yVhB6tyeVcondo"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748021,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209355,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -112,7 +113,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Finalized getAccountInfo returns this mint authority on the GLDon Token-2022 mint with 9 decimals; issuer identifies Solana as a native minting network. No signer threshold or immutable cap is inferred from the program PDA."
+        "evidence": "Exact-slot Account Archive getAccountInfo at solana block/slot 457209355, hash CDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp 2026-10-15T10:46:59.000Z, RPC https://solana-mainnet.g.alchemy.com/v2/ returns this mint authority, freeze authority 51QVCuHfL1FeNjd8BDeffCKhCcAYoULnVB3yjNhShiuK and 9 decimals on the Token-2022 mint. The pausable-config extension has this authority and paused=false. Issuer docs identify Solana as native issuance. No signer threshold or immutable cap is inferred from the mint-authority PDA."
       },
       {
         "label": "GLDon native beacon-owner timelocks",
@@ -126,8 +127,8 @@
         ],
         "timelockDelaySec": 7200,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110184,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197409,
         "sources": [
           {
             "label": "Ondo native managers",
@@ -150,7 +151,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "Ethereum beacon 0x985462c9aa4d6c3ad59ae6e1e9c0c11347ed1598 is controlled by this 7200-second timelock. At block 26110184 enumerable role census: proposer 0x71a4d411b5f7941dee020417fca30413712f1646 (getThreshold 4, getOwners 7); executors/cancellers 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc (threshold 1, owners 9) and zero-code 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; DEFAULT_ADMIN_ROLE this timelock and 0xcd35671dcab88d05ee29dc4d360181529390b17f (threshold 5, owners 9). Proposer owners: 0xdb867df5187d61e8e85c2c9822549e54ad1b553c, 0x60f030d621a4ab27dff024a8e43eb36e2d95fb02, 0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893, 0x189d409b807ac1949fe82c143270992fe9457607, 0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241, 0x40482b9538a418cb62b92f14cc13d20092b3dbb4, 0x74a4c329aa5a6bfa16bd32baf37209f4c632173d. Execution/cancellation quorum is not the upgrade proposal quorum. Fresh reads at the same block close the proposer/admin module question: both Safes have no enabled modules, zero guard, singleton 0x41675c099f32341bf84bfc5382af534df5c7461a and standard CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Verified TimelockController source gates grantRole by the role administrator, scheduling by PROPOSER_ROLE, execution by a ready operation, and delay changes by a timelock self-call. Human signer independence/key custody remain unverified."
+        "evidence": "At ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/, beacon owner and token DEFAULT_ADMIN_ROLE both identify this timelock; getMinDelay=7200. Complete enumerable role census: PROPOSER_ROLE=0x71a4d411b5f7941dee020417fca30413712f1646; EXECUTOR_ROLE=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc,0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; CANCELLER_ROLE=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc,0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; DEFAULT_ADMIN_ROLE=0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1,0xcd35671dcab88d05ee29dc4d360181529390b17f. Same-pin Safe census: 0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc: threshold 1 of 9; owners 0x7d72d4c9c660d8118b9ac440037f7d6cff40c8d2,0x74a4c329aa5a6bfa16bd32baf37209f4c632173d,0x756531b70c42c48f98270baac414f9f208a8580b,0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893,0x189d409b807ac1949fe82c143270992fe9457607,0x40482b9538a418cb62b92f14cc13d20092b3dbb4,0x60f030d621a4ab27dff024a8e43eb36e2d95fb02,0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e,0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241; modules empty with terminal sentinel; guard zero; singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e; fallback 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 | 0x71a4d411b5f7941dee020417fca30413712f1646: threshold 4 of 7; owners 0xdb867df5187d61e8e85c2c9822549e54ad1b553c,0x60f030d621a4ab27dff024a8e43eb36e2d95fb02,0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893,0x189d409b807ac1949fe82c143270992fe9457607,0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241,0x40482b9538a418cb62b92f14cc13d20092b3dbb4,0x74a4c329aa5a6bfa16bd32baf37209f4c632173d; modules empty with terminal sentinel; guard zero; singleton 0x41675c099f32341bf84bfc5382af534df5c7461a; fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 | 0xcd35671dcab88d05ee29dc4d360181529390b17f: threshold 5 of 9; owners 0x58417f57f29c6b03114129e0eb59a174b1f41504,0x189d409b807ac1949fe82c143270992fe9457607,0x60f030d621a4ab27dff024a8e43eb36e2d95fb02,0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e,0xece6bc29f718085a30b7bc14162b0fad4737e5d0,0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241,0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46,0x74a4c329aa5a6bfa16bd32baf37209f4c632173d,0x81961c315e38badc02c014a13dd1d4b3dab81d15; modules empty with terminal sentinel; guard zero; singleton 0x41675c099f32341bf84bfc5382af534df5c7461a; fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Scheduling is proposer-gated; execution requires operation readiness and changing the delay is a self-call under verified TimelockController source. Executor/canceller quorum is not proposal quorum. Human signer independence and operational key custody remain unverified; no exact execution-scope certificate is asserted."
       },
       {
         "label": "GLDon BNB beacon-owner timelock",
@@ -161,13 +162,13 @@
         "address": "0x8860bbfc7a83e4788a981f4e9f30878331413b26",
         "deploymentRefs": ["bsc:0xfa9a1e901085e269f6d428f79cd5252d8b919344"],
         "timelockDelaySec": 7200,
-        "observedAt": "2026-10-03",
-        "observedBlock": 125441304,
+        "observedAt": "2026-10-15",
+        "observedBlock": 127773120,
         "sources": [{
           "label": "BNB native beacon timelock; enumerable roles and current Safe reads",
           "url": "https://bscscan.com/address/0x8860bbfc7a83e4788a981f4e9f30878331413b26"
         }],
-        "evidence": "Beacon 0xc046b05a920e4b412815934dd8e58904dda73315 owner is this timelock. At BNB block 125441304: proposer 0xa307e57ca7f9712af3557af8c5624bef214aa913 (threshold 4, seven owner addresses identical to the enumerated Ethereum proposer); executors/cancellers 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97 (threshold 1, nine owners) and zero-code 0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; DEFAULT_ADMIN_ROLE this timelock and 0xa3a3c71380128972f172ff4052af7b6405da6364 (threshold 5, nine owners). At that same block proposer/admin Safes have no enabled modules, zero guard, verified SafeL2 singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762 and CompatibilityFallbackHandler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99; fallback runtime is identical to the verified Ethereum deployment. Verified TimelockController source gates role grants by the role administrator, scheduling by PROPOSER_ROLE, execution by operation readiness and delay changes by self-call. Human independence and key custody remain unclosed."
+        "evidence": "At bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/, beacon owner and token DEFAULT_ADMIN_ROLE both identify this timelock; getMinDelay=7200. Complete enumerable role census: PROPOSER_ROLE=0xa307e57ca7f9712af3557af8c5624bef214aa913; EXECUTOR_ROLE=0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97,0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; CANCELLER_ROLE=0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97,0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b; DEFAULT_ADMIN_ROLE=0x8860bbfc7a83e4788a981f4e9f30878331413b26,0xa3a3c71380128972f172ff4052af7b6405da6364. Same-pin Safe census: 0x80120c4d44ffd6f86716fd8dacd5e395d8bbbe97: threshold 1 of 9; owners 0x7d72d4c9c660d8118b9ac440037f7d6cff40c8d2,0x74a4c329aa5a6bfa16bd32baf37209f4c632173d,0x756531b70c42c48f98270baac414f9f208a8580b,0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893,0x189d409b807ac1949fe82c143270992fe9457607,0x40482b9538a418cb62b92f14cc13d20092b3dbb4,0x60f030d621a4ab27dff024a8e43eb36e2d95fb02,0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e,0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241; modules empty with terminal sentinel; guard zero; singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762; fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 | 0xa307e57ca7f9712af3557af8c5624bef214aa913: threshold 4 of 7; owners 0xdb867df5187d61e8e85c2c9822549e54ad1b553c,0x60f030d621a4ab27dff024a8e43eb36e2d95fb02,0x59702bb067eeae05ac2c1b8c6f30dffd1cc29893,0x189d409b807ac1949fe82c143270992fe9457607,0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241,0x40482b9538a418cb62b92f14cc13d20092b3dbb4,0x74a4c329aa5a6bfa16bd32baf37209f4c632173d; modules empty with terminal sentinel; guard zero; singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762; fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 | 0xa3a3c71380128972f172ff4052af7b6405da6364: threshold 5 of 9; owners 0x58417f57f29c6b03114129e0eb59a174b1f41504,0x189d409b807ac1949fe82c143270992fe9457607,0x60f030d621a4ab27dff024a8e43eb36e2d95fb02,0xaa1e4eef723ceadd137b3ad39ea540da4b092f8e,0xece6bc29f718085a30b7bc14162b0fad4737e5d0,0x020679ff2bc53758bebad1bbe0ab0cf7c1bed241,0x6a95a204ad4a6842b2f0ae3bbb59f35e85594f46,0x74a4c329aa5a6bfa16bd32baf37209f4c632173d,0x81961c315e38badc02c014a13dd1d4b3dab81d15; modules empty with terminal sentinel; guard zero; singleton 0x29fcb43b46531bca003ddc8fcb67ffe91900c762; fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Scheduling is proposer-gated; execution requires operation readiness and changing the delay is a self-call under verified TimelockController source. Executor/canceller quorum is not proposal quorum. Human signer independence and operational key custody remain unverified; no exact execution-scope certificate is asserted."
       },
       {
         "label": "GLDon Solana GM program upgrade authority",
@@ -181,8 +182,8 @@
         "signerCount": 7,
         "modulesOrGuardsStatus": "not-applicable",
         "timelockDelaySec": 7200,
-        "observedAt": "2026-10-03",
-        "observedBlock": 453074463,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457209355,
         "sources": [
           {
             "label": "Issuer-published Solana GM program",
@@ -209,7 +210,7 @@
             "url": "https://api.mainnet-beta.solana.com"
           }
         ],
-        "evidence": "At finalized slot 453074463, one getMultipleAccounts observation binds the issuer GM program to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU, its upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM, and Squads-v4-owned Multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr. The Multisig discriminator matches account:Multisig; decoded threshold=4, members=7 (each permission mask 7), time_lock=7200, config_authority=11111111111111111111111111111111, transaction_index=69 and stale_transaction_index=67. Deriving the multisig from create_key BhW6Tsx43Q6bi9nfP3a7tekDExi1k3bEGkKC19CyShwm gives EfMUAS..., bump 254; its vault index 0 derives exactly this off-curve upgrade authority, bump 254. Finalized transaction 5XVxqQtn... at slot 444346793 independently shows Squads VaultTransactionExecute invoking the GM program with that vault. This establishes current uniform topology and the configured delay, not exhaustive execution/bypass closure, absence of spending limits, Squads program immutability or human key independence. EVM modules/guards do not apply."
+        "evidence": "Separate exact-slot Account Archive observations at solana block/slot 457209355, hash CDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp 2026-10-15T10:46:59.000Z, RPC https://solana-mainnet.g.alchemy.com/v2/ bind issuer program XzTT4XB8m7sLD2xi6snefSasaswsKCxx5Tifjondogm to program-data F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU and its upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM. Squads-owned Multisig EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr decodes to threshold=4, members=7, time_lock=7200, zero config_authority, transaction_index=69, stale_transaction_index=67. Members, each permission mask 7: 3GDhxifYcMxrmkNWC7ARD7UfpALf5FF4zZB5NFuMfiSW, 97VPg6E4Ncdy513ncFpdCNvS3uxEDR6rjTUNDdLvHQmz, 9MDbuzJMuYfeSXGxieuuLXbJMBt1YR92Vr3W1oMRHQRB, Do6TjuVbtSoCDBerE4zwgq6F9Qpto1Qp4JH3u7z3udBJ, EgKrikyPT56NzRJDeNAZSMStfK7LJRe8fFRCopCBUcrY, FGb3upaQC5sRuTnEHRMbpmkkUGiqat9wPVDVnKvSeZvb, HoiPiUt9ZxPusdkP9yXpSGJFLxU8ZHqW4WPNZbcPrcHt. The retained October 3 derivation binds vault index 0 to this off-curve authority; the historical execution source is retained without claiming a fresh transaction census. Current account state verifies topology, not exact deployed Squads runtime/source correspondence, all spending-limit accounts or exhaustive bypass closure. Human independence remains unknown."
       }
     ],
     "upgradeability": {
@@ -233,7 +234,7 @@
       "canChangeMintLogic": true,
       "delaySec": 7200,
       "controlRef": "GLDon native beacon-owner timelocks",
-      "observedAt": "2026-10-02",
+      "observedAt": "2026-10-15",
       "sources": [
         {
           "label": "Ondo native managers",
@@ -262,6 +263,18 @@
     "supervision": "attestation-only",
     "review": {
       "sources": [
+        {
+          "label": "ethereum block/slot 26197409, hash 0x501e8bac1c055cb784cd64194e7bd5d739ec01c2f51face5ffbb6cba94db9f44, timestamp 2026-10-15T10:46:59.000Z, RPC https://eth-mainnet.g.alchemy.com/v2/",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "bsc block/slot 127773120, hash 0x95a11581769bcd239d1d4b5d7ef56482169a2163104fbd7320f1784f688df94d, timestamp 2026-10-15T10:47:11.000Z, RPC https://bnb-mainnet.g.alchemy.com/v2/",
+          "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "solana block/slot 457209355, hash CDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp 2026-10-15T10:46:59.000Z, RPC https://solana-mainnet.g.alchemy.com/v2/",
+          "url": "https://solana-mainnet.g.alchemy.com/v2/"
+        },
         {
           "label": "Verified native GMTokenManager adminProcessMint without posted deposit or custody attestation",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c"
@@ -297,6 +310,7 @@
         {
           "label": "Exact Ethereum beacon-owner timelock and role census",
           "url": "https://etherscan.io/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+
         },
         {
           "label": "Exact BNB beacon-owner timelock and role census",
@@ -343,9 +357,9 @@
           "url": "https://cdn.sanity.io/files/8k2tqa6n/production/ae1f1ca8ce2c2197a45b563e3e9add041924a249.pdf"
         }
       ],
-      "evidence": "Exact native role membership, EVM beacon owners, timelock proposer/executor/canceller/admin rosters and wallet quorums are identified. Fresh Ethereum block 26110184 and BNB block 125441304 reads additionally show no modules or guards on the proposer/admin Safes and the standard Safe fallback handler; verified timelock and singleton source closes the previously recorded executable bypass questions. Final Terms allow increasing nominal issue volume. GLDon belongs to the same Ondo Global Markets issuer/product family as IAUon and SLVon: the shared Trust & Transparency disclosure appoints Ankura as daily verification agent for all tokenized-stock holdings, expressly confirms investor-liability/fund-reserve reconciliation, and publishes a monthly reconciliation series. This is the identical program-scoped evidence used by the siblings, so periodic reconciliation, attestation-only supervision and unbounded-reconciled posture are aligned. This does not establish issuer prudential supervision, exact GLDon reserve weights, or GLDon-specific Other Collateral allocation in the retrieved aggregate reports; those backing gaps remain. Program code audits cover stated commits, not current financial assurance. Human signer independence/key custody remain unverified. Solana upgrade authority 9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM is off-curve under canonical Ed25519 point decompression, despite being system-program-owned; its program-signing provenance remains unresolved and is not authored as an EOA. D14/D29 sweep (2026-10-03): Verified native GMTokenManager ordinary mintWithAttestation transfers/burns USDon, but adminProcessMint(gmToken,recipient,amount,metadata) separately calls token.mint after only ADMIN_MINT_ROLE, accepted-token and registered-recipient checks. Its comment refers to an off-system deposit; executable code does not require custody attestation or a posted deposit. This direct administrative mint path is economically unbounded despite the product being a tokenized gold-ETF claim and despite periodic reconciliation. No D29 certificate is authored. Pinned block hashes read this review: bsc 125374463 0xf23e6fc88b7d5b47a847c77d3c130c980c5a5e7dbfef50ab6bd1ba01919abbf9; ethereum 26110184 0x297d56c41c8ab9797c999a738a007c72439f48f625074bc2d4cb4202f59b5341; ethereum 26107702 0x292b4ed6cca79fa476bc17c9ef12dd938dbbf67f4a61564c2fe8f897e07390e6; bsc 125441304 0x467abaa630f181137dff3b5a0f0a7457250adbf26c5cfe225211ea11e040e442. No transaction was sent; no governed-issuance qualification is claimed.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (MiscRaiseable)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Fresh pinned reads on 2026-10-15 refresh native manager/token roles, EVM beacon implementations and owners, 7200-second timelocks, complete timelock role rosters, Safe owners/modules/guards/handlers and exact-slot Solana GM/Squads account topology. Full native-manager role rosters are retained per control, including the immediate ADMIN_MINT_ROLE path and ordinary attestation signer. Verified adminProcessMint permits registered-recipient issuance without executable deposit or custody-attestation validation; the nominal legal issue volume is extendible and does not cap this path. Whole-program Trust & Transparency disclosures appoint Ankura to daily verification of all Ondo Stocks holdings and periodic investor-liability reconciliation, with monthly reports and no claimed issuer prudential supervision. The October 12 aggregate report includes Ondo Stocks, USDY and USDon; it does not establish GLDon-specific collateral weights, custody shares or reserve-to-liability financial assurance. The off-curve Solana upgrade authority's Squads topology is now freshly pinned, replacing the obsolete endpoint-unavailable statement. Exact Solana execution/bypass closure and human key independence remain open. Source-level code audits do not establish current financial assurance. No transaction was sent and no governed-issuance certificate is claimed.",
+      "reviewer": "Rev_GldonOndo primary-source and pinned-chain review",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -373,10 +387,10 @@
         },
         {
           "controlRef": "GLDon Solana GM program upgrade authority",
-          "question": "The retained finalized-slot 453074463 observation binds the upgrade authority to Squads v4 vault index 0 of EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr, with 4-of-7 quorum and 7200-second configured delay; no new account-state pin is asserted. Squads publishes that its Solana v4 program SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf has been immutable since November 2024, that autonomous config changes require member voting, and that spending limits permit selected members to spend without a proposal. These protocol-family disclosures do not verify the exact deployed runtime/build, spending-limit inventory or every reachable reconfiguration/bypass path for this vault. The required pinned helper currently rejects Solana because no supplemental endpoint is registered. Exact execution closure remains unverified; human key independence is separate and receives no credit.",
+          "question": "Exact-slot Account Archive reads at solana block/slot 457209355, hash CDgKoooF2tDeo6sX7VTqP5n1vDxKRJFewEkHrPZzBVzL, timestamp 2026-10-15T10:46:59.000Z, RPC https://solana-mainnet.g.alchemy.com/v2/ now verify the GM program-data upgrade authority and Squads 4-of-7 topology with 7200-second configured delay. The old statement that the pinned helper has no Solana endpoint is obsolete. Exact deployed Squads runtime/build correspondence, the full spending-limit account inventory and every reachable reconfiguration/bypass path remain unverified. Family immutability disclosures and public code do not certify this exact vault's exhaustive execution closure; human key independence remains separate.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-09",
-          "reviewer": "Sol curation campaign 2026-10-09 (W2L04Ondo)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_GldonOndo exact-slot archive review",
           "sources": [{
             "label": "Exact GM program-data upgrade-authority account",
             "url": "https://solscan.io/account/F4F1ZdqwmT4KfCfCnXrqLp9R6Liq4vEqJcs64xVKTKeU"

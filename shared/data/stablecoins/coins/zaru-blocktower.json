@@ -15,14 +15,14 @@
     "disposition": "resolved",
     "reviewedAt": "2026-10-03",
     "reviewer": "Pharos refinement Refine02 primary-source and RPC review",
-    "rationale": "The whitepaper defines a fixed-rand, issuer-native liability backed by bank deposits and money-market instruments, not a variable-NAV fund share. Canonical Solana mint creation and initialization at slot 373091718 on 2025-10-13 bind the implementation date; later EVM native deployments are not substituted for that canonical mint's age.",
+    "rationale": "The whitepaper defines a fixed-rand, issuer-native liability backed by bank deposits and money-market instruments, not a variable-NAV fund share. Canonical Solana mint creation and initialization at slot 373091718 on 2025-10-13 establish pre-launch deployment history. The product launched for qualifying institutions on 2026-02-03; no later critical mechanism boundary is established, so no implementationLaunchDate override is authored.",
     "sources": [
       {"label": "ZARU whitepaper 4.04, 4.08 and 4.17", "url": "https://zaru.network/blog/zar-universal-white-paper"},
       {"label": "Canonical mint creation and initialization", "url": "https://solscan.io/tx/5ujgjg4P8ciRqDaQkMjM135KoWkMJUmRbxXj5nQUdxkEhkMFrx8rFDnaqCtU27Vv8RtkbbRP2Xmay41pMBJUJNW9"}
     ]
   },
   "detailProvider": "coingecko",
-  "implementationLaunchDate": "2025-10-13",
+  "launchDate": "2026-02-03",
   "contracts": [
     {
       "chain": "solana",
@@ -49,6 +49,7 @@
     "country": "South Africa"
   },
   "custodyModel": "unknown",
+  "governanceQuality": "single-entity",
   "collateralQuality": "rwa",
   "links": [
     {
@@ -78,6 +79,26 @@
     {
       "label": "Canonical Solana mint creation and initialization, slot 373091718",
       "url": "https://solscan.io/tx/5ujgjg4P8ciRqDaQkMjM135KoWkMJUmRbxXj5nQUdxkEhkMFrx8rFDnaqCtU27Vv8RtkbbRP2Xmay41pMBJUJNW9"
+    },
+    {
+      "label": "Institutional launch announcement, February 3, 2026",
+      "url": "https://zaru.network/blog/leading-south-african-financial-institutions-launch-rand-stablecoin"
+    },
+    {
+      "label": "Arc and StableFX launch announcement, September 22, 2026",
+      "url": "https://zaru.network/blog/zaru-live-on-arc"
+    },
+    {
+      "label": "Issuer FAIS disclosure",
+      "url": "https://blocktower.tech/legal/fais-disclosure-notice"
+    },
+    {
+      "label": "Solana mint explorer",
+      "url": "https://solscan.io/token/2WvREMqcoxtGuKTyyuzVMH7xDkeH8mY6phduvUofPRXN"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/ZARUniversal"
     }
   ],
   "geckoId": "zar-universal",

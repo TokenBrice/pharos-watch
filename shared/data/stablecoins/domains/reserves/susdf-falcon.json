@@ -22,13 +22,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R11 fixed-block immediate wrapper liquidity review; original composition observation retained",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdfFalcon batch64 primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ethereum block 26114891: cooldownDuration=0 and complete USDf backing less unvested rewards",
-        "url": "https://etherscan.io/block/26114891"
+        "label": "Ethereum block 26196960, zero cooldown and complete local USDf accounting at 2026-10-15T09:16:59Z",
+        "url": "https://etherscan.io/block/26196960"
       },
       {
         "label": "Falcon Finance savings documentation",
@@ -43,13 +43,13 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
       },
       {
-        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Pinned Alchemy Ethereum read surface; block 26196960",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "rationale": "The original composition at block 26107704 remains dated 2026-10-02. A separate metadata review at Ethereum block 26114891 (2026-10-03T22:45:59Z; hash 0x7215bcdfd4a73605d2bafc27738791d6ec1174694cf33890a23fb81811fc7065) reconfirmed asset()=USDf, implementation 0x0d132bee412e6619a4863aeedad97541bfda3f34, cooldownDuration()=0, silo USDf balance=0, and totalAssets()=USDf.balanceOf(vault)-getUnvestedAmount(). Verified withdraw/redeem executes the ERC4626 underlying transfer in the same transaction when cooldown is off, for unrestricted callers, owners and recipients; no strategy realization or offchain settlement is required for the immediate USDf position. The immediate horizon concerns delivery of parent USDf only, not its dollar realization. Restriction/admin/upgrade and future cooldown risks remain separately recorded.",
-    "compositionBasis": "Official single-asset vault documentation, verified accounting source and fixed-block Ethereum reads at 26107704",
-    "compositionAsOf": "2026-10-02",
+    "rationale": "At Ethereum block 26196960 (2026-10-15T09:16:59Z; hash 0x1a4f5cb527411fb0fc8677f0879875f3e43ade5ff9df564a53385595899324b3), asset() is USDf, implementation is 0x0d132bee412e6619a4863aeedad97541bfda3f34, cooldownDuration() is zero and the withdrawal silo holds zero USDf. totalAssets() of 55824281.629681906987176191 USDf equals the vault balance of 55836506.014562423237176191 less getUnvestedAmount() of 12224.384880516250. totalSupply() is 49035315.060910100442172154 shares; convertToAssets(1e18) and previewRedeem(1e18) are 1.138450554673479090 USDf. Verified withdraw/redeem transfers underlying in the same transaction when cooldown is off, for unrestricted callers, owners and recipients. No local strategy realization or offchain settlement is needed. The immediate horizon concerns delivery of parent USDf only, not its dollar realization or stressed execution at a particular notional. Restriction, upgrade and future cooldown risks remain.",
+    "compositionBasis": "Official single-asset documentation, complete verified implementation and pinned Ethereum asset, balance, supply, reward, silo and conversion reads at block 26196960",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
     "knownUnknownExposure": "Local underlying identity is fully identified. Upstream parent custody, collateral realization and stressed liquidity remain parent-layer risks; the local percentage is not an end-to-end solvency claim.",
     "knownUnknownExposurePct": 0
@@ -63,13 +63,21 @@
       {
         "name": "Falcon USDf withdrawal silo (Ethereum 0xeb1a55f406c1dc08f017ce8f424b178a5b0667e7)",
         "role": "other"
+      },
+      {
+        "name": "Fireblocks (issuer-disclosed upstream USDf custody infrastructure)",
+        "role": "custodian"
+      },
+      {
+        "name": "Ceffu (issuer-disclosed upstream USDf off-exchange custody)",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SusdfFalcon batch64 primary-evidence review",
     "confidence": "verified",
     "sources": [
       {
@@ -85,10 +93,14 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d132bee412e6619a4863aeedad97541bfda3f34"
       },
       {
-        "label": "Ethereum block 26107704, pinned vault identity, supply, custody and NAV reads",
-        "url": "https://etherscan.io/block/26107704"
+        "label": "Ethereum block 26196960, local USDf holdings and zero silo balance",
+        "url": "https://etherscan.io/block/26196960"
+      },
+      {
+        "label": "Issuer discloses parent off-exchange custody, exchange balances and onchain multisig strategies",
+        "url": "https://falcon.finance/news/a-guide-to-transparency-and-security-in-falcon-finance"
       }
     ],
-    "uncertainty": "Onchain custody describes only the immediate wrapper token holdings. It does not assert legal segregation, bankruptcy priority, upstream custodial safeguards or administrator independence. The silo holds zero USDf at this pin while cooldownDuration is zero; administrators can later activate the silo withdrawal path."
+    "uncertainty": "Immediate wrapper custody is onchain, but whole-book custody is mixed: Falcon discloses parent USDf collateral with Fireblocks/Ceffu off-exchange custody infrastructure, exchange-held liquidity and onchain multisig strategy wallets. Provider shares are not established by this review and are not estimated. No wrapper-specific legal segregation, bankruptcy priority, absence of liens/reuse, signer independence or current upstream financial assurance is established. The silo holds zero USDf at block 26196960 while cooldownDuration() is zero; administrators can activate the silo withdrawal path later."
   }
 }

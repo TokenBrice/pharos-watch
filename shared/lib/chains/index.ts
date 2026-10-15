@@ -37,6 +37,7 @@ const CHAIN_RESILIENCE_TIER: Partial<Record<string, ChainResilienceTier>> = {
   arc: 3,           // new PoA-validator L1 from Circle
   rise: 3,          // newer Ethereum L2
   somnia: 3,        // newer high-performance L1
+  "0g": 3,         // newer high-performance L1, like RISE/Somnia/Arc; unproven security
 
   // Everything else defaults to tier 2 via getChainResilienceTier()
 };

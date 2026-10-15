@@ -12,13 +12,13 @@
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
       },
       {
-        "label": "Pinned Gnosis block 48557408",
-        "url": "https://gnosis.blockscout.com/block/48557408"
+        "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+        "url": "https://gnosis.blockscout.com/block/48768019"
       }
     ],
     "evidence": "Complete immutable SavingsXDai and imported ERC-4626 source has no holder blacklist, pause, seizure or privileged arbitrary-holder burn. Inherited xDAI bridge and Sky dependencies remain exposed.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "oracleless",
@@ -27,8 +27,8 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
-      "reviewedAt": "2026-10-02",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
       "rationale": "The ERC-4626 asset-per-share rate controls deposit and withdrawal amounts, without borrower debt or local liquidation branches.",
       "sources": [
         {
@@ -40,13 +40,13 @@
           "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
         },
         {
-          "label": "Pinned Gnosis block 48557408",
-          "url": "https://gnosis.blockscout.com/block/48557408"
+          "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+          "url": "https://gnosis.blockscout.com/block/48768019"
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
     "confidence": "verified",
     "sources": [
       {
@@ -58,16 +58,16 @@
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
       },
       {
-        "label": "Pinned Gnosis block 48557408",
-        "url": "https://gnosis.blockscout.com/block/48557408"
+        "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+        "url": "https://gnosis.blockscout.com/block/48768019"
       }
     ]
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "SavingsXDai shares are native ERC-4626 issuance on Gnosis at the exact reviewed deployment. The wrapper does not mint a bridge representation; xDAI bridge validator, Sky reserve and bridged-underlying risks remain inherited through xdai-gnosis rather than reclassified as a share-token bridge.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
     "confidence": "verified",
     "sources": [
       {
@@ -79,8 +79,8 @@
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
       },
       {
-        "label": "Pinned Gnosis block 48557408",
-        "url": "https://gnosis.blockscout.com/block/48557408"
+        "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+        "url": "https://gnosis.blockscout.com/block/48768019"
       }
     ],
     "routes": [
@@ -97,8 +97,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Complete verified source fixes WXDAI as the asset and contains no bridge mint, messaging, remote-peer or upgrade entrypoint. Parent bridged-system exposure remains in the reserve dependency.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 48557408,
+        "observedAt": "2026-10-15",
+        "observedBlock": 48768019,
         "sources": [
           {
             "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
@@ -109,8 +109,8 @@
             "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
           },
           {
-            "label": "Pinned Gnosis block 48557408",
-            "url": "https://gnosis.blockscout.com/block/48557408"
+            "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+            "url": "https://gnosis.blockscout.com/block/48768019"
           }
         ]
       }

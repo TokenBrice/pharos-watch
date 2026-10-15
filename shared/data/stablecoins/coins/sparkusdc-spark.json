@@ -1,7 +1,7 @@
 {
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "sparkusdc-spark",
     "display": {
@@ -17,16 +17,16 @@
     },
     "params": {
       "slice": {
-        "name": "Spark USDC idle underlying and Morpho lender claims",
+        "name": "Spark USDC accounted Morpho lender claims",
         "risk": "high",
         "coinId": "usdc-circle",
         "depType": "wrapper",
         "expectedAssetAddress": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
       },
       "deployedExposure": {
-        "basis": "Reviewed complete USDC-denominated claim scope at Base block 52095837: idle native USDC plus the funded cbBTC-secured Morpho lender position; current reviewed WETH and collateral-free queue entries carry zero supplied assets. Borrower cbBTC is not directly held vault collateral. This bucket describes the whole parent-denominated lender claim, not idle cash or guaranteed redemption capacity.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://api.morpho.org/graphql"
+        "basis": "Reviewed complete accounted-NAV scope at Base block 52630636 (2026-10-15T07:50:19Z): funded cbBTC-secured Morpho lender claim; the WETH residual rounds to zero USDC base units and the collateral-free queue position is zero. MetaMorphoV1_1 totalAssets excludes donated idle USDC and includes lostAssets, which was zero at the pin. Borrower cbBTC is not directly held vault collateral. This bucket is a loan-denominated accounting claim, not idle cash or guaranteed redemption capacity.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://api-base-mainnet-archive.n.dwellir.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v1",
@@ -79,7 +79,7 @@
     ]
   },
   "collateral": "USDC-denominated Morpho lending claims on Base, concentrated in a cbBTC-collateralized market; the lender vault does not directly hold the borrowers' cbBTC collateral.",
-  "pegMechanism": "Deposit USDC to mint ERC-4626 lending-vault shares. Accrued lending interest increases USDC per share; redemption burns shares and withdraws available underlying liquidity from Morpho positions. Borrower defaults, collateral liquidation and vault fees affect share value.",
+  "pegMechanism": "Deposit USDC to mint ERC-4626 lending-vault shares. Lending interest net of fees increases USDC per share; redemption burns shares and withdraws available Morpho liquidity. MetaMorpho V1.1 does not immediately reduce the reported share price after market bad debt: its lostAssets accounting can leave the last depositors bearing the shortfall unless assets are voluntarily injected.",
   "detailProvider": "coingecko",
   "contracts": [
     {
@@ -94,15 +94,34 @@
       "url": "https://spark.fi"
     },
     {
-      "label": "Exact vault",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/base/vault/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
     },
     {
       "label": "Verified exact vault deployment and source",
       "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.spark.finance/products/isolated-markets"
+    },
+    {
+      "label": "Morpho V1.1 framework audits",
+      "url": "https://github.com/morpho-org/metamorpho-v1.1/tree/main/audits"
+    },
+    {
+      "label": "Morpho V1.1 bad-debt and last-exiter mechanics",
+      "url": "https://docs.morpho.org/curate/tutorials-v1/bad-debt/"
     }
   ],
-  "custodyModel": "unknown",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Last-exiter loss exposure",
+      "message": "Morpho V1.1 can retain the reported share price after market bad debt. Later withdrawals may be unable to realize that accounting value unless someone voluntarily covers the loss. This is a design risk, not a claim of current bad debt; lostAssets was zero at the October 15 review."
+    }
+  ],
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "implementationLaunchDate": "2024-12-30",
   "yieldConfig": {

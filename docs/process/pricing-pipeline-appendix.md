@@ -377,6 +377,10 @@ When authoritative pricing removes every Jupiter fallback candidate, the run clo
 
 ### CoinGecko low-volume lane
 
+The 2026-10-13 `v6.50` release adds Crown BRLV to the CoinGecko low-volume fallback on the v6.49 terms below, effective October 14.
+
+The 2026-10-12 `v6.49` release admits NXUSD and Hermetica USDh to the existing CoinGecko low-volume fallback cohort. Only missing prices can recover, with fallback confidence and their original upstream clock; the seven-day age budget, future-skew gate, peg validation and supply rules are unchanged. Historical lookup activates at the next UTC midnight (October 13), preserving earlier publications. Fresh production publication remains required to establish recovery.
+
 The 2026-10-13 review admitted Crown BRLV: the exact `crown-brlv` row returned $0.200255 (0.998311 BRL) at upstream timestamp `1791806930`, about 22 hours before inspection, on $52 of daily volume. CG-only intake requires a 15-minute-fresh market cap, and BRLV's Base, Ethereum and Tempo deployments block the single-contract on-chain supply fallback, so the row was carried with restored supply and its native-implied price expired. The low-volume pass fills only that missing price with fallback confidence and the original clock; carried supply is unchanged. DexScreener returns no BRLV pairs and GeckoTerminal's largest Base pool holds about $28.7K, below the address-provider floor.
 
 The 2026-10-12 review admitted NXUSD and Hermetica USDh to the existing fallback cohort: the exact `nxusd` API row returned $1.0218116165811697 at upstream timestamp `1791761973`, approximately seven hours before inspection; `hermetica-usdh` returned $0.9997925123055649 at `1791780809`, approximately two hours old. CoinGecko contract identities matched the tracked Avalanche NXUSD and Stacks Hermetica USDh deployments. Both retain fallback confidence and their original clocks, and cannot change supply. HBD's upstream quote was older than seven days and remains unavailable; these admissions do not extend that budget.

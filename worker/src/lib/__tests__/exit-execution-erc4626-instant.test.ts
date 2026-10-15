@@ -366,7 +366,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(result.failures).toEqual([]);
     const observation = result.observations[0]!;
     expect(observation.routeId).toBe(`execution:${exitExecutionReviewDigest(review)}`);
-    expect(observation).toMatchObject({ scoreEligible: true, completionRatio: 1, executionModelId: "erc4626-instant", executionCertificate: { settlement: { maximumCompletionSec: 0 } } });
+    expect(observation).toMatchObject({ routeFamily: "protocol-redemption", scoreEligible: true, completionRatio: 1, executionModelId: "erc4626-instant", executionCertificate: { settlement: { maximumCompletionSec: 0 } } });
     expect(resolveV9ExitCapacityAtRequest(observation.capacityCurve!.map(point => ({ ...point, executionCostBps: point.executionCostBps! })), request)?.completionRatio).toBe(1);
     expect(observation.executionCertificate!.points.every(point => point.certification === "exact-complete")).toBe(true);
     expect(observation.executionCertificate!.points).toHaveLength(1);

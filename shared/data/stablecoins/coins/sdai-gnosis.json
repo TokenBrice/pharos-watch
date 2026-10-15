@@ -24,8 +24,8 @@
   "mechanismArchetype": "protocol-position",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
     "rationale": "Exact Gnosis SavingsXDai is an immutable ERC-4626 operational share claim against WXDAI held by 0xaf204776c7245bf4147c2612bf6e5972ee483701. It is distinct from Ethereum Savings Dai; xDAI bridge and Sky reserve risks remain inherited.",
     "sources": [
       {
@@ -37,8 +37,8 @@
         "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
       },
       {
-        "label": "Pinned Gnosis block 48557408",
-        "url": "https://gnosis.blockscout.com/block/48557408"
+        "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
+        "url": "https://gnosis.blockscout.com/block/48768019"
       },
       {
         "label": "SavingsXDai creation transaction 2023-09-28T11:21:40Z, Gnosis block 30195209",
@@ -47,25 +47,42 @@
     ]
   },
   "collateral": "WXDAI held directly in the immutable Gnosis SavingsXDai vault; underlying xDAI bridge and Sky backing remains inherited.",
-  "pegMechanism": "Holders deposit WXDAI for ERC-4626 shares and redeem for WXDAI at the current asset-per-share rate, then may unwrap WXDAI into native xDAI. No local cooldown or withdrawal fee is implemented; gas applies. Conversion is not a fiat-dollar redemption guarantee.",
+  "pegMechanism": "Holders deposit WXDAI for ERC-4626 shares and redeem for WXDAI at the current asset-per-share rate, then may unwrap WXDAI into native xDAI. The vault rejects direct native-xDAI transfers. No local cooldown or withdrawal fee is implemented; gas and integer rounding apply. Conversion is not a fiat-dollar redemption guarantee.",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
+    "url": "https://gnosisscan.io/address/0xaf204776c7245bf4147c2612bf6e5972ee483701?tab=read_contract",
     "provider": "SavingsXDai onchain WXDAI asset and share accounting",
     "cadence": "real-time"
   },
   "links": [
     {
-      "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
-      "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+      "label": "Explorer",
+      "url": "https://gnosisscan.io/address/0xaf204776c7245bf4147c2612bf6e5972ee483701?tab=read_contract"
     },
     {
       "label": "Gnosis xDAI bridge and savings infrastructure",
       "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+    },
+    {
+      "label": "Website",
+      "url": "https://app.spark.finance/savings/gnosis/sdai"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.analytics.gnosis.io/protocols/savings/"
+    },
+    {
+      "label": "Audits (xDAI bridge and savings integration scope)",
+      "url": "https://docs.gnosischain.com/bridges/audits"
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/gnosischain"
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "unknown",
+  "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "Gnosis xDAI bridge savings yield",
     "yieldType": "nav-appreciation"
@@ -76,7 +93,7 @@
     "semantics": "single-asset",
     "breakerScope": "sdai-gnosis",
     "display": {
-      "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
+      "url": "https://gnosisscan.io/address/0xaf204776c7245bf4147c2612bf6e5972ee483701?tab=read_contract",
       "label": "Gnosis SavingsXDai"
     },
     "inputs": {
@@ -101,5 +118,5 @@
     }
   },
   "archetypeOverride": true,
-  "implementationLaunchDate": "2023-09-28"
+  "launchDate": "2023-09-28"
 }

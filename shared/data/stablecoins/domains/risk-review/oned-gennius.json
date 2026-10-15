@@ -2,12 +2,12 @@
   "id": "oned-gennius",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine03",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_OnedGennius",
     "sources": [
       {
         "label": "ONED native holder terms",
-        "url": "https://oned.global/#/end-user-terms-and-conditions"
+        "url": "https://oned.global/end-user-terms-and-conditions"
       },
       {
         "label": "Verified current ONED implementation",
@@ -24,15 +24,19 @@
       {
         "label": "Cantina EVM code-security audit (published 2026-04-07)",
         "url": "https://github.com/coinbase/custom-stablecoin/blob/main/audits/cantina_coinbase_custom_stablecoin_mar2026.pdf"
+      },
+      {
+        "label": "Pinned Base role memberships and pause state at block 52635892 (2026-10-15T10:45:31Z)",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com"
       }
     ],
-    "evidence": "Base block 52110793 independently confirms hasRole(BLOCKLIST_ROLE,0x2c34489fd3b7cc2a5dc4a47b34b117d3f62b6e9e)=true and paused()=false. Coinbase technical reference states transfer/transferFrom fail for blocklisted accounts or global pause; role/event census corroborates the exact implementation's local restrictions. April 7 Cantina report reviews EVM Stablecoin, MutableBeaconProxy, Blocklist and RateLimit; this is code-security evidence, not financial assurance. August 2026 Cantina report covers Solana mint-controller only and does not support this Base deployment."
+    "evidence": "Base block 52635892 (2026-10-15T10:45:31Z) confirms BLOCKLIST_ROLE and UNBLOCKLIST_ROLE at 0x2c34489fd3b7cc2a5dc4a47b34b117d3f62b6e9e, PAUSE_ROLE at 0xe0f6c6c500081b51cefc805bc5fdacfc478c5617, UNPAUSE_ROLE at 0xd9105ae607e3f3c89cde50300d7cd2057a986cd5, and paused()=false. A complete creation-to-pin RoleGranted/RoleRevoked census corroborates those memberships. The verified implementation gates token movements on blocklist checks and global pause; approvals also enforce the blocklist. Native holder terms expressly permit freezes and seizure. April 7 Cantina report covers EVM Stablecoin, MutableBeaconProxy, Blocklist and RateLimit at reviewed commit 8d1bee02 with reported fixes; this is code-security evidence, not financial assurance or an audit of every later revision. Solana mint-controller audit scope does not establish Base deployment security."
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "The reviewed native ONED liability exists only on Base. Coinbase identifies the exact Base token; native holder terms explicitly exclude redemption of copies, wrapped tokens and bridged versions. No additional representation is authored.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_OnedGennius",
     "confidence": "verified",
     "sources": [
       {
@@ -45,7 +49,7 @@
       },
       {
         "label": "ONED native holder terms",
-        "url": "https://oned.global/#/end-user-terms-and-conditions"
+        "url": "https://oned.global/end-user-terms-and-conditions"
       }
     ]
   }

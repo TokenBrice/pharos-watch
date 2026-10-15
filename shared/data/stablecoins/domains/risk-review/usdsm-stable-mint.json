@@ -24,9 +24,9 @@
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
       }
     ],
-    "evidence": "Verified Etherlink implementation prevents transfers involving blacklisted senders or recipients. At Etherlink block 54792510 the issuer EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd holds BLACKLIST_ROLE; Base and Arbitrum membership is also true at their pinned blocks. Ethereum has the same blacklist surface but that EOA is not a current BLACKLIST_ROLE holder; its DEFAULT_ADMIN_ROLE can authorize roles. Issuance control is separately scoped to native Etherlink.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "Verified native implementation rejects transfers involving a blacklisted sender or recipient. At Etherlink block 55662309 (2026-10-15T10:44:04Z), the issuer EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd has BLACKLIST_ROLE; this also holds on Base 52635906 and Arbitrum 515036195 (2026-10-15T10:45:59Z). On Ethereum 26197403 (2026-10-15T10:45:47Z), BLACKLIST_ROLE is held by 0x4a7148c0c0a18808075dff911b19e9aad5e6fe67, while the issuer default administrator can authorize roles. All four paused() reads return false. Native mint authority remains separately scoped to Etherlink.",
+    "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "oracleless",
@@ -35,13 +35,13 @@
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
       "rationale": "Terms sections 4, 8 and 9 define fixed-par USDSM claims without yield or NAV appreciation. The verified native USDSM.mint function checks MINTER_ROLE and request-ID reuse, with no external-price read, borrower debt position or collateral liquidation.",
       "sources": [{"label": "Stable Mint fixed-par issuance and redemption terms", "url": "https://stablemint.io/legal/terms-conditions/"}, {"label": "Exact Etherlink native implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
     "confidence": "verified",
     "sources": [{"label": "Stable Mint fixed-par terms", "url": "https://stablemint.io/legal/terms-conditions/"}, {"label": "Verified native implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}],
     "paths": [{
@@ -51,8 +51,8 @@
       "pricingAuthority": "none",
       "applicability": {
         "disposition": "not-applicable",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
         "confidence": "verified",
         "rationale": "The canonical token mints a requested nominal quantity under MINTER_ROLE, while the holder claim is fixed USD par. No variable conversion or borrower/liquidation branch exists in the verified native implementation.",
         "sources": [{"label": "Exact native mint and transfer implementation", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x7089856110b005a40e8d16da1da31313b0f60561"}, {"label": "Fixed-par issuer terms", "url": "https://stablemint.io/legal/terms-conditions/"}]
@@ -61,9 +61,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Etherlink supplies the native issuer liability; current issuer documentation identifies Ethereum, Base and Arbitrum as LayerZero V2 OFT interoperable deployments. Bridge token mint/burn, peer/DVN configuration and satellite upgrade/admin powers remain separately chargeable. Full live adapter inventory, validation thresholds and rate-limit governance are unresolved.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "summary": "Etherlink is the native issuer liability; Ethereum, Base and Arbitrum use LayerZero V2 burn-and-mint transfers. Fresh four-chain reads identify all adapters, middleware, twelve peers and two-required-DVN send/receive configurations. One issuer EOA owns and delegates configuration for all adapters; token role administrators and proxy owners retain separate mint and upgrade powers.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_UsdsmStableMint)",
     "confidence": "manual-review",
     "protocols": [
       {
@@ -96,7 +96,13 @@
       {
         "label": "ESMA exact issuer and USD whitepaper register row",
         "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
-      }
+      },
+      {"label": "Official four-chain adapters, middleware and security disclosure", "url": "https://docs.stablemint.io/bridge/overview.md"},
+      {"label": "Verified native adapter and inherited receive/amount code", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"},
+      {"label": "Etherlink state pin, 55662309 at 2026-10-15T10:44:04Z", "url": "https://explorer.etherlink.com/block/55662309"},
+      {"label": "Ethereum state pin, 26197403 at 2026-10-15T10:45:47Z", "url": "https://etherscan.io/block/26197403"},
+      {"label": "Base state pin, 52635906 at 2026-10-15T10:45:59Z", "url": "https://basescan.org/block/52635906"},
+      {"label": "Arbitrum state pin, 515036195 at 2026-10-15T10:45:59Z", "url": "https://arbiscan.io/block/515036195"}
     ],
     "routes": [
       {
@@ -113,8 +119,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Official four-chain issuer roster and exact-contract RPC pin USDSM with 18 decimals; observed implementation 7089856110b005a40e8d16da1da31313b0f60561. Native mint privilege is reviewed in Mint Authority; cross-chain transfer operations are not independent reserve backing.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 54792510,
+        "observedAt": "2026-10-15",
+        "observedBlock": 55662309,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -138,10 +144,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Official four-chain issuer roster and exact-contract RPC pin USDSM with 18 decimals; observed implementation 1053baf5964b82859f6aa140ed2c02f2975075eb. Issuer-designated LayerZero representation; adapter/DVN/controller closure remains incomplete and no bridge threshold credit is asserted.",
+        "reviewNote": "USDSM symbol and 18 decimals, implementation 0x1053baf5964b82859f6aa140ed2c02f2975075eb and proxy owner independently refreshed. Middleware 0x6a02e153bcbf9e6be45c0b49f7f0abc82859ebd5 binds adapter 0x0afa4be6fa5ebaf5ffee3ab9f88eaa3e16c37ade. All three peers match the roster; effective send/receive ULNs require two DVNs, with no optional DVNs or active receive-library grace path. Issuer configuration authority remains centralized.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197403,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -165,10 +171,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Official four-chain issuer roster and exact-contract RPC pin USDSM with 18 decimals; observed implementation 6947ea86f8c1d4de5fa296641974d5d5ba73719d. Issuer-designated LayerZero representation; adapter/DVN/controller closure remains incomplete and no bridge threshold credit is asserted.",
+        "reviewNote": "USDSM symbol and 18 decimals, implementation 0x6947ea86f8c1d4de5fa296641974d5d5ba73719d and proxy owner independently refreshed. Middleware 0x6bde51212203ae5d592cc5180da2abbd41c922de binds adapter 0x1053baf5964b82859f6aa140ed2c02f2975075eb. All three peers match the roster; effective send/receive ULNs require two DVNs, with no optional DVNs or active receive-library grace path. Same-hex deployments on other chains are distinct contracts.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095853,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635906,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -192,10 +198,10 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Official four-chain issuer roster and exact-contract RPC pin USDSM with 18 decimals; observed implementation 6947ea86f8c1d4de5fa296641974d5d5ba73719d. Issuer-designated LayerZero representation; adapter/DVN/controller closure remains incomplete and no bridge threshold credit is asserted.",
+        "reviewNote": "USDSM symbol and 18 decimals, implementation 0x6947ea86f8c1d4de5fa296641974d5d5ba73719d and proxy owner independently refreshed. Middleware 0x6bde51212203ae5d592cc5180da2abbd41c922de binds adapter 0x1053baf5964b82859f6aa140ed2c02f2975075eb. All three peers match the roster; effective send/receive ULNs require two DVNs, with no optional DVNs or active receive-library grace path. Same-hex deployments on other chains are distinct contracts.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123894,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515036195,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -217,10 +223,10 @@
         "controllerChain": "etherlink",
         "controllerAddress": "0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a",
         "authorityType": "contract",
-        "observedAt": "2026-10-03",
-        "observedBlock": 54814410,
+        "observedAt": "2026-10-15",
+        "observedBlock": 55662309,
         "sources": [{"label": "Verified USDSMMinterBurner deployed source", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a"}],
-        "evidence": "Full native role history and pinned hasRole identify this as active MINTER_ROLE/BURNER_ROLE. Verified immutable-token middleware only accepts mint/burn from its one-time-configurable adapter; pinned adapter() returns 0xe7f117f87fa650350c3e363ca2c644951d273d1f. Full adapter peer/DVN/upgrade closure is not established. This authenticated transfer capability is reviewed under Bridge Risk, not duplicated as native issuer minting."
+        "evidence": "At Etherlink block 55662309, this middleware has active MINTER_ROLE/BURNER_ROLE. Verified immutable-token code only accepts mint/burn from its one-time-set adapter, pinned as 0xe7f117f87fa650350c3e363ca2c644951d273d1f. The adapter pins the official three remote peers and two required DVNs per effective send/receive configuration. Its issuer EOA owner/delegate can reconfigure peers and validation; separate native EOA mint powers remain in Mint Authority."
       },
       {
         "id": "usdsm-ethereum-direct-representation-minter",
@@ -230,10 +236,10 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x4a7148c0c0a18808075dff911b19e9aad5e6fe67",
         "authorityType": "eoa",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197403,
         "sources": [{"label": "USDSM Ethereum representation", "url": "https://etherscan.io/address/0x399b29975cbe313c56269cd5097f5ae097fa2741#readProxyContract"}, {"label": "Stable Mint deployment and OFT roster", "url": "https://stablemint.io/stablecoins/"}],
-        "evidence": "At Ethereum block 26107704, hasRole(MINTER_ROLE, this address) is true and eth_getCode is empty. This uncapped privileged mint capability affects the issuer-designated satellite representation, not Etherlink-native mint issuance. This same EOA owns the representation ProxyAdmin, separately recorded below."
+        "evidence": "At Ethereum block 26197403, hasRole(MINTER_ROLE, this address) is true and eth_getCode returns 0x. BLACKLIST_ROLE is also true. This uncapped privileged mint capability affects the issuer-designated satellite representation, not Etherlink-native issuance. The same address owns the representation ProxyAdmin."
       },
       {
         "id": "usdsm-ethereum-contract-representation-minter",
@@ -243,10 +249,10 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x6a02e153bcbf9e6be45c0b49f7f0abc82859ebd5",
         "authorityType": "contract",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197403,
         "sources": [{"label": "USDSM Ethereum representation mint role", "url": "https://etherscan.io/address/0x399b29975cbe313c56269cd5097f5ae097fa2741#readProxyContract"}, {"label": "Ethereum minter contract", "url": "https://etherscan.io/address/0x6a02e153bcbf9e6be45c0b49f7f0abc82859ebd5#code"}],
-        "evidence": "At Ethereum block 26107704, hasRole(MINTER_ROLE, this address) is true and its deployed bytecode is nonempty. No exact current adapter identity, owner, DVN configuration or governance strength is inferred from this membership alone. Its satellite mint capability stays in Bridge Risk."
+        "evidence": "At Ethereum block 26197403, this official middleware has MINTER_ROLE and deployed code. adapter() returns 0x0afa4be6fa5ebaf5ffee3ab9f88eaa3e16c37ade; that adapter's owner and Endpoint delegate are the issuer EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. All three peers match the official roster and all effective send/receive ULN configurations require two DVNs. Satellite mint capability stays in Bridge Risk."
       },
       {
         "id": "usdsm-layerzero-transfer-rail",
@@ -269,13 +275,13 @@
           "messaging:layerzero-v2:usdsm"
         ],
         "routeChecks": {
-          "onchainAmountBounds": "Issuer describes OFT burn-and-mint transfers; full adapter conservation checks and any mint bypass require further review.",
-          "trustedPeerOrRemote": "Etherlink bridge-only middleware 0x28da1dfaf5dca1af226a2e56b834e8ec3c495c5a has one-time-set adapter 0xe7f117f87fa650350c3e363ca2c644951d273d1f. Other adapter addresses, complete peer values and DVN configuration remain unclosed.",
-          "rateLimits": "Current chain-by-chain rate limits and authority to raise them are undisclosed.",
-          "signingModel": "No published DVN threshold or signer independence was verified.",
-          "pausersAdminsUpgraders": "Known satellite token administrators and proxy owners are separately identified below. No complete messaging-controller closure is claimed."
+          "onchainAmountBounds": "Verified native adapter burns the dust-adjusted debit and credits the authenticated message amount. sharedDecimals=6 and decimalConversionRate=1000000000000 on all four chains; uint64 shared-amount overflow reverts. These encoding bounds are not reserve-gated economic caps. Token EOAs and role/proxy administrators retain separately disclosed mint bypass powers.",
+          "trustedPeerOrRemote": "Pinned official adapters: Etherlink 0xe7f117f87fa650350c3e363ca2c644951d273d1f; Ethereum 0x0afa4be6fa5ebaf5ffee3ab9f88eaa3e16c37ade; Base and Arbitrum 0x1053baf5964b82859f6aa140ed2c02f2975075eb. All twelve directed peers match these chain-qualified adapters. Native verified lzReceive accepts only its immutable endpoint and the configured peer; lzReceiveSimulate is self-only and lzReceiveAndRevert always reverts.",
+          "rateLimits": "Verified native adapter and inherited OFT code implement no rolling daily or per-route economic rate limiter. All four preCrime and msgInspector reads are zero. No extra limiter is inferred from uint64 encoding, quoted totalSupply or enforced execution gas.",
+          "signingModel": "All twenty-four effective send/receive ULN configurations require two DVNs, with zero optional DVNs and zero optional threshold. The issuer identifies these as LZ Labs and Horizen; independent operator/key-control assurance is not established. All twelve receive libraries are explicit, send defaults are false, and receiveLibraryTimeout returns zero address and expiry for every path.",
+          "pausersAdminsUpgraders": "All four adapter owner() and Endpoint.delegates(adapter) reads return issuer EOA 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd; pendingOwner is zero. Verified native onlyOwner methods can change peer/delegate/inspector/PreCrime without a timelock; delegate configures endpoint libraries and ULNs. Token administrators can pause, blacklist, grant mint roles or upgrade through the separately recorded ProxyAdmins. Fresh token paused() is false on all four chains."
         },
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -284,9 +290,11 @@
           {
             "label": "USDSM whitepaper, issuer administration and MPC claim",
             "url": "https://stablemintpublicdocs.blob.core.windows.net/docs/StableMint_Whitepaper_USD.html"
-          }
+          },
+          {"label": "Exact adapter, middleware, DVN and peer roster", "url": "https://docs.stablemint.io/bridge/overview.md"},
+          {"label": "Verified native bridge receive, simulation and amount-validation code", "url": "https://explorer.etherlink.com/api/v2/smart-contracts/0xe7f117f87fa650350c3e363ca2c644951d273d1f"}
         ],
-        "evidence": "Current issuer page names OFT via LayerZero V2 across the four exact deployments. This identifies the bridge mint/burn capability without inventing live adapter addresses or quorum strengths; unknown validation and amount bounds retain conservative treatment."
+        "evidence": "Configuration refreshed at Etherlink 55662309 (2026-10-15T10:44:04Z), Ethereum 26197403 (2026-10-15T10:45:47Z), Base 52635906 and Arbitrum 515036195 (2026-10-15T10:45:59Z). Twelve peer links, owner/delegate bindings, explicit effective libraries, twenty-four ULN configurations and twelve zeroed receive-library grace slots are pinned. Native verified source establishes endpoint/peer authentication, one-time middleware binding, dust-preserving conversion and reverting simulation. This is source/state evidence, not a runtime-tested execution certificate or proof of DVN human independence. Exact provider addresses and full encoded configurations are retained in the pinned research records."
       },
       {
         "id": "usdsm-ethereum-representation-admin",
@@ -304,8 +312,8 @@
         "failureDomainKeys": [
           "issuer-backend:usdsm-stable-mint:stable-mint"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197403,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -334,8 +342,8 @@
         "failureDomainKeys": [
           "issuer-backend:usdsm-stable-mint:stable-mint"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095853,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635906,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -364,8 +372,8 @@
         "failureDomainKeys": [
           "issuer-backend:usdsm-stable-mint:stable-mint"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123894,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515036195,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -390,7 +398,8 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0x4a7148c0c0a18808075dff911b19e9aad5e6fe67",
         "authorityType": "issuer-backend",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197403,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -401,7 +410,7 @@
             "url": "https://etherscan.io/address/0x399b29975cbe313c56269cd5097f5ae097fa2741"
           }
         ],
-        "evidence": "The October 2 research packet reads Ethereum ProxyAdmin 0xca2ef3455429a32e0d8c4b07e684a8b6a51228dd owner as 0x4a7148c0c0a18808075dff911b19e9aad5e6fe67, and Base/Arbitrum ProxyAdmin 0xaa3390c1d2fdbecc68a2ead92feb28ceacd3ba5e owner as 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. Fresh implementation slots remain unchanged; no proxy-owner timelock or governance independence is established."
+        "evidence": "At Ethereum block 26197403, EIP-1967 admin is ProxyAdmin 0xca2ef3455429a32e0d8c4b07e684a8b6a51228dd and owner() is 0x4a7148c0c0a18808075dff911b19e9aad5e6fe67. Implementation remains 0x1053baf5964b82859f6aa140ed2c02f2975075eb. No proxy-owner timelock or independent governance is established."
       },
       {
         "id": "usdsm-base-representation-upgrade",
@@ -415,7 +424,8 @@
         "controllerChain": "base",
         "controllerAddress": "0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",
         "authorityType": "issuer-backend",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635906,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -426,7 +436,7 @@
             "url": "https://basescan.org/address/0x26c358f7c5fedb20a6ddef108cd91efb6b8da0cb"
           }
         ],
-        "evidence": "The October 2 research packet reads Ethereum ProxyAdmin 0xca2ef3455429a32e0d8c4b07e684a8b6a51228dd owner as 0x4a7148c0c0a18808075dff911b19e9aad5e6fe67, and Base/Arbitrum ProxyAdmin 0xaa3390c1d2fdbecc68a2ead92feb28ceacd3ba5e owner as 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. Fresh implementation slots remain unchanged; no proxy-owner timelock or governance independence is established."
+        "evidence": "At Base block 52635906, EIP-1967 admin is ProxyAdmin 0xaa3390c1d2fdbecc68a2ead92feb28ceacd3ba5e and owner() is 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. Implementation remains 0x6947ea86f8c1d4de5fa296641974d5d5ba73719d. No proxy-owner timelock or independent governance is established."
       },
       {
         "id": "usdsm-arbitrum-representation-upgrade",
@@ -440,7 +450,8 @@
         "controllerChain": "arbitrum",
         "controllerAddress": "0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd",
         "authorityType": "issuer-backend",
-        "observedAt": "2026-10-02",
+        "observedAt": "2026-10-15",
+        "observedBlock": 515036195,
         "sources": [
           {
             "label": "Stable Mint current deployment and interoperability roster",
@@ -451,7 +462,7 @@
             "url": "https://arbiscan.io/address/0x26c358f7c5fedb20a6ddef108cd91efb6b8da0cb"
           }
         ],
-        "evidence": "The October 2 research packet reads Ethereum ProxyAdmin 0xca2ef3455429a32e0d8c4b07e684a8b6a51228dd owner as 0x4a7148c0c0a18808075dff911b19e9aad5e6fe67, and Base/Arbitrum ProxyAdmin 0xaa3390c1d2fdbecc68a2ead92feb28ceacd3ba5e owner as 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. Fresh implementation slots remain unchanged; no proxy-owner timelock or governance independence is established."
+        "evidence": "At Arbitrum block 515036195, EIP-1967 admin is ProxyAdmin 0xaa3390c1d2fdbecc68a2ead92feb28ceacd3ba5e and owner() is 0x1bb0b2666edd827f74b558136fdbe69e4ecec5fd. Implementation remains 0x6947ea86f8c1d4de5fa296641974d5d5ba73719d. No proxy-owner timelock or independent governance is established."
       }
     ]
   }

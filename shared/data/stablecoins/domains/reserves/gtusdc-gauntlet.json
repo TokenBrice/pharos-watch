@@ -2,7 +2,7 @@
   "id": "gtusdc-gauntlet",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "sourceKey": "erc4626-single-asset:ethereum:0xdd0f28e19c1780eb6396170735d45153d261490d:deployed",
       "name": "USDC deposited into Gauntlet-curated Morpho lending markets",
       "pct": 100,
       "risk": "medium",

@@ -1,7 +1,7 @@
 {
   "liveReservesConfig": {
     "adapter": "erc4626-single-asset",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "sparkusdtbc-spark",
     "display": {
@@ -17,16 +17,16 @@
     },
     "params": {
       "slice": {
-        "name": "Spark USDT idle underlying and Morpho lender claims",
+        "name": "Spark USDT Morpho lender claims",
         "risk": "high",
         "coinId": "usdt-tether",
         "depType": "wrapper",
         "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
       },
       "deployedExposure": {
-        "basis": "Reviewed full native USDT-denominated lender claim through the sole MorphoMarketV1Adapter, covering wstETH-, WBTC-, sUSDS- and negligible cbBTC-secured markets. Those tokens are borrower collateral, not directly held vault reserves. The reviewed parent-denominated bucket includes idle USDT and deployed USDT receivables; it is not an idle-cash, independent-assurance or guaranteed-capacity claim.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://api.morpho.org/graphql"
+        "basis": "Pinned Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z): totalSupply=76314545914654098613391774 (18 decimals), totalAssets=77544999649970 (6-decimal USDT), convertToAssets(10^18)=1016123 USDT base units. Idle USDT=0; sole adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a realAssets equals vault totalAssets at this pin. At this pin only, the four expectedSupplyAssets sum to the vault denominator 77544999649970: sUSDS=7678890857988 (9.9024964764%), wstETH=46289560215238 (59.6938041449%), WBTC=23576548519424 (30.4036993047%), cbBTC=57320 (0.0000000739%). This observed reconciliation is not an invariant: VaultV2 can cap recognized accrual through maxRate. All four adapter positions have zero borrow shares and zero posted collateral. These are lender receivables, not borrower collateral held by the vault or guaranteed USDT realization.",
+        "reviewedAt": "2026-10-15",
+        "sourceUrl": "https://ethereum-rpc.publicnode.com"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",
@@ -52,9 +52,9 @@
   "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "rationale": "Exact ethereum holder instrument 0xb0c424116172b55cbb6dd3136f5989f7959e5b91 is an operational ERC-4626 protocol-position claim. USDT-denominated Morpho lending positions through a MorphoMarketV1Adapter, collateralized by wstETH, WBTC, sUSDS and a negligible cbBTC position; not directly held borrower collateral. Verified deployment code and native accounting distinguish this receipt from direct parent fiat ownership and from Spark Savings V2. Exact implementation creation is pinned by transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95, block 24794487, timestamp 2026-04-02T21:02:35+00:00, independently joined from Blockscout to RPC receipt and block timestamp on2026-10-03. This is the implementation launch, not issuer founding or parent-token launch.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SparkusdtbcSpark)",
+    "rationale": "Exact Ethereum holder instrument 0xb0c424116172b55cbb6dd3136f5989f7959e5b91 is an immutable ERC-4626 protocol-position claim, distinct from Spark Savings and direct USDT holdings. Pinned Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z): totalSupply=76314545914654098613391774 (18 decimals), totalAssets=77544999649970 (6-decimal USDT), convertToAssets(10^18)=1016123 USDT base units. Idle USDT=0; sole adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a realAssets equals vault totalAssets at this pin. At this pin only, the four expectedSupplyAssets sum to the vault denominator 77544999649970: sUSDS=7678890857988 (9.9024964764%), wstETH=46289560215238 (59.6938041449%), WBTC=23576548519424 (30.4036993047%), cbBTC=57320 (0.0000000739%). This observed reconciliation is not an invariant: VaultV2 can cap recognized accrual through maxRate. All four adapter positions have zero borrow shares and zero posted collateral. These are lender receivables, not borrower collateral held by the vault or guaranteed USDT realization. Verified creation transaction 0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95 is included at block 24794487, timestamp 2026-04-02T21:02:35Z; this is the exact implementation inception, not issuer founding or parent-token launch.",
     "sources": [
       {
         "label": "Morpho exact vault portfolio and control API, accessed 2026-10-02",
@@ -75,11 +75,15 @@
       {
         "label": "Exact implementation creation transaction",
         "url": "https://eth.blockscout.com/tx/0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95"
+      },
+      {
+        "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ]
   },
-  "collateral": "USDT-denominated Morpho lending positions through a MorphoMarketV1Adapter, collateralized by wstETH, WBTC, sUSDS and a negligible cbBTC position; not directly held borrower collateral.",
-  "pegMechanism": "Deposit USDT to mint ERC-4626 lending-vault shares. Accrued lending interest increases USDT per share; redemption burns shares and withdraws available underlying liquidity from Morpho positions. Borrower defaults, collateral liquidation and vault fees affect share value.",
+  "collateral": "USDT-denominated Morpho lending positions through a MorphoMarketV1AdapterV2, collateralized by wstETH, WBTC, sUSDS and a negligible cbBTC position; not directly held borrower collateral.",
+  "pegMechanism": "Deposit USDT to mint ERC-4626 lending-vault shares. Accrued lending interest increases USDT per share; ordinary redemption burns shares for idle USDT and available liquidity from the selected adapter's wstETH/USDT market. Borrower defaults, collateral liquidation and vault fees affect share value. VaultV2 maxWithdraw/maxRedeem always return zero as conservative underestimates, not measured exit capacity; force-deallocation is a separate path subject to underlying liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "detailProvider": "coingecko",
   "contracts": [
     {
@@ -94,15 +98,27 @@
       "url": "https://spark.fi"
     },
     {
-      "label": "Exact vault",
+      "label": "Morpho: Vault",
       "url": "https://app.morpho.org/ethereum/vault/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
     },
     {
       "label": "Verified exact vault deployment and source",
       "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+    },
+    {
+      "label": "Morpho: Vault V2 documentation",
+      "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+    },
+    {
+      "label": "Morpho: Framework audits",
+      "url": "https://docs.morpho.org/get-started/resources/audits/"
+    },
+    {
+      "label": "Spark exact-vault allocator governance",
+      "url": "https://forum.skyeco.com/t/june-19-2026-spark-usdt-morpho-v2-vault-allocator-updates/27978"
     }
   ],
-  "custodyModel": "unknown",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "implementationLaunchDate": "2026-04-02",
   "yieldConfig": {
@@ -110,8 +126,8 @@
     "yieldType": "lending-vault"
   },
   "dependencyReview": {
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos batch64 review (Rev_SparkusdtbcSpark)",
     "confidence": "verified",
     "sources": [
       {
@@ -129,6 +145,10 @@
       {
         "label": "Morpho vault framework and holder exit mechanics",
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
+      },
+      {
+        "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
     "rationale": "USDT is the exact native deposit/redemption denomination and tracked variant parent. Reserve composition records separate held positions; borrower collateral is not custody of the lender receipt.",

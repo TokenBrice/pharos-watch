@@ -30,17 +30,21 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+      },
+      {
+        "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "evidence": "At ethereum block 26107704 (0x18e5f38), observed 2026-10-02T22:44:15.742108+00:00, receiveSharesGate, sendSharesGate and receiveAssetsGate were zero and all three setters were abdicated. Reviewed VaultV2 transfer/transferFrom and withdraw/redeem use these gates. sendAssetsGate was zero with its setter not abdicated; it governs deposit/mint, not direct withdrawal or transfer. Deposit-dependent in-kind paths can be constrained by it. USDC freeze exposure is inherited from usdc-circle; this is not a direct share blacklist claim.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197050 (hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z), receiveSharesGate, sendSharesGate and receiveAssetsGate are zero and all three setters are abdicated. Exact independently runtime-matched VaultV2 transfer/transferFrom and withdraw/redeem use those gates. sendAssetsGate is zero with its setter not abdicated; its current 604800-second timelock governs deposit/mint gating, not ordinary withdrawal or share transfer. Morpho's documented funded in-kind workflow supplies flash-loaned USDC directly to the underlying Morpho market before forceDeallocate and vault withdrawal. The root sendAssetsGate gates deposits into this vault, not that underlying-market supply, so it does not gate the documented direct-market-funded workflow. A path that actually deposits into the root vault remains subject to its deposit gate; no flash-loan availability or executable capacity is certified here. USDC freeze exposure remains inherited from usdc-circle; this is not a direct share blacklist claim.",
+    "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
+    "reviewedAt": "2026-10-15"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "One reviewed native ethereum VaultV2 share deployment; no bridge or separate confidential receipt supply is included. This does not prove absence of uncatalogued integrations.",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
     "confidence": "probable",
     "sources": [
       {
@@ -70,6 +74,10 @@
       {
         "label": "Exact Morpho lending adapter",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+      },
+      {
+        "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
     "routes": [
@@ -86,8 +94,8 @@
         "scope": "canonical",
         "reviewDisposition": "reviewed",
         "reviewNote": "Native asset-backed ERC-4626 share issuance on the sole authored deployment.",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "sources": [
           {
             "label": "Exact Morpho Vault V2 deployment",
@@ -116,6 +124,10 @@
           {
             "label": "Exact Morpho lending adapter",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbfe734baab130048e20a64e800c4c2ec25756284"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       }
@@ -123,14 +135,14 @@
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
-    "summary": "A positively evidenced funded mF-ONE collateral branch establishes privileged internal NAV pricing, not an independently determined external market feed. At Ethereum block 26122340 (2026-10-04T23:40:11Z), exact adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 has nonzero supplyShares in market 0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba. Its reviewed discounted feed 0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99 uses MFOneCustomAggregatorFeed implementation 0x7cc057c382dea2d1d590386db13655f6ec8a65b4; exact published source states price is submitted manually by feed admins and binds M_FONE_CUSTOM_AGGREGATOR_FEED_ADMIN_ROLE. Other branch control, freshness, fallback and complete administrator membership remain unresolved. Profile-wide confidence deliberately stays limited; this concrete adverse pricing authority does not promote the aggregate review or five branch-component reviews.",
+    "summary": "Eight current accounted Morpho collateral branches are pinned at Ethereum block 26197050 (2026-10-15T09:34:59Z). The material mF-ONE branch uses a manually submitted Midas NAV feed; current implementation, access-control address and feed-admin role remain verified, preserving privileged-internal-pricing. Source-backed paths identify tranche accounting for wFalconX, lower-of-two Ojo PT valuation, reUSD NAV updater logic, RedStone weETH pricing, Origami rate conversion and two MetaOracle primary/backup paths. Current oracle prices, directly exposed feed timestamps and MetaOracle selected sides are observed; they do not certify complete current administrator membership, underlying-data freshness, independent market value, fallback availability or funded insurance. Aggregate confidence remains limited.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Refine07",
-      "rationale": "The exact current lending adapter census establishes 10 borrower markets. Each remains price-sensitive through its configured collateral oracle, separately from direct share accounting.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
+      "rationale": "The complete exact adapter marketIds census at Ethereum block 26197050 (2026-10-15T09:34:59Z) establishes eight current accounted borrower markets, whose expectedSupplyAssets sum exactly to totalAssets. Each remains price-sensitive through its configured collateral oracle, separately from root share accounting. Former cbBTC and syrupUSDC markets retain internal dust shares but each rounds to zero expectedSupplyAssets and is absent from the adapter realAssets census; their historical branch reviews no longer describe accounted exposure.",
       "sources": [
         {
           "label": "Adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -147,11 +159,15 @@
         {
           "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
           "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+        },
+        {
+          "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },
-    "reviewedAt": "2026-10-07",
-    "reviewer": "Sol unknown-resolver wave 2026-10-07 (MISC)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
     "confidence": "limited",
     "sources": [
       {
@@ -181,6 +197,10 @@
       {
         "label": "Nonzero exact adapter supplyShares in mF-ONE market, block 26122340, 2026-10-04T23:40:11Z",
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
     "branchKindReviews": [
@@ -194,14 +214,12 @@
           "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
           "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
           "0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d",
-          "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
-          "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
-          "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44"
+          "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e"
         ],
-        "reviewedAt": "2026-10-10T23:36:19Z",
-        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
         "confidence": "verified",
-        "rationale": "Every listed market has its immutable Morpho idToMarketParams LLTV independently pinned at Ethereum block 26122340 (2026-10-04T23:40:11Z). Exact creation/runtime-matched source sets parameters at createMarket with no update setter. These are liquidation thresholds, not share mint limits, allocation weights or nested-feed assurances.",
+        "rationale": "Every listed market has its immutable Morpho idToMarketParams LLTV independently pinned at Ethereum block 26197050 (2026-10-15T09:34:59Z). Exact creation/runtime-matched source sets parameters at createMarket with no update setter. These are liquidation thresholds, not share mint limits, allocation weights or nested-feed assurances.",
         "sources": [
           {
             "label": "Exact creation/runtime-matched Morpho Blue source: createMarket, liquidate and zero-collateral write-off",
@@ -214,6 +232,10 @@
           {
             "label": "Ethereum block 26122340 evidence timestamp",
             "url": "https://etherscan.io/block/26122340"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       },
@@ -227,14 +249,12 @@
           "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
           "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
           "0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d",
-          "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
-          "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
-          "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44"
+          "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e"
         ],
-        "reviewedAt": "2026-10-10T23:36:19Z",
-        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
         "confidence": "verified",
-        "rationale": "All ten pinned markets use Morpho Blue 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb. Independently exact creation/runtime-matched liquidate source requires an oracle-valued unhealthy borrower, seizes collateral and collects loan-token repayment. This verifies mechanics only, not feed freshness, successful liquidation latency, liquidator availability or insurance.",
+        "rationale": "All eight current accounted markets use Morpho Blue 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb. Independently exact creation/runtime-matched liquidate source requires an oracle-valued unhealthy borrower, seizes collateral and collects loan-token repayment. This verifies mechanics only, not feed freshness, successful liquidation latency, liquidator availability or insurance.",
         "sources": [
           {
             "label": "Exact creation/runtime-matched Morpho Blue liquidate implementation",
@@ -243,6 +263,10 @@
           {
             "label": "Ten retained market identities and exact Morpho runtime pin, Ethereum block 26122340, 2026-10-04T23:40:11Z",
             "url": "https://etherscan.io/block/26122340"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       },
@@ -256,14 +280,12 @@
           "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
           "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
           "0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d",
-          "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
-          "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
-          "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44"
+          "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e"
         ],
-        "reviewedAt": "2026-10-10T23:36:19Z",
-        "reviewer": "Sol curation campaign 2026-10-11 (K6OracleKinds)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
         "confidence": "verified",
-        "rationale": "Exact Morpho Blue liquidate source writes off remaining debt after borrower collateral reaches zero and subtracts badDebtAssets from totalSupplyAssets for all ten independently pinned immutable markets. This is lender loss recognition, not a guaranteed recovery or funded backstop. Feed and root vault pricing confidence remain limited.",
+        "rationale": "Exact Morpho Blue liquidate source writes off remaining debt after borrower collateral reaches zero and subtracts badDebtAssets from totalSupplyAssets for all eight current independently pinned immutable markets. This is lender loss recognition, not a guaranteed recovery or funded backstop. Feed and root vault pricing confidence remain limited.",
         "sources": [
           {
             "label": "Exact creation/runtime-matched Morpho Blue zero-collateral bad-debt write-off",
@@ -272,6 +294,10 @@
           {
             "label": "Ten retained market identities and exact Morpho runtime pin, Ethereum block 26122340, 2026-10-04T23:40:11Z",
             "url": "https://etherscan.io/block/26122340"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ]
       }
@@ -281,7 +307,7 @@
         "id": "0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba",
         "label": "mF-ONE collateral market 0xef2c308b",
         "tier": "privileged-internal-pricing",
-        "summary": "The nested mF-ONE feed is a Midas manually submitted NAV, not an independently established Chainlink market-price feed. At Ethereum block 26122340 its transparent proxy implementation and access-control deployment are pinned. Full feed-admin membership and stale-price/bypass review remain incomplete.",
+        "summary": "The exact current Morpho base feed is 0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99. Midas proxy 0x8d51dbc85ceef637c97d02bdaabb5e274850e68c currently implements MFOneCustomAggregatorFeed 0x7cc057c382dea2d1d590386db13655f6ec8a65b4, with accessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b and feed-admin role 0xdb5e9dab3324bd3260229fbc56a0f12fa0317c8cb14bee310acef564572cd504. Exact published implementation permits manual feed-admin price submission. Complete current role membership and stale-price/bypass certification remain unresolved. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1042800580000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0x238a700ed6165261cf8b2e544ba797bc11e466ba"
         ],
@@ -290,16 +316,17 @@
         ],
         "feeds": [
           {
-            "provider": "Midas manual NAV via CustomAggregatorV3CompatibleFeedDiscounted (7.7% discount)",
-            "path": "baseFeedOne of 0x0cb1928eca8783f05a07d9ae2afb33f38bfbeb78 for market 0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba",
+            "provider": "Midas manually submitted mF-ONE NAV with 7.7% discounted wrapper",
+            "path": "baseFeedOne of 0x0cb1928eca8783f05a07d9ae2afb33f38bfbeb78 for market 0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba; current latestRoundData at block 26197050: answer raw 104280058, updatedAt 1792000403. Zero or adapter-generated timestamps do not establish underlying source freshness.",
             "address": "0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Discounted feed 0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99 reads Midas proxy 0x8d51dbc85ceef637c97d02bdaabb5e274850e68c. At block 26122340 its implementation is MFOneCustomAggregatorFeed 0x7cc057c382dea2d1d590386db13655f6ec8a65b4, whose feed admins submit prices manually. accessControl() returns 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b, another mutable proxy; feedAdminRole() is 0xdb5e9dab3324bd3260229fbc56a0f12fa0317c8cb14bee310acef564572cd504. ProxyAdmin 0xbf25b58cb8dfad688f7bcb2b87d71c23a6600aac is owned by MidasTimelockController 0xe3eee3e0d2398799c884a47fc40c029c8e241852, whose getMinDelay() is 172800 seconds. That upgrade delay does not establish delayed price submission, independent signers or a complete freshness/fallback certificate.",
-        "observedAt": "2026-10-04",
-        "observedBlock": 26122340,
+        "fallbackBehavior": "The exact current Morpho base feed is 0x4386307a07c4de7ba11b4f4ec3e1f37bbe95dc99. Midas proxy 0x8d51dbc85ceef637c97d02bdaabb5e274850e68c currently implements MFOneCustomAggregatorFeed 0x7cc057c382dea2d1d590386db13655f6ec8a65b4, with accessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b and feed-admin role 0xdb5e9dab3324bd3260229fbc56a0f12fa0317c8cb14bee310acef564572cd504. Exact published implementation permits manual feed-admin price submission. Complete current role membership and stale-price/bypass certification remain unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
@@ -338,6 +365,14 @@
           {
             "label": "Nested proxy, access-control and upgrade-delay observation pin",
             "url": "https://etherscan.io/block/26122340"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cc057c382dea2d1d590386db13655f6ec8a65b4"
           }
         ]
       },
@@ -345,7 +380,7 @@
         "id": "0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467",
         "label": "wFalconX collateral market 0x2a0b8934",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Verified wrapper creation identifies tranche/CDO 0xc26a6fa2c37b38e549a4a1807543801db684f99 behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff. Chainlink-compatible ABI does not establish independent market pricing. Its pinned latestRoundData returns a zero timestamp; no upstream-data freshness is certified. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1115076000000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0x4614f7a56a3eb83b2ff9fa4b4b9575b28fb68644"
         ],
@@ -354,16 +389,17 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
-            "path": "baseFeedOne of 0x52ea2c12734b5bb61e1edf52bb0f01d9206493fc for market 0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467",
+            "provider": "TranchesChainlinkOracle over wFalconX tranche accounting",
+            "path": "baseFeedOne of 0x52ea2c12734b5bb61e1edf52bb0f01d9206493fc for market 0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467; current latestRoundData at block 26197050: answer raw 1115076, updatedAt 0. Zero or adapter-generated timestamps do not establish underlying source freshness.",
             "address": "0x50449b3d1f5931d568a1951ee506a9534e7f7dff",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Verified wrapper creation identifies tranche/CDO 0xc26a6fa2c37b38e549a4a1807543801db684f99 behind feed 0x50449b3d1f5931d568a1951ee506a9534e7f7dff. Chainlink-compatible ABI does not establish independent market pricing. Its pinned latestRoundData returns a zero timestamp; no upstream-data freshness is certified.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0x4614f7a56a3eb83b2ff9fa4b4b9575b28fb68644",
@@ -390,6 +426,14 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x56b0cc522c5de46978c0800775449a02a2662c45f4d9072b54c212e8b4c4f25f"
           }
         ]
       },
@@ -397,7 +441,7 @@
         "id": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
         "label": "PT-reUSD-10DEC2026 collateral market 0x1e9d6146",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Creation records identify underlying feeds 0x570ea68f11e63a9108514eb73dc4f88232c9e7f6 and 0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994. Verified Ojo implementation returns the lower input. Adapter timestamps set to the current block do not prove underlying input freshness, independence or redundancy. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 982754513330251956000000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0xecfafdc7741323a945a163ed068b5a3c43483957"
         ],
@@ -406,16 +450,17 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
-            "path": "baseFeedOne of 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0 for market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+            "provider": "Ojo lower-of-two PT-reUSD valuation adapter",
+            "path": "baseFeedOne of 0x217d6ddcdb95112c51657f6270e8c079cfdb51f0 for market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64; current latestRoundData at block 26197050: answer raw 982754513330251956, updatedAt 1792056899. Zero or adapter-generated timestamps do not establish underlying source freshness.",
             "address": "0x77ee147391eac11c92817e771860ff4aad265d89",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Creation records identify underlying feeds 0x570ea68f11e63a9108514eb73dc4f88232c9e7f6 and 0x7cfd3ed001d9d65d4022db4e15c6101db2bbc994. Verified Ojo implementation returns the lower input. Adapter timestamps set to the current block do not prove underlying input freshness, independence or redundancy.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0xecfafdc7741323a945a163ed068b5a3c43483957",
@@ -442,6 +487,18 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/transactions/0x17f7d586dcd2da9f1d43a14d8fa8aafa3502d797a1665db86b79aecac2c668d5"
+          },
+          {
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5aab95e3c6f9ba0ccfa0a17c2c7235633c7c6585"
           }
         ]
       },
@@ -449,7 +506,7 @@
         "id": "0xeffa583f87a425f68b8ba0c62408b2afe5c30dac436c680fbd2ee3836f037e1d",
         "label": "TSLAon collateral market 0xeffa583f",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Exact MetaOracle clone uses published implementation 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b. Pinned primary 0x7e5a0f4a0ca67d283469b2dbcde13bf7fe08e253, backup 0xe495fb2dc9e142c8cf86efccebb0097fdebb33a4, currentOracle 0x7e5a0f4a0ca67d283469b2dbcde13bf7fe08e253, deviationThreshold raw 20000000000000000 (2%), challenge duration 259200 seconds and healing duration 86400 seconds. Source computes deviation against backup price; issuer documentation describes the average, a source/documentation discrepancy. Selected primary/backup identity is observed; complete nested feed operator/admin and source-data freshness remain unresolved. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 360145000000000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0xf6b1117ec07684d3958cad8beb1b302bfd21103f"
         ],
@@ -458,16 +515,17 @@
         ],
         "feeds": [
           {
-            "provider": "Unresolved feed/rate topology",
-            "path": "IOracle.price() at market oracle 0xeccf43900d96c79fb36122818b42f40bde01597c; API returns null topology",
-            "address": "0xeccf43900d96c79fb36122818b42f40bde01597c",
+            "provider": "MetaOracle selected primary/backup path; no independence credit",
+            "path": "currentOracle() at exact MetaOracle 0xeccf43900d96c79fb36122818b42f40bde01597c",
+            "address": "0x7e5a0f4a0ca67d283469b2dbcde13bf7fe08e253",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Exact MetaOracle clone uses published implementation 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b. Pinned primary 0x7e5a0f4a0ca67d283469b2dbcde13bf7fe08e253, backup 0xe495fb2dc9e142c8cf86efccebb0097fdebb33a4, currentOracle 0x7e5a0f4a0ca67d283469b2dbcde13bf7fe08e253, deviationThreshold raw 20000000000000000 (2%), challenge duration 259200 seconds and healing duration 86400 seconds. Source computes deviation against backup price; issuer documentation describes the average, a source/documentation discrepancy. Selected primary/backup identity is observed; complete nested feed operator/admin and source-data freshness remain unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0xf6b1117ec07684d3958cad8beb1b302bfd21103f",
@@ -494,6 +552,18 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact MetaOracle implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
+          },
+          {
+            "label": "Issuer MetaOracle architecture; denominator wording differs from published source",
+            "url": "https://www.steakhouse.financial/docs/products/infrastructure/metaoracle"
           }
         ]
       },
@@ -501,7 +571,7 @@
         "id": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
         "label": "reUSD collateral market 0x4565ac05",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Verified feed 0x72b5760cfbe437dd01409f44055fdfb8f8121b46 reads NAV provider 0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6 getCurrentNAV(). Published source exposes updater, admin, emergency-updater, keeper and Chainlink Functions/Automation paths. Complete current role membership, mutable deviation settings and underlying NAV input verification remain unresolved. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 1107212112352092400000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
         ],
@@ -510,16 +580,17 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
-            "path": "baseFeedOne of 0xa66a4f03fd8031973f8c7718904ce32385f54e70 for market 0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+            "provider": "reUSD NAV provider through Chainlink-compatible adapter",
+            "path": "baseFeedOne of 0xa66a4f03fd8031973f8c7718904ce32385f54e70 for market 0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed; current latestRoundData at block 26197050: answer raw 1107212112352092400, updatedAt 1792021535. Zero or adapter-generated timestamps do not establish underlying source freshness.",
             "address": "0x72b5760cfbe437dd01409f44055fdfb8f8121b46",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Verified feed 0x72b5760cfbe437dd01409f44055fdfb8f8121b46 reads NAV provider 0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6 getCurrentNAV(). Published source exposes updater, admin, emergency-updater, keeper and Chainlink Functions/Automation paths. Complete current role membership, mutable deviation settings and underlying NAV input verification remain unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
@@ -546,6 +617,18 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x72b5760cfbe437dd01409f44055fdfb8f8121b46"
+          },
+          {
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x84d4eaeb10f9e57b67622f667c6c13e22fa4b2b6"
           }
         ]
       },
@@ -553,7 +636,7 @@
         "id": "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
         "label": "weETH collateral market 0x61765602",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Pinned EIP-1967 implementation of feed 0xddb6f90ffb4d3257dd666b69178e5b3c5bf41136 is 0x0c2c7ded01ccdfab16f04aff82af766b23d6be0a. Verified implementation includes RedStone updater paths. Complete updater/admin/fallback authority and bounded underlying-source freshness remain unresolved. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 2609199085960000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee"
         ],
@@ -562,16 +645,17 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
-            "path": "baseFeedOne of 0x5635a2f38c5dfd1d8fdb176d9cb5aefa07bf6a68 for market 0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
+            "provider": "RedStone MergedAdapterWithRoundsWeethV1",
+            "path": "baseFeedOne of 0x5635a2f38c5dfd1d8fdb176d9cb5aefa07bf6a68 for market 0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664; current latestRoundData at block 26197050: answer raw 260919908596, updatedAt 1792042127. Zero or adapter-generated timestamps do not establish underlying source freshness.",
             "address": "0xddb6f90ffb4d3257dd666b69178e5b3c5bf41136",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Pinned EIP-1967 implementation of feed 0xddb6f90ffb4d3257dd666b69178e5b3c5bf41136 is 0x0c2c7ded01ccdfab16f04aff82af766b23d6be0a. Verified implementation includes RedStone updater paths. Complete updater/admin/fallback authority and bounded underlying-source freshness remain unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
@@ -598,6 +682,14 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0c2c7ded01ccdfab16f04aff82af766b23d6be0a"
           }
         ]
       },
@@ -605,7 +697,7 @@
         "id": "0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d",
         "label": "FLHYon collateral market 0xfb8d9208",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Exact MetaOracle clone uses published implementation 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b. Pinned primary 0xd87b4a9de5b184a469942339508dd485e8eeead7, backup 0xdee9c016bd52b0a99a78790a9bf8410662a3d1e3, currentOracle 0xd87b4a9de5b184a469942339508dd485e8eeead7, deviationThreshold raw 20000000000000000 (2%), challenge duration 28800 seconds and healing duration 86400 seconds. Source computes deviation against backup price; issuer documentation describes the average, a source/documentation discrepancy. Selected primary/backup identity is observed; complete nested feed operator/admin and source-data freshness remain unresolved. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 24030637530000000000000000. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0x54c1ff361b402f66c13107421e6a431c3375ef24"
         ],
@@ -614,16 +706,17 @@
         ],
         "feeds": [
           {
-            "provider": "Unresolved feed/rate topology",
-            "path": "IOracle.price() at market oracle 0xd703c55b871d999ea5435ac3721b19296ac249d1; API returns null topology",
-            "address": "0xd703c55b871d999ea5435ac3721b19296ac249d1",
+            "provider": "MetaOracle selected primary/backup path; no independence credit",
+            "path": "currentOracle() at exact MetaOracle 0xd703c55b871d999ea5435ac3721b19296ac249d1",
+            "address": "0xd87b4a9de5b184a469942339508dd485e8eeead7",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Exact MetaOracle clone uses published implementation 0x9b4655239e91dc9e1f7599bb88fba41b4542de5b. Pinned primary 0xd87b4a9de5b184a469942339508dd485e8eeead7, backup 0xdee9c016bd52b0a99a78790a9bf8410662a3d1e3, currentOracle 0xd87b4a9de5b184a469942339508dd485e8eeead7, deviationThreshold raw 20000000000000000 (2%), challenge duration 28800 seconds and healing duration 86400 seconds. Source computes deviation against backup price; issuer documentation describes the average, a source/documentation discrepancy. Selected primary/backup identity is observed; complete nested feed operator/admin and source-data freshness remain unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0x54c1ff361b402f66c13107421e6a431c3375ef24",
@@ -650,6 +743,18 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+          },
+          {
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact MetaOracle implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b4655239e91dc9e1f7599bb88fba41b4542de5b"
+          },
+          {
+            "label": "Issuer MetaOracle architecture; denominator wording differs from published source",
+            "url": "https://www.steakhouse.financial/docs/products/infrastructure/metaoracle"
           }
         ]
       },
@@ -657,7 +762,7 @@
         "id": "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
         "label": "weETH collateral market 0x85252bb8",
         "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
+        "summary": "Verified Origami adapter 0x4270e1817576bba4b640466be79a408ef128f828 reads weETH getRate(); the second base leg is EAC proxy 0xc0053f3fbccd593758258334dfce24c2a9a673ad. The constant dummy quote feed does not provide a second independent market price. Origami latestRoundData returns a zero timestamp; complete underlying EAC aggregator/control and freshness certification remain unresolved. At Ethereum block 26197050 (2026-10-15T09:34:59Z), exact market oracle price() returns raw 2618324773137816223159659834. This is a pricing observation, not proof of market-value accuracy, solvency or a freshness guarantee.",
         "collateralAssets": [
           "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee"
         ],
@@ -666,30 +771,33 @@
         ],
         "feeds": [
           {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
-            "path": "baseFeedOne of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 for market 0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
+            "provider": "Origami weETH rate adapter, EAC ETH-price leg and constant quote feed",
+            "path": "baseFeedOne of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 for market 0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e; current latestRoundData at block 26197050: answer raw 1105784777951807648, updatedAt 0. Zero or adapter-generated timestamps do not establish underlying source freshness.",
             "address": "0x4270e1817576bba4b640466be79a408ef128f828",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           },
           {
             "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
             "path": "baseFeedTwo of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 for market 0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
             "address": "0xc0053f3fbccd593758258334dfce24c2a9a673ad",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           },
           {
             "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
             "path": "quoteFeedOne of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 for market 0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
             "address": "0xc3866d726c204c0836e0677a31973c649888973d",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-15",
+            "observedBlock": 26197050
           }
         ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
+        "fallbackBehavior": "Verified Origami adapter 0x4270e1817576bba4b640466be79a408ef128f828 reads weETH getRate(); the second base leg is EAC proxy 0xc0053f3fbccd593758258334dfce24c2a9a673ad. The constant dummy quote feed does not provide a second independent market price. Origami latestRoundData returns a zero timestamp; complete underlying EAC aggregator/control and freshness certification remain unresolved.",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197050,
         "collateralParameters": [
           {
             "asset": "0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee",
@@ -716,155 +824,14 @@
           {
             "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
             "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          }
-        ]
-      },
-      {
-        "id": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
-        "label": "cbBTC collateral market 0x64d65c9a",
-        "tier": "opaque-or-unknown",
-        "summary": "Exact collateral/oracle identity and LLTV are established. Nested valuation inputs, operator controls, feed staleness enforcement and fallback behavior remain incompletely reviewed; no independence or redundancy credit is claimed.",
-        "collateralAssets": [
-          "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
-        ],
-        "chains": [
-          "ethereum"
-        ],
-        "feeds": [
-          {
-            "provider": "ChainlinkOracleV2 adapter (Morpho API classification; feed operator/custody not independently established)",
-            "path": "baseFeedOne of 0xa6d6950c9f177f1de7f7757fb33539e3ec60182a for market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
-            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
-            "chain": "ethereum",
-            "observedAt": "2026-10-03"
-          }
-        ],
-        "fallbackBehavior": "Market consumes its configured IOracle.price(); nested-feed stale-price handling and fallback/bypass paths are not yet verified for this exact oracle.",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110193,
-        "collateralParameters": [
-          {
-            "asset": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf",
-            "maximumLtvPct": 86.0,
-            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
-          }
-        ],
-        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independently reviewed branch-kind evidence covers mechanics, not feed correctness or executable liquidation availability.",
-        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded insurance or root-vault assurance is inferred.",
-        "sources": [
-          {
-            "label": "Adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
-            "url": "https://ethereum-rpc.publicnode.com"
           },
           {
-            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
-            "url": "https://api.morpho.org/graphql"
+            "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           },
           {
-            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
-            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
-          },
-          {
-            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          }
-        ]
-      },
-      {
-        "id": "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44",
-        "label": "syrupUSDC collateral market 0x729badf2",
-        "tier": "opaque-or-unknown",
-        "summary": "At Ethereum block 26154200, the exact syrupUSDC Morpho market uses immutable oracle 0x80032f4cb6e3573b9ed61e888af658e48fb790cc, syrupUSDC convertToAssets(100000000), and zero external-feed/quote-vault slots. This is internal pool NAV, not a Chainlink or Pyth feed. Independently source-matched MaplePool and current manager implementation establish balance-plus-strategy accounting; all four strategy addresses and direct manager/admin role addresses are pinned. Their downstream accounting, upgrade controllers and signing topology remain incompletely reviewed. No feed independence, redundancy, bounded freshness, recovery or current allocation credit is claimed.",
-        "collateralAssets": [
-          "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
-        ],
-        "chains": [
-          "ethereum"
-        ],
-        "feeds": [
-          {
-            "provider": "syrupUSDC ERC-4626 conversion rate; no external Chainlink feed in this exact oracle",
-            "path": "Immutable Morpho oracle 0x80032f4cb6e3573b9ed61e888af658e48fb790cc calls syrupUSDC 0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b convertToAssets(100000000); all BASE_FEED/QUOTE_FEED slots and QUOTE_VAULT are zero. Pool manager is 0x7ad5ffa5fdf509e30186f4609c2f6269f4b6158f, implementation 0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8; manager.totalAssets sums pool USDC balance and every strategyList entry's assetsUnderManagement",
-            "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-            "chain": "ethereum",
-            "observedAt": "2026-10-11",
-            "observedBlock": 26154200
-          }
-        ],
-        "fallbackBehavior": "Exact immutable Morpho oracle directly calls syrupUSDC convertToAssets(100000000); zero feed/quote-vault slots are identity factors, not redundant providers. There is no external-feed heartbeat, oracle administrator setter, timestamp check or fallback at this oracle. Independently executable-matched pool and manager source compute convertToAssets from manager.totalAssets/totalSupply; manager sums pool USDC balance plus all four strategy assetsUnderManagement calls without its own timestamp-age check. Any nested revert propagates rather than selecting an alternative. Strategy-level update/staleness and complete upgrade/signing controls remain unreviewed; no numeric heartbeat or staleness bound is established. This pricing path does not subtract unrealizedLosses as convertToExitAssets does. Manager setImplementation/migrate require its factory; upgrade permits the scheduled poolDelegate or globals.securityAdmin. At the pin, poolDelegate=0xc1e18ffd8825ffb286d177ddebeba345ec70b49f, factory=0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339 and globals=0x804a6f5f667170f545bf14e5ddb48c70b788390c. Globals getters return governor=0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b, securityAdmin=0x6b1a78c1943b03086f7ee53360f9b0672bd60818 and operationalAdmin=0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8; these are observed role addresses, not independently verified quorum or ownership claims.",
-        "observedAt": "2026-10-11",
-        "observedBlock": 26154200,
-        "collateralParameters": [
-          {
-            "asset": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
-            "maximumLtvPct": 91.5,
-            "note": "Immutable market LLTV per Morpho marketById; this is loan-to-liquidation value, not a vault share mint cap."
-          }
-        ],
-        "liquidationMechanism": "Exact creation/runtime-matched Morpho Blue liquidate checks oracle-valued health against immutable LLTV, transfers seized collateral and requires loan-token repayment. Independently reviewed branch-kind evidence covers mechanics, not feed correctness or executable liquidation availability.",
-        "backstop": "No exact-market funded insurance or discretionary rescue commitment was verified in the cited inventory; that fact remains unknown.",
-        "shutdownOrBadDebtBehavior": "Exact creation/runtime-matched Morpho Blue writes off remaining debt at zero borrower collateral and subtracts badDebtAssets from totalSupplyAssets. No guaranteed recovery, funded insurance or root-vault assurance is inferred.",
-        "sources": [
-          {
-            "label": "Adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
-            "url": "https://ethereum-rpc.publicnode.com"
-          },
-          {
-            "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Sol curation campaign 2026-10-09 (Lane23Steakhouse): chainId 1 marketById parameters and oracle type observed 2026-10-09T10:35:28Z; corroborates the existing pinned syrupUSDC branch",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
-            "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
-          },
-          {
-            "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Fully verified exact immutable syrupUSDC market oracle, decoded constructor inputs and VaultLib/ChainlinkDataFeedLib source; Sol curation campaign 2026-10-09 (W2L19Figure)",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80032f4cb6e3573b9ed61e888af658e48fb790cc"
-          },
-          {
-            "label": "Exact oracle runtime bytes equal the fully verified Blockscout deployment at Ethereum block 26110193, oracle runtime hash 0x7c1445e54e779269c3961399108a9635f407f54957917c55a4e806310376197b (not a block hash), timestamp 2026-10-03T07:03:47.000Z; observed 2026-10-09T11:43:17.954Z by Sol curation campaign 2026-10-09 (W2L19Figure)",
-            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
-          },
-          {
-            "label": "Official Maple exact syrupUSDC identity and convertToAssets versus convertToExitAssets pricing distinction; observed 2026-10-10T23:46:22Z by Sol curation campaign 2026-10-11 (K6OracleKinds)",
-            "url": "https://docs.maple.finance/integrate/ethereum-mainnet/asset-integration.md"
-          },
-          {
-            "label": "Published exact MaplePool source is partially, not fully, verified; pool-accounting conversion is not upstream manager/runtime closure; observed 2026-10-10T23:46:22Z by Sol curation campaign 2026-10-11 (K6OracleKinds)",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b"
-          },
-          {
-            "label": "Primary Maple PoolManager accounting and administrative boundary; no block-pinned implementation or membership assertion",
-            "url": "https://docs.maple.finance/technical-resources/pools/pool-manager.md"
-          },
-          {
-            "label": "Sol curation campaign 2026-10-11 (P2BbqUSDC), observed 2026-10-11T11:55:03.504Z and 11:56:27.957Z: Ethereum block 26154200, block hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, timestamp 2026-10-09T10:17:35.000Z; exact market tuple, zero feed slots, conversion sample, pool/manager runtime, implementation, factory, globals, direct role getters and complete four-entry strategyList census",
-            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
-          },
-          {
-            "label": "Independent MaplePool executable-source correspondence: creation/runtime match, not exact metadata match; declared immutable and CBOR transformations reproduce the pinned runtime; reviewed 2026-10-11T11:59:22Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b?fields=matchId,creationMatch,runtimeMatch,verifiedAt,creationBytecode,runtimeBytecode,compilation"
-          },
-          {
-            "label": "Independent MaplePoolManager implementation executable-source correspondence: creation/runtime match with CBOR-only transformation, not exact metadata match; pinned runtime equals the recorded onchain runtime; reviewed 2026-10-11T11:59:22Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
-            "url": "https://sourcify.dev/server/v2/contract/1/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8?fields=matchId,creationMatch,runtimeMatch,verifiedAt,creationBytecode,runtimeBytecode,compilation"
-          },
-          {
-            "label": "Matched MaplePool source: convertToAssets, totalAssets manager call and unrealized-loss-aware exit distinction",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b?fields=sources"
-          },
-          {
-            "label": "Matched MaplePoolManager source: totalAssets strategy census, no manager-level age check, factory-only setters and scheduled-delegate/security-admin upgrade path",
-            "url": "https://sourcify.dev/server/v2/contract/1/0xfe02be1ad28edfd8e3dd6f29c402b244c2a258b8?fields=sources"
+            "label": "Exact published oracle topology; source scope only, not whole-feed assurance",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4270e1817576bba4b640466be79a408ef128f828"
           }
         ]
       }
@@ -877,10 +844,10 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-11",
-          "reviewer": "Sol curation campaign 2026-10-11 (P2BbqUSDC)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "verified",
-          "rationale": "The exact Ethereum root share-accounting executable is independently authenticated against Sourcify's recompiled VaultV2 runtime (matchId 30034094): all executable bytes match after substituting only compiler-declared immutable fields and excluding CBOR metadata. All 12 immutable occurrences independently equal pinned exact-root getters: asset is USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals 18 and virtualShares 1000000000000. The independent matched main source equals the root explorer source. totalAssets/accrueInterestView sums underlying USDC balance and adapter realAssets, bounds accrued interest by maxRate and adjusts fee shares; deposit/mint/withdraw/redeem previews use that asset/share accounting without a separate root price feed. This local exemption does NOT cover borrower collateral liquidation, adapter-internal pricing or nested-vault valuation, and does not promote the aggregate multi-branch oracle profile or feed quality. Exact metadata equality or a fully verified root explorer badge is not claimed.",
+          "rationale": "At Ethereum block 26197050 (2026-10-15T09:34:59Z), the exact Ethereum root share-accounting executable is independently authenticated against Sourcify's recompiled VaultV2 runtime (matchId 30034094): all executable bytes match after substituting only compiler-declared immutable fields and excluding CBOR metadata. All 12 immutable occurrences independently equal pinned exact-root getters: asset is USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, decimals 18 and virtualShares 1000000000000. The independent matched main source equals the root explorer source. totalAssets/accrueInterestView sums underlying USDC balance and adapter realAssets, bounds accrued interest by maxRate and adjusts fee shares; deposit/mint/withdraw/redeem previews use that asset/share accounting without a separate root price feed. This local exemption does NOT cover borrower collateral liquidation, adapter-internal pricing or nested-vault valuation, and does not promote the aggregate multi-branch oracle profile or feed quality. Exact metadata equality or a fully verified root explorer badge is not claimed.",
           "sources": [
             {
               "label": "Adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
@@ -909,6 +876,10 @@
             {
               "label": "Exact Ethereum block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, timestamp 2026-10-09T10:17:35.000Z: root runtime observed 2026-10-11T11:55:03.504Z; root asset/decimals/virtualShares and USDC decimals getters observed 2026-10-11T12:06:28.158Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
               "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -921,8 +892,8 @@
         "branchId": "0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices mF-ONE borrower collateral in market 0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -941,6 +912,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -953,8 +928,8 @@
         "branchId": "0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices wFalconX borrower collateral in market 0x2a0b893471c785a1f0fda00df7fca578b703eef7ae7186d2429c2824b5212467; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -973,6 +948,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -985,8 +964,8 @@
         "branchId": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices PT-reUSD-10DEC2026 borrower collateral in market 0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -1005,6 +984,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -1017,8 +1000,8 @@
         "branchId": "0xeffa583f87a425f68b8ba0c62408b2afe5c30dac436c680fbd2ee3836f037e1d",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices TSLAon borrower collateral in market 0xeffa583f87a425f68b8ba0c62408b2afe5c30dac436c680fbd2ee3836f037e1d; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -1037,6 +1020,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -1049,8 +1036,8 @@
         "branchId": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices reUSD borrower collateral in market 0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -1069,6 +1056,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -1081,8 +1072,8 @@
         "branchId": "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices weETH borrower collateral in market 0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -1101,6 +1092,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -1113,8 +1108,8 @@
         "branchId": "0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices FLHYon borrower collateral in market 0xfb8d92086861bae6fb778917afd1de5dbbc4ec70edfb636fed48238e225e7e3d; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -1133,6 +1128,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }
@@ -1145,8 +1144,8 @@
         "branchId": "0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Batch64 exact-deployment review (Rev_BbqusdcSteakhouseV2)",
           "confidence": "probable",
           "rationale": "The configured oracle prices weETH borrower collateral in market 0x85252bb8485c99bba46fe149c7dd2aad83672640f53c630890673cf1848ba16e; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
           "sources": [
@@ -1165,82 +1164,10 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-            }
-          ]
-        }
-      },
-      {
-        "id": "ethereum:0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
-        "chain": "ethereum",
-        "address": "0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
-        "pricingAuthority": "external-price",
-        "branchId": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
-        "applicability": {
-          "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine07",
-          "confidence": "probable",
-          "rationale": "The configured oracle prices cbBTC borrower collateral in market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64; ERC-4626 accounting does not exempt this lending branch. Feed/operator/freshness topology remains bounded unknown.",
-          "sources": [
-            {
-              "label": "Adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
-              "url": "https://ethereum-rpc.publicnode.com"
             },
             {
-              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
-              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
-            },
-            {
-              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
-              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-            }
-          ]
-        }
-      },
-      {
-        "id": "ethereum:0x80032f4cb6e3573b9ed61e888af658e48fb790cc",
-        "chain": "ethereum",
-        "address": "0x80032f4cb6e3573b9ed61e888af658e48fb790cc",
-        "pricingAuthority": "internal-price",
-        "branchId": "0x729badf297ee9f2f6b3f717b96fd355fc6ec00422284ce1968e76647b258cf44",
-        "applicability": {
-          "disposition": "branches-required",
-          "reviewedAt": "2026-10-11",
-          "reviewer": "Sol curation campaign 2026-10-11 (P2BbqUSDC)",
-          "confidence": "verified",
-          "rationale": "Exact Morpho market tuple, deployed oracle runtime, immutable syrupUSDC BASE_VAULT/sample and zero feed/quote-vault slots are independently pinned at Ethereum block 26154200 (2026-10-09T10:17:35.000Z). Fully verified oracle source directly prices borrower collateral through syrupUSDC convertToAssets(100000000), so branches-required/internal-price applicability is established for this exact lending path. This does not verify downstream Maple strategy freshness or whole-feed operator/control topology, establish an independent market price, promote profile confidence or exempt root share accounting.",
-          "sources": [
-            {
-              "label": "Fully verified exact Morpho configuration has internal ERC-4626 pricing and zero external feeds; reviewed 2026-10-10T23:46:22Z",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x80032f4cb6e3573b9ed61e888af658e48fb790cc"
-            },
-            {
-              "label": "Exact syrupUSDC market tuple, oracle runtime and configured inputs at Ethereum block 26154200, hash 0xc9beb4276500c84291b521a60efba653d8326240f6c820438a10bae3721b9bf1, timestamp 2026-10-09T10:17:35.000Z; observed 2026-10-11T11:55:03.504Z by Sol curation campaign 2026-10-11 (P2BbqUSDC)",
-              "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
-            },
-            {
-              "label": "Official Maple syrupUSDC identity and internal pricing/redemption distinction; reviewed 2026-10-10T23:46:22Z",
-              "url": "https://docs.maple.finance/integrate/ethereum-mainnet/asset-integration.md"
-            },
-            {
-              "label": "Adapter 0xbfe734baab130048e20a64e800c4c2ec25756284 marketIdsLength/marketIds census at ethereum block 26110193, 2026-10-03; adapter.morpho/idToMarketParams collateral/oracle/LLTV all independently match the API",
-              "url": "https://ethereum-rpc.publicnode.com"
-            },
-            {
-              "label": "Morpho marketById chain-qualified collateral/oracle/LLTV and oracle.data feed inventory, accessed 2026-10-03",
-              "url": "https://api.morpho.org/graphql"
-            },
-            {
-              "label": "Pinned Morpho Blue liquidation and bad-debt source (framework semantics, not exact deployment verification)",
-              "url": "https://raw.githubusercontent.com/morpho-org/morpho-blue/8f89ede29ec9d2cfa9688aa670346226a3571f06/src/Morpho.sol"
-            },
-            {
-              "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
-              "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+              "label": "Ethereum block 26197050, hash 0x5e8ca9eb6082e454ceb0d555bc3ca08de468e3e7e667b30e1fc7fda1e54599d6, 2026-10-15T09:34:59Z; pinned vault roles, Safe census, gates, runtime and eight-market inventory",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ]
         }

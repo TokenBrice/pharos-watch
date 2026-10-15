@@ -112,6 +112,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "paxos-independent-assurance": lazyAdapter(() => import("./paxos-independent-assurance").then((mod) => mod.fetchPaxosIndependentAssuranceReserves)),
   "straitsx-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
   "tether-transparency": lazyAdapter(() => import("./tether-transparency").then((mod) => mod.fetchTetherTransparencyReserves)),
+  "tether-transparency-mxnt": lazyAdapter(() => import("./tether-transparency").then((mod) => mod.fetchTetherTransparencyReserves)),
   "united-por": lazyAdapter(() => import("./united-por").then((mod) => mod.fetchUnitedPorReserves)),
   "usdgo-transparency": lazyAdapter(() => import("./usdgo-transparency").then((mod) => mod.fetchUsdgoTransparencyReserves)),
   "usdai-proof-of-reserves": lazyAdapter(() => import("./usdai-proof-of-reserves").then((mod) => mod.fetchUsdAiProofOfReserves)),

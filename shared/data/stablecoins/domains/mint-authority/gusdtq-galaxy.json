@@ -21,9 +21,13 @@
         "authorityType": "contract",
         "directMintAbility": "none",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197374,
         "sources": [
+          {
+            "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
           {
             "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
             "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
@@ -50,7 +54,8 @@
           }
         ],
         "capDescription": "Deposits require transferred underlying; performance and management fee accrual may mint configured fee shares. No arbitrary owner share-mint entrypoint in reviewed source.",
-        "evidence": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=10849240390816215589153603 raw 18-decimal shares and totalAssets()=11026389722645 raw 6-decimal USDT. One adapter 0x0b4bcdd43778df87befb011a27debf5e48a78b71 enumerates 4 current market IDs; summed expectedSupplyAssets=11026140085669, idle underlying=249636976; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. Source and zero EIP-1967 implementation/admin/beacon slots support non-proxy VaultV2; full compiler verification remains unproven."
+        "evidence": "At Ethereum block 26197374 (2026-10-15T10:39:59Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=10478891992770618122577723 raw 18-decimal shares and totalAssets()=10659854285013 raw 6-decimal USDT. The sole adapter 0x0b4bcdd43778df87befb011a27debf5e48a78b71 enumerates four positive lender positions with summed expectedSupplyAssets=10659854285013; idle USDT=0 and realAssets()=totalAssets(). Local positions have zero borrow shares and zero posted collateral. EIP-1967 implementation, admin and beacon slots are zero. Deposit/mint require transferred USDT; fee accrual is the only other share-creation path. Functional VaultV2 correspondence was reproduced against Sourcify runtimeMatch=match, matchId 30034094, solc 0.8.28, viaIR, optimizer 100000: only declared immutable offsets and the 11-byte CBOR tag at byte 21796 were masked. Every immutable occurrence matches asset(), decimals()=18 and virtualShares()=1000000000000. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Full metadata and creation-bytecode identity and financial assurance are not asserted.",
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
@@ -63,9 +68,13 @@
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197374,
         "sources": [
+          {
+            "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
           {
             "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
             "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
@@ -92,7 +101,8 @@
           }
         ],
         "evidence": "Pinned owner()=0x42d510edeb9257f8d920d5b9f5109d95cb22419d. eth_getCode is empty at the pin; no verified multisig, independent signer or institutional key-custody protection is claimed. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance.",
-        "capDescription": "addAdapter timelock=259200 seconds; performance/management fee setters each 604800 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee."
+        "capDescription": "At the same pin, addAdapter, setIsAllocator, cap increases and setForceDeallocatePenalty delays are 259200 seconds; removeAdapter and all four fee/recipient setter delays are 604800 seconds. Current performanceFee, managementFee and forceDeallocatePenalty(adapter) are zero. All eleven capped adapter/collateral/market IDs have absoluteCap=340282366920938463463374607431768211455 and relativeCap=1000000000000000000: the nine IDs of the four current positions plus a zero-allocation weETH collateral ID and weETH/USDT market 0xa6a4c1f15490a1ff39d9de3a366b408dd5647a436d8b179726d3e0562aff1292, which allocators can fund without a new timelock. setAdapterRegistry is abdicated. These broad allocation caps do not bound arbitrary parent-token issuance. Owner appointment, allocator liquidity selection/maxRate and sentinel reductions are not subject to a blanket delay guarantee.",
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
@@ -105,9 +115,13 @@
         "authorityType": "eoa",
         "directMintAbility": "parameter-only",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197374,
         "sources": [
+          {
+            "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
           {
             "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
             "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
@@ -134,7 +148,8 @@
           }
         ],
         "evidence": "Pinned curator()=0xa13094eced689b7419baba12851374424c1486f1. eth_getCode is empty at the pin; no verified multisig, independent signer or institutional key-custody protection is claimed. Owner appointment and curator adapter/cap/fee powers can change future allocations; these are not arbitrary parent-token issuance. The same controller additionally holds isAllocator at this block.",
-        "capDescription": "addAdapter timelock=259200 seconds; performance/management fee setters each 604800 seconds. Both current fee rates are zero. Module reach and role replacement do not inherit a blanket delay guarantee."
+        "capDescription": "At the same pin, addAdapter, setIsAllocator, cap increases and setForceDeallocatePenalty delays are 259200 seconds; removeAdapter and all four fee/recipient setter delays are 604800 seconds. Current performanceFee, managementFee and forceDeallocatePenalty(adapter) are zero. All eleven capped adapter/collateral/market IDs have absoluteCap=340282366920938463463374607431768211455 and relativeCap=1000000000000000000: the nine IDs of the four current positions plus a zero-allocation weETH collateral ID and weETH/USDT market 0xa6a4c1f15490a1ff39d9de3a366b408dd5647a436d8b179726d3e0562aff1292, which allocators can fund without a new timelock. setAdapterRegistry is abdicated. These broad allocation caps do not bound arbitrary parent-token issuance. Owner appointment, allocator liquidity selection/maxRate and sentinel reductions are not subject to a blanket delay guarantee.",
+        "canRaiseCap": false
       },
       {
         "chain": "ethereum",
@@ -148,9 +163,13 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197374,
         "sources": [
+          {
+            "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
           {
             "label": "Exact ethereum block 26107704; independent role, Safe, gate and market census re-read 2026-10-03",
             "url": "https://etherscan.io/block/26107704"
@@ -178,9 +197,13 @@
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26107704,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197374,
         "sources": [
+          {
+            "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
           {
             "label": "Exact ethereum block 26107704; independent role, Safe, gate and market census re-read 2026-10-03",
             "url": "https://etherscan.io/block/26107704"
@@ -201,9 +224,13 @@
       "model": "immutable",
       "canChangeMintLogic": false,
       "controlRef": "Galaxy USDT Quality deposit-backed share accounting",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107704,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197374,
       "sources": [
+        {
+          "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
         {
           "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
           "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
@@ -236,6 +263,14 @@
     },
     "review": {
       "sources": [
+        {
+          "label": "Ethereum block 26197374, hash 0x8bb6f81d6a60dc24ccc56617771029f713bb91a1a08235440bb560bdba9ddce0, 2026-10-15T10:39:59Z; complete vault, role, gate and market census",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
+        },
+        {
+          "label": "Exact role-event census through Ethereum block 26197374 (SetCurator, SetIsAllocator, SetIsSentinel, SetOwner)",
+          "url": "https://api.etherscan.io/v2/api?chainid=1&module=logs&action=getLogs&fromBlock=0&toBlock=26197374&address=0x71ffb6a81786ec285d429d531cf655107b9d878d"
+        },
         {
           "label": "Exact Galaxy USDT Quality Morpho Vault V2 deployment",
           "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
@@ -277,9 +312,9 @@
           "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=sources,compilation,runtimeBytecode"
         }
       ],
-      "evidence": "At Ethereum block 26107704, asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=10849240390816215589153603 raw 18-decimal shares and totalAssets()=11026389722645 raw 6-decimal USDT. One adapter 0x0b4bcdd43778df87befb011a27debf5e48a78b71 enumerates 4 current market IDs; summed expectedSupplyAssets=11026140085669, idle underlying=249636976; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Current performance and management fees are zero; governed fee settings can create accrual fee shares. Parent issuer authority is inherited rather than copied as favorable wrapper supervision. Independent refinement reproduced exact deployed bytecode equality, owner/curator, all gate addresses and irreversible setters, per-selector delays, and full historical grant-event candidates with active mapping confirmation. Active allocators=0xa13094eced689b7419baba12851374424c1486f1,0xd1fcd938008a582e5f356bfe0d92604ffb7d3171; active sentinels=0xb4b1c558af077b34f071b1b6e4cca0fb8a34aee0. Owner/curator and added Safe rosters, terminating module pages, guards and nonzero fallback handlers are explicitly recorded. This closes role-address/quorum and coarse module-presence census, NOT execution-complete controller/alternate-call reach, custody attestation or financial/insolvency assurance. Independently reproduced functional compiler/runtime correspondence against Sourcify runtimeMatch=match (matchId 30034094, verifiedAt 2026-05-26T22:26:25Z, solc 0.8.28+commit.7893614a, viaIR, optimizer 100000). Only compiler-declared immutable offsets (asset AST37, decimals AST39, virtualShares AST41) and the 11-byte CBOR compiler tag at byte offset 21796 were masked; every remaining executable byte equals the Sourcify recompiled VaultV2 runtime. Each immutable occurrence separately equals this exact deployment asset()/decimals()/virtualShares() getter. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. This is functional source correspondence, not full metadata/creation-bytecode identity or a financial audit. Calibration 2026-10-03 preserves the following observations outside the umbrella census flag: Independent human control and key-custody procedures are not publicly established for the exact listed controller/signing addresses; no custody attestation is inferred from Safe quorum or empty EOA code. | No exact-vault independently signed financial assurance or enforceable statutory holder insolvency priority is established; this separate backing gap is not resolved by the mint-role census. Mint-level reconciliation remains not-applicable to the reviewed immutable, deposit/fee-share accounting mechanism; the missing independently signed financial assurance and insolvency priority remain explicit Backing-domain gaps in the existing reserves/mechanism evidence. Known signer/quorum facts receive no inferred custody or human-independence credit. V2 correction: the exact deployment functional runtime equivalence proof closes the VaultV2 mint-code identity gap. Supply is issued by immutable deposit/fee-share accounting; reconciliation remains not-applicable to that mint mechanism and supervision remains none, with no financial-assurance or regulatory-supervision credit inferred. V2 rule 1 records the existing signing-policy/human-independence/key-custody observations on every exact identified Safe/EOA control. No custody attestation or human independence is inferred, and no automatic multisig custody-pricing claim is made.",
-      "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
-      "reviewedAt": "2026-10-03",
+      "evidence": "At Ethereum block 26197374 (2026-10-15T10:39:59Z), asset()=0xdac17f958d2ee523a2206206994597c13d831ec7, totalSupply()=10478891992770618122577723 raw 18-decimal shares and totalAssets()=10659854285013 raw 6-decimal USDT. The sole adapter 0x0b4bcdd43778df87befb011a27debf5e48a78b71 enumerates four positive lender positions with summed expectedSupplyAssets=10659854285013; idle USDT=0 and realAssets()=totalAssets(). Local positions have zero borrow shares and zero posted collateral. Lender-claim allocation weights (rounded to three decimal places) are WBTC 92.670%, cbBTC 5.449%, XAUt 1.879% and wstETH 0.001%; these are not borrower-collateral reserve ownership weights. Functional VaultV2 correspondence was reproduced against Sourcify runtimeMatch=match, matchId 30034094, solc 0.8.28, viaIR, optimizer 100000: only declared immutable offsets and the 11-byte CBOR tag at byte 21796 were masked. Every immutable occurrence matches asset(), decimals()=18 and virtualShares()=1000000000000. Normalized runtime SHA-256=cf17ab0161388ea9277000e692e929216da2618e441c54bcd677def1000dd12e. Full metadata and creation-bytecode identity and financial assurance are not asserted. Current owner=0x42d510edeb9257f8d920d5b9f5109d95cb22419d; curator=0xa13094eced689b7419baba12851374424c1486f1. Etherscan role-event history from genesis through this block returns exactly two allocator grants (curator and 0xd1fcd938008a582e5f356bfe0d92604ffb7d3171) and one sentinel grant (0xb4b1c558af077b34f071b1b6e4cca0fb8a34aee0), each confirmed by pinned mappings. All four controllers have empty deployed code, not Safe rosters; no quorum, institutional key custody or human independence is inferred. At Ethereum block 26197374 (2026-10-15T10:39:59Z), all four share/asset gates are zero and all four setter selectors are irreversibly abdicated. Transfer checks send/receive share gates; withdrawal checks sendShares/receiveAssets, while sendAssets controls deposits. Underlying USDT freeze exposure remains inherited. At the same pin, addAdapter, setIsAllocator, cap increases and setForceDeallocatePenalty delays are 259200 seconds; removeAdapter and all four fee/recipient setter delays are 604800 seconds. Current performanceFee, managementFee and forceDeallocatePenalty(adapter) are zero. All eleven capped adapter/collateral/market IDs have absoluteCap=340282366920938463463374607431768211455 and relativeCap=1000000000000000000: the nine IDs of the four current positions plus a zero-allocation weETH collateral ID and weETH/USDT market 0xa6a4c1f15490a1ff39d9de3a366b408dd5647a436d8b179726d3e0562aff1292, which allocators can fund without a new timelock. setAdapterRegistry is abdicated. These broad allocation caps do not bound arbitrary parent-token issuance. Owner appointment, allocator liquidity selection/maxRate and sentinel reductions are not subject to a blanket delay guarantee. The adapter also exposes curator-submitted burnShares with a 259200-second delay; burning tracked supply shares permanently removes the corresponding claim from reported realAssets. Independent financial assurance, legal segregation and insolvency priority remain unestablished. Reconciliation is not-applicable to deposit/fee-share accounting and supervision remains none. Role census does not certify complete alternate-call execution reach or future allocations.",
+      "reviewer": "Rev_GusdtqGalaxy primary-source review",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -392,6 +427,7 @@
           ]
         }
       ]
-    }
+    },
+    "headline": "Immutable deposit-backed shares inherit USDT exposure; Galaxy-controlled keys govern lending allocations and fees."
   }
 }

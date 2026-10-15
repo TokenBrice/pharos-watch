@@ -3,9 +3,9 @@
   "mintAuthority": {
     "capSemanticsReview": {
       "verdict": "bounded-by-construction",
-      "rationale": "Pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern eurcv-societe-generale-forge, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewedAt": "2026-10-03",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
+      "rationale": "Pinned Ethereum block 26197300, hash 0xcc2d6fe52717666f3a8700dbef29e3c77c5657a006aaac60c928cba68a12ab03, timestamp 2026-10-15T10:25:11.000Z. Runtime bytecode matches the exact verified immutable VaultV2 source. enter() transfers underlying before createShares(); accrueInterest() separately creates formula-bound fee shares under immutable 50% performance-fee and 5% annualized management-fee maxima. Allocation-cap increases, new adapters, allocator appointments, fee settings and gates cannot create arbitrary unbacked recipient shares or native EURCV. The curator may raise allocation caps after seven days; fees and allocator changes have zero selector delay. Core has no upgrade entrypoint and its EIP-1967 implementation slot is zero. Upstream EURCV issuer authority remains inherited, not local unlimited issuance.",
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Rev_SteakeurcvSteakhouse",
       "sources": [
         {
           "label": "Verified current local mint implementation/source",
@@ -14,6 +14,10 @@
         {
           "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
           "url": "https://etherscan.io/block/26113624"
+        },
+        {
+          "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+          "url": "https://etherscan.io/block/26197300"
         }
       ]
     },
@@ -32,8 +36,8 @@
       ],
       "canChangeMintLogic": false,
       "controlRef": "steakEURCV immutable VaultV2 share issuance",
-      "observedAt": "2026-10-02",
-      "observedBlock": 26107702,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197300,
       "sources": [
         {
           "label": "Morpho exact Steakhouse Prime EURCV deployment",
@@ -42,6 +46,10 @@
         {
           "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
           "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+        },
+        {
+          "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+          "url": "https://etherscan.io/block/26197300"
         }
       ]
     },
@@ -58,8 +66,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "Morpho exact Steakhouse Prime EURCV deployment",
@@ -68,9 +76,13 @@
           {
             "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
             "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
+          },
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
           }
         ],
-        "evidence": "Exact verified VaultV2 enter() transfers deposited EURCV before creating user shares; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and EIP-1967 implementation slot was zero. Performance fee 0% of interest; management fee 0% at block 26107702."
+        "evidence": "Exact VaultV2 runtime matches verified source at Ethereum block 26197300. enter() transfers EURCV before user-share creation; accrueInterest() may mint fee shares. Core has no upgrade entrypoint and its EIP-1967 implementation slot is zero. Performance and management fees both read zero. Allocation permissions and caps do not permit arbitrary share minting."
       },
       {
         "chain": "ethereum",
@@ -79,13 +91,13 @@
           "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
         ],
         "label": "steakEURCV vault owner",
-        "role": "other",
+        "role": "governor",
         "authorityType": "contract",
         "directMintAbility": "parameter-only",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "unknown",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107702,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "Morpho exact Steakhouse Prime EURCV deployment",
@@ -106,9 +118,13 @@
           {
             "label": "Steakhouse Supervisor v2 exact action delays and Guardian veto",
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+          },
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
           }
         ],
-        "evidence": "owner() can replace curator and sentinels under the immutable core; owner internal authorization, key custody and signer independence remain unresolved. Exact supervisor owner()=0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd; getGuardians(vault)=0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb. Guardians can revoke pending owner/curator actions, including their own removal, but cannot expand native minting. No depositor-voting assertion is made from the default documentation alone."
+        "evidence": "At Ethereum block 26197300, exact Supervisor owner() is 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd and getGuardians(vault) returns 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb. TIMELOCK is 1209600 seconds for vault ownership transfer and Guardian removal; curator replacement is immediate. The Supervisor is not currently a vault Sentinel. The Guardian can instead revoke curator submissions through the separately enumerated Revoker Sentinel and can veto pending Supervisor ownership/Guardian-removal actions. No depositor voting or key-independence credit follows from default documentation."
       },
       {
         "chain": "ethereum",
@@ -117,13 +133,13 @@
           "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
         ],
         "label": "steakEURCV curator",
-        "role": "cap-admin",
+        "role": "other",
         "authorityType": "safe",
         "directMintAbility": "parameter-only",
-        "canRaiseCap": true,
+        "canRaiseCap": false,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "Morpho exact Steakhouse Prime EURCV deployment",
@@ -140,30 +156,36 @@
           {
             "label": "ethereum pinned block 26110187, owner/curator, Guardian list and Safe getters",
             "url": "https://etherscan.io/block/26110187"
+          },
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
           }
         ],
-        "evidence": "curator() schedules adapter, allocation-cap, fee and gate changes. Allocation-cap increases were delayed 604800 seconds; both fee selectors had zero delay. User issuance remains asset-backed; fee governance can dilute shares. Ultimate controller authorization is not granted favorable credit. Current pinned getOwners/getThreshold and getModulesPaginated(0x1,100) resolve the 2/7 Safe; pagination ends at 0x1 with no modules, transaction guard and module-guard slots zero. Fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Human independence and operational key custody remain unproven.",
+        "evidence": "At Ethereum block 26197300, getOwners/getThreshold resolve this curator to a 3-of-9 Safe, replacing the historical 2-of-7 roster. Empty module pagination ends at sentinel 0x1; guard and module-guard slots are zero; fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Source-matched curator authority schedules adapters, allocation caps, gates, fees and allocator appointments. Adapter/cap increases wait 604800 seconds; both fee selectors and setIsAllocator have zero delay. User issuance remains deposit-backed; fees can dilute claims. Human independence and operational key custody remain unproven.",
         "safe": {
           "owners": [
-            "0xfc615395336aade67fd853a0157001a215ea1279",
-            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
-            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
-            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
-            "0xcc771952fde840e30c6802734e5ad20479c2959f",
-            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
-            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120"
+            "0x1710932cf538f38e7bcfc30aaae389b24dd004f6",
+            "0x44e6e4152a60d594c175bfed42e68ad62ffb5871",
+            "0xfb3e98b5d59505ceb259e9874b4553fd27fcce3c",
+            "0x7307bf07641a794fdbc2391d0983a7f1cfa36e4b",
+            "0x1936552b58be97ffd9c7c1dd28e675b7b022f16d",
+            "0xd824031d4a115590e6ff26e4e23fc346ab4cb2db",
+            "0x4c23e86a9d8506a43046c15be1b7fa0b6f3427de",
+            "0x5868aaa8d66023137365adae9634a9d8834d488d",
+            "0x1dc4354b39554251d4a2c4b571906e7ebae535a3"
           ],
-          "threshold": 2,
+          "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "observedBlock": 26110187,
-          "observedAt": "2026-10-03",
+          "observedBlock": 26197300,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
-        "threshold": 2,
-        "signerCount": 7
+        "threshold": 3,
+        "signerCount": 9
       },
       {
         "chain": "ethereum",
@@ -195,13 +217,13 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "moduleGuard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "observedBlock": 26110187,
-          "observedAt": "2026-10-03",
+          "observedBlock": 26197300,
+          "observedAt": "2026-10-15",
           "source": "onchain"
         },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110187,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
         "sources": [
           {
             "label": "ethereum pinned block 26110187, owner/curator, Guardian list and Safe getters",
@@ -210,15 +232,255 @@
           {
             "label": "Steakhouse Supervisor v2 exact action delays and Guardian veto",
             "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+          },
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
           }
         ],
-        "evidence": "Pinned supervisor owner() resolves to this 5-of-10 Safe, whose complete owner list is recorded. Empty enabled-module pagination reaches sentinel 0x1; guard/module-guard slots are zero, fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Material owner/Guardian-removal actions wait 14 days; curator replacement is immediate. Parameter and fee authority can affect share economics but does not mint underlying tokens. No independent-human or key-custody credit is asserted."
+        "evidence": "At Ethereum block 26197300, the exact Supervisor owner remains this 5-of-10 Safe with the recorded complete owner roster. Empty module pagination ends at 0x1; guard/module-guard slots are zero and fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Exact Supervisor code delays vault-owner and Guardian-removal actions for 14 days, while curator replacement is immediate. These parameter powers cannot mint native EURCV or bypass the deposit-backed share accounting. Human signer independence and custody remain undisclosed.",
+        "canRaiseCap": false
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x0000aeb716a0df7a9a1aad119b772644bc089da8",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV allocator 1",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ],
+        "evidence": "Full-range SetIsAllocator event census through block 26197300 identifies this account; pinned isAllocator returns true. It can allocate/deallocate within enabled adapters and existing caps and set liquidity adapter/data and maxRate immediately. It cannot raise vault caps, appoint a curator, replace immutable share accounting or mint arbitrary user shares. Internal operational key custody is not established. getOwners/getThreshold establish 1-of-7; empty module pagination ends at 0x1 and both guard slots are zero.",
+        "threshold": 1,
+        "signerCount": 7,
+        "safe": {
+          "owners": [
+            "0xfc615395336aade67fd853a0157001a215ea1279",
+            "0xe3fcee6b6cd564e073346f71394f60ec9adf5120",
+            "0x8ae8ee5ad6eae89836b0070ebc47af06e3d7422b",
+            "0xf83db716a1ff12f9005f98f678d8be97b8bc81d6",
+            "0x0d61c8b6ca9669a36f351de3ae335e9689dd9c5b",
+            "0x387cde8598e1cbb297fdc5baeba5e5c5c2735344",
+            "0xcc771952fde840e30c6802734e5ad20479c2959f"
+          ],
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "observedBlock": 26197300,
+          "observedAt": "2026-10-15",
+          "source": "onchain"
+        }
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV allocator 2",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ],
+        "evidence": "Full-range SetIsAllocator event census through block 26197300 identifies this account; pinned isAllocator returns true. It can allocate/deallocate within enabled adapters and existing caps and set liquidity adapter/data and maxRate immediately. It cannot raise vault caps, appoint a curator, replace immutable share accounting or mint arbitrary user shares. Internal operational key custody is not established."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xaad84c80b013c34d70e54fb343d0c2f309f635e7",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV allocator 3",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ],
+        "evidence": "Full-range SetIsAllocator event census through block 26197300 identifies this account; pinned isAllocator returns true. It can allocate/deallocate within enabled adapters and existing caps and set liquidity adapter/data and maxRate immediately. It cannot raise vault caps, appoint a curator, replace immutable share accounting or mint arbitrary user shares. Internal operational key custody is not established. EIP-1967 implementation is 0xfcdc2271c352be8ae8a8fdad93f67d4f7622ca95 (verified VaultV2Allocator); implementation grants UUPS upgrades to DEFAULT_ADMIN_ROLE. Its wider helper ABI does not create borrowing or arbitrary-call entrypoints in the immutable parent VaultV2."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV allocator 4",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ],
+        "evidence": "Full-range SetIsAllocator event census through block 26197300 identifies this account; pinned isAllocator returns true. It can allocate/deallocate within enabled adapters and existing caps and set liquidity adapter/data and maxRate immediately. It cannot raise vault caps, appoint a curator, replace immutable share accounting or mint arbitrary user shares. Internal operational key custody is not established. eth_getCode identifies EIP-7702 delegation to 0xbeef1d6cf4f7bd10c1f2cd45864a7ce53888beef; delegation does not grant extra parent-vault capabilities."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV allocator 5",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ],
+        "evidence": "Full-range SetIsAllocator event census through block 26197300 identifies this account; pinned isAllocator returns true. It can allocate/deallocate within enabled adapters and existing caps and set liquidity adapter/data and maxRate immediately. It cannot raise vault caps, appoint a curator, replace immutable share accounting or mint arbitrary user shares. Internal operational key custody is not established. eth_getCode identifies EIP-7702 delegation to 0xbeef1d6cf4f7bd10c1f2cd45864a7ce53888beef; delegation does not grant extra parent-vault capabilities."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x00b8e1509398ed692c3f326cbaf1694f9a881e27",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV allocator 6",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ],
+        "evidence": "Full-range SetIsAllocator event census through block 26197300 identifies this account; pinned isAllocator returns true. It can allocate/deallocate within enabled adapters and existing caps and set liquidity adapter/data and maxRate immediately. It cannot raise vault caps, appoint a curator, replace immutable share accounting or mint arbitrary user shares. Internal operational key custody is not established. Exact source is BluePublicAllocator: permissionless reallocation remains subject to per-vault configuration and core caps; it can reduce idle/liquidity-market balances. No arbitrary call surface or local leverage is attributed to the parent from this helper."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xbeef5f9f39e684cf39e0770fa57a43fa46a3beef",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV allocator 7",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact immutable VaultV2 allocator permissions",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          }
+        ],
+        "evidence": "Full-range SetIsAllocator event census through block 26197300 identifies this account; pinned isAllocator returns true. It can allocate/deallocate within enabled adapters and existing caps and set liquidity adapter/data and maxRate immediately. It cannot raise vault caps, appoint a curator, replace immutable share accounting or mint arbitrary user shares. Internal operational key custody is not established. Exact source is SteakhouseOperator (EIP-2535 diamond); pinned owner is 0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827. Facet reachability is not treated as closed execution-scope evidence; every parent operation remains bound by the allocator role and immutable core."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb239fde1ef31641beb75e3a89c335ab7ac4b0115",
+        "deploymentRefs": [
+          "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        ],
+        "label": "steakEURCV Revoker Sentinel",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197300,
+        "sources": [
+          {
+            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+            "url": "https://etherscan.io/block/26197300"
+          },
+          {
+            "label": "Exact Revoker source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb239fde1ef31641beb75e3a89c335ab7ac4b0115"
+          }
+        ],
+        "evidence": "Complete SetIsSentinel census and pinned isSentinel establish the sole current Sentinel. Exact Revoker only forwards revoke(bytes) for its immutable configured vault when called by sentinel(). Pinned vault() is this share vault and sentinel() is Guardian 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb. It cannot mint shares, allocate, deallocate or lower caps. The Guardian proxy implementation remains Aragon DAO 0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29; no complete depositor voting/execution census or human independence is assumed."
       }
     ],
     "review": {
       "sources": [
-        {"label": "Verified current local mint implementation/source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"},
-        {"label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2", "url": "https://etherscan.io/block/26113624"},
+        {
+          "label": "Verified current local mint implementation/source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+        },
+        {
+          "label": "ethereum D14 observation block 26113624, hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2",
+          "url": "https://etherscan.io/block/26113624"
+        },
         {
           "label": "Morpho exact Steakhouse Prime EURCV deployment",
           "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
@@ -250,20 +512,24 @@
         {
           "label": "Exact Guardian proxy code identity",
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb"
+        },
+        {
+          "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+          "url": "https://etherscan.io/block/26197300"
         }
       ],
-      "evidence": "Fixed-block state and matched exact VaultV2 source bound asset-backed mint, fee-share mint and burn/redeem at ethereum block 26107702. Parent mint authority remains inherited. Owner/curator control addresses and selector delays are current; internal authorization closure receives no favorable assumption. Refinement pin 26110187: supervisor getGuardians(vault) returned 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb. Supervisor TIMELOCK=1209600 seconds applies to setOwner/removeGuardian; setCurator remains immediate. Guardian veto is verified. Exact Guardian 0x31ca6fddc0c36cc84760d7e6a43ac6c7ccc210cb is an ERC1967Proxy whose current EIP-1967 implementation is the verified Aragon DAO 0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29. Its complete voting-plugin/permission census and depositor-weighting configuration remain unverified; the documentation default is not treated as exact-vault proof. Morpho creationTimestamp=1765822487 and creationBlockNumber=24019726 identify this exact vault, not the issuer founding date. Calibration 2026-10-03: non-census disclosure observations retained outside the umbrella mint-path flag: Human independence and operational key-custody procedures behind the enumerated signing addresses are not publicly established. No exact-vault independent financial assurance or enforceable statutory holder priority has been published. D14/A7/A10 review 2026-10-03, pinned ethereum block 26113624 (hash 0xa8237b00d3c3b45acd6b8c3284c68a98037052ea7447b7674ce460b207a33ca2). The pinned immutable VaultV2 source routes deposit/mint through enter(), which transfers underlying assets before createShares(). Curator increaseAbsoluteCap/increaseRelativeCap and addAdapter govern allocation limits, not arbitrary recipient minting; owner/curator, deposit-gate and fee-recipient settings cannot bypass this accounting. accrueInterest() separately creates fee shares under immutable MAX_PERFORMANCE_FEE (50% of interest) and MAX_MANAGEMENT_FEE (5% annualized) limits, not discretionary arbitrary-share issuance. There is no local upgrade entrypoint. Inherited controls concern eurcv-societe-generale-forge, whose parent issuance is carried by the serial-claim dependency, not wrapper-local D14.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U12aWrapperCapReviews)",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Fresh exact-source and fixed-block review at Ethereum 26197300 (2026-10-15T10:25:11.000Z, hash 0xcc2d6fe52717666f3a8700dbef29e3c77c5657a006aaac60c928cba68a12ab03). Verified deposit-backed user mint, bounded fee-share issuance, zero current fees, immutable core and absent EIP-1967 implementation. Refreshed owner/curator and Safe authorizations: curator now 3-of-9; Supervisor owner remains 5-of-10. Full Etherscan logs from inception through the pin returned nine allocator-setting and one Sentinel-setting events; all candidates were re-read with isAllocator/isSentinel. Seven allocators are enabled; former 0x328dc4a2950b4a19fd440e9ffc6e9c3a496afcfd is disabled. The sole Sentinel is the Revoker controlled by the same Guardian as the Supervisor veto. The Supervisor itself is not currently Sentinel. Core cap/adapter changes wait seven days, fee/allocator changes have zero delay, and transfer/withdrawal gate setters are permanently abdicated. Force-deallocation penalty is 10000000000000 / 1e18 (0.001%); ordinary redeem has no separate withdrawal fee. Complete nine-market adapter positions have zero borrow shares and posted collateral. Operator/proxy reachability does not bypass immutable parent capabilities or establish human independence. No arbitrary-recipient native issuance or favorable execution-scope closure is inferred.",
+      "reviewer": "Rev_SteakeurcvSteakhouse",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
         {
           "controlRef": "steakEURCV curator",
-          "question": "At Ethereum block 26110187 the on-chain signing roster and 2-of-7 threshold for 0x827e86072b06674a077f592a531dce4590adecdb are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
+          "question": "At Ethereum block 26197300 the on-chain signing roster and 3-of-9 threshold for 0x827e86072b06674a077f592a531dce4590adecdb are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SteakeurcvSteakhouse",
           "sources": [
             {
               "label": "Enumerated exact Safe roster and threshold at Ethereum block 26110187",
@@ -272,15 +538,19 @@
             {
               "label": "Steakhouse Supervisor v2 authorization and Guardian roles",
               "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+            },
+            {
+              "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+              "url": "https://etherscan.io/block/26197300"
             }
           ]
         },
         {
           "controlRef": "steakEURCV supervisor owner Safe",
-          "question": "At Ethereum block 26110187 the on-chain signing roster and 5-of-10 threshold for 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
+          "question": "At Ethereum block 26197300 the on-chain signing roster and 5-of-10 threshold for 0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd are enumerated. What establishes human signer independence, operational key-custody procedures and current signing policy for this exact Safe?",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol mint-authority calibration v2 (Refine12)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SteakeurcvSteakhouse",
           "sources": [
             {
               "label": "Enumerated exact Safe roster and threshold at Ethereum block 26110187",
@@ -289,10 +559,28 @@
             {
               "label": "Steakhouse Supervisor v2 authorization and Guardian roles",
               "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+            },
+            {
+              "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+              "url": "https://etherscan.io/block/26197300"
+            }
+          ]
+        },
+        {
+          "controlRef": "steakEURCV allocator 1",
+          "question": "The current allocator Safe is enumerated at Ethereum block 26197300 as 1-of-7. What establishes its human signer independence, operational key custody, approval and recovery policy?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_SteakeurcvSteakhouse",
+          "sources": [
+            {
+              "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
+              "url": "https://etherscan.io/block/26197300"
             }
           ]
         }
       ]
-    }
+    },
+    "headline": "User shares require EURCV deposits; fee governance can dilute claims, while underlying issuance remains with the parent."
   }
 }

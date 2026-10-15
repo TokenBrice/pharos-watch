@@ -256,7 +256,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.50");
+    expect(methodology.currentLabel).toBe("v6.51");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -272,7 +272,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 4).map((candidate) => candidate.version)).toEqual(["6.50", "6.49", "6.48", "6.47"]);
+    expect(methodology.entries.slice(0, 5).map((candidate) => candidate.version)).toEqual(["6.51", "6.50", "6.49", "6.48", "6.47"]);
   });
 
   it.each([
@@ -287,6 +287,24 @@ describe("methodology registry", () => {
     expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
     expect(release.impact.join(" ")).toContain("Activation: 2026-10-14 12:40 UTC (release cut; 1791981600)");
     expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
+  });
+
+  it.each([
+    ["pricing-pipeline", "6.50", "6.51"],
+    ["redemption-backstop", "4.5", "4.51"],
+    ["yield", "8.48", "8.49"],
+    ["mint-burn-flow", "6.25", "6.26"],
+  ] as const)("retains the provisional October 16 %s release boundary", (key, previousVersion, version) => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === key)!;
+    const release = methodology.entries.find((candidate) => candidate.version === version)!;
+    expect(release).toMatchObject({
+      version,
+      date: "2026-10-15",
+      effectiveAt: 1_792_108_800,
+      reconstructed: false,
+    });
+    expect(getMethodologyVersionAt(key, release.effectiveAt - 1)).toBe(previousVersion);
+    expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
   });
 
   it("keeps the Safety drain policy identity and accepted-pair replay proof explicit", () => {

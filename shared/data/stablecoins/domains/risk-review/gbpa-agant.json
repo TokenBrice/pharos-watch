@@ -2,8 +2,8 @@
   "id": "gbpa-agant",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review (Rev_GbpaAgant)",
     "sources": [
       {
         "label": "Verified GBPA Ethereum implementation and imported OFT source",
@@ -24,9 +24,25 @@
       {
         "label": "Solana GBPA Token-2022 mint",
         "url": "https://explorer.solana.com/address/DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+      },
+      {
+        "label": "Tempo TIP-403 directional blacklist and policy administration",
+        "url": "https://tempo.xyz/developers/docs/protocol/tip403/spec"
+      },
+      {
+        "label": "Tempo policy and burn-blocked role pin 44247678, 2026-10-15T10:49:01Z",
+        "url": "https://api-tempo-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Solana OFT programData and shared freeze/upgrade authority",
+        "url": "https://explorer.solana.com/address/4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD"
+      },
+      {
+        "label": "Solana exact mint, programData and authority-wallet archive pin 457210287, 2026-10-15T10:50:17Z",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "evidence": "Verified AgantTokenUpgradeable source provides owner/assetProtection freeze and unfreeze controls and blocks transfers and approvals involving frozen accounts. Fresh Ethereum, Base and Arc reads at Ethereum block 26107703, Base 52095851, Arc 23952287 return 0xbecf04e2348d00885c62d97d9629c99e581fe00f as owner, pauser and assetProtection. Solana finalized slot 452748382 retains freeze and pause authority BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X and permanent delegate AkRcEoab3ECQ4GoDgVb9jE9wVMVeSksR3TwGCmdNEtB8. Tempo policy-controller identity remains a separate coverage gap, not a mint-to-freeze inference."
+    "evidence": "Verified AgantTokenUpgradeable source freezes transfers and approvals involving frozen accounts; authorized compliance burns remain possible from frozen accounts and while paused. October 15 Ethereum 26197414, Base 52635993 and Arc 26080855 retain 0xbecf04e2348d00885c62d97d9629c99e581fe00f as owner, pauser and assetProtection. Exact archived Solana slot 457210287 (2026-10-15T10:50:17Z) retains freeze/pause authority BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X and permanent delegate AkRcEoab3ECQ4GoDgVb9jE9wVMVeSksR3TwGCmdNEtB8. The same BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X wallet is the upgrade authority of OFT program Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM through programData 4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD. One on-chain wallet can therefore both freeze holders and replace Store mint-signing logic; its off-chain signing custody remains unproven. Tempo 44247678 closes the obsolete policy-controller gap: transferPolicyId 552 is COMPOUND (sender551,recipient1,mintRecipient1); sender policy551 is BLACKLIST administered by 0x5c32ec946062109c61260c738e2fd794b18499d8, which also holds BURN_BLOCKED_ROLE. The default administrator can replace the transfer policy. These are directly evidenced transfer restrictions and compliance-burn powers, not inference from mint authority."
   },
   "oracleRisk": {
     "tier": "oracleless",
@@ -61,9 +77,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "All five deployments are issuer-native liabilities with separate LayerZero interoperability. Ethereum/Base/Arc token-specific peers, libraries, four required DVNs and worker signing rosters are pinned; each worker has one signer and quorum one, without an independence claim. Solana's OFT program has a live wallet upgrade authority that can replace the Store's mint-signing logic. Solana validation and Tempo executable-controller closure remain unresolved; no favorable limit or conservation bound is asserted.",
-    "reviewedAt": "2026-10-05",
-    "reviewer": "Unknown-resolver wave 3 (W3R05)",
+    "summary": "All five deployments are issuer-native liabilities with separate LayerZero interoperability. October 15 pins retain all four peers, send/receive libraries, four required DVNs and one-signature worker rosters on Ethereum, Base, Arc and Tempo. Solana's freeze-authority wallet also holds the OFT program upgrade authority and can replace Store mint-signing logic. Solana validation and exact Tempo executable authorization remain unresolved; current configuration is not immutable conservation or independent-key proof.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review (Rev_GbpaAgant)",
     "confidence": "manual-review",
     "sources": [
       {
@@ -105,6 +121,26 @@
       {
         "label": "Solana program replacement authority semantics",
         "url": "https://solana.com/docs/programs/deploying"
+      },
+      {
+        "label": "Ethereum native and all-lane LayerZero pin 26197414, 2026-10-15T10:47:59Z, hash 0xa3dc932b76f5cbce832690724e683d038f95011717dba49f40a2486914239170",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base native and all-lane LayerZero pin 52635993, 2026-10-15T10:48:53Z, hash 0xa832e18281d2bd2b73edb0917512768ea9493f7112659efa84b4e317c98f314c",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Arc native and all-lane LayerZero pin 26080855, 2026-10-15T10:49:01Z, hash 0x0a00a66b211f40cefae6b5e7b9c143f5f103aeffe24a46e5c131989cef07254d",
+        "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Tempo proxy, runtime and all-lane LayerZero pin 44247678, 2026-10-15T10:49:01Z, hash 0xad4a3a5055678f28db52d950a85245eaf3d78de12471eb783709308b67df5082",
+        "url": "https://api-tempo-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Solana exact Account Archive mint, multisig, Store, program, programData and upgrade-wallet pin 457210287, 2026-10-15T10:50:17Z, hash 6EYsXfsNHRhwnLrDxRbzoa3dAtyDR4zJTCpzuHPndwQV",
+        "url": "https://solana-mainnet.g.alchemy.com/v2/"
       }
     ],
     "routes": [
@@ -121,8 +157,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197414,
         "sources": [
           {
             "label": "Agant official mainnet deployment registry",
@@ -147,8 +183,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 52095851,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635993,
         "sources": [
           {
             "label": "Agant official mainnet deployment registry",
@@ -173,8 +209,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 23952287,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26080855,
         "sources": [
           {
             "label": "Agant official mainnet deployment registry",
@@ -199,8 +235,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 42323712,
+        "observedAt": "2026-10-15",
+        "observedBlock": 44247678,
         "sources": [
           {
             "label": "Agant official mainnet deployment registry",
@@ -225,8 +261,8 @@
         "reviewDisposition": "reviewed",
         "reviewNote": "Issuer networks registry and September reserve/supply report bind this native deployment. Current symbol GBPA, decimals 6 and positive supply were independently read. Native liability identity does not establish exhaustive cross-chain peer/DVN/controller closure.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-02",
-        "observedBlock": 452748382,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457210287,
         "sources": [
           {
             "label": "Agant official mainnet deployment registry",
@@ -239,6 +275,45 @@
         ]
       }
     ],
+    "nativeInventoryReview": {
+      "kind": "exhaustive-material-native-census",
+      "exhaustive": true,
+      "reviewedAt": "2026-10-15",
+      "reviewer": "Batch-64 review (Rev_GbpaAgant)",
+      "routeIds": [
+        "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "tempo:0x20c0000000000000000000000a6da882d075a4c3",
+        "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+      ],
+      "rationale": "The current issuer mainnet registry, September whole-supply report and independently resolved CoinGecko deployment map identify exactly these five native GBPA liabilities. October 15 pinned state independently verifies each token identity, six decimals and positive supply. This is a deployment/liability-identity census, not a complete authority or executable transfer census.",
+      "sources": [
+        {"label": "Agant complete official mainnet registry", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"},
+        {"label": "Nephos September whole-supply reserve report", "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"},
+        {"label": "CoinGecko exact Ethereum-contract identity and deployment map", "url": "https://pro-api.coingecko.com/api/v3/coins/ethereum/contract/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"}
+      ]
+    },
+    "nativeExternalTransferReviews": [
+      {
+        "id": "gbpa-layerzero-native-transfer-rail",
+        "routeRefs": [
+          "ethereum:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "base:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "arc:0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+          "tempo:0x20c0000000000000000000000a6da882d075a4c3",
+          "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        ],
+        "tier": "external-validated-network",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch-64 review (Rev_GbpaAgant)",
+        "rationale": "Agant explicitly documents LayerZero OFT source burns and destination minting after external message verification on all five native deployments. This separately declared transfer rail prevents native liability identity from being mistaken for absence of bridge validation exposure. Current four-EVM-chain configuration is pinned; Solana validation and exact Tempo executable authorization remain open under their existing controls.",
+        "sources": [
+          {"label": "Agant exact GBPA cross-chain and contract design", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"},
+          {"label": "Agant exact token and OFT deployment identities", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"}
+        ]
+      }
+    ],
     "controls": [
       {
         "id": "gbpa-tempo-token-bound-transfer-proxy",
@@ -248,10 +323,10 @@
         "controllerChain": "tempo",
         "controllerAddress": "0x5575151bf6076129d0729c0f40d967d41df34a63",
         "authorityType": "contract",
-        "observedAt": "2026-10-09",
-        "observedBlock": 43332359,
+        "observedAt": "2026-10-15",
+        "observedBlock": 44247678,
         "sources": [{"label": "Pinned Tempo controller state at block 43332359, hash 0x5283b9729048ede4e7c25125d03e1d297c83ba0132c16d620e12211f5ea01aeb, 2026-10-09T11:51:03Z; observed 2026-10-09T11:51:23Z", "url": "https://api-tempo-mainnet.n.dwellir.com"}, {"label": "Pinned Tempo token-bound controller observation", "url": "https://explorer.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"}, {"label": "TIP-20 mint/burn role semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"}],
-        "evidence": "Historical complete RoleMembershipUpdated census through block 42377525 grants ISSUER_ROLE to this proxy. New Dwellir pinned state at block 43332359 independently reproduces token()=GBPA, owner()=0xbecf04e2348d00885c62d97d9629c99e581fe00f, endpoint()=0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c and approvalRequired()=true. EIP-1967 implementation is 0x57d51739b3c73bc38819556835a9a6e14474e782, admin is 0x1703d87af0893964c1effef756ee20424b75530e, and admin.owner() is the same issuer owner. Implementation runtime is 10727 bytes with SHA-256 a1dd9b368b81b963b744a12bf32e0200d00c846b0822115da8967df6feaf178c, unchanged from the prior pin. Metadata recovery using normal-browser curl remains blocked by IPFS gateway 403; archive CDX returns no successful snapshot. Known current ownership/runtime does not close executable mint authorization, peers/DVNs, bypasses or replacement reach; no conservation, quorum or cap relief is granted."
+        "evidence": "At Tempo block 44247678, hasRole confirms this proxy retains ISSUER_ROLE and token() resolves to GBPA. owner() and ProxyAdmin.owner() retain 0xbecf04e2348d00885c62d97d9629c99e581fe00f; endpoint() is 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c and approvalRequired() is true. EIP-1967 implementation/admin slots retain 0x57d51739b3c73bc38819556835a9a6e14474e782 and 0x1703d87af0893964c1effef756ee20424b75530e. The 10727-byte implementation runtime SHA-256 remains a1dd9b368b81b963b744a12bf32e0200d00c846b0822115da8967df6feaf178c. All four peer/library/configuration lanes and four one-signature DVNs are now independently refreshed. Exact metadata remains inaccessible through Sourcify and multiple IPFS gateways; executable mint authorization, replacement/bypass reach and conservation remain unverified."
       },
       {
         "id": "gbpa-evm-oft-owner",
@@ -276,8 +351,8 @@
         ],
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": true,
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197414,
         "sources": [
           {
             "label": "Verified GBPA Ethereum implementation and imported OFT source",
@@ -298,12 +373,12 @@
         ],
         "routeChecks": {
           "lockboxOrEscrow": "Verified OFT source burns on debit and mints on credit rather than locking in a separately identified escrow.",
-          "trustedPeerOrRemote": "OAppCore setPeer and setDelegate are owner-only; complete live peer mappings were not enumerated.",
-          "attestorQuorum": "Current token-specific required/optional DVNs and message-validation thresholds were not pinned.",
+          "trustedPeerOrRemote": "OAppCore setPeer and setDelegate are owner-only. At Ethereum 26197414, Base 52635993 and Arc 26080855, all four expected remote peers match the official five-deployment roster.",
+          "attestorQuorum": "The same pins resolve token-specific send/receive libraries and ULN configurations on every authored remote lane: four required DVNs, no optional DVNs, and optional threshold zero. Every worker currently has one signer and quorum one; independent beneficial operators are not established.",
           "rateLimits": "No complete current route cap/remaining-quota inventory was retrieved.",
           "pausersAdminsUpgraders": "Current codeless token owner also owns ProxyAdmin; verified source exposes separate bridgePause/bridgeUnpause. Native mint-logic replacement is also authored in Mint Authority because that distinct capability reaches fiat-originated issuance."
         },
-        "evidence": "At Ethereum block 26107703, Base 52095851, Arc 23952287, owner(), pauser() and ProxyAdmin.owner() identify the same EOA. Verified Ethereum/Base OFT/OApp code establishes owner configuration and source-debit/destination-credit semantics. Arc uses a different implementation and endpoint; no assumption of identical full bridge configuration is made."
+        "evidence": "At Ethereum 26197414, Base 52635993 and Arc 26080855, owner(), pauser() and ProxyAdmin.owner() retain the same codeless EOA. Verified exact implementations establish owner configuration and source-debit/destination-credit semantics. Arc's separately verified implementation binds a different immutable endpoint. Fresh per-chain reads independently establish peers and validation configuration; no cross-chain identity assumption substitutes for them."
       },
       {
         "id": "gbpa-layerzero-message-validation",
@@ -323,7 +398,7 @@
         "failureDomainKeys": [
           "protocol:layerzero"
         ],
-        "observedAt": "2026-10-05",
+        "observedAt": "2026-10-15",
         "sources": [
           {
             "label": "Agant GBPA token design",
@@ -340,11 +415,11 @@
         ],
         "routeChecks": {
           "onchainAmountBounds": "OFT debit/credit implements supply-conserving transfers, not a bound on native fiat issuance.",
-          "attestorQuorum": "At Ethereum 26122372, Base 52184128 and Arc 24300270, every authored remote lane has four required DVN contracts, zero optional DVNs and optional threshold zero. Each DVN worker has quorum one and one current signing address; these are network requirements, not a certified independent 4-of-4 wallet multisig.",
+          "attestorQuorum": "At Ethereum 26197414, Base 52635993 and Arc 26080855, every authored send and receive lane has four required DVN contracts, zero optional DVNs and optional threshold zero. Each worker has one signer and quorum one. This is a network validation requirement, not an independently certified 4-of-4 wallet multisig.",
           "trustedPeerOrRemote": "Each EVM deployment pins all four peers: the common Ethereum/Base/Arc token, Tempo adapter 0x5575151bf6076129d0729c0f40d967d41df34a63 and Solana Store 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4.",
           "rateLimits": "No favorable fixed cap is established. The separately identified issuer-owned EVM proxy-upgrade path preserves unbounded impairment."
         },
-        "evidence": "Token-bound endpoint getSendLibrary/getReceiveLibrary/getConfig reads at Ethereum 26122372, Base 52184128 and Arc 24300270 establish the current four-required-DVN validation model on every authored lane. getSigners/quorum return one signer/quorum one for eleven workers; legacy Ethereum worker 0x58249a2ec05c1978bf21df1f5ec1847e42455cf4 instead returns signerSize=1 and signers(0xf5e075609ac2376572752d16f5152d59601183df)=true. The four signing identities are 0xd031f474f7e6e28845e1d4856b9b1aef28970397, 0xa714e62887ec74a324479ec532444394e115495e, 0xf5e075609ac2376572752d16f5152d59601183df and 0x6d695bdb416274d37fb877f5f46a3f20c9343d80, reused across chains. Verified DVN source gates execution and signer/quorum replacement on signatures. This identifies the validation model, not custody independence, immutable configuration or complete execution scope."
+        "evidence": "October 15 token-bound endpoint getSendLibrary/getReceiveLibrary/getConfig reads independently refresh all twelve EVM remote lanes. getSigners()/quorum() retain one signer/quorum one for eleven workers; legacy Ethereum worker 0x58249a2ec05c1978bf21df1f5ec1847e42455cf4 retains signerSize=1 and signers(0xf5e075609ac2376572752d16f5152d59601183df)=true. The four signing identities remain 0xd031f474f7e6e28845e1d4856b9b1aef28970397, 0xa714e62887ec74a324479ec532444394e115495e, 0xf5e075609ac2376572752d16f5152d59601183df and 0x6d695bdb416274d37fb877f5f46a3f20c9343d80, reused across chains. Verified DVN source signature-gates execution and signer/quorum replacement. Current configuration does not prove independent key custody, immutable governance or complete execution scope."
       },
       {
         "id": "gbpa-solana-tempo-message-validation",
@@ -357,14 +432,14 @@
         "authorityType": "unknown",
         "canRaiseCap": "unknown",
         "failureDomainKeys": ["protocol:layerzero"],
-        "observedAt": "2026-10-05",
+        "observedAt": "2026-10-15",
         "sources": [
           {"label": "Agant complete native deployment registry", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"},
           {"label": "Exact Solana OFT Store", "url": "https://explorer.solana.com/address/2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4"},
           {"label": "Exact Tempo transfer adapter", "url": "https://explore.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"},
           {"label": "Exact Solana OFT program executable verification status", "url": "https://verify.osec.io/status/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"}
         ],
-        "evidence": "The original five-route contributor is split without dropping any route or capability: its EVM three-chain validation model is observed, while this contributor retains two unresolved lanes. Tempo block 42641088 pins all four peers and four required DVNs, each quorum one with one signer. A new October 5 block 42697239 pin confirms unchanged implementation/admin slots, adapter/admin owners and exact runtime; source retrieval still fails, so executable mint authorization and replacement closure remain unverified. A new atomic finalized Solana slot 453525562 binds Store/program/programData/mint/multisig/upgrade wallet and retains the same 1-of-2 mint multisig and live upgrade wallet. Store bytes and the 636736-byte deployed ELF equal the prior pin; ELF SHA-256 is 838d4306aa77c07906c0190e0b319426bb6bd3e161bf4f55394fa5f1c40e34e6. The program-specific OSEC verification endpoint states is_verified=false with no repository or commit. Solana Store-specific receive-library/DVN configuration and executable correspondence remain unresolved; no absence or favorable validation claim is made."
+        "evidence": "Tempo block 44247678 independently refreshes all four peers, send/receive libraries and four required DVNs, each quorum one with one signer. Exact proxy implementation/admin/owner/runtime are unchanged, but source remains unavailable, so executable authorization and replacement closure remain open. Solana exact Account Archive slot 457210287 binds mint, multisig, Store, program, programData and upgrade wallet at one finalized state. The deployed programData ELF remains 636736 bytes with SHA-256 838d4306aa77c07906c0190e0b319426bb6bd3e161bf4f55394fa5f1c40e34e6. OSEC still reports is_verified=false with no repository or commit. Solana Store-specific receive-library/DVN configuration and executable correspondence remain unresolved. Successful account archival access closes the previous helper-availability claim, not the validation/executable gap."
       },
       {
         "id": "gbpa-solana-oft-program-upgrade",
@@ -375,24 +450,24 @@
         "controllerAddress": "BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X",
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-05",
-        "observedBlock": 453406766,
+        "observedAt": "2026-10-15",
+        "observedBlock": 457210287,
         "sources": [
           {"label": "GBPA OFT program", "url": "https://explorer.solana.com/address/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"},
           {"label": "Exact programData and upgrade authority", "url": "https://explorer.solana.com/address/4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD"},
           {"label": "Solana program replacement semantics", "url": "https://solana.com/docs/programs/deploying"},
           {"label": "OFT Store mint-signing architecture", "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"}
         ],
-        "evidence": "One finalized getMultipleAccounts response at slot 453406766 binds GBPA mint DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ to Token-2022 mint-authority multisig B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c (1-of-2); Store 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4 is one signer. The Store is owned by program Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM; SHA-256 PDA derivation using seeds OFT, observed escrow EWxqSpPfkBLZWRNdkMMQPz1vAhN8YQLLSfg4f5771Bff and bump 255 exactly reproduces it. The loader program account points to programData 4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD, whose upgrade-authority option is Some(BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X). That authority is a non-executable, zero-data System Program wallet. Replacing this program can change its Store mint-signing logic; the reachable upgrade is unbounded impairment, not a protective transfer cap or certified complete execution scope."
+        "evidence": "Exact finalized Alchemy Account Archive reads at slot 457210287 (2026-10-15T10:50:17Z) bind GBPA mint DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ to 1-of-2 Token-2022 mint multisig B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c. Store 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4 remains one signer and is owned by program Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM. Its loader account still points to programData 4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD, with upgrade authority Some(BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X). This is the same wallet as the token mint's freeze authority, so one on-chain wallet can both freeze holders and replace Store mint-signing logic. That authority remains a non-executable zero-data System Program wallet; its off-chain signing custody remains unproven. The deployed ELF hash is unchanged. Program replacement is not a protective transfer bound or certified complete execution scope."
       }
     ],
     "scopedQuestions": [
       {
         "controlRef": "gbpa-solana-tempo-message-validation",
-        "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and complete Tempo adapter replacement/authorization and route-limit closure? At Tempo block 43332359 the proxy slots, adapter/admin owners and implementation runtime are independently reproduced, but exact metadata CID remains inaccessible and no source/runtime closure is proved. Solana OSEC currently reports unverified with no repository/commit; the approved Dwellir helper has no registered Solana endpoint, so no new pinned account census is claimed. Existing historical Solana evidence is retained.",
+        "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and complete Tempo adapter replacement/authorization and route-limit closure? October 15 Tempo block 44247678 refreshes proxy slots, adapter/admin owners, exact runtime and all four peer/library/DVN lanes, but exact metadata remains inaccessible. Solana Account Archive slot 457210287 successfully refreshes the six-account controller census and unchanged deployed ELF; OSEC still reports unverified without repository/commit. Account-state availability is now resolved; executable and validation closure is not.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-09",
-        "reviewer": "Sol curation campaign 2026-10-09 (W2L16Agant)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Batch-64 review (Rev_GbpaAgant)",
         "sources": [
           {
             "label": "Agant official mainnet deployment registry",

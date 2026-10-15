@@ -2,8 +2,8 @@
   "id": "pyusdx-moonpay",
   "blacklistabilityReview": {
     "reviewedStatus": true,
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_PyusdxMoonpay",
     "sources": [
       {
         "label": "MoonPay PYUSDx holder and counterparty terms",
@@ -22,13 +22,13 @@
         "url": "https://docs.m0.org/raw/protocol/pyusdx/token-and-yield.md"
       }
     ],
-    "evidence": "Token source and security docs expose per-account freezing, forced transfers and global pause. Current independent role reads on Ethereum, Arbitrum, Monad and Base confirm the issuer holds FREEZE_MANAGER_ROLE and FORCED_TRANSFER_MANAGER_ROLE. Base block52110793 totalSupply=100000raw(0.1PYUSDx). An additional0G exact native deployment has zero supply at block46024355 but its transfer controls are not reviewed or added to the catalog. Terms section11 applies freezing, seizure, forfeiture and potential destruction to all holders, not only eligible counterparties."
+    "evidence": "MoonPay terms section 11 and M0 security docs support freezing, forced transfers and global pause. Fresh hasRole reads on Ethereum 26197396, Arbitrum 515035868, Monad 113592531 and Base 52635861 confirm issuer 0x314160525f5ea6677d3908112ff9bd885f3bb78e holds FREEZE_MANAGER_ROLE and FORCED_TRANSFER_MANAGER_ROLE. Additional 0G block 47207217 has 7 PYUSDx and those roles are held by 0xf2f1acbe0ba726fee8d75f3e32900526874740bb. Its exact native controls and supply are included by the coordinated five-chain integration. Terms permit freezing, forfeiture and potential destruction for all holders, not only eligible counterparties."
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Four catalogued native deployments transfer through Portal burn/mint and LayerZero V2. Independent RPC resolves the shared3-of-5 Safe v1.4.1 administrator, both bridge ProxyAdmin owners, exact getPeer(uint32) native-chain mappings and two-required-DVN configurations on the eight active directed pathways (Ethereum/Arbitrum/Monad plus Ethereum/Base). No Safe modules or guard are detected at the current pins; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 is present. Signer independence, fallback execution safeguards, enforced upgrade delay and numeric route limits remain unresolved. Ethereum additionally peers to0G(chain16661); that exact native token has zero supply at block46024355 and is evidenced without registering the chain.",
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement Refine03",
+    "summary": "The five catalogued native deployments use Portal burn/mint and LayerZero V2. On Ethereum, Arbitrum, Monad and Base, fresh pins confirm the shared 3-of-5 Safe v1.4.1 as Portal admin and owner of both bridge ProxyAdmins, empty Safe modules, zero guard and a present fallback handler. A separately identified operator key can change adapter peers and chain mappings and pause Portal, so the Safe is not the only bridge authority. Current peers and two-required-DVN settings are verified on the Ethereum/Arbitrum/Monad triangle, Ethereum/Base pair and Ethereum/0G pair. The 0G deployment has a different single-key bridge administrator/upgrade owner. Signing independence, fallback execution safeguards and enforced upgrade delay remain unresolved.",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_PyusdxMoonpay",
     "confidence": "manual-review",
     "sources": [
       {
@@ -56,7 +56,7 @@
         "url": "https://etherscan.io/address/0xd26efc0b5754c59bbd7b309aa2befe276709c58f#code"
       },
       {
-        "label": "Known zero-supply0G native token",
+        "label": "Known 0G native token (7 PYUSDx at block 47214952)",
         "url": "https://chainscan.0g.ai/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
       }
     ],
@@ -79,8 +79,8 @@
           "protocol:layerzero-v2",
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -99,7 +99,7 @@
             "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
           }
         ],
-        "reviewNote": "Ethereum26110185: shared3-of-5 Safe VERSION1.4.1 administers Portal and owns both bridge ProxyAdmins. getPeer(uint32) returns exact adapter0xeff09b0c726789f4c123397c04f5ed4a9a20070d for native chains42161,143,8453,16661. The reviewed Ethereum/Arbitrum/Monad triangle and Ethereum/Base pair require two DVNs and no optional DVNs.0G token supply is zero at46024355. Numeric route limits remain unresolved."
+        "reviewNote": "ethereum block 26197396 (2026-10-15T10:44:23.000Z), https://api-ethereum-mainnet.n.dwellir.com: getPeer(uint32) resolves native chains [42161, 143, 8453, 16661] to exact adapter 0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Portal admin membership and both bridge ProxyAdmin owners resolve to shared Safe 0x48670b46380fe1645f0e3e821a25162db2589d19, VERSION 1.4.1, threshold 3 and five chain-local owners [0x9ae9f1e2eb39604e77fc60b54646ab12b66b7fbb, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (Ethereum/Arbitrum share one roster, Monad/Base another, with four common owners). Current supply is 96535071818024 raw units at 6 decimals. Ethereum also peers with positive-supply 0G; its 7 PYUSDx is included in the five-chain runtime roster. Exact LayerZero libraries/configurations require two DVNs on each reviewed pathway. Beneficial signer independence and enforceable upgrade delay remain unresolved."
       },
       {
         "id": "arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
@@ -119,8 +119,8 @@
           "protocol:layerzero-v2",
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123860,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -139,7 +139,7 @@
             "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
           }
         ],
-        "reviewNote": "Arbitrum511230133: shared3-of-5 Safe VERSION1.4.1 administers Portal and owns both bridge ProxyAdmins. getPeer(uint32) resolves Ethereum1 and Monad143 to adapter0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Both remote pathways require two DVNs and no optional DVNs; numeric route limits remain unresolved."
+        "reviewNote": "arbitrum block 515035868 (2026-10-15T10:44:30.000Z), https://api-arbitrum-mainnet-archive.n.dwellir.com: getPeer(uint32) resolves native chains [1, 143] to exact adapter 0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Portal admin membership and both bridge ProxyAdmin owners resolve to shared Safe 0x48670b46380fe1645f0e3e821a25162db2589d19, VERSION 1.4.1, threshold 3 and five chain-local owners [0x9ae9f1e2eb39604e77fc60b54646ab12b66b7fbb, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (Ethereum/Arbitrum share one roster, Monad/Base another, with four common owners). Current supply is 443589530573 raw units at 6 decimals. Exact LayerZero libraries/configurations require two DVNs on each reviewed pathway. Beneficial signer independence and enforceable upgrade delay remain unresolved."
       },
       {
         "id": "monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
@@ -159,8 +159,8 @@
           "protocol:layerzero-v2",
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016384,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -179,7 +179,7 @@
             "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
           }
         ],
-        "reviewNote": "Monad110115415: shared3-of-5 Safe VERSION1.4.1 administers Portal and owns both bridge ProxyAdmins. getPeer(uint32) resolves Ethereum1 and Arbitrum42161 to adapter0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Both remote pathways require two DVNs and no optional DVNs; numeric route limits remain unresolved."
+        "reviewNote": "monad block 113592531 (2026-10-15T10:44:30.000Z), https://api-monad-mainnet-full.n.dwellir.com: getPeer(uint32) resolves native chains [1, 42161] to exact adapter 0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Portal admin membership and both bridge ProxyAdmin owners resolve to shared Safe 0x48670b46380fe1645f0e3e821a25162db2589d19, VERSION 1.4.1, threshold 3 and five chain-local owners [0x02490f751d7d69115d2466239391faad0a00b650, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (Ethereum/Arbitrum share one roster, Monad/Base another, with four common owners). Current supply is 1000000 raw units at 6 decimals. Exact LayerZero libraries/configurations require two DVNs on each reviewed pathway. Beneficial signer independence and enforceable upgrade delay remain unresolved."
       },
       {
         "id": "base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
@@ -196,10 +196,42 @@
         "controllerChain": "base",
         "controllerAddress": "0x48670b46380fe1645f0e3e821a25162db2589d19",
         "failureDomainKeys": ["protocol:layerzero-v2", "entity:m0-pyusdx-portal"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52110793,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
         "sources": [{"label": "Exact Base native token", "url": "https://basescan.org/address/0xebdb0942ce16386ab90718c7bd10c91cdb66b14d#code"}, {"label": "Exact Base Portal", "url": "https://basescan.org/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7#code"}, {"label": "LayerZero endpoint and EID metadata", "url": "https://metadata.layerzero-api.com/v1/metadata/deployments"}],
-        "reviewNote": "Base52110793: native supply0.1PYUSDx; getPeer(1) returns exact shared adapter, getPeer(42161) and getPeer(143) return zero. The Base/Ethereum pathway is active with two required DVNs; shared Safe VERSION1.4.1 threshold3/5 administers Portal and both bridge ProxyAdmins."
+        "reviewNote": "base block 52635861 (2026-10-15T10:44:29.000Z), https://api-base-mainnet-archive.n.dwellir.com: getPeer(uint32) resolves native chains [1] to exact adapter 0xeff09b0c726789f4c123397c04f5ed4a9a20070d. Portal admin membership and both bridge ProxyAdmin owners resolve to shared Safe 0x48670b46380fe1645f0e3e821a25162db2589d19, VERSION 1.4.1, threshold 3 and five chain-local owners [0x02490f751d7d69115d2466239391faad0a00b650, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (Ethereum/Arbitrum share one roster, Monad/Base another, with four common owners). Current supply is 100000 raw units at 6 decimals. Exact LayerZero libraries/configurations require two DVNs on each reviewed pathway. Beneficial signer independence and enforceable upgrade delay remain unresolved."
+      },
+      {
+        "id": "0g:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "destinationChain": "0g",
+        "contractAddress": "0xebdb0942ce16386ab90718c7bd10c91cdb66b14d",
+        "protocol": "M0 PYUSDx native issuance with LayerZero Portal transfer rail",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "0g",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-15",
+        "observedBlock": 47207217,
+        "sources": [
+          {
+            "label": "Pinned 0G native token, Portal, reciprocal peer and role census",
+            "url": "https://evmrpc.0g.ai"
+          },
+          {
+            "label": "M0 Portal burn/mint semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "reviewNote": "0G47207217 at2026-10-15T10:44:28Z: native6-decimal token supply7000000raw; Portal is token ISSUER_ROLE member; getPeer(1) returns exact shared Ethereum adapter and Ethereum26197396 reciprocates native chain16661. The sole Portal and adapter admin/operator is0xf2f1acbe0ba726fee8d75f3e32900526874740bb, not the deployed3-of-5 Safe. Both bridge ProxyAdmin owners are this no-code key. Two required DVNs, zero optional DVNs; send2/receive15 confirmations. Signing safeguards remain undisclosed."
       }
     ],
     "controls": [
@@ -221,8 +253,8 @@
           "protocol:layerzero-v2",
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -242,7 +274,7 @@
           }
         ],
         "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
-        "capDescription": "Ethereum26110185: endpoint getConfig(adapter,library,remoteEid,2) requires two DVNs and no optional DVNs. ArbitrumEID30110:0x589dedbd617e0cbcb916a9223f4d1300c294236b+0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send15/receive20. MonadEID30390:0x589dedbd617e0cbcb916a9223f4d1300c294236b+0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, send15/receive4. BaseEID30184:0x589dedbd617e0cbcb916a9223f4d1300c294236b+0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send15/receive10. Numeric route limits unresolved."
+        "capDescription": "ethereum block 26197396: native chain 42161 (EID 30110): required DVNs 0x589dedbd617e0cbcb916a9223f4d1300c294236b + 0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send 15/receive 20 confirmations; native chain 143 (EID 30390): required DVNs 0x589dedbd617e0cbcb916a9223f4d1300c294236b + 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, send 15/receive 4 confirmations; native chain 8453 (EID 30184): required DVNs 0x589dedbd617e0cbcb916a9223f4d1300c294236b + 0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send 15/receive 10 confirmations; native chain 16661 (EID 30388): required DVNs 0x589dedbd617e0cbcb916a9223f4d1300c294236b + 0xa59ba433ac34d2927232918ef5b2eaafcf130ba5, send 15/receive 2 confirmations. All reviewed pathways require 2 DVNs and 0 optional DVNs. Token Portal mint bucket: 10000000 PYUSDx burst, 5000 PYUSDx/second refill, mutable by the token rate-limit manager; not an immutable per-path financial cap."
       },
       {
         "id": "pyusdx-ethereum-portal-admin",
@@ -263,8 +295,8 @@
         "failureDomainKeys": [
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26107703,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -283,7 +315,7 @@
             "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
           }
         ],
-        "evidence": "Complete Portal role census through Ethereum26110185 leaves this sole DEFAULT_ADMIN_ROLE member. getThreshold()=3 and getOwners() returns 0x02490f751d7d69115d2466239391faad0a00b650, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be and 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687. VERSION()=1.4.1, not1.3.0. Beneficial independence, Safe modules, guards and enforceable timelock remain unresolved."
+        "evidence": "ethereum block 26197396 (2026-10-15T10:44:23.000Z), https://api-ethereum-mainnet.n.dwellir.com: Portal.hasRole(DEFAULT_ADMIN_ROLE,Safe)=true; Portal ProxyAdmin 0x65ce3f3c4732f171e3e7b759f4249dc9cd49a68f and adapter ProxyAdmin 0x3ddb1389e0bb7c627e9acc73ea62e9ae99819a3c owner() both return this Safe. getThreshold()=3, getOwners() returns [0x9ae9f1e2eb39604e77fc60b54646ab12b66b7fbb, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (five chain-local owners; the Ethereum/Arbitrum and Monad/Base rosters share four owners and differ by one), VERSION()=1.4.1, getModulesPaginated(sentinel1,100) returns empty and sentinel1, guard storage is zero, fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. This proves configuration, not human independence or fallback noninterference. Complete current Portal permission history retains this sole admin."
       },
       {
         "id": "pyusdx-arbitrum-portal",
@@ -303,8 +335,8 @@
           "protocol:layerzero-v2",
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123860,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -324,7 +356,7 @@
           }
         ],
         "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
-        "capDescription": "Arbitrum block 511230133: LayerZero endpoint getConfig(adapter,library,remoteEid,2) requires both DVNs, zero optional DVNs. Ethereum EID30101: 0x2f55c492897526677c5b68fb199ea31e2c126416 + 0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send20/receive15 confirmations. Monad EID30390: 0x2f55c492897526677c5b68fb199ea31e2c126416 + 0xa7b5189bca84cd304d8553977c7c614329750d99, send20/receive4 confirmations. Numeric route limits remain unresolved."
+        "capDescription": "arbitrum block 515035868: native chain 1 (EID 30101): required DVNs 0x2f55c492897526677c5b68fb199ea31e2c126416 + 0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send 20/receive 15 confirmations; native chain 143 (EID 30390): required DVNs 0x2f55c492897526677c5b68fb199ea31e2c126416 + 0xa7b5189bca84cd304d8553977c7c614329750d99, send 20/receive 4 confirmations. All reviewed pathways require 2 DVNs and 0 optional DVNs. Token Portal mint bucket: 10000000 PYUSDx burst, 5000 PYUSDx/second refill, mutable by the token rate-limit manager; not an immutable per-path financial cap."
       },
       {
         "id": "pyusdx-arbitrum-portal-admin",
@@ -345,8 +377,8 @@
         "failureDomainKeys": [
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 511123860,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -365,7 +397,7 @@
             "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
           }
         ],
-        "evidence": "Complete Portal role census through Arbitrum511230133 leaves this sole DEFAULT_ADMIN_ROLE member. Independent getThreshold()=3, getOwners() returns the same five signer addresses as Ethereum and VERSION()=1.4.1. Beneficial independence, Safe modules, guards and enforceable timelock remain unresolved."
+        "evidence": "arbitrum block 515035868 (2026-10-15T10:44:30.000Z), https://api-arbitrum-mainnet-archive.n.dwellir.com: Portal.hasRole(DEFAULT_ADMIN_ROLE,Safe)=true; Portal ProxyAdmin 0x65ce3f3c4732f171e3e7b759f4249dc9cd49a68f and adapter ProxyAdmin 0x3ddb1389e0bb7c627e9acc73ea62e9ae99819a3c owner() both return this Safe. getThreshold()=3, getOwners() returns [0x9ae9f1e2eb39604e77fc60b54646ab12b66b7fbb, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (five chain-local owners; the Ethereum/Arbitrum and Monad/Base rosters share four owners and differ by one), VERSION()=1.4.1, getModulesPaginated(sentinel1,100) returns empty and sentinel1, guard storage is zero, fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. This proves configuration, not human independence or fallback noninterference. Complete current Portal permission history retains this sole admin."
       },
       {
         "id": "pyusdx-monad-portal",
@@ -385,8 +417,8 @@
           "protocol:layerzero-v2",
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016384,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -406,7 +438,7 @@
           }
         ],
         "evidence": "The exact official Portal deployment burns source PYUSDx and mints destination PYUSDx after an adapter-authenticated message. Messages bind destination chain and peer and have replay protection. These cross-chain capabilities belong in Bridge Risk, separately from IssuerGateway and reward issuance.",
-        "capDescription": "Monad block 110115415: LayerZero endpoint getConfig(adapter,library,remoteEid,2) requires both DVNs 0x282b3386571f7f794450d5789911a9804fa346b4 + 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7, zero optional DVNs on Ethereum EID30101 and Arbitrum EID30110 pathways. Send4 confirmations; receive15 from Ethereum and20 from Arbitrum. Numeric route limits remain unresolved."
+        "capDescription": "monad block 113592531: native chain 1 (EID 30101): required DVNs 0x282b3386571f7f794450d5789911a9804fa346b4 + 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7, send 4/receive 15 confirmations; native chain 42161 (EID 30110): required DVNs 0x282b3386571f7f794450d5789911a9804fa346b4 + 0xacde1f22eeab249d3ca6ba8805c8fee9f52a16e7, send 4/receive 20 confirmations. All reviewed pathways require 2 DVNs and 0 optional DVNs. Token Portal mint bucket: 10000000 PYUSDx burst, 5000 PYUSDx/second refill, mutable by the token rate-limit manager; not an immutable per-path financial cap."
       },
       {
         "id": "pyusdx-monad-portal-admin",
@@ -427,8 +459,8 @@
         "failureDomainKeys": [
           "entity:m0-pyusdx-portal"
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 110016384,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
         "sources": [
           {
             "label": "M0 native token and Portal deployments",
@@ -447,7 +479,7 @@
             "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"
           }
         ],
-        "evidence": "Complete Portal role census through Monad110115415 leaves this sole DEFAULT_ADMIN_ROLE member. Independent getThreshold()=3, getOwners() returns the same five signer addresses as Ethereum and VERSION()=1.4.1. Beneficial independence, Safe modules, guards and enforceable timelock remain unresolved."
+        "evidence": "monad block 113592531 (2026-10-15T10:44:30.000Z), https://api-monad-mainnet-full.n.dwellir.com: Portal.hasRole(DEFAULT_ADMIN_ROLE,Safe)=true; Portal ProxyAdmin 0x65ce3f3c4732f171e3e7b759f4249dc9cd49a68f and adapter ProxyAdmin 0x3ddb1389e0bb7c627e9acc73ea62e9ae99819a3c owner() both return this Safe. getThreshold()=3, getOwners() returns [0x02490f751d7d69115d2466239391faad0a00b650, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (five chain-local owners; the Ethereum/Arbitrum and Monad/Base rosters share four owners and differ by one), VERSION()=1.4.1, getModulesPaginated(sentinel1,100) returns empty and sentinel1, guard storage is zero, fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. This proves configuration, not human independence or fallback noninterference. Complete current Portal permission history retains this sole admin."
       },
       {
         "id": "pyusdx-ethereum-bridge-upgrade",
@@ -462,8 +494,8 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110185,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
         "sources": [
           {
             "label": "M0 bridge and Portal upgrade/pause specification",
@@ -474,7 +506,7 @@
             "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
           }
         ],
-        "evidence": "Ethereum26110185: both bridge ProxyAdmin owner() calls return shared3-of-5 Safe VERSION1.4.1. getModulesPaginated(sentinel1,100) returns empty module list and sentinel1; guard slot keccak256(guard_manager.guard.address)=zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 exists. Signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
+        "evidence": "ethereum block 26197396 (2026-10-15T10:44:23.000Z), https://api-ethereum-mainnet.n.dwellir.com: both bridge ProxyAdmin owners remain the shared 3-of-5 Safe VERSION 1.4.1. Modules are empty with sentinel1, guard storage zero, and fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 present. Beneficial signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
       },
       {
         "id": "pyusdx-arbitrum-bridge-upgrade",
@@ -489,8 +521,8 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 511230133,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
         "sources": [
           {
             "label": "M0 bridge and Portal upgrade/pause specification",
@@ -501,7 +533,7 @@
             "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
           }
         ],
-        "evidence": "Arbitrum511230133: both bridge ProxyAdmin owner() calls return shared3-of-5 Safe VERSION1.4.1. getModulesPaginated(sentinel1,100) returns empty module list and sentinel1; guard slot keccak256(guard_manager.guard.address)=zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 exists. Signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
+        "evidence": "arbitrum block 515035868 (2026-10-15T10:44:30.000Z), https://api-arbitrum-mainnet-archive.n.dwellir.com: both bridge ProxyAdmin owners remain the shared 3-of-5 Safe VERSION 1.4.1. Modules are empty with sentinel1, guard storage zero, and fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 present. Beneficial signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
       },
       {
         "id": "pyusdx-monad-bridge-upgrade",
@@ -516,8 +548,8 @@
         "threshold": 3,
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-03",
-        "observedBlock": 110115415,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
         "sources": [
           {
             "label": "M0 bridge and Portal upgrade/pause specification",
@@ -528,55 +560,55 @@
             "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
           }
         ],
-        "evidence": "Monad110115415: both bridge ProxyAdmin owner() calls return shared3-of-5 Safe VERSION1.4.1. getModulesPaginated(sentinel1,100) returns empty module list and sentinel1; guard slot keccak256(guard_manager.guard.address)=zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 exists. Signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
+        "evidence": "monad block 113592531 (2026-10-15T10:44:30.000Z), https://api-monad-mainnet-full.n.dwellir.com: both bridge ProxyAdmin owners remain the shared 3-of-5 Safe VERSION 1.4.1. Modules are empty with sentinel1, guard storage zero, and fallback handler 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99 present. Beneficial signer independence, fallback execution safeguards and enforced upgrade delay remain unverified."
       },
       {
         "id": "pyusdx-ethereum-portal-pause",
         "routeRefs": ["ethereum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
-        "capabilities": ["pause"],
+        "capabilities": ["pause", "peer-config"],
         "controllerChain": "ethereum",
         "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
-        "label": "PYUSDx ethereum Portal delegated-account pauser",
+        "label": "PYUSDx ethereum Portal pauser and bridge peer operator",
         "authorityType": "eoa",
-        "observedAt": "2026-10-03",
-        "observedBlock": 26114898,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197396,
         "sources": [
           {"label": "Exact Portal role and pause deployment", "url": "https://etherscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"},
           {"label": "Verified EIP7702StatelessDeleGator and inherited execution source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"},
           {"label": "Pinned Ethereum observation block", "url": "https://etherscan.io/block/26114898"}
         ],
-        "evidence": "W1R50 at Ethereum block 26114898: Portal.hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb)=true. The account retains EIP-7702 designation to verified EIP7702StatelessDeleGator 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b, VERSION 1.3.0. Its signature implementation accepts ECDSA.recover(hash,signature)==address(this), so root authorization is the same single EOA key, not a multisig. Delegated execution also admits EntryPoint 0x0000000071727de22e5e9d8baf0edac6f37da032 and DelegationManager 0xdb9b1e94b5b69df7e401ddbede43491141047db3. EOA denotes the proved root signer, not codelessness or absence of delegate/bypass execution; outstanding signed delegations, key custody, operator independence and complete execution scope are not certified."
+        "evidence": "ethereum block 26197396 (2026-10-15T10:44:23.000Z), https://api-ethereum-mainnet.n.dwellir.com: Portal.hasRole(PAUSER_ROLE,address)=true, Portal.hasRole(OPERATOR_ROLE,address)=true and adapter.hasRole(OPERATOR_ROLE,address)=true. Verified adapter setPeer(uint32,bytes32) and setBridgeChainId(uint32,uint256) require OPERATOR_ROLE; this key controls peer configuration as well as pause. eth_getCode retains EIP-7702 designation to EIP7702StatelessDeleGator 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b. Prior verified source establishes EOA-root ECDSA authorization; delegated execution, outstanding signed delegations and complete execution closure remain unasserted."
       },
       {
         "id": "pyusdx-arbitrum-portal-pause",
         "routeRefs": ["arbitrum:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
-        "capabilities": ["pause"],
+        "capabilities": ["pause", "peer-config"],
         "controllerChain": "arbitrum",
         "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
-        "label": "PYUSDx arbitrum Portal pauser",
+        "label": "PYUSDx arbitrum Portal pauser and bridge peer operator",
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 511230133,
+        "observedAt": "2026-10-15",
+        "observedBlock": 515035868,
         "sources": [{"label": "Exact Portal role and pause deployment", "url": "https://arbiscan.io/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"}],
-        "evidence": "Complete Portal role-event census leaves this sole PAUSER_ROLE member. eth_getCode(address)=0x; key-custody safeguards are undisclosed."
+        "evidence": "arbitrum block 515035868 (2026-10-15T10:44:30.000Z), https://api-arbitrum-mainnet-archive.n.dwellir.com: Portal.hasRole(PAUSER_ROLE,address)=true, Portal.hasRole(OPERATOR_ROLE,address)=true and adapter.hasRole(OPERATOR_ROLE,address)=true. Verified adapter setPeer(uint32,bytes32) and setBridgeChainId(uint32,uint256) require OPERATOR_ROLE; this key controls peer configuration as well as pause. eth_getCode(address)=0x; key custody and independent human approvals remain undisclosed."
       },
       {
         "id": "pyusdx-monad-portal-pause",
         "routeRefs": ["monad:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
-        "capabilities": ["pause"],
+        "capabilities": ["pause", "peer-config"],
         "controllerChain": "monad",
         "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
-        "label": "PYUSDx monad Portal delegated-account pauser",
+        "label": "PYUSDx monad Portal pauser and bridge peer operator",
         "authorityType": "eoa",
-        "observedAt": "2026-10-03",
-        "observedBlock": 110303959,
+        "observedAt": "2026-10-15",
+        "observedBlock": 113592531,
         "sources": [
           {"label": "Exact Portal role and pause deployment", "url": "https://monadscan.com/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7"},
           {"label": "Verified Monad EIP7702StatelessDeleGator deployment", "url": "https://monadscan.com/address/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b#code"},
           {"label": "Pinned Monad observation block", "url": "https://monadscan.com/block/110303959"}
         ],
-        "evidence": "W1R50 at Monad block 110303959: Portal.hasRole(PAUSER_ROLE,0xf2f1acbe0ba726fee8d75f3e32900526874740bb)=true. The account retains EIP-7702 designation to verified EIP7702StatelessDeleGator 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b, VERSION 1.3.0. Verified signature logic requires recovery to the delegated account itself: the root signer is its single EOA key, not a multisig. Pinned getters return EntryPoint 0x0000000071727de22e5e9d8baf0edac6f37da032 and DelegationManager 0xdb9b1e94b5b69df7e401ddbede43491141047db3. EOA denotes root authorization, not codelessness or absence of delegated execution. Outstanding signed delegations, key custody, signer independence and full execution closure remain unasserted; chain-specific runtime identity is not assumed equal to Ethereum."
+        "evidence": "monad block 113592531 (2026-10-15T10:44:30.000Z), https://api-monad-mainnet-full.n.dwellir.com: Portal.hasRole(PAUSER_ROLE,address)=true, Portal.hasRole(OPERATOR_ROLE,address)=true and adapter.hasRole(OPERATOR_ROLE,address)=true. Verified adapter setPeer(uint32,bytes32) and setBridgeChainId(uint32,uint256) require OPERATOR_ROLE; this key controls peer configuration as well as pause. eth_getCode retains EIP-7702 designation to EIP7702StatelessDeleGator 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b. Prior verified source establishes EOA-root ECDSA authorization; delegated execution, outstanding signed delegations and complete execution closure remain unasserted."
       },
       {
         "id": "pyusdx-base-portal",
@@ -588,11 +620,11 @@
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": ["protocol:layerzero-v2", "entity:m0-pyusdx-portal"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52110793,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
         "sources": [{"label": "Exact Base Portal", "url": "https://basescan.org/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7#code"}],
-        "evidence": "Independent receipt2026-10-03T07:30:25.992Z: Base52110793(timestamp2026-10-03T07:02:13Z) exact native supply100000raw=0.1PYUSDx;0G46024355(timestamp2026-10-03T07:21:18Z) same exact token supply0. Token role census confirms Portal ISSUER_ROLE; getPeer(1) authenticates the exact Ethereum adapter. Base stock is additive burn/mint supply, not locked canonical stock.0G is evidenced but not registered per current catalog scope; no exhaustive five-chain liability claim is made.",
-        "capDescription": "Base52110793 endpoint getSendLibrary/getReceiveLibrary and getConfig for remoteEID30101 require DVNs0x9e059a54699a285714207b43b055483e78faac25+0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, zero optional DVNs; send10/receive15 confirmations. Numeric route limits unresolved."
+        "evidence": "Base block 52635861 (2026-10-15T10:44:29Z), https://api-base-mainnet-archive.n.dwellir.com: native supply remains 100000 raw (0.1 PYUSDx), token hasRole(ISSUER_ROLE,Portal)=true and getPeer(1) authenticates exact Ethereum adapter. This is additive native burn/mint stock, not escrowed canonical stock. 0G block 47207217 (2026-10-15T10:44:28Z) now has 7000000 raw (7 PYUSDx); the complete five-chain aggregate includes that known native liability.",
+        "capDescription": "base block 52635861: native chain 1 (EID 30101): required DVNs 0x9e059a54699a285714207b43b055483e78faac25 + 0xd56e4eab23cb81f43168f9f45211eb027b9ac7cc, send 10/receive 15 confirmations. All reviewed pathways require 2 DVNs and 0 optional DVNs. Token Portal mint bucket: 10000000 PYUSDx burst, 5000 PYUSDx/second refill, mutable by the token rate-limit manager; not an immutable per-path financial cap."
       },
       {
         "id": "pyusdx-base-portal-admin",
@@ -606,24 +638,90 @@
         "signerCount": 5,
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": ["entity:m0-pyusdx-portal"],
-        "observedAt": "2026-10-03",
-        "observedBlock": 52110793,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
         "sources": [{"label": "Exact Base shared Safe", "url": "https://basescan.org/address/0x48670b46380fe1645f0e3e821a25162db2589d19#code"}],
-        "evidence": "VERSION1.4.1, threshold3, five owners match the other chains. Both Portal ProxyAdmin0x65ce3f3c4732f171e3e7b759f4249dc9cd49a68f and adapter ProxyAdmin0x3ddb1389e0bb7c627e9acc73ea62e9ae99819a3c owner() return this Safe. Modules are empty with sentinel1; guard slot zero; fallback handler0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. Signer independence, fallback execution safeguards and enforced upgrade delay are unverified."
+        "evidence": "base block 52635861 (2026-10-15T10:44:29.000Z), https://api-base-mainnet-archive.n.dwellir.com: Portal.hasRole(DEFAULT_ADMIN_ROLE,Safe)=true; Portal ProxyAdmin 0x65ce3f3c4732f171e3e7b759f4249dc9cd49a68f and adapter ProxyAdmin 0x3ddb1389e0bb7c627e9acc73ea62e9ae99819a3c owner() both return this Safe. getThreshold()=3, getOwners() returns [0x02490f751d7d69115d2466239391faad0a00b650, 0xa00baef9adb918bf57a124ec0ca469b68362ee3a, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0x9ced0724b8b93c2c7ce6c6c314d21cbf88d93687] (five chain-local owners; the Ethereum/Arbitrum and Monad/Base rosters share four owners and differ by one), VERSION()=1.4.1, getModulesPaginated(sentinel1,100) returns empty and sentinel1, guard storage is zero, fallback handler is 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. This proves configuration, not human independence or fallback noninterference. A complete pinned RPC permission census from pre-deployment block 50000000 through 52635861 retains this sole Portal admin; token/Portal/gateway/adapter permission history contains 35 events."
       },
       {
         "id": "pyusdx-base-portal-pause",
         "routeRefs": ["base:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"],
-        "capabilities": ["pause"],
+        "capabilities": ["pause", "peer-config"],
         "controllerChain": "base",
         "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
-        "label": "PYUSDx Base Portal pauser",
+        "label": "PYUSDx Base Portal pauser and bridge peer operator",
         "authorityType": "eoa",
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-03",
-        "observedBlock": 52110793,
+        "observedAt": "2026-10-15",
+        "observedBlock": 52635861,
         "sources": [{"label": "Exact Base Portal", "url": "https://basescan.org/address/0xaad1466fe33d373189fb9dcc47270e608feee8a7#code"}],
-        "evidence": "hasRole(PAUSER_ROLE,address)=true and eth_getCode(address)=0x. Key-custody safeguards remain undisclosed."
+        "evidence": "base block 52635861 (2026-10-15T10:44:29.000Z), https://api-base-mainnet-archive.n.dwellir.com: Portal.hasRole(PAUSER_ROLE,address)=true, Portal.hasRole(OPERATOR_ROLE,address)=true and adapter.hasRole(OPERATOR_ROLE,address)=true. Verified adapter setPeer(uint32,bytes32) and setBridgeChainId(uint32,uint256) require OPERATOR_ROLE; this key controls peer configuration as well as pause. eth_getCode(address)=0x; key custody and independent human approvals remain undisclosed."
+      },
+      {
+        "id": "pyusdx-0g-portal",
+        "routeRefs": [
+          "0g:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "0g",
+        "controllerAddress": "0xaad1466fe33d373189fb9dcc47270e608feee8a7",
+        "label": "PYUSDx 0G Portal burn/mint transfer rail",
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "entity:m0-pyusdx-portal"
+        ],
+        "observedAt": "2026-10-15",
+        "observedBlock": 47207217,
+        "sources": [
+          {
+            "label": "Pinned 0G native token, Portal, reciprocal peer and role census",
+            "url": "https://evmrpc.0g.ai"
+          },
+          {
+            "label": "M0 Portal burn/mint semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "0G47207217: complete15-event token/Portal/gateway/adapter role census establishes Portal ISSUER_ROLE. Token name/symbol PYUSDx, decimals6, supply7; Portal sendPaused and receivePaused are false. Reciprocal adapter peers bind Ethereum1 and0G16661. This is additive burn/mint stock, not an Ethereum escrow duplicate.",
+        "capDescription": "native chain 1 (EID 30101): required DVNs 0x6788f52439aca6bff597d3eec2dc9a44b8fee842 + 0x95729ea44326f8add8a9b1d987279dbdc1dd3dff, send 2/receive 15 confirmations. All reviewed pathways require 2 DVNs and 0 optional DVNs. Token Portal mint bucket: 10000000 PYUSDx burst, 5000 PYUSDx/second refill, mutable by the token rate-limit manager; not an immutable per-path financial cap."
+      },
+      {
+        "id": "pyusdx-0g-bridge-admin",
+        "routeRefs": [
+          "0g:0xebdb0942ce16386ab90718c7bd10c91cdb66b14d"
+        ],
+        "capabilities": [
+          "admin",
+          "upgrade",
+          "peer-config",
+          "pause"
+        ],
+        "controllerChain": "0g",
+        "controllerAddress": "0xf2f1acbe0ba726fee8d75f3e32900526874740bb",
+        "label": "PYUSDx 0G bridge administrator, upgrade owner and operator",
+        "authorityType": "eoa",
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "address:0xf2f1acbe0ba726fee8d75f3e32900526874740bb"
+        ],
+        "observedAt": "2026-10-15",
+        "observedBlock": 47207217,
+        "sources": [
+          {
+            "label": "Pinned 0G native token, Portal, reciprocal peer and role census",
+            "url": "https://evmrpc.0g.ai"
+          },
+          {
+            "label": "M0 Portal burn/mint semantics",
+            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+          }
+        ],
+        "evidence": "0G47207217: sole Portal DEFAULT_ADMIN_ROLE, OPERATOR_ROLE and PAUSER_ROLE and adapter DEFAULT_ADMIN_ROLE and OPERATOR_ROLE are this no-code key. Portal ProxyAdmin0x65ce3f3c4732f171e3e7b759f4249dc9cd49a68f and adapter ProxyAdmin0x3ddb1389e0bb7c627e9acc73ea62e9ae99819a3c owner() independently return this address. The3-of-5 Safe exists on0G but does not hold these admin roles or bridge ProxyAdmin ownership; no Safe protection is inferred. Key custody, beneficial signing authority and enforceable delay are undisclosed."
       }
     ],
     "scopedQuestions": [

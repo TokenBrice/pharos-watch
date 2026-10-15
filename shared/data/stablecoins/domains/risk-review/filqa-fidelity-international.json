@@ -20,9 +20,9 @@
         "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
       }
     ],
-    "evidence": "At Ethereum block 26107703 the exact deployment points to verified SygToken implementation 0x7030fe438be6ed196b8886616bbf5a245c267339. Source implements blacklistTokenUser, forcedTransfer and pause under permission-manager authorization. Prospectus gives compulsory-redemption and registry correction powers and prohibits token transfers for on-chain investors.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26197100 (2026-10-15T09:45:11Z), https://api-ethereum-mainnet.n.dwellir.com, the deployment still points to verified SygToken implementation 0x7030fe438be6ed196b8886616bbf5a245c267339 and isPaused returns false. Source implements blacklistTokenUser, forcedTransfer and pause under permission-manager authorization. Full factory role-event replay and current bitmaps identify the group1 pauser as 0xb7cca0adbae4c9b51977688f2a75099d745f80b9. The September 14 prospectus gives compulsory-redemption and registry correction powers and prohibits token transfers for on-chain investors. An unpaused observation does not remove those powers.",
+    "reviewer": "Rev_FilqaFidelityInternational batch64 review",
+    "reviewedAt": "2026-10-15"
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
@@ -45,10 +45,14 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Rev_FilqaFidelityInternational batch64 review",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Ethereum block 26197100, 2026-10-15T09:45:11Z: oracle identity, bundle NAV and native getPrice revert",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
       {
         "label": "Fidelity September 14, 2026 fund prospectus",
         "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
@@ -66,10 +70,10 @@
         "pricingAuthority": "internal-price",
         "applicability": {
           "disposition": "top-level-only",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine04 source and publication review",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_FilqaFidelityInternational batch64 review",
           "confidence": "verified",
-          "rationale": "The class is an administered money-market fund share with no borrower-vault or liquidation branch in its native SygToken. At block 26110197 the configured oracle is BundleAggregatorProxy 0x0c6c789a375cc4ee9ce6008715c915a91da5ac5c (aggregator 0x16b53825c8ceaea593507274d4c1aaec9e261433). latestBundle reports class ISIN KYG3R61G1088 and NAV 1014013/10000; latestBundleTimestamp=1790975700. Native token getPrice reverts at that pin, so no working token price getter or oracle independence is claimed. Daily issuer NAV remains the primary pricing authority.",
+          "rationale": "The class is an administered money-market fund share with no borrower-vault or liquidation branch in its native SygToken. At Ethereum block 26197100 (2026-10-15T09:45:11Z), https://api-ethereum-mainnet.n.dwellir.com, the configured oracle remains BundleAggregatorProxy 0x0c6c789a375cc4ee9ce6008715c915a91da5ac5c, aggregator 0x16b53825c8ceaea593507274d4c1aaec9e261433. latestBundle reports Class SP Acc 1, ISIN KYG3R61G1088 and NAV 1014996/10000; latestBundleTimestamp=1792012200 (2026-10-14T21:10:00Z). Native getBundleData returns the same publication; getPrice reverts because the configured feed uses the bundle interface, as the verified code specifies. This interface distinction is not a failed NAV publication or a financial reconciliation. Daily issuer NAV remains the primary pricing authority.",
           "sources": [{"label": "Exact native token implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7030fe438be6ed196b8886616bbf5a245c267339"}, {"label": "Deployed BundleAggregatorProxy", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0c6c789a375cc4ee9ce6008715c915a91da5ac5c"}, {"label": "Fidelity fund valuation terms", "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"}]
         }
       }

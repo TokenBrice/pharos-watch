@@ -17,6 +17,7 @@ import { URL } from "node:url";
 import MIDAS_MTBILL_CAPTURE from "./fixtures/midas-mtbill-transparency.json";
 import SOLOMON_CHANCERY_CAPTURE from "./fixtures/solomon-chancery-token-backing.json";
 import QCAD_BALANCES_CAPTURE from "./fixtures/qcad-balances-2026-10-07.json";
+import TETHER_TRANSPARENCY_CAPTURE from "./fixtures/tether-transparency.json";
 import { FOREST_ACCOUNTING_NETWORK, FOREST_MANAGER, SPARK_BALANCE_CALL, SPARK_INVENTORY_NETWORK, SPARK_SUSDS } from "./fixtures/identity-bound-reserve-readers";
 import { resolveAdapterCoin, type AdapterNetworkSpec, type AdapterRpcValue } from "./reserve-adapter.test-support";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -108,6 +109,9 @@ export const CORPUS_BACKLOG = reasonsFromNames(
 );
 
 const TETHER_ENDPOINT = "https://app.tether.to/transparency.json";
+const TETHER_MXNT_CAPTURE = {
+  data_formatted: TETHER_TRANSPARENCY_CAPTURE.data_formatted.filter((entry) => entry.iso === "mxnt"),
+};
 // Captured 2026-07-09 from GET https://app.tether.to/transparency.json, trimmed
 // to the fields the adapter reads for the USDT entry.
 const TETHER_CAPTURE = {
@@ -173,6 +177,24 @@ export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
         json: {
           [TETHER_ENDPOINT]: {
             data_formatted: [{ ...TETHER_CAPTURE.data_formatted[0], total_assets: "not-a-number" }],
+          },
+        },
+      },
+      outcome: "error",
+    },
+  },
+  "tether-transparency-mxnt": {
+    coinId: "mxnt-tether",
+    nowSec: 1_783_555_140 + 3_600,
+    network: { json: { [TETHER_ENDPOINT]: TETHER_MXNT_CAPTURE } },
+    drift: {
+      label: "MXNT total_assets becomes a non-numeric string",
+      network: {
+        json: {
+          [TETHER_ENDPOINT]: {
+            data_formatted: TETHER_MXNT_CAPTURE.data_formatted.map((entry) => ({
+              ...entry, total_assets: "not-a-number",
+            })),
           },
         },
       },

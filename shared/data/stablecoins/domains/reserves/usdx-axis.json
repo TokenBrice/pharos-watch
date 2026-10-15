@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Liquid hedge inventory",
-      "pct": 67.92479935540385,
+      "pct": 75.83085415312392,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Axis trading venues and instrument issuers for BTC, ETH, SOL, xNVDA and other approved liquid inventory",
@@ -12,7 +12,7 @@
     },
     {
       "name": "Stablecoins and settlement tokens",
-      "pct": 25.18285742476866,
+      "pct": 18.12606078638028,
       "risk": "medium",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Approved fiat-backed stablecoin issuers and Axis settlement venues; constituent weights undisclosed",
@@ -21,7 +21,7 @@
     },
     {
       "name": "Yield-bearing and staked collateral",
-      "pct": 5.78946085398962,
+      "pct": 4.504718234710571,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "stETH, bnSOL and approved yield-bearing or staked instrument providers; constituent weights undisclosed",
@@ -30,7 +30,7 @@
     },
     {
       "name": "Fiat cash and FX balances",
-      "pct": 0.5383752484722824,
+      "pct": 0.6445170925256527,
       "risk": "medium",
       "assetClass": "cash",
       "issuerOrObligor": "Axis bank, venue and settlement-account counterparties for USD, EUR, JPY, TRY, GBP, HKD, SGD and other approved currencies",
@@ -39,7 +39,7 @@
     },
     {
       "name": "Tokenized Treasuries and reserve-backed cash equivalents",
-      "pct": 0.5645071173655849,
+      "pct": 0.8938497332595817,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "USYC, USDG and approved short-duration Treasury or reserve-backed instrument issuers; constituent weights undisclosed",
@@ -48,27 +48,27 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W2L17Nest)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review 2026-10-15 (Rev_UsdxAxis)",
     "confidence": "manual-review",
     "sources": [
-      { "label": "Axis rendered Asset Composition and embedded full-precision asset_classes payload, reporting date October 8, 2026; accessed October 9", "url": "https://app.axis.to/transparency?tab=asset-composition" },
+      { "label": "Axis rendered Asset Composition and embedded full-precision asset_classes payload, October 15, 2026 at 07:02:41.668 UTC", "url": "https://app.axis.to/transparency?tab=asset-composition" },
       { "label": "Axis backing and custody disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
       { "label": "Accountable independently operated reserve dashboard", "url": "https://axis.accountable.capital:8443/dashboard" },
       { "label": "Axis canonical Ethereum V2 and separate legacy Plasma V1 scope", "url": "https://docs.axis.to/reference/contract-addresses.md" }
     ],
-    "rationale": "Source recovery on 2026-10-09 recovered the rendered October 8 Asset Composition tab and its embedded asset_classes object. The five exact source percentages total 100%; the displayed two-decimal labels total 99.99% and are not normalized. Gross category values sum to the source denominator USD 63,270,977.76704198. The payload separately marks USD 28,867,528.97282344, or 45.62522975243257% of the whole book, across 430 liquid-hedge assets as unclassified. Category examples therefore do not establish all constituent identities, obligors or tracked dependencies. The same dashboard embeds all-scope supply including legacy Plasma V1 and Ethereum V2; the official directory distinguishes those claims. No exact V2 reserve/liability allocation or financial assurance is inferred from the pooled snapshot. Manual-review confidence is retained and the missing reserve-composition sentinel is not asserted closed. Observation review and genuine October 8 source date are separate; hedge coverage, maturity, liquidity and custody claims remain unchanged.",
-    "compositionBasis": "Issuer October 8, 2026 Asset Composition gross asset_classes payload: liquid_hedge USD 42,976,684.69846544; stablecoins USD 15,933,440.12233126; staked_lst USD 3,663,048.489759372; cash_fiat USD 340,635.2837641548; tbill_rwa USD 357,169.1727217488; denominator USD 63,270,977.76704198. Copy source percentages at their published precision before hedge offsets; pooled reporting scope is not independently partitioned to canonical Ethereum V2.",
-    "compositionAsOf": "2026-10-08",
+    "rationale": "The October 15 dashboard and its embedded asset_classes payload supersede the October 8 snapshot. The five exact source percentages total 100%; displayed two-decimal labels total 99.99% and are not normalized. Gross category values sum to USD 65,491,180.51503999. The payload separately marks USD 29,448,666.93235196, or 44.96585143336835% of the whole book, across 437 liquid-hedge assets as unclassified. Category examples do not establish all constituent identities, obligors or tracked dependencies. Accountable separately reports USD 65,744,482.26 gross reserves and USD 65,377,351.98 supply, including USD 12.41 legacy Plasma units; its reserve clock and proof fields differ from the issuer snapshot. No cross-clock ratio, V2-only reserve allocation or independently validated cryptographic or financial assurance is inferred. Manual-review confidence and the open canonical reserve-composition gap are retained.",
+    "compositionBasis": "Issuer October 15, 2026 Asset Composition gross asset_classes payload, dashboard last_updated 2026-10-15T07:02:41.668Z: liquid_hedge USD 49,662,521.57951909; stablecoins USD 11,870,971.18987419; staked_lst USD 2,950,193.150788223; cash_fiat USD 422,101.8525162625; tbill_rwa USD 585,392.7423422361; denominator USD 65,491,180.51503999. Source percentages retain published precision before hedge offsets; pooled reporting is not independently partitioned to canonical Ethereum V2.",
+    "compositionAsOf": "2026-10-15",
     "scope": "full-composition",
-    "knownUnknownExposure": "All four non-fiat baskets require constituent identity and dependency look-through, totaling 99.46162475152771%. Within the liquid-hedge category, the issuer explicitly marks 430 assets and 45.62522975243257% of the whole book unclassified; that amount is contained within the category and is not additional reserve weight. The 0.5383752484722824% fiat category identifies asset form but no named bank or settlement counterparty. Current V2-versus-legacy book partition, venue identities, hedge notional, liquidity, legal ownership and enforceable recovery remain unresolved. Named examples USYC and USDG establish no dependency weights.",
-    "knownUnknownExposurePct": 99.46162475152771,
+    "knownUnknownExposure": "All four non-fiat baskets require constituent identity and dependency look-through, totaling 99.35548290747435%. Within liquid hedge inventory, the issuer explicitly marks 437 assets and 44.96585143336835% of the whole book unclassified; that amount is contained within the category, not additional reserve weight. The 0.6445170925256527% fiat category identifies asset form but no named bank or settlement counterparty. Current V2-versus-legacy partition, venue identities, hedge notional, liquidity, legal ownership and enforceable recovery remain unresolved. Named examples USYC and USDG establish no dependency weights.",
+    "knownUnknownExposurePct": 99.35548290747435,
     "nonLinkDispositions": [
-      { "reserveIndex": 0, "reserveName": "Liquid hedge inventory", "pct": 67.92479935540385, "disposition": "basket-needs-split", "rationale": "BTC, ETH, SOL and xNVDA are examples, not an exhaustive inventory. The source explicitly marks 430 assets, USD 28,867,528.97282344 and 45.62522975243257% of the whole book unclassified within this category. No untracked-only or fully hedged identity census is proved." },
-      { "reserveIndex": 1, "reserveName": "Stablecoins and settlement tokens", "pct": 25.18285742476866, "disposition": "basket-needs-split", "rationale": "The payload counts eleven assets but does not supply exact identities and constituent weights. Accepted USDC/USDT deposits do not prove current reserve allocations." },
-      { "reserveIndex": 2, "reserveName": "Yield-bearing and staked collateral", "pct": 5.78946085398962, "disposition": "basket-needs-split", "rationale": "The payload counts two assets; stETH and bnSOL are documented examples without constituent balances or weights. No synthetic-dollar dependency is inferred." },
-      { "reserveIndex": 3, "reserveName": "Fiat cash and FX balances", "pct": 0.5383752484722824, "disposition": "untracked-exogenous-asset", "rationale": "Fiat and FX balances at bank, venue or settlement accounts are not tracked stablecoin token holdings. No bank or account provider is identified." },
-      { "reserveIndex": 4, "reserveName": "Tokenized Treasuries and reserve-backed cash equivalents", "pct": 0.5645071173655849, "disposition": "basket-needs-split", "rationale": "The payload counts two assets and docs name USYC and USDG, but no constituent balances or exhaustive split is published; no dependency weights can be assigned.", "candidateCoinIds": ["usyc-hashnote", "usdg-paxos"] }
+      { "reserveIndex": 0, "reserveName": "Liquid hedge inventory", "pct": 75.83085415312392, "disposition": "basket-needs-split", "rationale": "BTC, ETH, SOL and xNVDA are examples, not an exhaustive inventory. The payload counts 470 assets and explicitly marks 437 assets, USD 29,448,666.93235196 and 44.96585143336835% of the whole book unclassified within this category. No untracked-only or fully hedged identity census is proved." },
+      { "reserveIndex": 1, "reserveName": "Stablecoins and settlement tokens", "pct": 18.12606078638028, "disposition": "basket-needs-split", "rationale": "The payload counts eleven assets but does not supply exact identities and constituent weights. Accepted USDC/USDT deposits do not prove current reserve allocations." },
+      { "reserveIndex": 2, "reserveName": "Yield-bearing and staked collateral", "pct": 4.504718234710571, "disposition": "basket-needs-split", "rationale": "The payload counts two assets; stETH and bnSOL are documented examples without constituent balances or weights. No synthetic-dollar dependency is inferred." },
+      { "reserveIndex": 3, "reserveName": "Fiat cash and FX balances", "pct": 0.6445170925256527, "disposition": "untracked-exogenous-asset", "rationale": "Fiat and FX balances at bank, venue or settlement accounts are not tracked stablecoin token holdings. No bank or account provider is identified." },
+      { "reserveIndex": 4, "reserveName": "Tokenized Treasuries and reserve-backed cash equivalents", "pct": 0.8938497332595817, "disposition": "basket-needs-split", "rationale": "The payload counts two assets and docs name USYC and USDG, but no constituent balances or exhaustive split is published; no dependency weights can be assigned.", "candidateCoinIds": ["usyc-hashnote", "usdg-paxos"] }
     ]
   },
   "custodyProfile": {
@@ -79,8 +79,8 @@
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-02",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Batch-64 review 2026-10-15 (Rev_UsdxAxis)",
     "confidence": "manual-review",
     "sources": [
       { "label": "Axis custody and on-venue inventory disclosure", "url": "https://docs.axis.to/backing-reserves-and-transparency/backing-custody-transparency.md" },
@@ -88,7 +88,7 @@
       { "label": "Accountable anonymized venue reserves", "url": "https://axis.accountable.capital:8443/dashboard" },
       { "label": "Axis registered deposit custody address", "url": "https://docs.axis.to/reference/contract-addresses.md" }
     ],
-    "uncertainty": "The deposit address is an entry point, not a whole-book custodian. Docs say no current off-exchange custody, while the same reporting-date dashboard assigns 2.83% to qualified custody and 1.04% to onchain derivatives margin. This contradiction remains unresolved, so custodyModel is unknown rather than a whole-book CEX or institutional tier. Dashboard location percentages are not named-provider shares or legal segregation evidence; no share is assigned to the deposit address or a guessed venue.",
+    "uncertainty": "The deposit address is an entry point, not a whole-book custodian. Docs say no current off-exchange custody, while the October 15 dashboard assigns 2.08% to qualified custody and 0.98% to onchain derivatives margin. The dashboard calls location ratios working management classifications pending Finance and Risk validation. This contradiction remains unresolved, so custodyModel stays unknown rather than a whole-book CEX or institutional tier. Location percentages are not named-provider shares or legal segregation evidence; no share is assigned to the deposit address or a guessed venue.",
     "knownUnknownExposurePct": 100
   }
 }

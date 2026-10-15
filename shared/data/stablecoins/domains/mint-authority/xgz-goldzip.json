@@ -5,6 +5,7 @@
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
     "summary": "The Ethereum UUPS owner can mint, grant every role and replace mint logic. Its custom wallet permits one administrator signature; the alternative operator-plus-validator path does not remove that bypass.",
+    "headline": "One administrator signature can mint without a gold-verification cap and replace the token logic.",
     "controls": [
       {
         "label": "GoldZip owner mint and UUPS administration",
@@ -19,8 +20,8 @@
         "deploymentRefs": [
           "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161"
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110184,
+        "observedAt": "2026-10-15",
+        "observedBlock": 26197360,
         "sources": [
           {
             "label": "GoldZip Ethereum proxy",
@@ -41,9 +42,13 @@
           {
             "label": "GoldZip issuance claim",
             "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+          },
+          {
+            "label": "Ethereum block 26197360 (2026-10-15T10:37:11Z), owner, wallet policy, all five roles and complete role-event census from block 23231220",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
           }
         ],
-        "evidence": "At Ethereum block 26110184, owner() is this wallet, hasRole(MINT_ROLE,owner) is true, and wallet storage slot 0 binds 0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7. Verified AccessControl.hasRole returns true for the owner for every role; _authorizeUpgrade is onlyOwner. Complete RoleGranted/RoleRevoked log search from creation block 23231220 through 26110184 returns no rows: no additional role grantees are recorded. getOwners returns three account/role tuples; direct role getters identify administrator 0xf22386da1a906a586ffaf176c9e38a282584ae6b, operator 0x396656e13098632264748c8b08994031844f61a9 and validator 0x56083e333a23ed70ba8fabba11490407fbc939c4. adminThreshold/operatorThreshold/validatorThreshold and each count are 1. Verified checkSignature accepts one administrator signature OR one operator plus one validator signature; execTransaction supports delegatecall and enforces no time delay. This is not a 2-of-3 Safe, and signer-human independence is not established."
+        "evidence": "At Ethereum block 26197360 (2026-10-15T10:37:11Z), owner() is this wallet and hasRole is true for MINT_ROLE, BURN_ROLE, FREEZE_ROLE, FEE_CONTROLLER_ROLE and MANAGE_ROLE. Wallet slot 0 binds 0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7. Verified AccessControl.hasRole gives the owner every role; _authorizeUpgrade is onlyOwner. Complete RoleGranted/RoleRevoked logs from creation block 23231220 through 26197360 return no rows, recording no additional role grantees. getOwnerInfo identifies administrator 0xf22386da1a906a586ffaf176c9e38a282584ae6b, operator 0x396656e13098632264748c8b08994031844f61a9 and validator 0x56083e333a23ed70ba8fabba11490407fbc939c4. Each role threshold and count is 1. Verified checkSignature accepts one administrator signature OR one operator plus one validator signature; execTransaction supports arbitrary call/delegatecall with no delay. getOwners swaps the operator/validator tuple fields, so getOwnerInfo is used for role identity. Current transfer fee is 1 basis point, owner is fee recipient and CCIP administrator, and paused() is false. This is not a 2-of-3 Safe; human independence and operational key custody remain unverified."
       }
     ],
     "upgradeability": {
@@ -63,8 +68,8 @@
       "canChangeMintLogic": true,
       "delaySec": 0,
       "controlRef": "GoldZip owner mint and UUPS administration",
-      "observedAt": "2026-10-03",
-      "observedBlock": 26110184,
+      "observedAt": "2026-10-15",
+      "observedBlock": 26197360,
       "sources": [
         {
           "label": "GoldZip Ethereum proxy",
@@ -85,6 +90,10 @@
         {
           "label": "GoldZip issuance claim",
           "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        },
+        {
+          "label": "Ethereum block 26197360 (2026-10-15T10:37:11Z), token implementation, owner and wallet singleton slots",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },
@@ -112,11 +121,15 @@
         {
           "label": "GoldZip issuance claim",
           "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        },
+        {
+          "label": "Ethereum block 26197360 (2026-10-15T10:37:11Z), current controls and complete role-event census from block 23231220",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ],
-      "evidence": "Current owner, no additional role grants since deployment, owner role bypass and owner-only UUPS authorization are resolved by exact verified source and pinned RPC reads. Mint takes an arbitrary uint256 amount with no collateral verification or economic cap. The custom wallet's administrator path requires one signature, with unrestricted call/delegatecall execution and no delay. getThreshold() is absent from the executable ABI; its revert is not evidence of an unreadable policy because the three role-specific threshold getters are public and return 1. Physical reserve/liability reconciliation and independent human/key custody remain undisclosed.",
-      "reviewer": "Refine06 primary-source and pinned RPC review",
-      "reviewedAt": "2026-10-03",
+      "evidence": "Exact verified source and Ethereum block 26197360 (2026-10-15T10:37:11Z) resolve the current owner, all five owner roles, full deployment-to-pin role-event census, wallet accounts, thresholds and unchanged UUPS implementation. Mint accepts arbitrary uint256 amounts without collateral verification or an economic cap. One administrator signature authorizes unrestricted call/delegatecall and immediate owner-only upgrades. Token transfer fees can be raised by the fee-controller role up to 100%; the pinned rate is 0.01%. Physical reserve reconciliation and exact-controller human/key custody remain undisclosed. MinLaw's published scope is AML/CFT/CPF only, not prudential mint or reserve supervision.",
+      "reviewer": "Rev_XgzGoldzip",
+      "reviewedAt": "2026-10-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "scopedQuestions": [
@@ -124,8 +137,8 @@
           "controlRef": "GoldZip owner mint and UUPS administration",
           "question": "Human independence and key-custody safeguards for the three identified custom-wallet accounts are not publicly established. The verified one-administrator authorization path is unchanged; this question concerns signer custody and independence rather than unknown executable authorization.",
           "subject": "key-custody-independence",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Refine06 mint-authority calibration v2",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Rev_XgzGoldzip",
           "sources": [{
             "label": "Exact custom wallet and identified owner-manager accounts",
             "url": "https://sourcify.dev/server/v2/contract/1/0x06b7c1460154a4d0cf79954298d6ba8d5b2d38f7?fields=sources,abi"
