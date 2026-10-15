@@ -102,13 +102,14 @@ async function runAdapterAttempt(
   adapterCtx?: AdapterContext,
   deadlineMs?: number,
 ): Promise<AdapterResult> {
-  const remainingMs = (deadlineMs ?? Infinity) - Date.now();
+  const startedMs = Date.now();
+  const remainingMs = (deadlineMs ?? Infinity) - startedMs;
   if (remainingMs <= 0) throw new Error("run-budget-exhausted");
+  const attemptDeadlineMs = Math.min(startedMs + adapterTimeoutMs, deadlineMs ?? Infinity);
   const { signal: attemptSignal, cleanup } = createAbortableAttemptSignal(
-    signal, Math.min(adapterTimeoutMs, remainingMs),
+    signal, attemptDeadlineMs - startedMs,
     remainingMs < adapterTimeoutMs ? "run-budget-exhausted" : "adapter-timeout",
   );
-  const startedMs = Date.now();
   let ioCallCount = 0;
   let ioActivityBurstCount = 0;
   let activeIo = 0;
@@ -139,6 +140,7 @@ async function runAdapterAttempt(
       adapter.fetch(coin, config, attemptSignal, Object.assign({}, adapterCtx, {
         nowSec: Math.floor(startedMs / 1_000),
         abortSignal: attemptSignal,
+        attemptDeadlineMs,
         ioLimiter: instrumentedLimiter,
       })),
       attemptSignal,

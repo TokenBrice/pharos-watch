@@ -7,11 +7,13 @@ import {
   type CompositionRect,
 } from "../maintenance/build-safety-score-map";
 
-const FOOTER_RULE_Y = 880;
-const BODY_TOP = 98;
-const CHIP_FLOOR = FOOTER_RULE_Y - 4;
-const LEFT_BOUND = 56;
-const RIGHT_BOUND = 1544;
+// The orbital field runs to a 14px edge clearance; corner chrome is owned by
+// the annotation scene, not by these body bounds.
+const BODY_BOTTOM = 886;
+const BODY_TOP = 14;
+const CHIP_FLOOR = BODY_BOTTOM;
+const LEFT_BOUND = 40;
+const RIGHT_BOUND = 1560;
 
 function orbit(
   tier: string,
@@ -29,14 +31,14 @@ function goldenScene(): { orbits: CompositionOrbit[]; chips: CompositionRect[] }
   return {
     orbits: [
       orbit("A", { innerRx: 0, innerRy: 0, outerRx: 300, outerRy: 190 }, [
-        { id: "usdt-tether", cx: 800, cy: 495, r: 60 },
-        { id: "usdc-circle", cx: 940, cy: 495, r: 42 },
+        { id: "usdt-tether", cx: 800, cy: 463, r: 60 },
+        { id: "usdc-circle", cx: 940, cy: 463, r: 42 },
       ]),
       orbit("B", { innerRx: 320, innerRy: 210, outerRx: 430, outerRy: 245 }, [
-        { id: "pyusd-paypal", cx: 1175, cy: 495, r: 14 },
+        { id: "pyusd-paypal", cx: 1175, cy: 463, r: 14 },
       ]),
       orbit("C", { innerRx: 450, innerRy: 260, outerRx: 550, outerRy: 285 }, [
-        { id: "usdd-tron", cx: 1300, cy: 495, r: 12 },
+        { id: "usdd-tron", cx: 1300, cy: 463, r: 12 },
       ]),
     ],
     chips: [
@@ -56,8 +58,8 @@ describe("validateComposition — golden orbital scene", () => {
     expect(validateComposition({ orbits: [], chips: [] })).toEqual([]);
   });
 
-  it("honours caller-supplied footer and body bounds", () => {
-    const violations = validateComposition({ ...goldenScene(), footerRuleY: 700, bodyTop: BODY_TOP });
+  it("honours caller-supplied body bounds", () => {
+    const violations = validateComposition({ ...goldenScene(), bodyBottom: 700, bodyTop: BODY_TOP });
     expect(violations.some((value) => value.includes("crosses the body bounds"))).toBe(true);
   });
 });
@@ -92,17 +94,19 @@ describe("validateComposition — chip collisions", () => {
 });
 
 describe("validateComposition — bounds", () => {
-  it("keeps planet edges below the protected header clearance", () => {
+  it("keeps planet edges inside the canvas edge clearance, top and bottom", () => {
     const violations = validateComposition({
-      orbits: [orbit("F", { innerRx: 0, innerRy: 0, outerRx: 744, outerRy: 388 }, [
-        { id: "header-rider", cx: 800, cy: BODY_TOP + 5, r: 6 },
+      orbits: [orbit("F", { innerRx: 0, innerRy: 0, outerRx: 724, outerRy: 436 }, [
+        { id: "top-rider", cx: 800, cy: BODY_TOP + 5, r: 6 },
+        { id: "bottom-rider", cx: 800, cy: BODY_BOTTOM - 5, r: 6 },
       ])],
       chips: [],
     });
-    expect(violations).toContain("bubble header-rider: crosses the 12px header clearance");
+    expect(violations).toContain("bubble top-rider: crosses the 14px edge clearance");
+    expect(violations).toContain("bubble bottom-rider: crosses the 14px edge clearance");
   });
 
-  it("reports a chip whose bottom crosses the footer rule", () => {
+  it("reports a chip whose bottom crosses the body bottom", () => {
     const violations = validateComposition({
       orbits: [],
       chips: [chip("usdt-tether", 600, CHIP_FLOOR - 19, 60, 20)],
@@ -111,12 +115,12 @@ describe("validateComposition — bounds", () => {
     expect(violations[0]).toMatch(/^chip usdt-tether: crosses the body bounds/);
   });
 
-  it("accepts a chip that ends exactly on the footer bound", () => {
+  it("accepts a chip that ends exactly on the body bottom", () => {
     expect(validateComposition({ orbits: [], chips: [chip("usdt-tether", 600, CHIP_FLOOR - 20)] })).toEqual([]);
   });
 
   it("reports a chip that rides above the body top", () => {
-    const violations = validateComposition({ orbits: [], chips: [chip("usdt-tether", 600, BODY_TOP - 9)] });
+    const violations = validateComposition({ orbits: [], chips: [chip("usdt-tether", 600, BODY_TOP - 1)] });
     expect(violations).toHaveLength(1);
     expect(violations[0]).toMatch(/^chip usdt-tether: crosses the body bounds/);
   });
@@ -146,7 +150,7 @@ describe("validateComposition — orbit integrity", () => {
   it("reports an orbit that overruns the poster body", () => {
     expect(
       validateComposition({
-        orbits: [orbit("F", { innerRx: 600, innerRy: 300, outerRx: 760, outerRy: 340 })],
+        orbits: [orbit("F", { innerRx: 600, innerRy: 300, outerRx: 780, outerRy: 340 })],
         chips: [],
       }),
     ).toEqual(["orbit F: crosses the body bounds"]);
@@ -164,8 +168,8 @@ describe("validateComposition — orbit integrity", () => {
     const violations = validateComposition({
       orbits: [
         orbit("B", { innerRx: 175, innerRy: 175, outerRx: 215, outerRy: 215 }, [
-          { id: "outside", cx: 1005, cy: 495, r: 12 },
-          { id: "inside", cx: 950, cy: 495, r: 12 },
+          { id: "outside", cx: 1005, cy: 463, r: 12 },
+          { id: "inside", cx: 950, cy: 463, r: 12 },
         ]),
       ],
       chips: [],
@@ -177,8 +181,8 @@ describe("validateComposition — orbit integrity", () => {
     const violations = validateComposition({
       orbits: [
         orbit("C", { innerRx: 220, innerRy: 220, outerRx: 264, outerRy: 264 }, [
-          { id: "one", cx: 1042, cy: 495, r: 12 },
-          { id: "two", cx: 1062, cy: 495, r: 12 },
+          { id: "one", cx: 1042, cy: 463, r: 12 },
+          { id: "two", cx: 1062, cy: 463, r: 12 },
         ]),
       ],
       chips: [],
@@ -193,7 +197,7 @@ describe("validateComposition — orbit integrity", () => {
     const bubbles = [0, 0.08, 0.16, 0.24, 0.32].map((angle, index) => ({
       id: `coin-${index}`,
       cx: 800 + guideRx * Math.cos(angle),
-      cy: 482 + guideRy * Math.sin(angle),
+      cy: 450 + guideRy * Math.sin(angle),
       r: 2,
     }));
 
@@ -265,9 +269,9 @@ describe("validateComposition — the NaN scan", () => {
     const violations = validateComposition({
       orbits: [
         orbit("A", { innerRx: 0, innerRy: 0, outerRx: 300, outerRy: 138 }, [
-          { id: "nan-radius", cx: 700, cy: 504, r: Number.NaN },
-          { id: "infinite-radius", cx: 900, cy: 504, r: Number.POSITIVE_INFINITY },
-          { id: "nan-center", cx: Number.NaN, cy: 504, r: 20 },
+          { id: "nan-radius", cx: 700, cy: 472, r: Number.NaN },
+          { id: "infinite-radius", cx: 900, cy: 472, r: Number.POSITIVE_INFINITY },
+          { id: "nan-center", cx: Number.NaN, cy: 472, r: 20 },
         ]),
       ],
       chips: [],

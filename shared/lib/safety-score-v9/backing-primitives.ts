@@ -11,6 +11,7 @@ import type {
   V9FactGapV2,
   V9FactGapV3,
   V9FactStatusV2,
+  V1019LenderBookFact,
   V9ReserveExposureFactV2,
 } from "../../types/safety-score-v9-facts";
 import type {
@@ -110,6 +111,7 @@ export interface V9BackingAssetInput {
   }[];
   readonly cdpLiquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
   readonly inheritedStablecoinBacking?: V9InheritedStablecoinBacking;
+  readonly lenderBook?: V1019LenderBookFact;
   /** Conservative measured months since launch; absent → no seasoning credit. */
   readonly trackRecordMonths?: number;
   /** Evaluation clock; absent means a dated collateralization fact cannot be admitted. */

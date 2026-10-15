@@ -65,6 +65,7 @@ import {
 } from "./fact-set-peg-supply";
 import { buildWrapperLocalFacts, resolveWrapperForm } from "./fact-set-wrapper";
 import { buildAllocationScopeFacts } from "./fact-set-allocation";
+import { buildLenderBookFact } from "./fact-set-lender-book";
 
 export {
   SafetyScoreV9FactSetExtensionV2Schema,
@@ -136,6 +137,7 @@ function buildAssetFacts(
     observationState: operationalGap.observationState, gapIds: [operationalGap.gapId],
     evidenceRefIds: operationalGap.evidenceRefIds,
   }) : undefined;
+  const lenderBook = buildLenderBookFact(context);
   const allocationScopeFacts = buildAllocationScopeFacts(context, {
     dependencies, reserveStatus: reserves.reserveStatus, reserveExposures: reserves.reserveExposures,
   });
@@ -172,6 +174,7 @@ function buildAssetFacts(
     mechanismRiskReview,
     mechanismExitFacts,
     ...(cdpStressCoverage === undefined ? {} : { cdpStressCoverage }),
+    ...(lenderBook === undefined ? {} : { lenderBook }),
     dependencies,
     ...reserves,
     ...(reserveScopeAdmissions === undefined ? {} : { reserveScopeAdmissions }),

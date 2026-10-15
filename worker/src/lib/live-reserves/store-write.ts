@@ -7,6 +7,10 @@
  */
 import { WORKER_FROZEN_IDS, WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { canonicalEvmAddress } from "@shared/lib/evm-address";
+import { lenderBookAdmissionReason } from "@shared/lib/safety-score-v9/lender-book-registry";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { LenderBookObservationSchema } from "@shared/types/safety-score-v9-lender-book";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
 import { buildInClause, executeAtomicBatch } from "../db";
 import { runWithOverloadRetry } from "../d1-overload-retry";
@@ -97,6 +101,45 @@ export async function didReserveSyncAttemptBecomeAuthoritative(
   return row?.finalized === 1;
 }
 
+/** Retain measured book bytes, never re-date them to the successful reserve fetch. */
+async function retainFreshLenderBook(
+  db: D1Database,
+  composition: ReserveCompositionRecord,
+  configFingerprint: string | null,
+): Promise<ReserveCompositionRecord> {
+  const incoming = LenderBookObservationSchema.safeParse(composition.metadata.lenderBookObservation);
+  if (!incoming.success || incoming.data.status !== "unavailable" ||
+      incoming.data.reason === "missing-observation" || incoming.data.reason === "legacy-unobserved") return composition;
+  const policy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.lenderCollateralBook;
+  const clockSec = Math.max(composition.fetchedAt, incoming.data.acquiredAtSec);
+  if (lenderBookAdmissionReason(incoming.data, composition.stablecoinId, clockSec, policy) !== incoming.data.reason) return composition;
+  // A failed persistence read must fail the write, not erase an unknown prior good book.
+  const previous = await runWithOverloadRetry(() => db.prepare(
+    "SELECT metadata, config_fingerprint FROM reserve_composition WHERE stablecoin_id = ?",
+  ).bind(composition.stablecoinId).first<{ metadata: string | null; config_fingerprint: string | null }>());
+  if (!previous?.metadata || !configFingerprint || previous.config_fingerprint !== configFingerprint) return composition;
+  let metadata: unknown;
+  try {
+    metadata = JSON.parse(previous.metadata);
+  } catch {
+    return composition;
+  }
+  const prior = LenderBookObservationSchema.safeParse(
+    metadata && typeof metadata === "object" ? Reflect.get(metadata, "lenderBookObservation") : undefined,
+  );
+  if (!prior.success || prior.data.status !== "ok" ||
+      lenderBookAdmissionReason(prior.data, composition.stablecoinId, clockSec, policy) !== null ||
+      incoming.data.acquiredAtSec < prior.data.acquiredAtSec) return composition;
+  const contracts = WORKER_TRACKED_META_BY_ID.get(composition.stablecoinId)?.contracts ?? [];
+  if (prior.data.deployments.some(deployment => !contracts.some(contract =>
+    contract.chain === deployment.chain && canonicalEvmAddress(contract.address) === deployment.vault))) return composition;
+  return { ...composition, metadata: {
+    ...composition.metadata,
+    lenderBookObservation: prior.data,
+    lenderBookLatestAttemptFailure: incoming.data,
+  } };
+}
+
 
 export async function finalizeReserveSyncSuccess(
   db: D1Database,
@@ -107,6 +150,7 @@ export async function finalizeReserveSyncSuccess(
 ): Promise<{ finalized: boolean }> {
   const config = WORKER_TRACKED_META_BY_ID.get(composition.stablecoinId)?.liveReservesConfig;
   const configFingerprint = composition.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null);
+  composition = await retainFreshLenderBook(db, composition, configFingerprint);
   const payloadSha256 = await sha256Hex(
     reserveCompositionPayloadJson(reserveCompositionPayloadFromRecord(composition)),
   );

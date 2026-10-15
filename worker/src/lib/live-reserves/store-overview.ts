@@ -385,6 +385,8 @@ export async function loadFreshIndependentLiveReserveMap(
           ...(snapshot.metadata.sharedBookMeasuredHoldings === undefined ? {} : { sharedBookMeasuredHoldings: snapshot.metadata.sharedBookMeasuredHoldings }),
           ...(snapshot.metadata.reserveObservation === undefined ? {} : { reserveObservation: snapshot.metadata.reserveObservation }),
           ...(snapshot.metadata.boundedFactsGeneration === undefined ? {} : { boundedFactsGeneration: snapshot.metadata.boundedFactsGeneration }),
+          ...(snapshot.metadata.lenderBookObservation === undefined ? {} : { lenderBookObservation: snapshot.metadata.lenderBookObservation }),
+          ...(snapshot.metadata.lenderBookLatestAttemptFailure === undefined ? {} : { lenderBookLatestAttemptFailure: snapshot.metadata.lenderBookLatestAttemptFailure }),
         },
       ]),
     ),

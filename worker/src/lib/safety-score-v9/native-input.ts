@@ -19,6 +19,8 @@ import {
   type SafetyScoreV9InputIdentity,
 } from "@shared/types/safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
+import { LenderCollateralBackingSchema } from "@shared/types/safety-score-v9-lender-book";
+import { canonicalizeLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
 import {
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
@@ -90,6 +92,22 @@ const NativeSafetyScoreV9InputPayloadFields = createFixedInputPayloadFields({
   beforeLiveToFallbackCoins: {},
 });
 
+// Sort only well-shaped gap arrays before strict admission. Duplicates and
+// malformed values remain failures; a permutation is not a source mutation.
+const NativeLenderCollateralBackingSchema = z.preprocess((value) => {
+  if (value === null || typeof value !== "object" || !("byAssetId" in value) ||
+      value.byAssetId === null || typeof value.byAssetId !== "object" || Array.isArray(value.byAssetId)) return value;
+  const rows = value.byAssetId as Record<string, unknown>;
+  return {
+    ...value,
+    byAssetId: Object.fromEntries(Object.entries(rows).map(([id, row]) => {
+      if (row === null || typeof row !== "object" || !("sourceGapIds" in row) ||
+          !Array.isArray(row.sourceGapIds) || !row.sourceGapIds.every((gap: unknown) => typeof gap === "string")) return [id, row];
+      return [id, { ...row, sourceGapIds: [...row.sourceGapIds].sort() }];
+    })),
+  };
+}, LenderCollateralBackingSchema);
+
 /**
  * Schema v4: the native Safety Score V9 input. Everything the V8 report-card
  * projection needed and the V9 compiler does not read is gone — `bluechipMap`,
@@ -110,6 +128,7 @@ export const NativeSafetyScoreV9InputSchema = z
     registryFingerprint: Sha256Schema,
     inputMethodologyVersions: ReportCardsFixedInputMethodologyVersionsSchema,
     dexLiqMap: z.record(z.string(), NativeDexLiquidityRowSchema),
+    lenderCollateralBacking: NativeLenderCollateralBackingSchema.optional(),
     baseInputGenerationId: BaseInputGenerationIdSchema,
   })
   .strict();
@@ -300,6 +319,21 @@ export function normalizeNativeV9Input(value: unknown, navAssetIds?: ReadonlySet
     ...normalizeCommonFixedInputRecords(input),
     dexLiqMap: normalizeNativeDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap: normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap),
+    liveReserveProvenanceMap: normalizeSortedRowMap(input.liveReserveProvenanceMap, (row) => ({
+      ...row,
+      ...(row.lenderBookObservation === undefined ? {} : {
+        lenderBookObservation: canonicalizeLenderBookObservation(row.lenderBookObservation),
+      }),
+    })),
+    ...(input.lenderCollateralBacking === undefined ? {} : {
+      lenderCollateralBacking: {
+        ...input.lenderCollateralBacking,
+        tokenToAssetId: normalizeSortedRowMap(input.lenderCollateralBacking.tokenToAssetId, (id) => id),
+        byAssetId: normalizeSortedRowMap(input.lenderCollateralBacking.byAssetId, (row) => ({
+          ...row, sourceGapIds: [...row.sourceGapIds].sort(),
+        })),
+      },
+    }),
   });
   const suppliedBaseInputGenerationId = input.baseInputGenerationId;
   const normalized = NativeSafetyScoreV9InputSchema.parse({

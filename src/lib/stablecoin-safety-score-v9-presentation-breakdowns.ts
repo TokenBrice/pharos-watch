@@ -163,7 +163,7 @@ function causeLabel(cause: "A" | "B" | "C" | "U" | "D" | null | undefined): stri
     case "A": return "excluded — pipeline gap";
     case "B": return "excluded — awaiting curation";
     case "C": return "Issuer does not disclose";
-    case "U": return "Not yet researched";
+    case "U": return "Unresolved";
     case "D": return "Measured and adverse";
     case null: case undefined: return null;
   }

@@ -426,6 +426,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       "fact-gap-cause-proofs.v1",
       "governed-issuance.v1",
       "journaled-cdp-shock-coverage.v1",
+      "morpho-lender-collateral-book.v1",
       "reviewed-deployment-unit-supply-attribution.v1",
       "reviewed-transfer-deployments.v1",
       "wrapper-local-facts.v1",

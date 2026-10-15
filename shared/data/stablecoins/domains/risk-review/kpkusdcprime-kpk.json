@@ -26,11 +26,15 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+      },
+      {
+        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=0. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "evidence": "At Ethereum block 26107704, sendSharesGate, receiveSharesGate and receiveAssetsGate are zero and their setter selectors are permanently abdicated. Source transfer requires share gates; exit requires canSendShares and canReceiveAssets. sendAssetsGate instead controls deposits, not direct withdrawal. Its setter abdicated=0. Underlying USDC issuer freeze exposure remains inherited. Partial source verification and matching deployed bytes do not prove a complete compiler match. Re-read at Ethereum block 26191269 (2026-10-14): all four gates are zero; setReceiveSharesGate, setSendSharesGate and setReceiveAssetsGate remain abdicated, while setSendAssetsGate is not abdicated. USDC.isBlacklisted(vault 0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6 / adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902) is false at the pin, not an irrevocable freeze exemption. Native share transfers do not themselves transfer USDC; underlying issuer freeze exposure remains inherited.",
+    "reviewer": "Sol KPK review 2026-10-14 (PrimeOracle)",
+    "reviewedAt": "2026-10-14"
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
@@ -114,8 +118,8 @@
     ]
   },
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. At Ethereum block 26154662, the adapter enumerates eight markets; the current/historical reviewed union has eight positive Morpho supply positions, with matching internal supply shares and zero borrowing/collateral. weETH retains one raw USDC unit of expected assets. This position census establishes identities and dust, not feed administrators, update/staleness safeguards or complete oracle fallback topology; the profile remains unresolved.",
+    "tier": "privileged-internal-pricing",
+    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. PIN census at Ethereum block 26191269: same eight IDs, seven 86% LLTV markets with non-dust lender claims and cap-zero 77% LLTV weETH dust; totalAssets 29787716153634 raw USDC, idle 0. Lender-claim weights: cbBTC 43.08614484%, WBTC 25.39328015%, rETH 10.50545639%, wstETH 10.16026120%, OETH 8.06209006%, WETH 1.81143609%, LsETH 0.98133126%; weETH expected 1 raw USDC unit. All composer/feed identities, proxy owners/aggregators where applicable and latestRoundData were pinned. Six branches use identified external pricing; OETH explicitly assumes OETH=ETH without a depeg leg, as cbBTC assumes cbBTC=BTC. rETH and weETH instead use issuer-controlled token exchange-rate accounting plus external ETH pricing, so both are privileged-internal-pricing and the exhaustive worst-branch aggregate is privileged-internal-pricing, not standard-external. Dust is not exempted and vault-nav stays top-level-only; no allocation weighting is applied to tiers. Synthetic adapter timestamps do not establish lag or a manual owner-set feed, so single-source-or-laggy is not inferred. Confidence remains probable: this inventory does not certify the full upstream issuer-control hierarchy, heartbeat bounds, independent failover or stressed liquidation. Historical block 26154662 (2026-10-09) census remains eight positive positions, including one-raw-unit weETH dust; the prior unresolved topology conclusion is superseded by this pinned feed review.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -162,8 +166,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+    "reviewedAt": "2026-10-14",
+    "reviewer": "Sol KPK review 2026-10-14 (PrimeOracle)",
     "confidence": "probable",
     "sources": [
       {
@@ -205,14 +209,102 @@
       {
         "label": "Exact current MorphoMarketV1AdapterV2 source",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+      },
+      {
+        "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4270e1817576bba4b640466be79a408ef128f828"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc0053f3fbccd593758258334dfce24c2a9a673ad"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3866d726c204c0836e0677a31973c649888973d"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36cb058364a811636685ef15a71e8ea99043f815"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8200f6622bb906a78896a3da4ddc81ebc8a08458"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x377f722043bb5d021f4366127d49c772e1c01c7b"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe858728eb31a25c4accce17d01b68dcfc3a0ed2c"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdddd770badd886df3864029e4b377b5f6a2b6b83"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe8adff9117151fb5ad7313873780b87cc56eedb0"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa6d6950c9f177f1de7f7757fb33539e3ec60182a"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f67e4d9bd67efa28236013288737d39aef48e79"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x986b5e1e1755e3c2440e960477f25201b0a8bbd4"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x86392dc19c0b719886221c78ab11eb8cf5c52812"
+      },
+      {
+        "label": "Exact reviewed oracle/feed identity; pinned block 26191269 topology",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f948cba8231db7898ef36a4212581ad7b1b4580"
       }
     ],
     "branches": [
       {
         "id": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
         "label": "weETH / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies weETH collateral 0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee, market 0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd, oracle 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2960620043535041308419566336. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x4270e1817576bba4b640466be79a408ef128f828, baseFeedTwo=0xc0053f3fbccd593758258334dfce24c2a9a673ad, quoteFeedOne=0xc3866d726c204c0836e0677a31973c649888973d. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "privileged-internal-pricing",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=1 raw USDC, supplyShares=1701250, allocation share 3.3570885221356704e-12% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Retained 1-raw-unit dust (expected 1, supplyShares 1701250); market cap 0/0, collateral cap open; retained for an exhaustive census, not a material restaking allocation. Pinned composer BASE_VAULT=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0x4270e1817576bba4b640466be79a408ef128f828, BASE_FEED_2=0xc0053f3fbccd593758258334dfce24c2a9a673ad, QUOTE_FEED_1=0xc3866d726c204c0836e0677a31973c649888973d, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_VAULT=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE=1, SCALE_FACTOR=10000000000, price=2701725088303857772787882067. Privileged internal pricing: Origami WeEthToEthExchangeRateAdapter reads issuer WEETH.getRate(), not a weETH market price; round fields and updatedAt are zero. The ETH/USD leg is Chainlink, but does not independently price weETH/eETH impairment. The dummy quote leg is a fixed USDC=1 assumption, not USDC/USD market evidence. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2960620043535041308419566336. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "weETH"
         ],
@@ -221,36 +313,39 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0x34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+            "provider": "Morpho market oracle (MorphoChainlinkOracleV2; pinned configuration)",
+            "path": "Collateral/USDC price() for market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd; pinned raw price=2701725088303857772787882067",
             "address": "0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 ; API decimals=18",
+            "provider": "Origami WeEthToEthExchangeRateAdapter (ether.fi WEETH.getRate; issuer conversion)",
+            "path": "BASE_FEED_1: weETH/ETH exchange rate; decimals=18; no aggregator or owner entrypoint in reviewed adapter source; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[0,1105736449749179288,0,0,0]",
             "address": "0x4270e1817576bba4b640466be79a408ef128f828",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedTwo of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
+            "path": "BASE_FEED_2: ETH / USD; decimals=8; aggregator=0xad88fc1a810379ef4efbf2d97ede57e306178e5a; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[36893488147419121630,244337164513,1791986670,1791986687,36893488147419121630]",
             "address": "0xc0053f3fbccd593758258334dfce24c2a9a673ad",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "quoteFeedOne of 0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411 ; API decimals=12",
+            "provider": "DummyFeed (immutable fixed one, 12 decimals; USDC=USD assumption)",
+            "path": "QUOTE_FEED_1: Dummy feed with 12 decimals; decimals=12; no aggregator or owner entrypoint in reviewed adapter source; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[1,1000000000000,1791987287,1791987287,1]",
             "address": "0xc3866d726c204c0836e0677a31973c649888973d",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established. The weETH adapter returns getRate with zero timestamps; the dummy quote returns constant 1e12 with synthetic block-time timestamps. Neither is a freshness check or external depeg fallback.",
         "collateralParameters": [
           {
             "asset": "weETH",
@@ -278,16 +373,36 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411"
+          },
+          {
+            "label": "Exact feed Origami WeEthToEthExchangeRateAdapter (ether.fi WEETH.getRate; issuer conversion); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4270e1817576bba4b640466be79a408ef128f828"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (ETH / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc0053f3fbccd593758258334dfce24c2a9a673ad"
+          },
+          {
+            "label": "Exact feed DummyFeed (immutable fixed one, 12 decimals; USDC=USD assumption); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc3866d726c204c0836e0677a31973c649888973d"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       },
       {
         "id": "market-0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf",
         "label": "rETH / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies rETH collateral 0xae78736cd615f374d3085123a210448e74fc6393, market 0x0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf, oracle 0x36cb058364a811636685ef15a71e8ea99043f815, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 3142760010789142633948283859. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x8200f6622bb906a78896a3da4ddc81ebc8a08458, baseFeedTwo=0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, quoteFeedOne=0x8fffffd4afb6115b954bd326cbe7b4ba576818f6. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "privileged-internal-pricing",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=3129335529826 raw USDC, supplyShares=3066922906134260971, allocation share 10.50545639% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Pinned composer BASE_VAULT=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0x8200f6622bb906a78896a3da4ddc81ebc8a08458, BASE_FEED_2=0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, QUOTE_FEED_1=0x8fffffd4afb6115b954bd326cbe7b4ba576818f6, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_VAULT=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE=1, SCALE_FACTOR=1000000, price=2862578998893612012975723472. Privileged internal pricing: RethExchangeRateAdapter reads Rocket Pool rETH.getExchangeRate(), not an external rETH/ETH market price. Its updatedAt equals block.timestamp on every call and is not evidence of a fresh underlying exchange-rate update. Chainlink ETH/USD and USDC/USD do not independently price rETH impairment. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 3142760010789142633948283859. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "rETH"
         ],
@@ -296,36 +411,39 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0x0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf",
+            "provider": "Morpho market oracle (MorphoChainlinkOracleV2; pinned configuration)",
+            "path": "Collateral/USDC price() for market-0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf; pinned raw price=2862578998893612012975723472",
             "address": "0x36cb058364a811636685ef15a71e8ea99043f815",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0x36cb058364a811636685ef15a71e8ea99043f815 ; API decimals=18",
+            "provider": "RethExchangeRateAdapter (Rocket Pool rETH.getExchangeRate; issuer conversion)",
+            "path": "BASE_FEED_1: rETH/ETH exchange rate adapter; decimals=18; no aggregator or owner entrypoint in reviewed adapter source; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[0,1173790560152522716,0,1791987287,0]",
             "address": "0x8200f6622bb906a78896a3da4ddc81ebc8a08458",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedTwo of 0x36cb058364a811636685ef15a71e8ea99043f815 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
+            "path": "BASE_FEED_2: ETH / USD; decimals=8; aggregator=0x7d4e742018fb52e48b08be73d041c18b21de6fb5; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[129127208515966895932,243832903905,1791986809,1791986819,129127208515966895932]",
             "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "quoteFeedOne of 0x36cb058364a811636685ef15a71e8ea99043f815 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
+            "path": "QUOTE_FEED_1: USDC / USD; decimals=8; aggregator=0x54bcc589d9743e521c64233706fc8cb36d275b07; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[73786976294838206496,99982834,1791970815,1791970835,73786976294838206496]",
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established. The rETH adapter requires a positive exchange rate within uint192, then returns synthetic block-time updatedAt; this is not an independent freshness guard.",
         "collateralParameters": [
           {
             "asset": "rETH",
@@ -353,16 +471,36 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x36cb058364a811636685ef15a71e8ea99043f815"
+          },
+          {
+            "label": "Exact feed RethExchangeRateAdapter (Rocket Pool rETH.getExchangeRate; issuer conversion); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8200f6622bb906a78896a3da4ddc81ebc8a08458"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (ETH / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (USDC / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       },
       {
         "id": "market-fb7d54e0ce71efc8fffd3f4e1db0afa9265882da5cc76604b62adfac64501e80",
         "label": "LsETH / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies LsETH collateral 0x8c1bed5b9a0928467c9b1341da1d7bd5e10b6549, market 0xfb7d54e0ce71efc8fffd3f4e1db0afa9265882da5cc76604b62adfac64501e80, oracle 0x377f722043bb5d021f4366127d49c772e1c01c7b, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2997326901422054738352661957. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xe858728eb31a25c4accce17d01b68dcfc3a0ed2c, baseFeedTwo=0xc0053f3fbccd593758258334dfce24c2a9a673ad, quoteFeedOne=0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=292316170957 raw USDC, supplyShares=289354572133680476, allocation share 0.98133126% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Pinned composer BASE_VAULT=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0xe858728eb31a25c4accce17d01b68dcfc3a0ed2c, BASE_FEED_2=0xc0053f3fbccd593758258334dfce24c2a9a673ad, QUOTE_FEED_1=0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_VAULT=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE=1, SCALE_FACTOR=1000000, price=2735514908603911933540299492. Standard external pricing: identified Chainlink LsETH/ETH exchange-rate, ETH/USD and USDC/USD proxies; unlike the direct issuer-rate adapters, the conversion leg has an identified external aggregator and observed round timestamp. This establishes feed topology, not independence from issuer accounting or a redemption guarantee. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2997326901422054738352661957. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "LsETH"
         ],
@@ -371,36 +509,39 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0xfb7d54e0ce71efc8fffd3f4e1db0afa9265882da5cc76604b62adfac64501e80",
+            "provider": "Morpho market oracle (MorphoChainlinkOracleV2; pinned configuration)",
+            "path": "Collateral/USDC price() for market-fb7d54e0ce71efc8fffd3f4e1db0afa9265882da5cc76604b62adfac64501e80; pinned raw price=2735514908603911933540299492",
             "address": "0x377f722043bb5d021f4366127d49c772e1c01c7b",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0x377f722043bb5d021f4366127d49c772e1c01c7b ; API decimals=18",
+            "provider": "Chainlink EACAggregatorProxy (LsETH / ETH Exchange Rate)",
+            "path": "BASE_FEED_1: LsETH / ETH Exchange Rate; decimals=18; aggregator=0x82cd6b814cf9cc8e4164480f7e1347ca38bcb4fa; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[18446744073709552113,1119385925819897836,1791980231,1791980255,18446744073709552113]",
             "address": "0xe858728eb31a25c4accce17d01b68dcfc3a0ed2c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedTwo of 0x377f722043bb5d021f4366127d49c772e1c01c7b ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
+            "path": "BASE_FEED_2: ETH / USD; decimals=8; aggregator=0xad88fc1a810379ef4efbf2d97ede57e306178e5a; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[36893488147419121630,244337164513,1791986670,1791986687,36893488147419121630]",
             "address": "0xc0053f3fbccd593758258334dfce24c2a9a673ad",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "quoteFeedOne of 0x377f722043bb5d021f4366127d49c772e1c01c7b ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
+            "path": "QUOTE_FEED_1: USDC / USD; decimals=8; aggregator=0xd340fbf7f18fca1117f42552bfae7c7c0b19c05e; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[55340232221128654880,99983949,1791970824,1791970847,55340232221128654880]",
             "address": "0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
         "collateralParameters": [
           {
             "asset": "LsETH",
@@ -428,16 +569,36 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x377f722043bb5d021f4366127d49c772e1c01c7b"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (LsETH / ETH Exchange Rate); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe858728eb31a25c4accce17d01b68dcfc3a0ed2c"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (ETH / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc0053f3fbccd593758258334dfce24c2a9a673ad"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (USDC / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37be050e75c7f0a80f0e8abbfc2c4ff826728caa"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       },
       {
         "id": "market-3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
         "label": "WBTC / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies WBTC collateral 0x2260fac5e5542a773aa44fbcfedf7c193bc2c599, market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49, oracle 0xdddd770badd886df3864029e4b377b5f6a2b6b83, type ChainlinkOracle. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 845778841037489787522160348154705917888. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23, baseFeedTwo=0xf4030086522a5beea4988f8ca5b36dbc97bee88c, quoteFeedOne=0x8fffffd4afb6115b954bd326cbe7b4ba576818f6. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=7564078214138 raw USDC, supplyShares=6595169747712917158, allocation share 25.39328015% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Pinned composer VAULT=0x0000000000000000000000000000000000000000, VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23, BASE_FEED_2=0xf4030086522a5beea4988f8ca5b36dbc97bee88c, QUOTE_FEED_1=0x8fffffd4afb6115b954bd326cbe7b4ba576818f6, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, SCALE_FACTOR=100000000000000000000000000, price=821609494991710276986147442069905720015. This is the legacy ChainlinkOracle: V2 BASE_VAULT getters revert; its supported VAULT/VAULT_CONVERSION_SAMPLE getters were read instead, and it has no QUOTE_VAULT getter. Standard external pricing under the identical Galaxy oracle precedent: Chainlink WBTC/BTC times BTC/USD divided by USDC/USD. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 845778841037489787522160348154705917888. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "WBTC"
         ],
@@ -446,36 +607,39 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracle API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+            "provider": "Morpho market oracle (ChainlinkOracle; legacy single-vault composer; pinned configuration)",
+            "path": "Collateral/USDC price() for market-3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49; pinned raw price=821609494991710276986147442069905720015",
             "address": "0xdddd770badd886df3864029e4b377b5f6a2b6b83",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (WBTC / BTC)",
+            "path": "BASE_FEED_1: WBTC / BTC; decimals=8; aggregator=0xa5e3a55cea42b86560a5215094981c300899199d; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[36893488147419104061,99849880,1791926657,1791926675,36893488147419104061]",
             "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedTwo of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (BTC / USD)",
+            "path": "BASE_FEED_2: BTC / USD; decimals=8; aggregator=0x4a3411ac2948b33c69666b35cc6d055b27ea84f1; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[129127208515966886434,8227035000000,1791986447,1791986459,129127208515966886434]",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "quoteFeedOne of 0xdddd770badd886df3864029e4b377b5f6a2b6b83 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
+            "path": "QUOTE_FEED_1: USDC / USD; decimals=8; aggregator=0x54bcc589d9743e521c64233706fc8cb36d275b07; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[73786976294838206496,99982834,1791970815,1791970835,73786976294838206496]",
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
         "collateralParameters": [
           {
             "asset": "WBTC",
@@ -503,16 +667,36 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact legacy ChainlinkOracle source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdddd770badd886df3864029e4b377b5f6a2b6b83"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (WBTC / BTC); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (BTC / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (USDC / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       },
       {
         "id": "market-b8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e",
         "label": "OETH / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies OETH collateral 0x856c4efb76c1d1ae02e20ceb03a2a6a08b0b8dc3, market 0xb8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e, oracle 0xe8adff9117151fb5ad7313873780b87cc56eedb0, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2679186979412882687728665427. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, quoteFeedOne=0x8fffffd4afb6115b954bd326cbe7b4ba576818f6. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=2401512502632 raw USDC, supplyShares=2296618323023697461, allocation share 8.06209006% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Pinned composer BASE_VAULT=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419, BASE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_FEED_1=0x8fffffd4afb6115b954bd326cbe7b4ba576818f6, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_VAULT=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE=1, SCALE_FACTOR=1000000000000000000000000, price=2438747674475800515916562237. Standard external, peg-assumed pricing: Chainlink ETH/USD divided by USDC/USD, with no OETH/ETH leg or OETH conversion. This hard-codes one OETH=one ETH and cannot observe an OETH-specific discount or impairment. The label follows the Galaxy cbBTC neutral-peg/external-feed convention; it is not redundant-with-failover, issuer-controlled NAV or a verified owner-set manual price. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2679186979412882687728665427. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "OETH"
         ],
@@ -521,29 +705,31 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0xb8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e",
+            "provider": "Morpho market oracle (MorphoChainlinkOracleV2; pinned configuration)",
+            "path": "Collateral/USDC price() for market-b8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e; pinned raw price=2438747674475800515916562237",
             "address": "0xe8adff9117151fb5ad7313873780b87cc56eedb0",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0xe8adff9117151fb5ad7313873780b87cc56eedb0 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
+            "path": "BASE_FEED_1: ETH / USD; decimals=8; aggregator=0x7d4e742018fb52e48b08be73d041c18b21de6fb5; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[129127208515966895932,243832903905,1791986809,1791986819,129127208515966895932]",
             "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "quoteFeedOne of 0xe8adff9117151fb5ad7313873780b87cc56eedb0 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
+            "path": "QUOTE_FEED_1: USDC / USD; decimals=8; aggregator=0x54bcc589d9743e521c64233706fc8cb36d275b07; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[73786976294838206496,99982834,1791970815,1791970835,73786976294838206496]",
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established. No OETH/ETH depeg leg or fallback replaces the fixed one-OETH/one-ETH assumption.",
         "collateralParameters": [
           {
             "asset": "OETH",
@@ -571,16 +757,32 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe8adff9117151fb5ad7313873780b87cc56eedb0"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (ETH / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (USDC / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8fffffd4afb6115b954bd326cbe7b4ba576818f6"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       },
       {
         "id": "market-64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
         "label": "cbBTC / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies cbBTC collateral 0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf, market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64, oracle 0xa6d6950c9f177f1de7f7757fb33539e3ec60182a, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 846278090899100000000000000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xf4030086522a5beea4988f8ca5b36dbc97bee88c. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=12834378526082 raw USDC, supplyShares=11711023056322378946, allocation share 43.08614484% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Pinned composer BASE_VAULT=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0xf4030086522a5beea4988f8ca5b36dbc97bee88c, BASE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_FEED_1=0x0000000000000000000000000000000000000000, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_VAULT=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE=1, SCALE_FACTOR=100000000000000000000000000, price=822703500000000000000000000000000000000. Standard external pricing under the identical Galaxy oracle precedent: Chainlink BTC/USD; no cbBTC/BTC leg or USDC/USD quote feed. cbBTC=BTC and USDC=USD are fixed peg assumptions, not independent depeg observations. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 846278090899100000000000000000000000000. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "cbBTC"
         ],
@@ -589,22 +791,23 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+            "provider": "Morpho market oracle (MorphoChainlinkOracleV2; pinned configuration)",
+            "path": "Collateral/USDC price() for market-64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64; pinned raw price=822703500000000000000000000000000000000",
             "address": "0xa6d6950c9f177f1de7f7757fb33539e3ec60182a",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0xa6d6950c9f177f1de7f7757fb33539e3ec60182a ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (BTC / USD)",
+            "path": "BASE_FEED_1: BTC / USD; decimals=8; aggregator=0x4a3411ac2948b33c69666b35cc6d055b27ea84f1; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[129127208515966886434,8227035000000,1791986447,1791986459,129127208515966886434]",
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
         "collateralParameters": [
           {
             "asset": "cbBTC",
@@ -632,16 +835,28 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa6d6950c9f177f1de7f7757fb33539e3ec60182a"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (BTC / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       },
       {
         "id": "market-b323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
         "label": "wstETH / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies wstETH collateral 0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0, market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc, oracle 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2, type ChainlinkOracle. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 3311600437209598183204833936. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0x4f67e4d9bd67efa28236013288737d39aef48e79, quoteFeedOne=0x986b5e1e1755e3c2440e960477f25201b0a8bbd4. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=3026509767996 raw USDC, supplyShares=2637686432234552355, allocation share 10.16026120% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Pinned composer VAULT=0x0000000000000000000000000000000000000000, VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0x4f67e4d9bd67efa28236013288737d39aef48e79, BASE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_FEED_1=0x986b5e1e1755e3c2440e960477f25201b0a8bbd4, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, SCALE_FACTOR=10000000000000000000000000000000000, price=3055751658434967679283559330. This is the legacy ChainlinkOracle: V2 BASE_VAULT getters revert; its supported VAULT/VAULT_CONVERSION_SAMPLE getters were read instead, and it has no QUOTE_VAULT getter. Standard external pricing under the identical Galaxy oracle precedent: Compound WstETHPriceFeed composes Chainlink STETH/ETH with wstETH.tokensPerStEth() wrapping conversion, divided by Chainlink USDC/ETH. The stETH/ETH external leg observes staking-token market discount; it is not the issuer-rate-only rETH/weETH topology. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 3311600437209598183204833936. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "wstETH"
         ],
@@ -650,29 +865,39 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracle API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+            "provider": "Morpho market oracle (ChainlinkOracle; legacy single-vault composer; pinned configuration)",
+            "path": "Collateral/USDC price() for market-b323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc; pinned raw price=3055751658434967679283559330",
             "address": "0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2 ; API decimals=8",
+            "provider": "Compound WstETHPriceFeed (Chainlink STETH/ETH plus wstETH wrapping conversion)",
+            "path": "BASE_FEED_1: Custom price feed for wstETH / ETH; decimals=8; stETHtoETHPriceFeed=0x86392dc19c0b719886221c78ab11eb8cf5c52812; wstETH=0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0; no aggregator or owner entrypoint on wrapper; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[36893488147419104158,124607454,1791953894,1791953927,36893488147419104158]",
             "address": "0x4f67e4d9bd67efa28236013288737d39aef48e79",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "quoteFeedOne of 0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2 ; API decimals=18",
+            "provider": "Chainlink EACAggregatorProxy (USDC / ETH)",
+            "path": "QUOTE_FEED_1: USDC / ETH; decimals=18; aggregator=0x26ae9b951f84e6c28f58a92133c30e312d42e0fe; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[92233720368547765511,407780042124951,1791986411,1791986423,92233720368547765511]",
             "address": "0x986b5e1e1755e3c2440e960477f25201b0a8bbd4",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy (STETH / ETH; downstream of Compound WstETHPriceFeed)",
+            "path": "BASE_FEED_1.stETHtoETHPriceFeed: STETH / ETH; decimals=18; aggregator=0xc9c8efa84eab332d1950e5ba0a913b090775825c; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[36893488147419104158,999805850000000000,1791953894,1791953927,36893488147419104158]",
+            "address": "0x86392dc19c0b719886221c78ab11eb8cf5c52812",
+            "chain": "ethereum",
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
         "collateralParameters": [
           {
             "asset": "wstETH",
@@ -700,16 +925,36 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact legacy ChainlinkOracle source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x48f7e36eb6b826b2df4b2e630b62cd25e89e40e2"
+          },
+          {
+            "label": "Exact feed Compound WstETHPriceFeed (Chainlink STETH/ETH plus wstETH wrapping conversion); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f67e4d9bd67efa28236013288737d39aef48e79"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (USDC / ETH); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x986b5e1e1755e3c2440e960477f25201b0a8bbd4"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (STETH / ETH; downstream of Compound WstETHPriceFeed); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x86392dc19c0b719886221c78ab11eb8cf5c52812"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       },
       {
         "id": "market-94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd",
         "label": "WETH / USDC",
-        "tier": "opaque-or-unknown",
-        "summary": "Morpho API identifies WETH collateral 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2, market 0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd, oracle 0x0f948cba8231db7898ef36a4212581ad7b1b4580, type ChainlinkOracleV2. Current nonzero supply exposure is established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2679402647150000000000000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Current Morpho oracleByAddress publishes baseFeedOne=0xc0053f3fbccd593758258334dfce24c2a9a673ad. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "standard-external",
+        "summary": "At Ethereum block 26191269, expectedSupplyAssets=539585442002 raw USDC, supplyShares=522541227297906298, allocation share 1.81143609% of NAV. Weights are lender-claim allocations, not holdings of pledged collateral. Pinned composer BASE_VAULT=0x0000000000000000000000000000000000000000, BASE_VAULT_CONVERSION_SAMPLE=1, BASE_FEED_1=0xc0053f3fbccd593758258334dfce24c2a9a673ad, BASE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_FEED_1=0x0000000000000000000000000000000000000000, QUOTE_FEED_2=0x0000000000000000000000000000000000000000, QUOTE_VAULT=0x0000000000000000000000000000000000000000, QUOTE_VAULT_CONVERSION_SAMPLE=1, SCALE_FACTOR=10000000000000000, price=2443371645130000000000000000. Standard external pricing: Chainlink ETH/USD with a fixed USDC=USD quote assumption; WETH wraps ETH, and no independent USDC depeg leg is configured. Historical 2026-10-03 observation retained: Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 2679402647150000000000000000. Heartbeats and stressed liquidation execution are not established.",
         "collateralAssets": [
           "WETH"
         ],
@@ -718,22 +963,23 @@
         ],
         "feeds": [
           {
-            "provider": "Morpho market oracle (ChainlinkOracleV2 API classification; upstream topology unverified)",
-            "path": "Collateral/USDC price() for market 0x94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd",
+            "provider": "Morpho market oracle (MorphoChainlinkOracleV2; pinned configuration)",
+            "path": "Collateral/USDC price() for market-94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd; pinned raw price=2443371645130000000000000000",
             "address": "0x0f948cba8231db7898ef36a4212581ad7b1b4580",
             "chain": "ethereum",
-            "observedAt": "2026-10-03",
-            "observedBlock": 26110242
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           },
           {
-            "provider": "Chainlink-compatible composite leg (provider/admin/update policy unverified)",
-            "path": "baseFeedOne of 0x0f948cba8231db7898ef36a4212581ad7b1b4580 ; API decimals=8",
+            "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
+            "path": "BASE_FEED_1: ETH / USD; decimals=8; aggregator=0xad88fc1a810379ef4efbf2d97ede57e306178e5a; proxy owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; latestRoundData(roundId,answer,startedAt,updatedAt,answeredInRound)=[36893488147419121630,244337164513,1791986670,1791986687,36893488147419121630]",
             "address": "0xc0053f3fbccd593758258334dfce24c2a9a673ad",
             "chain": "ethereum",
-            "observedAt": "2026-10-03"
+            "observedAt": "2026-10-14",
+            "observedBlock": 26191269
           }
         ],
-        "fallbackBehavior": "Morpho core invokes the configured market oracle price(); no alternate core oracle is selected. Any fallback or staleness rejection inside this exact oracle remains unverified.",
+        "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
         "collateralParameters": [
           {
             "asset": "WETH",
@@ -761,10 +1007,22 @@
           {
             "label": "ethereum idToMarketParams and exact price() archive calls at block 26110242, read 2026-10-03; credentials omitted",
             "url": "https://eth-mainnet.g.alchemy.com"
+          },
+          {
+            "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+            "url": "https://eth-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Exact MorphoChainlinkOracleV2 source and immutable configuration",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0f948cba8231db7898ef36a4212581ad7b1b4580"
+          },
+          {
+            "label": "Exact feed Chainlink EACAggregatorProxy (ETH / USD); identity and authority pinned at block 26191269",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc0053f3fbccd593758258334dfce24c2a9a673ad"
           }
         ],
-        "observedAt": "2026-10-03",
-        "observedBlock": 26110242
+        "observedAt": "2026-10-14",
+        "observedBlock": 26191269
       }
     ],
     "paths": [
@@ -823,14 +1081,14 @@
         "id": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
         "chain": "ethereum",
         "address": "0xa3a7a3cefee206f9d7fe00ec3c83324ed4228411",
-        "pricingAuthority": "external-price",
+        "pricingAuthority": "internal-price",
         "branchId": "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-03",
-          "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+          "reviewedAt": "2026-10-14",
+          "reviewer": "Sol KPK review 2026-10-14 (PrimeOracle)",
           "confidence": "probable",
-          "rationale": "This active lender exposure depends on the exact market collateral oracle for borrowing capacity and liquidation, despite the vault having no own borrowing position.",
+          "rationale": "Retained 1-raw-unit dust (expected 1, supplyShares 1701250 at block 26191269); market cap 0/0, collateral cap open; retained for an exhaustive census, not a material restaking allocation. The residual lender claim remains exposed to its exact market oracle and liquidation path, despite no own borrowing position.",
           "sources": [
             {
               "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -843,6 +1101,10 @@
             {
               "label": "Morpho oracle-driven liquidation and VaultV2 proportional loss realization",
               "url": "https://docs.morpho.org/learn/concepts/liquidation/"
+            },
+            {
+              "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); pinned composer, feed identity/owner and latestRoundData reads; complete Prime allocation census",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
             }
           ]
         }
@@ -851,7 +1113,7 @@
         "id": "market-0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf",
         "chain": "ethereum",
         "address": "0x36cb058364a811636685ef15a71e8ea99043f815",
-        "pricingAuthority": "external-price",
+        "pricingAuthority": "internal-price",
         "branchId": "market-0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf",
         "applicability": {
           "disposition": "branches-required",

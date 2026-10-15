@@ -3,15 +3,20 @@ import { JSDOM } from "jsdom";
 import {
   BAND_GUIDE_DASHARRAY,
   CHART_KEY_PANEL,
+  chromeKeepOuts,
+  rectClearsOuterField,
   bubblesOverlap,
   classifyLogoPlate,
   centerHeroPair,
   computeDemandOrbitZones,
+  DEFAULT_CORE_ZONE,
+  GRAVEL_FLOORS,
   loadLogoDataUri,
   buildPsiSubtitle,
   packEllipticalOrbit,
   parseMapPsi,
   placeSubgradeRadialLanes,
+  R_MIN_A,
   radiusForMcap,
   renderPsiStatus,
   selectMapPsi,
@@ -34,7 +39,7 @@ describe("Safety Map PSI footer", () => {
   it.each(Object.entries(PSI_HEX_COLORS) as Array<[ConditionBand, string]>)(
     "themes %s with the canonical band colour while keeping small text neutral",
     (band, color) => {
-      const svg = renderPsiStatus({ score: 92.6, band, basis: "24H AVG", computedAt: 1_777_000_000 }, 48, 886);
+      const svg = renderPsiStatus({ score: 92.6, band, basis: "24H AVG", computedAt: 1_777_000_000 }, 1550, 830);
       const { window } = new JSDOM(`<svg xmlns="http://www.w3.org/2000/svg">${svg}</svg>`, {
         contentType: "image/svg+xml",
       });
@@ -96,21 +101,36 @@ describe("Safety Map PSI footer", () => {
   });
 });
 
+const FLOOR = GRAVEL_FLOORS[0];
+// The zone allocator is exercised with a fixed synthetic mark size so these
+// cases test its arithmetic, not today's publication floor.
+const MARK = 7.8125;
 const radii = (overrides: Partial<Record<"A" | "B" | "C" | "D" | "F", number[]>> = {}) => ({
   A: [],
-  B: Array.from({ length: 41 }, () => 7.8125),
-  C: Array.from({ length: 133 }, () => 7.8125),
-  D: Array.from({ length: 75 }, () => 7.8125),
-  F: Array.from({ length: 56 }, () => 7.8125),
+  B: Array.from({ length: 41 }, () => MARK),
+  C: Array.from({ length: 133 }, () => MARK),
+  D: Array.from({ length: 75 }, () => MARK),
+  F: Array.from({ length: 56 }, () => MARK),
   ...overrides,
 });
 
 describe("Safety Map chart key geometry", () => {
-  it("reserves a compact key panel in the header rather than the body", () => {
-    expect(CHART_KEY_PANEL.y).toBeGreaterThanOrEqual(4);
-    expect(CHART_KEY_PANEL.y + CHART_KEY_PANEL.h).toBeLessThan(68);
-    expect(CHART_KEY_PANEL.x + CHART_KEY_PANEL.w).toBeLessThanOrEqual(1536);
-    expect(CHART_KEY_PANEL.w).toBeGreaterThan(CHART_KEY_PANEL.h * 15);
+  it("keeps the headline block in the top-right corner the ellipse leaves empty", () => {
+    expect(CHART_KEY_PANEL.y).toBeGreaterThanOrEqual(12);
+    expect(CHART_KEY_PANEL.y + CHART_KEY_PANEL.h).toBeLessThanOrEqual(130);
+    expect(CHART_KEY_PANEL.x).toBeGreaterThan(1200);
+    expect(CHART_KEY_PANEL.x + CHART_KEY_PANEL.w).toBeLessThanOrEqual(1552);
+  });
+
+  it("keeps every corner block, with its clearance, wholly outside the orbital field", () => {
+    // Marks never leave the outer ellipse, so this alone guarantees no layout
+    // can crowd the corner type, whatever the census does.
+    const blocks = chromeKeepOuts();
+    expect(blocks.map((block) => block.id)).toEqual([
+      "masthead-eyebrow", "masthead-lockup", "masthead-tail", "chart-key-panel", "supply-key-panel", "footer-panel",
+    ]);
+    for (const block of blocks) expect(rectClearsOuterField(block), block.id).toBe(true);
+    expect(rectClearsOuterField({ x: 760, y: 400, w: 80, h: 40 })).toBe(false);
   });
 
   it("keeps every outer guide pattern distinct without changing grade colours", () => {
@@ -119,10 +139,10 @@ describe("Safety Map chart key geometry", () => {
 
   it("uses the bubble radius function for both disclosed floors", () => {
     const k = 0.0002;
-    const gravelFloor = 7.8125;
-    const aFloorMcap = (10.9375 / k) ** 2;
+    const gravelFloor = FLOOR;
+    const aFloorMcap = (R_MIN_A / k) ** 2;
     const otherFloorMcap = (gravelFloor / k) ** 2;
-    expect(radiusForMcap("A", aFloorMcap, k, gravelFloor)).toBeCloseTo(10.9375, 10);
+    expect(radiusForMcap("A", aFloorMcap, k, gravelFloor)).toBeCloseTo(R_MIN_A, 10);
     expect(radiusForMcap("F", otherFloorMcap, k, gravelFloor)).toBeCloseTo(gravelFloor, 10);
   });
 });
@@ -185,12 +205,23 @@ describe("Safety Map supply mass and demand bands", () => {
     const cThickness = result.zones.C.outerRy - result.zones.C.innerRy;
     const dThickness = result.zones.D.outerRy - result.zones.D.innerRy;
     expect(cThickness).toBeGreaterThan(dThickness);
-    expect(cThickness).toBeGreaterThanOrEqual(2 * 7.8125 + 8);
-    expect(result.zones.A.outerRy).toBe(164);
-    expect(result.zones.B.innerRy - result.zones.A.outerRy).toBe(8);
-    expect(result.zones.B.innerRy).toBeLessThan(232);
-    expect(result.zones.F.outerRy).toBeLessThanOrEqual(384);
-    expect(result.zones.F.outerRx).toBeLessThanOrEqual(744);
+    expect(cThickness).toBeGreaterThanOrEqual(2 * MARK + 8);
+    expect(result.zones.A).toEqual(DEFAULT_CORE_ZONE);
+    expect(result.zones.B.innerRy - result.zones.A.outerRy).toBe(10);
+    expect(result.zones.B.innerRx - result.zones.A.outerRx).toBe(16);
+    expect(result.zones.F.outerRy).toBeLessThanOrEqual(396);
+    expect(result.zones.F.outerRx).toBeLessThanOrEqual(724);
+  });
+
+  it("starts B just outside whatever core it is given", () => {
+    const wide = { innerRx: 0, innerRy: 0, outerRx: 240, outerRy: 148 };
+    const result = computeDemandOrbitZones(radii(), {}, {}, wide);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.zones.A).toEqual(wide);
+    expect(result.zones.B.innerRx).toBe(256);
+    expect(result.zones.B.innerRy).toBe(158);
+    expect(result.zones.F.outerRy).toBeCloseTo(396, 10);
   });
 
   it("adds bounded demand-derived room only for tiers with published modifier lanes", () => {
@@ -201,12 +232,13 @@ describe("Safety Map supply mass and demand bands", () => {
     if (!base.ok || !laned.ok) return;
     expect(laned.requiredThickness.B).toBeGreaterThan(base.requiredThickness.B);
     expect(laned.requiredThickness.C).toBeGreaterThan(base.requiredThickness.C);
-    expect(laned.zones.B.outerRy - laned.zones.B.innerRy).toBeCloseTo(laned.requiredThickness.B, 10);
+    // B may take surplus too: it is what moves a census-heavy C out to a longer guide.
+    expect(laned.zones.B.outerRy - laned.zones.B.innerRy).toBeGreaterThanOrEqual(laned.requiredThickness.B - 1e-9);
     expect(laned.zones.C.outerRy - laned.zones.C.innerRy).toBeGreaterThanOrEqual(laned.requiredThickness.C - 1e-9);
     expect(laned.zones.D.outerRy - laned.zones.D.innerRy).toBeCloseTo(base.zones.D.outerRy - base.zones.D.innerRy, 10);
     expect(laned.zones.F.outerRy - laned.zones.F.innerRy).toBeCloseTo(base.zones.F.outerRy - base.zones.F.innerRy, 10);
     expect(laned.zones.D.innerRy).toBeCloseTo(base.zones.D.innerRy, 10);
-    expect(laned.zones.F.outerRy).toBeCloseTo(384, 10);
+    expect(laned.zones.F.outerRy).toBeCloseTo(396, 10);
   });
 
   it("fails closed when required bubble thickness exceeds the bounded map", () => {
@@ -222,10 +254,10 @@ describe("Safety Map supply mass and demand bands", () => {
     // search floor. Each band only needs its leader to fit where it is placed.
     const leaders = { B: 68, C: 43.5 };
     const result = computeDemandOrbitZones(radii({
-      B: [leaders.B, 11.2, ...Array.from({ length: 40 }, () => 7.8125)],
-      C: [leaders.C, 10.6, 10.5, ...Array.from({ length: 115 }, () => 7.8125)],
-      D: Array.from({ length: 86 }, () => 7.8125),
-      F: Array.from({ length: 60 }, () => 7.8125),
+      B: [leaders.B, 11.2, ...Array.from({ length: 40 }, () => MARK)],
+      C: [leaders.C, 10.6, 10.5, ...Array.from({ length: 115 }, () => MARK)],
+      D: Array.from({ length: 86 }, () => MARK),
+      F: Array.from({ length: 60 }, () => MARK),
     }), { B: true, C: true });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -237,7 +269,7 @@ describe("Safety Map supply mass and demand bands", () => {
   });
 
   it("moves a census-heavy C outward until its guide ring holds every mark", () => {
-    const census = radii({ C: Array.from({ length: 150 }, () => 7.8125) });
+    const census = radii({ C: Array.from({ length: 140 }, () => MARK) });
     const result = computeDemandOrbitZones(census, { B: true, C: true });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -245,7 +277,7 @@ describe("Safety Map supply mass and demand bands", () => {
     const guideRy = (result.zones.C.innerRy + result.zones.C.outerRy) / 2;
     expect(packEllipticalOrbit(census.C, guideRx, guideRy, Math.PI)).not.toBeNull();
 
-    const overflow = computeDemandOrbitZones(radii({ C: Array.from({ length: 180 }, () => 7.8125) }), { B: true, C: true });
+    const overflow = computeDemandOrbitZones(radii({ C: Array.from({ length: 180 }, () => MARK) }), { B: true, C: true });
     expect(overflow.ok).toBe(false);
   });
 });
@@ -279,12 +311,12 @@ describe("Safety Map published sub-grade lanes", () => {
   const guideRx = 320;
   const guideRy = 220;
   const centers = [
-    { x: 800 + guideRx, y: 482 },
-    { x: 800 - guideRx / 2, y: 482 + guideRy * Math.sqrt(3) / 2 },
-    { x: 800 - guideRx / 2, y: 482 - guideRy * Math.sqrt(3) / 2 },
+    { x: 800 + guideRx, y: 450 },
+    { x: 800 - guideRx / 2, y: 450 + guideRy * Math.sqrt(3) / 2 },
+    { x: 800 - guideRx / 2, y: 450 - guideRy * Math.sqrt(3) / 2 },
   ];
   const guideValue = ({ x, y }: { x: number; y: number }) =>
-    ((x - 800) ** 2) / guideRx ** 2 + ((y - 482) ** 2) / guideRy ** 2;
+    ((x - 800) ** 2) / guideRx ** 2 + ((y - 450) ** 2) / guideRy ** 2;
 
   it("derives plus/base/minus only from the published grade modifier", () => {
     expect([subgradeLaneForGrade("B+"), subgradeLaneForGrade("B"), subgradeLaneForGrade("B-")]).toEqual([
@@ -308,9 +340,9 @@ describe("Safety Map published sub-grade lanes", () => {
   it("shrinks the offset deterministically in a narrow band and collapses base-only tiers", () => {
     const narrow = { innerRx: 300, innerRy: 200, outerRx: 313, outerRy: 213 };
     const narrowCenters = [
-      { x: 800 + 306.5, y: 482 },
-      { x: 800 - 153.25, y: 482 + 206.5 * Math.sqrt(3) / 2 },
-      { x: 800 - 153.25, y: 482 - 206.5 * Math.sqrt(3) / 2 },
+      { x: 800 + 306.5, y: 450 },
+      { x: 800 - 153.25, y: 450 + 206.5 * Math.sqrt(3) / 2 },
+      { x: 800 - 153.25, y: 450 - 206.5 * Math.sqrt(3) / 2 },
     ];
     const shrunk = placeSubgradeRadialLanes(narrowCenters, [5, 5, 5], ["C+", "C", "C-"], narrow);
     expect(shrunk?.offsetY).toBeGreaterThan(0);

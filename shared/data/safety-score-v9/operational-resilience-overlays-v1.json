@@ -12467,10 +12467,10 @@
     },
     {
       "assetId": "kpkusdcyield-kpk",
-      "reviewedAt": "2026-10-03T23:06:59Z",
+      "reviewedAt": "2026-10-14T15:21:20Z",
       "expiresAt": "2027-10-03T23:06:59Z",
-      "reviewer": "W1R82 exact-wrapper creation review",
-      "notes": "Exact Yield VaultV2 creation is 2025-12-30 at Ethereum block 24125461. Nine full calendar months is a lower bound as of review. No legacy Yield or parent history, stress performance, independent reconciliation or incident-free claim is made.",
+      "reviewer": "Sol KPK review 2026-10-14 (ControlIncidents)",
+      "notes": "Exact Yield VaultV2 creation is 2025-12-30 at Ethereum block 24125461; the 2026-10-03 review of nine full calendar months remains an eligibility-only lower bound, not renewed parent or legacy history. The 2026-06-09 Cap precautionary pause has an observed exact-vault allocator response: 633.203984 USDC deallocated through adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 at block 25282840, 2026-06-09T22:24:11Z, with the successful receipt re-read 2026-10-14T14:37:20.085Z. KPK describes a soft shutdown and subsequent re-enabling after human review. Neither this receipt nor the disclosed approximately-15-second first response proves holder redemption continued or measures whole-book recovery; both outcomes remain unknown. No redemption throughput, independent reconciliation or incident-free claim is made. The separately recorded June 21 mint-control incident is not duplicated here; incidentReview remains not-reviewed.",
       "sources": [
         {
           "sourceId": "yield-exact-creation",
@@ -12478,6 +12478,14 @@
           "publisher": "Ethereum contract creation via Blockscout",
           "publishedAt": "2025-12-30",
           "url": "https://eth.blockscout.com/api/v2/transactions/0x3a6041e6583339606ee67d3755e61a636e7db6b5f9553fb1a4b33beafeb6f5dc",
+          "confidence": "issuer-reported"
+        },
+        {
+          "sourceId": "yield-cap-soft-shutdown-2026-06-09",
+          "label": "Exact Yield Deallocate receipt, block 25282840, hash 0xffb63adc26e4cfe9f98f193d2b45dd12d44ce8daaa851527cdf87c07eca62b19, 2026-06-09T22:24:11Z; 633.203984 USDC via adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550; successful pinned receipt observed 2026-10-14T14:37:20.085Z",
+          "publisher": "Ethereum transaction via Blockscout",
+          "publishedAt": "2026-06-09",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x5c15f1ea3873bd1d74f74fb1251568a701edee4b5fee56dd401b4c3ebfb0c828",
           "confidence": "issuer-reported"
         }
       ],
@@ -12492,7 +12500,18 @@
         }
       },
       "redemptionThroughput": null,
-      "stressEpisodes": [],
+      "stressEpisodes": [
+        {
+          "episodeKey": "kpk-usdc-yield-cap-pause-2026-06-09",
+          "name": "Cap precautionary pause and Yield soft shutdown",
+          "observedMonth": "2026-06",
+          "redemptionContinued": null,
+          "recoveredWithinSec": null,
+          "sourceIds": [
+            "yield-cap-soft-shutdown-2026-06-09"
+          ]
+        }
+      ],
       "reserveReconciliation": null,
       "incidentReview": {
         "state": "not-reviewed"

@@ -732,7 +732,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 2, // Sequential per-coin loop with per-adapter I/O limited to 2
+    maxConnections: 2, // 11 */4: serial coins, adapter max2; Morpho book runs after reserve/redemption, serial 32-call chunks (20s), bodies consumed before fallback; reserve-sync-chain2 + Kinesis1 = 3/6
     connectionGroup: "reserve-sync-chain",
   },
   {

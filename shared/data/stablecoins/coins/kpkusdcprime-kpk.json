@@ -2,7 +2,7 @@
   "id": "kpkusdcprime-kpk",
   "name": "KPK USDC Prime",
   "symbol": "KPK_USDC_Prime",
-  "oneLiner": "KPK USDC Prime is a KPK-curated Morpho V2 USDC lending vault; shares accrue interest, absorb losses, and redeem subject to liquidity.",
+  "oneLiner": "KPK USDC Prime is a KPK-curated Morpho V2 USDC vault targeting blue-chip collateral; shares accrue interest, absorb losses and redeem subject to liquidity.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -12,7 +12,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC-denominated idle balances and lender positions in KPK-curated Morpho markets. Borrower collateral, valuation and market liquidity vary; the share does not represent cash held solely at the parent issuer.",
+  "collateral": "USDC-denominated idle balances and lender positions in KPK-curated Morpho markets targeting blue-chip collateral such as WETH, WBTC, cbBTC and ETH liquid-staking tokens. Borrower collateral secures the underlying loans rather than being held directly by the vault; liquidation, oracle and market-liquidity risks remain, and shares are not direct claims on Circle's cash reserves.",
   "pegMechanism": "ERC-4626 deposits exchange USDC for NAV-bearing shares. Borrower interest and configured fee-share accrual change assets per share; realized lending losses can reduce NAV. Withdraw/redeem burns shares for idle USDC and liquidity from the configured adapter; force-deallocation is separate and cannot create liquidity in fully borrowed markets. VaultV2 deliberately returns zero from maxWithdraw and maxRedeem as conservative underestimates, not measurements of available exit liquidity.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,
@@ -61,7 +61,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.morpho.org/curate/"
+      "url": "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-prime"
     }
   ],
   "contracts": [
@@ -72,7 +72,7 @@
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
-  "custodyModel": "onchain",
+  "custodyModel": "mixed",
   "governanceQuality": "wrapper",
   "yieldConfig": {
     "yieldSource": "KPK USDC Prime Morpho V2 lending interest",
@@ -103,9 +103,9 @@
         "expectedAssetAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
       },
       "deployedExposure": {
-        "basis": "Complete current adapter census at Ethereum block 26107704 identifies USDC-denominated lender positions, not idle cash; credit, collateral and liquidity risks remain local.",
-        "reviewedAt": "2026-10-02",
-        "sourceUrl": "https://app.morpho.org/ethereum/vault/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+        "basis": "Complete adapter census at Ethereum block 26191269 (2026-10-14; hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7; timestamp 2026-10-14T14:14:47Z, 1791987287) identifies USDC-denominated lender positions in 8 markets, including 1-raw-unit weETH dust, with no idle cash; credit, collateral and liquidity risks remain local.",
+        "reviewedAt": "2026-10-14",
+        "sourceUrl": "https://eth-mainnet.g.alchemy.com/v2/"
       },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",

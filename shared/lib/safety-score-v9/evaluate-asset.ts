@@ -15,7 +15,7 @@ import { isDexMeasuredExecutionObservationHistoryMature } from "../../types/meas
 import { V9_NEUTRAL_CONTROL_SCORE } from "../../types/safety-score-v9-public-facts";
 import { evaluateV9AccessPosture, type V9AccessPostureResult } from "./access-posture";
 import { createUnavailableV9BackingResult } from "./archetypes/evaluation";
-import { V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT } from "./backing-inheritance";
+import { verifiedLiveInheritedExposures, V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT } from "./backing-inheritance";
 import {
   v9StructuralSignalSharePct,
   type V9BackingResult,
@@ -1245,13 +1245,15 @@ function applyRoleDependencyPillarLimits(
 /**
  * A wrapper whose whole backing is one ~100% tracked parent inherits that
  * parent's available backing pillar even when another dimension withholds its whole rating.
- * Missing reserve envelopes retain the reviewed curated/variant path; a present envelope qualifies only when it is one known,
- * verified live exposure matching the sole serial wrapper parent.
+ * Missing reserve envelopes retain the reviewed curated/variant path. Present
+ * envelopes require a verified live sole parent; only admitted lender assets may
+ * aggregate complete same-parent slices (their old generic quality remains a cap).
  */
 function resolveInheritedStablecoinBacking(
   asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
+  envelope: V9ValidatedPolicyEnvelope,
 ): V9InheritedStablecoinBacking | undefined {
   if (asset.reserveStatus.applicability.state === "not-applicable") return undefined;
   if (
@@ -1272,26 +1274,17 @@ function resolveInheritedStablecoinBacking(
     }
     weight = wrapped ? 1 : resolved.basket[0].weight;
   } else {
-    if (!wrapped || asset.reserveExposures.length !== 1) return undefined;
-    const exposure = asset.reserveExposures[0]!;
+    if (!wrapped) return undefined;
     const hasWrapperEdge = asset.dependencies.edges.some(
       (edge) =>
         edge.pathKind === "serial-dependency" &&
         edge.dependencyType === "wrapper" &&
         edge.upstreamAssetId === upstreamAssetId,
     );
-    if (
-      !hasWrapperEdge ||
-      asset.reserveStatus.applicability.state !== "required" ||
-      asset.reserveStatus.observationState !== "known" ||
-      exposure.provenance !== "live" ||
-      exposure.status.applicability.state !== "required" ||
-      exposure.status.observationState !== "known" ||
-      exposure.trackedAssetId !== upstreamAssetId
-    ) {
-      return undefined;
-    }
-    weight = exposure.weight;
+    const exposures = verifiedLiveInheritedExposures(asset, { parentAssetId: upstreamAssetId },
+      envelope.policy.semantic.backing.lenderCollateralBook.admittedAssets.some(row => row.assetId === asset.assetId));
+    if (!hasWrapperEdge || exposures === undefined) return undefined;
+    weight = exposures.reduce((sum, exposure) => sum + exposure.weight, 0);
   }
   if (weight < V9_WRAPPER_INHERITANCE_MIN_PARENT_WEIGHT) return undefined;
   const parent = evaluatedById.get(upstreamAssetId);
@@ -1647,7 +1640,7 @@ export function evaluateV9Asset({
           identity.asOfSec,
         )
       : undefined;
-  const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById);
+  const inheritedStablecoinBacking = resolveInheritedStablecoinBacking(asset, resolved, evaluatedById, envelope);
   const wrapperStrategyTier = resolveV9WrapperStrategyTier(asset, resolved, inheritedStablecoinBacking);
   const trackRecordMonths = conservativeTrackRecordMonths(asset.implementation.launchedAtSec, identity.asOfSec);
   const dependencyStatusGaps = gapsForV9Ids(gapIndex, asset.dependencies.status.gapIds);
@@ -1682,6 +1675,7 @@ export function evaluateV9Asset({
       ? {}
       : { cdpLiquidationCapacitySelection: liquidationCapacitySelection }),
     ...(inheritedStablecoinBacking === undefined ? {} : { inheritedStablecoinBacking }),
+    ...(asset.lenderBook === undefined ? {} : { lenderBook: asset.lenderBook }),
     trackRecordMonths,
     asOfSec: identity.asOfSec,
   };

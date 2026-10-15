@@ -10,7 +10,7 @@ import { decimalSnap } from "./formula";
 import { resolveV9ReasonTreatment } from "./policy";
 import { createV9GapIndex, type V9GapIndex } from "./gap-index";
 import { canonicalDomains, canonicalUniqueBy, compareText, domainKey, uniqueSorted } from "./primitives";
-import { inheritedStablecoinReserveEvaluation } from "./backing-inheritance";
+import { inheritedStablecoinReserveEvaluation, verifiedLiveInheritedExposures } from "./backing-inheritance";
 import {
   backingPolicy,
   createV9BackingStructuralReason,
@@ -884,16 +884,49 @@ export function evaluateV9ReserveExposures(
   // otherwise gets. Only applied when the inherited (discounted) quality beats
   // that floor: a weak parent yields no positive evidence to credit above it, so
   // the wrapper falls through to the existing bounded path byte-identically.
-  const inheritedReserve =
-    asset.inheritedStablecoinBacking !== undefined
-      ? inheritedStablecoinReserveEvaluation(
-          asset,
-          asset.inheritedStablecoinBacking,
-          policy,
-          gapIndex,
-        )
-      : null;
-  if (inheritedReserve !== null) return inheritedReserve;
+  const inherited = asset.inheritedStablecoinBacking;
+  const admittedMultiSlice = asset.reserveExposures.length > 1 &&
+    backing.lenderCollateralBook.admittedAssets.some(row => row.assetId === asset.assetId);
+  const completeLenderEnvelope = inherited !== undefined && admittedMultiSlice &&
+    verifiedLiveInheritedExposures(asset, inherited, true) !== undefined;
+  const inheritedReserve = inherited !== undefined && (!admittedMultiSlice || completeLenderEnvelope)
+    ? inheritedStablecoinReserveEvaluation(asset, inherited, policy, gapIndex) : null;
+  if (!admittedMultiSlice && inheritedReserve !== null) return inheritedReserve;
+  const generic = evaluateGenericV9ReserveExposures(asset, policy, gapIndex);
+  if (!completeLenderEnvelope || inheritedReserve === null || generic.score === null) return generic;
+
+  // These envelopes previously used generic reserves, not inheritance. Keep
+  // their exact lower local reserve/concentration constraints: R = min(G, L).
+  // Unavailable books leave G unchanged. The nonbinding branch is disclosed as
+  // zero-weight factors, never a second haircut or a second scoring weight.
+  const hasMeasuredBook = inheritedReserve.contributions.some(row =>
+    row.factors?.some(factor => factor.componentKey.includes(":lender-book:") && factor.effectiveScoringWeight > 0));
+  const lenderBinds = hasMeasuredBook && inheritedReserve.score !== null && inheritedReserve.score < generic.score;
+  const selected = lenderBinds ? inheritedReserve : generic;
+  const diagnostic = lenderBinds ? generic : inheritedReserve;
+  const diagnosticFactors = diagnostic.contributions
+    .filter(row => row.source === "reserve-exposure")
+    .flatMap(row => row.factors ?? [{
+      componentKey: row.componentKey, score: row.score, normalizedWeight: 0, effectiveScoringWeight: 0,
+      cause: row.cause ?? null, causeGapIds: row.causeGapIds ?? [], scoringDisposition: row.scoringDisposition ?? "included",
+    }])
+    .map(factor => ({ ...factor, normalizedWeight: 0, effectiveScoringWeight: 0 }));
+  return {
+    ...selected,
+    contributions: selected.contributions.map(row => row.source === "reserve-exposure"
+      ? { ...row, factors: [...(row.factors ?? []), ...diagnosticFactors] } : row),
+    structuralReasons: generic.structuralReasons,
+    unresolved: [...generic.unresolved, ...inheritedReserve.unresolved],
+    rateability: generic.rateability,
+  };
+}
+
+function evaluateGenericV9ReserveExposures(
+  asset: V9BackingAssetInput,
+  policy: V9BackingEvaluationPolicy,
+  gapIndex: V9GapIndex,
+): ReserveEvaluation {
+  const backing = backingPolicy(policy);
   if (asset.reserveStatus.applicability.state === "unresolved") {
     return boundedReserveForStatus(asset, gapIndex, policy, "unreviewed-reserve-envelope");
   }

@@ -4,7 +4,7 @@ import { clampScore } from "../../math";
 import { sha256Hex } from "../../sha256";
 import { stableJsonStringifyV1 } from "../../stable-json";
 import { evaluateV9ReserveExposures } from "../backing";
-import { verifiedLiveInheritedExposure } from "../backing-inheritance";
+import { verifiedLiveInheritedExposures } from "../backing-inheritance";
 import {
   assertV9BackingPolicy,
   backingPolicy,
@@ -218,7 +218,7 @@ function evaluateV9ArchetypeBackingInternal(
   const verifiedLiveInheritance =
     input.asset.inheritedStablecoinBacking === undefined
       ? undefined
-      : verifiedLiveInheritedExposure(input.asset, input.asset.inheritedStablecoinBacking);
+      : verifiedLiveInheritedExposures(input.asset, input.asset.inheritedStablecoinBacking);
   if (
     archetypePolicy.allowCompleteLiveParentMechanismBypass &&
     verifiedLiveInheritance !== undefined &&
