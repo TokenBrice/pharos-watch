@@ -24,7 +24,9 @@ export const SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY = "report-cards:v
 
 export const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
-const SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES = 8_000_000;
+// Public card detail grows independently of the gzip/D1 transport budgets.
+// Keep writer and bounded reader on one raw ceiling; transport caps still bind.
+const SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES = 9_000_000;
 
 export class SafetyScoreV9SchemaCutoverPendingError extends Error {
   readonly code = "publication-schema-cutover-pending";
