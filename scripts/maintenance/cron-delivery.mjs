@@ -15,12 +15,16 @@ export function parseCronDeliveryArgs(argv) {
   return { minutes: parseCliInteger(values.minutes, { name: "--minutes", min: 1, max: 1440 }), raw: values.raw === true };
 }
 
+export function buildScheduledInvocationQuery(limit = LIMIT) {
+  return `query($a:String!,$f:Time!,$t:Time!,$s:String!){viewer{accounts(filter:{accountTag:$a}){
+    workersInvocationsScheduled(limit:${limit},filter:{scriptName:$s,datetime_geq:$f,datetime_leq:$t},orderBy:[datetime_ASC]){
+      datetime scheduledDatetime cron status cpuTimeUs }}}}`;
+}
+
 export async function readCronDelivery({ minutes = 120, token, accountId = "a8e445f07ec0022391b6b090c6ce01c2", scriptName = "stablecoin-api", now = new Date(), fetchImpl = fetch }) {
   if (!token?.trim()) throw new Error("CLOUDFLARE_API_TOKEN is required (Analytics read permission)");
   const from = new Date(now.getTime() - minutes * 60_000);
-  const query = `query($a:String!,$f:Time!,$t:Time!,$s:String!){viewer{accounts(filter:{accountTag:$a}){
-    workersInvocationsScheduled(limit:${LIMIT},filter:{scriptName:$s,datetime_geq:$f,datetime_leq:$t},orderBy:[datetime_ASC]){
-      datetime scheduledDatetime cron status cpuTimeUs }}}}`;
+  const query = buildScheduledInvocationQuery();
   const response = await fetchImpl("https://api.cloudflare.com/client/v4/graphql", {
     method: "POST", signal: AbortSignal.timeout(30_000),
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },

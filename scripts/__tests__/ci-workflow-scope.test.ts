@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -9,6 +10,33 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
+  it("retains resource evidence after failure only for the selected resource lane", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml"));
+    const upload = workflow.jobs.validation.steps.find(
+      (step: { name?: string }) => step.name === "Upload V9 resource results",
+    );
+    expect(upload.if).toBe("${{ always() && matrix.lane == 'v9-resource' }}");
+    expect(upload.with.path).toBe(".tmp/v9-resource-lane/");
+    for (const lane of ["v9-resource", "tests", "static-guards"]) {
+      for (const outcome of ["success", "failure", "cancelled"]) {
+        const selected = runInNewContext(upload.if.slice(3, -2), {
+          always: () => true, success: () => outcome === "success",
+          failure: () => outcome === "failure", cancelled: () => outcome === "cancelled",
+          matrix: { lane },
+        });
+        expect(selected, `${lane}/${outcome}`).toBe(lane === "v9-resource");
+      }
+    }
+    for (const file of ["nightly-validation.yml", "weekly-validation.yml"]) {
+      const scheduled = parseYaml(readRepoFile(`.github/workflows/${file}`));
+      expect(scheduled.jobs["v9-resource"].strategy).toBeUndefined();
+      expect(scheduled.jobs["v9-resource"].steps.filter(
+        (step: { run?: string }) => step.run === "npm run test:v9-resource",
+      )).toHaveLength(1);
+      expect(scheduled.jobs["report-failures"].needs).toContain("v9-resource");
+    }
+  });
+
   it("restricts auxiliary production publishers to main for manual and scheduled runs", () => {
     const scenarios = parseYaml(readRepoFile(".github/workflows/dependency-scenarios-refresh.yml"));
     const map = parseYaml(readRepoFile(".github/workflows/safety-map-refresh.yml"));

@@ -92,7 +92,7 @@ export function runPrTests({
   }
   const startedAt = Date.now();
   const result = spawn(vitest, [...vitestArgs, ...reportArgs], {
-    env,
+    env: { ...env, PHAROS_V9_RESOURCE_LANE: "0" },
     stdio: "inherit",
   });
   const wallMs = Date.now() - startedAt;

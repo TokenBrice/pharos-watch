@@ -397,6 +397,8 @@ Cron detail displays **current progress** and **last terminal** resource evidenc
 
 Legacy missing/invalid blocks, nullable counters and unknown platform outcomes render as **unavailable**, never zero or healthy-green reassurance. `heapUsedBytes` is always null and the detail explicitly says **Heap unavailable** (`workers-runtime-no-heap-api`): Workers has no usable production heap API, and the installed unenv process-memory implementation is a zero stub. Body bytes and conservative cache estimates exclude in-flight decode allocations, warmed graphs, native storage and concurrent invocation heap. See [per-job resource evidence](./worker-and-api-limits.md#per-job-resource-evidence) for policy/accounting boundaries.
 
+The hourly **Worker Memory Monitor** GitHub artifact/incident supplies [external sampled memory and Adaptive kill evidence](./worker-and-api-limits.md#per-job-resource-evidence); it adds no `/api/status` fields/card/polling, does not mutate `platformOutcome`, and does not change status severity.
+
 ## Availability status
 
 Computed from public cache impact, public mint/burn impact, circuit health, D1 capacity pressure, and availability-impacting cron availability. Blacklist gap health contributes to `/api/health` public status and the admin data-quality/status rollup, not directly to the availability floor.

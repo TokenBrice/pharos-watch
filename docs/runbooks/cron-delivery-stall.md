@@ -15,6 +15,8 @@ CLOUDFLARE_WORKER_NAME=stablecoin-heavy npm run ops:cron-delivery -- --minutes 2
 
 The helper defaults to `stablecoin-api` and prints the selected script name. It reads GraphQL `workersInvocationsScheduled`, the delivery/resource-outcome ground truth. It rejects transport, GraphQL, schema and possible truncation failures; reduce the window on truncation. An empty window is absent evidence, not success. Compare `datetime`, `scheduledDatetime`, `cron`, `status` and `cpuTimeUs` against the missing lane clocks for each script separately. Cloudflare status values other than "success" (internal errors, exceeded memory/CPU, thrown exceptions) are platform evidence; child `cron_runs` alone cannot prove the trigger was delivered. `--raw` emits JSON rows instead of the human-readable summary.
 
+For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron-slot-abandonment.md#first-checks) and the hourly Worker Memory Monitor artifacts. Scheduled is delivery evidence, **not a complete memory-outcome authority**: its `internalError`/`clientDisconnected` labels can correspond to Adaptive `exceededMemory`. The independent error-filtered Adaptive inventory and exact-second/CPU correlation preserve that distinction; no Scheduled non-success label alone establishes an OOM.
+
 ## Triage and lost slots
 
 1. Read public health and admin live status. Retain `observedAt`, `lastAnyStartedAt`, `lastFiveMinuteStartedAt`, public lane clocks, `heavy.scheduleKey` / `heavy.lastStartedAt`, each role's age/budgets/status and unavailable reason.

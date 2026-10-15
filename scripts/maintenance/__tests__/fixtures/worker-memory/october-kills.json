@@ -1,0 +1,51 @@
+{
+  "adaptive": [
+    {
+      "dimensions": {
+        "datetime": "2026-10-14T01:16:39Z",
+        "scriptName": "stablecoin-heavy",
+        "scriptVersion": "63da580a-59b1-4f11-912c-1f091e39ec23",
+        "status": "exceededMemory"
+      },
+      "quantiles": {
+        "cpuTimeP50": 13888337,
+        "durationP50": 13.888337,
+        "memoryUsageBytesP50": 133180710,
+        "memoryUsageBytesP90": 133180710,
+        "memoryUsageBytesP99": 133180710
+      },
+      "sum": {
+        "requests": 1,
+        "subrequests": 0
+      }
+    },
+    {
+      "dimensions": {
+        "datetime": "2026-10-15T05:10:15Z",
+        "scriptName": "stablecoin-api",
+        "scriptVersion": "d21d160a-5536-4139-814a-50a3a09b0f8a",
+        "status": "exceededMemory"
+      },
+      "quantiles": {
+        "cpuTimeP50": 7437887,
+        "durationP50": 10.035379,
+        "memoryUsageBytesP50": 180088100,
+        "memoryUsageBytesP90": 180088100,
+        "memoryUsageBytesP99": 180088100
+      },
+      "sum": {
+        "requests": 1,
+        "subrequests": 169
+      }
+    }
+  ],
+  "scheduled": [
+    {
+      "cpuTimeUs": 13888337,
+      "cron": "16 * * * *",
+      "datetime": "2026-10-14T01:16:39Z",
+      "scheduledDatetime": "2026-10-14T01:16:37Z",
+      "status": "internalError"
+    }
+  ]
+}

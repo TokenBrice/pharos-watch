@@ -282,6 +282,11 @@ export async function runCiParityClone({ env = process.env, repoRoot = process.c
         await execute(`pr-tests:${shard}/${plan.shardCount}`, command.program, buildPrLaneCommandArgs(command, { base: baseSha, shard, shardCount: plan.shardCount }), tests.timeoutMinutes);
       }
     } else if (!code) leaves.push({ id: "pr-tests", command: "explicit CI test partitions", status: "not-selected", durationMs: 0 });
+    const resource = getPrLane("v9-resource");
+    for (const command of resource.commands) {
+      if (code) await execute(command.id, command.program, [...command.args], resource.timeoutMinutes);
+      else leaves.push({ id: command.id, command: [command.program, ...command.args].join(" "), status: "not-selected", durationMs: 0 });
+    }
     const coverage = getPrLane("critical-coverage-shards");
     if (classification.criticalCoverageChanged) {
       const shardCount = Math.max(1, Math.min(coverage.shards!, collectOwningTests(CRITICAL_FILES, CRITICAL_OWNERSHIP).length));

@@ -35,6 +35,7 @@ describe("PR lane manifest", () => {
       "static-compile",
       "static-guards",
       "tests",
+      "v9-resource",
       "critical-coverage-shards",
       "critical-coverage",
       "pages-artifact",
@@ -67,6 +68,9 @@ describe("PR lane manifest", () => {
       })),
     );
     expect(matrix.some((entry) => entry.lane === "critical-coverage-shards")).toBe(false);
+    expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
+      { lane: "v9-resource", timeout: 10 },
+    ]);
     expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["static-compile", "static-guards"]);
     expect(matrix.at(-1)?.lane).toBe("docs");
     const coverage = buildPrCoverageMatrix(selection).include;

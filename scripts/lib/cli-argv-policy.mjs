@@ -55,6 +55,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/measure-cdp-shock-coverage.ts"),
     strict("scripts/maintenance/measure-protocol-api-mechanism-metrics.ts"),
     strict("scripts/maintenance/migrate-stablecoin-sidecar.ts"),
+    strict("scripts/maintenance/monitor-worker-memory.ts"),
     strict("scripts/maintenance/publish-daily-social.ts"),
     strict("scripts/maintenance/publish-safety-score-map.ts"),
     strict("scripts/maintenance/purge-cloudflare-zone-cache.mjs"),
@@ -66,6 +67,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/maintenance/run-focused-checks.ts"),
     strict("scripts/maintenance/run-release-rehearsal.ts"),
     strict("scripts/maintenance/run-safety-score-v9-policy-sensitivity.ts"),
+    strict("scripts/maintenance/run-v9-resource-lane.ts"),
     strict("scripts/maintenance/sync-agent-skills.mjs"),
     strict("scripts/maintenance/sync-depeg-events.ts"),
     strict("scripts/maintenance/sync-digests.ts"),
@@ -82,6 +84,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("worker/scripts/export-safety-score-capture-archive.ts"),
     strict("worker/scripts/list-curation-expiry-queue.ts"),
     strict("worker/scripts/measure-contagion-gate0.ts"),
+    strict("worker/scripts/measure-v9-resource.ts"),
     strict("worker/scripts/one-shot-backfill.ts"),
     strict("worker/scripts/rebuild-blacklist-current-balances.ts", "worker/scripts/lib/destructive-operation-guard.ts"),
     strict(

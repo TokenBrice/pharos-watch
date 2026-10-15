@@ -3,21 +3,19 @@ import {
   V9PublicationHealthSchema,
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
-import {
-  SafetyScoreV9CurrentResponseSchema,
-  type SafetyScoreV9CurrentResponse,
-} from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import { z } from "zod";
 import { throwIfAborted } from "../abort";
 import { getCache } from "../db-cache";
 import { executeAtomicBatch } from "../db";
 import { parseJson } from "../json-parse";
+import { logWorkerEvent } from "../structured-log";
 import {
   parseSafetyScoreV9Publication,
   publicationIdentityFromStorageEnvelope,
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
-  serializeSafetyScoreV9Publication,
+  admitAndSerializeSafetyScoreV9Publication,
   SafetyScoreV9SchemaCutoverPendingError,
 } from "./publication-codec";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -28,6 +26,8 @@ import type { SafetyScoreCaptureArchiveCacheRows } from "@shared/types/safety-sc
 export const SAFETY_SCORE_V9_CACHE_KEYS = {
   publication: "report-cards:v9",
   scoreIndex: "report-cards:v9:score-index",
+  acceptedBaseline: "report-cards:v9:accepted-baseline:v1",
+  lenderCollateral: "report-cards:v9:lender-collateral:v1",
   publicationHealth: "report-cards:v9:publication-health",
   publicationAttempt: "report-cards:v9:last-attempt",
   failedPublicationAttempt: "report-cards:v9:last-failed-attempt",
@@ -336,6 +336,7 @@ async function loadStoredSafetyScoreV9PublicationReference(
 
 export interface PersistSafetyScoreV9PublicationInput {
   publication?: SafetyScoreV9CurrentResponse;
+  buildAcceptedProjections?: (publication: Readonly<SafetyScoreV9CurrentResponse>) => { baseline: string; lender: string };
   publicationReplayCaptureValue?: string;
   publicationReplayBaseValue?: string;
   publicationHealth: V9PublicationHealth;
@@ -462,14 +463,15 @@ export async function persistSafetyScoreV9Publication(
 
   let publicationValue: string | null = null;
   let scoreIndexValue: string | null = null;
+  let acceptedProjections: { baseline: string; lender: string } | null = null;
   if (health.status === "current") {
     if (input.publication === undefined) {
       throw new Error(
         "Current Safety Score v9 health requires a publication",
       );
     }
-    const publication = SafetyScoreV9CurrentResponseSchema.parse(
-      input.publication,
+    const { publication, stored } = await admitAndSerializeSafetyScoreV9Publication(
+      input.publication, input.signal,
     );
     if (
       health.acceptedPublicationGenerationId !==
@@ -483,10 +485,11 @@ export async function persistSafetyScoreV9Publication(
         "Safety Score v9 publication does not match current publication health",
       );
     }
-    publicationValue = await serializeSafetyScoreV9Publication(
-      publication,
-      input.signal,
-    );
+    publicationValue = stored;
+    if (!input.buildAcceptedProjections) {
+      throw new Error("Accepted Safety Score v9 publication requires projection builders");
+    }
+    acceptedProjections = input.buildAcceptedProjections(publication);
     scoreIndexValue = stableJsonStringifyV1(SafetyScoreIndexSchema.parse({
       schemaVersion: 2,
       safetyScoreIdentity: {
@@ -601,6 +604,16 @@ export async function persistSafetyScoreV9Publication(
       scoreIndexValue,
       input.publicationClockSec,
     ));
+    statements.push(cacheStatement.bind(
+      SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline,
+      acceptedProjections!.baseline,
+      input.publicationClockSec,
+    ));
+    statements.push(cacheStatement.bind(
+      SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral,
+      acceptedProjections!.lender,
+      input.publicationClockSec,
+    ));
     if (input.publicationReplayCaptureValue !== undefined) {
       statements.push(cacheStatement.bind(
         SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
@@ -688,6 +701,17 @@ export async function persistSafetyScoreV9Publication(
   );
   await executeAtomicBatch(db, statements, { signal: input.signal });
   throwIfAborted(input.signal);
+  if (acceptedProjections !== null) {
+    logWorkerEvent({
+      scope: "lib", level: "info", event: "safety_score_v9_accepted_projections_written",
+      message: "Accepted Safety Score v9 projections committed",
+      metadata: {
+        publicationClockSec: input.publicationClockSec,
+        baselineBytes: new TextEncoder().encode(acceptedProjections.baseline).byteLength,
+        lenderBytes: new TextEncoder().encode(acceptedProjections.lender).byteLength,
+      },
+    });
+  }
   // Return references to the exact committed transports, never re-encode or
   // re-read live cache rows which a later accepted generation could overwrite.
   if (publicationValue === null || input.publicationReplayBaseValue === undefined ||

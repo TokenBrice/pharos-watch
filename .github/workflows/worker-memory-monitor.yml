@@ -1,0 +1,146 @@
+name: Worker Memory Monitor
+
+on:
+  schedule:
+    - cron: "43 * * * *"
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Optional inclusive ISO timestamp (requires to; at most 48 hours)"
+        required: false
+        type: string
+      to:
+        description: "Optional exclusive ISO timestamp (requires from)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-memory-monitor
+  cancel-in-progress: false
+
+jobs:
+  memory:
+    name: Collect Worker memory evidence
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-generated: "false"
+          bootstrap-history: "false"
+          install-playwright-chromium: "false"
+          install-playwright-firefox: "false"
+      - name: Collect sampled isolate memory and filtered kills
+        id: collect
+        continue-on-error: true
+        env:
+          CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          INPUT_FROM: ${{ inputs.from }}
+          INPUT_TO: ${{ inputs.to }}
+        shell: bash
+        run: |
+          args=(--out-dir "$RUNNER_TEMP/worker-memory")
+          if [[ -n "$INPUT_FROM" ]]; then args+=(--from "$INPUT_FROM"); fi
+          if [[ -n "$INPUT_TO" ]]; then args+=(--to "$INPUT_TO"); fi
+          npm run ops:worker-memory -- "${args[@]}"
+      - name: Append evidence summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -f "$RUNNER_TEMP/worker-memory/report.md" ]]; then
+            cat "$RUNNER_TEMP/worker-memory/report.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Preserve memory evidence before verdicts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: worker-memory-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/worker-memory/report.json
+            ${{ runner.temp }}/worker-memory/report.md
+            ${{ runner.temp }}/worker-memory/samples.ndjson
+            ${{ runner.temp }}/worker-memory/exceeded-memory.ndjson
+            ${{ runner.temp }}/worker-memory/queries.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Heavy kill observed
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          try {
+            const report = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/worker-memory/report.json`, 'utf8'));
+            if (report.schemaVersion === 1 && report.verdict?.heavyKillObserved === true) {
+              const safe = value => String(value).replace(/[^\x20-\x7e]/g, ' ').replace(/::/g, ': :').slice(0, 160).replace(/%/g, '%25');
+              const lanes = report.exceededMemory.groups
+                .filter(row => row.workerRole === 'heavy' && Date.parse(row.adaptive.dimensions.datetime) >= Date.parse(report.verdict.alertFrom) && Date.parse(row.adaptive.dimensions.datetime) < Date.parse(report.verdict.alertTo))
+                .slice(0, 5)
+                .map(row => `lane=${safe(row.lane?.cron ?? 'unattributed')} schedule=${safe(row.lane?.scheduleKey ?? 'unattributed')} correlation=${safe(row.correlation)} requests=${safe(row.adaptive.sum.requests)}`);
+              console.error(`::error::heavy-exceeded-memory-observed; ${lanes.join('; ') || 'lane=unattributed'}; inspect retained candidate-job evidence`);
+              process.exitCode = 1;
+            }
+          } catch { /* Missing evidence belongs to the separate collection incident. */ }
+          NODE
+      - name: Collection incomplete
+        if: ${{ always() }}
+        env:
+          COLLECT_OUTCOME: ${{ steps.collect.outcome }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { existsSync, readFileSync } from 'node:fs';
+          try {
+            const root = `${process.env.RUNNER_TEMP}/worker-memory`;
+            const report = JSON.parse(readFileSync(`${root}/report.json`, 'utf8'));
+            const verdict = report.verdict;
+            if (report.schemaVersion !== 1 || typeof verdict?.heavyKillObserved !== 'boolean' || typeof verdict?.collectionIncomplete !== 'boolean' || typeof verdict?.freshnessFailed !== 'boolean' || ![0, 1].includes(verdict.exitCode)
+                || !['report.json', 'report.md', 'samples.ndjson', 'exceeded-memory.ndjson', 'queries.json'].every(file => existsSync(`${root}/${file}`))) throw new Error();
+            if (verdict.collectionIncomplete || process.env.COLLECT_OUTCOME !== (verdict.exitCode === 0 ? 'success' : 'failure')) {
+              console.error('::error::collection-incomplete; inspect retained source coverage and machine reasons');
+              process.exitCode = 1;
+            }
+            if (verdict.freshnessFailed) {
+              console.error('::error::coverage-stale; default-window evidence exceeds the coverage-lag budget');
+              process.exitCode = 1;
+            }
+          } catch {
+            console.error('::error::report-unreadable; required memory evidence unavailable');
+            process.exitCode = 1;
+          }
+          NODE
+
+  report-failures:
+    name: Report main workflow incidents
+    needs: [memory]
+    if: >-
+      ${{ always() && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    concurrency:
+      group: workflow-incidents-${{ github.workflow }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/report-workflow-failure
+        with:
+          workflow-file: worker-memory-monitor.yml
+          needs-json: ${{ toJSON(needs) }}
+          job-names-json: '{"memory":"Collect Worker memory evidence"}'
+          github-token: ${{ github.token }}

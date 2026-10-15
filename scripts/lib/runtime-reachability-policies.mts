@@ -20,7 +20,7 @@ export interface DirectImportPolicy {
 }
 
 export interface RuntimeReachabilityPolicy {
-  id: "scheduled" | "mint-burn" | "memory-constrained-cron" | "pages-functions" | "client-registry";
+  id: "scheduled" | "mint-burn" | "memory-constrained-cron" | "pages-functions" | "client-registry" | "public-safety-projections";
   entrypoints: EntrypointSelector;
   forbidden: ForbiddenSelector;
   directImports?: DirectImportPolicy;
@@ -30,6 +30,18 @@ export interface RuntimeReachabilityPolicy {
 }
 
 export const RUNTIME_REACHABILITY_POLICIES = [
+  {
+    id: "public-safety-projections",
+    // Public storage roots exclude the generic scheduler's lazy heavy-only imports.
+    entrypoints: { kind: "paths", paths: [
+      "worker/src/lib/safety-score-v9/publication-store.ts",
+      "worker/src/lib/safety-score-index.ts",
+    ] },
+    forbidden: { kind: "paths", paths: ["worker/src/lib/safety-score-v9/accepted-projections.ts"] },
+    failureHeading: "Public Worker accepted-projection boundary failed",
+    remediation: "Inject accepted-projection builders from the heavy publication runner; public storage readers must not import them.",
+    successLabel: "Public Worker accepted-projection boundary",
+  },
   {
     id: "scheduled",
     entrypoints: { kind: "scheduled-loaders", source: "worker/src/handlers/scheduled.ts" },

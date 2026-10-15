@@ -20,6 +20,11 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { bytesToBase64 } from "@shared/lib/base64";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import { handleReportCardsV9 } from "../../api/report-cards-v9";
+import {
+  buildSafetyScoreV9AcceptedProjections,
+  parseSafetyScoreV9AcceptedBaselineProjection,
+  parseSafetyScoreV9LenderCollateralProjection,
+} from "../safety-score-v9/accepted-projections";
 
 const databases: DatabaseSync[] = [];
 
@@ -37,6 +42,101 @@ afterEach(() => {
 });
 
 describe("Safety Score V9 publication store", () => {
+  it("derives the index and both read models from the same immutable normalized publication", async () => {
+    const { sqlite, db } = database();
+    const publication = makeWorkerSafetyScoreV9Publication();
+    publication.cards[0]!.pillars.backing.supportedComponentKeys = ["z", "a"];
+    let admitted: typeof publication | undefined;
+    await persistSafetyScoreV9Publication(db, {
+      ...currentInput(publication),
+      buildAcceptedProjections: value => {
+        expect(Object.isFrozen(value.cards[0]!.pillars.backing)).toBe(true);
+        expect(value.cards[0]!.pillars.backing.supportedComponentKeys).toEqual(["a", "z"]);
+        admitted = value;
+        return buildSafetyScoreV9AcceptedProjections(value);
+      },
+    });
+    const read = (key: string) => {
+      const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(key) as { value: string; updated_at: number };
+      return { value: row.value, updatedAt: row.updated_at };
+    };
+    expect(await loadSafetyScoreV9Publication(db)).toEqual(admitted);
+    const baseline = parseSafetyScoreV9AcceptedBaselineProjection(read(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline));
+    const lender = parseSafetyScoreV9LenderCollateralProjection(read(SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral));
+    expect(baseline.safetyScoreIdentity).toEqual(lender.safetyScoreIdentity);
+    expect(baseline.publicationResultDigest).toBe(admitted!.resultDigest);
+    expect(lender.publicationResultDigest).toBe(admitted!.resultDigest);
+    const index = JSON.parse(read(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex).value);
+    expect(index.safetyScoreIdentity).toEqual(baseline.safetyScoreIdentity);
+    expect(index.scores[admitted!.cards[0]!.id]).toMatchObject({
+      score: admitted!.cards[0]!.score, grade: admitted!.cards[0]!.grade,
+    });
+    expect(publication.cards[0]!.pillars.backing.supportedComponentKeys).toEqual(["z", "a"]);
+    expect(Object.isFrozen(publication.cards[0])).toBe(false);
+  });
+
+  it.each(["acceptedBaseline", "lenderCollateral", "publicationAttempt"] as const)(
+    "rolls back every accepted row and replay transport when %s fails its constraint", async field => {
+      const { sqlite, db } = database();
+      const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 110 });
+      await persistSafetyScoreV9Publication(db, { ...currentInput(prior),
+        publicationReplayBaseValue: "prior-base", publicationReplayCaptureValue: "prior-delta" });
+      const before = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
+      sqlite.exec(`CREATE TRIGGER reject_projection BEFORE UPDATE ON cache
+        WHEN NEW.key = '${SAFETY_SCORE_V9_CACHE_KEYS[field]}' BEGIN SELECT RAISE(ABORT, 'forced constraint failure'); END`);
+      const next = makeWorkerSafetyScoreV9Publication({
+        publicationGenerationId: "report-cards:v9:next", publishedAtSec: 120,
+      });
+      await expect(persistSafetyScoreV9Publication(db, { ...currentInput(next),
+        publicationReplayBaseValue: "next-base", publicationReplayCaptureValue: "next-delta" })).rejects.toThrow();
+      expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
+    },
+  );
+
+  it.each(["baseline", "lender"] as const)("fences equal-clock conflicting %s projection bytes but allows identical acceptance", async field => {
+    const { sqlite, db } = database();
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const input = { ...currentInput(publication), publicationReplayBaseValue: "base", publicationReplayCaptureValue: "delta" };
+    await persistSafetyScoreV9Publication(db, input);
+    const before = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
+    await persistSafetyScoreV9Publication(db, input);
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
+    await expect(persistSafetyScoreV9Publication(db, { ...input, buildAcceptedProjections: value => {
+      const projections = buildSafetyScoreV9AcceptedProjections(value);
+      return { ...projections, [field]: projections[field] + " " };
+    } })).rejects.toThrow();
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
+  });
+
+  it("rejects projection construction failure before committing any accepted row", async () => {
+    const { sqlite, db } = database();
+    await expect(persistSafetyScoreV9Publication(db, {
+      ...currentInput(makeWorkerSafetyScoreV9Publication()),
+      buildAcceptedProjections: () => { throw new Error("projection admission failed"); },
+    })).rejects.toThrow("projection admission failed");
+    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([]);
+  });
+
+  it.each(["card", "legacy-schema", "unsupported-schema", "chronology", "membership", "foreign-gap", "parent", "health-clock"] as const)(
+    "refuses invalid %s before any accepted D1 write", async scenario => {
+      const { sqlite, db } = database();
+      const publication = makeWorkerSafetyScoreV9Publication();
+      if (scenario === "card") publication.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = -1;
+      if (scenario === "legacy-schema") Object.assign(publication, { schemaVersion: 6 });
+      if (scenario === "unsupported-schema") Object.assign(publication, { schemaVersion: 8 });
+      if (scenario === "chronology") publication.asOfSec = publication.publishedAtSec + 1;
+      if (scenario === "membership") publication.cards.push(structuredClone(publication.cards[0]!));
+      if (scenario === "foreign-gap") publication.cards[0]!.foreignCauseGapRefs = [0];
+      if (scenario === "parent") publication.cards[0]!.dependencies.serial = [{
+        upstreamAssetId: publication.cards[0]!.id, score: null, blocked: false, ratingStatus: "pipeline-gap", partialEvidence: null,
+      }];
+      const input = currentInput(publication);
+      if (scenario === "health-clock") input.publicationHealth.acceptedAtSec = publication.publishedAtSec + 1;
+      await expect(persistSafetyScoreV9Publication(db, input)).rejects.toThrow();
+      expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([]);
+    },
+  );
+
   it.each(["publicationReplayCaptureValue", "publicationReplayBaseValue"] as const)("rejects a torn accepted replay pair with only %s", async field => {
     const { db } = database();
     const publication = makeWorkerSafetyScoreV9Publication();
@@ -384,10 +484,14 @@ describe("Safety Score V9 publication store", () => {
       sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => row.key),
     ).toEqual([
       SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline,
+      SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
       SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
       SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
     ].sort());
+    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral);
 
     await persistSafetyScoreV9Publication(db, {
       publicationHealth: {
@@ -407,6 +511,8 @@ describe("Safety Score V9 publication store", () => {
       },
       publicationClockSec: 120,
     });
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral)).toEqual(projectionRows);
 
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       publication,
@@ -444,7 +550,7 @@ describe("Safety Score V9 publication store", () => {
   });
 
   it("records failed attempt metadata without replacing accepted attempt, publication, or health", async () => {
-    const { db } = database();
+    const { sqlite, db } = database();
     const publication = makeWorkerSafetyScoreV9Publication({
       publishedAtSec: 110,
     });
@@ -458,6 +564,8 @@ describe("Safety Score V9 publication store", () => {
         affectedAssetIds: ["usdc-circle"],
       },
     });
+    const projectionRows = sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral);
 
     await persistSafetyScoreV9PublicationAttempt(db, {
       publicationAttempt: {
@@ -475,6 +583,8 @@ describe("Safety Score V9 publication store", () => {
       },
       publicationClockSec: 130,
     });
+    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key")
+      .all(SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral)).toEqual(projectionRows);
 
     await expect(loadSafetyScoreV9Publication(db)).resolves.toEqual(
       publication,

@@ -1,11 +1,13 @@
 import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 import type { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import { buildSafetyScoreV9AcceptedProjections } from "../safety-score-v9/accepted-projections";
 
 type PublicationWrite = Parameters<typeof persistSafetyScoreV9Publication>[1];
 
 export function currentInput(publication: SafetyScoreV9CurrentResponse): PublicationWrite {
   return {
     publication,
+    buildAcceptedProjections: buildSafetyScoreV9AcceptedProjections,
     publicationHealth: {
       schemaVersion: 2,
       status: "current",

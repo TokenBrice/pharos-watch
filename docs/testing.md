@@ -184,11 +184,13 @@ CI shape:
 6. `PR gate` runs with `always()` and requires secrets/prepare success. Non-docs-only validation must succeed; docs-only validation must be skipped with successful inline docs. Selected coverage requires shards and merge success; unselected coverage requires explicit `false` and both skipped. Selected Pages artifacts must succeed; unselected Pages requires explicit `false` and skipped. Failures, cancellations, missing classification, and unexpected skips fail the gate.
 7. Nightly/manual mandatory lint, root/Worker typing, typed lint, test typing, and structural steps each run after workspace success with `!cancelled()`: one failure cannot hide later leaves. The aggregate prints all six outcomes and fails unless all succeed. Cache save requires lint/root/Worker typing success. Full Vitest has two shards; Node 26 typing is advisory. [`package.json`](../package.json) gives typed lint an 8 GiB heap and combined TS/TSX globs; [`typed-lint-scope.test.ts`](../scripts/__tests__/typed-lint-scope.test.ts) rejects empty/omitted scope. CodeQL/Zizmor retain change/scheduled backstops; weekly all-critical coverage is blocking.
 
+The required `v9-resource` lane's execution, environment isolation, failure classification and non-gating diagnostic are documented in [V9 resource lane](#v9-resource-lane).
+
 The [weekly workflow](../.github/workflows/weekly-validation.yml) also compares Cloudflare account state with `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN`.
 
 Weekly dependency coverage keeps structural evaluation separate from permanent advisory reconciliation (`if: always()`, `continue-on-error: true`). Audit JSON carries schema-validated upstream publication identity, clocks and source generations plus the audit checkout revision; `generatedAt` is only the capture clock. Reconciliation reports the current comparison checkout separately and renders absent legacy provenance as unknown, never reconstructing a publication generation from the capture time or methodology version. Malformed supplied provenance is a tool error, not a clean comparison. Differences do not admit edges or gate releases.
 
-Validation is capped at `max-parallel: 10`, coverage shards at `8`, both with `fail-fast: false`. The [PR workflow](../.github/workflows/pull-request-checks.yml) now peaks at **20 jobs: validation 10 + coverage 8 + Pages 1 + secrets 1**. Under GitHub Free's 20-concurrent-job allowance this leaves no spare slot: other workflows share the allowance and queue at the peak. An eight-test-shard mixed PR has eleven validation entries, so one queues within the validation cap.
+Validation is capped at `max-parallel: 10`, coverage shards at `8`, both with `fail-fast: false`. The [PR workflow](../.github/workflows/pull-request-checks.yml) now peaks at **20 jobs: validation 10 + coverage 8 + Pages 1 + secrets 1**. Under GitHub Free's 20-concurrent-job allowance this leaves no spare slot: other workflows share the allowance and queue at the peak. An eight-test-shard mixed PR has twelve validation entries, so two queue within the validation cap.
 
 **Re-run failed jobs** can retry a validation/coverage shard or merge without rerunning successful `prepare`: consumers validate and restore its producer-owned name, not their new attempt. Per-shard coverage/timing uploads use `overwrite: true`, replacing only the rerun shard; merge downloads `critical-coverage-*`, including retained successful shards. Workspace/coverage artifacts expire after one day, so an expired transport requires a full rerun/new run. Failed `prepare` reruns itself; source fixes require a new PR revision.
 
@@ -295,11 +297,25 @@ Optional Poppler (`pdftotext` and `pdfinfo` on `PATH`) enables RLUSD assurance P
 
 Scheduled-slot topology is asserted once by [`worker/src/handlers/scheduled/__tests__/slot-registry.test.ts`](../worker/src/handlers/scheduled/__tests__/slot-registry.test.ts). Per-slot suites exercise gating/order semantics, not duplicate registry membership; state-dependent slots must still never lease an unplanned job. PSI recompute, replay and benchmark suites remain separate evidence for historical inputs, methodology-aware replay and crisis signatures.
 
+### V9 resource lane
+
+The required `v9-resource` code lane runs once, unsharded, on its own validation runner for every non-docs PR; nightly and weekly/manual validation each have an explicit required leaf too. `npm run test:v9-resource` alone opts into the expensive publication/contagion tests, disables coverage and uses one Vitest worker. Its launcher requires both named cases to pass in fresh Vitest JSON; the optional frozen-capture byte check may skip. PR artifacts upload `.tmp/v9-resource-lane/` even on failure (seven days). Local readiness runs the lane once, serially with ordinary tests/coverage.
+
+The V9 resource test's admission unit cases still execute in ordinary coverage. Its expensive `describe` is default-off before bundling/hooks; `test:all`, `test:pr`, and both coverage runners override an ambient `PHAROS_V9_RESOURCE_LANE=1` so coverage never spawns those probes. The dedicated launcher owns the only opt-in. Canonical, contagion and optional capture children allow only path/home/temp/locale environment values, then explicit contagion/capture protocol values; native coverage, Node preload/inspector options and ambient probe selectors are not inherited.
+
+A heap OOM or signal from the 128 MiB publication child is **memory evidence**. Wall timeout, protocol/configuration failure and infrastructure cancellation are **not heap-margin evidence**. Nothing is retried away. Isolation removes contention and inherited instrumentation as variables, not proof of Workers-isolate margin. Qualification requires five successful nightly/manual lane runs, not PR reruns; do not land a red base lane as a promised follow-up.
+
+`npm run measure:v9-resource -- --profile=compute --runs=1` is a **non-gating Node diagnostic**, not Workers isolate-capacity proof. `heavy-warm` first initializes real native capture and transfer-materiality preparation roots. Both profiles run two successive real compute publications against independent latest-schema SQLite copies: instrumented 256 MiB old-space with forced-GC phase observations, then uninstrumented natural-GC 128 MiB old-space. The parent always writes `.tmp/safety-score-v9-resource/report.json` (including OOM, signal, timeout and protocol failures); each invocation replaces that directory. Preserve reports elsewhere before comparing revisions. `--phase-manifest=pre-p2|post-p2` explicitly selects the workload protocol; absent observations fail rather than becoming zero. Synthetic raw publication bytes and the approximate 8.0 MB production gap accompany every report.
+
 ## Test Infrastructure
 
 ### Sibling test-support modules
 
 For shared test-only fixtures, harness setup, and builders, use a sibling `*.test-support.ts` module next to the owning test family. Keep assertions and test cases in the owning test files; the reference case is `worker/src/lib/__tests__/cron-leases.test-support.ts`.
+
+The V9 resource family separates the measured `safety-score-v9-resource-probe.test-support.ts` entry from `safety-score-v9-resource-fixture.test-support.ts` setup/correctness inspection. `safety-score-v9-resource-budget.test-support.ts` owns production-config-derived bundling, fail-closed AST phase instrumentation, child isolation and diagnostic reports. Fixture generation and migration code must never enter the measured module graph; full correctness decoding runs only after children exit.
+
+The resource diagnostic CLI's failure-mode tests live in [`worker/scripts/__tests__/measure-v9-resource.test.ts`](../worker/scripts/__tests__/measure-v9-resource.test.ts), alongside the Worker tooling entry rather than in cross-boundary root scripts.
 
 Helpers used across test families live in the shared homes instead:
 
@@ -481,6 +497,8 @@ Full-suite coverage threshold is not enforced. The critical gate applies a 40% d
 
 CI **does not** run a full-suite coverage gate. The PR workflow selects critical coverage for enrolled sources, their current or base-revision owner tests, or critical-coverage plumbing; affected sources scope the no-regression ratchet. PR shards and the weekly/manual all-critical ratchet execute the same full derived critical-owner test set so their measurements remain comparable to the checked-in baseline. Tests owning other critical sources can exercise an affected source indirectly:
 
+The [V9 resource lane](#v9-resource-lane) keeps admission unit coverage here while isolating expensive probes and their environment from ordinary and coverage runners.
+
 - `critical-coverage.mjs` scans high-stakes source roots and applies the existing candidate path rules. `CRITICAL_FILES` is the generated intersection of those candidates and sources imported by tests; there is no hand-maintained source enrollment list.
 - `critical-ownership.mts` resolves executable static imports and quoted dynamic `import(...)` calls (including `@/`, `@shared/`, and relative paths) to repository files and records every importing test. Mock-only `vi.mock` references and type-only imports are not ownership evidence. `CRITICAL_OWNERSHIP_WAIVERS` records each reviewed no-owner gap with a reason and `reviewAfter` date; `check:critical-coverage-completeness` fails for any new unowned candidate or any explicitly enrolled source without an owner. Ownership waivers are distinct from reviewed coverage-denominator exclusions: neither ledger proves measured coverage.
 - Draining an ownership waiver requires a used exact-source import in a behavioral test. Imports through a barrel do not enroll its re-exported implementations: move the exercised function import to the implementation or add a direct consumer contract, preserving existing higher-level assertions. Registry reviews should exercise admission/expiry boundaries rather than transcribe authored rows; store readers should assert semantic results against the latest-schema SQLite fixture. Retained gaps keep their review date and a dated, path-specific evidence rationale; ownership removal never substitutes for measured coverage or permits lowering its floors.
@@ -544,6 +562,8 @@ Use the actual [`blacklist.test.ts`](../worker/src/api/__tests__/blacklist.test.
 ## ESLint Configuration
 
 [`eslint.config.mjs`](../eslint.config.mjs) and [`eslint.typed.config.mjs`](../eslint.typed.config.mjs) own scopes, rules and exclusions; do not duplicate their rule tables, allowlists or ignored-path arrays. Typed unsafe-value and promise rules remain blocking in configured scopes. Decode external data as `unknown` and validate it at the typed boundary.
+
+Typed-lint regression probes use `ESLint.lintText` with an existing in-scope project member and disable automatic single-run inference so the parser typechecks the supplied text even when `CI=true`. Never create transient fixtures under `src/`: concurrent readiness scanners can enumerate them before cleanup and then fail when the files disappear.
 
 Suppressions require a scoped justification, never a blanket subsystem exemption. Flat-config rule options replace rather than merge; use existing composed constants when extending restrictions. Import boundaries, nullable supply admission and React purity remain governed by the root rules and their executable lint authorities.
 
