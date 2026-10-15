@@ -105,8 +105,7 @@ export function buildSafetyScoreV9LenderCollateralProjection(
   publication: Readonly<SafetyScoreV9CurrentResponse>,
 ): SafetyScoreV9LenderCollateralProjectionV1 {
   const byAssetId: LenderCollateralBacking["byAssetId"] = {};
-  // Release A deliberately retains capture's independent extraction until the
-  // reader cutover. Preserve its rules here, except for the capture-token subset.
+  // Retain the full eligible inventory; capture owns only registry-bound subsetting.
   for (const card of publication.cards) {
     const backing = card.pillars.backing;
     if (card.ratingStatus !== "rated" || backing.aggregationDisposition === "excluded-a-b" ||

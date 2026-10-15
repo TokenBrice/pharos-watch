@@ -54,6 +54,10 @@ import * as snapshot from "../report-cards-snapshot";
 import * as pegAnalytics from "../peg-analytics";
 import * as pegCache from "../peg-analytics-cache";
 import * as evidenceJournalStore from "../report-card-evidence-journal-store";
+import { buildSafetyScoreV9LenderCollateralProjection } from "../safety-score-v9/accepted-projections";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { compareCodeUnits } from "@shared/lib/compare";
 
 // The shared setup evaluates both capture lanes. Preserve the coverage budget
 // for two full-registry compile/evaluate passes without repeating the native pass;
@@ -496,8 +500,9 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
         acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
       };
-      vi.spyOn(publicationStore, "loadSafetyScoreV9Publication").mockResolvedValue(previous);
-      vi.spyOn(publicationStore, "loadSafetyScoreV9PublicationHealth").mockResolvedValue(health);
+      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+        kind: "accepted", projection: buildSafetyScoreV9LenderCollateralProjection(previous), health,
+      });
       const captured = await captureLenderCollateralBacking(mockD1(), live.provenanceById!, input.registryFingerprint, input.clockSec + 1);
       expect(captured.status).toBe("ok");
       expect(Object.keys(captured.tokenToAssetId).sort()).toEqual([`ethereum:${SAVUSD}`, `ethereum:${FTUSD}`].sort());
@@ -507,12 +512,37 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         expect(row.cardSha256).toMatch(/^[0-9a-f]{64}$/);
       }
       expect(captured.byAssetId).not.toHaveProperty("usdc-circle");
+      // Independent full-source extraction oracle: no projection builder on this side.
+      const byAssetId: LenderCollateralBacking["byAssetId"] = {};
+      for (const card of previous.cards) {
+        if (!Object.values(captured.tokenToAssetId).includes(card.id)) continue;
+        const backing = card.pillars.backing;
+        if (card.ratingStatus !== "rated" || backing.aggregationDisposition === "excluded-a-b" ||
+            backing.score === null || !Number.isFinite(backing.score) || backing.score < 0 || backing.score > 100) continue;
+        const sourceCause = (["D", "C", "U"] as const).find(cause => backing.limitedEvidenceCauses?.includes(cause)) ?? null;
+        const sourceGapIds = [...new Set((backing.causeGapRefs ?? []).map(ref => resolveCauseGapId(previous, card, ref)))].sort(compareCodeUnits);
+        if ((sourceCause === "C" || sourceCause === "U") && sourceGapIds.length === 0) continue;
+        byAssetId[card.id] = { assetId: card.id, backingScore: backing.score,
+          cardSha256: sha256Hex(stableJsonStringifyV1(card)), sourceCause, sourceGapIds };
+      }
+      const oracle = LenderCollateralBackingSchema.parse({
+        schemaVersion: 1, status: "ok", reason: null,
+        publicationGenerationId: previous.publicationGenerationId, publishedAtSec: previous.publishedAtSec,
+        policyDigest: previous.policy.semanticDigest, evaluationBuildDigest: previous.evaluationBuildDigest,
+        registryFingerprint: input.registryFingerprint, maxAgeSec: 3600, tokenToAssetId: captured.tokenToAssetId,
+        byAssetId: Object.fromEntries(Object.entries(byAssetId).sort(([a], [b]) => compareCodeUnits(a, b))),
+      });
+      expect(captured).toEqual(oracle);
       const base = subsetInput(input, { [YIELD]: live.provenanceById!.get(YIELD)!.lenderBookObservation }, captured);
       const native = normalizeNativeV9Input({
         ...base, baseInputGenerationId: undefined,
         liveReserveProvenanceMap: { ...base.liveReserveProvenanceMap, [YIELD]: live.provenanceById!.get(YIELD)! },
       });
       expect(native.baseInputGenerationId).not.toBe(base.baseInputGenerationId);
+      expect(native).toEqual(normalizeNativeV9Input({
+        ...base, baseInputGenerationId: undefined, lenderCollateralBacking: oracle,
+        liveReserveProvenanceMap: { ...base.liveReserveProvenanceMap, [YIELD]: live.provenanceById!.get(YIELD)! },
+      }));
       const identity = buildSafetyScoreV9InputIdentity({
         methodologyVersion: native.methodologyVersion, baseInputGenerationId: native.baseInputGenerationId,
         publicationGenerationId: native.sourceGeneration,
@@ -578,8 +608,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
         acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
       };
-      const publicationRead = vi.spyOn(publicationStore, "loadSafetyScoreV9Publication").mockResolvedValue(previous);
-      const healthRead = vi.spyOn(publicationStore, "loadSafetyScoreV9PublicationHealth").mockResolvedValue(health);
+      const sourceRead = vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState");
       let clock = input.clockSec + 1;
       if (scenario === "held") Object.assign(health, { status: "held", heldSinceSec: previous.publishedAtSec, reasons: [{ code: "dex-stale" }] });
       if (scenario === "stale") clock = input.clockSec + 3601;
@@ -589,9 +618,11 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         health.attemptedAtSec = previous.publishedAtSec;
       }
       if (scenario === "future-attempt") health.attemptedAtSec = clock + 1;
-      if (scenario === "identity-mismatch") health.acceptedPublicationGenerationId = "report-cards:v9:v1:" + "0".repeat(64);
-      if (scenario === "read-failed") publicationRead.mockRejectedValue(new Error("D1 read unavailable"));
-      if (scenario === "missing") publicationRead.mockResolvedValue(null);
+      const projection = buildSafetyScoreV9LenderCollateralProjection(previous);
+      sourceRead.mockResolvedValue({ kind: "accepted", projection, health });
+      if (scenario === "identity-mismatch") sourceRead.mockResolvedValue({ kind: "unavailable", reason: "health-mismatch" });
+      if (scenario === "read-failed") sourceRead.mockResolvedValue({ kind: "unavailable", reason: "read-failed" });
+      if (scenario === "missing") sourceRead.mockResolvedValue({ kind: "bootstrap", health: null });
       const provenance = new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]);
       const captured = await captureLenderCollateralBacking(mockD1(), provenance, frozen.registryFingerprint, clock);
       expect(captured).toMatchObject({
@@ -600,21 +631,47 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       });
       expect(captured.tokenToAssetId[`ethereum:${SAVUSD}`]).toBe("savusd-avant");
       expect(captured.tokenToAssetId[`ethereum:${FTUSD}`]).toBe("ftusd-flying-tulip");
-      expect(publicationRead).toHaveBeenCalledTimes(1);
-      expect(healthRead).toHaveBeenCalledTimes(1);
+      expect(sourceRead).toHaveBeenCalledTimes(1);
     });
 
     it("admits the accepted-publication freshness boundary inclusively", async () => {
       const previous = pipeline.candidate;
-      vi.spyOn(publicationStore, "loadSafetyScoreV9Publication").mockResolvedValue(previous);
-      vi.spyOn(publicationStore, "loadSafetyScoreV9PublicationHealth").mockResolvedValue({
-        schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
-        acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
+      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+        kind: "accepted", projection: buildSafetyScoreV9LenderCollateralProjection(previous),
+        health: {
+          schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
+          acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
+        },
       });
       const captured = await captureLenderCollateralBacking(mockD1(), new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]), input.registryFingerprint, input.clockSec + 3600);
       expect(captured.status).toBe("ok");
       expect(captured.publishedAtSec).toBe(previous.publishedAtSec);
       expect(captured.maxAgeSec).toBe(3600);
+    });
+
+    it("resolves a newly referenced token from the complete accepted collateral inventory", async () => {
+      const previous = pipeline.candidate;
+      const projection = buildSafetyScoreV9LenderCollateralProjection(previous);
+      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+        kind: "accepted", projection,
+        health: {
+          schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
+          acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
+        },
+      });
+      const provenance = new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]);
+      const before = await captureLenderCollateralBacking(mockD1(), provenance, input.registryFingerprint, input.clockSec + 1);
+      expect(before.byAssetId).not.toHaveProperty("usdc-circle");
+      const changed = structuredClone(observations[YIELD]);
+      if (changed.status !== "ok") throw new Error("Expected complete fixture");
+      changed.deployments[0]!.markets[0]!.collateralToken = USDC;
+      Object.assign(changed, deriveLenderBookObservationIdentity(changed));
+      provenance.set(YIELD, { ...provenance.get(YIELD)!, lenderBookObservation: changed });
+      const after = await captureLenderCollateralBacking(mockD1(), provenance, input.registryFingerprint, input.clockSec + 1);
+      expect(after.status).toBe("ok");
+      expect(after.tokenToAssetId[`ethereum:${USDC}`]).toBe("usdc-circle");
+      expect(after.byAssetId["usdc-circle"]).toEqual(projection.byAssetId["usdc-circle"]);
+      expect(after.byAssetId["usdc-circle"]).toBeDefined();
     });
 
     it.each(["not-rated", "pipeline-gap", "excluded", "missing", "causal-identity-missing"] as const)(
@@ -628,10 +685,12 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
           card.pillars.backing.limitedEvidenceCauses = ["U"];
           card.pillars.backing.causeGapRefs = [];
         }
-        vi.spyOn(publicationStore, "loadSafetyScoreV9Publication").mockResolvedValue(previous);
-        vi.spyOn(publicationStore, "loadSafetyScoreV9PublicationHealth").mockResolvedValue({
-          schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
-          acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
+        vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+          kind: "accepted", projection: buildSafetyScoreV9LenderCollateralProjection(previous),
+          health: {
+            schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
+            acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
+          },
         });
         const captured = await captureLenderCollateralBacking(mockD1(), new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]), input.registryFingerprint, input.clockSec + 1);
         expect(captured.status).toBe("ok");
@@ -658,7 +717,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
 
     it("replays frozen token resolutions against a supplied registry without network or recapture", () => {
       const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Offline replay must not fetch"));
-      const source = vi.spyOn(publicationStore, "loadSafetyScoreV9Publication").mockRejectedValue(new Error("Offline replay must not recapture"));
+      const source = vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockRejectedValue(new Error("Offline replay must not recapture"));
       const metaById = new Map([PRIME, YIELD, "usdc-circle"].map(id => [id, structuredClone(ACTIVE_META_BY_ID.get(id)!)] as const));
       const resolve = vi.spyOn(lenderRegistry, "resolveLenderTokenIds").mockImplementation(() => {
         throw new Error("Offline replay must consume frozen token identities");
@@ -763,8 +822,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         generationId: input.dexGenerationId, updatedAt: observedAt,
       });
       vi.spyOn(evidenceJournalStore, "loadReportCardEvidenceJournalByIdV1").mockResolvedValue({});
-      vi.spyOn(publicationStore, "loadSafetyScoreV9Publication").mockResolvedValue(null);
-      vi.spyOn(publicationStore, "loadSafetyScoreV9PublicationHealth").mockResolvedValue(null);
+      vi.spyOn(publicationStore, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({ kind: "bootstrap", health: null });
       const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Preparation must only consume captured lender data"));
       const captured = await buildNativeSafetyScoreV9Capture(mockD1(), { expectedDexGenerationId: input.dexGenerationId });
       expect(captured.input.lenderCollateralBacking).toMatchObject({

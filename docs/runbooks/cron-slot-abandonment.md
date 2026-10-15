@@ -101,6 +101,17 @@ Inspect `cron_slot_executions.child_marker_version` and the attempt ledger befor
 - **Do not clear a lease to "fix" this.** Reconciliation already releases or expires the dead slot's lease. Clearing a live lease while `/api/status` shows a fresh `inFlight` progress row for the same job risks a concurrent second writer.
 - **Observed memory kill versus telemetry unavailable.** The collector alerts on heavy kills in its trailing 24-hour window and incomplete required collection; public kills and incomplete public broad sampling are report-only initially (review after one week of baseline). Preserve source/version/lane evidence before changing code. Do not retry/rebalance automatically, infer OOM from abandonment alone, or subtract sampled bytes from 128 MiB; shared sampled isolate memory is not live phase headroom.
 
+## Safety Score accepted projection recovery
+
+**Symptom:** after the Release B strict-reader cutover, `compute-safety-score-v9` fails at `publication-gate` before compiling with `safety-score-v9-accepted-baseline-projection-missing`, `-invalid`, `-publication-mismatch` or `-read-failed`. Accepted publication/health remain unchanged; the failed attempt is recorded separately. Missing/invalid projections beside accepted state can follow a D1 restore to a pre-writer point, manual deletion or writer/reader skew. Preparation may report `accepted-source-unavailable` instead of previous-accepted lender backing. This is not by itself an OOM.
+
+1. Preserve the named failure, deployed heavy/public versions and read-only cache evidence. Compare both projection identities, result digests and `publishedAtSec`/row clocks with the envelope identity and health's accepted generation/clock. Check D1 availability first for `-read-failed`; do not treat read errors or orphan replay/index/projection rows as bootstrap.
+2. Revert **the Release B reader commit on the current head**, retaining subsequent changes and the Release A atomic projection writers. Do not redeploy the historical Release A build: that can discard unrelated fixes. Deploy through the normal reviewed heavy-before-public procedure and allow any earlier publication lease to settle.
+3. Let **one normal accepted `:22/:52` cycle** reseed both projections. A held or failed cycle does not reseed; wait for acceptance. Read-only verify both rows against each other, the accepted envelope and health, including full identity, result digest and clocks.
+4. Re-apply the strict-reader commit on current head and deploy normally. Observe the first `:16/:46` preparation using the lender projection and the first successful `:22/:52` compile; correlate memory-monitor evidence separately.
+
+Never hand-write projections, delete accepted state or clear a live lease to force reseeding. A dedicated fenced reseed tool requires separate owner approval; it is not this recovery procedure.
+
 ## Prevention
 
 - Treat a sub-hourly logical cadence carrying CPU-heavy work as requiring the paired-hourly physical form. `shared/lib/__tests__/cron-jobs.test.ts` asserts the converted lanes keep single-minute hourly aliases so a regression to one comma expression fails CI instead of silently re-entering the 30-second class.
