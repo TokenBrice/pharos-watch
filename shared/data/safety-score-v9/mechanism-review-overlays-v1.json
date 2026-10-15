@@ -20670,9 +20670,25 @@
         {
           "label": "External Ethereum observation block26107704 (existing source observation date retained)",
           "url": "https://eth.blockscout.com/block/26107704"
+        },
+        {
+          "label": "KPK custody and encumbrance disclosure, issuer-documented; accessedAt 2026-10-15",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md"
+        },
+        {
+          "label": "Archived KPK custody disclosure, 2026-10-15T10:23:29Z; accessedAt 2026-10-15",
+          "url": "https://web.archive.org/web/20261015102329/https://docs.kpk.io/vaults/vaults/morpho"
+        },
+        {
+          "label": "KPK Digital Assets Inc. curator disclaimer and holder-rights exclusions, issuer-documented; accessedAt 2026-10-15",
+          "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
+        },
+        {
+          "label": "Independent pinned RPC census and controls at Ethereum block 26197527, hash 0x5f89e32ab183bf529b1fa542c5b01ff54792ba9fe963a80ffb582f2101f5448f, 2026-10-15T11:10:59Z; observed 2026-10-15T19:03:18.762Z..19:04:35.577Z",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ],
-      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28097145082426439535141891 raw 18-decimal shares and totalAssets()=29100078912490 raw 6-decimal USDC. One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 current market IDs; summed expectedSupplyAssets=29100078910236, idle underlying=2254; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $12770068.09, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged. Review 2026-10-07: exact current KPK VaultV2/direct MorphoMarketV1AdapterV2 route is bound by the existing Ethereum26107704 positions observed2026-10-02T22:44:52.884200+00:00 and official KPK product/architecture pages; no intermediate V1.1 MetaMorpho wrapper is in this path. Newly reviewed primary Morpho V2 bad-debt/emergency guides and c034336f82b0415f786fa15fc61fa81bf5256e31 reference code establish loss recognition: adapter realAssets falls after recognized bad debt; accrueInterest sets newTotalAssets=min(realAssets,maxTotalAssets); receipt-share holders remaining at recognition absorb loss pro rata through lower share value without shares being burned. For a consistently reverting market the documented timelocked adapter burnShares(marketId), followed by vault.deallocate(adapter,data,0), writes off irrecoverable market shares; it abandons assets and is NOT funded asset recovery. Revoking pending cap increases, zeroing caps, staged liquidity-dependent deallocation and allocator maxRate=0 limit additional exposure/phantom upward interest; downward losses still book. Previously accrued phantom interest and pre-recognition exits may disadvantage remaining holders; management fees may continue. Limited operational default/loss procedure and scoped receipt-ledger priority only, not legal insolvency rank, full stressed liquidity or external recovery guarantee, not evidence that bad debt occurred. Existing partial-source-verification/bytecode caveat preserved; reference code/security assessments are not independent financial assurance. External-creditor, legal encumbrance and reuse scope remain unavailable.",
+      "notes": "Historical evidence pins remain unchanged for holderClaim, liabilityConservation, positionCustody and defaultRecovery. The 2026-10-02 census at Ethereum block 26107704 matched totalAssets 29100078912490 raw USDC to 8 enumerated same-asset supply positions (29100078910236) and idle 2254, with totalSupply 28097145082426439535141891 raw shares, zero borrowing and zero posted collateral. It establishes operational proportional lending claims, not direct Circle reserve ownership, legal segregation or independent financial reconciliation. Selected-route liquidity $12770068.09 at that observation is not full-supply stressed capacity. The 2026-10-07 defaultRecovery review remains limited: direct-market adapter realAssets and VaultV2 accrueInterest recognize losses through lower remaining-holder share value; timelocked burnShares followed by zero-asset deallocation abandons irrecoverable positions rather than funding recovery. Zeroing caps, revoking increases and maxRate=0 bound additional exposure/phantom interest but do not restore lost assets. Pre-recognition exits may disadvantage remaining holders. The new 2026-10-15 encumbranceAndAllocation component review supersedes the previous unavailable disposition only for that component; its own date-only gate applies. KPK's fetched custody disclosure states there is no vault-wide insurance or segregated loss reserve. Seed capital and a commitment to leave last remain issuer statements, not independently identified balances, enforceable subordination or a funded backstop; defaultRecovery stays limited without a date renewal. KPK Digital Assets Inc.'s disclaimer excludes contractual obligations to holders and places any contractual rights under Morpho terms. Partial-source-verification caveats remain: Blockscout is_fully_verified=false, deployed-bytecode equality is not complete compiler/source verification, and ChainSecurity/Cantina reference-code security reports are not exact-vault financial assurance or recovery guarantees.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20685,9 +20701,30 @@
           "quality": "limited"
         },
         "encumbranceAndAllocation": {
-          "applicability": "unavailable",
-          "rationale": "Current complete position inventory is pinned, but complete legal encumbrance, external creditor scope and collateral-custodian reuse/recovery rights are not established by Morpho itemized data.",
-          "sourceUrl": "https://api.morpho.org/graphql"
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-10-15",
+            "reviewer": "KPK questionnaire follow-up (Reserves)",
+            "rationale": "Operational allocation and encumbrance scope only. At block 26197527, the sole adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 positions totaling 30215446628068 raw USDC; idle 27251845493 plus positions equals totalAssets 30242698473561 against totalSupply 29155601056107453877078191 raw shares. All enumerated positions have zero borrowing and posted collateral. addAdapter delay is 259201 seconds; adapterRegistry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e cannot be replaced because its setter is abdicated. Both fees are zero with 1209601-second setter delays. Four gates are zero and the three exit/share setters are abdicated. These reads externally anchor KPK's archived itemized custody/rights disclosure: assets are idle USDC and Morpho supply claims, vaults are separately accounted, no outside pledge/lien is disclosed, borrower collateral is not a vault-owned reserve, and holders have no direct borrower/collateral-issuer claim. The no-lien statement is issuer-documented, not an independent legal opinion. Reference adapter code confines allocation to same-asset Morpho supply/withdrawal. This establishes the limited operational rung, not enforceable bankruptcy priority, downstream collateral recovery or independently reconciled legal protections required for higher grades. Existing partial-source-verification caveat remains. Date-only admission starts after 2026-10-15 UTC.",
+            "sources": [
+              {
+                "label": "Archived issuer custody and allocation-rights disclosure; accessedAt 2026-10-15",
+                "url": "https://web.archive.org/web/20261015102329/https://docs.kpk.io/vaults/vaults/morpho"
+              },
+              {
+                "label": "Pinned Ethereum block 26197527 inventory, liabilities, timelocks and abdications",
+                "url": "https://eth-mainnet.g.alchemy.com/v2/"
+              },
+              {
+                "label": "Issuer-documented holder-rights exclusions; accessedAt 2026-10-15",
+                "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
+              },
+              {
+                "label": "Immutable adapter allocation and withdrawal code",
+                "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+              }
+            ]
+          }
         },
         "defaultRecovery": {
           "quality": "limited"
@@ -20758,9 +20795,25 @@
         {
           "label": "External Ethereum observation block26107704 (existing source observation date retained)",
           "url": "https://eth.blockscout.com/block/26107704"
+        },
+        {
+          "label": "KPK custody and encumbrance disclosure, issuer-documented; accessedAt 2026-10-15",
+          "url": "https://docs.kpk.io/vaults/vaults/morpho.md"
+        },
+        {
+          "label": "Archived KPK custody disclosure, 2026-10-15T10:23:29Z; accessedAt 2026-10-15",
+          "url": "https://web.archive.org/web/20261015102329/https://docs.kpk.io/vaults/vaults/morpho"
+        },
+        {
+          "label": "KPK Digital Assets Inc. curator disclaimer and holder-rights exclusions, issuer-documented; accessedAt 2026-10-15",
+          "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
+        },
+        {
+          "label": "Independent pinned RPC census and controls at Ethereum block 26197527, hash 0x5f89e32ab183bf529b1fa542c5b01ff54792ba9fe963a80ffb582f2101f5448f, 2026-10-15T11:10:59Z; observed 2026-10-15T19:03:18.762Z..19:04:35.577Z",
+          "url": "https://eth-mainnet.g.alchemy.com/v2/"
         }
       ],
-      "notes": "At Ethereum block 26107704, asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=9792630120840452584390720 raw 18-decimal shares and totalAssets()=10295065635649 raw 6-decimal USDC. One adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 5 current market IDs; summed expectedSupplyAssets=9983200606668, idle underlying=311865028981; their sum equals totalAssets. All current positions have zero borrow shares and zero posted collateral. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Limited holderClaim reflects exact code-enforced operational redemption; limited liabilityConservation reflects dated complete current assets/shares and reproducible expectedSupplyAssets accounting; limited positionCustody reflects all enumerated immediate on-chain lenders. Neither accounting NAV nor an upstream financial report grants vault legal or assurance credit. Selected-route liquidity observed 2026-10-02T22:44:52.884200+00:00 is $1115988.79, not a guarantee, DEX quote, same-notional executable depth or full-supply stressed capacity. Reference code security reports: ChainSecurity 2025-09-16 and Cantina Managed 2025-12-15 (final adapter code tag 2025-12-04). These are not independent reserve-to-liability assurance, exact-vault audit coverage or default-recovery guarantees; existing component grades and evidence pin remain unchanged. Review 2026-10-07: exact current KPK VaultV2/direct MorphoMarketV1AdapterV2 route is bound by the existing Ethereum26107704 positions observed2026-10-02T22:44:52.884200+00:00 and official KPK product/architecture pages; no intermediate V1.1 MetaMorpho wrapper is in this path. Newly reviewed primary Morpho V2 bad-debt/emergency guides and c034336f82b0415f786fa15fc61fa81bf5256e31 reference code establish loss recognition: adapter realAssets falls after recognized bad debt; accrueInterest sets newTotalAssets=min(realAssets,maxTotalAssets); receipt-share holders remaining at recognition absorb loss pro rata through lower share value without shares being burned. For a consistently reverting market the documented timelocked adapter burnShares(marketId), followed by vault.deallocate(adapter,data,0), writes off irrecoverable market shares; it abandons assets and is NOT funded asset recovery. Revoking pending cap increases, zeroing caps, staged liquidity-dependent deallocation and allocator maxRate=0 limit additional exposure/phantom upward interest; downward losses still book. Previously accrued phantom interest and pre-recognition exits may disadvantage remaining holders; management fees may continue. Limited operational default/loss procedure and scoped receipt-ledger priority only, not legal insolvency rank, full stressed liquidity or external recovery guarantee, not evidence that bad debt occurred. Existing partial-source-verification/bytecode caveat preserved; reference code/security assessments are not independent financial assurance. External-creditor, legal encumbrance and reuse scope remain unavailable.",
+      "notes": "Historical evidence pins remain unchanged for holderClaim, liabilityConservation, positionCustody and defaultRecovery. The 2026-10-02 census at Ethereum block 26107704 matched totalAssets 10295065635649 raw USDC to 5 enumerated same-asset supply positions (9983200606668) and idle 311865028981, with totalSupply 9792630120840452584390720 raw shares, zero borrowing and zero posted collateral. It establishes operational proportional lending claims, not direct Circle reserve ownership, legal segregation or independent financial reconciliation. Selected-route liquidity $1115988.79 at that observation is not full-supply stressed capacity. The 2026-10-07 defaultRecovery review remains limited: direct-market adapter realAssets and VaultV2 accrueInterest recognize losses through lower remaining-holder share value; timelocked burnShares followed by zero-asset deallocation abandons irrecoverable positions rather than funding recovery. Zeroing caps, revoking increases and maxRate=0 bound additional exposure/phantom interest but do not restore lost assets. Pre-recognition exits may disadvantage remaining holders. The new 2026-10-15 encumbranceAndAllocation component review supersedes the previous unavailable disposition only for that component; its own date-only gate applies. KPK's fetched custody disclosure states there is no vault-wide insurance or segregated loss reserve. Seed capital and a commitment to leave last remain issuer statements, not independently identified balances, enforceable subordination or a funded backstop; defaultRecovery stays limited without a date renewal. KPK Digital Assets Inc.'s disclaimer excludes contractual obligations to holders and places any contractual rights under Morpho terms. Partial-source-verification caveats remain: Blockscout is_fully_verified=false, deployed-bytecode equality is not complete compiler/source verification, and ChainSecurity/Cantina reference-code security reports are not exact-vault financial assurance or recovery guarantees.",
       "metrics": {},
       "components": {
         "holderClaim": {
@@ -20773,9 +20826,30 @@
           "quality": "limited"
         },
         "encumbranceAndAllocation": {
-          "applicability": "unavailable",
-          "rationale": "Current complete position inventory is pinned, but complete legal encumbrance, external creditor scope and collateral-custodian reuse/recovery rights are not established by Morpho itemized data.",
-          "sourceUrl": "https://api.morpho.org/graphql"
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-10-15",
+            "reviewer": "KPK questionnaire follow-up (Reserves)",
+            "rationale": "Operational allocation and encumbrance scope only. At block 26197527, the sole adapter 0x4f74895557bea2de5d51d8c06e944da92dbc8550 enumerates 7 positions totaling 13548188669278 raw USDC; idle 2824 plus positions equals totalAssets 13548188672102 against totalSupply 12860091198915665773935089 raw shares. Four previously identified off-list residuals remain 1 raw USDC each, excluded from adapter realAssets, not silently asserted absent. All enumerated positions have zero borrowing and posted collateral. addAdapter delay is 259201 seconds; adapterRegistry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e cannot be replaced because its setter is abdicated. Both fees are zero with 1209601-second setter delays. Four gates are zero and the three exit/share setters are abdicated. These reads externally anchor KPK's archived itemized custody/rights disclosure: assets are idle USDC and Morpho supply claims, vaults are separately accounted, no outside pledge/lien is disclosed, borrower collateral is not a vault-owned reserve, and holders have no direct borrower/collateral-issuer claim. The no-lien statement is issuer-documented, not an independent legal opinion. Reference adapter code confines allocation to same-asset Morpho supply/withdrawal. This establishes the limited operational rung, not enforceable bankruptcy priority, downstream collateral recovery or independently reconciled legal protections required for higher grades. Existing partial-source-verification caveat remains. Date-only admission starts after 2026-10-15 UTC.",
+            "sources": [
+              {
+                "label": "Archived issuer custody and allocation-rights disclosure; accessedAt 2026-10-15",
+                "url": "https://web.archive.org/web/20261015102329/https://docs.kpk.io/vaults/vaults/morpho"
+              },
+              {
+                "label": "Pinned Ethereum block 26197527 inventory, liabilities, timelocks and abdications",
+                "url": "https://eth-mainnet.g.alchemy.com/v2/"
+              },
+              {
+                "label": "Issuer-documented holder-rights exclusions; accessedAt 2026-10-15",
+                "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
+              },
+              {
+                "label": "Immutable adapter allocation and withdrawal code",
+                "url": "https://github.com/morpho-org/vault-v2/blob/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
+              }
+            ]
+          }
         },
         "defaultRecovery": {
           "quality": "limited"

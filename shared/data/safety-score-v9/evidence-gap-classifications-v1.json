@@ -37186,8 +37186,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T10:07:26Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsA)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -37204,6 +37204,14 @@
           "location": "Governance and control / Key settings and roles",
           "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
           "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -37222,7 +37230,7 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
       ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcprime-kpk-5a07e17e100c7dc3",
@@ -37237,8 +37245,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T10:07:26Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsA)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -37255,6 +37263,14 @@
           "location": "Governance and control / Key settings and roles",
           "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
           "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -37273,7 +37289,7 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
       ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcprime-kpk-6ec27b3facbd2976",
@@ -37288,8 +37304,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T10:07:26Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsA)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -37306,6 +37322,14 @@
           "location": "Governance and control / Key settings and roles",
           "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
           "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -37324,7 +37348,7 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
       ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcprime-kpk-fe52c63a720292f7",
@@ -37339,8 +37363,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T10:07:26Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsA)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -37357,6 +37381,14 @@
           "location": "Governance and control / Key settings and roles",
           "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
           "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -37375,7 +37407,7 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
       ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcprime-kpk-a1cf11147e1cc02e",
@@ -37390,8 +37422,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T10:07:26Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (B12SubjectsA)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -37408,6 +37440,14 @@
           "location": "Governance and control / Key settings and roles",
           "excerpt": "**Owner and sentinel:** Security Council Safe (5/8)",
           "assertion": "Names the exact Security Council, curator quorum and Deployer 1/2/3 addresses, but no independently controlled human signer roster or per-address key custody attestation."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -37426,7 +37466,7 @@
         "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
       ],
-      "rationale": "The exact scoped questions ask for independent human signers/operators and actual key custody. KPK discloses manual team signers, named deployer addresses, shared curator signer sets, quorum and signing practices. Its issuer site, reports index, legal terms, complete docs index, signer/automation architecture and governance archive do not map all exact manual/Security Council signer addresses to independently controlled people or provide per-key custody evidence. Automation EOAs are excluded because their signer-vault custody is positively disclosed."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-frnt-wyoming-d719c274eb0e90d2",
@@ -43540,8 +43580,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T10:37:38Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane10Kpk)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43558,13 +43598,21 @@
           "location": "Key information and Strategy",
           "excerpt": "0xD5cCe260E7a755DDf0Fb9cdF06443d593AaeaA13",
           "assertion": "Exact Yield VaultV2 identity and its three KPK-operated automation agents bind the signer architecture to this asset."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Private keys are generated and held in a dedicated ETH signer vault. No team member can sign manually from these addresses.",
+          "assertion": "KPK has responded: questionnaire Q1.3 (2026-10-14/15, issuer statement) identifies self-hosted HashiCorp Vault with ethsigner and software keys, explicitly not HSM/MPC. The public signing-only service/no-manual-access disclosure corroborates the operating arrangement, not stronger custody. §A offers a threshold Safe attestation covering agent policy and recovery, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound attestation and exact service-control/recovery evidence, not a claim that KPK refused to describe its custody model. Software-key custody has no admissible keyCustodyAttestation kind; do not relabel it HSM/MPC, remove the gap, or award custody relief. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
         "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
         "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
       ],
-      "rationale": "The required keyCustody datum admits mpc or hsm only. A dedicated ETH signer vault and no manual human key access establish an operational custody arrangement, not either cryptographic implementation or attestation. The reviewed signer architecture, exact Yield vault page and referenced automation description publish no MPC/HSM implementation; replace the overbroad B claim with researched C without inventing HSM/MPC or refreshing on-chain observations."
+      "rationale": "KPK has responded: questionnaire Q1.3 (2026-10-14/15, issuer statement) identifies self-hosted HashiCorp Vault with ethsigner and software keys, explicitly not HSM/MPC. The public signing-only service/no-manual-access disclosure corroborates the operating arrangement, not stronger custody. §A offers a threshold Safe attestation covering agent policy and recovery, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound attestation and exact service-control/recovery evidence, not a claim that KPK refused to describe its custody model. Software-key custody has no admissible keyCustodyAttestation kind; do not relabel it HSM/MPC, remove the gap, or award custody relief."
     },
     {
       "id": "uw-kpkusdcyield-kpk-41c8a220cbc7df2a",
@@ -43579,8 +43627,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T10:37:38Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane10Kpk)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43597,13 +43645,21 @@
           "location": "Key information and Strategy",
           "excerpt": "0xD5cCe260E7a755DDf0Fb9cdF06443d593AaeaA13",
           "assertion": "Exact Yield VaultV2 identity and its three KPK-operated automation agents bind the signer architecture to this asset."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Private keys are generated and held in a dedicated ETH signer vault. No team member can sign manually from these addresses.",
+          "assertion": "KPK has responded: questionnaire Q1.3 (2026-10-14/15, issuer statement) identifies self-hosted HashiCorp Vault with ethsigner and software keys, explicitly not HSM/MPC. The public signing-only service/no-manual-access disclosure corroborates the operating arrangement, not stronger custody. §A offers a threshold Safe attestation covering agent policy and recovery, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound attestation and exact service-control/recovery evidence, not a claim that KPK refused to describe its custody model. Software-key custody has no admissible keyCustodyAttestation kind; do not relabel it HSM/MPC, remove the gap, or award custody relief. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
         "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
         "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
       ],
-      "rationale": "The required keyCustody datum admits mpc or hsm only. A dedicated ETH signer vault and no manual human key access establish an operational custody arrangement, not either cryptographic implementation or attestation. The reviewed signer architecture, exact Yield vault page and referenced automation description publish no MPC/HSM implementation; replace the overbroad B claim with researched C without inventing HSM/MPC or refreshing on-chain observations."
+      "rationale": "KPK has responded: questionnaire Q1.3 (2026-10-14/15, issuer statement) identifies self-hosted HashiCorp Vault with ethsigner and software keys, explicitly not HSM/MPC. The public signing-only service/no-manual-access disclosure corroborates the operating arrangement, not stronger custody. §A offers a threshold Safe attestation covering agent policy and recovery, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound attestation and exact service-control/recovery evidence, not a claim that KPK refused to describe its custody model. Software-key custody has no admissible keyCustodyAttestation kind; do not relabel it HSM/MPC, remove the gap, or award custody relief."
     },
     {
       "id": "uw-kpkusdcyield-kpk-5fea68cebb429fac",
@@ -43618,8 +43674,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T10:37:38Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane10Kpk)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43636,13 +43692,21 @@
           "location": "Key information and Strategy",
           "excerpt": "0xD5cCe260E7a755DDf0Fb9cdF06443d593AaeaA13",
           "assertion": "Exact Yield VaultV2 identity and its three KPK-operated automation agents bind the signer architecture to this asset."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Private keys are generated and held in a dedicated ETH signer vault. No team member can sign manually from these addresses.",
+          "assertion": "KPK has responded: questionnaire Q1.3 (2026-10-14/15, issuer statement) identifies self-hosted HashiCorp Vault with ethsigner and software keys, explicitly not HSM/MPC. The public signing-only service/no-manual-access disclosure corroborates the operating arrangement, not stronger custody. §A offers a threshold Safe attestation covering agent policy and recovery, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound attestation and exact service-control/recovery evidence, not a claim that KPK refused to describe its custody model. Software-key custody has no admissible keyCustodyAttestation kind; do not relabel it HSM/MPC, remove the gap, or award custody relief. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
         "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
         "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md"
       ],
-      "rationale": "The required keyCustody datum admits mpc or hsm only. A dedicated ETH signer vault and no manual human key access establish an operational custody arrangement, not either cryptographic implementation or attestation. The reviewed signer architecture, exact Yield vault page and referenced automation description publish no MPC/HSM implementation; replace the overbroad B claim with researched C without inventing HSM/MPC or refreshing on-chain observations."
+      "rationale": "KPK has responded: questionnaire Q1.3 (2026-10-14/15, issuer statement) identifies self-hosted HashiCorp Vault with ethsigner and software keys, explicitly not HSM/MPC. The public signing-only service/no-manual-access disclosure corroborates the operating arrangement, not stronger custody. §A offers a threshold Safe attestation covering agent policy and recovery, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound attestation and exact service-control/recovery evidence, not a claim that KPK refused to describe its custody model. Software-key custody has no admissible keyCustodyAttestation kind; do not relabel it HSM/MPC, remove the gap, or award custody relief."
     },
     {
       "id": "uw-kpkusdcyield-kpk-326c1dab8e757f97",
@@ -43657,8 +43721,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T12:32:50Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43675,6 +43739,14 @@
           "location": "Roles and addresses",
           "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
           "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -43687,7 +43759,7 @@
         "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
         "https://docs.kpk.io/vaults/vaults/morpho.md"
       ],
-      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcyield-kpk-9135c4cbe984c870",
@@ -43702,8 +43774,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T12:32:50Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43720,6 +43792,14 @@
           "location": "Roles and addresses",
           "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
           "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -43732,7 +43812,7 @@
         "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
         "https://docs.kpk.io/vaults/vaults/morpho.md"
       ],
-      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcyield-kpk-51012a2b46bbe247",
@@ -43747,8 +43827,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T12:32:50Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43765,6 +43845,14 @@
           "location": "Roles and addresses",
           "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
           "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -43777,7 +43865,7 @@
         "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
         "https://docs.kpk.io/vaults/vaults/morpho.md"
       ],
-      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcyield-kpk-b30faad585f9c929",
@@ -43792,8 +43880,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T12:32:50Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43810,6 +43898,14 @@
           "location": "Roles and addresses",
           "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
           "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -43822,7 +43918,7 @@
         "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
         "https://docs.kpk.io/vaults/vaults/morpho.md"
       ],
-      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-kpkusdcyield-kpk-4c49b50f365885ef",
@@ -43837,8 +43933,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T12:32:50Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K06)",
+      "reviewedAt": "2026-10-15T19:07:28Z",
+      "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
       "sources": [
         {
           "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
@@ -43855,6 +43951,14 @@
           "location": "Roles and addresses",
           "excerpt": "0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537",
           "assertion": "Nearby documentation names the Security Council Safe, not its exact private-key custodial arrangement."
+        },
+        {
+          "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md",
+          "observedAt": "2026-10-15T19:07:28Z",
+          "datumAsOf": null,
+          "location": "Automation addresses are vault-specific; Manual signers; questionnaire Q1/§A retained separately in review packet",
+          "excerpt": "Transaction hashes are independently verified on hardware wallets.",
+          "assertion": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted. Questionnaire-only details above are attributed to the retained issuer response, not quoted from this linked public page."
         }
       ],
       "searchedSurfaces": [
@@ -43867,7 +43971,7 @@
         "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
         "https://docs.kpk.io/vaults/vaults/morpho.md"
       ],
-      "rationale": "Exact private-key custody, direct-EOA approval policy and human signer independence remain undisclosed for Curator Safe, Security Council Safe and three manual/deployer EOAs. Hardware hash verification does not attest key storage. Team labels and same signer set do not prove independence. Agent-vault disclosure applies only to automation EOAs. On-chain roles/quorums do not reveal this off-chain datum."
+      "rationale": "KPK has responded: questionnaire Q1.1–Q1.3 (2026-10-14/15, issuer statements) says four different KPK team members hold the four curator EOA keys, all human curator/Council keys use hardware wallets, no MPC is used, and Council affiliation is mostly KPK with some outside signers. §A offers exact-address EIP-191 and threshold Safe EIP-1271 statements, but none has been provided. C/researched-nondisclosure now describes the still-unprovided address-bound custody/signing/recovery attestation and unresolved actual human/operator independence, not an absence of an issuer response. Public hardware transaction-hash checks and on-chain quorums do not satisfy the exact-controller storage review. Keep the matching custody-scoped question open; no custody credit or independent-organizations conclusion is admitted."
     },
     {
       "id": "uw-gusdtq-galaxy-f28db7ca39cb78cb",
@@ -62529,48 +62633,6 @@
         "https://docs.solstice.finance/solstice-for-users/usx.md"
       ],
       "rationale": "The retrieved Solstice dashboard and exact-USX primary documentation disclose aggregate reserves and broad eligible collateral, but no complete dated current reserve-composition vector. Aggregate collateralization, cryptographic attestations and named reserve categories cannot substitute for category/instrument weights. The missing reserve-composition datum remains bounded as researched non-disclosure; the old 100% unresolved basket and composition clock are not refreshed or assigned favorable weights."
-    },
-    {
-      "id": "campaign-L27KPKUSDCPri-kpkusdcyield-kpk-oracle-backstop",
-      "assetId": "kpkusdcyield-kpk",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "economic-control:oracle:backstop",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "economic-control:oracle:backstop"
-      },
-      "reviewedAt": "2026-10-10T23:39:25Z",
-      "reviewer": "Sol curation campaign 2026-10-11 (L27KPKUSDCPri)",
-      "sources": [
-        {
-          "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
-          "observedAt": "2026-10-10T23:38:35Z",
-          "datumAsOf": null,
-          "location": "No custody or guarantee; Limitation of liability",
-          "excerpt": "KPK has no contractual obligations to Vault users and accepts no responsibility for any losses, damages, or claims arising out of or in connection with the Vaults.",
-          "assertion": "The successfully retrieved issuer terms disclaim guaranteed recovery and do not specify a funded exact-Yield-market backstop or its capital, eligibility and callable recovery path."
-        },
-        {
-          "url": "https://docs.morpho.org/learn/concepts/liquidation/",
-          "observedAt": "2026-10-10T23:38:35Z",
-          "datumAsOf": null,
-          "location": "Liquidation Mechanism; Morpho Vaults V2 - Loss Socialization",
-          "excerpt": "Morpho Vault V2 implements an automatic loss socialization mechanism where losses - including bad debt from underlying adapters - are detected and distributed proportionally across all shareholders through share price depreciation.",
-          "assertion": "Permissionless collateral liquidation and proportional loss socialization are disclosed mechanisms, not evidence of a separately funded recovery backstop."
-        }
-      ],
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "searchedSurfaces": [
-        "https://docs.kpk.io/vaults/vaults/morpho/ethereum/usdc-yield.md",
-        "https://docs.kpk.io/vaults/vaults/morpho.md",
-        "https://docs.kpk.io/vaults/infrastructure/risk-framework.md",
-        "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md",
-        "https://docs.morpho.org/learn/concepts/liquidation/"
-      ],
-      "rationale": "Reviewed the exact Ethereum Yield vault/adapter identity and retrieved product, governance, risk-framework, issuer disclaimer and Morpho liquidation disclosures. None specifies a funded committed exact-market recovery facility, its funding amount, beneficiary/eligibility terms or executable funding path. Generic monitoring, buffers, liquidator incentives and discretionary shutdown do not establish the required backstop datum. This is scoped nondisclosure of those terms, not a claim that all recovery or discretionary assistance is absent and not a missing-public-contract technical topology classification."
     },
     {
       "id": "campaign-l28-susdat-cost-20261010",

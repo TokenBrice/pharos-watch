@@ -86,11 +86,11 @@
         "role": "other"
       }
     ],
-    "segregation": "unknown",
+    "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-14",
-    "reviewer": "Sol KPK review 2026-10-14 (S1AllocationCensus)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "KPK questionnaire follow-up (Reserves)",
     "confidence": "probable",
     "sources": [
       {
@@ -120,8 +120,24 @@
       {
         "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, 2026-10-14T14:14:47Z (1791987287); full adapter/market census",
         "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "KPK custody and encumbrance disclosure, issuer-documented; accessedAt 2026-10-15; no bankruptcy legal opinion",
+        "url": "https://docs.kpk.io/vaults/vaults/morpho.md"
+      },
+      {
+        "label": "Archived issuer custody/encumbrance disclosure, 2026-10-15T10:23:29Z; accessedAt 2026-10-15",
+        "url": "https://web.archive.org/web/20261015102329/https://docs.kpk.io/vaults/vaults/morpho"
+      },
+      {
+        "label": "KPK Digital Assets Inc. curator and holder-rights exclusions, issuer-documented; accessedAt 2026-10-15",
+        "url": "https://docs.kpk.io/vaults/resources/legal/morpho-disclaimer.md"
+      },
+      {
+        "label": "Ethereum block 26197527, hash 0x5f89e32ab183bf529b1fa542c5b01ff54792ba9fe963a80ffb582f2101f5448f, 2026-10-15T11:10:59Z; independent controls and complete current adapter census observed 2026-10-15T19:03:18.762Z..19:04:35.577Z",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
       }
     ],
-    "uncertainty": "At Ethereum block 26191269 (2026-10-14), asset()=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, totalSupply()=28719959401678804018293507 raw 18-decimal shares and totalAssets()=29787716153634 raw 6-decimal USDC (29,787,716.153634 USDC). One adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 enumerates 8 positive positions; summed expectedSupplyAssets=29787716153634, idle underlying=0; their sum equals totalAssets. Lender-claim allocation shares are cbBTC 43.086%, WBTC 25.393%, rETH 10.505%, wstETH 10.160%, OETH 8.062%, WETH 1.811% and LsETH 0.981%; weETH retains 1 raw USDC unit with market caps 0/0. All current positions have zero borrow shares and zero posted collateral. 68.479% of lender allocation is to cbBTC/WBTC-collateral markets (custodial wrapped BTC); this is not a custodian reserve share. Weights are lender-claim allocation shares, not holdings of pledged collateral. Immediate holders are on-chain contracts; downstream collateral issuer/custodian and legal rights remain separate. Lending deployment does not establish custodian reuse rights. This is an operational proportional lending-position claim. It is not direct ownership of the parent issuer reserve, an independently signed financial reconciliation, or proof of legal segregation and insolvency priority. Blockscout is_fully_verified=false; bytecode equality is not a complete compiler/source verification. Superseded 2026-10-02 review at block 26107704: totalSupply()=28097145082426439535141891, totalAssets()=29100078912490, 8 markets with summed expectedSupplyAssets=29100078910236 and idle underlying=2254."
+    "uncertainty": "The 2026-10-14 reserve composition pin and provider roster are retained; this 2026-10-15 custody review adds issuer-documented rights and independently pinned current custody/controls. At block 26197527, sole adapter 0x1d511811aca9d8817a3e50f29cadff6243a02902 holds 8 Morpho supply positions totaling 30215446628068 raw USDC; idle 27251845493 plus those claims equals totalAssets 30242698473561 against 29155601056107453877078191 raw shares. All enumerated positions have zero borrowing and posted collateral. Segregated describes operational separation between the named vault/adapter positions, corroborating KPK's published and archived statement that assets are not pooled across its vaults; it does not mean holder-by-holder custody accounts, enforceable legal ring-fencing or segregation of every downstream collateral issuer's assets. KPK says it never holds depositor assets and asserts no outside pledge or lien. Its disclaimer names KPK Digital Assets Inc. as curator, excludes contractual obligations to holders, and places any contractual remedies under Morpho terms. No bankruptcy-remoteness legal opinion exists, so bankruptcyRemoteness stays unknown; operational separation is not insolvency priority. Lending vault USDC to Morpho borrowers is the product's capital reuse, already graded in wrapper allocation; it is not a separately established custodian rehypothecation permission or prohibition. The disclosure says borrower collateral is not reused, but that does not establish downstream collateral issuer/custodian reuse and recovery rights; rehypothecation stays unknown for the custody profile. The no-lien assertion is issuer-documented, not independently legally verified. Blockscout partial-source-verification caveat remains. The published 75-100% liquidity target and questionnaire's unpinned Morpho API figures do not bound realization of the borrowed remainder; the whole-position liquidityHorizon stays unknown. Seed-capital leave-last is an issuer statement, not enforceable subordination or a funded backstop."
   }
 }

@@ -119,7 +119,7 @@
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. At Ethereum block 26191269 (2026-10-14), the adapter enumerates seven markets: savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437% and weETH 0.0004% of USDC lender-claim assets, with no idle USDC. Eleven positions have positive expected assets: seven current plus srNUSD, YFI, matured PT-cUSD and ssftUSD residuals at one raw USDC unit each; twenty positions have nonzero raw shares. These weights are lender-claim allocation shares, not holdings of pledged collateral. Historical block 26154662 census: six enumerated markets and nine positive expected positions; srNUSD switching and USD3 proxy/admin observations remain historical evidence. Pinned composers and feed identities distinguish external feeds from issuer NAV/conversion legs; unresolved nested source/controller closure remains bounded, so the aggregate tier is opaque-or-unknown rather than an asserted standard-external topology. The vault-nav top-level-only path remains applicable; dust is not excluded from the aggregate review.",
+    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. Historical block 26191269 lender-claim weights remain savUSD 46.760%, USD3 25.558%, siUSD 9.901%, PT-siUSD-7JAN2027 7.549%, srRoyUSDC 6.795%, ftUSD 3.437%, weETH 0.0004% and four one-raw-USDC residuals (srNUSD, YFI, matured PT-cUSD and ssftUSD). Independent Ethereum block 26193333 (2026-10-14T21:08:35Z) reads confirm seven enumerated markets, all eleven positive expected claims, exact market/oracle identities and composer feed slots; adapter realAssets=13477495044968 raw USDC. Chainlink's directory and pinned savUSD feed identify an Avant SAVUSD/AVUSD exchange rate, not an independent savUSD/USD sale price; OCR2 transport does not remove issuer valuation dependence, so savUSD becomes privileged-internal-pricing. The observed material book uses privileged internal pricing. The authored aggregate remains opaque-or-unknown because srNUSD and matured PT-cUSD retain unresolved nested topology; allocation-based relief is conditional on v10.19 admission of a fresh complete lender book and its reviewed path joins. Opaque dust remains disclosed, not relabeled safe or deleted; unknown/unjoined weights remain fail-closed in the compiler. KPK's 10-USDC branch omission and 10%-aggregate threshold are not our methodology. Vault-nav remains top-level-only. Directory heartbeats are reporting targets, not composer-enforced freshness. Confidence remains probable; nested dust backup/admin controls and stressed liquidation are not certified.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -166,10 +166,30 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-14",
-    "reviewer": "Sol KPK review 2026-10-14 (YieldOracle)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Ethereum block 26193333, hash 0xc17ff5d0c2d8c38b8af6b1f0f0c12688faf4cb530925cd9fcfea0452433ee047, timestamp 2026-10-14T21:08:35Z; composer/feed/census reads observed 2026-10-15",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Chainlink exact proxy directory: SAVUSD/AVUSD is an exchange-rate feed, heartbeat 86400 seconds; accessedAt 2026-10-15",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "Avant savUSD issuer-strategy yield and avUSD conversion semantics; accessedAt 2026-10-15",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens.md"
+      },
+      {
+        "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; Q3 and section C supplied directly (URL is issuer entry point, not a published response)",
+        "url": "https://docs.kpk.io/"
+      },
+      {
+        "label": "Optional OpenCover/Nexus cover applies only to opted-in Covered Vault positions; accessedAt 2026-10-15",
+        "url": "https://docs.kpk.io/vaults/infrastructure/coverage.md"
+      },
       {
         "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
         "url": "https://blue-api.morpho.org/graphql"
@@ -271,8 +291,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-weETH/USDC-YieldV2 with 1 enabled trigger and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -357,8 +377,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-siUSDC/USDC-Yieldv2 with 7 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -439,8 +459,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK's section C current-channel list does not identify an srNUSD residual channel; no automatic exit coverage is inferred.",
         "sources": [
           {
             "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): clone getters at Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; observed 2026-10-09T12:16:43.516Z",
@@ -481,8 +501,8 @@
       {
         "id": "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
         "label": "savUSD / USDC",
-        "tier": "standard-external",
-        "summary": "At block 26191269 (2026-10-14): 5878226045241710483 shares / 6198058117175 expected raw USDC (46.760%). BASE_FEED_1 SAVUSD / AVUSD Exchange Rate is external Chainlink OCR2 reporting, not a demonstrated owner-set manual answer. Pinned proxy owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca controls aggregator confirmation; aggregator 0xc3990f01cdf334df305335bf2f4a5bae9d52b6f5 typeAndVersion=AccessControlledOCR2Aggregator 1.0.0, updatedAt=1791927131. AVUSD/USD and USDC/USD are assumed unity: no quote feed, independently redundant fallback or protective heartbeat bound. Historical review: Morpho API identifies savUSD collateral 0xb8d89678e75a973e74698c976716308abb8a46a4, market 0xe07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9, oracle 0x839940de5043e7c6edaf063714afe7f20de5ff12, type ChainlinkOracleV2. Historical nonzero supply exposure was established; upstream feed/admin/staleness and per-oracle fallback controls remain unverified. Independently read Morpho 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb idToMarketParams(bytes32) at block 26110242 confirmed the exact oracle and LLTV; price() returned raw 1205614824672297253000000. A returned price proves callability of pricing at this block, not feed freshness, liquidator execution or safe topology. Historical Morpho oracleByAddress publishes baseFeedOne=0x9fbb7d07ae32b3f75c2a5805c2153243a2532589. This improves the exact feed inventory; heartbeat/staleness enforcement, conversion-leg controls and complete privileged/manual update powers have not been established.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Historical block 26191269 lender claim: 5878226045241710483 shares / 6198058117175 expected raw USDC (46.760%). Independent Ethereum block 26193333 reads confirm market oracle 0x839940de5043e7c6edaf063714afe7f20de5ff12 uses only BASE_FEED_1 0x9fbb7d07ae32b3f75c2a5805c2153243a2532589; the other feeds are zero. description() is SAVUSD / AVUSD Exchange Rate, aggregator 0xc3990f01cdf334df305335bf2f4a5bae9d52b6f5 and owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca. Chainlink's exact-proxy directory classifies the datum as exchange_rate, and Avant documents this ratio as its strategy-yield conversion into avUSD. Chainlink OCR2 reports issuer conversion value, not an independent savUSD/USD market quote. Therefore privileged-internal-pricing replaces standard-external; no owner-set manual answer is alleged. At block 26193333 expectedSupplyAssets=6320799827767 raw USDC (46.8989% of adapter NAV). AVUSD/USD and USDC/USD remain unity assumptions. The documented 86400-second reporting heartbeat is not enforced by the composer; no independent failover or complete issuer-valuation-control certification is established.",
         "collateralAssets": [
           "savUSD"
         ],
@@ -499,15 +519,16 @@
             "observedBlock": 26191269
           },
           {
-            "provider": "SAVUSD / AVUSD Exchange Rate",
-            "path": "BASE_FEED_1; latestRoundData updatedAt=1791927131; owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca; aggregator=0xc3990f01cdf334df305335bf2f4a5bae9d52b6f5 (AccessControlledOCR2Aggregator 1.0.0); getTransmitters() returns 16 configured OCR2 reporters, not a demonstrated owner-set manual answer",
+            "provider": "Chainlink-operated Avant SAVUSD / AVUSD Exchange Rate (issuer conversion value)",
+            "path": "BASE_FEED_1; OCR2 transport of savUSD/avUSD conversion rather than USD market pricing; at block 26193333 owner=0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca and aggregator=0xc3990f01cdf334df305335bf2f4a5bae9d52b6f5; directory heartbeat is a reporting target only",
             "address": "0x9fbb7d07ae32b3f75c2a5805c2153243a2532589",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26193333,
+            "heartbeatSec": 86400
           }
         ],
-        "fallbackBehavior": "Morpho core calls the immutable market oracle price(); no alternate core oracle. Configured feed/vault calls are composed arithmetically; the composer checks nonnegative answers but not updatedAt freshness. A downstream revert reverts price(); no independent failover or heartbeat guarantee is established. SAVUSD/AVUSD answer is submitted via OCR2 transmit by configured reporters; getTransmitters() returns sixteen at PIN. Aggregator owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca can reconfigure signers/transmitters; the same proxy owner can propose/confirm a replacement aggregator. Replay/stale-round checks are not an elapsed-time answer freshness bound. No demonstrated owner-set manual exchange-rate setter or alternate AVUSD/USD price feed was established.",
+        "fallbackBehavior": "Morpho core calls the immutable market oracle price(); no alternate core oracle. The verified composer reads the configured latestRoundData answer and requires answer >= 0, but checks neither updatedAt nor min/max bounds. A stale answer can continue to value collateral; a reverting feed reverts price() and the oracle-dependent borrow, withdrawCollateral and liquidate paths. SAVUSD/AVUSD is delivered through Chainlink OCR2; signer/transmitter configuration and proxy aggregator replacement remain privileged Chainlink controls. This transport is not an independently priced savUSD/USD leg or independent verification of Avant's strategy NAV. The directory's 86400-second heartbeat is not a freshness rejection or fallback; no owner-set manual answer is alleged.",
         "collateralParameters": [
           {
             "asset": "savUSD",
@@ -517,9 +538,25 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-savUSD/USDC-YieldV2 with 6 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
+          {
+            "label": "Independent composer/feed/census reads at Ethereum block 26193333, hash 0xc17ff5d0c2d8c38b8af6b1f0f0c12688faf4cb530925cd9fcfea0452433ee047, 2026-10-14T21:08:35Z; observed 2026-10-15",
+            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Exact SAVUSD/AVUSD exchange-rate proxy and 86400-second reporting heartbeat; accessedAt 2026-10-15",
+            "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+          },
+          {
+            "label": "Avant savUSD issuer-strategy yield and avUSD conversion semantics; accessedAt 2026-10-15",
+            "url": "https://docs.avantprotocol.com/overview/core-tokens.md"
+          },
+          {
+            "label": "Exact composer and ChainlinkDataFeedLib: nonnegative answer only, no freshness rejection or fallback",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x839940de5043e7c6edaf063714afe7f20de5ff12"
+          },
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
@@ -591,9 +628,13 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-srRoyUSDC/USDC-Yieldv2 with 6 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched); this private wiring is an issuer statement. Independently verified precedent: successful tx 0x8b1be7113f811cf89435b357d5cfb99c475a76e4e950f47fa808556c35d50080 at Ethereum block 25953789 (2026-09-11T11:13:35Z) called the Yield Roles modifier from shutdown agent 0x769605006f6feee3494c72236130067526af848f and deallocated the srRoyUSDC market, moving 259859711729 raw USDC (259859.711729 USDC) from Morpho through the adapter to this vault. This observes one exit, not current trigger completeness, automatic causation by Midas, future timing or guaranteed recovery.",
         "sources": [
+          {
+            "label": "Successful exact Yield srRoyUSDC exit; Ethereum block 25953789, hash 0x111d09a5a42acb45d23e5c11fb0fa4c33940605b434907c762ab728869044c74, 2026-09-11T11:13:35Z; receipt independently pinned 2026-10-15",
+            "url": "https://etherscan.io/tx/0x8b1be7113f811cf89435b357d5cfb99c475a76e4e950f47fa808556c35d50080"
+          },
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
@@ -648,7 +689,8 @@
             "address": "0xa027702dbb89fbd58938e4324ac03b58d812b0e1",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 86400
           },
           {
             "provider": "USDC / USD",
@@ -656,7 +698,8 @@
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 82800
           }
         ],
         "fallbackBehavior": "Morpho core calls the immutable market oracle price(); no alternate core oracle. Configured feed/vault calls are composed arithmetically; the composer checks nonnegative answers but not updatedAt freshness. A downstream revert reverts price(); no independent failover or heartbeat guarantee is established.",
@@ -669,7 +712,7 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
         "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
         "sources": [
           {
@@ -759,7 +802,7 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
         "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. Realized market bad debt 149652 raw USDC at block 26162510 (tx 0x76c1fabec33659875d8abfc1139988ea9ec5e7147b37440c633ae0e749cadab9) while this vault held expected 1 raw unit (pre-event pin 26162509); no material holder loss established.",
         "sources": [
           {
@@ -828,7 +871,8 @@
             "address": "0xa69f7a38b6c91a4bc2477f097dc8a1f16daadff8",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "stalenessBoundSec": 88200
           },
           {
             "provider": "USDC / USD",
@@ -844,7 +888,8 @@
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 82800
           }
         ],
         "fallbackBehavior": "Morpho core calls the immutable market oracle price(); no alternate core oracle. Configured feed/vault calls are composed arithmetically; the composer checks nonnegative answers but not updatedAt freshness. A downstream revert reverts price(); no independent failover or heartbeat guarantee is established. FtUsdMintRedeemOracleProxy rejects incomplete/future/stale base rounds, nonpositive/below-minimum answers or paused state; takes the lower mint/redeem preview and caps the result. At PIN paused=false, requirePositiveAnswer=true, boundsEnabled=true, minAnswer=0, maxAnswer=100000000 and maxStaleness=88200 seconds; onlyOwner can change these controls. Quote-feed freshness is not checked by the composer.",
@@ -857,8 +902,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-ftUSD/USDC-YieldV2 with 5 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -923,8 +968,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "Permissionless incentivized liquidation only; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho core liquidate() writes off residual bad debt by reducing market totalSupplyAssets; the direct-market adapter claim and VaultV2 realAssets/accrual socialize the loss through share-price depreciation. This establishes loss allocation, not a funded recovery backstop or borrower-collateral legal priority.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho core liquidate() writes off residual bad debt by reducing market totalSupplyAssets; the direct-market adapter claim and VaultV2 realAssets/accrual socialize the loss through share-price depreciation. This establishes loss allocation, not funded recovery or borrower-collateral legal priority. KPK reports Hypernative channel shutdown_ethereum-USD3/USDC-YieldV2 with 2 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Sol curation campaign 2026-10-09 (W2L13Kpk): Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; observations 2026-10-09T12:16:43.516Z through 2026-10-09T12:20:08.013Z",
@@ -1029,8 +1074,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "Permissionless incentivized liquidation only; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho core liquidate() writes off residual bad debt by reducing market totalSupplyAssets; the direct-market adapter claim and VaultV2 realAssets/accrual socialize the loss through share-price depreciation. This establishes loss allocation, not a funded recovery backstop or borrower-collateral legal priority.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho core liquidate() writes off residual bad debt by reducing market totalSupplyAssets; the direct-market adapter claim and VaultV2 realAssets/accrual socialize the loss through share-price depreciation. This establishes loss allocation, not funded recovery or borrower-collateral legal priority. KPK reports Hypernative channel shutdown_ethereum-pt-siUSD/USDC-Yieldv2 with 8 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Ethereum block 26191269, hash 0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7, timestamp 2026-10-14T14:14:47Z (1791987287); composer/feed/controller and market-identity archive reads",
@@ -1094,7 +1139,8 @@
             "address": "0xa69f7a38b6c91a4bc2477f097dc8a1f16daadff8",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "stalenessBoundSec": 88200
           },
           {
             "provider": "USDC / USD",
@@ -1118,7 +1164,8 @@
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 82800
           }
         ],
         "fallbackBehavior": "Morpho core calls the immutable market oracle price(); no alternate core oracle. Configured feed/vault calls are composed arithmetically; the composer checks nonnegative answers but not updatedAt freshness. A downstream revert reverts price(); no independent failover or heartbeat guarantee is established. FtUsdMintRedeemOracleProxy rejects incomplete/future/stale base rounds, nonpositive/below-minimum answers or paused state; takes the lower mint/redeem preview and caps the result. At PIN paused=false, requirePositiveAnswer=true, boundsEnabled=true, minAnswer=0, maxAnswer=100000000 and maxStaleness=88200 seconds; onlyOwner can change these controls. Quote-feed freshness is not checked by the composer. ssftUSD BASE_VAULT share conversion adds issuer NAV dependence; no separate receipt-conversion freshness check.",
@@ -1131,7 +1178,7 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "Permissionless incentivized liquidation only; no funded exact-market recovery backstop was established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Yield seed capital of about 781,505 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
         "shutdownOrBadDebtBehavior": "Morpho core liquidate() writes off residual bad debt by reducing market totalSupplyAssets; the direct-market adapter claim and VaultV2 realAssets/accrual socialize the loss through share-price depreciation. This establishes loss allocation, not a funded recovery backstop or borrower-collateral legal priority.",
         "sources": [
           {
@@ -1319,15 +1366,23 @@
         "id": "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
         "chain": "ethereum",
         "address": "0x839940de5043e7c6edaf063714afe7f20de5ff12",
-        "pricingAuthority": "external-price",
+        "pricingAuthority": "internal-price",
         "branchId": "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-14",
-          "reviewer": "Sol KPK review 2026-10-14 (YieldOracle)",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
           "confidence": "probable",
-          "rationale": "At block 26191269 5878226045241710483 shares / 6198058117175 expected raw USDC (46.760%). The pinned composer and identified upstream feeds remain a required borrower-collateral pricing path. Historical applicability review 2026-10-03 is retained in the source references; zero own vault borrowing does not remove borrower liquidations.",
+          "rationale": "The pinned composer uses Chainlink-operated SAVUSD/AVUSD exchange-rate reporting, independently identified in the directory as issuer conversion value rather than a savUSD/USD market price. Internal pricing remains applicable to borrower liquidations; neither zero own-vault borrowing nor OCR2 transport removes it. Historical 26191269 allocation evidence is retained; independent block 26193333 reads confirm the path.",
           "sources": [
+            {
+              "label": "SAVUSD/AVUSD exchange-rate feed and proxy identity; accessedAt 2026-10-15",
+              "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+            },
+            {
+              "label": "Ethereum block 26193333, hash 0xc17ff5d0c2d8c38b8af6b1f0f0c12688faf4cb530925cd9fcfea0452433ee047, 2026-10-14T21:08:35Z; independently pinned 2026-10-15",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
             {
               "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
               "url": "https://blue-api.morpho.org/graphql"
@@ -1562,6 +1617,40 @@
     ],
     "branchKindReviews": [
       {
+        "kind": "backstop",
+        "branchIds": [
+          "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+          "market-bbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+          "market-0ff9c1f2b9cb037ecb14029cbacd3a94470458cf5c6884f09c46ae354765d789",
+          "market-e07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+          "market-acc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+          "market-973e9dd45799efe8775417bcc420a3ab84a583587b2108985746e2fe201d0c83",
+          "market-702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+          "market-88ab06d43b089e574bbe312deee6cdb292702c3a2e765059492c34b1cd298acf",
+          "market-e3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+          "market-0c93c623fd2a78a2ffa36b019f74c400c3f3d81fcb22851c88e0c96e510f9689",
+          "market-fdf78c1ecec460f0d54bbf1b2475227e36eb25ee7692562f5d433df2bf80259d"
+        ],
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
+        "confidence": "probable",
+        "rationale": "All eleven branches, including retained dust, share the reviewed Morpho/VaultV2 supplier-loss path without a protocol-funded recovery facility. Q3 discloses no holder-wide insurance or segregated reserve. Seed capital and the last-to-leave promise remain unverified issuer statements, not enforceable first-loss funding. Retrieved coverage documentation restricts OpenCover/Nexus to opted-in Covered Vault positions, with discretionary claims and no KPK payout guarantee. This records negative backstop scope, not funded recovery credit; external insurance absence is an issuer disclosure, not an exhaustive on-chain proof. The separate Arbitrum RLP intervention is not a backstop for this Ethereum vault.",
+        "sources": [
+          {
+            "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; Q3 supplied directly (issuer entry point only)",
+            "url": "https://docs.kpk.io/"
+          },
+          {
+            "label": "Optional per-position OpenCover/Nexus cover; accessedAt 2026-10-15",
+            "url": "https://docs.kpk.io/vaults/infrastructure/coverage.md"
+          },
+          {
+            "label": "Exact adapter expectedSupplyAssets/realAssets accounting; no funded recovery facility",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
+          }
+        ]
+      },
+      {
         "kind": "collateral-parameter",
         "branchIds": [
           "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
@@ -1614,11 +1703,19 @@
           "market-0c93c623fd2a78a2ffa36b019f74c400c3f3d81fcb22851c88e0c96e510f9689",
           "market-fdf78c1ecec460f0d54bbf1b2475227e36eb25ee7692562f5d433df2bf80259d"
         ],
-        "reviewedAt": "2026-10-14",
-        "reviewer": "Sol KPK review 2026-10-14 (YieldOracle)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
         "confidence": "verified",
-        "rationale": "At Ethereum block 26154662, the exact Yield adapter morpho() returned 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb and all nine authored market IDs resolved on that core. Its 15623-byte RPC runtime exactly equals the Sourcify onchain runtime (matchId 1907237, creationMatch/runtimeMatch exact_match). Verified src/Morpho.sol liquidate() writes off remaining borrower debt when collateral reaches zero by subtracting badDebtAssets from market totalSupplyAssets, reducing lender claims. The previously admitted exact VaultV2/adapter functional runtime correspondence and disclosed direct-market architecture bind that loss-bearing path to this vault; V2 realAssets/accrual then socializes loss as share-price depreciation. This is known mechanical bad-debt treatment at the historical pin, not proof of a complete current allocation census, successful liquidation, guaranteed recovery, funded backstop, or complete discretionary shutdown/cap/queue authorization certificate. At block 26191269 both new markets resolve on the same core 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb whose runtime match is already verified; this extends mechanical loss-allocation coverage, not a recovery guarantee.",
+        "rationale": "The historical exact Yield adapter/core runtime correspondence and verified Morpho liquidate source establish zero-collateral bad-debt write-off against market totalSupplyAssets, flowing through adapter realAssets and VaultV2 accrual into proportional share-price loss. Independent block 26193333 reads re-confirm all eleven retained market identities on that core. The successful receipt at block 25953789 (2026-09-11T11:13:35Z) independently proves the exact srRoyUSDC exit moved 259859711729 raw USDC through the adapter into Yield idle. Verified confidence covers mechanical loss allocation and that one observed exit only. Hypernative channel/trigger completeness, weekly/ad hoc collateral look-through reconciliation, the Midas alert's causation and subsequent reversal remain issuer statements, not an authenticated current wiring census, guaranteed timing or recovery.",
         "sources": [
+          {
+            "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; section C private wiring, not independently verified (issuer entry point only)",
+            "url": "https://docs.kpk.io/"
+          },
+          {
+            "label": "Observed srRoyUSDC exit only; receipt at Ethereum block 25953789, hash 0x111d09a5a42acb45d23e5c11fb0fa4c33940605b434907c762ab728869044c74, 2026-09-11T11:13:35Z; independently pinned 2026-10-15",
+            "url": "https://etherscan.io/tx/0x8b1be7113f811cf89435b357d5cfb99c475a76e4e950f47fa808556c35d50080"
+          },
           {
             "label": "Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; adapter morpho and exact core runtime observed 2026-10-10T23:39:06.893Z",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"

@@ -119,7 +119,7 @@
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
-    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. PIN census at Ethereum block 26191269: same eight IDs, seven 86% LLTV markets with non-dust lender claims and cap-zero 77% LLTV weETH dust; totalAssets 29787716153634 raw USDC, idle 0. Lender-claim weights: cbBTC 43.08614484%, WBTC 25.39328015%, rETH 10.50545639%, wstETH 10.16026120%, OETH 8.06209006%, WETH 1.81143609%, LsETH 0.98133126%; weETH expected 1 raw USDC unit. All composer/feed identities, proxy owners/aggregators where applicable and latestRoundData were pinned. Six branches use identified external pricing; OETH explicitly assumes OETH=ETH without a depeg leg, as cbBTC assumes cbBTC=BTC. rETH and weETH instead use issuer-controlled token exchange-rate accounting plus external ETH pricing, so both are privileged-internal-pricing and the exhaustive worst-branch aggregate is privileged-internal-pricing, not standard-external. Dust is not exempted and vault-nav stays top-level-only; no allocation weighting is applied to tiers. Synthetic adapter timestamps do not establish lag or a manual owner-set feed, so single-source-or-laggy is not inferred. Confidence remains probable: this inventory does not certify the full upstream issuer-control hierarchy, heartbeat bounds, independent failover or stressed liquidation. Historical block 26154662 (2026-10-09) census remains eight positive positions, including one-raw-unit weETH dust; the prior unresolved topology conclusion is superseded by this pinned feed review.",
+    "summary": "Vault share NAV uses internal asset/share accounting; Morpho borrower markets require collateral pricing. Historical block 26191269 lender-claim weights remain cbBTC 43.08614484%, WBTC 25.39328015%, rETH 10.50545639%, wstETH 10.16026120%, OETH 8.06209006%, WETH 1.81143609%, LsETH 0.98133126% and one-raw-USDC weETH dust. Independent Ethereum block 26193333 (2026-10-14T21:08:35Z) reads confirm all eight market identities, composer feed slots and positive lender claims: adapter realAssets=29751803481438 raw USDC and rETH expectedSupplyAssets=3129433879143 (10.5185% of NAV). KPK's proposed standard-external aggregate is rejected: material rETH still uses Rocket Pool getExchangeRate(), not an external rETH sale price, preserving privileged-internal-pricing under v10.19's inclusive 1%-of-NAV rule. Excluding LsETH below 1% and weETH dust cannot raise it. Dust stays disclosed; the compiler applies relief only from an admitted complete live lender book, not KPK's 10%-aggregate/10-USDC-inventory thresholds. OETH assumes OETH=ETH and cbBTC assumes cbBTC=BTC; vault-nav stays top-level-only. Directory heartbeats are reporting targets, not composer-enforced freshness or independent failover. Synthetic adapter timestamps establish neither lag nor an owner-set manual feed. Confidence remains probable; complete upstream control hierarchies and stressed liquidation are not certified.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -166,10 +166,26 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-14",
-    "reviewer": "Sol KPK review 2026-10-14 (PrimeOracle)",
+    "reviewedAt": "2026-10-15",
+    "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
     "confidence": "probable",
     "sources": [
+      {
+        "label": "Ethereum block 26193333, hash 0xc17ff5d0c2d8c38b8af6b1f0f0c12688faf4cb530925cd9fcfea0452433ee047, timestamp 2026-10-14T21:08:35Z; composer/feed/census reads observed 2026-10-15",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Chainlink exact proxy mappings and reporting heartbeats; accessedAt 2026-10-15",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+      },
+      {
+        "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; Q3 and section C supplied directly (URL is issuer entry point, not a published response)",
+        "url": "https://docs.kpk.io/"
+      },
+      {
+        "label": "Optional OpenCover/Nexus cover applies only to opted-in Covered Vault positions; accessedAt 2026-10-15",
+        "url": "https://docs.kpk.io/vaults/infrastructure/coverage.md"
+      },
       {
         "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
         "url": "https://blue-api.morpho.org/graphql"
@@ -355,8 +371,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK's section C current-channel list does not identify a Prime weETH dust channel; no automatic exit coverage is inferred.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -432,7 +448,8 @@
             "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 3600
           },
           {
             "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
@@ -440,7 +457,8 @@
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 82800
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established. The rETH adapter requires a positive exchange rate within uint192, then returns synthetic block-time updatedAt; this is not an independent freshness guard.",
@@ -453,8 +471,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-rETH/USDC-PrimeV2 with 3 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -522,7 +540,8 @@
             "address": "0xe858728eb31a25c4accce17d01b68dcfc3a0ed2c",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 86400
           },
           {
             "provider": "Chainlink EACAggregatorProxy (ETH / USD)",
@@ -551,8 +570,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-lsETH/USDC-PrimeV2 with 1 enabled trigger and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -620,7 +639,8 @@
             "address": "0xfdfd9c85ad200c506cf9e21f1fd8dd01932fbb23",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 86400
           },
           {
             "provider": "Chainlink EACAggregatorProxy (BTC / USD)",
@@ -628,7 +648,8 @@
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 3600
           },
           {
             "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
@@ -636,7 +657,8 @@
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 82800
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
@@ -649,8 +671,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-wBTC/USDC-PrimeV2 with 4 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -718,7 +740,8 @@
             "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 3600
           },
           {
             "provider": "Chainlink EACAggregatorProxy (USDC / USD)",
@@ -726,7 +749,8 @@
             "address": "0x8fffffd4afb6115b954bd326cbe7b4ba576818f6",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 82800
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established. No OETH/ETH depeg leg or fallback replaces the fixed one-OETH/one-ETH assumption.",
@@ -739,8 +763,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-OETH/USDC-PrimeV2 with 3 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -804,7 +828,8 @@
             "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 3600
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
@@ -817,8 +842,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-cbBTC/USDC-PrimeV2 with 1 enabled trigger and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -886,7 +911,8 @@
             "address": "0x986b5e1e1755e3c2440e960477f25201b0a8bbd4",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 86400
           },
           {
             "provider": "Chainlink EACAggregatorProxy (STETH / ETH; downstream of Compound WstETHPriceFeed)",
@@ -894,7 +920,8 @@
             "address": "0x86392dc19c0b719886221c78ab11eb8cf5c52812",
             "chain": "ethereum",
             "observedAt": "2026-10-14",
-            "observedBlock": 26191269
+            "observedBlock": 26191269,
+            "heartbeatSec": 86400
           }
         ],
         "fallbackBehavior": "No composer fallback or circuit-breaker branch: configured feed/vault calls are composed arithmetically; nonnegative-answer checks do not enforce updatedAt freshness. Zero inputs use the neutral factor. A reverting downstream call reverts price(); no independent failover or heartbeat/freshness bound is established.",
@@ -907,8 +934,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-wstETH/USDC-PrimeV2 with 3 enabled triggers and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -989,8 +1016,8 @@
         ],
         "liquidationMechanism": "Any external liquidator may repay debt and receive collateral when oracle-valued LTV exceeds LLTV. Actual callability and stressed sale execution on this exact feed were not measured.",
         "liquidationState": "unknown",
-        "backstop": "The reviewed code/documentation establishes permissionless incentivized liquidation; no funded exact-market recovery backstop was established.",
-        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established.",
+        "backstop": "No protocol-funded exact-market backstop in the reviewed Morpho/VaultV2 loss path; KPK discloses no holder-wide insurance or segregated reserve. Prime seed capital of about 2,148,714 USDC on 2026-10-14, committed to leave last, is an issuer statement only: holding address undisclosed, balance unverifiable, no funded/enforceable first-loss backstop. Optional OpenCover/Nexus cover protects only opted-in Covered Vault positions, not all holders; KPK guarantees no payout.",
+        "shutdownOrBadDebtBehavior": "Morpho losses reduce the adapter claim; VaultV2 accrual realizes reduced realAssets as proportional share-price depreciation. No exact-market funded shutdown recovery or legal priority is established. KPK reports Hypernative channel shutdown_ethereum-WETH/USDC-PrimeV2 with 1 enabled trigger and morpho_soft_shutdown_market_v2 / withdraw_to_idle (caps untouched), reconciled weekly/ad hoc against collateral look-through. This private wiring is an issuer statement, not verified coverage, guaranteed execution or recovery.",
         "sources": [
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
@@ -1308,6 +1335,37 @@
     ],
     "branchKindReviews": [
       {
+        "kind": "backstop",
+        "branchIds": [
+          "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
+          "market-0a15460ad263c2186fe0b5df20a8cf71d55f3cfa06de15edcf6138f6b8edd8bf",
+          "market-fb7d54e0ce71efc8fffd3f4e1db0afa9265882da5cc76604b62adfac64501e80",
+          "market-3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+          "market-b8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e",
+          "market-64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+          "market-b323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+          "market-94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd"
+        ],
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
+        "confidence": "probable",
+        "rationale": "All eight branches share the reviewed Morpho/VaultV2 supplier-loss path without a protocol-funded recovery facility. Q3 discloses no holder-wide insurance or segregated reserve. Seed capital and the last-to-leave promise remain unverified issuer statements, not enforceable first-loss funding. Retrieved coverage documentation restricts OpenCover/Nexus to opted-in Covered Vault positions, with discretionary claims and no KPK payout guarantee. This records negative backstop scope, not funded recovery credit; external insurance absence is an issuer disclosure, not an exhaustive on-chain proof.",
+        "sources": [
+          {
+            "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; Q3 supplied directly (issuer entry point only)",
+            "url": "https://docs.kpk.io/"
+          },
+          {
+            "label": "Optional per-position OpenCover/Nexus cover; accessedAt 2026-10-15",
+            "url": "https://docs.kpk.io/vaults/infrastructure/coverage.md"
+          },
+          {
+            "label": "Exact adapter expectedSupplyAssets/realAssets accounting; no funded recovery facility",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
+          }
+        ]
+      },
+      {
         "kind": "collateral-parameter",
         "branchIds": [
           "market-34377fc4f617c51818e92c79df31ff270c6a91bc94ad32e367fdf59b9f4ac5dd",
@@ -1350,11 +1408,15 @@
           "market-b323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
           "market-94b823e6bd8ea533b4e33fbc307faea0b307301bc48763acc4d4aa4def7636cd"
         ],
-        "reviewedAt": "2026-10-10",
-        "reviewer": "Sol curation campaign 2026-10-11 (L27KPKUSDCPri)",
+        "reviewedAt": "2026-10-15",
+        "reviewer": "Sol KPK questionnaire follow-up 2026-10-15 (Oracle)",
         "confidence": "verified",
-        "rationale": "At Ethereum block 26154662, the exact Prime adapter morpho() returned 0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb and all eight authored market IDs resolved on that core. Its 15623-byte RPC runtime exactly equals the Sourcify onchain runtime (matchId 1907237, creationMatch/runtimeMatch exact_match). Verified src/Morpho.sol liquidate() writes off remaining borrower debt when collateral reaches zero by subtracting badDebtAssets from market totalSupplyAssets, reducing lender claims. The previously admitted exact VaultV2/adapter functional runtime correspondence and disclosed direct-market architecture bind that loss-bearing path to this vault; V2 realAssets/accrual then socializes loss as share-price depreciation. This is known mechanical bad-debt treatment, not a successful liquidation observation, a guaranteed recovery, funded backstop, or complete discretionary shutdown/cap/queue authorization certificate.",
+        "rationale": "The historical exact Prime adapter/core runtime correspondence and verified Morpho liquidate source establish zero-collateral bad-debt write-off against market totalSupplyAssets, flowing through adapter realAssets and VaultV2 accrual into proportional share-price loss. Independent block 26193333 reads re-confirm all eight market identities on that core. This review's verified confidence covers mechanical loss allocation only. The new section C Hypernative per-market channels, trigger counts and weekly/ad hoc look-through reconciliation are explicitly issuer statements about private wiring, not verified shutdown coverage or a complete discretionary authorization certificate; Prime weETH dust has no listed channel. No successful Prime exit, guaranteed recovery or funded backstop is inferred.",
         "sources": [
+          {
+            "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; section C private wiring, not independently verified (issuer entry point only)",
+            "url": "https://docs.kpk.io/"
+          },
           {
             "label": "Ethereum block 26154662, hash 0xf60cac1fe0b417fe0ee522542ac4beb45d649b4004c4c7c5dcff838b39c6a06b, timestamp 2026-10-09T11:50:11Z; adapter morpho and exact core runtime observed 2026-10-10T23:39:06.893Z",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
