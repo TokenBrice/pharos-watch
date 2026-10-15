@@ -4,8 +4,8 @@ import type { ChainRpcConfig, RpcEndpoint } from "../chain-registry";
 import { throwIfAborted } from "../abort";
 import { budgetExhausted, type SubrequestBudget } from "../evm-logs";
 
-/** Reviewed fallback only. Ethereum's new Dwellir host has not passed the lane parity gate. */
-export const MINT_BURN_DWELLIR_FALLBACK_CHAINS: Readonly<Record<string, true>> = { arbitrum: true, base: true };
+/** Reviewed scheduled fallback only; Alchemy remains first regardless of state placement. */
+export const MINT_BURN_DWELLIR_FALLBACK_CHAINS: Readonly<Record<string, true>> = { ethereum: true, arbitrum: true, base: true };
 
 export function mintBurnAlchemyEndpoint(url: string): RpcEndpoint {
   return { url, operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" };

@@ -68,11 +68,21 @@ describe("rpc parity targets", () => {
     // The comparator claim never carries the keyed URL's credential.
     expect(keyed?.ref.host).not.toContain("parity-test-alchemy-key");
 
-    const drpcChain = resolveRpcParityComparator(target("celo"), buildChainRpcs(undefined, "parity-test-drpc-key"));
-    expect(drpcChain?.ref.operator).toBe("drpc");
+  });
 
-    const arc = resolveRpcParityComparator(target("arc"), buildChainRpcs());
-    expect(arc?.ref).toEqual({ operator: "public", host: "rpc.mainnet.arc.io", source: "registry" });
+  it.each([
+    ["celo", "https://forno.celo.org"],
+    ["xdc", "https://erpc.xinfin.network"],
+    ["robinhood", "https://robinhood-rpc.publicnode.com"],
+    ["arc", "https://arc-rpc.publicnode.com"],
+  ])("keeps %s's reviewed comparator keyless and independent of consumer routing", (chainId, url) => {
+    const chainRpcs = buildChainRpcs("parity-test-alchemy-key", "parity-test-drpc-key");
+    for (const step of ["state", "logs"] as const) {
+      expect(resolveRpcParityComparator(target(chainId), chainRpcs, step)).toEqual({
+        url, ref: { operator: "public", host: new URL(url).host, source: "pin" },
+      });
+      expect(resolveRpcParityComparator(target(chainId), new Map(), step)?.url).toBe(url);
+    }
   });
 
   it("falls back to the reviewed public pin for chains with no registry config", () => {
@@ -123,7 +133,7 @@ describe("rpc parity targets", () => {
     });
     expect(plannedRpcParityComparator(target("xdc"))).toEqual({
       operator: "public",
-      host: "rpc.xdcrpc.com",
+      host: "erpc.xinfin.network",
       source: "pin",
     });
   });

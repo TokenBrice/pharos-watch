@@ -229,6 +229,7 @@ const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 export type DwellirStatePlacement = "primary" | "supplemental-first";
 
 export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, DwellirStatePlacement>> = {
+  ethereum: "primary",
   mantle: "primary",
   sonic: "primary",
   gnosis: "primary",
@@ -250,7 +251,7 @@ export const DWELLIR_STATE_PLACEMENT: Readonly<Record<string, DwellirStatePlacem
   stable: "supplemental-first",
 };
 
-export const DWELLIR_LOG_SCAN_CHAINS: ReadonlySet<string> = new Set(["gnosis", "base", "optimism", "avalanche"]);
+export const DWELLIR_LOG_SCAN_CHAINS: ReadonlySet<string> = new Set(["gnosis", "base", "arbitrum", "optimism", "avalanche"]);
 
 /** Single attachment authority; callers must admit the scheduled runtime first. */
 function appendDwellirEndpoints(

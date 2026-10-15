@@ -67,6 +67,8 @@ describe("rpc parity store merging", () => {
       row = mergeRpcParityRun(row, fullParityRun(atSec), { nowSec: atSec }).row;
     }
     expect(row?.runs).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(row?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(row?.gateRuns?.[0][0]).toBe(NOW_SEC + 5 * 3600);
     expect(row?.runs[0].atSec).toBe(NOW_SEC + 5 * 3600);
   });
 
@@ -564,6 +566,8 @@ describe("rpc parity store wire form", () => {
     expect(row.chains).toHaveLength(37);
     expect(encodeRpcParityStoreRow(row).length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
     const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row));
+    expect(decoded?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(decoded?.gateRuns?.[0][0]).toBe(runs[0].atSec);
     expect(row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
     expect(row.runs.length).toBeLessThanOrEqual(RPC_PARITY_RETENTION_RUNS);
     expect(decoded?.runs).toHaveLength(row.runs.length);
@@ -601,6 +605,8 @@ describe("rpc parity store wire form", () => {
     expect(gunzipSync(Buffer.from(envelope.payload, "base64")).byteLength).toBeLessThanOrEqual(RPC_PARITY_MAX_DECOMPRESSED_BYTES);
     expect(encoded.length).toBeLessThanOrEqual(RPC_PARITY_MAX_ROW_BYTES);
     expect(merged.droppedOldest).toBeGreaterThan(0);
+    expect(merged.row.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(decodeRpcParityStoreRow(encoded)?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
     expect(merged.row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
     expect(decodeRpcParityStoreRow(encoded)?.runs).toHaveLength(merged.row.runs.length);
     expect(merged.row.runs[0].atSec).toBe(runs[merged.droppedOldest].atSec);

@@ -4,6 +4,7 @@ import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 import {
   buildChainRpcs,
   hasRegistryRpc,
+  logScanRpcEndpoints,
   supplementalRpcEndpoints,
   type ChainRpcConfig,
 } from "../../../lib/chain-registry";
@@ -160,20 +161,24 @@ describe("scheduled runtime Dwellir enablement", () => {
       expect(dwellir.length).toBeLessThanOrEqual(1);
       expect(endpoints.filter((endpoint) => endpoint.operator !== "dwellir")).toEqual(registryConfig.endpoints);
     }
-    for (const chain of ["mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche", "polygon"]) {
+    for (const chain of ["ethereum", "mantle", "sonic", "gnosis", "tempo", "plasma", "base", "arbitrum", "optimism", "avalanche", "polygon"]) {
       expect(runtime.chainRpcs.get(chain)?.endpoints[0]).toMatchObject({ operator: "dwellir", position: "registry" });
     }
     expect(runtime.chainRpcs.get("base")?.endpoints.slice(0, 2).map((endpoint) => endpoint.operator))
       .toEqual(["dwellir", "alchemy"]);
 
     const ethereumEndpoints = runtime.chainRpcs.get("ethereum")?.endpoints ?? [];
-    expect(ethereumEndpoints[ethereumEndpoints.length - 1]).toMatchObject({
+    expect(ethereumEndpoints[0]).toMatchObject({
       url: "https://api-ethereum-mainnet.n.dwellir.com",
       operator: "dwellir",
       keyed: true,
-      position: "supplemental",
+      position: "registry",
       stateHistory: "archive",
     });
+    expect(ethereumEndpoints.slice(1).map((endpoint) => endpoint.operator)).toEqual(["alchemy", "public"]);
+    expect(logScanRpcEndpoints(runtime.chainRpcs.get("ethereum"))).toEqual(logScanRpcEndpoints(registryOnly.get("ethereum")));
+    expect(logScanRpcEndpoints(runtime.chainRpcs.get("arbitrum")).map((endpoint) => endpoint.operator))
+      .toEqual(["dwellir", "alchemy", "public"]);
 
     // State-only census endpoints and Dwellir can create supplemental-only
     // configs; map membership does not establish registry RPC readability.
@@ -205,9 +210,9 @@ describe("scheduled runtime Dwellir enablement", () => {
 
   it("parses the runtime rollback CSV without withholding supplemental fallback", async () => {
     const { db } = makeContextDb();
-    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY, disabledChains: " MANTLE, Base,GNOSIS ,Sonic, Linea, typo,TYPO " });
+    const runtime = buildRuntime({ db, dwellirApiKey: DWELLIR_API_KEY, disabledChains: " ETHEREUM, Arbitrum, MANTLE, Base,GNOSIS ,Sonic, Linea, typo,TYPO " });
     await runJob(runtime);
-    for (const chain of ["mantle", "base", "gnosis", "sonic", "linea"]) {
+    for (const chain of ["ethereum", "arbitrum", "mantle", "base", "gnosis", "sonic", "linea"]) {
       const endpoints = runtime.chainRpcs.get(chain)!.endpoints;
       expect(endpoints[endpoints.length - 1]).toMatchObject({
         operator: "dwellir", position: "supplemental", routingDisabled: true,
