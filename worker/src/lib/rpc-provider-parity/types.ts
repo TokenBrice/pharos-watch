@@ -193,8 +193,8 @@ export interface RpcProviderTrialReport {
 }
 
 /** Operator/source vocabulary of the comparator side of a parity sample. */
-export const RPC_PARITY_COMPARATOR_OPERATORS = ["alchemy", "drpc", "public"] as const;
-export const RPC_PARITY_COMPARATOR_SOURCES = ["registry", "pin"] as const;
+const RPC_PARITY_COMPARATOR_OPERATORS = ["alchemy", "drpc", "public"] as const;
+const RPC_PARITY_COMPARATOR_SOURCES = ["registry", "pin"] as const;
 export type RpcParityComparatorOperator = (typeof RPC_PARITY_COMPARATOR_OPERATORS)[number];
 export type RpcParityComparatorSource = (typeof RPC_PARITY_COMPARATOR_SOURCES)[number];
 export function isRpcParityComparatorOperator(value: unknown): value is RpcParityComparatorOperator {
