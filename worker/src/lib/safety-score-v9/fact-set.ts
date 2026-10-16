@@ -1,4 +1,5 @@
 import { compileV9FactSetV3, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
+import { sha256HexFromUtf8Chunks } from "../hash";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
   createV9FactStatus,
@@ -710,7 +711,7 @@ export function compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(
     },
     activeAssetIds: fixedInput.activeAssetIds,
     assets: outcomes.map((outcome) => outcome.facts),
-  });
+  }, sha256HexFromUtf8Chunks);
   const quarantines = outcomes
     .flatMap((outcome) =>
       outcome.quarantine === null ? [] : [outcome.quarantine],

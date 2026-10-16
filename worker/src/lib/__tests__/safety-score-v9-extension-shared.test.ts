@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { ReviewEvidenceBuilder, parseBoundedDateSec } from "@shared/lib/safety-score-v9/review-evidence";
+import { sha256HexFromUtf8Chunks } from "../hash";
 import {
-  nativeReviewEvidenceDigest,
   accessEvidenceObservationState,
   boundedObservedAt,
   confidenceForResearch,
@@ -40,7 +40,7 @@ describe("review evidence timestamp admission", () => {
 
   it("preserves identical evidence identity with portable and Worker-native streaming hashing", () => {
     const portable = new ReviewEvidenceBuilder("alpha", CLOCK_SEC);
-    const native = new ReviewEvidenceBuilder("alpha", CLOCK_SEC, nativeReviewEvidenceDigest);
+    const native = new ReviewEvidenceBuilder("alpha", CLOCK_SEC, sha256HexFromUtf8Chunks);
     const args = { ...base, sources: [{ label: "Unicode review 🔒", url: "https://example.test/review" }],
       payload: { z: ["🔒", "é", "a".repeat(200000)], a: { reviewed: true } } };
     expect(portable.add(args)).toEqual(native.add(args));

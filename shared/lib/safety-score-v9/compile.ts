@@ -122,11 +122,14 @@ export function compileV9FactSetV2(input: unknown): Readonly<CompiledV9FactSetV2
 }
 
 /** Compile the proof-bearing current family into a schema-4 envelope. */
-export function compileV9FactSetV3(input: unknown): Readonly<CompiledV9FactSetV3> {
+export function compileV9FactSetV3(
+  input: unknown,
+  digest?: (chunks: Iterable<string>) => string,
+): Readonly<CompiledV9FactSetV3> {
   const core: V9FactSetCoreV3 = inProcessFactSetSchema.parse(input);
   const compiled: CompiledV9FactSetV3 = {
     ...core,
-    v9FactSetDigest: computeValidatedV9FactSetDigest(core),
+    v9FactSetDigest: computeValidatedV9FactSetDigest(core, digest),
   };
   const sealed = sealValidatedFactSet(compiled);
   for (const asset of sealed.assets) validatedAssetFacts.add(asset);
