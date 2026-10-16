@@ -110,6 +110,9 @@ export function classifyFirstPartyAsset(url, resourceType, expectedOrigin) {
   if (parsed.origin !== expectedOrigin) return null;
 
   const pathname = parsed.pathname.toLowerCase();
+  // Cloudflare injects /cdn-cgi/ resources (bot challenge, analytics) at the edge;
+  // they are not part of the Pages artifact and can lack a MIME type for datacenter clients.
+  if (pathname.startsWith("/cdn-cgi/")) return null;
   if (resourceType === "font" || pathname.startsWith("/fonts/") || /\.(?:woff2?|ttf|otf)$/.test(pathname)) {
     return "font";
   }
