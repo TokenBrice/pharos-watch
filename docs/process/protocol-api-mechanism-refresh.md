@@ -1,6 +1,6 @@
 # Protocol API Mechanism Refresh
 
-The [Protocol API Mechanism Refresh](../../.github/workflows/protocol-api-mechanism-refresh.yml) captures first-party mechanism evidence for `usde-ethena` and `usdf-falcon`. Manual collection and reviewed weekly automation are permanent non-publishing evidence tooling (operator decision 2026-10-08), not a shadow score engine. Collection cannot update a Safety Score overlay, fact set, evaluation identity, or score; useful economic facts still require human-reviewed curation.
+The protocol API producer captures first-party mechanism evidence for `usde-ethena` and `usdf-falcon`. The [Protocol API Mechanism Refresh workflow](../../.github/workflows/protocol-api-mechanism-refresh.yml) refreshes Falcon automatically; Ethena is refreshed manually from a permitted region. Manual collection and reviewed weekly automation are permanent non-publishing evidence tooling (operator decision 2026-10-08), not a shadow score engine. Collection cannot update a Safety Score overlay, fact set, evaluation identity, or score; useful economic facts still require human-reviewed curation.
 
 ## Artifact Contract
 
@@ -22,7 +22,7 @@ Transport diagnostics also carry a machine-readable `reason`: `http-error` for u
 
 ### Ethena USDe
 
-USDe combines Ethena's collateralization-status and proof-of-reserves observations. Collateralization observations may be at most 12 hours old, PoR observations at most 10 days old, and timestamps may not be more than 5 minutes in the future.
+USDe combines Ethena's collateralization-status and proof-of-reserves observations. Collateralization observations may be at most 12 hours old, PoR observations at most 10 days old, and timestamps may not be more than 5 minutes in the future. The collateralization timestamp accepts the current ISO UTC form (`YYYY-MM-DDTHH:mm:ss[.fraction]Z`, observed with six fractional digits on October 16) and the legacy `YYYY-MM-DD HH:mm:ss[.fraction] UTC` form needed to replay retained captures. Both normalize by truncating sub-millisecond precision, reject invalid calendar dates, and retain the same freshness limits.
 
 The producer measures collateralization, reserve excess, and the dedicated Reserve Fund share. Delta-neutral and overcollateralized statements remain dated qualitative claims. Quantitative hedge coverage, exchange-margin headroom, funding-basis stress, and executable unwind capacity remain unavailable. Direct score adoption stays blocked; measured collateral/fund facts can inform confirmatory or adverse human curation, never substitute excess collateral for exchange margin or custody allocation for hedge notional.
 
@@ -39,6 +39,8 @@ The October 8 investigation found no supported replacement with an equivalent, d
 
 The source cutover remains blocked pending an official retrieval/access contract covering these fields. Keep the existing source configuration and fail-closed validation; do not invent a URL, bypass provider restrictions, infer complete backing from partial on-chain balances, or add blind retries. The focused transport fixture covers restricted HTML with both its real media type and a misleading JSON media type.
 
+The [October 14 run](https://github.com/TokenBrice/pharos-watch/actions/runs/38542679338) retained the same restricted-HTML failure. On October 16, local capture received JSON from both configured endpoints without redirects and exposed a separate schema-format drift: collateralization `timestamp` was `2026-10-16T09:00:00.000000Z` instead of the legacy UTC format. Supporting that ISO UTC format restored live capture and deterministic raw-byte replay locally. It does not establish access from the scheduled runner or clear the provider-access prerequisite.
+
 ### Falcon USDf
 
 USDf uses `https://api.falcon.finance/api/v1/transparency`, with a maximum source age of 36 hours and the common 5-minute future tolerance. Asset-allocation cells may arrive as quoted decimals or exact JSON number tokens; both forms normalize to nonnegative canonical decimal strings without `Number` coercion. The asset rows must reconcile to top-level TVL within `max($0.01, TVL * 1e-9)` using exact decimal arithmetic.
@@ -47,10 +49,7 @@ The separately published `reserves` total has unresolved scope, is never admitte
 
 ## Automation
 
-The weekly workflow runs an explicit matrix over `usde-ethena` and `usdf-falcon` with one branch per target:
-
-- `automated/protocol-api-mechanism-refresh/usde-ethena`
-- `automated/protocol-api-mechanism-refresh/usdf-falcon`
+The hosted workflow's matrix is authored directly in its YAML and runs only `usdf-falcon`, using `automated/protocol-api-mechanism-refresh/usdf-falcon`. Both scheduled runs and manual workflow dispatches use that same matrix. `usde-ethena` was removed from hosted collection on October 16 because the October 14 GitHub-hosted capture was redirected to `ethena.fi/restricted` by Ethena's US geo-restriction. The asset, reserve adapter, producer target, retained evidence, and strict replay remain supported; its live capture follows [Manual Use](#manual-use) from a permitted region instead.
 
 The refresh job admits scheduled and manual runs only on `refs/heads/main`; non-main manual dispatches are skipped before checkout or credentials. The workflow captures and replays evidence from that trusted checkout. It inspects the target branch and PR history before capture, but it does not check out an existing automation branch until after the focused producer test, repository-wide replay, and local additions-only artifact validation pass. This keeps repository-local actions, npm lifecycle behavior, and producer scripts sourced from `main` rather than from an unreviewed refresh PR branch.
 
@@ -60,7 +59,7 @@ If a target already has an open refresh PR and a new artifact was produced, the 
 
 Jobs use target-specific concurrency, stage only the target's evidence directory, run focused tests and repository-wide replay, and require the PR diff to contain additions only under that directory. They open or update a non-auto-merge PR only after those checks pass.
 
-When the branch guard reports unmerged commits without an open PR, inspect PR history and the actual diff before proposing reconciliation; a squash merge can leave branch commits unreachable from `main` even though their evidence was already adopted. On October 8, the Falcon branch at `971a39803deaaa7d9e1424bdfaf01e81ec79648a` was found stale: [PR #846](https://github.com/TokenBrice/pharos-watch/pull/846) had already merged its August 11 snapshot, and `main` subsequently migrated that same snapshot to an R2 hash summary. Reopening the branch would reintroduce an obsolete raw capture, not add current evidence. No new PR, push, or deletion was performed; branch-owner reconciliation remains an explicit maintainer operation, and the overwrite refusal stays intact.
+When the branch guard reports unmerged commits without an open PR, inspect PR history and the actual diff before proposing reconciliation; a squash merge can leave branch commits unreachable from `main` even though their evidence was already adopted. The stale Falcon branch at `971a39803deaaa7d9e1424bdfaf01e81ec79648a` was reconciled by deletion on October 16 after confirming [PR #846](https://github.com/TokenBrice/pharos-watch/pull/846) and [PR #779](https://github.com/TokenBrice/pharos-watch/pull/779) were merged, with no open refresh PR. PR #846 had merged its August 11 snapshot, and `main` subsequently migrated that snapshot to an R2 hash summary; reopening the branch would have reintroduced an obsolete raw capture. Deleting the stale branch allows automation to start from current `main`. The overwrite refusal remains intact, and future unowned branch history still requires explicit maintainer reconciliation.
 
 The PR records the snapshot identity, measured and unavailable metrics, adoption blockers, and the expected confirmatory or indeterminate effect. Automation never edits an overlay or grants an artifact score authority.
 
@@ -68,7 +67,7 @@ The November 4 operations packet remains an observability/cost inventory, not a 
 
 ## Manual Use
 
-Live capture requires an explicit allowlisted target:
+Live capture requires an explicit allowlisted target. Refresh Ethena manually from a provider-permitted region; GitHub workflow dispatch does not run the Ethena capture:
 
 ```bash
 npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset usde-ethena
@@ -83,3 +82,13 @@ npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --replay-a
 ```
 
 Live options, explicit replay paths, and `--replay-all` are mutually exclusive. Unknown or duplicate targets fail before network or filesystem work.
+
+### Accepting a manual Ethena refresh
+
+Use the same evidence acceptance and reviewed PR procedure as hosted collection:
+
+1. Start from trusted current `main` and inspect the target refresh branch/history with `GITHUB_REPOSITORY=TokenBrice/pharos-watch node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset usde-ethena --stage validate-branch`. Resolve any ownership refusal explicitly; never overwrite unowned history.
+2. From a permitted region, run `npx tsx scripts/maintenance/measure-protocol-api-mechanism-metrics.ts --asset usde-ethena`. The default output directory is the reviewed evidence root; `--out-dir <path>` is available for an exploratory capture but does not include that directory in `--replay-all`. Both configured endpoints must pass transport, schema, freshness, and deterministic derivation checks without bypassing provider restrictions.
+3. Run `npx vitest run scripts/__tests__/measure-protocol-api-mechanism-metrics.test.ts`, replay the exact new artifact with `--replay <artifact.json>`, and run `--replay-all` against the evidence root. Supply the documented archive credentials when original bytes require signed R2 reads. Unavailable or corrupt evidence blocks acceptance.
+4. Review the local diff for new target `*-protocol-api.json` artifacts only; existing artifacts, summaries, overlays, and score identities must remain unchanged. An identical source snapshot is a no-op, not a reason to rewrite retained evidence.
+5. Use the branch ownership and append-only PR process under [Automation](#automation). On the prepared refresh branch, commit only accepted new target artifacts and run `node --import tsx scripts/ci/verify-mechanism-refresh-diff.ts --asset usde-ethena --stage verify-diff` against `origin/main` before submission. Open or update a normally checked, human-reviewed, non-auto-merge PR that records snapshot identity, measured/unavailable metrics, adoption blockers, and expected effect. Normal pre-push readiness still applies; passing producer checks grants no direct score authority.

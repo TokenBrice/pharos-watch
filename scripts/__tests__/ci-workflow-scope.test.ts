@@ -461,11 +461,12 @@ it("scans PR merge-resolution lines for the full PR range including historical m
   expect(steps.indexOf(candidate)).toBeGreaterThan(tree);
 });
 
-it("admits protocol mechanism refresh credentials only for main dispatches and schedules", () => {
+it("admits hosted protocol mechanism refresh only for Falcon on main dispatches and schedules", () => {
   const workflow = parseYaml(readRepoFile(".github/workflows/protocol-api-mechanism-refresh.yml"));
   expect(workflow.on).toHaveProperty("workflow_dispatch");
   expect(workflow.on.schedule.length).toBeGreaterThan(0);
   expect(workflow.jobs.refresh.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+  expect(workflow.jobs.refresh.strategy.matrix).toEqual({ asset: ["usdf-falcon"] });
   expect(workflow.jobs.refresh.steps[0].uses).toMatch(/^actions\/checkout@[0-9a-f]{40}$/);
   expect(workflow.jobs.refresh.steps[0].with["persist-credentials"]).toBe(false);
   expect(workflow.jobs.refresh.steps.some(

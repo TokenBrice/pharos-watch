@@ -425,8 +425,12 @@ function normalizeTaggedNumberTokens(value: unknown): unknown {
 }
 
 function parseEthenaTimestamp(value: string): string {
+  // Ethena now emits ISO UTC while retained raw captures use the legacy UTC form.
+  const timestamp = value[10] === "T" && value.endsWith("Z")
+    ? `${value.slice(0, 10)} ${value.slice(11, -1)} UTC`
+    : value;
   // eslint-disable-next-line security/detect-unsafe-regex
-  const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.([0-9]+))? UTC$/.exec(value);
+  const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(?:\.([0-9]+))? UTC$/.exec(timestamp);
   if (!match) throw new Error(`Invalid Ethena collateralization timestamp: ${value}`);
   const [, date, time, fraction = ""] = match;
   const parsed = new Date(`${date}T${time}.${fraction.slice(0, 3).padEnd(3, "0")}Z`);
