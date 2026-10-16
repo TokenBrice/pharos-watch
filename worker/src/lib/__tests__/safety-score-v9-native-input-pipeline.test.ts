@@ -600,8 +600,15 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       ["stale", "accepted-source-stale"],
       ["future-publication", "future-dated"],
       ["future-attempt", "future-dated"],
+      ["negative-clock", "malformed"],
+      ["fractional-clock", "malformed"],
+      ["negative-publication", "malformed"],
+      ["fractional-publication", "malformed"],
+      ["negative-attempt", "malformed"],
+      ["fractional-attempt", "malformed"],
       ["identity-mismatch", "accepted-source-unavailable"],
       ["read-failed", "accepted-source-unavailable"],
+      ["read-threw", "accepted-source-unavailable"],
       ["missing", "accepted-source-unavailable"],
     ])("freezes %s accepted-source failure without fabricating score zero", async (scenario, reason) => {
       const previous: SafetyScoreV9CurrentResponse = structuredClone(pipeline.candidate);
@@ -619,11 +626,18 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         health.attemptedAtSec = previous.publishedAtSec;
       }
       if (scenario === "future-attempt") health.attemptedAtSec = clock + 1;
+      if (scenario === "negative-clock") clock = -1;
+      if (scenario === "fractional-clock") clock += 0.5;
+      if (scenario === "negative-attempt") health.attemptedAtSec = -1;
+      if (scenario === "fractional-attempt") health.attemptedAtSec += 0.5;
       const projection = buildSafetyScoreV9LenderCollateralProjection(previous);
+      if (scenario === "negative-publication") projection.publishedAtSec = -1;
+      if (scenario === "fractional-publication") projection.publishedAtSec += 0.5;
       sourceRead.mockResolvedValue({ kind: "accepted", projection, health });
       if (scenario === "identity-mismatch") sourceRead.mockResolvedValue({ kind: "unavailable", reason: "health-mismatch" });
       if (scenario === "read-failed") sourceRead.mockResolvedValue({ kind: "unavailable", reason: "read-failed" });
       if (scenario === "missing") sourceRead.mockResolvedValue({ kind: "bootstrap", health: null });
+      if (scenario === "read-threw") sourceRead.mockRejectedValue(new Error("Accepted projection read interrupted"));
       const provenance = new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]);
       const captured = await captureLenderCollateralBacking(mockD1(), provenance, frozen.registryFingerprint, clock);
       expect(captured).toMatchObject({
@@ -674,6 +688,31 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
       expect(after.tokenToAssetId[`ethereum:${USDC}`]).toBe("usdc-circle");
       expect(after.byAssetId["usdc-circle"]).toEqual(projection.byAssetId["usdc-circle"]);
       expect(after.byAssetId["usdc-circle"]).toBeDefined();
+    });
+
+    it.each(["ambiguous", "unmapped"] as const)("omits %s token identities without losing uniquely mapped collateral", async scenario => {
+      const resolveTokens = lenderRegistry.resolveLenderTokenIds;
+      vi.spyOn(lenderRegistry, "resolveLenderTokenIds").mockImplementation(contracts => resolveTokens(
+        scenario === "ambiguous"
+          ? [...contracts, { assetId: "ftusd-flying-tulip", chain: "ethereum", address: SAVUSD }]
+          : contracts.filter(contract => !(contract.chain === "ethereum" && contract.address.toLowerCase() === SAVUSD)),
+      ));
+      const previous = pipeline.candidate;
+      const projection = buildSafetyScoreV9LenderCollateralProjection(previous);
+      vi.spyOn(acceptedProjectionReaders, "loadSafetyScoreV9LenderCollateralState").mockResolvedValue({
+        kind: "accepted", projection,
+        health: {
+          schemaVersion: 2, status: "current", acceptedPublicationGenerationId: previous.publicationGenerationId,
+          acceptedAtSec: previous.publishedAtSec, attemptedAtSec: previous.publishedAtSec, heldSinceSec: null, reasons: [],
+        },
+      });
+      const captured = await captureLenderCollateralBacking(
+        mockD1(), new Map([[YIELD, frozen.liveReserveProvenanceMap[YIELD]!]]), input.registryFingerprint, input.clockSec + 1,
+      );
+      expect(captured.status).toBe("ok");
+      expect(captured.tokenToAssetId).toEqual({ [`ethereum:${FTUSD}`]: "ftusd-flying-tulip" });
+      expect(captured.byAssetId).toEqual({ "ftusd-flying-tulip": projection.byAssetId["ftusd-flying-tulip"] });
+      expect(captured.byAssetId["ftusd-flying-tulip"]).toBeDefined();
     });
 
     it.each(["not-rated", "pipeline-gap", "excluded", "missing", "causal-identity-missing"] as const)(
