@@ -612,14 +612,22 @@ describe("PharosWatchBotMiniAppPage", () => {
   });
 
   it("does not stack native MainButton listeners across panel-state transitions", async () => {
+    // A snapshot refresh can update nowSec and safely reattach the handler across
+    // a second boundary; fix wall time so cumulative registration counts are exact.
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
     const onClickHandlers: Array<() => void> = [];
-    const offClickHandlers: Array<() => void> = [];
+    const liveHandlers = new Set<() => void>();
+    const listenerCounts: number[] = [];
     const mainButton = {
       show: vi.fn(),
       hide: vi.fn(),
       setParams: vi.fn(),
-      onClick: vi.fn((handler: () => void) => { onClickHandlers.push(handler); }),
-      offClick: vi.fn((handler: () => void) => { offClickHandlers.push(handler); }),
+      onClick: vi.fn((handler: () => void) => {
+        onClickHandlers.push(handler);
+        liveHandlers.add(handler);
+        listenerCounts.push(liveHandlers.size);
+      }),
+      offClick: vi.fn((handler: () => void) => { liveHandlers.delete(handler); }),
     };
     const noSubscriberState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, exists: false, snoozeUntilTs: null } };
     const snoozedState: TelegramMiniAppState = { ...baseState, subscriber: { ...baseState.subscriber, exists: true, snoozeUntilTs: 9_000_000_000 } };
@@ -631,10 +639,13 @@ describe("PharosWatchBotMiniAppPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /Use recommended setup/i }));
     await waitFor(() => expect(onClickHandlers.length).toBe(2));
     fireEvent.click(screen.getByRole("button", { name: /Clear snooze/i }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      expect(screen.queryByRole("button", { name: /Clear snooze/i })).toBeNull();
+      expect(liveHandlers.size).toBe(0);
+    });
 
-    const live = onClickHandlers.filter((handler) => !offClickHandlers.includes(handler));
-    expect(live.length).toBeLessThanOrEqual(1);
+    expect(listenerCounts).toEqual([1, 1]);
     expect(new Set(onClickHandlers).size).toBe(onClickHandlers.length);
   });
 
