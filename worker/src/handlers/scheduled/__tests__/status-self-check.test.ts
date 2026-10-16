@@ -38,6 +38,8 @@ const dexRefreshSummary = (overrides: Partial<DexRefreshSummary> = {}): DexRefre
   acknowledgedGapsSkipped: 0, hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [],
   addressRefresh: { enabled: false, cohortSize: 0, targetCount: 0, resolved: 0, attemptedRequests: 0,
     successfulRequests: 0, cappedTargets: 0, failureClasses: [], circuitOpen: false, timedOut: false },
+  contractRefresh: { cohortSize: 0, resolved: 0, failedPasses: [], timedOut: false },
+  jupiterRefresh: { cohortSize: 0, resolved: 0, failedPasses: [], timedOut: false },
   ...overrides,
 });
 
@@ -152,6 +154,14 @@ describe("hourly corroboration before the next publication", () => {
     expect(mocks.logCronEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       metadata: expect.objectContaining({ addressRefresh: refresh }),
     }));
+  });
+
+  it.each(["contractRefresh", "jupiterRefresh"] as const)("keeps a failed %s degraded", async (lane) => {
+    mocks.runPriceDexRefresh.mockResolvedValueOnce(dexRefreshSummary({
+      [lane]: { cohortSize: 1, resolved: 0, failedPasses: ["upstream-error"], timedOut: false },
+    }));
+    await runStatusSelfCheckSlot(runtime([], 24));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ outcome: "degraded" }));
   });
 
   it("continues hourly recovery when the DEX routing cache fails", async () => {

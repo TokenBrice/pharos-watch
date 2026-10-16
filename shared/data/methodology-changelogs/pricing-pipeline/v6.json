@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.52",
+    "title": "Quarter-hour refresh for short-lived fallback prices",
+    "date": "2026-10-16",
+    "effectiveAt": 1792195200,
+    "summary": "Pricing v6.52 reobserves eligible DefiLlama contract and Jupiter fallback quotes on the existing quarter-hour refresh instead of relying on hourly discovery to keep a fifteen-minute quote available.",
+    "impact": [
+      "The :09/:24/:39/:54 refresh runs the existing DefiLlama contract and Jupiter passes serially after exact-address coverage and before DexScreener, with an independent 25-second envelope per pass. Active missing-price rows and current source-owned rows are eligible; M and XO remain missing-price recovery candidates.",
+      "Reviewed missing-price gaps stay on hourly discovery unless a publishable current quote is already owned by that source, including a composite source. A stale source label without a publishable price cannot admit a reviewed gap to quarter-hour probing.",
+      "Provider identity, original upstream or slot clocks, freshness budgets, liquidity and plausibility gates, circuit ownership, fallback confidence and depeg authority remain unchanged. Refresh observations are staged for the existing publication path rather than published directly.",
+      "Dated satUSD/Arbitrum and EURS/Polygon collapse reviews use the existing reviewed-release mechanism. Release requires an observed list current and a review at or after this quarantine's first detection, no later than the run clock; omitted chains and later incidents cannot inherit an older review. This chronology guard changes supply admission without adding supply or overriding the DefiLlama aggregate.",
+      "Activation is provisionally 2026-10-17 00:00 UTC (1792195200), following the next-UTC-midnight convention; re-date effectiveAt at release. Fresh admitted producer publication is required to establish recovery; this record does not claim production acceptance."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.51",
     "title": "Source-bound consensus inputs and reviewed USDFC price recovery",
     "date": "2026-10-15",

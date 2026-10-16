@@ -18,6 +18,7 @@ import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, loadPriceC
 import type { PeggedAsset } from "../enrich-prices-shared";
 import { planDexRefresh, runPriceDexRefresh } from "../price-dex-refresh";
 import { makePeggedAsset } from "./_fixtures";
+import * as shortLived from "../price-short-lived-refresh";
 
 const id = "usdaf-asymmetry";
 const target = { id, chain: "ethereum", target: "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8" };
@@ -30,6 +31,11 @@ const fixtures = createLatestSchemaFixtureTracker();
 let db: D1Database;
 beforeEach(() => {
   ({ db } = fixtures.open());
+  vi.spyOn(shortLived, "runShortLivedPriceRefresh").mockResolvedValue({
+    contractRefresh: { cohortSize: 0, resolved: 0, failedPasses: [], timedOut: false },
+    jupiterRefresh: { cohortSize: 0, resolved: 0, failedPasses: [], timedOut: false },
+    observations: [],
+  });
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); fixtures.closeAll(); });
 
@@ -163,6 +169,30 @@ describe("DEX refresh continuity", () => {
     await runPriceDexRefresh({ db, syncStartSec: now });
     expect(progress.loadFxRatesForPriceBounds).toHaveBeenCalledWith(db);
     expect(fetch.mock.calls[0][1]).toBe(fxRates);
+  });
+
+  it("stages current contract and Jupiter quotes without rewriting their observation clocks", async () => {
+    prepareRefresh().mockResolvedValue({ resolved: 0, failures: [] });
+    const observations = [
+      { id: "m-m0", source: "defillama-contract", price: 0.997, observedAt: now - 60, observedAtMode: "upstream" as const },
+      { id: "xo-exodus", source: "jupiter", price: 0.999, observedAt: now, observedAtMode: "local_fetch" as const },
+    ];
+    vi.mocked(shortLived.runShortLivedPriceRefresh).mockResolvedValueOnce({
+      contractRefresh: { cohortSize: 2, resolved: 1, failedPasses: [], timedOut: false },
+      jupiterRefresh: { cohortSize: 2, resolved: 1, failedPasses: [], timedOut: false },
+      observations,
+    });
+    const chainRpcs = new Map();
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now, jupiterApiKey: "test-key", chainRpcs });
+    expect(shortLived.runShortLivedPriceRefresh).toHaveBeenCalledWith(expect.objectContaining({
+      db, jupiterApiKey: "test-key", chainRpcs,
+    }));
+    expect(summary).toMatchObject({ contractRefresh: { resolved: 1 }, jupiterRefresh: { resolved: 1 } });
+    const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
+    expect(state.observations).toEqual(observations);
+    const staged = await loadPriceCorroborationObservations(db, now + 60);
+    expect(staged.byId.get("m-m0")?.[0].observedAt).toBe(now - 60);
+    expect(staged.byId.get("xo-exodus")?.[0].observedAt).toBe(now);
   });
 
   it("paces consecutive batches within the lane budget", async () => {
