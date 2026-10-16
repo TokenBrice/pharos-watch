@@ -1,5 +1,5 @@
 import { chunkArray } from "@shared/lib/collections";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";

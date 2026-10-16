@@ -1,7 +1,7 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import {
   buildSafetyScoreV9BaselineExtensionFromNormalizedInput,
-  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
@@ -10,12 +10,12 @@ const CLOCK_SEC = Date.UTC(2026, 9, 10, 12) / 1_000;
 const AS_OF_DATE_SEC = Date.UTC(2026, 9, 10) / 1_000;
 
 function compileLaunchDate(
-  alpha: Partial<V9ExtensionRegistryMeta>,
-  beta: Partial<V9ExtensionRegistryMeta> = {},
-  gamma: Partial<V9ExtensionRegistryMeta> = {},
+  alpha: Partial<SafetyScoreV9ScoringMeta>,
+  beta: Partial<SafetyScoreV9ScoringMeta> = {},
+  gamma: Partial<SafetyScoreV9ScoringMeta> = {},
 ) {
   const fixedInput = normalizeSafetyScoreV9CompilerInput(makeV9TwoAssetFixedInput({ clockSec: CLOCK_SEC }));
-  const metaById = new Map<string, V9ExtensionRegistryMeta>([
+  const metaById = new Map<string, SafetyScoreV9ScoringMeta>([
     ["alpha", { id: "alpha", mechanismArchetype: "tbill", launchDate: "2020-01-01", ...alpha }],
     ["beta", { id: "beta", mechanismArchetype: "tbill", launchDate: "2019-01-01", ...beta }],
     ["gamma", { id: "gamma", mechanismArchetype: "tbill", launchDate: "2018-01-01", ...gamma }],

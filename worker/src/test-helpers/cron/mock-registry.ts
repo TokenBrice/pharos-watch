@@ -1,4 +1,5 @@
 import { buildStablecoinRegistryIndexes } from "@shared/lib/stablecoins/registry-indexes";
+import type * as StablecoinRegistry from "@shared/lib/stablecoins/registry";
 
 /**
  * Factory for stubbing `@shared/lib/stablecoins/registry` in cron tests.
@@ -84,6 +85,7 @@ export function mockWorkerRuntimeRegistry(options: MockRegistryOptions) {
   const registry = mockRegistry(options);
   return {
     WORKER_TRACKED_STABLECOINS: registry.TRACKED_STABLECOINS,
+    WORKER_TRACKED_IDS: registry.TRACKED_IDS,
     WORKER_TRACKED_META_BY_ID: registry.TRACKED_META_BY_ID,
     WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS,
     WORKER_ACTIVE_IDS: registry.ACTIVE_IDS,
@@ -91,5 +93,29 @@ export function mockWorkerRuntimeRegistry(options: MockRegistryOptions) {
     WORKER_FROZEN_IDS: registry.FROZEN_IDS,
     WORKER_READABLE_IDS: registry.READABLE_IDS,
     hasWorkerLiveReserves: (coin: MockRegistryStablecoin) => coin.liveReservesConfig != null,
+  };
+}
+
+/** Keep mixed-owner fixtures on the same metadata universe after a projection cutover. */
+export function mockWorkerRuntimeRegistryFromFullRegistry(registry: typeof StablecoinRegistry) {
+  // Runtime consumers read these aliases directly; merely re-exporting full
+  // metadata fixtures omits the generated projection's top-level fields.
+  const project = (coin: (typeof StablecoinRegistry.ACTIVE_STABLECOINS)[number]) => ({
+    ...coin,
+    pegCurrency: coin.flags?.pegCurrency,
+    governance: coin.flags?.governance,
+    navToken: coin.flags?.navToken,
+  });
+  return {
+    WORKER_TRACKED_STABLECOINS: registry.TRACKED_STABLECOINS.map(project),
+    WORKER_TRACKED_IDS: registry.TRACKED_IDS,
+    WORKER_TRACKED_META_BY_ID: new Map([...registry.TRACKED_META_BY_ID].map(([id, coin]) => [id, project(coin)])),
+    WORKER_ACTIVE_STABLECOINS: registry.ACTIVE_STABLECOINS.map(project),
+    WORKER_ACTIVE_IDS: registry.ACTIVE_IDS,
+    WORKER_ACTIVE_META_BY_ID: new Map([...registry.ACTIVE_META_BY_ID].map(([id, coin]) => [id, project(coin)])),
+    WORKER_PRE_LAUNCH_STABLECOINS: registry.TRACKED_STABLECOINS.filter((coin) => coin.status === "pre-launch").map(project),
+    WORKER_FROZEN_IDS: registry.FROZEN_IDS,
+    WORKER_READABLE_IDS: registry.READABLE_IDS,
+    hasWorkerLiveReserves: (coin: { liveReservesConfig?: unknown }) => coin.liveReservesConfig != null,
   };
 }

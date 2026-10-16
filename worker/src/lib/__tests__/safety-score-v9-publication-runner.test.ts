@@ -8,17 +8,16 @@ import { V9AssetEvaluationError } from "@shared/lib/safety-score-v9/evaluate-set
 import * as fixedInputCodec from "../report-cards-fixed-input-cache-codec";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
+import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { loadActiveSafetyScoreIndex } from "../safety-score-index";
-import { loadPublishedReportCardsV9Snapshot } from "../report-cards-v9-cache";
+import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
+import { buildSafetyScoreV9AcceptedBaselineProjection } from "../safety-score-v9/accepted-projections";
+import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
   build: vi.fn(),
-  loadHealth: vi.fn(),
-  loadPublication: vi.fn(),
+  loadBaseline: vi.fn(),
   persist: vi.fn(),
   persistAttempt: vi.fn(),
   persistAlertEnvelope: vi.fn(),
@@ -40,16 +39,29 @@ vi.mock("../safety-score-v9/publication-assessment", async (importOriginal) => (
 }));
 vi.mock("../safety-score-v9/publication-store", async (importOriginal) => ({
   ...await importOriginal<typeof PublicationStore>(),
-  loadSafetyScoreV9Publication: mocks.loadPublication,
-  loadSafetyScoreV9PublicationHealth: mocks.loadHealth,
   persistSafetyScoreV9Publication: mocks.persist,
   persistSafetyScoreV9PublicationAttempt: mocks.persistAttempt,
+}));
+vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal) => ({
+  ...await importOriginal<typeof AcceptedProjectionReaders>(),
+  loadSafetyScoreV9AcceptedBaselineState: mocks.loadBaseline,
 }));
 
 const { runSafetyScoreV9Publication } = await import(
   "../safety-score-v9/publication-runner"
 );
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
+
+function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = false) {
+  return {
+    kind: "accepted" as const,
+    projection: buildSafetyScoreV9AcceptedBaselineProjection(publication),
+    health: {
+      ...currentInput(publication).publicationHealth,
+      ...(held ? { status: "held" as const, heldSinceSec: publication.publishedAtSec, reasons: [{ code: "dex-stale" as const }] } : {}),
+    },
+  };
+}
 
 describe("Safety Score V9 publication runner", () => {
   it("does not roll back accepted cards when the journal D1 read throws", async () => {
@@ -169,62 +181,67 @@ describe("Safety Score V9 publication runner", () => {
       quarantineAffectedAssetIds: [],
       bridgeJoinDiagnostics: [],
     });
-    mocks.loadHealth.mockReset().mockResolvedValue(null);
-    mocks.loadPublication.mockReset().mockResolvedValue(null);
+    mocks.loadBaseline.mockReset().mockResolvedValue({ kind: "bootstrap", health: null });
     mocks.persist.mockReset().mockResolvedValue(null);
     mocks.persistAttempt.mockReset().mockResolvedValue(undefined);
     mocks.persistAlertEnvelope.mockReset().mockResolvedValue(undefined);
   });
 
-  it("publishes schema 7 over stored schema 6 without inferring route identity at read time", async () => {
+  it("fails before compiling when the accepted publication is missing its baseline projection", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const prior = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100 });
     try {
       await store.persistSafetyScoreV9Publication(db, currentInput(prior));
-      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
-        stableJsonStringifyV1({ ...prior, schemaVersion: 6 }), store.SAFETY_SCORE_V9_CACHE_KEYS.publication,
-      );
-      const index = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-        .get(store.SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex)!.value as string);
-      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
-        stableJsonStringifyV1({ ...index, schemaVersion: 1 }), store.SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex,
-      );
-      const priorHealth = stableJsonStringifyV1({
-        ...currentInput(prior).publicationHealth, schemaVersion: 1,
-      });
-      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
-        priorHealth, store.SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
-      );
-      await expect(store.loadSafetyScoreV9PublicationHealth(db)).rejects.toThrow("publication-schema-cutover-pending");
-      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
-        .get(store.SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth)?.value).toBe(priorHealth);
-      mocks.loadPublication.mockImplementation(store.loadSafetyScoreV9Publication);
-      mocks.loadHealth.mockImplementation(store.loadSafetyScoreV9PublicationHealth);
-      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
-      await expect(loadPublishedReportCardsV9Snapshot(db)).rejects.toThrow("publication-schema-cutover-pending");
-      await expect(loadActiveSafetyScoreIndex(db)).resolves.toMatchObject({
-        kind: "error", reason: "publication-schema-cutover-pending", snapshot: null,
-      });
+      sqlite.prepare("DELETE FROM cache WHERE key = ?").run(store.SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline);
+      const before = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
+      const readers = await vi.importActual<typeof AcceptedProjectionReaders>("../safety-score-v9/accepted-projection-readers");
+      mocks.loadBaseline.mockImplementation(readers.loadSafetyScoreV9AcceptedBaselineState);
+      mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
       const result = await runSafetyScoreV9Publication({ db, fixedInput, nowSec: fixedInput.clockSec });
-      expect(result).toMatchObject({ status: "published", schemaCutoverReason: "schema-cutover-6-to-7" });
-      await expect(store.loadSafetyScoreV9Publication(db)).resolves.toMatchObject({ schemaVersion: 7 });
-      await expect(store.loadSafetyScoreV9PublicationHealth(db)).resolves.toMatchObject({ schemaVersion: 2 });
-      await expect(loadPublishedReportCardsV9Snapshot(db)).resolves.toMatchObject({ schemaVersion: 8 });
-      await expect(loadActiveSafetyScoreIndex(db)).resolves.toMatchObject({ kind: "v9" });
-    } finally {
-      sqlite.close();
-    }
+      expect(result).toMatchObject({ status: "failed", stage: "publication-gate",
+        code: "safety-score-v9-accepted-baseline-projection-missing" });
+      expect(mocks.build).not.toHaveBeenCalled();
+      expect(mocks.persist).not.toHaveBeenCalled();
+      expect((await store.loadSafetyScoreV9FailedPublicationAttempt(db))?.failure?.code).toBe(
+        "safety-score-v9-accepted-baseline-projection-missing",
+      );
+      for (const row of before) {
+        if (row.key === store.SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt) continue;
+        expect(sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key = ?").get(row.key)).toEqual(row);
+      }
+    } finally { sqlite.close(); }
   });
 
-  it.each([4, 5, 8])("does not bypass an unknown predecessor schema %s", async schema => {
-    mocks.loadPublication.mockImplementation(() => parseSafetyScoreV9Publication(
-      stableJsonStringifyV1({ ...makeWorkerSafetyScoreV9Publication(), schemaVersion: schema }),
-    ));
-    const result = await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput, nowSec: fixedInput.clockSec });
-    expect(result).toMatchObject({ status: "failed", message: expect.stringContaining("Unsupported") });
+  it("uses the retained baseline while publication health is held", async () => {
+    const accepted = makeWorkerSafetyScoreV9Publication({ publishedAtSec: fixedInput.clockSec - 100 });
+    const state = acceptedBaseline(accepted, true);
+    mocks.loadBaseline.mockResolvedValue(state);
+    const result = await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput });
+    expect(result.status).toBe("published");
+    expect(mocks.assess).toHaveBeenCalledWith(expect.objectContaining({ acceptedPublication: state.projection.baseline }));
+  });
+
+  it.each([
+    ["projection-missing", "missing"],
+    ["projection-invalid", "invalid"],
+    ["publication-invalid", "invalid"],
+    ["publication-mismatch", "publication-mismatch"],
+    ["health-unavailable", "invalid"],
+    ["health-mismatch", "publication-mismatch"],
+    ["read-failed", "read-failed"],
+  ] as const)("records a named pre-compile failure for %s", async (reason, suffix) => {
+    mocks.loadBaseline.mockResolvedValue({ kind: "unavailable", reason });
+    const code = `safety-score-v9-accepted-baseline-projection-${suffix}`;
+    const result = await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput });
+    expect(result).toMatchObject({ status: "failed", stage: "publication-gate", code });
     expect(mocks.build).not.toHaveBeenCalled();
     expect(mocks.persist).not.toHaveBeenCalled();
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      publicationAttempt: expect.objectContaining({
+        outcome: "failed", failure: expect.objectContaining({ stage: "publication-gate", code }),
+      }),
+    }));
   });
   it("publishes an accepted canonical candidate", async () => {
     const result = await runSafetyScoreV9Publication({
@@ -266,9 +283,9 @@ describe("Safety Score V9 publication runner", () => {
       publicationGenerationId: "report-cards:v9:accepted",
       publishedAtSec: fixedInput.clockSec - 30,
     });
-    mocks.loadPublication.mockImplementation(async () => {
+    mocks.loadBaseline.mockImplementation(async () => {
       order.push("accepted-loaded");
-      return accepted;
+      return acceptedBaseline(accepted);
     });
     mocks.build.mockImplementation(() => {
       order.push("candidate-compiled");
@@ -429,7 +446,7 @@ describe("Safety Score V9 publication runner", () => {
       sourceGenerations: { dex: expiredInput.dexGenerationId },
       publicationGenerationId: "report-cards:v9:accepted",
     });
-    mocks.loadPublication.mockResolvedValue(accepted);
+    mocks.loadBaseline.mockResolvedValue(acceptedBaseline(accepted));
     const buildCandidate = (input: typeof expiredInput, expired: boolean) => mocks.build.mockReturnValue({
       candidate: makeWorkerSafetyScoreV9Publication({
         cards: cards.map((row) => expired && row.id === assetId ? { ...row, grade: "B", score: 72 } : row),
@@ -699,7 +716,7 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
-  it("preserves accepted state when publication assessment loading fails", async () => {
+  it("preserves accepted state when the accepted baseline read fails", async () => {
     mocks.build.mockReturnValue({
       candidate: makeWorkerSafetyScoreV9Publication({
         baseInputGenerationId: fixedInput.baseInputGenerationId,
@@ -713,7 +730,7 @@ describe("Safety Score V9 publication runner", () => {
       quarantineAffectedAssetIds: ["alpha"],
       bridgeJoinDiagnostics: [],
     });
-    mocks.loadPublication.mockRejectedValue(new Error("read failed"));
+    mocks.loadBaseline.mockResolvedValue({ kind: "unavailable", reason: "read-failed" });
 
     const result = await runSafetyScoreV9Publication({
       db: {} as D1Database,
@@ -723,7 +740,7 @@ describe("Safety Score V9 publication runner", () => {
     expect(result).toMatchObject({
       status: "failed",
       stage: "publication-gate",
-      message: "read failed",
+      code: "safety-score-v9-accepted-baseline-projection-read-failed",
     });
     expect(mocks.persist).not.toHaveBeenCalled();
     expect(mocks.persistAttempt).toHaveBeenCalledWith(
@@ -733,7 +750,7 @@ describe("Safety Score V9 publication runner", () => {
           outcome: "failed",
           failure: expect.objectContaining({
             stage: "publication-gate",
-            message: "read failed",
+            code: "safety-score-v9-accepted-baseline-projection-read-failed",
           }),
         }),
       }),
@@ -746,16 +763,7 @@ describe("Safety Score V9 publication runner", () => {
       publicationGenerationId: "report-cards:v9:accepted",
       publishedAtSec: fixedInput.clockSec - 30,
     });
-    mocks.loadPublication.mockResolvedValue(accepted);
-    mocks.loadHealth.mockResolvedValue({
-      schemaVersion: 2,
-      status: "current",
-      acceptedPublicationGenerationId: accepted.publicationGenerationId,
-      acceptedAtSec: accepted.publishedAtSec,
-      attemptedAtSec: accepted.publishedAtSec,
-      heldSinceSec: null,
-      reasons: [],
-    });
+    mocks.loadBaseline.mockResolvedValue(acceptedBaseline(accepted));
     mocks.assess.mockImplementation(() => {
       throw new Error("assessment failed");
     });

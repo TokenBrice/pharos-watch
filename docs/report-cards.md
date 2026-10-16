@@ -93,7 +93,7 @@ The outer API report is schema v8 (`model: "v9"`), carrying public publication s
 
 The [report schema implementation contract](./process/report-cards-appendix.md#report-schema-v8) retains lossless witness interning, obligation accounting, supply/dependency projections, common-mode effects and exact Exit identity/freshness rules.
 
-Accepted publication's [private writer-side read models](./process/report-cards-appendix.md#accepted-publication-read-models) are Release A writers only; public API and score-index schema 2 are unchanged.
+Accepted publication's [private read models](./process/report-cards-appendix.md#accepted-publication-read-models) serve preparation and pre-compile comparison without decoding the prior full publication. Release A writers must seed and verify both rows before the Release B strict readers deploy; no full-publication fallback exists. Missing/invalid baseline projections block compilation with a named failed attempt; lender-source failures retain the existing unavailable/class fallback. [Recovery](./runbooks/cron-slot-abandonment.md#safety-score-accepted-projection-recovery) reverts only the strict-reader change on current head, reseeds through one normal accepted cycle, then reapplies it. Public API and score-index schema 2 are unchanged.
 
 ## Publication journal and movement attribution
 

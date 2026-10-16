@@ -1,5 +1,5 @@
 import type { PriceValidationReferences } from "./price-validation";
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { buildPriceValidationContext, getReferencePriceForContext } from "./price-validation";
 import { isUsdReferenceSymbol, normalizeDexSymbol } from "./dex-cron-constants";
 import { resolveTrackedStablecoinId } from "../cron/dex-liquidity/token-resolution";

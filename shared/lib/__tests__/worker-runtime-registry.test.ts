@@ -7,6 +7,7 @@ import {
   PRE_LAUNCH_STABLECOINS,
   READABLE_IDS,
   TRACKED_STABLECOINS,
+  TRACKED_IDS,
 } from "../stablecoins/registry";
 import {
   WORKER_ACTIVE_IDS,
@@ -16,6 +17,8 @@ import {
   WORKER_PRE_LAUNCH_STABLECOINS,
   WORKER_READABLE_IDS,
   WORKER_TRACKED_META_BY_ID,
+  WORKER_TRACKED_IDS,
+  WORKER_ACTIVE_STABLECOINS,
 } from "../stablecoins/worker-runtime-registry";
 
 describe("Worker runtime stablecoin registry", () => {
@@ -57,6 +60,29 @@ describe("Worker runtime stablecoin registry", () => {
         ...(kind != null ? { kind } : {}), chain, address, decimals,
         ...(amountEncoding != null ? { amountEncoding } : {}),
       })));
+    }
+  });
+
+  it("preserves every heavy prep, DEX, chart, and yield metadata read", () => {
+    expect([...WORKER_TRACKED_IDS]).toEqual([...TRACKED_IDS]);
+    expect(WORKER_ACTIVE_STABLECOINS.map((coin) => coin.id)).toEqual(ACTIVE_STABLECOINS.map((coin) => coin.id));
+    for (const coin of TRACKED_STABLECOINS) {
+      const projected = WORKER_TRACKED_META_BY_ID.get(coin.id)!;
+      for (const field of ["id", "name", "symbol", "geckoId", "contracts", "tradedContracts",
+        "detailProvider", "llamaId", "liveReservesConfig", "commodityOunces"] as const) {
+        expect(projected[field], `${coin.id}.${field}`).toEqual(coin[field]);
+      }
+      for (const field of ["navToken", "pegCurrency", "yieldBearing"] as const) {
+        expect(projected.flags[field], `${coin.id}.flags.${field}`).toEqual(coin.flags[field]);
+      }
+      // Price validation consumes generated top-level aliases, not full-meta flags.
+      expect(projected.pegCurrency, `${coin.id}.pegCurrency`).toBe(coin.flags.pegCurrency);
+      expect(projected.governance, `${coin.id}.governance`).toBe(coin.flags.governance);
+      expect(projected.navToken === true, `${coin.id}.navToken`).toBe(coin.flags.navToken === true);
+      expect(projected.yieldConfig?.yieldType, coin.id).toEqual(coin.yieldConfig?.yieldType);
+      for (const field of ["detailProvider", "llamaId", "yieldConfig"] as const) {
+        expect(Object.hasOwn(projected, field), `${coin.id}.${field} presence`).toBe(Object.hasOwn(coin, field));
+      }
     }
   });
 

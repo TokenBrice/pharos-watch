@@ -1,5 +1,5 @@
 import { chunkArray } from "@shared/lib/collections";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_IDS as ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { throwIfAborted } from "./abort";
 import { batchExecute } from "./db";

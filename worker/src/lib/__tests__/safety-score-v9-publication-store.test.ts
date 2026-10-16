@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import {
@@ -25,6 +25,7 @@ import {
   parseSafetyScoreV9AcceptedBaselineProjection,
   parseSafetyScoreV9LenderCollateralProjection,
 } from "../safety-score-v9/accepted-projections";
+import { loadSafetyScoreV9AcceptedBaselineState, loadSafetyScoreV9LenderCollateralState } from "../safety-score-v9/accepted-projection-readers";
 
 const databases: DatabaseSync[] = [];
 
@@ -42,6 +43,207 @@ afterEach(() => {
 });
 
 describe("Safety Score V9 publication store", () => {
+  describe.each([
+    ["baseline", SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline, loadSafetyScoreV9AcceptedBaselineState],
+    ["lender", SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral, loadSafetyScoreV9LenderCollateralState],
+  ] as const)("%s compact accepted reader", (_name, projectionKey, loadState) => {
+    it.each(["current", "held"] as const)("admits matching %s health with one compact SELECT", async status => {
+      const { sqlite, db } = database();
+      const publication = makeWorkerSafetyScoreV9Publication();
+      await persistSafetyScoreV9Publication(db, currentInput(publication));
+      const health = currentInput(publication).publicationHealth;
+      if (status === "held") Object.assign(health, {
+        status, attemptedAtSec: health.attemptedAtSec + 30,
+        heldSinceSec: health.attemptedAtSec + 10, reasons: [{ code: "dex-stale" }],
+      });
+      sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(
+        stableJsonStringifyV1(health), health.attemptedAtSec, SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+      );
+      // The accepted payload is intentionally undecodable: only its identity may be read.
+      const stored = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string);
+      stored.payload = "not-base64";
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        stableJsonStringifyV1(stored), SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      );
+      const prepare = vi.spyOn(db, "prepare");
+      const state = await loadState(db);
+      expect(state).toMatchObject({ kind: "accepted", health,
+        projection: { publicationResultDigest: publication.resultDigest, publishedAtSec: publication.publishedAtSec } });
+      expect(prepare).toHaveBeenCalledTimes(1);
+      const sql = prepare.mock.calls[0]![0];
+      expect(sql).toContain("FROM (SELECT 1) singleton");
+      expect(sql).toContain("json_extract(p.value, '$.identity')");
+      expect(sql).not.toMatch(/p\.value\s+AS|SELECT\s+p\.value/);
+      prepare.mockRestore();
+    });
+
+    it.each([
+      "policyVersion", "policyId", "policyDigest", "evaluationBuildDigest",
+      "baseInputGenerationId", "publicationGenerationId", "resultDigest",
+    ] as const)("rejects mismatched envelope %s", async field => {
+      const { sqlite, db } = database();
+      await persistSafetyScoreV9Publication(db, currentInput(makeWorkerSafetyScoreV9Publication()));
+      const envelope = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string);
+      envelope.identity[field] = field.endsWith("Digest") ? "f".repeat(64)
+        : field === "baseInputGenerationId" ? "report-cards-input:v1:" + "f".repeat(64) : "different";
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+        stableJsonStringifyV1(envelope), SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      );
+      expect(await loadState(db)).toEqual({ kind: "unavailable", reason: "publication-mismatch" });
+    });
+
+    it.each([
+      ["projection-missing", "projection-missing"],
+      ["projection-malformed", "projection-invalid"],
+      ["projection-schema", "projection-invalid"],
+      ["projection-source-clock", "projection-invalid"],
+      ["projection-noncanonical", "projection-invalid"],
+      ["projection-clock", "projection-invalid"],
+      ["publication-missing", "publication-invalid"],
+      ["publication-malformed", "publication-invalid"],
+      ["publication-identity", "publication-invalid"],
+      ["publication-clock", "publication-mismatch"],
+      ["health-missing", "health-unavailable"],
+      ["health-malformed", "health-unavailable"],
+      ["health-clock", "health-unavailable"],
+      ["health-generation", "health-mismatch"],
+      ["health-accepted-clock", "health-mismatch"],
+    ] as const)("rejects %s", async (scenario, reason) => {
+      const { sqlite, db } = database();
+      const publication = makeWorkerSafetyScoreV9Publication();
+      await persistSafetyScoreV9Publication(db, currentInput(publication));
+      const key = scenario.startsWith("projection") ? projectionKey
+        : scenario.startsWith("publication") ? SAFETY_SCORE_V9_CACHE_KEYS.publication : SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth;
+      if (scenario.endsWith("-missing")) sqlite.prepare("DELETE FROM cache WHERE key = ?").run(key);
+      else if (scenario.endsWith("-malformed")) sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run("{", key);
+      else if (scenario === "projection-schema" || scenario === "projection-source-clock") {
+        const projection = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key)!.value as string);
+        if (scenario === "projection-schema") projection.schemaVersion = 2;
+        else projection.asOfSec = projection.publishedAtSec + 1;
+        sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(projection), key);
+      }
+      else if (scenario === "projection-noncanonical") sqlite.prepare("UPDATE cache SET value = value || ' ' WHERE key = ?").run(key);
+      else if (scenario === "publication-identity") sqlite.prepare("UPDATE cache SET value = '{}' WHERE key = ?").run(key);
+      else if (scenario === "health-generation" || scenario === "health-accepted-clock") {
+        const health = currentInput(publication).publicationHealth;
+        if (scenario === "health-generation") health.acceptedPublicationGenerationId = "different";
+        else health.acceptedAtSec = publication.publishedAtSec - 1;
+        sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(stableJsonStringifyV1(health), key);
+      } else sqlite.prepare("UPDATE cache SET updated_at = updated_at + 1 WHERE key = ?").run(key);
+      expect(await loadState(db)).toEqual({ kind: "unavailable", reason });
+    });
+
+    it.each(["absent", "held-bootstrap", "failed-attempt", "held-attempt", "missing-outcome-attempt"] as const)(
+      "bootstraps only without accepted witnesses (%s)", async scenario => {
+        const { sqlite, db } = database();
+        let health = null;
+        if (scenario === "held-bootstrap") {
+          health = { schemaVersion: 2, status: "held", acceptedPublicationGenerationId: null, acceptedAtSec: null,
+            attemptedAtSec: 100, heldSinceSec: 100, reasons: [{ code: "dex-stale" }] };
+          sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+            SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth, stableJsonStringifyV1(health), 100,
+          );
+        }
+        if (scenario.endsWith("-attempt")) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+          SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+          stableJsonStringifyV1(scenario === "missing-outcome-attempt" ? {} : {
+            outcome: scenario === "failed-attempt" ? "failed" : "held",
+          }), 100,
+        );
+        expect(await loadState(db)).toEqual({ kind: "bootstrap", health });
+      },
+    );
+
+    it.each([
+      ["replay-only", [SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY]],
+      ["replay-base-only", [SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY]],
+      ["replay-pair", [SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY]],
+      ["index-only", [SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex]],
+      ["baseline-only", [SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline]],
+      ["lender-only", [SAFETY_SCORE_V9_CACHE_KEYS.lenderCollateral]],
+      ["published-attempt-only", [SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt]],
+      ["published-partial-attempt-only", [SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt]],
+    ] as const)("never bootstraps %s orphans", async (scenario, retained) => {
+      const { sqlite, db } = database();
+      await persistSafetyScoreV9Publication(db, {
+        ...currentInput(makeWorkerSafetyScoreV9Publication()),
+        publicationReplayCaptureValue: "delta", publicationReplayBaseValue: "base",
+      });
+      if (scenario === "published-partial-attempt-only") {
+        sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(
+          stableJsonStringifyV1({ outcome: "published-partial" }), SAFETY_SCORE_V9_CACHE_KEYS.publicationAttempt,
+        );
+      }
+      for (const row of sqlite.prepare("SELECT key FROM cache").all()) {
+        if (!retained.some(key => key === row.key)) sqlite.prepare("DELETE FROM cache WHERE key = ?").run(row.key);
+      }
+      expect(await loadState(db)).toMatchObject({ kind: "unavailable" });
+    });
+
+    it.each(["malformed", "accepted-health"] as const)("rejects %s health without accepted rows", async scenario => {
+      const { sqlite, db } = database();
+      const health = currentInput(makeWorkerSafetyScoreV9Publication()).publicationHealth;
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        SAFETY_SCORE_V9_CACHE_KEYS.publicationHealth,
+        scenario === "malformed" ? "{" : stableJsonStringifyV1(health), health.attemptedAtSec,
+      );
+      expect(await loadState(db)).toEqual({ kind: "unavailable",
+        reason: scenario === "malformed" ? "health-unavailable" : "health-mismatch" });
+    });
+
+    it("keeps rejected D1 reads distinct from bootstrap", async () => {
+      const { sqlite, db } = database();
+      sqlite.exec("DROP TABLE cache");
+      expect(await loadState(db)).toEqual({ kind: "unavailable", reason: "read-failed" });
+    });
+
+    it("logs a bounded read-failure cause with the affected projection", async () => {
+      const { db } = database();
+      const message = "D1 read failed: " + "x".repeat(600);
+      const prepare = vi.spyOn(db, "prepare").mockImplementation(() => { throw new Error(message); });
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        expect(await loadState(db)).toEqual({ kind: "unavailable", reason: "read-failed" });
+        expect(log).toHaveBeenCalledTimes(1);
+        expect(JSON.parse(log.mock.calls[0]![0] as string)).toMatchObject({
+          scope: "lib", level: "error", event: "safety_score_v9_accepted_projection_read_failed",
+          source: projectionKey, errorName: "Error", errorMessage: message.slice(0, 500),
+        });
+      } finally {
+        prepare.mockRestore();
+        log.mockRestore();
+      }
+    });
+
+    it("propagates a D1 AbortError even before the signal reports aborted", async () => {
+      const { db } = database();
+      const failure = new DOMException("D1 request cancelled", "AbortError");
+      const prepare = vi.spyOn(db, "prepare").mockImplementation(() => { throw failure; });
+      await expect(loadState(db, new AbortController().signal)).rejects.toThrow("D1 request cancelled");
+      prepare.mockRestore();
+    });
+
+    it("propagates cancellation before and during the D1 read", async () => {
+      const { db } = database();
+      const before = new AbortController();
+      before.abort(new Error("cancelled-before"));
+      const original = db.prepare.bind(db);
+      const prepare = vi.spyOn(db, "prepare");
+      await expect(loadState(db, before.signal)).rejects.toThrow("cancelled-before");
+      expect(prepare).not.toHaveBeenCalled();
+      const after = new AbortController();
+      prepare.mockImplementation(query => {
+        const statement = original(query);
+        queueMicrotask(() => after.abort(new Error("cancelled-after")));
+        return statement;
+      });
+      await expect(loadState(db, after.signal)).rejects.toThrow("cancelled-after");
+      prepare.mockRestore();
+    });
+  });
+
   it("derives the index and both read models from the same immutable normalized publication", async () => {
     const { sqlite, db } = database();
     const publication = makeWorkerSafetyScoreV9Publication();

@@ -1,5 +1,5 @@
 import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
 import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { hasRegistryRpc, supplementalRpcEndpoints, registryRpcUrls, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";

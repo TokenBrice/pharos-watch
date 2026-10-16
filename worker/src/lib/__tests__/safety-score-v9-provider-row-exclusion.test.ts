@@ -10,7 +10,7 @@ import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { boundedUnknown, makeDeploymentControl, makeEconomicControlFacts, noBridgeReview, noMintReview, noOracleReview, requiredKnown } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
-import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SafetyScoreV9ReviewedTransferFactSchema } from "@shared/types/safety-score-v9-transfer-overlays";
@@ -64,7 +64,7 @@ async function consumer({
       reviewDisposition: "reviewed", observedAt: "2026-10-01", sources: [source],
     }],
   };
-  const meta: V9ExtensionRegistryMeta = {
+  const meta: SafetyScoreV9ScoringMeta = {
     id: "frax-frax", mechanismArchetype: "fiat-cash", bridgeRouteRisk: risk,
     contracts: [native, ...(ownLegacyDeployment ? [{
       chain: "fraxtal", address: "0xff000000000000000000000000000000000001fd", decimals: 18,
@@ -147,7 +147,7 @@ describe("reviewed attribution-only provider-row exclusion", () => {
     ] } as BridgeRouteRiskProfile;
     const supply = await build(fixed, risk);
     const { providerRowExclusions: _exclusions, ...baselineSupply } = supply;
-    const meta = { id: "frax-frax", bridgeRouteRisk: risk } as V9ExtensionRegistryMeta;
+    const meta = { id: "frax-frax", bridgeRouteRisk: risk } as SafetyScoreV9ScoringMeta;
     const adapt = (review: NonNullable<SafetyScoreV9FactSetExtensionV2["assets"][number]["supplyReview"]>) =>
       adaptBridgeReview(meta, review, 3, new ReviewEvidenceBuilder(meta.id, fixed.clockSec), fixed.clockSec);
     const baselineBridge = adapt(baselineSupply);

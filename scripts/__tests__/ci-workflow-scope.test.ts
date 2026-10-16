@@ -16,7 +16,10 @@ describe("CI workflow scope", () => {
       (step: { name?: string }) => step.name === "Upload V9 resource results",
     );
     expect(upload.if).toBe("${{ always() && matrix.lane == 'v9-resource' }}");
-    expect(upload.with.path).toBe(".tmp/v9-resource-lane/");
+    expect(upload.with.path.trim().split(/\s+/)).toEqual([".tmp/safety-score-v9-resource/", ".tmp/v9-resource-lane/"]);
+    expect(upload.with.name).toBe("safety-score-v9-resource-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}");
+    expect(upload.with["retention-days"]).toBe(30);
+    expect(upload.with["if-no-files-found"]).toBe("error");
     for (const lane of ["v9-resource", "tests", "static-guards"]) {
       for (const outcome of ["success", "failure", "cancelled"]) {
         const selected = runInNewContext(upload.if.slice(3, -2), {

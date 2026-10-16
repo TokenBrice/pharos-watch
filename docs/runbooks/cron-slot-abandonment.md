@@ -101,6 +101,57 @@ Inspect `cron_slot_executions.child_marker_version` and the attempt ledger befor
 - **Do not clear a lease to "fix" this.** Reconciliation already releases or expires the dead slot's lease. Clearing a live lease while `/api/status` shows a fresh `inFlight` progress row for the same job risks a concurrent second writer.
 - **Observed memory kill versus telemetry unavailable.** The collector alerts on heavy kills in its trailing 24-hour window and incomplete required collection; public kills and incomplete public broad sampling are report-only initially (review after one week of baseline). Preserve source/version/lane evidence before changing code. Do not retry/rebalance automatically, infer OOM from abandonment alone, or subtract sampled bytes from 128 MiB; shared sampled isolate memory is not live phase headroom.
 
+## Safety Score accepted projection recovery
+
+**Symptom:** after the Release B strict-reader cutover, `compute-safety-score-v9` fails at `publication-gate` before compiling with `safety-score-v9-accepted-baseline-projection-missing`, `-invalid`, `-publication-mismatch` or `-read-failed`. Accepted publication/health remain unchanged; the failed attempt is recorded separately. Missing/invalid projections beside accepted state can follow a D1 restore to a pre-writer point, manual deletion or writer/reader skew. Preparation may report `accepted-source-unavailable` instead of previous-accepted lender backing. This is not by itself an OOM.
+
+1. Preserve the named failure, deployed heavy/public versions and read-only cache evidence. Compare both projection identities, result digests and `publishedAtSec`/row clocks with the envelope identity and health's accepted generation/clock. Check D1 availability first for `-read-failed`; do not treat read errors or orphan replay/index/projection rows as bootstrap.
+2. Make a **minimal temporary reader-only recovery change on the current head**, retaining subsequent fixes, current scoring-catalog/runtime-registry imports and Release A's atomic projection writers. There is no single revertable "Release B reader commit": `ef096e16a` cut over the call sites and `53e3425a3` subsequently moved their loaders. Do not blindly revert either commit or deploy a historical Release A build.
+   - In `worker/src/lib/safety-score-v9/capture.ts`, switch `captureLenderCollateralBacking` from `loadSafetyScoreV9LenderCollateralState` to `loadSafetyScoreV9Publication(db)` plus `loadSafetyScoreV9PublicationHealth(db)` from `publication-store.ts`. Restore the full-publication lender extraction, not just the imports: require current health and matching accepted generation/clock; retain future-clock and 3,600-second age checks; select required tokens' eligible cards, resolve D>C>U causes and stable gap IDs, and hash each canonical card. The pre-cutover function body is available with `git show 'ef096e16a^:worker/src/lib/safety-score-v9/capture.ts'`; transplant only this function's reader/extraction body and its needed imports, not the historical file or registry imports.
+   - In `worker/src/lib/safety-score-v9/publication-runner.ts`, replace the `loadSafetyScoreV9AcceptedBaselineState` block at `publication-gate` with `Promise.all([loadSafetyScoreV9Publication(input.db, publicationSignal), loadSafetyScoreV9PublicationHealth(input.db, publicationSignal)])`. Set `acceptedPublication` to `publication === null ? null : buildSafetyScoreV9AcceptedPublicationBaseline(publication)` and `previousHealth` to the loaded health. Import both loaders from `publication-store.ts` and the baseline builder from `publication-assessment.ts`; let read/decode errors propagate through the existing failed-attempt path. Remove the now-unused strict-reader error class/type imports. Do not reinstate retired schema-cutover plumbing.
+   - Leave `accepted-projections.ts`, both projection writers and `accepted-projection-readers.ts` in place. Confirm neither active call site calls a strict reader (`git grep -n -E 'loadSafetyScoreV9(LenderCollateralState|AcceptedBaselineState)' -- worker/src/lib/safety-score-v9/capture.ts worker/src/lib/safety-score-v9/publication-runner.ts` must have no matches). Review/test the two-call-site change through the normal process, record it as a separate temporary recovery commit, and deploy heavy before public; allow any earlier publication lease to settle.
+3. Let **one normal accepted `:22/:52` cycle** reseed both projections. A held or failed cycle does not reseed; wait for acceptance. Run these exact read-only queries against the same production database snapshot (not a preview database):
+
+   ```sql
+   SELECT key, updated_at, length(value) AS bytes,
+          json_extract(value, '$.safetyScoreIdentity.model') AS model,
+          json_extract(value, '$.safetyScoreIdentity.schemaVersion') AS identity_schema,
+          json_extract(value, '$.safetyScoreIdentity.methodologyVersion') AS policy_version,
+          json_extract(value, '$.safetyScoreIdentity.policyId') AS policy_id,
+          json_extract(value, '$.safetyScoreIdentity.policyDigest') AS policy_digest,
+          json_extract(value, '$.safetyScoreIdentity.evaluationBuildDigest') AS build_digest,
+          json_extract(value, '$.safetyScoreIdentity.baseInputGenerationId') AS base_generation,
+          json_extract(value, '$.safetyScoreIdentity.publicationGenerationId') AS generation,
+          json_extract(value, '$.publicationResultDigest') AS result_digest,
+          json_extract(value, '$.publishedAtSec') AS published_at
+     FROM cache
+    WHERE key IN ('report-cards:v9:accepted-baseline:v1',
+                  'report-cards:v9:lender-collateral:v1')
+    ORDER BY key;
+
+   SELECT updated_at, 'v9' AS model, 1 AS identity_schema,
+          json_extract(value, '$.identity.policyVersion') AS policy_version,
+          json_extract(value, '$.identity.policyId') AS policy_id,
+          json_extract(value, '$.identity.policyDigest') AS policy_digest,
+          json_extract(value, '$.identity.evaluationBuildDigest') AS build_digest,
+          json_extract(value, '$.identity.baseInputGenerationId') AS base_generation,
+          json_extract(value, '$.identity.publicationGenerationId') AS generation,
+          json_extract(value, '$.identity.resultDigest') AS result_digest
+     FROM cache WHERE key = 'report-cards:v9';
+
+   SELECT updated_at,
+          json_extract(value, '$.status') AS status,
+          json_extract(value, '$.acceptedPublicationGenerationId') AS generation,
+          json_extract(value, '$.acceptedAtSec') AS accepted_at,
+          json_extract(value, '$.attemptedAtSec') AS attempted_at
+     FROM cache WHERE key = 'report-cards:v9:publication-health';
+   ```
+
+   Require exactly two projection rows and one envelope/health row, with no null identity/digest/clock fields. Every same-named identity/digest column in both projections must equal the envelope's; `policyVersion` in the envelope maps to projection `methodologyVersion`, and its decoder supplies `model = 'v9'` / identity schema `1`. Both projection `published_at` and `updated_at` must equal envelope `updated_at` and health `accepted_at`; health generation must equal that envelope generation, and health `updated_at` must equal `attempted_at`. These are the strict loader's identity/result/clock bindings, including its health decoder's row-clock check. A later held attempt may have a newer health attempt clock; it does not change the accepted clock. Any missing row, SQL/decode failure or mismatch means reseeding is not verified: stop, preserve evidence and investigate rather than reapplying strict readers.
+4. Revert only the recorded temporary recovery commit on the then-current head (resolve any intervening edits by restoring the two strict-reader call sites/imports, not by replacing whole files) and deploy normally. Observe the first `:16/:46` preparation using the lender projection and the first successful `:22/:52` compile; correlate memory-monitor evidence separately.
+
+Never hand-write projections, delete accepted state or clear a live lease to force reseeding. A dedicated fenced reseed tool requires separate owner approval; it is not this recovery procedure.
+
 ## Prevention
 
 - Treat a sub-hourly logical cadence carrying CPU-heavy work as requiring the paired-hourly physical form. `shared/lib/__tests__/cron-jobs.test.ts` asserts the converted lanes keep single-minute hourly aliases so a regression to one comma expression fails CI instead of silently re-entering the 30-second class.

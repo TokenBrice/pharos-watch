@@ -1,4 +1,4 @@
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { WORKER_ACTIVE_META_BY_ID, WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   computeReportCardsRegistryFingerprint,
@@ -42,10 +42,7 @@ import { resolveLenderTokenIds, deriveLenderBookObservationIdentity, canonicaliz
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { LenderBookObservationSchema, LenderCollateralBackingSchema, type LenderCollateralBacking } from "@shared/types/safety-score-v9-lender-book";
 import type { LiveReserveSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
-import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
-import { sha256Hex } from "@shared/lib/sha256";
-import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { loadSafetyScoreV9Publication, loadSafetyScoreV9PublicationHealth } from "./publication-store";
+import { loadSafetyScoreV9LenderCollateralState } from "./accepted-projection-readers";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./consumer-freshness";
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
@@ -115,8 +112,7 @@ function freshnessAtClock(
 }
 
 /**
- * Project the prior accepted publication immediately into compact, registry-bound
- * collateral rows. The decoded card set never escapes this capture-only scope.
+ * Subset the accepted collateral inventory using current-registry token identities.
  */
 export async function captureLenderCollateralBacking(
   db: D1Database,
@@ -124,7 +120,7 @@ export async function captureLenderCollateralBacking(
   registryFingerprint: string,
   clockSec: number,
 ): Promise<LenderCollateralBacking> {
-  const tokenIds = resolveLenderTokenIds(ACTIVE_STABLECOINS.flatMap((coin) =>
+  const tokenIds = resolveLenderTokenIds(WORKER_ACTIVE_STABLECOINS.flatMap((coin) =>
     (coin.contracts ?? []).map((contract) => ({ assetId: coin.id, chain: contract.chain, address: contract.address })),
   ));
   const requiredTokens = new Set<string>();
@@ -150,41 +146,27 @@ export async function captureLenderCollateralBacking(
     });
   try {
     // One bounded D1-backed source read; no RPC, API fetch or score evaluation.
-    const [publication, health] = await Promise.all([
-      loadSafetyScoreV9Publication(db),
-      loadSafetyScoreV9PublicationHealth(db),
-    ]);
-    if (!publication || !health) return unavailable("accepted-source-unavailable");
+    const state = await loadSafetyScoreV9LenderCollateralState(db);
+    if (state.kind !== "accepted") return unavailable("accepted-source-unavailable");
+    const { projection, health } = state;
     if (health.status !== "current") return unavailable("accepted-source-held");
-    if (health.acceptedPublicationGenerationId !== publication.publicationGenerationId ||
-        health.acceptedAtSec !== publication.publishedAtSec) return unavailable("accepted-source-unavailable");
     if (!Number.isSafeInteger(clockSec) || clockSec < 0 ||
-        !Number.isSafeInteger(publication.publishedAtSec) || publication.publishedAtSec < 0 ||
+        !Number.isSafeInteger(projection.publishedAtSec) || projection.publishedAtSec < 0 ||
         !Number.isSafeInteger(health.attemptedAtSec) || health.attemptedAtSec < 0) return unavailable("malformed");
-    if (publication.publishedAtSec > clockSec || health.attemptedAtSec > clockSec) return unavailable("future-dated");
-    if (clockSec - publication.publishedAtSec > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+    if (projection.publishedAtSec > clockSec || health.attemptedAtSec > clockSec) return unavailable("future-dated");
+    if (clockSec - projection.publishedAtSec > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
       return unavailable("accepted-source-stale");
     }
     const requiredIds = new Set(Object.values(tokenToAssetId));
     const byAssetId: LenderCollateralBacking["byAssetId"] = {};
-    for (const card of publication.cards) {
-      if (!requiredIds.has(card.id)) continue;
-      const backing = card.pillars.backing;
-      if (card.ratingStatus !== "rated" || backing.aggregationDisposition === "excluded-a-b" ||
-          backing.score === null || !Number.isFinite(backing.score) || backing.score < 0 || backing.score > 100) continue;
-      const sourceCause = (["D", "C", "U"] as const).find((cause) => backing.limitedEvidenceCauses?.includes(cause)) ?? null;
-      const sourceGapIds = [...new Set((backing.causeGapRefs ?? []).map((ref) => resolveCauseGapId(publication, card, ref)))].sort(compareCodeUnits);
-      if ((sourceCause === "C" || sourceCause === "U") && sourceGapIds.length === 0) continue;
-      byAssetId[card.id] = {
-        assetId: card.id, backingScore: backing.score,
-        cardSha256: sha256Hex(stableJsonStringifyV1(card)),
-        sourceCause, sourceGapIds,
-      };
+    for (const id of requiredIds) {
+      const row = projection.byAssetId[id];
+      if (row) byAssetId[id] = row;
     }
     return LenderCollateralBackingSchema.parse({
       schemaVersion: 1, status: "ok", reason: null,
-      publicationGenerationId: publication.publicationGenerationId, publishedAtSec: publication.publishedAtSec,
-      policyDigest: publication.policy.semanticDigest, evaluationBuildDigest: publication.evaluationBuildDigest,
+      publicationGenerationId: projection.safetyScoreIdentity.publicationGenerationId, publishedAtSec: projection.publishedAtSec,
+      policyDigest: projection.safetyScoreIdentity.policyDigest, evaluationBuildDigest: projection.safetyScoreIdentity.evaluationBuildDigest,
       registryFingerprint, maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC, tokenToAssetId,
       byAssetId: Object.fromEntries(Object.entries(byAssetId).sort(([a], [b]) => compareCodeUnits(a, b))),
     });
@@ -267,7 +249,7 @@ export async function buildNativeSafetyScoreV9Capture(
   const capturedReserveProvenanceMap = captureLenderBookOutcomes(liveReserveProvenanceMap, clockSec);
   const lenderCollateralBacking = await captureLenderCollateralBacking(db, capturedReserveProvenanceMap, registryFingerprint, clockSec);
   const nonNavPegDataById = new Map(
-    [...pegAnalytics.pegDataById].filter(([id]) => ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
+    [...pegAnalytics.pegDataById].filter(([id]) => WORKER_ACTIVE_META_BY_ID.get(id)?.flags.navToken !== true),
   );
   const scoringInputFreshness: ReportCardsInputFreshness = {
     dexLiquidity: freshnessAtClock(inputFreshness.dexLiquidity, clockSec, "DEX liquidity"),
@@ -316,7 +298,7 @@ export async function buildNativeSafetyScoreV9Capture(
   const dexLiqMap: Record<string, NativeDexLiquidityRow> = {};
   const dexDeploymentSupplyCoverageById: NativeSafetyScoreV9Input["dexDeploymentSupplyCoverageById"] = {};
   const dexMethodologyVersions = new Set<string>();
-  for (const coin of ACTIVE_STABLECOINS) {
+  for (const coin of WORKER_ACTIVE_STABLECOINS) {
     const row = dexLiquiditySnapshot.map[coin.id];
     if (!row) throw new Error(`Native V9 capture has no in-memory DEX row for ${coin.id}`);
     const methodologyVersion = (row as typeof row & { methodologyVersion?: string }).methodologyVersion?.trim();
@@ -350,11 +332,9 @@ export async function buildNativeSafetyScoreV9Capture(
     methodologyVersion: redemptionSnapshotProvenance.methodologyVersion,
   });
 
-  // `ACTIVE_IDS` is built from `ACTIVE_STABLECOINS` in the same registry
-  // module, so the capture's asset list cannot diverge from the active set. The
-  // guard that used to compare them, and the always-empty `missing` list it
-  // reported, were tautologies left over from the V8-shaped bridge.
-  const activeAssetIds = ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
+  // worker-runtime-registry owns both the metadata rows consumed above and
+  // this active census, so capture does not load a second full-registry owner.
+  const activeAssetIds = WORKER_ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
   const reserveJournal = await loadReportCardEvidenceJournalByIdV1(db, activeAssetIds, clockSec);
   const pipelineGapByAssetId = captureReservePipelineGaps(reserveJournal, liveReserveMap, clockSec);
   if (!redemptionStale) {
@@ -436,7 +416,7 @@ export async function buildNativeSafetyScoreV9Capture(
     inputMethodologyVersions: projectReportCardsFixedInputMethodologyVersions({
       methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       dexLiqMap: Object.fromEntries(
-        ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: [...dexMethodologyVersions][0] }]),
+        WORKER_ACTIVE_STABLECOINS.map((coin) => [coin.id, { methodologyVersion: [...dexMethodologyVersions][0] }]),
       ),
       pegDataById,
       redemptionBackstopMap,

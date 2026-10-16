@@ -1,10 +1,10 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { describe, expect, it } from "vitest";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,
-  type V9ExtensionRegistryMeta,
 } from "../safety-score-v9/extension";
 import { createSafetyScoreV9FullRegistryInput, FULL_REGISTRY_CLOCK_SEC } from "./fixtures/safety-score-v9-full-registry-input";
 
@@ -13,8 +13,7 @@ const PARENT_ID = "apxusd-apyx";
 const CLOCK_SEC = FULL_REGISTRY_CLOCK_SEC;
 
 type FullInput = ReturnType<typeof createSafetyScoreV9FullRegistryInput>;
-type TestMeta = V9ExtensionRegistryMeta & { pegReferenceId?: string };
-type TestMetaOverrides = Partial<Pick<TestMeta, "variantOf" | "pegReferenceId">>;
+type TestMetaOverrides = Partial<Pick<SafetyScoreV9ScoringMeta, "variantOf" | "pegReferenceId">>;
 
 function pick<T>(record: Readonly<Record<string, T>>, ids: readonly string[]): Record<string, T> {
   return Object.fromEntries(
@@ -69,7 +68,7 @@ function twoAssetInput(overrides: Partial<Parameters<typeof createReportCardsFix
 }
 
 function metadata(overrides: Partial<Record<string, TestMetaOverrides>> = {}) {
-  return new Map<string, V9ExtensionRegistryMeta>([
+  return new Map<string, SafetyScoreV9ScoringMeta>([
     [CHILD_ID, { ...ACTIVE_META_BY_ID.get(CHILD_ID)!, ...overrides[CHILD_ID] }],
     [PARENT_ID, { ...ACTIVE_META_BY_ID.get(PARENT_ID)!, ...overrides[PARENT_ID] }],
   ]);
@@ -77,7 +76,7 @@ function metadata(overrides: Partial<Record<string, TestMetaOverrides>> = {}) {
 
 function compiledChild(
   fixedInput: ReturnType<typeof twoAssetInput>,
-  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta> = metadata(),
+  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta> = metadata(),
 ) {
   return compileSafetyScoreV9FactSetFromFixedInput(
     fixedInput,
@@ -87,7 +86,7 @@ function compiledChild(
 
 function childPeg(
   fixedInput: ReturnType<typeof twoAssetInput>,
-  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta> = metadata(),
+  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta> = metadata(),
 ) {
   return compiledChild(fixedInput, metaById).peg;
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { SAFETY_SCORE_V9_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/safety-score-v9-registry";
 import { buildChainRpcs } from "../chain-registry";
 import { observeSafetyScoreV9TransferMaterialityGeneration, TRANSFER_MATERIALITY_CAPTURE_BUDGET } from "../safety-score-v9/transfer-materiality-observer";
 import { SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS } from "../safety-score-v9/transfer-materiality";

@@ -18,24 +18,22 @@ import {
 import {
   assessV9Publication,
   expiredMeasuredExitAssetIds,
-  buildSafetyScoreV9AcceptedPublicationBaseline,
   type SafetyScoreV9AcceptedPublicationBaseline,
   type V9PublicationCoverageFloor,
 } from "./publication-assessment";
 import {
-  loadSafetyScoreV9Publication,
-  loadSafetyScoreV9PublicationHealth,
   persistSafetyScoreV9Publication,
   persistSafetyScoreV9PublicationAttempt,
   type V9PublicationAttempt,
 } from "./publication-store";
 import type { V9AssetQuarantine } from "./fact-set";
 import { persistAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
+import { loadSafetyScoreV9AcceptedBaselineState } from "./accepted-projection-readers";
 import { buildSafetyScoreV9PublicationIdentity } from "../report-cards-v9-cache";
 import { logWorkerEvent } from "../structured-log";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "./transfer-materiality";
 import { buildSafetyScoreV9PublicationReplayCapture, SafetyScoreV9ReplayCaptureIdentityError } from "./publication-replay-capture";
-import { SafetyScoreV9SchemaCutoverPendingError } from "./publication-codec";
+import type { AcceptedProjectionUnavailableReason } from "./accepted-projections";
 import { journalSafetyScorePublication, type SafetyScoreJournalResult } from "./publication-journal";
 import { archiveSafetyScoreCapture, type SafetyScoreCaptureArchiveResult } from "./capture-archive";
 import { buildSafetyScoreV9AcceptedProjections } from "./accepted-projections";
@@ -92,7 +90,6 @@ export type SafetyScoreV9PublicationRunResult =
       quarantines: readonly V9AssetQuarantine[];
       affectedAssetIds: readonly string[];
       bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
-      schemaCutoverReason?: "schema-cutover-6-to-7";
       journal: SafetyScoreJournalResult;
       captureArchive: SafetyScoreCaptureArchiveResult;
     }
@@ -183,6 +180,9 @@ function safeFailure(
   error: unknown,
   stage: SafetyScoreV9PublicationFailureStage,
 ): { code: string; message: string } {
+  if (error instanceof SafetyScoreV9AcceptedBaselineProjectionError) {
+    return { code: error.code, message: error.message };
+  }
   const name = error instanceof Error && error.name ? error.name : "Error";
   const assetAndField =
     error instanceof V9AssetEvaluationError
@@ -232,31 +232,18 @@ function heldPublicationHealth(args: {
   };
 }
 
-async function loadAcceptedPublicationState(
-  db: D1Database,
-  signal: AbortSignal,
-): Promise<{
-  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
-  previousHealth: V9PublicationHealth | null;
-  schemaCutoverReason?: "schema-cutover-6-to-7";
-}> {
-  let schemaCutoverReason: "schema-cutover-6-to-7" | undefined;
-  const [publication, previousHealth] = await Promise.all([
-    loadSafetyScoreV9Publication(db, signal).catch((error: unknown) => {
-      if (!(error instanceof SafetyScoreV9SchemaCutoverPendingError)) throw error;
-      schemaCutoverReason = "schema-cutover-6-to-7";
-      return null;
-    }),
-    loadSafetyScoreV9PublicationHealth(db, signal).catch((error: unknown) => {
-      if (!(error instanceof SafetyScoreV9SchemaCutoverPendingError)) throw error;
-      return null;
-    }),
-  ]);
-  return {
-    acceptedPublication: publication === null ? null : buildSafetyScoreV9AcceptedPublicationBaseline(publication),
-    previousHealth,
-    ...(schemaCutoverReason === undefined ? {} : { schemaCutoverReason }),
-  };
+class SafetyScoreV9AcceptedBaselineProjectionError extends Error {
+  readonly code: string;
+
+  constructor(reason: AcceptedProjectionUnavailableReason) {
+    const suffix = reason === "projection-missing" ? "missing"
+      : reason === "read-failed" ? "read-failed"
+      : reason === "publication-mismatch" || reason === "health-mismatch" ? "publication-mismatch"
+      : "invalid";
+    super(`Accepted Safety Score v9 baseline projection unavailable: ${reason}`);
+    this.name = "SafetyScoreV9AcceptedBaselineProjectionError";
+    this.code = `safety-score-v9-accepted-baseline-projection-${suffix}`;
+  }
 }
 
 function publicationAttempt(args: {
@@ -457,14 +444,12 @@ export async function runSafetyScoreV9Publication(
     }
 
     stage = "publication-gate";
-    const {
-      acceptedPublication,
-      previousHealth,
-      schemaCutoverReason,
-    } = await loadAcceptedPublicationState(
-      input.db,
-      publicationSignal,
-    );
+    const acceptedState = await loadSafetyScoreV9AcceptedBaselineState(input.db, publicationSignal);
+    if (acceptedState.kind === "unavailable") {
+      throw new SafetyScoreV9AcceptedBaselineProjectionError(acceptedState.reason);
+    }
+    const acceptedPublication = acceptedState.kind === "accepted" ? acceptedState.projection.baseline : null;
+    const previousHealth = acceptedState.health;
 
     stage = "compile";
     const pipeline = buildSafetyScoreV9PublicationFromNormalizedInput({
@@ -649,7 +634,6 @@ export async function runSafetyScoreV9Publication(
       captureArchive,
       publicationGenerationId: publication.publicationGenerationId,
       candidateId: publication.candidateId,
-      ...(schemaCutoverReason === undefined ? {} : { schemaCutoverReason }),
       outcome: partial ? "partial" : "clean",
       quarantines: pipeline.quarantines,
       affectedAssetIds: assessment.affectedAssetIds,

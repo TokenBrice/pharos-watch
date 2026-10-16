@@ -1,3 +1,4 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { readFileSync, writeFileSync } from "node:fs";
 import { z } from "zod";
 import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
@@ -10,7 +11,6 @@ import { V9AccessClaimGraphSchema } from "@shared/types/safety-score-v9-access-l
 import type { SafetyScoreV9FactSetExtensionV2 } from "../src/lib/safety-score-v9/fact-set";
 import {
   buildSafetyScoreV9BaselineExtension,
-  type V9ExtensionRegistryMeta,
 } from "../src/lib/safety-score-v9/extension";
 import {
   buildSafetyScoreV9Candidate,
@@ -183,7 +183,7 @@ export function buildCounterfactualPipeline(
   replay: Replay,
   fixedInput: SafetyScoreV9CompilerInput,
   assetId: string,
-  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
+  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta>,
 ): SafetyScoreV9CandidatePipelineResult {
   const replayExtension = (replay.pipeline as unknown as { extension?: unknown }).extension;
   let extension: unknown;
@@ -267,7 +267,7 @@ function supplyByAssetId(replay: Replay): ReadonlyMap<string, Pick<LiveWithheldR
  */
 export function buildLiveWithheldCounterfactualReport(
   replayValue: Replay,
-  metaById: ReadonlyMap<string, V9ExtensionRegistryMeta> = ACTIVE_META_BY_ID,
+  metaById: ReadonlyMap<string, SafetyScoreV9ScoringMeta> = ACTIVE_META_BY_ID,
 ): LiveWithheldReport {
   const replay = ReplaySchema.parse(replayValue);
   const { fixedInput, candidate } = replay.pipeline;

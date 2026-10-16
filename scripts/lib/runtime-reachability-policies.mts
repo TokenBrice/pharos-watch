@@ -1,6 +1,7 @@
 export type EntrypointSelector =
   | { kind: "paths"; paths: readonly string[] }
   | { kind: "scheduled-loaders"; source: string }
+  | { kind: "scheduled-owner-loaders"; source: string; role: "heavy"; additionalPaths: readonly string[] }
   | { kind: "source-files"; root: string }
   | { kind: "use-client"; root: string };
 
@@ -20,10 +21,14 @@ export interface DirectImportPolicy {
 }
 
 export interface RuntimeReachabilityPolicy {
-  id: "scheduled" | "mint-burn" | "memory-constrained-cron" | "pages-functions" | "client-registry" | "public-safety-projections";
+  id: "scheduled" | "mint-burn" | "memory-constrained-cron" | "pages-functions" | "client-registry" | "public-safety-projections" | "safety-score-v9-publication";
   entrypoints: EntrypointSelector;
   forbidden: ForbiddenSelector;
   directImports?: DirectImportPolicy;
+  requiredReachable?: readonly string[];
+  wranglerConfig?: string;
+  /** Check initialization through static edges, excluding deferred invocation imports. */
+  staticImportsOnly?: boolean;
   failureHeading: string;
   remediation: string;
   successLabel: string;
@@ -31,15 +36,61 @@ export interface RuntimeReachabilityPolicy {
 
 export const RUNTIME_REACHABILITY_POLICIES = [
   {
+    id: "safety-score-v9-publication",
+    // Invocation closure, not the whole physical generic-dispatcher bundle.
+    // Non-owner lazy edges are excluded only after proving role-before-loader.
+    entrypoints: {
+      kind: "scheduled-owner-loaders",
+      source: "worker/src/handlers/scheduled.ts",
+      role: "heavy",
+      additionalPaths: [
+        "worker/src/handlers/scheduled/context.ts",
+        "worker/src/workflows/safety-score-v9-publication.entry.ts",
+        "worker/src/cron/compute-safety-score-v9.ts",
+        "worker/src/lib/safety-score-v9/candidate.ts",
+      ],
+    },
+    wranglerConfig: "worker/wrangler.heavy.toml",
+    forbidden: {
+      kind: "paths",
+      paths: [
+        "shared/lib/stablecoins/registry.ts",
+        "shared/lib/stablecoins/full-catalog.ts",
+        "worker/src/lib/full-stablecoin-catalog.ts",
+        "shared/data/stablecoins/coins.generated.json",
+        "shared/data/stablecoins/coins.worker-full.generated.json",
+        "shared/data/safety-score-v9/incident-reviews-v1.json",
+        "shared/lib/safety-score-v9/contagion.ts",
+      ],
+    },
+    requiredReachable: [
+      "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
+      "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
+    ],
+    failureHeading: "Safety Score V9 publication invocation boundary failed",
+    remediation: "Use scoring-only metadata for scoring and the Worker runtime projection for prep/DEX; preserve heavy role rejection before invoking any slot loader. This guard proves the owner-derived invocation closure, not absence of non-owner lazy code from the physical bundle.",
+    successLabel: "Safety Score V9 publication invocation boundary",
+  },
+  {
     id: "public-safety-projections",
-    // Public storage roots exclude the generic scheduler's lazy heavy-only imports.
+    // Public HTTP initialization, not deferred scheduled/admin invocation graphs.
     entrypoints: { kind: "paths", paths: [
+      "worker/src/index.ts",
+      "worker/src/handlers/http/request-dispatch.ts",
+      "worker/src/lib/report-cards-v9-cache.ts",
+      "worker/src/lib/public-health-assessment.ts",
       "worker/src/lib/safety-score-v9/publication-store.ts",
       "worker/src/lib/safety-score-index.ts",
     ] },
-    forbidden: { kind: "paths", paths: ["worker/src/lib/safety-score-v9/accepted-projections.ts"] },
+    staticImportsOnly: true,
+    forbidden: { kind: "paths", paths: [
+      "worker/src/lib/safety-score-v9/accepted-projections.ts",
+      "worker/src/lib/safety-score-v9/accepted-projection-readers.ts",
+      "shared/lib/stablecoins/safety-score-v9-registry.ts",
+      "shared/data/stablecoins/coins.safety-score-v9.generated.json",
+    ] },
     failureHeading: "Public Worker accepted-projection boundary failed",
-    remediation: "Inject accepted-projection builders from the heavy publication runner; public storage readers must not import them.",
+    remediation: "Keep accepted-projection builders/readers and scoring-only catalogs out of public static initialization; inject builders from the heavy publication runner and retain deferred scheduled/admin imports.",
     successLabel: "Public Worker accepted-projection boundary",
   },
   {

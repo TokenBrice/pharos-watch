@@ -1,3 +1,4 @@
+import type { SafetyScoreV9ScoringMeta } from "@shared/types/safety-score-v9-scoring-catalog";
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -7,9 +8,6 @@ import xdaiRiskReview from "@shared/data/stablecoins/domains/risk-review/xdai-gn
 import { REVIEWED_DEPLOYMENT_CATALOG } from "../../test-helpers/reviewed-deployment-catalog.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
-import {
-  type V9ExtensionRegistryMeta,
-} from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
   buildSafetyScoreV9SupplyReview,
@@ -499,7 +497,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       id: "alpha",
       bridgeRouteRisk,
       contracts: [{ chain: "ethereum", address: "0x01" }],
-    } as unknown as V9ExtensionRegistryMeta;
+    } as unknown as SafetyScoreV9ScoringMeta;
     const rows = { Ethereum: { current: 100 } };
     const review = buildSafetyScoreV9SupplyReview(fixedInputStub(rows), "alpha", bridgeRouteRisk, { meta })!;
     const exact = adaptBridgeReview(meta, review, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec, rows);
@@ -536,7 +534,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     } as BridgeRouteRiskProfile;
     const rows = { Ethereum: { current: 100 } };
     const review = buildSafetyScoreV9SupplyReview(fixedInputStub(rows), "alpha", bridgeRouteRisk)!;
-    const meta = { id: "alpha", bridgeRouteRisk } as unknown as V9ExtensionRegistryMeta;
+    const meta = { id: "alpha", bridgeRouteRisk } as unknown as SafetyScoreV9ScoringMeta;
     const bridge = adaptBridgeReview(meta, review, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec, rows);
 
     expect(review.selectedBridgeRoutes).toMatchObject([
@@ -565,7 +563,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
         sources: [],
       } as BridgeRouteRiskProfile;
       const review = buildSafetyScoreV9SupplyReview(fixedInputStub({ Ethereum: { current: 100 } }), "alpha", bridgeRouteRisk)!;
-      const meta = { id: "alpha", bridgeRouteRisk } as unknown as V9ExtensionRegistryMeta;
+      const meta = { id: "alpha", bridgeRouteRisk } as unknown as SafetyScoreV9ScoringMeta;
       const bridge = adaptBridgeReview(meta, review, 1, new ReviewEvidenceBuilder("alpha", clockSec), clockSec);
 
       expect(review.unknownRouteSupplyShare).toBe(1);
@@ -883,7 +881,7 @@ describe("curated native single-route supply attribution", () => {
       id: "xdai-gnosis",
       mechanismArchetype: "crypto-backed",
       bridgeRouteRisk: XDAI_PROFILE,
-    } as unknown as V9ExtensionRegistryMeta;
+    } as unknown as SafetyScoreV9ScoringMeta;
     const review = buildSafetyScoreV9SupplyReview(xdaiFixedInput(), "xdai-gnosis", XDAI_PROFILE);
 
     const withoutReview = adaptBridgeReview(

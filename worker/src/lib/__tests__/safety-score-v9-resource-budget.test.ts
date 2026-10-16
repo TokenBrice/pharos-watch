@@ -76,7 +76,7 @@ describe("Safety Score V9 compile admission", () => {
     { capturePath: "/explicit/capture.json" },
   ])("isolates probe children from poisoned ambient instrumentation: %j", (protocol) => {
     const env = createResourceProbeEnv({
-      PATH: process.env.PATH, HOME: process.env.HOME, LANG: "C", LC_ALL: "C",
+      PATH: process.env.PATH, HOME: process.env.HOME, LANG: "C", LANGUAGE: "en", LC_ALL: "C", LC_lowercase: "poison",
       NODE_V8_COVERAGE: "/poison/coverage", NODE_OPTIONS: "--require=/poison/preload.cjs",
       VITEST: "true", VITEST_WORKER_ID: "1", COVERAGE: "1",
       CONTAGION_MATRIX: "poison", SAFETY_SCORE_V9_RESOURCE_CAPTURE: "/poison/capture.json",
@@ -89,7 +89,7 @@ describe("Safety Score V9 compile admission", () => {
     expect(JSON.parse(child.stdout)).toEqual({
       ...(process.env.PATH === undefined ? {} : { PATH: process.env.PATH }),
       ...(process.env.HOME === undefined ? {} : { HOME: process.env.HOME }),
-      LANG: "C", LC_ALL: "C",
+      LANG: "C", LANGUAGE: "en", LC_ALL: "C",
       ...("contagion" in protocol ? { CONTAGION_MATRIX: "1" } : {}),
       ...("capturePath" in protocol ? { SAFETY_SCORE_V9_RESOURCE_CAPTURE: protocol.capturePath } : {}),
     });
@@ -98,11 +98,6 @@ describe("Safety Score V9 compile admission", () => {
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
 const TEST_DIRECTORY = resolve(import.meta.dirname);
-const HEAP_LIMIT_MIB = 128;
-// Keep this synthetic fixture's 7.1 MB regression ceiling below the 9 MB publication limit.
-// The 2026-10-10 same-registry probe measured 7,029,184 B: retained bridge questions add
-// 9,995 B and independently admitted aggregate oracle evidence adds 2,086 B.
-// Both are required cause-bearing disclosures; the 128 MiB compile guard stays unchanged.
 const PUBLICATION_BYTE_BUDGET = 7_100_000;
 // Frozen pre-Phase-2 BASE from 335ecb0f5, smoke-out/base-20261003-0149.json
 // .pipeline.candidate encoded with stableJsonStringifyV1 and gzipCanonicalJson;
@@ -119,15 +114,11 @@ const CONTAGION_HEAP_LIMIT_MIB = 256;
 // measured 60,496.228465 ms in the full-suite run (2026-10-07).
 // This is not a Worker CPU, byte, heap, or catalog-admission ceiling.
 const CONTAGION_WALL_BUDGET_MS = 90_000;
-// Node 24 profiling found the probe retaining a second full extension through
-// publication, and the matrix rebuilding its identical baseline nine times.
-// Release fixture-only graphs and share the admitted baseline, not shock results;
-// plain and coverage runs keep the same child workloads and every budget.
 let temporaryDirectory = "";
 let bundledProbe = "";
 let bundledInputs: string[] = [];
 
-describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 canonical publication resource budget", {
+describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 contagion and historical capture resource budgets", {
   timeout: 210_000,
 }, () => {
   beforeAll(() => {
@@ -137,23 +128,17 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 ca
       stdin: {
         contents: `
           import { readFileSync } from "node:fs";
-          import { setImmediate as yieldTurn } from "node:timers/promises";
           import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
           import { applySafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation.ts";
           import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget.ts";
           import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
           import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate.ts";
-          import { parseSafetyScoreV9Publication, serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
-          import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment.ts";
+          import { serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
           import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
-          import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-          import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
-          import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
           import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
           import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
           import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
           import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-          import { buildSafetyScoreV9PublicationReplayCapture } from "../safety-score-v9/publication-replay-capture.ts";
           import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
           import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
           import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance.ts";
@@ -235,11 +220,6 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 ca
             }));
             process.exit(0);
           }
-          const fixtureMetrics = {
-            extensionAssets: extension.assets.length,
-            researchEvidenceCount: extension.assets.reduce((count, asset) => count + asset.researchEvidence.length, 0),
-            componentEvidenceCount: extension.assets.reduce((count, asset) => count + asset.componentEvidence.length, 0),
-          };
           if (capturePath) {
             const result = buildSafetyScoreV9PublicationFromNormalizedInput({
               fixedInput: input, extension, publishedAtSec: input.clockSec,
@@ -250,133 +230,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 ca
               candidateBytes: metadata.uncompressedBytes, compressedBytes: metadata.compressedBytes }));
             process.exit(0);
           }
-          // The production builder owns its extension; retaining the fixture's
-          // separate graph defeats its release-before-evaluation memory path.
-          extension = null;
-          await yieldTurn();
-          globalThis.gc?.();
-          // The async serializer's argument registers must die with this frame
-          // before the probe decodes the accepted generation.
-          let { acceptedStored, witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes } = await (async () => {
-          const prior = buildSafetyScoreV9PublicationFromNormalizedInput({
-            fixedInput: input,
-            publishedAtSec: input.clockSec,
-          });
-          // Scope the measurement iterator and decoded card graphs to a completed
-          // synchronous frame before decoding a second accepted publication.
-          const { witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes } = (() => {
-            let witnessTextSavingsBytes = 0;
-            let factVocabularySavingsBytes = 0;
-            const witnessViewBytes = {};
-            for (const card of prior.candidate.cards) {
-              const semantic = resolveV9PublicWitnessTexts(card);
-              witnessTextSavingsBytes += Buffer.byteLength(JSON.stringify(semantic)) - Buffer.byteLength(JSON.stringify(card));
-              const decoded = [...iterateEvidenceResponsibilityFacts(card.scoreTrace.evidenceResponsibility)];
-              const originalFacts = card.scoreTrace.evidenceResponsibility.facts.map((row, index) => {
-                const fact = decoded[index];
-                return [fact[0], row[1], row[2], fact[3], fact[4], fact[5], fact[6]];
-              });
-              factVocabularySavingsBytes += Buffer.byteLength(JSON.stringify(originalFacts)) -
-                Buffer.byteLength(JSON.stringify(card.scoreTrace.evidenceResponsibility.facts));
-              for (const [view, value] of Object.entries({
-                pillarReasons: Object.values(semantic.pillars).flatMap(pillar => pillar.reasons),
-                evidenceReasons: semantic.evidence.reasons,
-                adverseAttribution: semantic.scoreTrace.adverseAttribution.items,
-                boundedAttribution: semantic.scoreTrace.boundedUncertaintyAttribution.items,
-                evidenceFacts: semantic.scoreTrace.evidenceResponsibility.facts,
-              })) {
-                witnessViewBytes[view] = (witnessViewBytes[view] ?? 0) + Buffer.byteLength(JSON.stringify(value));
-              }
-            }
-            return { witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes };
-          })();
-          let acceptedStored;
-          try {
-            acceptedStored = await serializeSafetyScoreV9Publication(prior.candidate);
-            const measuredBytes = JSON.parse(acceptedStored).uncompressedBytes;
-            process.stderr.write(JSON.stringify({ probe: "publication-byte-measurement",
-              candidateBytes: measuredBytes, expandedWitnessCandidateBytes: measuredBytes + witnessTextSavingsBytes + factVocabularySavingsBytes,
-              witnessTextSavingsBytes, factVocabularySavingsBytes }) + "\\n");
-          } catch (error) {
-            // Measure one card field at a time on failure, never retain a second
-            // cohort-sized string or bypass the production serialization bound.
-            const cardFieldBytes = {};
-            const traceFieldBytes = {};
-            const scalarFieldBytes = {};
-            function measureScalars(value) {
-              if (Array.isArray(value)) { for (const row of value) measureScalars(row); return; }
-              if (value === null || typeof value !== "object") return;
-              for (const [key, field] of Object.entries(value)) {
-                if (field === null || typeof field !== "object" || Array.isArray(field) && field.length === 0) {
-                  scalarFieldBytes[key] = (scalarFieldBytes[key] ?? 0) +
-                    Buffer.byteLength(JSON.stringify(key) + ":" + JSON.stringify(field));
-                } else measureScalars(field);
-              }
-            }
-            let cardBytes = 0;
-            for (const card of prior.candidate.cards) {
-              cardBytes += Buffer.byteLength(JSON.stringify(card));
-              for (const [key, value] of Object.entries(card)) {
-                cardFieldBytes[key] = (cardFieldBytes[key] ?? 0) + Buffer.byteLength(JSON.stringify(value));
-              }
-              for (const [key, value] of Object.entries(card.scoreTrace)) {
-                traceFieldBytes[key] = (traceFieldBytes[key] ?? 0) + Buffer.byteLength(JSON.stringify(value));
-              }
-              measureScalars(card);
-            }
-            console.error({ probe: "publication-byte-failure", cards: prior.candidate.cards.length,
-              cardBytes, cardFieldBytes, traceFieldBytes, scalarFieldBytes,
-              finalHeapUsedBytes: process.memoryUsage().heapUsed,
-              peakRssBytes: process.resourceUsage().maxRSS * 1024 });
-            throw error;
-          }
-            return { acceptedStored, witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes };
-          })();
-          await new Promise((resolve) => setImmediate(resolve));
-          globalThis.gc?.();
-          let accepted = await parseSafetyScoreV9Publication(acceptedStored);
-          const acceptedBaseline = buildSafetyScoreV9AcceptedPublicationBaseline(accepted);
-          accepted = null;
-          acceptedStored = null;
-          await new Promise((resolve) => setImmediate(resolve));
-          globalThis.gc?.();
-          const result = buildSafetyScoreV9PublicationFromNormalizedInput({
-            fixedInput: input,
-            publishedAtSec: input.clockSec,
-          });
-          globalThis.gc?.();
-          const captureMemoryBefore = process.memoryUsage();
-          const captureCpuBefore = process.cpuUsage();
-          const capture = await buildSafetyScoreV9PublicationReplayCapture(result.candidate, input, null);
-          const captureCpu = process.cpuUsage(captureCpuBefore);
-          const captureMemoryAfter = process.memoryUsage();
-          const stored = await serializeSafetyScoreV9Publication(result.candidate);
-          const metadata = JSON.parse(stored);
-          process.stdout.write(JSON.stringify({
-            ...fixtureMetrics,
-            baseInputGenerationId: result.candidate.baseInputGenerationId,
-            expected: input.activeAssetIds.length,
-            cards: result.candidate.cards.length,
-            rated: result.candidate.completeness.ratedCount,
-            factDigest: result.candidate.factSetDigest,
-            resultDigest: result.candidate.resultDigest,
-            acceptedBaselineBytes: new TextEncoder().encode(
-              JSON.stringify(acceptedBaseline),
-            ).byteLength,
-            candidateBytes: metadata.uncompressedBytes,
-            expandedWitnessCandidateBytes: metadata.uncompressedBytes + witnessTextSavingsBytes + factVocabularySavingsBytes,
-            witnessTextSavingsBytes, factVocabularySavingsBytes, witnessViewBytes,
-            compressedBytes: metadata.compressedBytes,
-            storedBytes: new TextEncoder().encode(stored).byteLength,
-            replayCaptureStoredBytes: capture.storedBytes,
-            replayCaptureUncompressedBytes: capture.uncompressedBytes,
-            replayCaptureCpuMs: (captureCpu.user + captureCpu.system) / 1000,
-            replayCaptureHeapDeltaBytes: captureMemoryAfter.heapUsed - captureMemoryBefore.heapUsed,
-            replayCaptureRssDeltaBytes: captureMemoryAfter.rss - captureMemoryBefore.rss,
-            wallMs: performance.now(),
-            finalHeapUsedBytes: process.memoryUsage().heapUsed,
-            peakRssBytes: process.resourceUsage().maxRSS * 1024,
-          }));
+          throw new Error("Expected explicit contagion or historical capture protocol");
         `,
         loader: "ts",
         resolveDir: TEST_DIRECTORY,
@@ -417,61 +271,8 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 ca
   });
 
 
-  it(`publishes the full registry within ${HEAP_LIMIT_MIB} MiB of old-space`, () => {
-    const result = spawnSync(
-      process.execPath,
-      [
-        `--max-old-space-size=${HEAP_LIMIT_MIB}`,
-        "--expose-gc",
-        bundledProbe,
-      ],
-      {
-        cwd: ROOT,
-        encoding: "utf8",
-        // Wall-clock guard only (memory is the asserted bound): the 397-active registry
-        // runs near the 128 MiB ceiling, and the GC-bound child exceeded 100s inside a
-        // fully parallel test:pr run while taking ~30s alone.
-        timeout: 180_000,
-        env: createResourceProbeEnv(process.env),
-      },
-    );
-    if (result.status !== 0) console.error({ probe: "canonical-publication-failure", stdout: result.stdout, stderr: result.stderr });
-    expect(result.error).toBeUndefined();
-    expect(result.status, result.stderr).toBe(0);
 
-    const output = JSON.parse(result.stdout) as {
-      expected: number;
-      cards: number;
-      rated: number;
-      factDigest: string;
-      resultDigest: string;
-      acceptedBaselineBytes: number;
-      candidateBytes: number;
-      compressedBytes: number;
-      storedBytes: number;
-      replayCaptureUncompressedBytes: number;
-      extensionAssets: number;
-      researchEvidenceCount: number;
-      componentEvidenceCount: number;
-    };
-    console.info({ probe: "canonical-publication", oldSpaceLimitMiB: HEAP_LIMIT_MIB, ...output });
-    expect(output.extensionAssets).toBeGreaterThan(300);
-    expect(output.researchEvidenceCount).toBeGreaterThan(5_000);
-    expect(output.componentEvidenceCount).toBeGreaterThan(3_000);
-    expect(output.expected).toBeGreaterThan(300);
-    expect(output.replayCaptureUncompressedBytes).toBeGreaterThan(300_000);
-    expect(output.cards).toBe(output.expected);
-    expect(output.rated).toBeGreaterThan(output.expected / 3);
-    expect(output.factDigest).toMatch(/^[a-f0-9]{64}$/);
-    expect(output.resultDigest).toMatch(/^[a-f0-9]{64}$/);
-    expect(output.acceptedBaselineBytes).toBeLessThan(500_000);
-    expect(output.candidateBytes).toBeLessThanOrEqual(PUBLICATION_BYTE_BUDGET);
-    expect(output.compressedBytes).toBeLessThan(1_350_000);
-    expect(output.storedBytes).toBeGreaterThan(0);
-  });
-
-  // Byte-size measurement only: 256 MiB makes no compile/Worker memory claim.
-  // The independent full-registry regression above continues to require 128 MiB.
+  // Historical capture byte-size measurement only; the faithful compute harness owns the current guard.
   it.skipIf(!process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE)("keeps the frozen same-capture production envelope within both byte budgets", () => {
     const result = spawnSync(process.execPath, [
       `--max-old-space-size=${CONTAGION_HEAP_LIMIT_MIB}`, "--expose-gc", bundledProbe,
@@ -493,7 +294,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 ca
     ], {
       // Wall-clock guard only (memory is the asserted bound): v10.01 cause
       // tracing raises evaluation CPU, and shared CI runners exceeded 45s.
-      cwd: ROOT, encoding: "utf8", timeout: 100_000,
+      cwd: ROOT, encoding: "utf8", timeout: 130_000,
       env: createResourceProbeEnv(process.env, { contagion: true }),
     });
     expect(result.error).toBeUndefined();
@@ -512,7 +313,7 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 ca
       expect(count.failed).toBe(0);
     }
     // Retain all nine full-cohort scenarios and the independent 256 MiB heap bound.
-    // Shared-runner scheduling/GC time is included; the subprocess keeps its 100s kill guard.
-    expect(output.wallMs).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
+    // Shared-runner scheduling/GC time is included; leave 40s of kill headroom.
+    expect(output.wallMs, `nine-scenario matrix wallMs=${output.wallMs}`).toBeLessThan(CONTAGION_WALL_BUDGET_MS);
   });
 });

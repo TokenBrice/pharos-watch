@@ -16,6 +16,8 @@ import {
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
 import { parseSourceFile } from "../lib/ts-ast.mts";
+import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE } from "../../shared/lib/scheduled-runner-registry";
+import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
@@ -47,6 +49,7 @@ export interface ReachabilityViolation {
   entrypoint: string;
   forbidden: string;
   kind: "reachable" | "direct-import";
+  chain?: string[];
 }
 
 export interface RuntimeReachabilityResult {
@@ -107,6 +110,118 @@ function scheduledLoaderEntrypoints(root: string, sourcePath: string): string[] 
   return [...entrypoints].sort();
 }
 
+interface OwnerInvocationBoundary {
+  configurationErrors: string[];
+  entrypoints: string[];
+  excludedLazyImports: Set<string>;
+}
+
+function scheduledOwnerBoundary(
+  root: string,
+  selector: Extract<EntrypointSelector, { kind: "scheduled-owner-loaders" }>,
+): OwnerInvocationBoundary {
+  const source = toRepoPath(root, selector.source);
+  const configurationErrors: string[] = [];
+  const entrypoints = [source, ...selector.additionalPaths];
+  const excludedLazyImports = new Set<string>();
+  if (!isFile(resolve(root, source))) {
+    return { configurationErrors: [`Configured scheduled owner source is missing: ${source}`], entrypoints: [], excludedLazyImports };
+  }
+  const { sourceFile } = parseSourceFile(resolve(root, source));
+  const ownerKeys = new Set<string>(Object.values(SCHEDULED_SLOT_PLANS_BY_SCHEDULE)
+    .filter((plan) => plan.worker === selector.role).map((plan) => plan.scheduleKey));
+  const foundOwnerKeys = new Set<string>();
+  const loaderTables: ts.ObjectLiteralExpression[] = [];
+  const handlers: ts.FunctionDeclaration[] = [];
+  function find(node: ts.Node): void {
+    if (ts.isVariableDeclaration(node) && node.name.getText(sourceFile) === "SLOT_RUNNER_LOADER_BY_KEY") {
+      const initializer = node.initializer;
+      if (initializer && ts.isSatisfiesExpression(initializer) && ts.isObjectLiteralExpression(initializer.expression)) {
+        loaderTables.push(initializer.expression);
+      } else if (initializer && ts.isObjectLiteralExpression(initializer)) loaderTables.push(initializer);
+    }
+    if (ts.isFunctionDeclaration(node) && node.name?.text === "handleScheduledEvent") handlers.push(node);
+    ts.forEachChild(node, find);
+  }
+  find(sourceFile);
+  const loaderTable = loaderTables[0];
+  const handler = handlers[0];
+  if (!loaderTable || !handler?.body) {
+    configurationErrors.push("Scheduled owner boundary requires the loader table and handleScheduledEvent body");
+  } else {
+    for (const property of loaderTable.properties) {
+      if (!ts.isPropertyAssignment(property)) {
+        configurationErrors.push("Scheduled loader table must use explicit keyed loader properties");
+        continue;
+      }
+      const key = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name) ? property.name.text : "";
+      if (!ts.isArrowFunction(property.initializer) || ts.isBlock(property.initializer.body)) {
+        configurationErrors.push(`Scheduled loader ${key} must remain a lazy expression-bodied closure`);
+      }
+      const imports: string[] = [];
+      function collect(node: ts.Node): void {
+        if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+            node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) imports.push(node.arguments[0].text);
+        ts.forEachChild(node, collect);
+      }
+      collect(property.initializer);
+      if (imports.length !== 1) configurationErrors.push(`Scheduled loader ${key} must have exactly one literal lazy import`);
+      for (const specifier of imports) {
+        if (ownerKeys.has(key)) {
+          foundOwnerKeys.add(key);
+          const path = resolveRelativeModule(root, source, specifier);
+          if (path) entrypoints.push(path);
+          else configurationErrors.push(`Scheduled owner loader ${key} is missing: ${specifier}`);
+        } else excludedLazyImports.add(specifier);
+      }
+    }
+    // The rejected role must return at handler scope before the first loader
+    // invocation. Merely looking up a closure is safe; invoking it is not.
+    const statements = handler.body.statements;
+    const guard = statements.find((statement) => ts.isIfStatement(statement) &&
+      statement.expression.getText(sourceFile).replaceAll(/\s/g, "") === "slotPlan.worker!==workerRole");
+    const rejectsRole = guard && ts.isIfStatement(guard) && ts.isBlock(guard.thenStatement) &&
+      guard.thenStatement.statements.some((statement) => ts.isReturnStatement(statement));
+    let loaderCalls = 0;
+    function inspectCalls(node: ts.Node): void {
+      if (ts.isCallExpression(node) && node.expression.getText(sourceFile) === "loadRunner") {
+        loaderCalls++;
+        if (!rejectsRole || !guard || node.getStart(sourceFile) < guard.end) {
+          configurationErrors.push("Scheduled owner role rejection must return before invoking loadRunner()");
+        }
+      }
+      ts.forEachChild(node, inspectCalls);
+    }
+    inspectCalls(handler.body);
+    function inspectDispatcher(node: ts.Node): void {
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+          (node.getStart(sourceFile) < loaderTable!.pos || node.end > loaderTable!.end)) {
+        configurationErrors.push("Scheduled dispatcher may lazy-load slots only inside the guarded loader table");
+      }
+      if (ts.isIdentifier(node) && node.text === "SLOT_RUNNER_LOADER_BY_KEY" &&
+          ts.isElementAccessExpression(node.parent) && node.parent.expression === node) {
+        const declaration = node.parent.parent.parent;
+        if (!ts.isVariableDeclaration(declaration) || declaration.name.getText(sourceFile) !== "loadRunner" ||
+            node.parent.argumentExpression.getText(sourceFile) !== "slotPlan.scheduleKey") {
+          configurationErrors.push("Scheduled dispatcher must select loaders only through the guarded loadRunner binding");
+        }
+      }
+      ts.forEachChild(node, inspectDispatcher);
+    }
+    inspectDispatcher(sourceFile);
+    if (!rejectsRole || loaderCalls !== 1) {
+      configurationErrors.push("Scheduled owner boundary requires one guarded loadRunner() invocation");
+    }
+  }
+  for (const key of ownerKeys) {
+    if (!foundOwnerKeys.has(key)) configurationErrors.push(`Heavy-owned schedule has no loader: ${key}`);
+  }
+  for (const path of entrypoints) {
+    if (!isFile(resolve(root, path))) configurationErrors.push(`Configured entrypoint source is missing: ${path}`);
+  }
+  return { configurationErrors, entrypoints: [...new Set(entrypoints)].filter((path) => isFile(resolve(root, path))), excludedLazyImports };
+}
+
 function resolveEntrypoints(
   root: string,
   selector: EntrypointSelector,
@@ -119,6 +234,7 @@ function resolveEntrypoints(
     if (entrypoints.length === 0) configurationErrors.push("Configured entrypoint list is empty");
     return { configurationErrors, entrypoints: entrypoints.filter((path) => isFile(resolve(root, path))) };
   }
+  if (selector.kind === "scheduled-owner-loaders") return scheduledOwnerBoundary(root, selector);
   if (selector.kind === "scheduled-loaders") {
     const source = toRepoPath(root, selector.source);
     if (!isFile(resolve(root, source))) {
@@ -241,16 +357,27 @@ function resolveForbidden(root: string, selector: ForbiddenSelector): ResolvedFo
   return { allowedImporters: [], paths: new Set(paths), prefixes: [] };
 }
 
-function externalPackagesPlugin(): Plugin {
+function externalPackagesPlugin(
+  ownerBoundary?: { source: string; excludedLazyImports: Set<string> },
+  staticImportsOnly = false,
+): Plugin {
   return {
     name: "external-packages",
     setup(buildContext) {
       buildContext.onResolve({ filter: /.*/ }, (args) => {
+        if (staticImportsOnly && args.kind === "dynamic-import") {
+          return { path: args.path, external: true };
+        }
+        if (ownerBoundary && args.kind === "dynamic-import" &&
+            args.importer === ownerBoundary.source && ownerBoundary.excludedLazyImports.has(args.path)) {
+          return { path: args.path, external: true };
+        }
         if (
           args.path.startsWith(".") ||
           args.path.startsWith("/") ||
           args.path.startsWith("@shared/") ||
-          args.path.startsWith("@/")
+          args.path.startsWith("@/") ||
+          (ownerBoundary !== undefined && args.path === "#pharos-full-catalog")
         ) {
           return undefined;
         }
@@ -288,21 +415,49 @@ function buildReachabilityGraph(root: string, metafile: Metafile): ReachabilityG
   return { importersByInput, inputsByEntrypoint };
 }
 
-async function buildReachability(root: string, entrypoints: string[]): Promise<ReachabilityGraph> {
+function findImportChain(graph: ReachabilityGraph, entrypoint: string, target: string): string[] | undefined {
+  const queue = [[target]];
+  const seen = new Set([target]);
+  for (let index = 0; index < queue.length; index++) {
+    const chain = queue[index]!;
+    const current = chain[0]!;
+    if (current === entrypoint) return chain;
+    for (const importer of graph.importersByInput.get(current) ?? []) {
+      if (seen.has(importer)) continue;
+      seen.add(importer);
+      queue.push([importer, ...chain]);
+    }
+  }
+  return undefined;
+}
+
+async function buildReachability(root: string, entrypoints: string[], policy: RuntimeReachabilityPolicy): Promise<ReachabilityGraph> {
   if (entrypoints.length === 0) return { importersByInput: new Map(), inputsByEntrypoint: new Map() };
   const tsconfig = existsSync(resolve(root, "tsconfig.json")) ? "tsconfig.json" : undefined;
+  const alias: Record<string, string> = { "@": resolve(root, "src"), "@shared": resolve(root, "shared") };
+  if (policy.wranglerConfig) {
+    const configPath = resolve(root, policy.wranglerConfig);
+    const catalogAlias = parseAssignments(readFileSync(configPath, "utf8"))
+      .find((assignment) => assignment.section === "alias" && assignment.key === "#pharos-full-catalog");
+    const target = unquote(catalogAlias?.value);
+    if (!target) throw new Error(`Missing #pharos-full-catalog alias in ${policy.wranglerConfig}`);
+    alias["#pharos-full-catalog"] = resolve(dirname(configPath), target);
+  }
+  const ownerBoundary = policy.entrypoints.kind === "scheduled-owner-loaders"
+    ? { source: resolve(root, policy.entrypoints.source), excludedLazyImports: scheduledOwnerBoundary(root, policy.entrypoints).excludedLazyImports }
+    : undefined;
   const result = await build({
     absWorkingDir: root,
-    alias: { "@": resolve(root, "src"), "@shared": resolve(root, "shared") },
+    alias,
     bundle: true,
     entryPoints: entrypoints,
     format: "esm",
-    loader: { ".ttf": "file" },
+    loader: { ".ttf": "file", ".wasm": "file" },
     logLevel: "silent",
     metafile: true,
     outdir: "runtime-reachability-out",
     platform: "neutral",
-    plugins: [externalPackagesPlugin()],
+    plugins: [externalPackagesPlugin(ownerBoundary, policy.staticImportsOnly)],
     tsconfig,
     write: false,
   });
@@ -332,15 +487,31 @@ export async function checkRuntimeReachabilityPolicy(
   const resolved = resolveEntrypoints(root, policy.entrypoints);
   const { configurationErrors, entrypoints } = resolved;
   const forbidden = resolveForbidden(root, policy.forbidden);
-  const graph = await buildReachability(root, entrypoints);
+  if (configurationErrors.length > 0 && policy.entrypoints.kind === "scheduled-owner-loaders") {
+    return { configurationErrors, entrypointCount: entrypoints.length, policyId: policy.id, violations: [] };
+  }
+  if (policy.wranglerConfig && !isFile(resolve(root, policy.wranglerConfig))) {
+    configurationErrors.push(`Configured Wrangler source is missing: ${policy.wranglerConfig}`);
+    return { configurationErrors, entrypointCount: entrypoints.length, policyId: policy.id, violations: [] };
+  }
+  const graph = await buildReachability(root, entrypoints, policy);
   const violations: ReachabilityViolation[] = [];
 
   for (const entrypoint of entrypoints) {
     const reachableInputs = graph.inputsByEntrypoint.get(entrypoint) ?? new Set<string>();
     for (const input of reachableInputs) {
       if (isForbidden(input, forbidden, graph.importersByInput, reachableInputs)) {
-        violations.push({ entrypoint, forbidden: input, kind: "reachable" });
+        violations.push({
+          entrypoint, forbidden: input, kind: "reachable",
+          ...(policy.id === "safety-score-v9-publication" ? { chain: findImportChain(graph, entrypoint, input) } : {}),
+        });
       }
+    }
+  }
+
+  for (const required of policy.requiredReachable ?? []) {
+    if (![...graph.inputsByEntrypoint.values()].some((inputs) => inputs.has(required))) {
+      configurationErrors.push(`Required runtime evidence is not reachable: ${required}`);
     }
   }
 
@@ -373,6 +544,7 @@ function reportResult(policy: RuntimeReachabilityPolicy, result: RuntimeReachabi
     for (const violation of result.violations) {
       const relation = violation.kind === "direct-import" ? "directly imports" : "reaches";
       process.stderr.write(`  ${violation.entrypoint} ${relation} ${violation.forbidden}\n`);
+      if (violation.chain) process.stderr.write(`    ${violation.chain.join(" -> ")}\n`);
     }
     process.stderr.write(`\n${policy.remediation}\n`);
     return 1;
