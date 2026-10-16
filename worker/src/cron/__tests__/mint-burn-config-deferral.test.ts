@@ -15,6 +15,8 @@ import {
   deferConfig,
   loadDeferredConfigs,
   shouldDeferConfig,
+  resolveMintBurnResumeConfigKey,
+  resolveRotatedConfigs,
 } from "../mint-burn/run-state";
 
 vi.mock("../mint-burn/sync-config", async (importOriginal) => {
@@ -194,6 +196,7 @@ function makeChainContext() {
     ["ethereum", {
       chainHead: 22_050_000,
       rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth.example")],
+      endpointHeads: new Map<string, number>(),
       chainTimestampCache: new Map<string, number>(),
       txContextCache: new Map(),
     }],
@@ -234,6 +237,46 @@ describe("runMintBurnConfigPhase deferral integration", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("covers 129 extended configs in two rotated runs even when early configs consume their entire cap", async () => {
+    const { db } = fixtures.open();
+    const template = MINT_BURN_CONFIGS.find((config) => config.tier === "extended"
+      && config.chain.chainId === "ethereum" && config.events.length === 2)!;
+    const configs = Array.from({ length: 129 }, (_, i) => makeConfig({
+      ...template,
+      contractAddress: `0x${(i + 1).toString(16).padStart(40, "0")}`,
+      startBlock: 22_000_001,
+      tier: "extended",
+    }));
+    vi.mocked(syncMintBurnConfig).mockImplementation(async (input) => ({
+      summary: {
+        ...createMintBurnConfigSummary(input.config, input.key, input.tier, { attempted: true }),
+        requestBudgetUsed: input.configBudgetLimit,
+        requestBudgetLimit: input.configBudgetLimit,
+      },
+      apiErrors: 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0,
+      atomicRoundtripsDetected: 0, newLastBlock: null,
+    }));
+    const attempted = new Set<string>();
+    let rotated = configs;
+    for (let cycle = 0; cycle < 2; cycle++) {
+      const input = {
+        ...makePhaseInput({ db, configs: rotated }),
+        lane: "extended" as const,
+        budget: { count: 14, limit: 200 },
+        extendedConfigBudgetLimit: 25,
+      };
+      const result = await runMintBurnConfigPhase(input);
+      expect(result.contractsProcessed).toBeGreaterThanOrEqual(65);
+      expect(input.budget.count).toBeLessThanOrEqual(190);
+      for (const summary of result.configBreakdown) {
+        if (summary.attempted) attempted.add(summary.key);
+      }
+      rotated = resolveRotatedConfigs(resolveMintBurnResumeConfigKey(result.configBreakdown), configs,
+        (config) => `${config.chain.chainId}-${config.contractAddress}`);
+    }
+    expect(attempted.size).toBe(129);
   });
 
   it("records a deferral for a config with apiErrors=6 and coverage=0.5", async () => {

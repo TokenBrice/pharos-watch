@@ -84,6 +84,7 @@ export interface SyncMintBurnConfigInput {
   scanTo: number;
   chainHead: number;
   rpcEndpoints: readonly RpcEndpoint[];
+  endpointHeads?: Map<string, number>;
   signal?: AbortSignal;
   configBudgetLimit: number;
   runTimestamp: number;
@@ -197,6 +198,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     scanTo,
     chainHead,
     rpcEndpoints,
+    endpointHeads,
     signal,
     configBudgetLimit,
     runTimestamp,
@@ -245,7 +247,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       scanTo,
       configBudget,
       signal,
-      deadlineMs != null ? { deadlineMs } : undefined,
+      { deadlineMs, endpointHeads },
     );
 
     if (!fetched) {
@@ -302,7 +304,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       scanTo,
       configBudget,
       signal,
-      deadlineMs != null ? { deadlineMs } : undefined,
+      { deadlineMs, endpointHeads },
     );
     if (!fetched) {
       conservationCoverageComplete = false;

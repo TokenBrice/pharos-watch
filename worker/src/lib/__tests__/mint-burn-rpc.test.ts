@@ -72,6 +72,40 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(meter).not.toHaveBeenCalled();
   });
 
+  it("reuses the initial provider head across the extended roster without increasing the request budget", async () => {
+    const endpoints = admitted("ethereum");
+    const fetcher = recorder((_, call) => ({ result: call.method === "eth_blockNumber" ? "0xc350" : [] }));
+    const endpointHeads = new Map<string, number>();
+    const budget = createBudget(200);
+    expect(await getMintBurnBlockNumber(endpoints, budget, undefined, endpointHeads)).toBe(50_000);
+    for (let i = 0; i < 65; i++) {
+      for (let event = 0; event < 2; event++) {
+        expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 1, 50_000, budget, undefined, { endpointHeads }))
+          .toMatchObject({ complete: true, scannedToBlock: 50_000 });
+      }
+    }
+    expect(budget.count).toBe(131);
+    const calls = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call);
+    expect(calls.filter((call) => call.method === "eth_blockNumber")).toHaveLength(1);
+    expect(fetcher.mock.calls.every(([url]) => url === endpoints[0].url)).toBe(true);
+  });
+
+  it("keeps cached fallback and primary heads separate when the fallback lags", async () => {
+    const endpoints = admitted();
+    const endpointHeads = new Map<string, number>([[endpoints[0].url, 50_000]]);
+    const fetcher = recorder((url, call) => call.method === "eth_blockNumber" ? { result: "0xc2ec" }
+      : url === endpoints[0].url ? unavailable : { result: [] });
+    const budget = createBudget(25);
+    for (let i = 0; i < 2; i++) {
+      expect(await fetchMintBurnLogs(endpoints, "0xabc", [], 49_000, 50_000, budget, undefined, { endpointHeads }))
+        .toMatchObject({ complete: false, scannedToBlock: 49_900, failureReason: "provider-head-lag" });
+    }
+    expect(endpointHeads.get(endpoints[0].url)).toBe(50_000);
+    expect(endpointHeads.get(endpoints[1].url)).toBe(49_900);
+    const calls = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call);
+    expect(calls.filter((call) => call.method === "eth_blockNumber")).toHaveLength(1);
+  });
+
   it("preserves the contiguous frontier when a provider switch fails mid-scan", async () => {
     const endpoints = admitted();
     const fetcher = recorder((url, call) => {
