@@ -33,7 +33,23 @@ export const CHAIN_DROPOUT_ONCHAIN_ROSTER = [
 ] as const;
 const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
   assetId: string; chainId: string; reviewedAt: number; evidenceUrl: string;
-}[] = [];
+}[] = [
+  // 2026-10-16 06:18 UTC: Arbitrum block 515293481 confirms 1,155,833.488355934
+  // satUSD, matching the lower list/history stock after the October 11 reduction.
+  {
+    assetId: "satusd-river", chainId: "arbitrum",
+    reviewedAt: Date.parse("2026-10-16T06:18:46Z") / 1000,
+    evidenceUrl: "https://arbiscan.io/token/0xb4818bb69478730ef4e33cc068dd94278e2766cb",
+  },
+  // Polygon block 95617466: 533,719.13 EURS total minus 100,000 issuer inventory
+  // equals the list's 433,719.13 EUR. Ethereum gains the corresponding bridge unwind;
+  // accepting the observed lower chain stock avoids adding it back a second time.
+  {
+    assetId: "eurs-stasis", chainId: "polygon",
+    reviewedAt: Date.parse("2026-10-16T06:18:46Z") / 1000,
+    evidenceUrl: "https://polygonscan.com/token/0xe111178a87a3bff0c8d18decba5798827539ae99",
+  },
+];
 
 const TimestampSchema = z.number().int().nonnegative();
 const PairStateSchema = z.object({

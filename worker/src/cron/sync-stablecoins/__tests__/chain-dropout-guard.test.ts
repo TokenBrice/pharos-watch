@@ -589,6 +589,50 @@ describe("chain dropout guard", () => {
     expect(Object.values(result.state.pairs)[0]).toMatchObject({ baselineUsd: 94_886_012, quarantinedSince: NOW });
   });
 
+  it.each([
+    { assetId: "satusd-river", chainId: "arbitrum", chainLabel: "Arbitrum", pegKey: "peggedUSD", baseline: 10_735_947.2549878, current: 1_149_846.870580486 },
+    { assetId: "eurs-stasis", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedEUR", baseline: 2_125_295.460187289, current: 472_657.74823731947 },
+  ])("accepts only the dated reviewed $assetId chain reduction, not omitted or later incidents", async ({ assetId, chainId, chainLabel, pegKey, baseline, current }) => {
+    const reviewedAt = Date.parse("2026-10-16T06:18:46Z") / 1000;
+    const key = JSON.stringify([assetId, chainId]);
+    const makeState = (quarantinedSince = reviewedAt - DAY): ChainDropoutState => ({
+      version: 1,
+      pairs: {
+        [key]: {
+          assetId, chainId, chainLabel, baselineUsd: baseline, baselineObservedAt: quarantinedSince - 900,
+          baselineSource: "state", quarantinedSince, ambiguousSince: quarantinedSince, heldTotalUsd: 20_000_000,
+        },
+      },
+    });
+    const makeAsset = (includeChain = true): PeggedAsset => ({
+      id: assetId, name: assetId, symbol: assetId, pegType: pegKey, supplySource: "defillama",
+      circulating: { [pegKey]: 4_000_000 + (includeChain ? current : 0) },
+      circulatingPrevDay: { [pegKey]: 4_000_000 + baseline },
+      chainCirculating: {
+        Ethereum: { current: 4_000_000, circulatingPrevDay: 3_000_000 },
+        ...(includeChain ? { [chainLabel]: { current, circulatingPrevDay: current } } : {}),
+      },
+    });
+    const asset = makeAsset();
+    const original = structuredClone(asset);
+    const accepted = await guardChainDropouts({ assets: [asset], now: reviewedAt, state: makeState() });
+    expect(accepted.quarantinedAssetIds).toEqual([]);
+    expect(accepted.historyFetches).toBe(0);
+    expect(asset).toEqual(original);
+    expect(accepted.state.pairs[key]).toMatchObject({ baselineUsd: current, quarantinedSince: null, releasedAt: reviewedAt });
+
+    for (const scenario of [
+      { now: reviewedAt - 1, state: makeState(), asset: makeAsset() },
+      { now: reviewedAt + 900, state: makeState(reviewedAt + 1), asset: makeAsset() },
+      { now: reviewedAt, state: makeState(), asset: makeAsset(false) },
+    ]) {
+      const held = await guardChainDropouts({ assets: [scenario.asset], now: scenario.now, state: scenario.state });
+      expect(held.quarantinedAssetIds).toEqual([assetId]);
+      expect(scenario.asset.chainCirculating![chainLabel].current).toBeNull();
+      expect(held.state.pairs[key].releasedAt).toBeUndefined();
+    }
+  });
+
   it("keeps low same-provider chart evidence quarantined and caches attempts hourly", async () => {
     const asset = usdg();
     mocks.chart.mockResolvedValue({ response: { ok: true }, body: JSON.stringify([{ date: NOW, totalCirculatingUSD: { peggedUSD: 0 } }]) });
