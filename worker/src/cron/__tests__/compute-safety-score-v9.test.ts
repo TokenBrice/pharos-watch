@@ -201,14 +201,12 @@ describe("computeSafetyScoreV9", () => {
     mocks.runPublication.mockReset();
   });
 
-  it.each([true, false])("retains accepted replay only when requested (%s)", async (retainAcceptedReplay) => {
+  it("always retains the canonical fixed input for accepted replay", async () => {
     mocks.runPublication.mockResolvedValue({
       status: "failed", attemptId: "attempt", stage: "compile", code: "fixture", message: "fixture",
     });
-    await computeSafetyScoreV9({} as D1Database, undefined, undefined,
-      retainAcceptedReplay ? undefined : { retainAcceptedReplay: false });
-    expect(mocks.runPublication.mock.calls[0][0].fixedInputCacheValue)
-      .toBe(retainAcceptedReplay ? "fixed-input" : undefined);
+    await computeSafetyScoreV9({} as D1Database);
+    expect(mocks.runPublication.mock.calls[0][0].fixedInputCacheValue).toBe("fixed-input");
   });
 
   it.each([

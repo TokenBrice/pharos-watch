@@ -108,22 +108,17 @@ export function evaluateWorkerWranglerConfig(
     issues.push(`${role} must not declare retired WORKER_V9_WORKFLOW_MODE.`);
   }
   const workflows = assignments.filter(({ section }) => section === "workflows");
+  if (workflows.length > 0) {
+    issues.push(`${role} must not declare retired Workflow bindings.`);
+  }
   if (role === "heavy") {
     expectValue("root", "workers_dev", "false");
     expectValue("root", "preview_urls", "false");
     expectValue("r2_buckets", "binding", '"SAFETY_CAPTURE_ARCHIVE"');
     expectValue("r2_buckets", "bucket_name", '"pharos-measurements"');
-    // The named resource still references this class. Remove these requirements
-    // only after the reviewed history export and resource deletion.
-    expectValue("workflows", "name", '"safety-score-v9-publication"');
-    expectValue("workflows", "binding", '"SAFETY_SCORE_V9_WORKFLOW"');
-    expectValue("workflows", "class_name", '"SafetyScoreV9PublicationWorkflow"');
-    if (workflows.length !== 3) issues.push("Heavy must own exactly the V9 publication Workflow.");
     if (assignments.some(({ section, key }) => section.startsWith("ratelimits") || key === "CORS_ORIGIN")) {
       issues.push("Heavy must not declare HTTP rate-limit or CORS bindings.");
     }
-  } else if (workflows.length > 0) {
-    issues.push("Public must not own the V9 publication Workflow.");
   }
   if (role === "public" && assignments.some(({ section, key, value }) =>
     section === "r2_buckets" && key === "binding" && unquote(value) === "SAFETY_CAPTURE_ARCHIVE")) {

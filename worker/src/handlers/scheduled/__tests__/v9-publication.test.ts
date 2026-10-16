@@ -75,17 +75,15 @@ describe("V9 publication scheduling", () => {
 
   function compilingRuntime(metadata: Record<string, string> = identities) {
     const scheduledRuntime = runtime();
-    const workflow = { create: vi.fn().mockResolvedValue({}), get: vi.fn() };
     scheduledRuntime.env = {
       ...scheduledRuntime.env,
       CF_VERSION_METADATA: { id: "executing-worker", timestamp: "2026-10-07T20:00:00Z", tag: "" },
-      SAFETY_SCORE_V9_WORKFLOW: workflow,
       SAFETY_CAPTURE_ARCHIVE: { put: vi.fn() },
     } as unknown as ScheduledRuntimeContext["env"];
     mocks.computeSafetyScoreV9.mockResolvedValue({ status: "ok", metadata: JSON.stringify(metadata) });
     mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_options, run) =>
       run(new AbortController().signal, { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 10_000 }));
-    return { scheduledRuntime, workflow };
+    return { scheduledRuntime };
   }
 
   afterEach(() => vi.restoreAllMocks());
@@ -131,7 +129,7 @@ describe("V9 publication scheduling", () => {
   });
 
   it("runs only the canonical compiler with the original slot identity", async () => {
-    const { scheduledRuntime, workflow } = compilingRuntime();
+    const { scheduledRuntime } = compilingRuntime();
     expect(await runV9PublicationSlot(scheduledRuntime)).toBe(published);
     expect(mocks.computeSafetyScoreV9).toHaveBeenCalledOnce();
     expect(mocks.computeSafetyScoreV9).toHaveBeenCalledWith(scheduledRuntime.db, expect.any(AbortSignal), expect.any(Function), {
@@ -140,19 +138,12 @@ describe("V9 publication scheduling", () => {
       captureArchiveContext: scheduledRuntime.ctx,
       executionWindow: { slotStartedAtSec: scheduledRuntime.slotStartedAt, deadlineMs: 1_980_000, minimumRemainingMs: 10_000 },
     });
-    expect(workflow.create).not.toHaveBeenCalled();
-    expect(workflow.get).not.toHaveBeenCalled();
   });
 
 
 
   function neutralComputeRuntime(compute: { status: string; metadata: Record<string, unknown> }) {
     const { scheduledRuntime, inserts } = capturingRuntime();
-    const workflow = { create: vi.fn().mockResolvedValue({}), get: vi.fn() };
-    scheduledRuntime.env = {
-      ...scheduledRuntime.env,
-      SAFETY_SCORE_V9_WORKFLOW: workflow,
-    } as unknown as ScheduledRuntimeContext["env"];
     mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_options, run) => run(new AbortController().signal));
     const compiled = {
       status: compute.status as "skipped_neutral",
@@ -170,20 +161,19 @@ describe("V9 publication scheduling", () => {
         summarizeCronResult("compute-safety-score-v9", result as CronResult),
       ]);
     });
-    return { scheduledRuntime, inserts, workflow };
+    return { scheduledRuntime, inserts };
   }
   it("does not write retired observer rows when compute publishes nothing", async () => {
-    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+    const { scheduledRuntime, inserts } = neutralComputeRuntime({
       status: "skipped_neutral",
       metadata: { reason: "v9-core-slot-not-ready" },
     });
     await runV9PublicationSlot(scheduledRuntime);
-    expect(workflow.create).not.toHaveBeenCalled();
     expect(inserts).toHaveLength(0);
   });
 
   it("does not record observer rows for deployment-only recapture", async () => {
-    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+    const { scheduledRuntime, inserts } = neutralComputeRuntime({
       status: "skipped_neutral",
       metadata: {
         stage: "input-identity",
@@ -193,12 +183,11 @@ describe("V9 publication scheduling", () => {
 
     await runV9PublicationSlot(scheduledRuntime);
 
-    expect(workflow.create).not.toHaveBeenCalled();
     expect(inserts).toHaveLength(0);
   });
 
   it("does not record observer rows when the compiler fails closed on stale input", async () => {
-    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+    const { scheduledRuntime, inserts } = neutralComputeRuntime({
       status: "degraded",
       metadata: {
         stage: "input-load",
@@ -208,25 +197,23 @@ describe("V9 publication scheduling", () => {
 
     await runV9PublicationSlot(scheduledRuntime);
 
-    expect(workflow.create).not.toHaveBeenCalled();
     expect(inserts).toHaveLength(0);
   });
 
   it("stays silent while a competing invocation still owns the V9 lane", async () => {
-    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+    const { scheduledRuntime, inserts } = neutralComputeRuntime({
       status: "skipped_neutral",
       metadata: { reason: "v9-memory-lane-active" },
     });
 
     await runV9PublicationSlot(scheduledRuntime);
 
-    expect(workflow.create).not.toHaveBeenCalled();
     expect(inserts).toHaveLength(0);
     expect(mocks.logWorkerEvent).not.toHaveBeenCalled();
   });
 
-  it("does not record a workflow row when the execution window skipped the compiler", async () => {
-    const { scheduledRuntime, inserts, workflow } = neutralComputeRuntime({
+  it("does not record extra rows when the execution window skipped the compiler", async () => {
+    const { scheduledRuntime, inserts } = neutralComputeRuntime({
       status: "skipped_neutral",
       metadata: { reason: "v9-core-slot-not-ready" },
     });
@@ -239,7 +226,6 @@ describe("V9 publication scheduling", () => {
     await runV9PublicationSlot(scheduledRuntime);
 
     expect(mocks.computeSafetyScoreV9).not.toHaveBeenCalled();
-    expect(workflow.create).not.toHaveBeenCalled();
     expect(inserts).toHaveLength(0);
   });
 });

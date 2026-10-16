@@ -52,7 +52,7 @@ It intentionally does **not** treat vendor pricing-plan quotas as source of trut
 
 ## Worker Runtime
 
-Both public and heavy scripts retain the same `300000` ms CPU cap, runtime compatibility and shared D1 binding. `stablecoin-heavy` isolates publication, charts/preparation and supply attribution from public traffic; reserve sync/recovery remain public pending `M0_API_KEY`. The Workflow pilot is terminal no-go; its heavy class/binding remain only until history disposition and named-resource deletion, without cron triggering. Heavy has no HTTP routes, custom domains, workers.dev, previews or rate-limit bindings. Physical-trigger/fetch-capable/headroom growth gates apply to the duplicate-free union of both configs; retirement frees no expression or per-invocation budget.
+Both public and heavy scripts retain the same `300000` ms CPU cap, runtime compatibility and shared D1 binding. `stablecoin-heavy` isolates publication, charts/preparation and supply attribution from public traffic; reserve sync/recovery remain public pending `M0_API_KEY`. The Workflow pilot is terminal no-go; its class/binding are removed in the 2026-10-16 source cutover. The orchestrator deleted the named resource and verified genuine named-not-found that day; paired activation and step-5 observation remain pending in the [sunset record](process/worker-infrastructure-appendix.md#safety-score-v9-workflow-shadow-pilot). Heavy has no HTTP routes, custom domains, workers.dev, previews or rate-limit bindings. Physical-trigger/fetch-capable/headroom growth gates apply to the duplicate-free union of both configs; retirement frees no expression or per-invocation budget.
 
 | Constraint | Current repo value | Source | Notes |
 | --- | --- | --- | --- |

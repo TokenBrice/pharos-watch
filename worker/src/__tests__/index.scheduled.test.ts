@@ -2,7 +2,6 @@ import {
   CRON_TRIGGER_SCHEDULES,
 } from "@shared/lib/cron-jobs";
 import { getScheduledWorkerRoleForExpression } from "@shared/lib/scheduled-runner-registry";
-import { WorkflowEntrypoint } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type * as V9SlotWindow from "../lib/v9-slot-window";
@@ -419,7 +418,7 @@ vi.mock("../lib/chain-registry", async (importOriginal) => {
 });
 
 import worker from "../index";
-import heavyWorker, { SafetyScoreV9PublicationWorkflow } from "../index.heavy";
+import heavyWorker from "../index.heavy";
 import { makeExecutionContext } from "../test-helpers/__shared/auth";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { makeScheduledEnv } from "../test-helpers/scheduled-runtime.test-support";
@@ -457,16 +456,8 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
   });
 
-  it("imports without cron side effects and resolves the Workflow test stub", () => {
-    const ctx = {} as ExecutionContext;
-    const env = makeScheduledEnv();
-    const workflowEnv = { ...env, SAFETY_SCORE_V9_WORKFLOW: {} as Workflow,
-      SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
-    const workflow = new SafetyScoreV9PublicationWorkflow(ctx, workflowEnv);
-
+  it("imports both Worker entrypoints without cron side effects", () => {
     expect(indexImportCronCalls).toEqual([]);
-    expect(workflow).toBeInstanceOf(WorkflowEntrypoint);
-    expect(workflow).toMatchObject({ ctx, env: workflowEnv });
   });
 
   it("records the worker-version first-seen marker without blocking scheduled execution", async () => {
@@ -553,8 +544,7 @@ describe("worker.scheduled", () => {
             cron,
             scheduledTime: Date.parse("2026-06-12T08:00:00Z") + index * 60_000,
           } as ScheduledEvent,
-          { ...env, SAFETY_SCORE_V9_WORKFLOW: {} as Workflow,
-            SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() },
+          { ...env, SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() },
           ctx,
         );
         await Promise.all(waits);
@@ -586,8 +576,7 @@ describe("worker.scheduled", () => {
     const { SLOT_RUNNER_LOADER_BY_KEY } = await import("../handlers/scheduled");
     const runnerKey = cron.startsWith("16") ? "halfHourlyChartsOffset" : "quarterHourly";
     const loader = vi.spyOn(SLOT_RUNNER_LOADER_BY_KEY, runnerKey);
-    const env = { ...makeScheduledEnv(), SAFETY_SCORE_V9_WORKFLOW: {} as Workflow,
-      SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
+    const env = { ...makeScheduledEnv(), SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
     const prepare = vi.spyOn(env.DB, "prepare");
     const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
     await entry.scheduled({ cron } as ScheduledEvent, env, makeExecutionContext().ctx);
@@ -601,8 +590,7 @@ describe("worker.scheduled", () => {
 
   it("bypasses the V9 memory wait on public but retains it on heavy charts", async () => {
     const { waitForV9MemoryLaneRelease } = await import("../lib/v9-slot-window");
-    const env = { ...makeScheduledEnv(), SAFETY_SCORE_V9_WORKFLOW: {} as Workflow,
-      SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
+    const env = { ...makeScheduledEnv(), SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
     await worker.scheduled({ cron: "9 * * * *" } as ScheduledEvent, env, makeExecutionContext().ctx);
     expect(waitForV9MemoryLaneRelease).not.toHaveBeenCalled();
     await heavyWorker.scheduled({ cron: "16 * * * *" } as ScheduledEvent, env, makeExecutionContext().ctx);
