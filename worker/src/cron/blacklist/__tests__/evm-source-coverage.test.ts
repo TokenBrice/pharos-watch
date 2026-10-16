@@ -638,6 +638,42 @@ describe("EVM blacklist contiguous coverage", () => {
     });
   });
 
+  it.each([50, -50])("keeps the original topic safe head when RPC fallback moves by %i blocks", async (headDelta) => {
+    const config = makeConfig("arbitrum", [TOPIC_A, TOPIC_B]);
+    const rpc: ChainRpcConfig = {
+      chainId: "arbitrum", chainName: "Arbitrum", type: "evm", explorerUrl: "https://arbiscan.io",
+      endpoints: [{ url: "https://arb.example", operator: "public", keyed: false,
+        position: "registry", stateHistory: "archive", logsHistory: "full" }],
+    };
+    const chainRpcs = new Map([["arbitrum", rpc]]);
+    const originalHead = 10_000;
+    const originalSafeHead = getEvmSafeHead(42161, originalHead);
+    const availableSafeHead = Math.min(originalSafeHead, getEvmSafeHead(42161, originalHead + headDelta));
+    vi.mocked(getChainRpc).mockReturnValue(rpc);
+    vi.mocked(getAlchemyBlockNumber).mockResolvedValue(originalHead + headDelta);
+    vi.mocked(fetchEvmLogsForTopicWithCompleteness)
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: originalSafeHead, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: false, scannedToBlock: 5_999, calls: 1, maxDepth: 0 });
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, _address, _topics, _from, toBlock) => ({
+      logs: [], complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: 0,
+    }));
+
+    const result = await fetchEvmEventsIncremental(
+      mockD1(), config, "key", 6_000, new Map(), makeBudget(), limiter, undefined, chainRpcs, originalHead,
+    );
+
+    expect(vi.mocked(fetchEvmLogsForTopicWithCompleteness).mock.calls.map((call) => call[5]))
+      .toEqual([originalSafeHead, originalSafeHead]);
+    expect(vi.mocked(fetchAlchemyLogs).mock.calls[0]?.[4]).toBe(availableSafeHead);
+    expect(result).toMatchObject({
+      safeHead: originalSafeHead, scannedToBlock: availableSafeHead, coveredTopicCount: 2,
+      apiError: false, usedRpcLogs: true,
+      coverageOutcome: headDelta > 0 ? "quiet" : "incomplete",
+      incomplete: headDelta < 0,
+    });
+    expect(result.failureSamples).toEqual(headDelta > 0 ? [] : ["behind-safe-head"]);
+  });
+
   it("uses a bounded RPC fallback when explorer head resolution failed", async () => {
     const config = makeConfig("arbitrum");
     const chainRpcs = new Map<string, ChainRpcConfig>();
