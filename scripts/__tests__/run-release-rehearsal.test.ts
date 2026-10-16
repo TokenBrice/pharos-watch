@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -89,6 +89,9 @@ describe("Worker release packaging", () => {
         expect(command).toBe("npx");
         expect(options.cwd).toBe(join(root, "worker"));
         calls.push(args);
+        const outdir = args[args.indexOf("--outdir") + 1]!;
+        mkdirSync(outdir, { recursive: true });
+        writeFileSync(join(outdir, "index.js"), "export default {};\n");
         return { status: 0 };
       } }).status).toBe(0);
       expect(calls).toHaveLength(2);
