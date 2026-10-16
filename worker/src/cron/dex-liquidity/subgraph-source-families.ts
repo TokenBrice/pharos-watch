@@ -19,6 +19,7 @@ import {
   UNISWAP_V4_POOL_MAX_PAGES,
   UNISWAP_V4_POOL_PAGE_SIZE,
   UNISWAP_V4_SUBGRAPHS,
+  UNISWAP_V4_ETHEREUM_SOURCE,
   UNIV3_POOL_MIN_TVL_USD,
   buildUniswapV4PoolQuery,
   buildUniswapV4ExactPoolQuery,
@@ -59,8 +60,8 @@ type UniswapV4SubgraphPool = {
   id: string;
   token0: { id: string; symbol: string; decimals: string };
   token1: { id: string; symbol: string; decimals: string };
-  feeTier: string;
-  tickSpacing: string;
+  feeTier: string | number;
+  tickSpacing: string | number;
   hooks: string;
   liquidity: string;
   totalValueLockedUSD: string;
@@ -71,7 +72,9 @@ type UniswapV4SubgraphPool = {
 const UNIV3_EXECUTION_ONLY_CHAINS = new Set(["bsc"]);
 const UNIV3_MAX_ABS_TICK = 887_272;
 
-function parseSubgraphInteger(value: string): number {
+function parseSubgraphInteger(value: unknown): number {
+  if (typeof value === "number") return Number.isSafeInteger(value) ? value : Number.NaN;
+  if (typeof value !== "string") return Number.NaN;
   const normalized = value.trim();
   if (!/^-?[0-9]+$/.test(normalized)) return Number.NaN;
   const parsed = Number(normalized);
@@ -360,7 +363,7 @@ export async function fetchUniswapV4Data(
       subgraphUrl,
       sourceLabel: "Uniswap V4 subgraph",
       chain,
-      buildQuery: (skip) => buildUniswapV4PoolQuery(skip),
+      buildQuery: (skip) => buildUniswapV4PoolQuery(skip, chain),
       pageSize: UNISWAP_V4_POOL_PAGE_SIZE,
       maxPages: UNISWAP_V4_POOL_MAX_PAGES,
       signal: combinedSignal,
@@ -388,6 +391,15 @@ export async function fetchUniswapV4Data(
       `[dex-liquidity] Collected ${lookups.uniswapV4ExecutionCandidates.size} Uniswap V4 execution candidate keys`,
   });
   if (!graphApiKey) return result;
+  logWorkerEvent({
+    scope: "handler", level: "info", event: "uniswap-v4-subgraph-source",
+    message: "Ethereum Uniswap V4 identity source read",
+    job: "sync-dex-liquidity", source: "uniswap-v4-subgraph",
+    metadata: {
+      chain: "ethereum", ...UNISWAP_V4_ETHEREUM_SOURCE,
+      broadScanFailed: result.failedChains.includes("ethereum"),
+    },
+  });
 
   // Exact requests start only after the broad family has drained. Every batch
   // uses the existing bounded, body-consuming transport before the next opens.
@@ -416,7 +428,7 @@ export async function fetchUniswapV4Data(
         sourceLabel: "Uniswap V4 exact subgraph",
         chain,
         signal: combinedSignal,
-        buildQuery: () => buildUniswapV4ExactPoolQuery(batch),
+        buildQuery: () => buildUniswapV4ExactPoolQuery(batch, chain),
         extractEntities: (data) =>
           (data as { pools?: UniswapV4SubgraphPool[] } | undefined)?.pools,
         mapEntity: (pool) => {
@@ -472,7 +484,9 @@ export async function fetchUniswapV4Data(
 
 function isReadableUniswapV4Pool(pool: UniswapV4SubgraphPool): boolean {
   return pool != null &&
-    [pool.id, pool.hooks, pool.feeTier, pool.tickSpacing, pool.liquidity,
+    Number.isSafeInteger(parseSubgraphInteger(pool.feeTier)) &&
+    Number.isSafeInteger(parseSubgraphInteger(pool.tickSpacing)) &&
+    [pool.id, pool.hooks, pool.liquidity,
       pool.totalValueLockedUSD, pool.token0Price, pool.token1Price,
       pool.token0?.id, pool.token0?.symbol, pool.token0?.decimals,
       pool.token1?.id, pool.token1?.symbol, pool.token1?.decimals]
