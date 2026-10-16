@@ -135,6 +135,7 @@ const PROTOCOL_ASSET_CONFIG: Record<string, ProtocolAssetConfig> = {
   DQTS: { risk: "high" },
   ESC: { risk: "high" },
   SGG: { risk: "high" },
+  XAUH: { risk: "high" },
 };
 
 function getProtocolAssetConfig(symbol: string): ProtocolAssetConfig | null {

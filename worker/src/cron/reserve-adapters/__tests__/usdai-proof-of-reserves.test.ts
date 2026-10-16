@@ -1,17 +1,19 @@
 import { readFileSync } from "node:fs";
 import { URL } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import {
   expectWarningEffect,
   expectWarnings,
+  installAdapterNetwork,
   runAdapter,
   type AdapterNetworkSpec,
   type AdapterRpcValue,
 } from "./reserve-adapter.test-support";
 import {
   adaptUsdAiProofOfReserves,
+  fetchUsdAiProofOfReserves,
   parseUsdAiProofOfReserves,
 } from "../usdai-proof-of-reserves";
 
@@ -174,6 +176,40 @@ async function fetchAnchored(
 }
 
 describe("usdai-proof-of-reserves adapter", () => {
+  it("lets a 15-second origin response finish without restarting the read", async () => {
+    vi.useFakeTimers();
+    try {
+      const network = installAdapterNetwork({
+        json: {
+          [NO_ANCHOR_CONFIG.inputs.primary.url]: async (request: Request) => {
+            await new Promise<void>((resolve) => setTimeout(resolve, 15_000));
+            if (request.signal.aborted) throw request.signal.reason;
+            return JSON.parse(SAMPLE_RAW_PAYLOAD);
+          },
+        },
+      });
+      const pending = fetchUsdAiProofOfReserves(
+        NO_ANCHOR_COIN, NO_ANCHOR_CONFIG, new AbortController().signal,
+      );
+      await vi.advanceTimersByTimeAsync(15_000);
+      const result = await pending;
+      expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);
+      expect(network.fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not spend the remaining adapter budget retrying a failed origin read", async () => {
+    const network = installAdapterNetwork({
+      json: { [NO_ANCHOR_CONFIG.inputs.primary.url]: { status: 503, body: "unavailable" } },
+    });
+    await expect(fetchUsdAiProofOfReserves(
+      NO_ANCHOR_COIN, NO_ANCHOR_CONFIG, new AbortController().signal,
+    )).rejects.toThrow("HTTP 503");
+    expect(network.fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("retains amount observations without certifying composition shares", async () => {
     const result = await fetchAnchored();
     expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);

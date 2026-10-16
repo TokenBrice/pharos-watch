@@ -1,9 +1,10 @@
+import { ASSURANCE_RECONCILIATION_TOLERANCES } from "@shared/lib/independent-assurance-tolerances";
 import type { IndependentAssuranceProfile } from "./types";
 import { formatValidIsoDate, lastDayOfMonth } from "./report-date";
 
 // Brale publishes MCCPA's monthly SBC reserve attestations on
-// brale.xyz/stablecoins/SBC as direct monthly PDF links (01-2026 … 08-2026).
-// Discovery reads those anchors; the reviewed August 2026 report must remain
+// brale.xyz/stablecoins/SBC as direct monthly PDF links (01-2026 … 09-2026).
+// Discovery reads those anchors; the reviewed September 2026 report must remain
 // the latest dated candidate or the adapter fails closed on a newer unreviewed
 // report. The report's examiner limitation — MCCPA did not independently
 // confirm the authenticity of company-provided data — is carried in the
@@ -23,6 +24,7 @@ export const SBC_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   product: "SBC",
   profile: "sbc-v1",
   requiredAssetCodes: ["cash-and-cash-equivalents", "us-government-backed-debt"],
+  reconciliation: ASSURANCE_RECONCILIATION_TOLERANCES.SBC,
   classifications: {
     "cash-and-cash-equivalents": {
       name: "Cash and cash equivalents in unencumbered accounts segregated from other Brale accounts",

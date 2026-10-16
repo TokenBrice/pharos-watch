@@ -232,9 +232,9 @@ function assuranceFenceCases() {
       adapter: "sbc-independent-assurance",
       coinId: "sbc-brale",
       product: "SBC",
-      html: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">August</a>`,
-      newerHtml: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">August</a>` +
-        '<a href="https://brale.xyz/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf">September</a>',
+      html: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">September</a>`,
+      newerHtml: `<a href="${getIndependentAssuranceManifest("SBC").reportUrl}">September</a>` +
+        '<a href="https://brale.xyz/SBC-Stable-Coin-Reserve-Attestation-Report-10-2026.pdf">October</a>',
     },
     {
       adapter: "fidd-independent-assurance",
@@ -291,6 +291,14 @@ describe("independent-assurance manifest framework", () => {
         reportByteLength: PDF_BYTES.length,
         reportSha256: createHash("sha256").update(PDF_BYTES).digest("hex"),
       });
+      // The synthetic PDF has its own identity; the product suite separately
+      // rejects any real report identity outside the reviewed rounding scope.
+      const reconcile = assurance.reconcileIndependentAssuranceManifest;
+      vi.spyOn(assurance, "reconcileIndependentAssuranceManifest").mockImplementation((manifest, options) =>
+        reconcile(manifest, options?.reviewedReport ? {
+          ...options,
+          reviewedReport: { ...options.reviewedReport, reportSha256: PDF_SHA256 },
+        } : options));
       const options = "options" in testCase ? testCase.options : undefined;
       installAssuranceFetch(testCase.product, testCase.html, options);
       const coin = ACTIVE_STABLECOINS.find((candidate) => candidate.id === testCase.coinId);
@@ -306,6 +314,11 @@ describe("independent-assurance manifest framework", () => {
       expect(result.metadata?.details).toMatchObject({
         assurance: { product: testCase.product, assets: reviewed.assets, liabilities: reviewed.liabilities },
       });
+      if (testCase.product === "SBC") {
+        expect(result.warnings).toContainEqual(expect.objectContaining({
+          code: "report-rounding-difference", severity: "info", effect: "info",
+        }));
+      }
       expect(validateAdapterOutput(result, {
         adapter,
         now: assurance.independentAssuranceSourceTimestamp(reviewed) + 60,

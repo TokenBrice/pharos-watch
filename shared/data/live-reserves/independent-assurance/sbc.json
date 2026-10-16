@@ -3,13 +3,13 @@
   "product": "SBC",
   "profile": "sbc-v1",
   "officialIndexUrl": "https://brale.xyz/stablecoins/SBC",
-  "reportUrl": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf",
-  "reportSha256": "d5841f8cddb8d83152a329ee0ccbb4b571438a2bef44ae6af25bce62012f4180",
-  "reportByteLength": 209283,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:50:00-04:00",
+  "reportUrl": "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf",
+  "reportSha256": "cb0ec78a24aa1826f937c2bda874ef381d28063b233580769c754f80195973a0",
+  "reportByteLength": 209370,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:50:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-09-15T23:59:00-05:00",
+  "reportIssuedAt": "2026-10-13T23:59:00-05:00",
   "attestor": "Michael Coglianese, CPA, P.C. (MCCPA)",
   "engagement": "AICPA attestation standards direct examination of management's assertion; MCCPA relied on data and records provided by Brale Inc. and was not retained to, and has not attempted to, independently confirm the authenticity and accuracy of those data and records",
   "conclusion": "unmodified",
@@ -18,28 +18,28 @@
     {
       "code": "cash-and-cash-equivalents",
       "label": "Cash and cash equivalents in unencumbered segregated accounts",
-      "amount": "8141977"
+      "amount": "20185277"
     },
     {
       "code": "us-government-backed-debt",
       "label": "U.S. government backed debt",
-      "amount": "575265"
+      "amount": "1408578"
     }
   ],
   "liabilities": [
     {
       "code": "all-supported-blockchains",
-      "label": "SBC issued across all supported blockchains (Algorand, Aptos, Arbitrum, Avalanche, Base, Canton, Celo, Chia, Coreum, Ethereum, Ethereum Classic, Hedera, Kusama, Monad, Optimism, Polygon, PulseChain, Radius, Solana, Spark, Starknet, Stellar, Tron, Tempo, World Chain, XRP Ledger, Xion)",
-      "amount": "8717242"
+      "label": "SBC issued across all supported blockchains (Algorand, Aptos, Arbitrum, Avalanche, Base, Canton, Celo, Chia, Coreum, Ethereum, Ethereum Classic, Hedera, Kusama, Monad, Optimism, Polygon, PulseChain, Radius, Robinhood Chain, Solana, Spark, Starknet, Stellar, Tron, TX, Tempo, Verona, World Chain, XRP Ledger, Xion)",
+      "amount": "21593854"
     }
   ],
-  "reportedAssetTotal": "8717242",
-  "computedAssetTotal": "8717242",
-  "reportedLiabilityTotal": "8717242",
+  "reportedAssetTotal": "21593854",
+  "computedAssetTotal": "21593855",
+  "reportedLiabilityTotal": "21593854",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.07.0",
-    "normalizedTextSha256": "d7ef2ea4695c0cb7035721189d491db21047020c228a82ca1c3141a16f8a71a4",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "e1e07a5dcb363d8d91bfe567b23b43ee81fb1bbe1de23b212d99dddc12b6c30f",
     "pageCount": 2
   },
   "assuranceTier": "independent-assurance"
