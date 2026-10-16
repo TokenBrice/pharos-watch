@@ -7,6 +7,7 @@ import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 export interface MintBurnChainContext {
   chainHead: number;
   rpcEndpoints: readonly RpcEndpoint[];
+  endpointHeads: Map<string, number>;
   chainTimestampCache: Map<string, number>;
   txContextCache: Map<string, MintBurnTxContext | null>;
 }
@@ -22,13 +23,15 @@ export async function loadMintBurnChainContexts(input: {
   for (const chainId of [...new Set(input.configs.map((config) => config.chain.chainId))]) {
     throwIfAborted(input.signal);
     const rpcEndpoints = mintBurnRpcEndpoints(chainId, input.apiKey, input.chainRpcs);
-    const chainHead = await getMintBurnBlockNumber(rpcEndpoints, input.budget, input.signal);
+    const endpointHeads = new Map<string, number>();
+    const chainHead = await getMintBurnBlockNumber(rpcEndpoints, input.budget, input.signal, endpointHeads);
     if (chainHead === null) {
       throw new Error(`Failed to get ${chainId} chain head`);
     }
     chainContexts.set(chainId, {
       chainHead,
       rpcEndpoints,
+      endpointHeads,
       chainTimestampCache: new Map<string, number>(),
       txContextCache: new Map<string, MintBurnTxContext | null>(),
     });

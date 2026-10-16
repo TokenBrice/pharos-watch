@@ -10,7 +10,7 @@ import type { SupplyAttributionRejectionCode } from "@shared/lib/safety-score-v9
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import { getRpcAuthHeaders, type ChainRpcConfig } from "../chain-registry";
 import { getCache, setCache } from "../db-cache";
-import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result } from "../evm-rpc";
+import { fetchEvmBlockHeader, fetchEvmBlockNumber, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmRpcBatch, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockHeader, type EvmMulticall3Call, type EvmMulticall3Result } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl } from "../public-rpc-registry";
 import { decodeEvmUint256, fetchSafetyScoreV9SolanaRpc, rewindEvmBlockHeaderToScoringClock, type SafetyScoreV9SolanaRpcFetcher } from "./supply-observation-primitives";
@@ -475,27 +475,52 @@ async function observeReviewedEconomicDeploymentPartitionInternal(input: {
       const row = plan.deployments.find(row => row.deploymentKey === rule.deploymentKey);
       if (row) addEvmRead(row, rule.id, rule.account);
     }
-    const readEvm = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
-      if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null) return null;
-      let header = headers.get(row.chainId);
-      if (!header) {
-        const options = { chainRpcs: input.chainRpcs, signal: input.signal };
+    const pinEvmHeaders = async (): Promise<boolean> => {
+      const options = { chainRpcs: input.chainRpcs, signal: input.signal };
+      for (const row of plan.deployments) {
+        if (!evmCallsByChain.has(row.chainId) || headers.has(row.chainId)) continue;
+        failedRouteId = row.routeId ?? row.deploymentKey;
         const head = await fetchEvmBlockNumber(row.chainId, options);
         const lag = Math.max(...plan.deployments.filter(other => other.chainId === row.chainId).map(other =>
           "safeBlockLag" in other.read ? other.read.safeBlockLag : 0));
-        if (head === null || lag <= 0 || head < lag) return null;
+        if (head === null || lag <= 0 || head < lag) return false;
         // A reviewed lag is not a finality proof: rollup finalized heads can
         // trail it. Holdings and in-flight history must share an actually finalized pin.
         const finalized = finalizedChains.has(row.chainId)
           ? await fetchEvmBlockHeader(row.chainId, "finalized", options) : null;
-        if (finalizedChains.has(row.chainId) && !finalized) return null;
+        if (finalizedChains.has(row.chainId) && !finalized) return false;
         const block = await rewindEvmBlockHeaderToScoringClock({
           initialBlockNumber: Math.min(head - lag, finalized?.number ?? head - lag), scoringClockSec: input.scoringClockSec, signal: input.signal,
           fetchHeader: number => fetchEvmBlockHeader(row.chainId, number, options),
         });
-        if (!block) return null;
-        header = block; headers.set(row.chainId, header);
+        if (!block) return false;
+        headers.set(row.chainId, block);
       }
+      // Independent finalized heads can differ by several minutes. Select a
+      // coherent historical window before reading any quantities; never move
+      // the oldest pin forward, relax skew/freshness, or redate an observation.
+      const latestCoherentSec = Math.min(...[...headers.values()].map(header => header.timestamp)) +
+        V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxSkewSec;
+      for (const [chainId, header] of headers) {
+        if (header.timestamp <= latestCoherentSec) continue;
+        failedRouteId = `anchor:${chainId}`;
+        const blockNumber = await resolveClosestBlockAtOrBeforeTimestamp(chainId, latestCoherentSec, {
+          latestBlockNumber: header.number,
+          blockTimestampByNumber: new Map([[header.number, header.timestamp]]),
+        }, options);
+        if (blockNumber === null || blockNumber > header.number) return false;
+        const aligned = await fetchEvmBlockHeader(chainId, blockNumber, options);
+        if (!aligned || aligned.number !== blockNumber || aligned.timestamp > latestCoherentSec) return false;
+        headers.set(chainId, aligned);
+      }
+      return true;
+    };
+    const readEvm = async (row: ReviewedEconomicSupplyPlan["deployments"][number], id: string, account?: string): Promise<EconomicSupplyObservation | null> => {
+      if (CHAIN_META[row.chainId]?.type !== "evm" || row.address === null) return null;
+      if (headers.size === 0 && !await pinEvmHeaders()) return null;
+      const header = headers.get(row.chainId);
+      if (!header) return null;
+      failedRouteId = row.routeId ?? row.deploymentKey;
       if (account !== undefined && !/^0x[0-9a-f]{40}$/.test(account)) return null;
       if (row.holdingKind === "native-gas" && account !== undefined) {
         const result = await fetchEvmRpcBatch(row.chainId, [{ method: "eth_getBalance", params: [account, { blockHash: header.hash, requireCanonical: true }] }], { chainRpcs: input.chainRpcs, signal: input.signal });

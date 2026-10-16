@@ -37,10 +37,9 @@ import { parseJson } from "../json-parse";
 
 export const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY =
   "safety-score-v9:supply-attribution-generation:v1";
-// Both intervals stay under the 15-minute capture grid (5,20,35,50) so every
-// firing is eligible. That gives the :22/:52 publication a capture from :20/:50
-// with :05/:35 as an in-window fallback, instead of one skipped firing leaving
-// only a packet from the previous half hour.
+// Both cooldowns stay under the :08/:23/:38/:53 capture grid so every
+// firing is eligible. The :08/:38 opportunities precede :22/:52 publication;
+// :23/:53 can settle the exact-source request from fresh :16/:46 preparation.
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_HEALTHY_PRODUCER_INTERVAL_SEC =
   12 * 60;
 const SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_RETRY_PRODUCER_INTERVAL_SEC =

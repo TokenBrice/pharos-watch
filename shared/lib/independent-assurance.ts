@@ -212,6 +212,7 @@ function compareDecimal(left: string, right: string): number {
 }
 
 export interface IndependentAssuranceReconciliationOptions {
+  reviewedReport?: Pick<IndependentAssuranceManifest, "reportDate" | "reportUrl" | "reportSha256">;
   reportedAssetTotalTolerance?: {
     absolute: string;
     relativePpm: number;
@@ -238,6 +239,12 @@ export function reconcileIndependentAssuranceManifest(
   manifest: IndependentAssuranceManifest,
   options?: IndependentAssuranceReconciliationOptions,
 ): IndependentAssuranceReconciliation {
+  if (options?.reviewedReport &&
+      (manifest.reportDate !== options.reviewedReport.reportDate ||
+       manifest.reportUrl !== options.reviewedReport.reportUrl ||
+       manifest.reportSha256 !== options.reviewedReport.reportSha256)) {
+    throw new Error("independent-assurance: reconciliation allowance does not match the reviewed report");
+  }
   const assetAmounts = manifest.assets.map((row) => {
     const amount = parseDecimal(row.amount, `asset ${row.code}`);
     if (amount.units < 0n) {

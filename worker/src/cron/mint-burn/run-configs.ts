@@ -9,7 +9,7 @@ import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 import type { MintBurnChainContext } from "./chain-context";
 import {
-  fetchConservationBoundaries, getMintBurnConservationEligibility, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
+  conservationOnlyEventDefsFor, fetchConservationBoundaries, getMintBurnConservationEligibility, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
   type ConservationBoundaryRequest,
 } from "../../lib/mint-burn-conservation";
 
@@ -124,6 +124,25 @@ export async function runMintBurnConfigPhase(input: {
     deadlineMs: Math.min(deadlineMs, Date.now() + MINT_BURN_CONSERVATION_PREPASS_MAX_MS),
   });
 
+  // The persisted frontier rotates capacity-deferred configs to the next run.
+  // Reserve one complete set of log queries for half the extended roster before
+  // allowing hot configs to spend their full cap on recursion/timestamps/context.
+  // This keeps a few expensive contracts from turning the two-cycle sweep into
+  // three or more cycles; real provider/runtime failures still remain visible.
+  const reservedScanRequests = new Array<number>(input.configs.length + 1).fill(0);
+  if (input.lane === "extended") {
+    const coverageTarget = Math.ceil(input.configs.length / 2);
+    for (let i = coverageTarget - 1; i >= 0; i--) {
+      const config = input.configs[i]!;
+      const key = configKey(config);
+      const context = input.chainContexts.get(config.chain.chainId);
+      const needsScan = !deferredKeys.has(key) && context
+        && configScanRange(config, input.lastBlocksAfterRun.get(key), context.chainHead, input.maxScanRange).fromBlock <= context.chainHead;
+      reservedScanRequests[i] = reservedScanRequests[i + 1]!
+        + (needsScan ? config.events.length + conservationOnlyEventDefsFor(config).length : 0);
+    }
+  }
+
   for (let i = 0; i < input.configs.length; i++) {
     if (input.signal?.aborted) {
       throw input.signal.reason instanceof Error ? input.signal.reason : new Error("sync-mint-burn aborted");
@@ -234,6 +253,9 @@ export async function runMintBurnConfigPhase(input: {
       Math.min(
         input.budget.limit - input.budget.count,
         tierBudgetLimit,
+        input.lane === "extended"
+          ? Math.max(1, input.budget.limit - input.budget.count - 10 - reservedScanRequests[i + 1]!)
+          : tierBudgetLimit,
       ),
     );
     const boundaryRequest = boundaryRequests.get(key);
@@ -246,6 +268,7 @@ export async function runMintBurnConfigPhase(input: {
       scanTo,
       chainHead: chainContext.chainHead,
       rpcEndpoints: chainContext.rpcEndpoints,
+      endpointHeads: chainContext.endpointHeads,
       signal: input.signal,
       configBudgetLimit,
       runTimestamp: input.runTimestamp,

@@ -1,7 +1,7 @@
 import { linePattern, type CompilerProfile } from "./shared";
 
-// The August 2026 MCCPA report examines management's assertion that the fair
-// value of SBC reserve assets equals or exceeds SBC issued as of August 31,
+// The September 2026 MCCPA report examines management's assertion that the fair
+// value of SBC reserve assets equals or exceeds SBC issued as of September 30,
 // 2026 at 11:50pm Eastern Time. The report carries a material source
 // limitation: MCCPA "was not retained to, and has not attempted to,
 // independently confirm the authenticity and accuracy" of company-provided
@@ -15,11 +15,11 @@ export const PROFILE: CompilerProfile = {
   product: "SBC",
   profile: "sbc-v1",
   officialIndexUrl: "https://brale.xyz/stablecoins/SBC",
-  reportUrl: "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-08-2026.pdf",
-  reportDate: "2026-08-31",
-  reportAsOf: "2026-08-31T23:50:00-04:00",
+  reportUrl: "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf",
+  reportDate: "2026-09-30",
+  reportAsOf: "2026-09-30T23:50:00-04:00",
   reportTimeZone: "Eastern Daylight Time (UTC-4)",
-  reportIssuedAt: "2026-09-15T23:59:00-05:00",
+  reportIssuedAt: "2026-10-13T23:59:00-05:00",
   attestor: "Michael Coglianese, CPA, P.C. (MCCPA)",
   engagement: "AICPA attestation standards direct examination of management's assertion; MCCPA relied on data and records provided by Brale Inc. and was not retained to, and has not attempted to, independently confirm the authenticity and accuracy of those data and records",
   conclusion: "unmodified",
@@ -39,7 +39,7 @@ export const PROFILE: CompilerProfile = {
   liabilityRows: [
     {
       code: "all-supported-blockchains",
-      label: "SBC issued across all supported blockchains (Algorand, Aptos, Arbitrum, Avalanche, Base, Canton, Celo, Chia, Coreum, Ethereum, Ethereum Classic, Hedera, Kusama, Monad, Optimism, Polygon, PulseChain, Radius, Solana, Spark, Starknet, Stellar, Tron, Tempo, World Chain, XRP Ledger, Xion)",
+      label: "SBC issued across all supported blockchains (Algorand, Aptos, Arbitrum, Avalanche, Base, Canton, Celo, Chia, Coreum, Ethereum, Ethereum Classic, Hedera, Kusama, Monad, Optimism, Polygon, PulseChain, Radius, Robinhood Chain, Solana, Spark, Starknet, Stellar, Tron, TX, Tempo, Verona, World Chain, XRP Ledger, Xion)",
       pattern: linePattern("SBC Issued"),
     },
   ],
@@ -47,8 +47,8 @@ export const PROFILE: CompilerProfile = {
     { label: "MCCPA examiner", pattern: /Michael Coglianese|MCCPA/ },
     { label: "AICPA direct examination", pattern: /attestation standards for a direct examination/i },
     { label: "favorable MCCPA opinion", pattern: /fairly stated, in all material respects/i },
-    { label: "report date", pattern: /August 31, 2026,? at 11:50pm Eastern Time/ },
-    { label: "signature block", pattern: /Lincolnshire, IL\s+September 15, 2026/ },
+    { label: "report date", pattern: /September\s+30,\s+2026,?\s+at\s+11:50pm\s+Eastern\s+Time/ },
+    { label: "signature block", pattern: /Lincolnshire, IL\s+October 13, 2026/ },
     { label: "examiner source limitation", pattern: /independently confirm the authenticity/i },
     { label: "supported blockchains", pattern: /Supported Blockchains/i },
   ],
@@ -58,16 +58,16 @@ export const PROFILE: CompilerProfile = {
   reportedTotals: [
     {
       label: "Fair Value of Reserve Assets",
-      expected: "8717242",
+      expected: "21593854",
       pattern: linePattern("Fair Value of Reserve Assets"),
     },
     {
       label: "SBC Issued",
-      expected: "8717242",
+      expected: "21593854",
       pattern: linePattern("SBC Issued"),
     },
   ],
-  reportedAssetTotal: "8717242",
-  computedAssetTotal: "8717242",
-  reportedLiabilityTotal: "8717242",
+  reportedAssetTotal: "21593854",
+  computedAssetTotal: "21593855",
+  reportedLiabilityTotal: "21593854",
 };

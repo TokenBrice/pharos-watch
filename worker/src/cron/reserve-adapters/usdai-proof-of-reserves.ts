@@ -458,7 +458,10 @@ export async function fetchUsdAiProofOfReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "usdai-proof-of-reserves");
-  const entries = parseUsdAiProofOfReserves(await fetchTextWithRetry(input.url, signal, 12_000, ctx));
+  // The origin takes 14–16s even for its small cached reserve book. Fit one
+  // complete read inside the unchanged 20s adapter budget instead of canceling
+  // it at 12s and spending the remaining budget on a doomed retry.
+  const entries = parseUsdAiProofOfReserves(await fetchTextWithRetry(input.url, signal, 18_000, ctx, { maxRetries: 0 }));
   const result = adaptUsdAiProofOfReserves(entries);
   try {
     const anchor = await anchorUsdAiComposition(entries, config, signal, ctx);

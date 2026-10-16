@@ -87,6 +87,7 @@
     "worker/src/cron/sync-stablecoins/price-corroboration-observations.ts": 100,
     "worker/src/cron/sync-stablecoins/price-corroboration.ts": 80.9,
     "worker/src/cron/sync-stablecoins/price-dex-refresh.ts": 100,
+    "worker/src/cron/sync-stablecoins/price-short-lived-refresh.ts": 93.9,
     "worker/src/cron/sync-stablecoins/pricing.ts": 97.7,
     "worker/src/cron/sync-stablecoins/publication.ts": 94.1,
     "worker/src/cron/sync-stablecoins/runtime.ts": 82.4,

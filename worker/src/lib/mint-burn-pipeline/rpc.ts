@@ -26,11 +26,14 @@ export function mintBurnRpcEndpoints(chainId: string, apiKey: string,
 }
 
 export async function getMintBurnBlockNumber(endpoints: readonly RpcEndpoint[], budget: SubrequestBudget,
-  signal?: AbortSignal): Promise<number | null> {
+  signal?: AbortSignal, endpointHeads?: Map<string, number>): Promise<number | null> {
   for (const endpoint of endpoints) {
     throwIfAborted(signal);
-    const head = await getAlchemyBlockNumber(endpoint.url, budget, signal);
-    if (head != null) return head;
+    const head = endpointHeads?.get(endpoint.url) ?? await getAlchemyBlockNumber(endpoint.url, budget, signal);
+    if (head != null) {
+      endpointHeads?.set(endpoint.url, head);
+      return head;
+    }
   }
   return null;
 }
@@ -38,7 +41,7 @@ export async function getMintBurnBlockNumber(endpoints: readonly RpcEndpoint[], 
 /** Resume only at the proven contiguous frontier, discarding logs beyond an unproven gap. */
 export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contractAddress: string,
   topics: AlchemyTopicFilter[], fromBlock: number, toBlock: number, budget: SubrequestBudget,
-  signal?: AbortSignal, options?: { deadlineMs?: number }): Promise<AlchemyLogsFetchResult | null> {
+  signal?: AbortSignal, options?: { deadlineMs?: number; endpointHeads?: Map<string, number> }): Promise<AlchemyLogsFetchResult | null> {
   if (endpoints.length === 1) {
     return fetchAlchemyLogs(endpoints[0].url, contractAddress, topics, fromBlock, toBlock, budget, signal,
       options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined);
@@ -48,9 +51,12 @@ export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contr
   for (const endpoint of endpoints) {
     throwIfAborted(signal);
     if (budgetExhausted(budget) || (options?.deadlineMs != null && Date.now() >= options.deadlineMs)) break;
-    // A provider may silently clamp future toBlock values. Only its own head proves its scan ceiling.
-    const endpointHead = await getAlchemyBlockNumber(endpoint.url, budget, signal);
+    // Reuse only this endpoint's own run-local head, never another provider's ceiling.
+    // Every scan is capped to the run's initial head, so a later head read adds no coverage.
+    const endpointHead = options?.endpointHeads?.get(endpoint.url)
+      ?? await getAlchemyBlockNumber(endpoint.url, budget, signal);
     if (endpointHead == null || !Number.isSafeInteger(endpointHead) || endpointHead < 0) continue;
+    options?.endpointHeads?.set(endpoint.url, endpointHead);
     const endpointTo = Math.min(toBlock, endpointHead);
     if (endpointTo < start) {
       combined ??= { logs: [], complete: false, scannedToBlock: start - 1, calls: 0, maxDepth: 0,

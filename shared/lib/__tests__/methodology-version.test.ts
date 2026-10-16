@@ -256,7 +256,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.51");
+    expect(methodology.currentLabel).toBe("v6.52");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -272,7 +272,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 5).map((candidate) => candidate.version)).toEqual(["6.51", "6.50", "6.49", "6.48", "6.47"]);
+    expect(methodology.entries.slice(0, 6).map((candidate) => candidate.version)).toEqual(["6.52", "6.51", "6.50", "6.49", "6.48", "6.47"]);
   });
 
   it.each([
@@ -307,6 +307,16 @@ describe("methodology registry", () => {
     expect(getMethodologyVersionAt(key, release.effectiveAt)).toBe(version);
   });
 
+  it("pins quarter-hour short-lived price recovery to the next UTC release boundary", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    const release = methodology.entries[0];
+    expect(release).toMatchObject({
+      version: "6.52", date: "2026-10-16", effectiveAt: 1_792_195_200, reconstructed: false,
+    });
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt - 1)).toBe("6.51");
+    expect(getMethodologyVersionAt("pricing-pipeline", release.effectiveAt)).toBe("6.52");
+  });
+
   it("keeps the Safety drain policy identity and accepted-pair replay proof explicit", () => {
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.18")!;
     expect(release.summary).toContain("Track M is not part of this release");
@@ -320,10 +330,8 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("no shadow DEX family met its documented maturity gates");
   });
 
-  it("aligns v10.19 policy identity with its recorded release cut", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.19");
-    expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+  it("retains the v10.19 Morpho release cut", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.19")!;
     expect(release).toMatchObject({
       version: "10.19",
       date: "2026-10-14",
@@ -336,6 +344,17 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("Activation: 2026-10-14 22:00 UTC (release cut; 1792015200)");
     expect(release.impact.join(" ")).not.toMatch(/provisional|re-date/i);
     expect(release.impact.join(" ")).toMatch(/Morpho/);
+  });
+
+  it("aligns current Safety identity with the coherent economic-supply release", () => {
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.21");
+    expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
+    expect(release).toMatchObject({
+      version: "10.21", date: "2026-10-16", effectiveAt: 1_792_195_200, reconstructed: false,
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.19");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.21");
   });
 
   it("provides an LLM-facing description for every changelog", () => {

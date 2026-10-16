@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.21",
+    "title": "Coherent historical heads for economic supply attribution",
+    "date": "2026-10-16",
+    "effectiveAt": 1792195200,
+    "summary": "Safety Score v10.21 aligns independently selected safe EVM holdings heads before reading economic supply quantities, so cross-chain partitions can satisfy the existing observation-skew budget without moving the oldest head forward or relaxing evidence admission.",
+    "impact": [
+      "The observer first resolves every required EVM chain's reviewed lagged head at or before the scoring clock, capped at its actual finalized head where pending-history proof requires finality. Heads newer than the oldest timestamp plus the existing 120-second skew allowance are rewound to a canonical historical block at or before that bound, before supply and holding quantities are read.",
+      "This changes the measured input acquisition path: a cross-chain partition previously rejected for independent head skew may become admissible and can change attribution, downstream scores or availability. Complete accounting, exact identity, canonical hash pinning, the 1,800-second age budget, the 120-second skew bound and original observation clocks remain authoritative; a failed alignment never fabricates quantities.",
+      "The adjacent bounded lease-acquisition wait is scheduling only and preserves the existing producer deadline and minimum useful window. Pillar weights, grade gates, supply conservation tolerances, reviewed deployment plans and scoring formulas are unchanged; release metadata does not rotate the semantic policy digest.",
+      "Activation is provisionally 2026-10-17 00:00 UTC (1792195200), following the next-UTC-midnight convention; re-date effectiveAt at release. Fixed-clock admitted-input comparison and fresh capture/accepted publication remain required; no replay neutrality, mover totals or production recovery is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.19",
     "title": "Allocation-weighted Morpho lender collateral-book risk",
     "date": "2026-10-14",

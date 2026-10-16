@@ -18,4 +18,14 @@ export const ASSURANCE_RECONCILIATION_TOLERANCES: Partial<Record<IndependentAssu
     // August 2026 cash/fund schedule exceeds the asserted account total by MYR 0.03.
     reportedAssetTotalTolerance: { absolute: "0.03", relativePpm: 0.02 },
   },
+  SBC: {
+    // September 2026 whole-dollar rows sum to $21,593,855; the printed total is $21,593,854.
+    // This reviewed $1 discrepancy is not permission for a future report's rounding.
+    reviewedReport: {
+      reportDate: "2026-09-30",
+      reportUrl: "https://brale.xyz/assets/reports/SBC-Stable-Coin-Reserve-Attestation-Report-09-2026.pdf",
+      reportSha256: "cb0ec78a24aa1826f937c2bda874ef381d28063b233580769c754f80195973a0",
+    },
+    reportedAssetTotalTolerance: { absolute: "1", relativePpm: 0.05 },
+  },
 };

@@ -78,7 +78,10 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
           };
           const addressProvider = { enabledProviders: runtime.env.ADDRESS_PRICE_PROVIDERS_ENABLED,
             cgApiKey: runtime.coingeckoApiKey };
-          const dex = await collect("dex-refresh", () => runPriceDexRefresh({ db: runtime.db, syncStartSec: runtime.slotStartedAt, signal, addressProvider }));
+          const dex = await collect("dex-refresh", () => runPriceDexRefresh({
+            db: runtime.db, syncStartSec: runtime.slotStartedAt, signal, addressProvider,
+            jupiterApiKey: runtime.env.JUPITER_API_KEY, chainRpcs: runtime.chainRpcs,
+          }));
           const corroboration = isPriceCorroborationSlot(runtime.slotStartedAt)
             ? await collect("hourly", () => runPriceCorroboration({
                 db: runtime.db, syncStartSec: runtime.slotStartedAt, signal,
@@ -107,10 +110,13 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
         && dex.errorClasses.every((errorClass) => errorClass === "rate-limited");
       const addressRefreshRefused = !!dex?.addressRefresh?.enabled
         && (dex.addressRefresh.circuitOpen || dex.addressRefresh.timedOut || dex.addressRefresh.failureClasses.length > 0);
+      const shortLivedRefreshRefused = [dex?.contractRefresh, dex?.jupiterRefresh]
+        .some((refresh) => refresh && (refresh.timedOut || refresh.failedPasses.length > 0));
       const degraded = phaseFailed
         || !!dex && !throttledOnly && (dex.errorClasses.length > 0 || dex.timedOut || dex.deferredBatches > 0
           || (dex.hintedAttempted > 0 && dex.hintedResolved === 0))
         || addressRefreshRefused
+        || shortLivedRefreshRefused
         || !!summary && (summary.failedPasses.length > 0 || summary.providerDiagnostics.some((row) => !row.success));
       await recordBudgetSurfaceTelemetry(runtime.db, {
         surface: "price-corroboration", durationMs: Date.now() - startedMs,
@@ -125,6 +131,7 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
         severity: degraded ? "warning" : "info",
         message: `Price observation collection refreshed ${dex?.resolved ?? 0}/${dex?.cohortSize ?? 0} DEX rows`
           + `${dex?.addressRefresh.enabled ? ` and ${dex.addressRefresh.resolved}/${dex.addressRefresh.cohortSize} exact-address rows` : ""}`
+          + `${dex ? `, ${dex.contractRefresh.resolved} contract rows and ${dex.jupiterRefresh.resolved} Jupiter rows` : ""}`
           + `${summary ? " and completed hourly corroboration" : ""}`,
         metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, ...(summary ?? {}), dexRefresh: dex, addressRefresh: dex?.addressRefresh ?? null, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
       });

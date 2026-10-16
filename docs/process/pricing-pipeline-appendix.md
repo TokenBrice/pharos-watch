@@ -332,6 +332,10 @@ The same registry also supports historical replay for backfills where a provider
 
 ---
 
+## Quarter-Hour Fallback Refresh
+
+The existing `:09/:24/:39/:54` refresh also reruns the DefiLlama contract and Jupiter fallback passes for active missing-price rows and rows already priced by the corresponding source. Each pass has a separate 25-second envelope and runs serially after exact-address coverage and before DexScreener. Reviewed missing-price gaps remain on hourly discovery unless a current quote is already owned by that source. This fixes the cadence mismatch for short-lived quotes such as M's contract feed and XO's Jupiter quote: hourly observation cannot keep a 15-minute quote available through every publication. Admission, upstream/slot clocks, provider circuits, thresholds and source TTLs are unchanged. Staged quotes still publish with fallback confidence and cannot become trusted inherited parents for USDN or USDK; a stale wM parent is not refreshed by its children's sync timestamps.
+
 ## Fallback Enrichment
 
 The hourly observation handoff expires after one hour plus one 15-minute publication interval, providing a bounded handoff envelope across hourly replacement. It independently enforces each source's existing observation-age limit, including the reviewed seven-day CoinGecko low-volume window. Only freshly collected provider observations enter it; published references and cached replays never do. A missing-price consumer revalidates candidates with the normal fallback and severe-downside corroboration guards, preserves their source and observation time, and publishes only `fallback` confidence. The existing `cachedFallbackCount` includes this D1 handoff and ordinary replay recovery. Empty successful collections clear the handoff; older writers cannot replace newer snapshots. Ordinary replay lifetime and trust rules are unchanged.
@@ -558,6 +562,12 @@ For fiat FX, Frankfurter remains the preferred ECB-backed source for the busines
 The live `/price/` endpoints require no API key. A successful 30-day baseline with one gold/silver request pair every 30 minutes is 2,880 requests; retries and failed-bucket reattempts can exceed that estimate. Backfills use CoinGecko commodity history, not a separate gold-api.com historical endpoint.
 
 
+
+## v6.51–v6.52 Release Details
+
+The `v6.52` release refreshes eligible short-lived DefiLlama contract and Jupiter quotes on the existing quarter-hour lane, with a separate 25-second budget for each pass. Reviewed missing-price gaps remain hourly unless a publishable current quote is source-owned; a stale source label alone is insufficient. M and XO are not registered reviewed gaps, so both retain quarter-hour recovery while missing. Quote admission rules, source clocks, TTLs and fallback confidence are unchanged. Separately, chain-dropout reviewed releases require an observed list current and a review no earlier than this quarantine's first detection and no later than the run clock; satUSD/Arbitrum and EURS/Polygon use that existing release lane, without overriding aggregate supply. Activation is provisionally **2026-10-17 00:00 UTC (`1792195200`)**, to be re-dated at release. Fresh admitted publication remains necessary to establish recovery.
+
+The `v6.51` release binds DefiLlama-list consensus inputs to their actual source and adds USDFC to the reviewed low-volume CoinGecko fallback. Named supplemental prices cannot become a second DefiLlama observation. USDFC retains fallback confidence, its original observation clock and the existing seven-day age budget; source weights, depeg authority and supply admission are unchanged. Activation is provisionally **2026-10-16 00:00 UTC (`1792108800`)**, to be re-dated at release. Fixed-clock comparison and fresh publication remain required; this record does not establish production recovery.
 
 ## SOFID v6.48 release
 

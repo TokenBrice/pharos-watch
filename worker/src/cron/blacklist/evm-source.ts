@@ -428,18 +428,23 @@ export async function fetchEvmEventsIncremental(
     scanToBlock: number;
     logs: AlchemyLogsFetchResult | null;
   }> => {
-    const targetSafeHead = getEvmSafeHead(evmChainId, target.chainHead);
+    // Every topic must prove coverage against the same observed head. A newer
+    // fallback head must not move the goalpost after earlier explorer topics.
+    const observedSafeHead = getEvmSafeHead(evmChainId, target.chainHead);
+    const targetSafeHead = safeHead ?? observedSafeHead;
+    // A lagging fallback still cannot prove the original target was covered.
+    const availableSafeHead = Math.min(targetSafeHead, observedSafeHead);
     const scanToBlock = target.scanWindowBlocks != null
-      ? Math.min(targetSafeHead, fromBlock + target.scanWindowBlocks - 1)
-      : targetSafeHead;
+      ? Math.min(availableSafeHead, fromBlock + target.scanWindowBlocks - 1)
+      : availableSafeHead;
     const batches: AlchemyLogsFetchResult[] = [];
     // Separate the per-request provider range from this config's catch-up range.
     // Incumbent pacing stays unchanged, including Avalanche's eight serial pages.
     const catchUpCalls = target.endpoint.operator === "dwellir" ? DWELLIR_CATCH_UP_MAX_CALLS : null;
     let finalBlock = catchUpCalls != null && target.scanWindowBlocks != null
-      ? Math.min(targetSafeHead, fromBlock + target.scanWindowBlocks * catchUpCalls - 1)
+      ? Math.min(availableSafeHead, fromBlock + target.scanWindowBlocks * catchUpCalls - 1)
       : config.chain.chainId === "avalanche" && target.scanWindowBlocks === 2_000
-        ? Math.min(targetSafeHead, fromBlock + 16_000 - 1) : scanToBlock;
+        ? Math.min(availableSafeHead, fromBlock + 16_000 - 1) : scanToBlock;
     let calls = 0;
     let start = fromBlock;
     do {

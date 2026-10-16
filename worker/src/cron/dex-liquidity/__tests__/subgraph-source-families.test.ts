@@ -5,6 +5,9 @@ import {
 } from "../subgraph-source-families";
 import {
   UNISWAP_V4_SUBGRAPHS,
+  UNISWAP_V4_ETHEREUM_SOURCE,
+  buildUniswapV4PoolQuery,
+  buildUniswapV4ExactPoolQuery,
   UNIV3_BASE_POOL_MAX_PAGES,
   UNIV3_POOL_MAX_PAGES,
   UNIV3_POOL_PAGE_SIZE,
@@ -77,6 +80,46 @@ describe("subgraph source families", () => {
   it("returns empty Uniswap V4 lookups when Graph API key is missing", async () => {
     const result = await fetchUniswapV4Data(null, new Map());
 
+    expect(result.uniswapV4ExecutionCandidates.size).toBe(0);
+  });
+
+  it("maps the Ethereum fork's immutable Int fee and tick spacing in broad and exact reads", async () => {
+    expect(buildUniswapV4PoolQuery(1000, "ethereum")).toContain("feeTier: fee");
+    expect(buildUniswapV4ExactPoolQuery([THUSD_POOL.id], "ethereum")).toContain("feeTier: fee");
+    expect(buildUniswapV4PoolQuery(0, "base")).not.toContain("feeTier: fee");
+    expect(buildUniswapV4ExactPoolQuery([THUSD_POOL.id], "base")).not.toContain("feeTier: fee");
+    const infos = vi.spyOn(console, "info");
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      respond: async (request) => {
+        const ethereum = request.url.endsWith(UNISWAP_V4_ETHEREUM_SOURCE.subgraphId);
+        const { query } = await request.json() as { query: string };
+        if (ethereum) expect(query).toContain("feeTier: fee");
+        return { body: { data: { pools: ethereum ? [{
+          ...THUSD_POOL, feeTier: 100, tickSpacing: 1, totalValueLockedUSD: "100000",
+        }] : [] } } };
+      },
+    }], { requireMatch: true });
+    const broad = await fetchUniswapV4Data("graph-key", new Map());
+    const exact = await fetchUniswapV4Data("graph-key", new Map([["ethereum", [THUSD_POOL.id]]]));
+    for (const result of [broad, exact]) {
+      expect(result.failedChains).toEqual([]);
+      expect([...result.uniswapV4ExecutionCandidates.values()].flat()).toEqual([
+        expect.objectContaining({ poolId: THUSD_POOL.id, feePips: 100, tickSpacing: 1 }),
+      ]);
+    }
+    const provenance = infos.mock.calls.map(([message]) => JSON.parse(String(message)))
+      .find((event) => event.event === "uniswap-v4-subgraph-source");
+    expect(provenance?.metadata).toMatchObject(UNISWAP_V4_ETHEREUM_SOURCE);
+    expect(provenance?.metadata.repository).toBe("doryoku/copypools-subgraph");
+  });
+
+  it.each([100.5, Number.MAX_SAFE_INTEGER + 1])("rejects a non-integer Ethereum fee scalar %s", async (feeTier) => {
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      body: { data: { pools: [{ ...THUSD_POOL, feeTier, tickSpacing: 1 }] } },
+    }], { requireMatch: true });
+    const result = await fetchUniswapV4Data("graph-key", new Map([["ethereum", [THUSD_POOL.id]]]));
     expect(result.uniswapV4ExecutionCandidates.size).toBe(0);
   });
 

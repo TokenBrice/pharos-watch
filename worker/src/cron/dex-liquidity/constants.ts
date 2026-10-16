@@ -197,15 +197,19 @@ export const buildUniV3MessariPoolQuery = (skip: number, trackedCurrencies?: rea
 }`;
 
 /**
- * Official Uniswap V4 Ethereum subgraph deployment:
- * https://developers.uniswap.org/api/subgraph/subgraphs-devs/deployments
- *
- * The non-Ethereum sources are published by the same Uniswap Graph account and
- * feed target-review evidence only. Their runtime deployments remain outside
- * active scoring until independently pinned code identities survive shadow.
+ * Ethereum's identity-only source is a reviewed Uniswap V4 indexer fork.
+ * Its immutable `fee: Int` is PoolKey material, unlike deployments whose
+ * `feeTier` tracks the latest swap's protocol-inclusive fee.
  */
+export const UNISWAP_V4_ETHEREUM_SOURCE = {
+  subgraphId: "8B2wKxnkciCTc5HSgsAojF6vhKn6wxQ1nVecYzMge1hA",
+  deploymentId: "QmZFHYDCAMMaguzaCWk4nyaUSooL36RhiciW4HFLZDNGgX",
+  repository: "doryoku/copypools-subgraph",
+} as const;
+
+/** Non-Ethereum sources retain their existing shadow-only admission. */
 export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
-  ethereum: "DiYPVdygkfjDWhbxGSqAQxwBKmfKnkWQojqeM2rkLb3G",
+  ethereum: UNISWAP_V4_ETHEREUM_SOURCE.subgraphId,
   // 2026-09-27: replaced CHz2jQ8g… (deployment QmaoSfxT45Q3tKnQEcmCACRFKpv8SogxEcZ4kAvRDmgnrU),
   // whose only serving indexer (0xf92f430d…) answers non-JSON after ~15s, so
   // every run since 2026-09-22 recorded `uniswap-v4-subgraph:base`. The pinned
@@ -222,7 +226,7 @@ export const UNISWAP_V4_SUBGRAPHS: Record<string, string> = {
 export const UNISWAP_V4_POOL_PAGE_SIZE = 1000;
 export const UNISWAP_V4_POOL_MAX_PAGES = 5;
 
-export const buildUniswapV4PoolQuery = (skip: number): string => `{
+export const buildUniswapV4PoolQuery = (skip: number, chain: string): string => `{
   pools(
     first: ${UNISWAP_V4_POOL_PAGE_SIZE},
     skip: ${skip},
@@ -233,7 +237,7 @@ export const buildUniswapV4PoolQuery = (skip: number): string => `{
     id
     token0 { id symbol decimals }
     token1 { id symbol decimals }
-    feeTier
+    ${chain === "ethereum" ? "feeTier: fee" : "feeTier"}
     tickSpacing
     hooks
     liquidity
@@ -244,7 +248,7 @@ export const buildUniswapV4PoolQuery = (skip: number): string => `{
 }`;
 
 /** Retained physical identities are independent of the indexer's USD accounting. */
-export function buildUniswapV4ExactPoolQuery(poolIds: readonly string[]): string {
+export function buildUniswapV4ExactPoolQuery(poolIds: readonly string[], chain: string): string {
   if (
     poolIds.length === 0 || poolIds.length > 100 ||
     poolIds.some((id) => !/^0x[a-f0-9]{64}$/.test(id))
@@ -256,7 +260,7 @@ export function buildUniswapV4ExactPoolQuery(poolIds: readonly string[]): string
     id
     token0 { id symbol decimals }
     token1 { id symbol decimals }
-    feeTier
+    ${chain === "ethereum" ? "feeTier: fee" : "feeTier"}
     tickSpacing
     hooks
     liquidity

@@ -869,11 +869,11 @@ const CRON_CONNECTION_BUDGET_ONLY_DEFINITIONS: readonly CronConnectionBudgetDefi
     label: "Price observation collection",
     intervalSec: 900,
     scheduleKey: "statusSelfCheckOffset",
-    maxConnections: 4,
+    maxConnections: 4, // Hourly peak; quarter-hour address, contract, Jupiter and DEX phases are serial.
     connectionGroup: "status-self-check-chain",
     statusTracked: false,
     notes:
-      "Every 15 minutes after monitors, refreshes exact DEX observations plus the exact-address rows whose quote lifetime is one publication, all serially; broad fallback corroboration remains hourly at :09.",
+      "Every 15 minutes after monitors, serially refreshes exact DEX, exact-address, DefiLlama-contract and Jupiter observations whose quote lifetime is one publication; broad fallback corroboration remains hourly at :09.",
   },
   {
     job: "telegram-registration-reconciliation",

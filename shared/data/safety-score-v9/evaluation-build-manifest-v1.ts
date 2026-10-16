@@ -38,7 +38,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "646e790bdc27754029f22ad8fbde132c540e1456689ae9fd39e56e1d6341845d"
+      "sha256": "aa872de8279cf58b36c4a06846aaea23dff2945fe73bd279d768b843a0e8e345"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -138,7 +138,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "cd8a4b72834d98ff61fa93d0bf412b94d4f3802925b79af92a2abca56978dd7e"
+      "sha256": "a946f818bf845e37a7819f1d5bb0b22537fa23a265647d631e30e79a3ddfeade"
     },
     {
       "path": "shared/lib/curve-composite-identities.ts",
@@ -1299,7 +1299,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-15-block-26196659-shock-coverage.json.gz"
     }
   ],
-  "digest": "0db3393823f06cd60b0f774314901433d1a54d2862317056c2d59fd122a9726f"
+  "digest": "168cad0607748ac88d5b0d2a1ad1ac40332b12f4cf3039f57dd6001b3d506f03"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -22,6 +22,8 @@ import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, type Price
 import { loadFxRatesForPriceBounds } from "./enrich-prices-progress";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { resolveStablecoinPriceGapReviews } from "../../lib/stablecoin-publication-coverage";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { runShortLivedPriceRefresh, type ShortLivedRefreshSummary } from "./price-short-lived-refresh";
 
 const REFRESH_BUDGET_MS = 45_000;
 // 45-second envelope / (five-second request ceiling + 1.1-second DexScreener pacing).
@@ -57,6 +59,8 @@ export interface DexRefreshSummary {
   cacheWritten: boolean;
   errorClasses: string[];
   addressRefresh: AddressRefreshSummary;
+  contractRefresh: ShortLivedRefreshSummary;
+  jupiterRefresh: ShortLivedRefreshSummary;
 }
 
 /**
@@ -279,6 +283,8 @@ export async function runPriceDexRefresh(params: {
   syncStartSec: number;
   signal?: AbortSignal;
   addressProvider?: AddressPriceProviderRuntimeConfig;
+  jupiterApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
 }): Promise<DexRefreshSummary> {
   const { previousAssetsById, cacheState } = await loadPreviousStablecoinsById(params.db);
   if (cacheState.state !== "ok") throw new Error("DEX refresh requires valid published stablecoins cache");
@@ -300,6 +306,12 @@ export async function runPriceDexRefresh(params: {
     reviewedGapIds,
     hints: previous.addressTargets,
   });
+  // These fallback quotes also expire in one publication window. Reuse their
+  // existing admission paths serially, outside the primary publication Worker.
+  const shortLived = await runShortLivedPriceRefresh({
+    assets: [...previousAssetsById.values()], db: params.db, fxRates, signal: params.signal,
+    jupiterApiKey: params.jupiterApiKey, chainRpcs: params.chainRpcs, reviewedGapIds,
+  });
   const addressObservations = address.observations;
   const addressTargets = new Map(previous.addressTargets.map((target) => [target.id, target] as const));
   // Only definitive answered misses invalidate hints; capped, blocked and aborted work stays neutral.
@@ -309,7 +321,7 @@ export async function runPriceDexRefresh(params: {
     deferredBatches: plan.allBatchCount, unsupportedAssets: plan.unsupportedAssets, missingQuotes: 0,
     acknowledgedGapsSkipped: plan.acknowledgedGapsSkipped,
     hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: false, errorClasses: [],
-    addressRefresh: address.summary };
+    addressRefresh: address.summary, contractRefresh: shortLived.contractRefresh, jupiterRefresh: shortLived.jupiterRefresh };
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   const timeout = createTimeoutSignal({ timeoutMs: REFRESH_BUDGET_MS, timeoutReason: new DOMException("DEX refresh deadline", "TimeoutError"), parentSignal: params.signal });
   let successfulBatches = 0;
@@ -393,7 +405,7 @@ export async function runPriceDexRefresh(params: {
   await recordProviderOutcomeSafe({ db: params.db, circuitSource: CIRCUIT_SOURCE.DEXSCREENER_PRICES_REFRESH,
     attempted: summary.attemptedBatches, successful: successfulBatches });
   const written = await setCacheIfNewer(params.db, DEX_REFRESH_CACHE_KEY, JSON.stringify({
-    observations: [...addressObservations, ...observations],
+    observations: [...addressObservations, ...shortLived.observations, ...observations],
     targets: [...plan.targetsById.values()],
     // Hints outlive the slots that produced them but never a delisting.
     addressTargets: [...addressTargets.values()].filter((target) => previousAssetsById.has(target.id)),
