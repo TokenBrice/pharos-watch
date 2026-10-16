@@ -4,7 +4,7 @@
  * under their original local names so the bodies read exactly as before.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fixedFee, type RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
@@ -19,6 +19,8 @@ import { evaluateV9EconomicControlAssetFacts } from "@shared/lib/safety-score-v9
 import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
+import * as methodologyPolicy from "@shared/lib/safety-score-v9/policy";
+import * as exitExecution from "@shared/lib/safety-score-v9/exit-execution";
 import { rebuildFixed } from "./safety-score-v9-fact-set.test-support";
 import { withRedemptionBackstopConfig } from "./safety-score-v9-extension-routes.test-support";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
@@ -48,6 +50,28 @@ import {
 import { buildRoutes } from "../safety-score-v9/fact-set-exit";
 import { buildSupply } from "../safety-score-v9/fact-set-peg-supply";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
+
+describe("route compiler policy reuse", () => {
+  it("resolves one policy per fixed input without leaking another capture's clock", () => {
+    const first = factBuilderContext();
+    const second = factBuilderContext(exactFixedInput({ clockSec: first.fixedInput.clockSec + 3_600 }));
+    const loadPolicy = vi.spyOn(methodologyPolicy, "loadV9CandidateMethodologyPolicy");
+    const validateReviews = vi.spyOn(exitExecution, "validateExitExecutionModelReviews");
+    try {
+      buildRoutes(first, buildSupply(first));
+      buildRoutes({ ...first, evidence: new Map(), gaps: new Map() }, buildSupply(first));
+      expect(loadPolicy).toHaveBeenCalledTimes(1);
+      expect(loadPolicy).toHaveBeenLastCalledWith(first.fixedInput.clockSec);
+      buildRoutes(second, buildSupply(second));
+      expect(loadPolicy).toHaveBeenCalledTimes(2);
+      expect(loadPolicy).toHaveBeenLastCalledWith(second.fixedInput.clockSec);
+      expect(validateReviews).toHaveBeenCalledTimes(1);
+    } finally {
+      loadPolicy.mockRestore();
+      validateReviews.mockRestore();
+    }
+  });
+});
 
 describe("explicit route factor gaps and source chronology", () => {
   it.each([
