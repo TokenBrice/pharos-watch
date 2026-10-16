@@ -1,7 +1,7 @@
 {
   "version": 1,
   "waveId": "F-COVERAGE",
-  "baseSha": "abe02a7478a6b32b8cb5e4d202ed09a29ac07b85",
+  "baseSha": "9906dacc9b98428a8f2b744deb92015552bfa54d",
   "candidateSha": "8dac25ff8a087bbc6703975ca90f758b201cd66b",
   "measurement": {
     "command": "CRITICAL_COVERAGE_RATCHET_ALL=1 npm run coverage:critical",
