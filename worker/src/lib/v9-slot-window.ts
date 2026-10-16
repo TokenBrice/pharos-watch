@@ -329,6 +329,12 @@ export async function runV9AfterCoreWithinWindow(
       },
       {
         abortSignal: timeout.signal,
+        // Publication at :22/:52 can still own the lane when the following
+        // :23/:53 capture arrives. Wait only while a useful producer window
+        // remains; the lease still excludes overlapping memory-heavy work.
+        acquisitionWait: {
+          deadlineMs: deadlineMs - options.minimumRemainingMs,
+        },
         ttlSec:
           Math.ceil(effectiveWindowMs / 1_000) +
           V9_MEMORY_LANE_TTL_MARGIN_SEC,

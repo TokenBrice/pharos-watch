@@ -108,6 +108,40 @@ describe("reviewed economic supply observation", () => {
       .toMatchObject({ stateBlockHash: HASH, multicallFallbackBlockHash: HASH });
   });
 
+  it.each(["coherent", "lookup unavailable", "future aligned pin", "stale oldest pin"] as const)(
+    "aligns divergent safe heads without weakening admission: %s", async scenario => {
+      const f = fixture(), first = f.plan.deployments[0]!;
+      f.plan.deployments.push({ ...first, deploymentKey: `base:${first.address}`, chainId: "base" });
+      const oldest = CLOCK - (scenario === "stale oldest pin" ? 1801 : 300);
+      const target = oldest + 120;
+      const alignedTime = target + (scenario === "future aligned pin" ? 1 : 0);
+      vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (chain, number) => ({
+        number: number === "finalized" ? 100 : number, hash: HASH,
+        timestamp: chain === "ethereum" ? oldest : number === 90 ? alignedTime : CLOCK - 60,
+      }));
+      const lookup = vi.spyOn(evmRpc, "resolveClosestBlockAtOrBeforeTimestamp")
+        .mockResolvedValue(scenario === "lookup unavailable" ? null : 90);
+      const result = await f.run();
+      expect(lookup).toHaveBeenCalledWith("base", target, {
+        latestBlockNumber: 100, blockTimestampByNumber: new Map([[100, CLOCK - 60]]),
+      }, expect.objectContaining({ chainRpcs: f.chainRpcs }));
+      if (scenario !== "coherent") {
+        expect(result.status).toBe("rejected");
+        if (scenario !== "stale oldest pin") expect(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).not.toHaveBeenCalled();
+        return;
+      }
+      expect(result).toMatchObject({ status: "accepted", attribution: {
+        aggregate: { observedAtSec: CLOCK - 60 },
+        observations: [
+          expect.objectContaining({ anchor: "100", observedAtSec: oldest }),
+          expect.objectContaining({ anchor: "90", observedAtSec: target }),
+        ],
+      } });
+      expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls.map(call => [call[0], call[2]]))
+        .toEqual([["ethereum", 100], ["base", 90]]);
+    },
+  );
+
   it("rejects the exact failed batch leaf, never treating its unavailable amount as zero", async () => {
     const f = fixture();
     const first = f.plan.deployments[0]!;

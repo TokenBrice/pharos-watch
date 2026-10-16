@@ -28,6 +28,13 @@ export function SafetyScoresOverview() {
         not measured safe-book credit. v10.19 activated at the 2026-10-14 22:00 UTC release cut.
       </p>
       <p>
+        Methodology v10.21 aligns safe EVM supply-attribution heads before reading quantities, retaining required finality.
+        Newer heads rewind within the existing 120-second cross-chain skew bound; the oldest pin never moves
+        forward, and the 30-minute age budget, canonical hashes and original clocks remain required. Previously
+        skew-rejected partitions may become admissible and affect attribution or scores. Scoring formulas,
+        pillar weights and grade gates are unchanged; fresh accepted publication is needed to establish recovery.
+      </p>
+      <p>
         Exit compares every admissible route alone and every independently usable pair, then takes the best feasible
         portfolio. The stronger member is primary; its backup adds{" "}
         <span className="font-mono">min(10, 100 − primary score) × backup score / 100</span>. An improving correlated
