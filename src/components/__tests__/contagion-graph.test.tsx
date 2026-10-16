@@ -3,9 +3,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
+import { ContagionGraphControls } from "@/components/contagion-graph/contagion-graph-controls";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import { installSvgCoordinateShim } from "./contagion-graph-test-support";
-import { runSimulationInChunks } from "@/lib/contagion-layout";
+import { ALL_NODE_LIMIT, runSimulationInChunks } from "@/lib/contagion-layout";
 import { trackEvent } from "@/lib/analytics";
 
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
@@ -393,5 +394,29 @@ describe("ContagionGraph", () => {
     fireEvent.doubleClick(usdeNode);
 
     expect(container.querySelector('[data-pinned="true"]')).toBeNull();
+  });
+});
+
+describe("ContagionGraphControls", () => {
+  it("emits the all node-limit option without numeric coercion", () => {
+    const onNodeLimitChange = vi.fn();
+    render(
+      <ContagionGraphControls
+        focusMode="all"
+        edgeTypeFilter="all"
+        nodeLimit={50}
+        nodeSelectOptions={[{ id: "usdc-circle", symbol: "USDC", mcap: 1_000_000_000 }]}
+        selectedNeighborhoodId={null}
+        onFocusModeChange={vi.fn()}
+        onEdgeTypeFilterChange={vi.fn()}
+        onNodeLimitChange={onNodeLimitChange}
+        onTraceNodeChange={vi.fn()}
+      />,
+    );
+
+    const limitControls = screen.getByRole("group", { name: "Maximum nodes shown" });
+    fireEvent.click(within(limitControls).getByText("All"));
+
+    expect(onNodeLimitChange).toHaveBeenCalledWith(ALL_NODE_LIMIT);
   });
 });

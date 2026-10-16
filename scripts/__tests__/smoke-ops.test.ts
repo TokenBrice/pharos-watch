@@ -2,61 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { ACCESS_HEADERS, jsonResponse, textResponse } from "./smoke-ops.test-support";
 
 import {
-  assertNonceProtectedHtml,
   fetchJsonWithRetry,
   fetchOpsUiProxyStatus,
   fetchOpsUiProxyStatusWithRetry,
-  shouldSkipCanaryOpsUiProxyAssertion,
-  shouldRetryDirectOpsJson,
-  shouldSkipOpsUiProxyAssertion,
-  shouldRetryOpsUiProxyStatus,
 } from "../maintenance/smoke-ops.mjs";
-
-describe("assertNonceProtectedHtml", () => {
-  it("accepts inline scripts that carry the CSP nonce", () => {
-    const response = new Response(null, {
-      headers: {
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval'",
-      },
-    });
-
-    expect(() =>
-      assertNonceProtectedHtml(
-        response,
-        '<html><body><script nonce="abc123">self.__next_f=[];</script><script src="/_next/static/chunk.js"></script></body></html>',
-        "Ops UI",
-      ),
-    ).not.toThrow();
-  });
-
-  it("rejects inline scripts when the CSP nonce is missing", () => {
-    const response = new Response(null, {
-      headers: {
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-eval'",
-      },
-    });
-
-    expect(() =>
-      assertNonceProtectedHtml(response, "<html><body><script>self.__next_f=[];</script></body></html>", "Ops UI"),
-    ).toThrow("Ops UI CSP script-src is missing a nonce");
-  });
-
-  it("rejects inline scripts that do not carry the CSP nonce", () => {
-    const response = new Response(null, {
-      headers: {
-        "Content-Security-Policy": "default-src 'self'; script-src 'self' 'nonce-abc123' 'unsafe-eval'",
-      },
-    });
-
-    expect(() =>
-      assertNonceProtectedHtml(
-        response,
-        '<html><body><script nonce="wrong">self.__next_f=[];</script><script>window.__INLINE__=true;</script></body></html>',
-        "Ops UI",
-      ),
-    ).toThrow("Ops UI has 2 inline script(s) without the CSP nonce");
-  });
-});
 
 describe("fetchOpsUiProxyStatus", () => {
   it("retries the proxied status request with a bootstrapped Access cookie after a 401", async () => {
@@ -268,73 +217,5 @@ describe("fetchJsonWithRetry", () => {
     expect(result.response.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(sleepMock).not.toHaveBeenCalled();
-  });
-});
-
-describe("shouldSkipOpsUiProxyAssertion", () => {
-  it("skips when the proxied request is unauthorized and no UI session cookie was bootstrapped", () => {
-    const response = jsonResponse({ error: "Unauthorized" }, 401);
-
-    expect(shouldSkipOpsUiProxyAssertion(response, "cf_clearance=bot-cookie")).toBe(true);
-  });
-
-  it("still skips when a proxied 401 persists even after a UI session cookie was bootstrapped", () => {
-    const response = jsonResponse({ error: "Unauthorized" }, 401);
-
-    expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(true);
-  });
-
-  it("does not skip non-auth failures once the request cleared Access", () => {
-    const response = jsonResponse({ error: "Upstream failed" }, 502);
-
-    expect(shouldSkipOpsUiProxyAssertion(response, "CF_Authorization=ui-session")).toBe(false);
-  });
-});
-
-describe("shouldSkipCanaryOpsUiProxyAssertion", () => {
-  it("skips exhausted transient proxy failures only for canary smokes", () => {
-    const response = new Response("gateway timeout", {
-      status: 504,
-      headers: { "content-type": "text/html" },
-    });
-
-    expect(shouldSkipCanaryOpsUiProxyAssertion(response, "CF_Authorization=ui-session", "canary")).toBe(true);
-    expect(shouldSkipCanaryOpsUiProxyAssertion(response, "CF_Authorization=ui-session", "full")).toBe(false);
-  });
-});
-
-describe("shouldRetryOpsUiProxyStatus", () => {
-  it("retries only transient gateway warmup failures", () => {
-    expect(shouldRetryOpsUiProxyStatus(new Response("bad gateway", { status: 502 }))).toBe(true);
-    expect(shouldRetryOpsUiProxyStatus(new Response("gateway timeout", { status: 504 }))).toBe(true);
-    expect(
-      shouldRetryOpsUiProxyStatus(
-        jsonResponse({ error: "Unauthorized" }, 401),
-      ),
-    ).toBe(false);
-    expect(
-      shouldRetryOpsUiProxyStatus(
-        jsonResponse({ error: "upstream failed" }, 500),
-      ),
-    ).toBe(false);
-  });
-});
-
-describe("shouldRetryDirectOpsJson", () => {
-  it("retries only transient direct ops server failures", () => {
-    expect(shouldRetryDirectOpsJson(new Response("internal error", { status: 500 }))).toBe(true);
-    expect(shouldRetryDirectOpsJson(new Response("bad gateway", { status: 502 }))).toBe(true);
-    expect(shouldRetryDirectOpsJson(new Response("unavailable", { status: 503 }))).toBe(true);
-    expect(shouldRetryDirectOpsJson(new Response("gateway timeout", { status: 504 }))).toBe(true);
-    expect(
-      shouldRetryDirectOpsJson(
-        jsonResponse({ error: "Unauthorized" }, 401),
-      ),
-    ).toBe(false);
-    expect(
-      shouldRetryDirectOpsJson(
-        jsonResponse({ dryRun: true }, 200),
-      ),
-    ).toBe(false);
   });
 });

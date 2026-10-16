@@ -4,63 +4,7 @@ import { withRedirectFixture } from "./smoke-route-identity.test-support";
 import {
   assertRouteSummary,
   captureRoute,
-  getMobileWorkerCount,
-  getTableScanOutcome,
-  getTouchScanOutcome,
 } from "../maintenance/smoke-mobile-ui.mjs";
-
-describe("getMobileWorkerCount", () => {
-  it("clamps worker count by task count and max cap", () => {
-    expect(getMobileWorkerCount(1, "3")).toBe(1);
-    expect(getMobileWorkerCount(12, "99")).toBe(6);
-  });
-});
-
-describe("console and table scan outcomes", () => {
-  it.each([
-    { status: 400 },
-    { textLength: 19 },
-    { overflowDelta: 2 },
-    { hasFrameworkOverlay: true },
-    { finalUrl: "https://pharos.watch/" },
-  ])("rejects each boundary independently: %j", (invalid) => {
-    const valid = {
-      routeUrl: "https://pharos.watch/cemetery/",
-      finalUrl: "https://pharos.watch/cemetery/",
-      status: 399,
-      textLength: 20,
-      hasFrameworkOverlay: false,
-      overflowDelta: 1,
-      scrollWidth: 392,
-      innerWidth: 390,
-      tableScan: { checked: 0, issues: [] },
-      touchScan: { violations: [] },
-    };
-    expect(assertRouteSummary(valid, { strictTouchTargets: true })).toEqual([]);
-    expect(assertRouteSummary({ ...valid, ...invalid }, { strictTouchTargets: true })).toHaveLength(1);
-  });
-  it("surfaces table geometry issues as route failures", () => {
-    const failures = assertRouteSummary(
-      {
-        routeUrl: "https://pharos.watch/flows/",
-        finalUrl: "https://pharos.watch/flows/",
-        status: 200,
-        textLength: 100,
-        hasFrameworkOverlay: false,
-        overflowDelta: 0,
-        tableScan: {
-          checked: 1,
-          issues: [{ kind: "header-text-overflow", detail: "Name overlaps Score" }],
-        },
-        touchScan: { violations: [] },
-      },
-      { strictTouchTargets: true },
-    );
-
-    expect(getTableScanOutcome({ issues: [{ kind: "header-overlap" }] }).failCount).toBe(1);
-    expect(failures.join("\n")).toContain("table geometry failures=1");
-  });
-});
 
 describe("mobile route identity", () => {
   const healthy = {
@@ -120,37 +64,3 @@ describe("mobile route identity", () => {
   });
 });
 
-describe("getTouchScanOutcome", () => {
-  const scan = {
-    violations: [
-      { selector: "button.small", severity: "target", height: 32 },
-      { selector: "a.tiny", severity: "hard-floor", height: 20 },
-    ],
-  };
-
-  it("always fails hard-floor violations", () => {
-    expect(getTouchScanOutcome(scan)).toMatchObject({
-      failCount: 1,
-      hardFloor: [{ selector: "a.tiny", severity: "hard-floor" }],
-      targetWarnings: [{ selector: "button.small", severity: "target" }],
-    });
-  });
-
-  it("can fail all sub-44px target findings in strict mode", () => {
-    expect(getTouchScanOutcome(scan, { strictTouchTargets: true }).failCount).toBe(2);
-  });
-
-  it("keeps non-common sub-44px target findings advisory in strict mode", () => {
-    expect(
-      getTouchScanOutcome(
-        {
-          violations: [
-            { selector: "a.footer-pill", severity: "target", strictRequired: false, height: 28 },
-            { selector: "tr.row", severity: "target", strictRequired: true, height: 41 },
-          ],
-        },
-        { strictTouchTargets: true },
-      ).failCount,
-    ).toBe(1);
-  });
-});

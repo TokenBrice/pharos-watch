@@ -53,27 +53,21 @@ describe("decodeState", () => {
     expect(state.pegs).toEqual(["usd", "eur"]);
   });
 
-  it("decodes booleans from true/false/1/0", () => {
-    expect(decodeState("expanded=true", schema).expanded).toBe(true);
-    expect(decodeState("expanded=1", schema).expanded).toBe(true);
-    expect(decodeState("expanded=false", schema).expanded).toBe(false);
-    expect(decodeState("expanded=0", schema).expanded).toBe(false);
+  it.each([
+    ["true", true], ["1", true], ["false", false], ["0", false],
+  ] as const)("decodes expanded=%s as %s", (value, expected) => {
+    expect(decodeState(`expanded=${value}`, schema).expanded).toBe(expected);
   });
 
-  it("deduplicates enumList entries", () => {
-    expect(decodeState("pegs=usd,usd,eur", schema).pegs).toEqual(["usd", "eur"]);
-  });
-
-  it("respects enumList maxItems", () => {
-    const cappedSchema: UrlStateSchema<{ pegs: readonly string[] }> = {
-      pegs: {
-        kind: "enumList",
-        defaultValue: [],
-        allowedValues: ["usd", "eur", "gbp"],
-        maxItems: 2,
-      },
+  it.each([
+    { name: "deduplicates enumList entries", query: "pegs=usd,usd,eur", maxItems: undefined },
+    { name: "respects enumList maxItems", query: "pegs=usd,eur,gbp", maxItems: 2 },
+  ])("$name", ({ query, maxItems }) => {
+    const listSchema: UrlStateSchema<{ pegs: readonly string[] }> = {
+      pegs: { kind: "enumList", defaultValue: [], allowedValues: ["usd", "eur", "gbp"], maxItems },
     };
-    expect(decodeState("pegs=usd,eur,gbp", cappedSchema).pegs).toEqual(["usd", "eur"]);
+    const state = maxItems === undefined ? decodeState(query, schema) : decodeState(query, listSchema);
+    expect(state.pegs).toEqual(["usd", "eur"]);
   });
 
   it("normalizes enum aliases and preserves untrimmed string fields when configured", () => {

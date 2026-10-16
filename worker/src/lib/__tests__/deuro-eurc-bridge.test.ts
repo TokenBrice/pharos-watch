@@ -54,15 +54,12 @@ describe("dEURO exact EURC redemption bridge", () => {
     [0, "0x6000", "bridge code drift"], [1, "0x6000", "token code drift"],
     [2, word(0n), "wrong quote token"], [3, word(0n), "wrong target token"],
     [4, word(999n * 10n ** 18n), "insufficient minted capacity"],
+    [4, word(496_000n * 10n ** 18n + 1n), "fractional liability undercoverage rather than rounding it away"],
     [5, word(0n), "revoked minter"], [6, word(495_999n * 10n ** 6n), "insufficient reserve"],
     [7, word(18n), "wrong decimals"], [8, word(1n), "paused EURC"],
     [9, word(1n), "blacklisted bridge"], [4, "0x01", "malformed word"],
   ])("rejects %s %s (%s)", async (index, value) => {
     values[index as number] = value; healthy();
-    expect(await fetchDeuroEurcBridgePrice(context())).toBeNull();
-  });
-  it("rejects fractional liability undercoverage rather than rounding it away", async () => {
-    values[4] = word(496_000n * 10n ** 18n + 1n); healthy();
     expect(await fetchDeuroEurcBridgePrice(context())).toBeNull();
   });
   it("rejects stale or unavailable parent before RPC", async () => {

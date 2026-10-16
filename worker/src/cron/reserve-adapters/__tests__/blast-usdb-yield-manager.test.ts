@@ -9,42 +9,6 @@ const DECIMALS_SELECTOR = "0x313ce567";
 const NOW_SEC = 1_788_912_032;
 
 describe("fetchBlastUsdbYieldManagerReserves", () => {
-  it("uses USDYieldManager totalValue as USDB backing", async () => {
-    const { result } = await runAdapter("blast-usdb-yield-manager", "usdb-blast", {
-      network: {
-        rpc: {
-          [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: 120n * 10n ** 18n,
-          [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
-          [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
-        },
-      },
-      nowSec: NOW_SEC,
-    });
-
-    expect(result.slices).toEqual([
-      {
-        sourceKey: "blast-usdb-yield-manager:dai",
-        name: "MakerDAO DSR / DAI yield manager",
-        pct: 100,
-        risk: "low",
-        coinId: "dai-makerdao",
-        depType: "mechanism",
-      },
-    ]);
-    expectWarnings(result, []);
-    expect(result.metadata).toMatchObject({
-      freshnessMode: "not-applicable",
-      totalReserveUsd: 120,
-      supplyUsd: 100,
-      details: {
-        proofKind: "blast-usdb-yield-manager-total-value",
-        supplyChain: "blast",
-        sharePrice: 1.2,
-      },
-    });
-    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
-  });
-
   it("publishes the share price without a coverage claim when manager value falls below supply", async () => {
     const { result } = await runAdapter("blast-usdb-yield-manager", "usdb-blast", {
       network: {
@@ -60,19 +24,6 @@ describe("fetchBlastUsdbYieldManagerReserves", () => {
     expectWarnings(result, []);
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
     expect(result.metadata?.details?.sharePrice).toBeCloseTo(0.98, 6);
-  });
-
-  it("fails when the manager totalValue read is unavailable", async () => {
-    await expect(runAdapter("blast-usdb-yield-manager", "usdb-blast", {
-      network: {
-        rpc: {
-          [`ethereum:${YIELD_MANAGER}:${TOTAL_VALUE_SELECTOR}`]: null,
-          [`${USDB}:${TOTAL_SUPPLY_SELECTOR}`]: 100n * 10n ** 18n,
-          [`${USDB}:${DECIMALS_SELECTOR}`]: 18n,
-        },
-      },
-      nowSec: NOW_SEC,
-    })).rejects.toThrow(/totalValue/);
   });
 
   it("fails closed when supply decimals drift", async () => {

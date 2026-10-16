@@ -384,110 +384,93 @@ describe("stablecoin detail hero view-model builder", () => {
     });
   }
 
-  it("separates an undisclosed attestor from a reviewed absence of one", () => {
-    const attestor = (attestorTier: string) =>
-      buildPassportHero({
-        coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier } },
-      }).passportItems.find((item) => item.key === "attestor");
-
-    // A reviewed negative keeps the alarm tone; it asserts a fact a curator established.
-    expect(attestor("none")).toMatchObject({
-      value: "None",
-      valueClass: "text-red-700 dark:text-red-400",
-      ariaLabel: "Reserve attestation: No attestation — jump to Proof of Reserves",
-    });
-
-    // An issuer that names no attestor, or an artefact we cannot retrieve, is
-    // an unanswered question — muted, and never rendered as "None".
-    expect(attestor("undisclosed")).toMatchObject({
-      value: "Not disclosed",
-      valueClass: "text-muted-foreground",
-      ariaLabel: "Reserve attestation: Not disclosed — jump to Proof of Reserves",
-    });
+  it.each<{
+    name: string;
+    input: Parameters<typeof buildPassportHero>[0];
+    key: string;
+    expected: Record<string, unknown>;
+    unstyled?: boolean;
+  }>([
+    {
+      name: "distinguishes a reviewed absence of an attestor", key: "attestor",
+      input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "none" } } },
+      expected: {
+        value: "None", valueClass: "text-red-700 dark:text-red-400",
+        ariaLabel: "Reserve attestation: No attestation — jump to Proof of Reserves",
+      },
+    },
+    {
+      name: "keeps an undisclosed attestor muted rather than claiming None", key: "attestor",
+      input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "undisclosed" } } },
+      expected: {
+        value: "Not disclosed", valueClass: "text-muted-foreground",
+        ariaLabel: "Reserve attestation: Not disclosed — jump to Proof of Reserves",
+      },
+    },
+    {
+      name: "builds the pending MiCA visa", key: "mica",
+      input: { coin: { mica: { status: "pending" } } },
+      expected: {
+        category: "MiCA", value: "Pending", href: "#jurisdiction",
+        valueClass: "text-amber-700 dark:text-amber-400",
+        ariaLabel: "MiCA status: Pending — jump to jurisdiction details",
+      },
+    },
+    {
+      name: "builds the GENIUS filing pathway", key: "genius",
+      input: { coin: { genius: { authorizationStatus: "official-application-pending" } } },
+      expected: {
+        category: "GENIUS", value: "Filing Pending", href: "/compliance/?regime=genius",
+        ariaLabel: `GENIUS Act pathway: Filing Pending (regime effective ${GENIUS_REGIME_STATE.effectiveDate}) — view the Compliance Tracker`,
+      },
+    },
+    {
+      name: "records zero incidents without an alarm tone", key: "record",
+      input: { pegRecord: { eventCount: 0 } }, unstyled: true,
+      expected: {
+        category: "Record", value: "0 recorded", href: "#depeg-history",
+        ariaLabel: "Peg record: no depeg incidents recorded in the score coverage window — jump to Depeg History",
+      },
+    },
+    {
+      name: "records one incident with singular copy", key: "record",
+      input: { pegRecord: { eventCount: 1 } },
+      expected: {
+        value: "1 incident",
+        ariaLabel: "Peg record: 1 depeg incident in the score coverage window — jump to Depeg History",
+      },
+    },
+    {
+      name: "records several incidents without an alarm tone", key: "record",
+      input: { pegRecord: { eventCount: 3 } }, unstyled: true,
+      expected: {
+        value: "3 incidents",
+        ariaLabel: "Peg record: 3 depeg incidents in the score coverage window — jump to Depeg History",
+      },
+    },
+  ])("$name", ({ input, key, expected, unstyled }) => {
+    const item = buildPassportHero(input).passportItems.find((item) => item.key === key);
+    expect(item).toMatchObject(expected);
+    if (unstyled) expect(item?.valueClass).toBeUndefined();
   });
 
-  it("builds the MiCA visa field with historical framing for frozen assets", () => {
-    expect(
-      buildPassportHero({ coin: { mica: { status: "pending" } } }).passportItems.find((item) => item.key === "mica"),
-    ).toMatchObject({
-      category: "MiCA",
-      value: "Pending",
-      href: "#jurisdiction",
-      valueClass: "text-amber-700 dark:text-amber-400",
-      ariaLabel: "MiCA status: Pending — jump to jurisdiction details",
-    });
-
+  it("frames frozen MiCA authorization as historical", () => {
     const frozenMica = buildPassportHero({
       coin: { status: "frozen", mica: { status: "authorized" } },
     }).passportItems.find((item) => item.key === "mica");
     expect(frozenMica?.ariaLabel).toBe("Historical MiCA status: Authorized — jump to jurisdiction details");
-
-    expect(buildPassportHero().passportItems.some((item) => item.key === "mica")).toBe(false);
   });
 
-  it("builds the GENIUS pathway field and omits noise statuses", () => {
-    expect(
-      buildPassportHero({
-        coin: { genius: { authorizationStatus: "official-application-pending" } },
-      }).passportItems.find((item) => item.key === "genius"),
-    ).toMatchObject({
-      category: "GENIUS",
-      value: "Filing Pending",
-      href: "/compliance/?regime=genius",
-      ariaLabel: `GENIUS Act pathway: Filing Pending (regime effective ${GENIUS_REGIME_STATE.effectiveDate}) — view the Compliance Tracker`,
-    });
-
-    // not-applicable / unknown statuses are noise words, not passport facts.
-    for (const excluded of ["not-applicable", "unknown"]) {
-      expect(
-        buildPassportHero({ coin: { genius: { authorizationStatus: excluded } } }).passportItems.some(
-          (item) => item.key === "genius",
-        ),
-      ).toBe(false);
-    }
-    expect(buildPassportHero().passportItems.some((item) => item.key === "genius")).toBe(false);
-  });
-
-  it("builds the peg Record field with honest omissions", () => {
-    const zeroRecorded = buildPassportHero({ pegRecord: { eventCount: 0 } }).passportItems.find(
-      (item) => item.key === "record",
-    );
-    expect(zeroRecorded).toMatchObject({
-      category: "Record",
-      value: "0 recorded",
-      href: "#depeg-history",
-      ariaLabel: "Peg record: no depeg incidents recorded in the score coverage window — jump to Depeg History",
-    });
-    expect(zeroRecorded?.valueClass).toBeUndefined();
-
-    expect(
-      buildPassportHero({ pegRecord: { eventCount: 1 } }).passportItems.find((item) => item.key === "record"),
-    ).toMatchObject({
-      value: "1 incident",
-      ariaLabel: "Peg record: 1 depeg incident in the score coverage window — jump to Depeg History",
-    });
-    // History, not an alarm: a non-zero count keeps the default foreground tone.
-    const several = buildPassportHero({ pegRecord: { eventCount: 3 } }).passportItems.find(
-      (item) => item.key === "record",
-    );
-    expect(several).toMatchObject({
-      value: "3 incidents",
-      ariaLabel: "Peg record: 3 depeg incidents in the score coverage window — jump to Depeg History",
-    });
-    expect(several?.valueClass).toBeUndefined();
-
-    // Limited coverage, NAV tokens, and missing peg summaries omit the field.
-    expect(
-      buildPassportHero({ pegRecord: { eventCount: 2, depegEventCoverageLimited: true } }).passportItems.some(
-        (item) => item.key === "record",
-      ),
-    ).toBe(false);
-    expect(
-      buildPassportHero({ pegRecord: { eventCount: 0 }, isNavToken: true }).passportItems.some(
-        (item) => item.key === "record",
-      ),
-    ).toBe(false);
-    expect(buildPassportHero().passportItems.some((item) => item.key === "record")).toBe(false);
+  it.each<{ name: string; input: Parameters<typeof buildPassportHero>[0]; key: string }>([
+    { name: "absent MiCA profile", input: undefined, key: "mica" },
+    { name: "not-applicable GENIUS pathway", input: { coin: { genius: { authorizationStatus: "not-applicable" } } }, key: "genius" },
+    { name: "unknown GENIUS pathway", input: { coin: { genius: { authorizationStatus: "unknown" } } }, key: "genius" },
+    { name: "absent GENIUS profile", input: undefined, key: "genius" },
+    { name: "coverage-limited peg record", input: { pegRecord: { eventCount: 2, depegEventCoverageLimited: true } }, key: "record" },
+    { name: "NAV-token peg record", input: { pegRecord: { eventCount: 0 }, isNavToken: true }, key: "record" },
+    { name: "missing peg summary", input: undefined, key: "record" },
+  ])("omits $name instead of claiming a passport fact", ({ input, key }) => {
+    expect(buildPassportHero(input).passportItems.some((item) => item.key === key)).toBe(false);
   });
 
 });

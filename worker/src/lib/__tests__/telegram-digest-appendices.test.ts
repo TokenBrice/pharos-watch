@@ -90,11 +90,18 @@ vi.mock("../db-cache", () => ({
 }));
 
 const {
+  diffFrozenIds,
   prepareTelegramDigestAppendices,
   CEMETERY_FOOTERS,
   queuePendingTrackedStablecoinAdditions,
 } = await import("../telegram/digest-appendices");
 const { scanTelegramDigestWrapper } = await import("../../cron/digest/wrapper-style-gate");
+
+function mockCachedValues(values: Record<string, string>): void {
+  mockGetCache.mockImplementation(async (_db: unknown, key: string) =>
+    Object.prototype.hasOwnProperty.call(values, key) ? { value: values[key], updatedAt: 1_778_500_000 } : null,
+  );
+}
 
 describe("prepareTelegramDigestAppendices", () => {
   beforeEach(() => {
@@ -139,14 +146,8 @@ describe("prepareTelegramDigestAppendices", () => {
   });
 
   it("queues newly tracked active coins from the previous stablecoins cache baseline", async () => {
-    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
-      if (key === "telegram:tracked-stablecoins-pending") {
-        return {
-          value: JSON.stringify(["usdt-tether"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      return null;
+    mockCachedValues({
+      "telegram:tracked-stablecoins-pending": JSON.stringify(["usdt-tether"]),
     });
 
     const result = await queuePendingTrackedStablecoinAdditions(
@@ -169,24 +170,13 @@ describe("prepareTelegramDigestAppendices", () => {
   });
 
   it("uses queued tracked additions when the tracked snapshot is missing", async () => {
-    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
-      if (key === "telegram:cemetery-snapshot") {
-        return {
-          value: JSON.stringify([
-            "pusd-palm-usd-2026-01",
-            "eura-angle-eura-2026-03",
-            "usda-angle-usda-2026-03",
-          ]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:tracked-stablecoins-pending") {
-        return {
-          value: JSON.stringify(["usdx-example"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      return null;
+    mockCachedValues({
+      "telegram:cemetery-snapshot": JSON.stringify([
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
+      ]),
+      "telegram:tracked-stablecoins-pending": JSON.stringify(["usdx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -225,30 +215,15 @@ describe("prepareTelegramDigestAppendices", () => {
   });
 
   it("merges a queued tracked addition even when the tracked snapshot already contains it", async () => {
-    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
-      if (key === "telegram:cemetery-snapshot") {
-        return {
-          value: JSON.stringify([
-            "pusd-palm-usd-2026-01",
-            "eura-angle-eura-2026-03",
-            "usda-angle-usda-2026-03",
-          ]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:tracked-stablecoins-snapshot") {
-        return {
-          value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:tracked-stablecoins-pending") {
-        return { value: JSON.stringify(["usdx-example"]), updatedAt: 1_778_500_000 };
-      }
-      if (key === "frozen_ids_snapshot") {
-        return { value: JSON.stringify(["dusd-fluid"]), updatedAt: 1_778_500_000 };
-      }
-      return null;
+    mockCachedValues({
+      "telegram:cemetery-snapshot": JSON.stringify([
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
+      ]),
+      "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      "telegram:tracked-stablecoins-pending": JSON.stringify(["usdx-example"]),
+      "frozen_ids_snapshot": JSON.stringify(["dusd-fluid"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -267,32 +242,11 @@ describe("prepareTelegramDigestAppendices", () => {
   });
 
   it("builds cemetery and tracking appendices, then advances snapshots only after commit", async () => {
-    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
-      if (key === "telegram:cemetery-snapshot") {
-        return {
-          value: JSON.stringify(["llama:315"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:cemetery-footer-index") {
-        return {
-          value: "8",
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:tracked-stablecoins-snapshot") {
-        return {
-          value: JSON.stringify(["usdt-tether"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:tracked-stablecoins-pending") {
-        return {
-          value: JSON.stringify(["usdx-example"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      return null;
+    mockCachedValues({
+      "telegram:cemetery-snapshot": JSON.stringify(["llama:315"]),
+      "telegram:cemetery-footer-index": "8",
+      "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether"]),
+      "telegram:tracked-stablecoins-pending": JSON.stringify(["usdx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -355,24 +309,13 @@ describe("prepareTelegramDigestAppendices", () => {
   });
 
   it("treats old fallback cemetery snapshot keys as already seen and rewrites them to stable ids", async () => {
-    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
-      if (key === "telegram:cemetery-snapshot") {
-        return {
-          value: JSON.stringify([
-            "PUSD|2026-01|palm usd",
-            "EURA|2026-03|angle eura",
-            "USDA|2026-03|angle usda",
-          ]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:tracked-stablecoins-snapshot") {
-        return {
-          value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      return null;
+    mockCachedValues({
+      "telegram:cemetery-snapshot": JSON.stringify([
+        "PUSD|2026-01|palm usd",
+        "EURA|2026-03|angle eura",
+        "USDA|2026-03|angle usda",
+      ]),
+      "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -400,27 +343,14 @@ describe("prepareTelegramDigestAppendices", () => {
   });
 
   it("renders a newly frozen coin so the appendix passes the delivery-wrapper style gate", async () => {
-    mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
-      if (key === "telegram:cemetery-snapshot") {
-        return {
-          value: JSON.stringify([
-            "pusd-palm-usd-2026-01",
-            "eura-angle-eura-2026-03",
-            "usda-angle-usda-2026-03",
-          ]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "telegram:tracked-stablecoins-snapshot") {
-        return {
-          value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
-          updatedAt: 1_778_500_000,
-        };
-      }
-      if (key === "frozen_ids_snapshot") {
-        return { value: JSON.stringify([]), updatedAt: 1_778_500_000 };
-      }
-      return null;
+    mockCachedValues({
+      "telegram:cemetery-snapshot": JSON.stringify([
+        "pusd-palm-usd-2026-01",
+        "eura-angle-eura-2026-03",
+        "usda-angle-usda-2026-03",
+      ]),
+      "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
+      "frozen_ids_snapshot": JSON.stringify([]),
     });
 
     const prepared = await prepareTelegramDigestAppendices({} as D1Database);
@@ -439,5 +369,14 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache).not.toHaveBeenCalled();
     await prepared.commitSuccess();
     expect(mockSetCache).toHaveBeenCalledWith({}, "frozen_ids_snapshot", JSON.stringify(["dusd-fluid"]));
+  });
+});
+
+describe("diffFrozenIds", () => {
+  it.each([
+    { name: "returns an empty set when nothing changed", current: ["usr-resolv"], previous: ["usr-resolv"] },
+    { name: "ignores removals (un-freezing is out of scope)", current: [], previous: ["usr-resolv"] },
+  ])("$name", ({ current, previous }) => {
+    expect(diffFrozenIds(new Set(current), new Set(previous))).toEqual(new Set());
   });
 });

@@ -71,9 +71,8 @@ it("preserves unavailable market cap without inflating node size", () => {
 // ---------------------------------------------------------------------------
 
 describe("contagionEdgeWeight", () => {
-  it("treats every serial dependency as full pass-through", () => {
-    expect(contagionEdgeWeight(serialEdge("a", "b"))).toBe(1);
-    expect(contagionEdgeWeight(serialEdge("a", "b", true))).toBe(1);
+  it.each([false, true])("treats serial dependency blocked=%s as full pass-through", (blocked) => {
+    expect(contagionEdgeWeight(serialEdge("a", "b", blocked))).toBe(1);
   });
 });
 
@@ -98,72 +97,48 @@ describe("buildGraphData", () => {
     return ids.slice(1).map((id, index) => basketEdge(ids[index], id, 0.5));
   }
 
-  it("collapses V9 materiality onto the drawn relationship", () => {
-    const cards = [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")];
-    const mcapMap = new Map<string, number>([
-      ["usds-sky", 5_000_000_000],
-      ["susds-sky", 2_000_000_000],
-    ]);
-
-    const result = buildGraphData(cards, mcapMap, [serialEdge("usds-sky", "susds-sky")]);
-
-    expect(result.links).toEqual([
-      expect.objectContaining({
-        source: "susds-sky",
-        target: "usds-sky",
-        weight: 1,
-        type: "wrapper",
-      }),
-    ]);
-  });
-
-  it("draws an unresolvable upstream as its plain relationship", () => {
-    const cards = [mockCard("a", "A"), mockCard("b", "B"), mockCard("c", "C")];
-    const mcapMap = new Map<string, number>([["a", 3], ["b", 2], ["c", 1]]);
-
-    const result = buildGraphData(cards, mcapMap, [
-      serialEdge("a", "b", true),
-      basketEdge("a", "c", null),
-    ]);
-
-    expect(result.links.map((link) => link.type).sort()).toEqual(["collateral", "wrapper"]);
-  });
-
-  it("keeps an unrateable upstream's known exposure in the simulation and marks the link score-unknown", () => {
-    const cards = [mockCard("a", "A"), mockCard("b", "B"), mockCard("c", "C")];
-    const mcapMap = new Map<string, number>([["a", 3], ["b", 2], ["c", 1]]);
-
-    const result = buildGraphData(cards, mcapMap, [
-      basketEdge("a", "b", 0.4, "basket-bounded-unknown"),
-      basketEdge("a", "c", null),
-      serialEdge("b", "c"),
-    ]);
-
-    // An unrateable upstream keeps its known 0.4 magnitude (link force is
-    // weight * 0.4); an absent weight keeps magnitude 0, exerting no force.
-    expect(result.links).toEqual([
-      expect.objectContaining({
-        source: "b",
-        target: "a",
-        weight: 0.4,
-        scoreKnown: false,
-        type: "collateral",
-      }),
-      expect.objectContaining({
-        source: "c",
-        target: "a",
-        weight: 0,
-        scoreKnown: false,
-        type: "collateral",
-      }),
-      expect.objectContaining({
-        source: "c",
-        target: "b",
-        weight: 1,
-        scoreKnown: true,
-        type: "wrapper",
-      }),
-    ]);
+  it.each<{
+    name: string;
+    cards: ContagionGraphCard[];
+    mcapMap: Map<string, number>;
+    edges: ReportCardsV9DependencyEdge[];
+    expectedLinks?: unknown[];
+    expectedTypes?: string[];
+  }>([
+    {
+      name: "collapses V9 materiality onto the drawn relationship",
+      cards: [mockCard("usds-sky", "USDS"), mockCard("susds-sky", "SUSDS")],
+      mcapMap: new Map([["usds-sky", 5_000_000_000], ["susds-sky", 2_000_000_000]]),
+      edges: [serialEdge("usds-sky", "susds-sky")],
+      expectedLinks: [expect.objectContaining({ source: "susds-sky", target: "usds-sky", weight: 1, type: "wrapper" })],
+    },
+    {
+      name: "draws an unresolvable upstream as its plain relationship",
+      cards: [mockCard("a", "A"), mockCard("b", "B"), mockCard("c", "C")],
+      mcapMap: new Map([["a", 3], ["b", 2], ["c", 1]]),
+      edges: [serialEdge("a", "b", true), basketEdge("a", "c", null)],
+      expectedTypes: ["collateral", "wrapper"],
+    },
+    {
+      name: "keeps an unrateable upstream's known exposure in the simulation and marks the link score-unknown",
+      cards: [mockCard("a", "A"), mockCard("b", "B"), mockCard("c", "C")],
+      mcapMap: new Map([["a", 3], ["b", 2], ["c", 1]]),
+      edges: [
+        basketEdge("a", "b", 0.4, "basket-bounded-unknown"),
+        basketEdge("a", "c", null),
+        serialEdge("b", "c"),
+      ],
+      // Known 0.4 exposure still exerts force; absent weight stays 0.
+      expectedLinks: [
+        expect.objectContaining({ source: "b", target: "a", weight: 0.4, scoreKnown: false, type: "collateral" }),
+        expect.objectContaining({ source: "c", target: "a", weight: 0, scoreKnown: false, type: "collateral" }),
+        expect.objectContaining({ source: "c", target: "b", weight: 1, scoreKnown: true, type: "wrapper" }),
+      ],
+    },
+  ])("$name", ({ cards, mcapMap, edges, expectedLinks, expectedTypes }) => {
+    const result = buildGraphData(cards, mcapMap, edges);
+    if (expectedLinks) expect(result.links).toEqual(expectedLinks);
+    if (expectedTypes) expect(result.links.map((link) => link.type).sort()).toEqual(expectedTypes);
   });
 
   it("does not include defunct stablecoins", () => {

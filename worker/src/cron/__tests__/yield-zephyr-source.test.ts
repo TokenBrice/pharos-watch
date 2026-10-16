@@ -43,35 +43,29 @@ describe("fetchZephyrZysSource", () => {
     );
   });
 
-  it("refuses to date a payload the upstream marks x-stale", async () => {
-    mockYieldSourceRoutes([
-      {
-        match: "zephyrprotocol.com/api/v1/historicalreturns",
+  it.each([
+    {
+      name: "refuses to date a payload the upstream marks x-stale",
+      route: {
         headers: { "x-last-success-at": "1778592715928", "x-stale": "1" },
         body: { oneDay: { effectiveApy: 9.3084 } },
       },
-    ]);
-
-    await expect(fetchZephyrZysSource()).resolves.toBeNull();
-  });
-
-  it("returns null when the one-day effective APY is missing", async () => {
-    mockYieldSourceRoutes([
-      {
-        match: "zephyrprotocol.com/api/v1/historicalreturns",
+    },
+    {
+      name: "returns null when the one-day effective APY is missing",
+      route: {
         body: {
           lastBlock: { return: 0.00003408784470093992, zsd_accrued: 0.1069333381892648, effectiveApy: 9.2377 },
           oneDay: { return: 0.02472608440340735, zsd_accrued: 78.0483693688002 },
         },
       },
-    ]);
-
-    await expect(fetchZephyrZysSource()).resolves.toBeNull();
-  });
-
-  it("returns null on HTTP error", async () => {
-    mockYieldSourceRoutes([{ match: "zephyrprotocol.com/api/v1/historicalreturns", status: 500, body: "" }]);
-
+    },
+    {
+      name: "returns null on HTTP error",
+      route: { status: 500, body: "" },
+    },
+  ])("$name", async ({ route }) => {
+    mockYieldSourceRoutes([{ match: "zephyrprotocol.com/api/v1/historicalreturns", ...route }]);
     await expect(fetchZephyrZysSource()).resolves.toBeNull();
   });
 });

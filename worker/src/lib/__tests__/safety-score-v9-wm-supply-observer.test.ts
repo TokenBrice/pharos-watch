@@ -436,7 +436,12 @@ describe("wM reviewed deployment observer", () => {
   });
 
 
-  it.each([105_999, undefined])("refuses a repair without sleeping when the remaining budget is %s", async remainingMs => {
+  it.each([
+    ["remaining slot budget of 105999ms", 105_999, undefined],
+    ["no remaining slot budget", undefined, undefined],
+    ["asset deadline of 30000ms with slot headroom", 180_000, 30_000],
+    ["asset deadline of 60999ms with slot headroom", 180_000, 60_999],
+  ] as const)("refuses a repair without sleeping for %s", async (_label, remainingMs, assetBudgetMs) => {
     vi.useFakeTimers();
     const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
     try {
@@ -445,30 +450,10 @@ describe("wM reviewed deployment observer", () => {
         scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
         executionWindow: remainingMs === undefined ? undefined :
           { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + remainingMs, minimumRemainingMs: 60_000 },
+        ...(assetBudgetMs === undefined ? {} : { assetDeadlineMs: startedAtMs + assetBudgetMs }),
       }, f.deps);
       expect(attempt).toEqual({ status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
         failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291" });
-      expect(Date.now()).toBe(startedAtMs);
-    } finally {
-      f.metaById.set("wm-m0", f.reviewed);
-      vi.useRealTimers();
-    }
-  });
-
-  it.each([30_000, 60_999])("refuses a repair that exceeds the real %sms asset deadline even with slot headroom", async assetBudgetMs => {
-    vi.useFakeTimers();
-    const f = lineaSkewFixture(CLOCK_SEC - 90), startedAtMs = Date.now();
-    try {
-      const attempt = await observeWmReviewedDeploymentUnitPartitionAttempt({
-        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT,
-        scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(Object.keys(RUNTIME_CODE_BY_CHAIN)),
-        executionWindow: { slotStartedAtSec: Math.floor(startedAtMs / 1_000), deadlineMs: startedAtMs + 180_000, minimumRemainingMs: 60_000 },
-        assetDeadlineMs: startedAtMs + assetBudgetMs,
-      }, f.deps);
-      expect(attempt).toEqual({
-        status: "rejected", rejectionCode: "deployment-observation-window-insufficient",
-        failedRouteId: "linea:0x437cc33344a0b27a429f795ff6b469c72698b291",
-      });
       expect(Date.now()).toBe(startedAtMs);
     } finally {
       f.metaById.set("wm-m0", f.reviewed);

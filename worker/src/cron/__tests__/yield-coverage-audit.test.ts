@@ -778,9 +778,10 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
-  it("flags deterministic auto-lending overrides that no longer pass static venue gates", () => {
-    const stale = identifyStaleAutoLendingOverrides([
-      makeDlYieldPool({
+  it.each([
+    {
+      name: "flags deterministic auto-lending overrides that no longer pass static venue gates",
+      pools: [makeDlYieldPool({
         pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
         chain: "Flare",
         project: "clearpool-lending",
@@ -790,66 +791,51 @@ describe("identifyCoverageGaps", () => {
         apyBase: 0.01,
         apyMean30d: 0.01,
         underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
-      }),
-    ], { stablecoinSupplyById: new Map([["usdx-hex-trust", 1_000_000]]) });
-
-    expect(stale).toContainEqual(
-      expect.objectContaining({
+      })],
+      options: { stablecoinSupplyById: new Map([["usdx-hex-trust", 1_000_000]]) },
+      expected: {
         stablecoinId: "usdx-hex-trust",
         pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
         reasons: expect.arrayContaining(["below-apy-floor", "below-tvl-floor"]),
-      }),
-    );
-  });
-
-  it("applies the same supply-relative TVL floor as hourly auto-lending publication", () => {
-    const stale = identifyStaleAutoLendingOverrides(
-      [
-        makeDlYieldPool({
-          pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
-          chain: "Flare",
-          project: "clearpool-lending",
-          symbol: "USDX",
-          tvlUsd: 500_000,
-          underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
-        }),
-      ],
-      {
-        stablecoinSupplyById: new Map([["usdx-hex-trust", 1_000_000_000]]),
       },
-    );
-
-    expect(stale).toContainEqual(
-      expect.objectContaining({
+    },
+    {
+      name: "applies the same supply-relative TVL floor as hourly auto-lending publication",
+      pools: [makeDlYieldPool({
+        pool: "be50b874-8147-440d-b8ca-f2c202e9ed64",
+        chain: "Flare",
+        project: "clearpool-lending",
+        symbol: "USDX",
+        tvlUsd: 500_000,
+        underlyingTokens: ["0x4a771cc1a39fdd8aa08b8ea51f7fd412e73b3d2b"],
+      })],
+      options: { stablecoinSupplyById: new Map([["usdx-hex-trust", 1_000_000_000]]) },
+      expected: {
         stablecoinId: "usdx-hex-trust",
         requiredMinTvlUsd: 1_000_000,
         reasons: expect.arrayContaining(["below-tvl-floor"]),
-      }),
-    );
-  });
-
-  it("flags deterministic auto-lending overrides that no longer pass the safety gate", () => {
-    const stale = identifyStaleAutoLendingOverrides(
-      [
-        makeDlYieldPool({
-          pool: "d3b28212-a46b-4db8-8bb7-2c946b3cbe76",
-          project: "morpho-blue",
-          symbol: "STEAKEURCV",
-          tvlUsd: 2_000_000,
-        }),
-      ],
-      {
+      },
+    },
+    {
+      name: "flags deterministic auto-lending overrides that no longer pass the safety gate",
+      pools: [makeDlYieldPool({
+        pool: "d3b28212-a46b-4db8-8bb7-2c946b3cbe76",
+        project: "morpho-blue",
+        symbol: "STEAKEURCV",
+        tvlUsd: 2_000_000,
+      })],
+      options: {
         stablecoinSupplyById: new Map([["eurcv-societe-generale-forge", 1_000_000]]),
         safetyScores: new Map([["eurcv-societe-generale-forge", { score: 49 }]]),
       },
-    );
-
-    expect(stale).toContainEqual(
-      expect.objectContaining({
+      expected: {
         stablecoinId: "eurcv-societe-generale-forge",
         reasons: expect.arrayContaining(["below-safety-score"]),
-      }),
-    );
+      },
+    },
+  ])("$name", ({ pools, options, expected }) => {
+    const stale = identifyStaleAutoLendingOverrides(pools, options);
+    expect(stale).toContainEqual(expect.objectContaining(expected));
   });
 });
 

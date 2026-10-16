@@ -56,8 +56,9 @@ describe("fetchYearnYboldSource", () => {
     );
   });
 
-  it("fails closed when the staked vault no longer wraps the tracked yBOLD vault", async () => {
-    mockYieldSourceRoutes(ydaemonRoutes({
+  it.each([
+    {
+      name: "fails closed when the staked vault no longer wraps the tracked yBOLD vault",
       ysybold: {
         address: YSYBOLD_VAULT,
         token: { address: "0x0000000000000000000000000000000000000001" },
@@ -65,13 +66,9 @@ describe("fetchYearnYboldSource", () => {
         apr: { netAPR: 0.07 },
         info: { isRetired: false },
       },
-    }));
-
-    await expect(fetchYearnYboldSource()).resolves.toBeNull();
-  });
-
-  it("fails closed when the yBOLD vault no longer wraps BOLD", async () => {
-    mockYieldSourceRoutes(ydaemonRoutes({
+    },
+    {
+      name: "fails closed when the yBOLD vault no longer wraps BOLD",
       ybold: {
         address: YBOLD_VAULT,
         token: { address: "0x0000000000000000000000000000000000000002" },
@@ -79,13 +76,9 @@ describe("fetchYearnYboldSource", () => {
         apr: { netAPR: 0 },
         info: { isRetired: false },
       },
-    }));
-
-    await expect(fetchYearnYboldSource()).resolves.toBeNull();
-  });
-
-  it("returns null when Yearn retires the staked vault", async () => {
-    mockYieldSourceRoutes(ydaemonRoutes({
+    },
+    {
+      name: "returns null when Yearn retires the staked vault",
       ysybold: {
         address: YSYBOLD_VAULT,
         token: { address: YBOLD_VAULT },
@@ -93,13 +86,9 @@ describe("fetchYearnYboldSource", () => {
         apr: { netAPR: 0.07 },
         info: { isRetired: true },
       },
-    }));
-
-    await expect(fetchYearnYboldSource()).resolves.toBeNull();
-  });
-
-  it("returns null when Yearn reports no staked return", async () => {
-    mockYieldSourceRoutes(ydaemonRoutes({
+    },
+    {
+      name: "returns null when Yearn reports no staked return",
       ysybold: {
         address: YSYBOLD_VAULT,
         token: { address: YBOLD_VAULT },
@@ -107,13 +96,9 @@ describe("fetchYearnYboldSource", () => {
         apr: { netAPR: 0 },
         info: { isRetired: false },
       },
-    }));
-
-    await expect(fetchYearnYboldSource()).resolves.toBeNull();
-  });
-
-  it("returns null when the yBOLD vault TVL is below the publication floor", async () => {
-    mockYieldSourceRoutes(ydaemonRoutes({
+    },
+    {
+      name: "returns null when the yBOLD vault TVL is below the publication floor",
       ybold: {
         address: YBOLD_VAULT,
         token: { address: BOLD_TOKEN },
@@ -121,13 +106,9 @@ describe("fetchYearnYboldSource", () => {
         apr: { netAPR: 0 },
         info: { isRetired: false },
       },
-    }));
-
-    await expect(fetchYearnYboldSource()).resolves.toBeNull();
-  });
-
-  it("returns null when the reported APR exceeds the accepted envelope", async () => {
-    mockYieldSourceRoutes(ydaemonRoutes({
+    },
+    {
+      name: "returns null when the reported APR exceeds the accepted envelope",
       ysybold: {
         address: YSYBOLD_VAULT,
         token: { address: YBOLD_VAULT },
@@ -135,8 +116,9 @@ describe("fetchYearnYboldSource", () => {
         apr: { netAPR: 2.5 },
         info: { isRetired: false },
       },
-    }));
-
+    },
+  ])("$name", async (overrides) => {
+    mockYieldSourceRoutes(ydaemonRoutes(overrides));
     await expect(fetchYearnYboldSource()).resolves.toBeNull();
   });
 });

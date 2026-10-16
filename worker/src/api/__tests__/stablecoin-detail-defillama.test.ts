@@ -18,70 +18,41 @@ vi.mock("../../lib/abort", async (importOriginal) => ({
 }));
 
 describe("applyCuratedDetailAddress", () => {
-  it("adds the curated address to token-built cached bodies", () => {
-    const body = JSON.stringify({
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-
-    expect(
-      JSON.parse(
-        applyCuratedDetailAddress(body, {
-          contracts: [
-            {
-              chain: "ethereum",
-              address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-              decimals: 18,
-            },
-          ],
-        }),
-      ),
-    ).toEqual({
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-      address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-    });
-  });
-
-  it("overrides stale cached addresses when the curated address is absent", () => {
-    const body = JSON.stringify({
-      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-
-    expect(
-      JSON.parse(
-        applyCuratedDetailAddress(body, {
-          contracts: [
-            {
-              chain: "ethereum",
-              address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-              decimals: 18,
-            },
-          ],
-        }),
-      ),
-    ).toEqual({
-      address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
-      tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-  });
-
-  it("overrides stale cached addresses when a nested address matches the curated address", () => {
-    const curatedAddress = "0x57ab1e0003f623289cd798b1824be09a793e4bec";
-    const body = JSON.stringify({
-      address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
-      tokens: [{ address: curatedAddress, totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
-
-    expect(
-      JSON.parse(
-        applyCuratedDetailAddress(body, {
-          contracts: [{ chain: "ethereum", address: curatedAddress, decimals: 18 }],
-        }),
-      ),
-    ).toEqual({
-      address: curatedAddress,
-      tokens: [{ address: curatedAddress, totalCirculatingUSD: { peggedUSD: 100 } }],
-    });
+  it.each([
+    {
+      name: "adds the curated address to token-built cached bodies",
+      body: { tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }] },
+      expected: {
+        tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+        address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+      },
+    },
+    {
+      name: "overrides stale cached addresses when the curated address is absent",
+      body: {
+        address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+        tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+      expected: {
+        address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+        tokens: [{ totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+    },
+    {
+      name: "overrides stale cached addresses when a nested address matches the curated address",
+      body: {
+        address: "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+        tokens: [{ address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+      expected: {
+        address: "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+        tokens: [{ address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", totalCirculatingUSD: { peggedUSD: 100 } }],
+      },
+    },
+  ])("$name", ({ body, expected }) => {
+    expect(JSON.parse(applyCuratedDetailAddress(JSON.stringify(body), {
+      contracts: [{ chain: "ethereum", address: "0x57ab1e0003f623289cd798b1824be09a793e4bec", decimals: 18 }],
+    }))).toEqual(expected);
   });
 });
 

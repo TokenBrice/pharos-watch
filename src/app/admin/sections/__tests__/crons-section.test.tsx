@@ -95,9 +95,20 @@ describe("CronsSection", () => {
       }
     },
   );
-  it("shows neutral skips that inherit a degraded required outcome in the attention view", () => {
+  it.each([
+    {
+      name: "shows neutral skips that inherit a degraded required outcome in the attention view",
+      requiredStatus: "degraded",
+      healthy: true,
+    },
+    {
+      name: "labels a neutral skip after a failed required run as unhealthy",
+      requiredStatus: "error",
+      healthy: false,
+    },
+  ] as const)("$name", ({ requiredStatus, healthy }) => {
     const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
-    const degradedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "degraded" as const };
+    const requiredRun = { startedAt: 1_699_999_000, durationMs: 500, status: requiredStatus };
     renderCrons({
       groups: [
         makeGroup([
@@ -105,40 +116,9 @@ describe("CronsSection", () => {
             "weekly-recap",
             makeCronStatus({
               lastRun: neutralRun,
-              recentRuns: [neutralRun, degradedRun],
+              recentRuns: [neutralRun, requiredRun],
               expectedIntervalSec: 900,
-              healthy: true,
-            }),
-          ],
-        ]),
-      ],
-    });
-
-    const row = screen.getByTestId("cron-row-weekly-recap");
-    expect(within(row).getByText("Watch")).toBeTruthy();
-    expect(within(row).queryByText("Run warning")).toBeNull();
-    expect(within(row).getByText("Skipped: no work required")).toBeTruthy();
-    expect(within(row).getByText("200ms")).toBeTruthy();
-    expect(within(row).queryByText("500ms")).toBeNull();
-    const warningBadge = screen
-      .getAllByText("Completed with warnings")
-      .find((element) => element.getAttribute("data-slot") === "badge");
-    expect(warningBadge?.className).toContain("whitespace-normal");
-  });
-
-  it("labels a neutral skip after a failed required run as unhealthy", () => {
-    const neutralRun = { startedAt: 1_699_999_940, durationMs: 200, status: "skipped_neutral" as const };
-    const failedRun = { startedAt: 1_699_999_000, durationMs: 500, status: "error" as const };
-    renderCrons({
-      groups: [
-        makeGroup([
-          [
-            "weekly-recap",
-            makeCronStatus({
-              lastRun: neutralRun,
-              recentRuns: [neutralRun, failedRun],
-              expectedIntervalSec: 900,
-              healthy: false,
+              healthy,
             }),
           ],
         ]),
@@ -148,7 +128,17 @@ describe("CronsSection", () => {
     const row = screen.getByTestId("cron-row-weekly-recap");
     expect(within(row).getByText("Watch")).toBeTruthy();
     expect(within(row).getByText("Skipped: no work required")).toBeTruthy();
-    expect(within(row).getByText("The latest required run failed.")).toBeTruthy();
+    if (requiredStatus === "degraded") {
+      expect(within(row).queryByText("Run warning")).toBeNull();
+      expect(within(row).getByText("200ms")).toBeTruthy();
+      expect(within(row).queryByText("500ms")).toBeNull();
+      const warningBadge = screen
+        .getAllByText("Completed with warnings")
+        .find((element) => element.getAttribute("data-slot") === "badge");
+      expect(warningBadge?.className).toContain("whitespace-normal");
+    } else {
+      expect(within(row).getByText("The latest required run failed.")).toBeTruthy();
+    }
   });
 
   it("keeps a fresh neutral-only no-op without success evidence in the attention view as one verdict", () => {

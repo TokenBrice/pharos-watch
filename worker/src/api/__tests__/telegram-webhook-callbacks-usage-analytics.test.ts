@@ -35,25 +35,46 @@ beforeEach(resetCallbackTest);
 
 describe("handleCallbackQuery", () => {
   describe("P1.17 mutating callbacks emit usage analytics", () => {
-    it("depegstep:<id>:250 success records a subscribe usage event", async () => {
+    it.each([
+      {
+        name: "depegstep:<id>:250 success records a subscribe usage event",
+        data: "depegstep:usdc-circle:250",
+        callbackId: "cb-depegstep-ok",
+        actionDetail: "depegstep",
+        column: "depeg_worsening_bps_step",
+        binds: ["42", "usdc-circle", 250],
+        sqlFragments: ["alert_depeg = 1", "depeg_worsening_bps_step = excluded.depeg_worsening_bps_step"],
+        subscriberFlag: "alert_depeg = MAX",
+      },
+      {
+        name: "safetydown:<id> success records a subscribe usage event",
+        data: "safetydown:usdc-circle",
+        callbackId: "cb-safetydown-ok",
+        actionDetail: "safetydown",
+        column: "safety_mode",
+        binds: ["42", "usdc-circle", 1, "downgrade-only"],
+        sqlFragments: ["alert_safety = excluded.alert_safety", "safety_mode = excluded.safety_mode"],
+        subscriberFlag: "alert_safety = MAX",
+      },
+    ])("$name", async ({ data, callbackId, actionDetail, column, binds, sqlFragments, subscriberFlag }) => {
       const db = mockTelegramD1([
         { match: "INSERT INTO telegram_subscribers", rows: [] },
         { match: "INSERT INTO telegram_subscriptions", rows: [] },
       ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("depegstep:usdc-circle:250", { id: "cb-depegstep-ok", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery(data, { id: callbackId, message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
 
       const history = db.getHistory();
       const subscriptionUpsert = history.find(
-        (entry) =>
-          entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.sql.includes("depeg_worsening_bps_step"),
+        (entry) => entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.sql.includes(column),
       );
       expect(subscriptionUpsert).toBeDefined();
-      expect(subscriptionUpsert!.binds).toEqual(["42", "usdc-circle", 250]);
-      expect(subscriptionUpsert!.sql).toContain("alert_depeg = 1");
-      expect(subscriptionUpsert!.sql).toContain("depeg_worsening_bps_step = excluded.depeg_worsening_bps_step");
+      expect(subscriptionUpsert!.binds).toEqual(binds);
+      for (const fragment of sqlFragments) {
+        expect(subscriptionUpsert!.sql).toContain(fragment);
+      }
       expect(
         history.some(
-          (entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.sql.includes("alert_depeg = MAX"),
+          (entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.sql.includes(subscriberFlag),
         ),
       ).toBe(true);
 
@@ -63,47 +84,11 @@ describe("handleCallbackQuery", () => {
           (entry) =>
             entry.sql.includes("INSERT INTO telegram_usage_daily") &&
             entry.binds.includes("subscribe") &&
-            entry.binds.includes("depegstep"),
-        );
-      expect(usageRows).toHaveLength(1);
-      // eventType=subscribe, actionDetail=depegstep, outcome=success
-      expect(usageRows[0].binds[1]).toBe("subscribe");
-      expect(usageRows[0].binds[3]).toBe("depegstep");
-      expect(usageRows[0].binds[4]).toBe("success");
-    });
-
-    it("safetydown:<id> success records a subscribe usage event", async () => {
-      const db = mockTelegramD1([
-        { match: "INSERT INTO telegram_subscribers", rows: [] },
-        { match: "INSERT INTO telegram_subscriptions", rows: [] },
-      ]);
-      await handleCallbackQuery(db, "fake-token", makeCallbackQuery("safetydown:usdc-circle", { id: "cb-safetydown-ok", message: { chat: { id: 42, type: "private" }, message_id: 1 } }));
-
-      const history = db.getHistory();
-      const subscriptionUpsert = history.find(
-        (entry) => entry.sql.includes("INSERT INTO telegram_subscriptions") && entry.sql.includes("safety_mode"),
-      );
-      expect(subscriptionUpsert).toBeDefined();
-      expect(subscriptionUpsert!.binds).toEqual(["42", "usdc-circle", 1, "downgrade-only"]);
-      expect(subscriptionUpsert!.sql).toContain("alert_safety = excluded.alert_safety");
-      expect(subscriptionUpsert!.sql).toContain("safety_mode = excluded.safety_mode");
-      expect(
-        history.some(
-          (entry) => entry.sql.includes("INSERT INTO telegram_subscribers") && entry.sql.includes("alert_safety = MAX"),
-        ),
-      ).toBe(true);
-
-      const usageRows = db
-        .getHistory()
-        .filter(
-          (entry) =>
-            entry.sql.includes("INSERT INTO telegram_usage_daily") &&
-            entry.binds.includes("subscribe") &&
-            entry.binds.includes("safetydown"),
+            entry.binds.includes(actionDetail),
         );
       expect(usageRows).toHaveLength(1);
       expect(usageRows[0].binds[1]).toBe("subscribe");
-      expect(usageRows[0].binds[3]).toBe("safetydown");
+      expect(usageRows[0].binds[3]).toBe(actionDetail);
       expect(usageRows[0].binds[4]).toBe("success");
     });
   });

@@ -136,6 +136,8 @@ describe("Mento V2 Broker guarded prices", () => {
       expect(asset.price).toBe(severe ? null : override!.price);
     }
   });
+  const int48Limit = (1n << 47n) - 1n;
+  const overflowingOutput = (int48Limit + 2n) * UNIT;
   it.each([
     ["unknown limit mode", { inputLimits: config(10_000, 1) }],
     ["global input exhausted", { inputLimits: config(999) }],
@@ -150,22 +152,18 @@ describe("Mento V2 Broker guarded prices", () => {
     ["wrong decimals", { outputDecimals: uint(6n) }],
     ["over five percent impact", { depth: uint(680n * UNIT) }],
     ["malformed", { small: "0x" as const }],
+    ["int48 delta even when opposite existing flow would hide overflow", {
+      small: uint(overflowingOutput / 1_000n), depth: uint(overflowingOutput), outputLimits: config(Number(int48Limit)),
+      outputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, Number(int48Limit)]),
+    }],
+    ["small fractional output as minus one unit even when the large quote passes", {
+      outputLimits: config(1), outputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, -1]),
+    }],
   ])("withholds %s", async (_name, overrides) => { fixture(overrides); expect(await fetchMentoBrokerPrice("cadm-mento", context())).toBeNull(); });
   it("rejects unsupported ids and excessive configured spread", async () => {
     expect(mentoBrokerProvider.matches("toString")).toBe(false);
     expect(await fetchMentoBrokerPrice("toString", context())).toBeNull();
     fixture({}, 21n * 10n ** 21n);
-    expect(await fetchMentoBrokerPrice("cadm-mento", context())).toBeNull();
-  });
-  it("rejects an int48 delta even when opposite existing flow would hide overflow", async () => {
-    const limit = (1n << 47n) - 1n;
-    const output = (limit + 2n) * UNIT;
-    fixture({ small: uint(output / 1_000n), depth: uint(output), outputLimits: config(Number(limit)),
-      outputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, Number(limit)]) });
-    expect(await fetchMentoBrokerPrice("cadm-mento", context())).toBeNull();
-  });
-  it("checks small fractional output as minus one unit even when the large quote passes", async () => {
-    fixture({ outputLimits: config(1), outputState: encode("uint32,uint32,int48,int48,int48", [0, 0, 0, 0, -1]) });
     expect(await fetchMentoBrokerPrice("cadm-mento", context())).toBeNull();
   });
   it("withholds on canonical-block changes and preserves existing prices", async () => {

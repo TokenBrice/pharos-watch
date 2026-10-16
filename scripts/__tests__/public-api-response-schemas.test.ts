@@ -56,57 +56,97 @@ describe("public API response schemas", () => {
     expect(StablecoinDetailResponseSchema.parse(payload)).toEqual(payload);
     expect(StablecoinDetailResponseSchema.safeParse({ ...payload, priceConfidence: "bogus" }).success).toBe(false);
   });
-  it("isolates invalid price in StablecoinDetailResponseSchema", () => {
-    const payload = {
-      price: 1.0001,
-      tokens: [{
-        date: 1779105600,
-        totalCirculatingUSD: { peggedUSD: 100 },
-        totalCirculating: { peggedUSD: 100 },
-      }],
-    };
-    expect(StablecoinDetailResponseSchema.safeParse(payload).success).toBe(true);
-    const invalid = StablecoinDetailResponseSchema.safeParse({ ...payload, price: "invalid" });
+  it.each([
+    ["isolates invalid price in StablecoinDetailResponseSchema", StablecoinDetailResponseSchema, () => {
+      const payload = {
+        price: 1.0001,
+        tokens: [{
+          date: 1779105600,
+          totalCirculatingUSD: { peggedUSD: 100 },
+          totalCirculating: { peggedUSD: 100 },
+        }],
+      };
+      return [payload, { ...payload, price: "invalid" }];
+    }, ["price"]],
+    ["isolates invalid priceUsd in StablecoinSummaryResponseSchema", StablecoinSummaryResponseSchema, () => {
+      const payload = {
+        id: "usdt-tether",
+        name: "Tether",
+        symbol: "USDT",
+        pegType: "peggedUSD",
+        pegMechanism: "fiat-backed",
+        priceUsd: 1.0001,
+        priceSource: "coingecko+defillama-list",
+        priceConfidence: "high",
+        supplySource: "defillama",
+        supplyObservedAt: 1_700_000_000,
+        supplyRestored: true,
+        supplyByPegUsd: { peggedUSD: 100 },
+        supplyUsd: {
+          current: 100,
+          currentUnavailableReason: null,
+          prevDay: 90,
+          prevWeek: 80,
+          prevMonth: 70,
+          change1d: 10,
+          change7d: 20,
+          change30d: 30,
+        },
+        chainCount: 2,
+        updatedAt: 1_779_105_600,
+      };
+      return [payload, { ...payload, priceUsd: "invalid" }];
+    }, ["priceUsd"]],
+    ["isolates invalid date in NonUsdShareResponseSchema", NonUsdShareResponseSchema, () => {
+      const payload = [{
+        date: 1_779_105_600,
+        commodityShare: 0,
+        fiatNonUsdShare: 0.0456,
+        commodity: 0,
+        fiatNonUsd: 456,
+        total: 10_000,
+      }];
+      return [payload, [{ ...payload[0], date: "invalid" }]];
+    }, [0, "date"]],
+    ["isolates invalid byteSize in SnapshotsIndexResponseSchema", SnapshotsIndexResponseSchema, () => {
+      const payload = {
+        snapshots: [{
+          snapshotDate: "2026-05-16",
+          methodologyVersions: { pegScore: "7.25", psi: "3.3" },
+          safetyScoreIdentity: null,
+          contentHash: "abc123",
+          byteSize: 12345,
+          createdAt: 1_779_105_600,
+        }],
+        pagination: { limit: 500, hasMore: false, nextCursor: null },
+      };
+      return [payload, { ...payload, snapshots: [{ ...payload.snapshots[0], byteSize: "invalid" }] }];
+    }, ["snapshots", 0, "byteSize"]],
+    ["isolates invalid stablecoinId in SnapshotCoinResponseSchema", SnapshotCoinResponseSchema, () => {
+      const payload = {
+        snapshotDate: "2026-05-16",
+        stablecoinId: "usdc-circle",
+        generatedAt: 1_779_105_600,
+        methodologyVersions: { pegScore: "7.25" },
+        safetyScoreIdentity: null,
+        stablecoin: { id: "usdc-circle", symbol: "USDC" },
+        scores: {
+          reportCard: { score: 92.4, grade: "A-" },
+          psi: { score: 87.4, band: "STEADY" },
+          dews: { stablecoinId: "usdc-circle", score: 18 },
+          liquidity: { stablecoinId: "usdc-circle", liquidityScore: 9.2 },
+        },
+      };
+      return [payload, { ...payload, stablecoinId: 123 }];
+    }, ["stablecoinId"]],
+  ] as const)("%s", (_name, schema, samples, path) => {
+    const [payload, invalidPayload] = samples();
+    expect(schema.safeParse(payload).success).toBe(true);
+    const invalid = schema.safeParse(invalidPayload);
     expect(invalid.success).toBe(false);
     if (!invalid.success) {
       expect(invalid.error.issues.map(({ code, path }) => ({ code, path }))).toEqual([
-        { code: "invalid_type", path: ["price"] },
-      ]);
-    }
-  });
-  it("isolates invalid priceUsd in StablecoinSummaryResponseSchema", () => {
-    const payload = {
-      id: "usdt-tether",
-      name: "Tether",
-      symbol: "USDT",
-      pegType: "peggedUSD",
-      pegMechanism: "fiat-backed",
-      priceUsd: 1.0001,
-      priceSource: "coingecko+defillama-list",
-      priceConfidence: "high",
-      supplySource: "defillama",
-      supplyObservedAt: 1_700_000_000,
-      supplyRestored: true,
-      supplyByPegUsd: { peggedUSD: 100 },
-      supplyUsd: {
-        current: 100,
-        currentUnavailableReason: null,
-        prevDay: 90,
-        prevWeek: 80,
-        prevMonth: 70,
-        change1d: 10,
-        change7d: 20,
-        change30d: 30,
-      },
-      chainCount: 2,
-      updatedAt: 1_779_105_600,
-    };
-    expect(StablecoinSummaryResponseSchema.safeParse(payload).success).toBe(true);
-    const invalid = StablecoinSummaryResponseSchema.safeParse({ ...payload, priceUsd: "invalid" });
-    expect(invalid.success).toBe(false);
-    if (!invalid.success) {
-      expect(invalid.error.issues.map(({ code, path }) => ({ code, path }))).toEqual([
-        { code: "invalid_type", path: ["priceUsd"] },
+        { code: "invalid_type", path },
       ]);
     }
   });
@@ -123,69 +163,6 @@ describe("public API response schemas", () => {
     expect(StablecoinSummaryResponseSchema.safeParse({ ...base, supplyUsd: unavailable }).success).toBe(true);
     const { currentUnavailableReason: _omitted, ...withoutReason } = unavailable;
     expect(StablecoinSummaryResponseSchema.safeParse({ ...base, supplyUsd: withoutReason }).success).toBe(false);
-  });
-  it("isolates invalid date in NonUsdShareResponseSchema", () => {
-    const payload = [{
-      date: 1_779_105_600,
-      commodityShare: 0,
-      fiatNonUsdShare: 0.0456,
-      commodity: 0,
-      fiatNonUsd: 456,
-      total: 10_000,
-    }];
-    expect(NonUsdShareResponseSchema.safeParse(payload).success).toBe(true);
-    const invalid = NonUsdShareResponseSchema.safeParse([{ ...payload[0], date: "invalid" }]);
-    expect(invalid.success).toBe(false);
-    if (!invalid.success) {
-      expect(invalid.error.issues.map(({ code, path }) => ({ code, path }))).toEqual([
-        { code: "invalid_type", path: [0, "date"] },
-      ]);
-    }
-  });
-  it("isolates invalid byteSize in SnapshotsIndexResponseSchema", () => {
-    const payload = {
-      snapshots: [{
-        snapshotDate: "2026-05-16",
-        methodologyVersions: { pegScore: "7.25", psi: "3.3" },
-        safetyScoreIdentity: null,
-        contentHash: "abc123",
-        byteSize: 12345,
-        createdAt: 1_779_105_600,
-      }],
-      pagination: { limit: 500, hasMore: false, nextCursor: null },
-    };
-    expect(SnapshotsIndexResponseSchema.safeParse(payload).success).toBe(true);
-    const invalid = SnapshotsIndexResponseSchema.safeParse({ ...payload, snapshots: [{ ...payload.snapshots[0], byteSize: "invalid" }]});
-    expect(invalid.success).toBe(false);
-    if (!invalid.success) {
-      expect(invalid.error.issues.map(({ code, path }) => ({ code, path }))).toEqual([
-        { code: "invalid_type", path: ["snapshots", 0, "byteSize"] },
-      ]);
-    }
-  });
-  it("isolates invalid stablecoinId in SnapshotCoinResponseSchema", () => {
-    const payload = {
-      snapshotDate: "2026-05-16",
-      stablecoinId: "usdc-circle",
-      generatedAt: 1_779_105_600,
-      methodologyVersions: { pegScore: "7.25" },
-      safetyScoreIdentity: null,
-      stablecoin: { id: "usdc-circle", symbol: "USDC" },
-      scores: {
-        reportCard: { score: 92.4, grade: "A-" },
-        psi: { score: 87.4, band: "STEADY" },
-        dews: { stablecoinId: "usdc-circle", score: 18 },
-        liquidity: { stablecoinId: "usdc-circle", liquidityScore: 9.2 },
-      },
-    };
-    expect(SnapshotCoinResponseSchema.safeParse(payload).success).toBe(true);
-    const invalid = SnapshotCoinResponseSchema.safeParse({ ...payload, stablecoinId: 123 });
-    expect(invalid.success).toBe(false);
-    if (!invalid.success) {
-      expect(invalid.error.issues.map(({ code, path }) => ({ code, path }))).toEqual([
-        { code: "invalid_type", path: ["stablecoinId"] },
-      ]);
-    }
   });
   it("publishes the closed PSI band vocabulary and the route's malformed-row count", () => {
     const psi = documentSchemas().StabilityIndexResponse as {

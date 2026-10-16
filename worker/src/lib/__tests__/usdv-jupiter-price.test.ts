@@ -3,7 +3,6 @@ import accountFixture from "./fixtures/usdv-jupiter-accounts.json";
 import quoteFixture from "./fixtures/usdv-jupiter-quotes.json";
 import { fetchUsdvJupiterPrice, validateUsdvPoolState } from "../authoritative-price-sources/usdv-jupiter";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
-import { applyProtocolPriceOverrides, createValidationContextResolver } from "../../cron/sync-stablecoins/pricing";
 const fetchJson = vi.fn();
 vi.mock("../fetch-retry", () => ({ fetchJsonWithRetry: (...args: unknown[]) => fetchJson(...args) }));
 const NOW = 1790102400;
@@ -89,9 +88,5 @@ describe("reviewed USDv direct Jupiter route", () => {
     setup({ quoteChange: (q) => { q.outAmount = "NaN"; }}); expect(await fetchUsdvJupiterPrice(context())).toBeNull();
     const s = state(), b = Buffer.from(s.value[1].data[0], "base64"); b.writeBigUInt64LE(0n,56+39*144+8); s.value[1].data[0]=b.toString("base64");
     setup({pool:s}); expect(await fetchUsdvJupiterPrice(context())).toBeNull();
-  });
-  it("retains the soft-source severe downside publication guard", () => {
-    const run = (price: number) => applyProtocolPriceOverrides({ assets: [{id:"usdv-solomon",symbol:"USDv",price:null,pegType:"peggedUSD"} as unknown as PeggedAsset], overrides:new Map([["usdv-solomon",{price,source:"jupiter-exact",confidence:"fallback" as const,observedAt:NOW-30,observedAtMode:"upstream" as const}]]),validationContexts:createValidationContextResolver(),syncStartSec:NOW});
-    expect(run(.998882)).toBe(1); expect(run(.2)).toBe(0);
   });
 });

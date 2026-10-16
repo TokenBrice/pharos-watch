@@ -19,6 +19,7 @@ import type { CsvColumn } from "@/lib/exports/csv";
 import { buildCsvBody } from "@shared/lib/csv";
 import type { ExportPreamble } from "@/lib/exports/preamble";
 import { formatPreambleCsv } from "@/lib/exports/preamble";
+import { createTableComparator } from "@/lib/table-comparator";
 
 const { downloadCsvMock } = vi.hoisted(() => ({
   downloadCsvMock: vi.fn(),
@@ -452,5 +453,72 @@ describe("supply-change semantics", () => {
     ];
     const changeColumn = columns.find((column) => column.header === "24h Change (%)");
     expect(changeColumn?.accessor(missing, 0)).toBeNull();
+  });
+});
+
+interface ComparatorRow {
+  name: string;
+  value: number;
+  score: number | null;
+}
+
+describe("createTableComparator", () => {
+  it.each<{
+    name: string;
+    key: keyof ComparatorRow;
+    direction: "asc" | "desc";
+    nullPosition?: "first";
+    rows: ComparatorRow[];
+    expected: (number | string | null)[];
+  }>([
+    {
+      name: "sorts numbers ascending", key: "value", direction: "asc",
+      rows: [{ name: "B", value: 20, score: null }, { name: "A", value: 10, score: null }],
+      expected: [10, 20],
+    },
+    {
+      name: "sorts strings ascending", key: "name", direction: "asc",
+      rows: [{ name: "Banana", value: 1, score: null }, { name: "Apple", value: 2, score: null }],
+      expected: ["Apple", "Banana"],
+    },
+    {
+      name: "sorts null after non-null ascending by default", key: "score", direction: "asc",
+      rows: [{ name: "A", value: 1, score: null }, { name: "B", value: 2, score: 50 }],
+      expected: [50, null],
+    },
+    {
+      name: "sorts null before non-null ascending when configured", key: "score", direction: "asc", nullPosition: "first",
+      rows: [{ name: "B", value: 2, score: 50 }, { name: "A", value: 1, score: null }],
+      expected: [null, 50],
+    },
+    {
+      name: "sorts mixed null and non-null entries descending", key: "score", direction: "desc",
+      rows: [
+        { name: "A", value: 1, score: null }, { name: "B", value: 2, score: 80 },
+        { name: "C", value: 3, score: null }, { name: "D", value: 4, score: 30 },
+        { name: "E", value: 5, score: 60 },
+      ],
+      expected: [80, 60, 30, null, null],
+    },
+  ])("$name", ({ key, direction, nullPosition, rows, expected }) => {
+    const compare = createTableComparator<keyof ComparatorRow, ComparatorRow>({
+      name: (r) => r.name, value: (r) => r.value, score: (r) => r.score,
+    }, nullPosition ? { nullPosition } : undefined);
+    rows.sort((a, b) => compare(a, b, { key, direction }));
+    expected.forEach((value, index) => {
+      if (value === null) expect(rows[index][key]).toBeNull();
+      else expect(rows[index][key]).toBe(value);
+    });
+  });
+
+  it("returns 0 for an unrecognized key", () => {
+    const compare = createTableComparator<keyof ComparatorRow, ComparatorRow>({
+      name: (r) => r.name, value: (r) => r.value, score: (r) => r.score,
+    });
+    expect(compare(
+      { name: "A", value: 1, score: null },
+      { name: "B", value: 2, score: null },
+      { key: "unknown" as "name", direction: "asc" },
+    )).toBe(0);
   });
 });

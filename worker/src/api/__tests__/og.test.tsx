@@ -897,8 +897,176 @@ describe("og cards render through satori", () => {
     lastUpdated: "2026-06-10 07:30 UTC",
   };
 
-  it("renders the stablecoin card (calm baseline)", async () => {
-    const svg = await renderSvg(<StablecoinCard data={calmCoin} />);
+  const OG_CARD_FIXTURES = [
+    {
+      name: "renders the stablecoin card (calm baseline)",
+      element: <StablecoinCard data={calmCoin} />,
+    },
+    {
+      name: "renders the stablecoin card with depeg, frozen, and variant branches",
+      element: <StablecoinCard data={{
+        ...calmCoin,
+        hasActiveDepeg: true,
+        dewsBand: "DANGER",
+        isFrozen: true,
+        variantLabel: "Savings",
+        variantParentSymbol: "USDT",
+        grade: "NR",
+        change24h: null,
+        flow7d: -5_000_000,
+      }} />,
+    },
+    {
+      name: "renders the safety-scores card",
+      element: <SafetyScoresCard data={{
+        gradeDistribution: {
+          "A+": 2,
+          A: 10,
+          "A-": 12,
+          "B+": 30,
+          B: 40,
+          "B-": 25,
+          "C+": 12,
+          C: 8,
+          "C-": 4,
+          D: 3,
+          F: 1,
+        },
+        pulseGrade: "B+",
+        pulseScore: 78.4,
+        coverageRatio: 0.93,
+        totalCoins: 401,
+        topPerformers: [
+          { symbol: "USDC", grade: "A+", score: 95 },
+          { symbol: "PYUSD", grade: "A", score: 92 },
+          { symbol: "GUSD", grade: "A", score: 91 },
+        ],
+        bottomPerformers: [
+          { symbol: "XUSD", grade: "F", score: 12 },
+          { symbol: "YUSD", grade: "D", score: 28 },
+          { symbol: "ZUSD", grade: "C-", score: 41 },
+        ],
+        trend: -0.4,
+        lastUpdated: "2026-06-10 07:30 UTC",
+      }} />,
+    },
+    {
+      name: "renders the safety-scores unavailable aggregate without a numeric zero",
+      element: <SafetyScoresCard data={{
+        gradeDistribution: {
+          "A+": 0,
+          A: 0,
+          "A-": 0,
+          "B+": 0,
+          B: 0,
+          "B-": 0,
+          "C+": 0,
+          C: 0,
+          "C-": 0,
+          D: 0,
+          F: 0,
+          NR: 0,
+        },
+        pulseGrade: null,
+        pulseScore: null,
+        coverageRatio: 0,
+        totalCoins: 401,
+        topPerformers: [],
+        bottomPerformers: [],
+        trend: null,
+        safetyModel: null,
+        lastUpdated: "DEGRADED: V9 safety score unavailable",
+      }} />,
+    },
+    {
+      name: "renders the depeg card",
+      element: <DepegCard data={{
+        activeDepegCount: 3,
+        psiScore: 88.2,
+        psiBand: "BEDROCK",
+        coinsAtPeg: 380,
+        totalCoins: 401,
+        dewsDistribution: { danger: 2, alert: 5, warning: 12, normal: 382 },
+        activeDepegs: [
+          { symbol: "XAUM", name: "Matrixdock Gold", deviationBps: -312 },
+          { symbol: "EURS", name: "STASIS EURO", deviationBps: 145 },
+        ],
+        recoveredToday: 1,
+        newToday: 2,
+        lastUpdated: "2026-06-10 07:30 UTC",
+      }} />,
+    },
+    {
+      name: "renders the chain card",
+      element: <ChainCard data={{
+        name: "Ethereum",
+        totalUsd: 132_000_000_000,
+        change7dPercent: 1.8,
+        stablecoinCount: 214,
+        dominanceShare: 0.52,
+        healthScore: 74,
+        healthBand: "healthy",
+        topStablecoins: [
+          { symbol: "USDT", share: 0.42, supplyUsd: 55_000_000_000 },
+          { symbol: "USDC", share: 0.31, supplyUsd: 41_000_000_000 },
+          { symbol: "DAI", share: 0.04, supplyUsd: 5_000_000_000 },
+        ],
+        lastUpdated: "2026-06-10 07:30 UTC",
+      }} />,
+    },
+    {
+      name: "renders the chain card with zero tracked supply (degraded profile)",
+      element: <ChainCard data={{
+        name: "Ethereum",
+        totalUsd: 0,
+        change7dPercent: 0,
+        stablecoinCount: 0,
+        dominanceShare: 0,
+        healthScore: null,
+        healthBand: null,
+        topStablecoins: [],
+      }} />,
+    },
+    {
+      name: "renders the chain card without health data",
+      element: <ChainCard data={{
+        name: "Obscure Chain",
+        totalUsd: 1_200_000,
+        change7dPercent: -12.4,
+        stablecoinCount: 1,
+        dominanceShare: 0.000004,
+        healthScore: null,
+        healthBand: null,
+        topStablecoins: [{ symbol: "XUSD", share: 1, supplyUsd: 1_200_000 }],
+      }} />,
+    },
+    {
+      name: "renders the stability-index card",
+      element: <StabilityIndexCard data={{
+        psiScore: 92,
+        psiBand: "BEDROCK",
+        delta24h: 1.3,
+        sparklineData: [90, 92, 94],
+        bands: [
+          { name: "BEDROCK", active: true },
+          { name: "STEADY", active: false },
+          { name: "TREMOR", active: false },
+          { name: "FRACTURE", active: false },
+          { name: "CRISIS", active: false },
+          { name: "MELTDOWN", active: false },
+        ],
+        avg7d: 91.2,
+        allTimeHigh: 97.5,
+        allTimeLow: 11.4,
+        flightToQuality: true,
+        flightIntensity: 62,
+        lastUpdated: "2026-06-10 07:30 UTC",
+      }} />,
+    },
+  ];
+
+  it.each(OG_CARD_FIXTURES)("$name", async ({ element }) => {
+    const svg = await renderSvg(element);
     expect(svg).toContain("<svg");
   });
 
@@ -920,160 +1088,6 @@ describe("og cards render through satori", () => {
     else expect(visibleText).not.toMatch(/\$\s*0/);
   });
 
-  it("renders the stablecoin card with depeg, frozen, and variant branches", async () => {
-    const svg = await renderSvg(
-      <StablecoinCard
-        data={{
-          ...calmCoin,
-          hasActiveDepeg: true,
-          dewsBand: "DANGER",
-          isFrozen: true,
-          variantLabel: "Savings",
-          variantParentSymbol: "USDT",
-          grade: "NR",
-          change24h: null,
-          flow7d: -5_000_000,
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
-
-  it("renders the safety-scores card", async () => {
-    const svg = await renderSvg(
-      <SafetyScoresCard
-        data={{
-          gradeDistribution: {
-            "A+": 2,
-            A: 10,
-            "A-": 12,
-            "B+": 30,
-            B: 40,
-            "B-": 25,
-            "C+": 12,
-            C: 8,
-            "C-": 4,
-            D: 3,
-            F: 1,
-          },
-          pulseGrade: "B+",
-          pulseScore: 78.4,
-          coverageRatio: 0.93,
-          totalCoins: 401,
-          topPerformers: [
-            { symbol: "USDC", grade: "A+", score: 95 },
-            { symbol: "PYUSD", grade: "A", score: 92 },
-            { symbol: "GUSD", grade: "A", score: 91 },
-          ],
-          bottomPerformers: [
-            { symbol: "XUSD", grade: "F", score: 12 },
-            { symbol: "YUSD", grade: "D", score: 28 },
-            { symbol: "ZUSD", grade: "C-", score: 41 },
-          ],
-          trend: -0.4,
-          lastUpdated: "2026-06-10 07:30 UTC",
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
-
-  it("renders the safety-scores unavailable aggregate without a numeric zero", async () => {
-    const svg = await renderSvg(
-      <SafetyScoresCard
-        data={{
-          gradeDistribution: {
-            "A+": 0,
-            A: 0,
-            "A-": 0,
-            "B+": 0,
-            B: 0,
-            "B-": 0,
-            "C+": 0,
-            C: 0,
-            "C-": 0,
-            D: 0,
-            F: 0,
-            NR: 0,
-          },
-          pulseGrade: null,
-          pulseScore: null,
-          coverageRatio: 0,
-          totalCoins: 401,
-          topPerformers: [],
-          bottomPerformers: [],
-          trend: null,
-          safetyModel: null,
-          lastUpdated: "DEGRADED: V9 safety score unavailable",
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
-
-  it("renders the depeg card", async () => {
-    const svg = await renderSvg(
-      <DepegCard
-        data={{
-          activeDepegCount: 3,
-          psiScore: 88.2,
-          psiBand: "BEDROCK",
-          coinsAtPeg: 380,
-          totalCoins: 401,
-          dewsDistribution: { danger: 2, alert: 5, warning: 12, normal: 382 },
-          activeDepegs: [
-            { symbol: "XAUM", name: "Matrixdock Gold", deviationBps: -312 },
-            { symbol: "EURS", name: "STASIS EURO", deviationBps: 145 },
-          ],
-          recoveredToday: 1,
-          newToday: 2,
-          lastUpdated: "2026-06-10 07:30 UTC",
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
-
-  it("renders the chain card", async () => {
-    const svg = await renderSvg(
-      <ChainCard
-        data={{
-          name: "Ethereum",
-          totalUsd: 132_000_000_000,
-          change7dPercent: 1.8,
-          stablecoinCount: 214,
-          dominanceShare: 0.52,
-          healthScore: 74,
-          healthBand: "healthy",
-          topStablecoins: [
-            { symbol: "USDT", share: 0.42, supplyUsd: 55_000_000_000 },
-            { symbol: "USDC", share: 0.31, supplyUsd: 41_000_000_000 },
-            { symbol: "DAI", share: 0.04, supplyUsd: 5_000_000_000 },
-          ],
-          lastUpdated: "2026-06-10 07:30 UTC",
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
-
-  it("renders the chain card with zero tracked supply (degraded profile)", async () => {
-    const svg = await renderSvg(
-      <ChainCard
-        data={{
-          name: "Ethereum",
-          totalUsd: 0,
-          change7dPercent: 0,
-          stablecoinCount: 0,
-          dominanceShare: 0,
-          healthScore: null,
-          healthBand: null,
-          topStablecoins: [],
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
 
   it("renders unavailable chain history without inventing zero growth", () => {
     const markup = renderToStaticMarkup(<ChainCard data={{
@@ -1084,49 +1098,4 @@ describe("og cards render through satori", () => {
     expect(markup).not.toContain("0.0% 7d");
   });
 
-  it("renders the chain card without health data", async () => {
-    const svg = await renderSvg(
-      <ChainCard
-        data={{
-          name: "Obscure Chain",
-          totalUsd: 1_200_000,
-          change7dPercent: -12.4,
-          stablecoinCount: 1,
-          dominanceShare: 0.000004,
-          healthScore: null,
-          healthBand: null,
-          topStablecoins: [{ symbol: "XUSD", share: 1, supplyUsd: 1_200_000 }],
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
-
-  it("renders the stability-index card", async () => {
-    const svg = await renderSvg(
-      <StabilityIndexCard
-        data={{
-          psiScore: 92,
-          psiBand: "BEDROCK",
-          delta24h: 1.3,
-          sparklineData: [90, 92, 94],
-          bands: [
-            { name: "BEDROCK", active: true },
-            { name: "STEADY", active: false },
-            { name: "TREMOR", active: false },
-            { name: "FRACTURE", active: false },
-            { name: "CRISIS", active: false },
-            { name: "MELTDOWN", active: false },
-          ],
-          avg7d: 91.2,
-          allTimeHigh: 97.5,
-          allTimeLow: 11.4,
-          flightToQuality: true,
-          flightIntensity: 62,
-          lastUpdated: "2026-06-10 07:30 UTC",
-        }}
-      />,
-    );
-    expect(svg).toContain("<svg");
-  });
 });

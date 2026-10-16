@@ -12,18 +12,27 @@ import {
 } from "../url-storage-codecs";
 
 describe("URL search codecs", () => {
-  it("parses enum values with optional normalization", () => {
-    const values = ["A", "B"] as const;
-
-    expect(parseEnumSearchParam("?grade=a", "grade", values, { normalize: (value) => value.toUpperCase() })).toBe("A");
-    expect(parseEnumSearchParam("?grade=c", "grade", values)).toBeNull();
+  it.each([
+    { query: "?grade=a", normalize: (value: string) => value.toUpperCase(), expected: "A" },
+    { query: "?grade=c", normalize: undefined, expected: null },
+  ])("parses enum $query with its normalization policy", ({ query, normalize, expected }) => {
+    const result = parseEnumSearchParam(query, "grade", ["A", "B"] as const, { normalize });
+    if (expected === null) expect(result).toBeNull();
+    else expect(result).toBe(expected);
   });
 
-  it("parses bounded numeric and boolean values", () => {
-    expect(parseBoundedNumberSearchParam("?limit=10", "limit", { min: 1, max: 20, integer: true })).toBe(10);
-    expect(parseBoundedNumberSearchParam("?limit=21", "limit", { min: 1, max: 20, fallback: 5 })).toBe(5);
-    expect(parseBooleanSearchParam("?dryRun=1", "dryRun")).toBe(true);
-    expect(parseBooleanSearchParam("?dryRun=nope", "dryRun", false)).toBe(false);
+  it.each([
+    { query: "?limit=10", options: { min: 1, max: 20, integer: true }, expected: 10 },
+    { query: "?limit=21", options: { min: 1, max: 20, fallback: 5 }, expected: 5 },
+  ])("parses bounded numeric $query", ({ query, options, expected }) => {
+    expect(parseBoundedNumberSearchParam(query, "limit", options)).toBe(expected);
+  });
+
+  it.each([
+    { query: "?dryRun=1", fallback: undefined, expected: true },
+    { query: "?dryRun=nope", fallback: false, expected: false },
+  ])("parses boolean $query", ({ query, fallback, expected }) => {
+    expect(parseBooleanSearchParam(query, "dryRun", fallback)).toBe(expected);
   });
 
   it("parses arrays and stablecoin IDs through caller-provided decoders", () => {

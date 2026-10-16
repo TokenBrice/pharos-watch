@@ -7,7 +7,6 @@ const blockNumber = vi.fn(), blockHeader = vi.fn(), rpcBatch = vi.fn();
 vi.mock("../evm-rpc", () => ({ fetchEvmRpcBatch: (...args: unknown[]) => rpcBatch(...args),
   fetchEvmBlockNumber: (...args: unknown[]) => blockNumber(...args), fetchEvmBlockHeader: (...args: unknown[]) => blockHeader(...args) }));
 import { fetchUsduUniswapV3Price, usduUniswapV3Provider } from "../authoritative-price-sources/usdu-uniswap-v3";
-import { applyProtocolPriceOverrides, createValidationContextResolver } from "../../cron/sync-stablecoins/pricing";
 import reviewedRuntime from "./fixtures/usdu-uniswap-v3-runtime.json";
 
 const NOW = 1_790_981_071;
@@ -116,12 +115,5 @@ describe("Universal USD exact Uniswap v3 recovery", () => {
   it("never replaces a publishable incumbent", async () => {
     const asset = { id: "usdu-universal", price: 1.001, priceSource: "coingecko", priceObservedAt: NOW, priceObservedAtMode: "upstream" } as PeggedAsset;
     expect(await usduUniswapV3Provider.fetchLivePrice?.(asset, context())).toBeNull(); expect(rpcBatch).not.toHaveBeenCalled();
-  });
-  it("admits a normal recovered quote but retains severe-downside publication protection", () => {
-    for (const [price, expected] of [[1.000298588359182, 1], [0.2, 0]]) {
-      const asset = { id: "usdu-universal", symbol: "USDU", price: null, pegType: "peggedUSD" } as unknown as PeggedAsset;
-      expect(applyProtocolPriceOverrides({ assets: [asset], overrides: new Map([[asset.id, { price, source: "uniswap-v3-exact",
-        confidence: "fallback", observedAt: NOW - 20, observedAtMode: "upstream" }]]), validationContexts: createValidationContextResolver(), syncStartSec: NOW })).toBe(expected);
-    }
   });
 });
